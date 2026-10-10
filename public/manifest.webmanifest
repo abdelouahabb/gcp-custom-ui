@@ -1,0 +1,19 @@
+{
+  "name": "CloudPulse 2026 — Google Cloud Cockpit",
+  "short_name": "CloudPulse",
+  "description": "Next-generation 2026 Progressive Web App for Google Cloud SRE, FinOps, Cloud Run, BigQuery, and Gemini AI Operations.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "categories": ["developer", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

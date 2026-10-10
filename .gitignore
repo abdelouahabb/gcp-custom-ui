@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Production build output
+dist/
+build/
+
+# Environment & Local Secrets (NEVER COMMIT)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*.json
+*service-account*.json
+adc.json
+application_default_credentials.json
+
+# Logs & OS files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,783 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import axios from 'axios';
+import {
+  ShieldCheck,
+  ShieldAlert,
+  Search,
+  Power,
+  RefreshCw,
+  PlusCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Flame,
+  CreditCard,
+  Lock,
+  Unlock,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+
+const CORE_WATCHED_APIS = [
+  {
+    label: 'Compute Engine API',
+    service: 'compute.googleapis.com',
+    aliases: ['compute.googleapis.com'],
+  },
+  {
+    label: 'Vertex AI API',
+    service: 'aiplatform.googleapis.com',
+    aliases: ['aiplatform.googleapis.com'],
+  },
+  {
+    label: 'Cloud Run API',
+    service: 'run.googleapis.com',
+    aliases: ['run.googleapis.com'],
+  },
+  {
+    label: 'BigQuery API',
+    service: 'bigquery.googleapis.com',
+    aliases: ['bigquery.googleapis.com'],
+  },
+  {
+    label: 'Cloud Storage API',
+    service: 'storage.googleapis.com',
+    aliases: [
+      'storage.googleapis.com',
+      'storage-component.googleapis.com',
+      'storage-api.googleapis.com',
+    ],
+  },
+  {
+    label: 'Kubernetes Engine (GKE)',
+    service: 'container.googleapis.com',
+    aliases: ['container.googleapis.com'],
+  },
+];
+
+const HIGH_IMPACT_SET = new Set([
+  'compute.googleapis.com',
+  'aiplatform.googleapis.com',
+  'run.googleapis.com',
+  'bigquery.googleapis.com',
+  'storage.googleapis.com',
+  'container.googleapis.com',
+  'generativelanguage.googleapis.com',
+  'sqladmin.googleapis.com',
+  'alloydb.googleapis.com',
+  'spanner.googleapis.com',
+  'dataflow.googleapis.com',
+  'dataproc.googleapis.com',
+  'cloudfunctions.googleapis.com',
+]);
+
+export default function EmergencyApiKillSwitch({
+  projectId,
+  enabledApis = [],
+  onRefresh,
+  onShowToast,
+  onShowError,
+}) {
+  // 1) Project-Wide Billing Kill-Switch State
+  const [billingStatus, setBillingStatus] = useState(null);
+  const [loadingBilling, setLoadingBilling] = useState(false);
+  const [confirmKillBilling, setConfirmKillBilling] = useState(false);
+  const [stopAllVmsOnKill, setStopAllVmsOnKill] = useState(true);
+  const [togglingBilling, setTogglingBilling] = useState(false);
+  const [selectedRestoreBillingAccount, setSelectedRestoreBillingAccount] =
+    useState('');
+
+  // 2) Individual Service API Kill-Switch State
+  const [localApis, setLocalApis] = useState(enabledApis);
+  const [loadingApis, setLoadingApis] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [confirmDisableApi, setConfirmDisableApi] = useState(null);
+  const [busyApis, setBusyApis] = useState({});
+  const [enableServiceInput, setEnableServiceInput] = useState('');
+  const [enabling, setEnabling] = useState(false);
+  const [showAllApis, setShowAllApis] = useState(false);
+
+  // Sync when parent overview updates enabledApis
+  useEffect(() => {
+    if (Array.isArray(enabledApis) && enabledApis.length > 0) {
+      setLocalApis(enabledApis);
+    }
+  }, [enabledApis]);
+
+  const fetchBillingStatus = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingBilling(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/billing`
+      );
+      setBillingStatus(res.data);
+      if (res.data?.previousBillingAccountName) {
+        setSelectedRestoreBillingAccount(res.data.previousBillingAccountName);
+      } else if (res.data?.openBillingAccounts?.[0]?.name) {
+        setSelectedRestoreBillingAccount(res.data.openBillingAccounts[0].name);
+      }
+    } catch {
+      // ignore initial error
+    } finally {
+      setLoadingBilling(false);
+    }
+  }, [projectId]);
+
+  const fetchLiveApis = useCallback(
+    async (forceRefresh = false) => {
+      if (!projectId) return;
+      setLoadingApis(true);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/apis${
+            forceRefresh ? '?refresh=true' : ''
+          }`
+        );
+        if (Array.isArray(res.data?.enabledApis)) {
+          setLocalApis(res.data.enabledApis);
+        }
+      } catch {
+        // Fallback to prop if request fails
+      } finally {
+        setLoadingApis(false);
+      }
+    },
+    [projectId]
+  );
+
+  // Load live Billing Account status & Enabled APIs on mount or project change
+  useEffect(() => {
+    if (projectId) {
+      fetchBillingStatus();
+      if (!enabledApis || enabledApis.length === 0) {
+        fetchLiveApis(false);
+      }
+    }
+  }, [projectId, enabledApis, fetchBillingStatus, fetchLiveApis]);
+
+  const handleBillingKillSwitch = async (action) => {
+    setTogglingBilling(true);
+    setConfirmKillBilling(false);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/billing/kill-switch`,
+        {
+          action,
+          billingAccountName:
+            action === 'ENABLE' ? selectedRestoreBillingAccount : '',
+          stopAllVms: action === 'DISABLE' ? stopAllVmsOnKill : false,
+        }
+      );
+      if (res.data?.billing) {
+        setBillingStatus(res.data.billing);
+        if (res.data.billing.previousBillingAccountName) {
+          setSelectedRestoreBillingAccount(
+            res.data.billing.previousBillingAccountName
+          );
+        }
+      } else {
+        await fetchBillingStatus();
+      }
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            (action === 'DISABLE'
+              ? `Unlinked Billing Account from ${projectId}!`
+              : `Re-linked Billing Account to ${projectId}!`)
+        );
+      }
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to ${action.toLowerCase()} Cloud Billing for ${projectId}`
+        );
+      }
+    } finally {
+      setTogglingBilling(false);
+    }
+  };
+
+  const activeApis = useMemo(() => {
+    const source =
+      localApis && localApis.length > 0 ? localApis : enabledApis || [];
+    const hasMainStorage = source.some(
+      (a) => a.name === 'storage.googleapis.com'
+    );
+    return source.filter((a) => {
+      if (
+        hasMainStorage &&
+        (a.name === 'storage-component.googleapis.com' ||
+          a.name === 'storage-api.googleapis.com')
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [localApis, enabledApis]);
+
+  const enabledNamesSet = useMemo(
+    () => new Set(activeApis.map((a) => (a.name || '').toLowerCase())),
+    [activeApis]
+  );
+
+  // Only show core presets in "Re-Enable" if they are currently NOT enabled!
+  const disabledCorePresets = useMemo(() => {
+    return CORE_WATCHED_APIS.filter(
+      (preset) => !preset.aliases.some((alias) => enabledNamesSet.has(alias))
+    );
+  }, [enabledNamesSet]);
+
+  const filteredApis = useMemo(() => {
+    if (!searchQuery.trim()) return activeApis;
+    const q = searchQuery.toLowerCase();
+    return activeApis.filter(
+      (a) =>
+        (a.name || '').toLowerCase().includes(q) ||
+        (a.title || '').toLowerCase().includes(q)
+    );
+  }, [activeApis, searchQuery]);
+
+  const displayedApis = useMemo(() => {
+    if (searchQuery.trim() || showAllApis) return filteredApis;
+    return filteredApis.slice(0, 18);
+  }, [filteredApis, searchQuery, showAllApis]);
+
+  const handleToggleApi = async (serviceName, action) => {
+    setBusyApis((prev) => ({ ...prev, [serviceName]: action }));
+    setConfirmDisableApi(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/apis/toggle`,
+        {
+          serviceName,
+          action,
+          disableDependentServices: true,
+        }
+      );
+      if (Array.isArray(res.data?.enabledApis)) {
+        setLocalApis(res.data.enabledApis);
+      } else if (action === 'DISABLE') {
+        setLocalApis((prev) => prev.filter((a) => a.name !== serviceName));
+      }
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `${action === 'DISABLE' ? 'Disabled' : 'Enabled'} ${serviceName}`
+        );
+      }
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to ${action.toLowerCase()} ${serviceName}`
+        );
+      }
+    } finally {
+      setTimeout(() => {
+        setBusyApis((prev) => {
+          const next = { ...prev };
+          delete next[serviceName];
+          return next;
+        });
+      }, 2500);
+    }
+  };
+
+  const handleEnableSubmit = async (e, presetService) => {
+    if (e) e.preventDefault();
+    const target = (presetService || enableServiceInput).trim().toLowerCase();
+    if (!target || enabling) return;
+    if (enabledNamesSet.has(target)) {
+      if (onShowToast) {
+        onShowToast(`${target} is already ENABLED on ${projectId}.`);
+      }
+      setEnableServiceInput('');
+      return;
+    }
+    setEnabling(true);
+    try {
+      await handleToggleApi(target, 'ENABLE');
+      setEnableServiceInput('');
+    } finally {
+      setEnabling(false);
+    }
+  };
+
+  const isBillingEnabled = billingStatus?.billingEnabled !== false;
+
+  return (
+    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
+      {/* ===================================================================== */}
+      {/* LEVEL 1: ULTIMATE PROJECT KILL-SWITCH (CLOUD BILLING CIRCUIT BREAKER) */}
+      {/* ===================================================================== */}
+      <div
+        className={`relative overflow-hidden rounded-xl border p-4 transition-all ${
+          togglingBilling
+            ? 'border-rose-500/50 bg-rose-500/10 opacity-70 grayscale-[40%]'
+            : !billingStatus
+            ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#09090b]'
+            : isBillingEnabled
+            ? 'border-rose-500/35 bg-gradient-to-r from-rose-500/[0.06] via-amber-500/[0.04] to-transparent dark:from-rose-950/25 dark:via-[#09090b] dark:to-[#09090b]'
+            : 'border-emerald-500/40 bg-emerald-500/[0.07] dark:bg-emerald-950/20'
+        }`}
+      >
+        {togglingBilling && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500/20 overflow-hidden">
+            <div className="h-full w-1/2 bg-rose-500 animate-pulse" />
+          </div>
+        )}
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              {isBillingEnabled ? (
+                <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0" />
+              ) : (
+                <Lock className="w-5 h-5 text-emerald-500 shrink-0" />
+              )}
+              <span className="text-sm font-bold text-zinc-950 dark:text-zinc-50">
+                DEFCON-1 Project Emergency Kill-Switch (Billing Circuit Breaker)
+              </span>
+              {loadingBilling && !billingStatus ? (
+                <span className="text-[10px] font-mono bg-zinc-500/10 text-zinc-400 px-2 py-0.5 rounded-full">
+                  CHECKING BILLING...
+                </span>
+              ) : isBillingEnabled ? (
+                <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                  BILLING ENABLED · SPENDING ACTIVE
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  BILLING UNLINKED · $0.00 LOCKDOWN ACTIVE
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              {isBillingEnabled ? (
+                <>
+                  Got hacked or leaked an API key? Detach the Cloud Billing
+                  Account from{' '}
+                  <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-200">
+                    {projectId}
+                  </span>{' '}
+                  via <code className="font-mono">cloudbilling.googleapis.com</code> to{' '}
+                  <strong className="text-rose-600 dark:text-rose-400">
+                    immediately stop all money spending ($0.00)
+                  </strong>{' '}
+                  across the entire project.
+                </>
+              ) : (
+                <>
+                  Project{' '}
+                  <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-200">
+                    {projectId}
+                  </span>{' '}
+                  is currently detached from Cloud Billing. No billable charges
+                  can be incurred by any API key or resource.
+                </>
+              )}
+            </p>
+
+            {/* Current Active Billing Account Badge */}
+            {billingStatus && (
+              <div className="pt-1 flex flex-wrap items-center gap-3 text-xs">
+                <div className="inline-flex items-center gap-1.5 font-mono bg-white/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 px-2.5 py-1 rounded-md">
+                  <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-zinc-500">Active Billing Account:</span>
+                  {billingStatus.billingEnabled ? (
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      {billingStatus.billingAccountDisplayName} (
+                      {billingStatus.billingAccountName}) ·{' '}
+                      {billingStatus.currencyCode}
+                    </span>
+                  ) : (
+                    <span className="font-bold text-rose-500">
+                      NONE (Unlinked / Disabled)
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Action Area: Kill Billing or Restore Billing */}
+          <div className="shrink-0">
+            {togglingBilling ? (
+              <div className="inline-flex items-center gap-2 bg-rose-500/15 text-rose-500 border border-rose-500/30 px-4 py-2.5 rounded-xl text-xs font-mono font-bold">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>
+                  {isBillingEnabled
+                    ? 'SEVERING BILLING ACCOUNT...'
+                    : 'RE-LINKING BILLING ACCOUNT...'}
+                </span>
+              </div>
+            ) : isBillingEnabled ? (
+              !confirmKillBilling ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmKillBilling(true)}
+                  className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
+                >
+                  <Power className="w-4 h-4" />
+                  <span>KILL PROJECT BILLING (STOP SPENDING)</span>
+                </button>
+              ) : null
+            ) : (
+              /* Re-Link Billing Controls when project is in $0 lockdown */
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                {billingStatus?.openBillingAccounts?.length > 0 && (
+                  <select
+                    value={selectedRestoreBillingAccount}
+                    onChange={(e) =>
+                      setSelectedRestoreBillingAccount(e.target.value)
+                    }
+                    aria-label="Select Billing Account to re-link"
+                    className="bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    {billingStatus.openBillingAccounts.map((acct) => (
+                      <option key={acct.name} value={acct.name}>
+                        {acct.displayName} ({acct.name.replace('billingAccounts/', '')})
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleBillingKillSwitch('ENABLE')}
+                  className="inline-flex items-center justify-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>Restore & Re-Link Billing</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 2-Step Confirmation Drawer for Project Billing Kill-Switch */}
+        {confirmKillBilling && isBillingEnabled && (
+          <div className="mt-4 pt-3.5 border-t border-rose-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-rose-500/10 p-3.5 rounded-lg">
+            <div className="space-y-1.5">
+              <div className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>
+                  Confirm Emergency Billing Detachment for &ldquo;{projectId}
+                  &rdquo;?
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                This sends{' '}
+                <code className="font-mono">
+                  PUT /v1/projects/{projectId}/billingInfo
+                </code>{' '}
+                with <code className="font-mono">billingAccountName: &quot;&quot;</code> to
+                unlink{' '}
+                <strong>
+                  {billingStatus?.billingAccountDisplayName || 'your billing account'}
+                </strong>
+                . All billable resources and leaked keys will immediately stop
+                spending money. You can re-link the billing account here in 1
+                tap anytime.
+              </p>
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-zinc-900 dark:text-zinc-100 pt-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={stopAllVmsOnKill}
+                  onChange={(e) => setStopAllVmsOnKill(e.target.checked)}
+                  className="rounded border-zinc-400 text-rose-600 focus:ring-rose-500"
+                />
+                <span>
+                  Also stop all running Compute Engine VMs in {projectId}
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleBillingKillSwitch('DISABLE')}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
+              >
+                Yes, Unlink Billing & Freeze Spend
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmKillBilling(false)}
+                className="bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs px-3 py-2 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ===================================================================== */}
+      {/* LEVEL 2: INDIVIDUAL SERVICE API KILL-SWITCH & MANAGER                 */}
+      {/* ===================================================================== */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4 pt-1">
+        <div>
+          <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2 flex-wrap">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <span>
+              Granular Service API Kill-Switch (
+              {loadingApis && activeApis.length === 0
+                ? 'Scanning...'
+                : `${activeApis.length} Enabled`}
+              )
+            </span>
+          </h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+            Want to keep the project online but kill a specific service? Inspect
+            all enabled APIs on{' '}
+            <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+              {projectId}
+            </span>{' '}
+            below and disable any individual API in 2 taps.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-64">
+            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search enabled APIs (e.g. compute, ai)..."
+              aria-label="Filter enabled APIs"
+              className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-9 pr-3 py-2 text-xs text-zinc-950 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              fetchBillingStatus();
+              fetchLiveApis(true);
+            }}
+            disabled={loadingApis}
+            title="Sync live Billing & Enabled APIs from Google Cloud"
+            className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors shrink-0 disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${loadingApis ? 'animate-spin' : ''}`}
+            />
+            <span className="hidden sm:inline">Sync Status</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ENABLED APIS GRID (Shown FIRST so user immediately sees active APIs to disable) */}
+      {loadingApis && activeApis.length === 0 ? (
+        <div className="py-10 text-center text-xs text-zinc-500 flex flex-col items-center gap-2">
+          <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
+          <span>
+            Querying live enabled APIs from{' '}
+            <code className="font-mono">serviceusage.googleapis.com</code> for{' '}
+            <span className="font-mono font-semibold">{projectId}</span>...
+          </span>
+        </div>
+      ) : filteredApis.length === 0 ? (
+        <div className="py-8 text-center text-xs text-zinc-500">
+          No enabled Google Cloud APIs match &ldquo;{searchQuery}&rdquo; in{' '}
+          <span className="font-mono">{projectId}</span>.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {displayedApis.map((api) => {
+              const busyState = busyApis[api.name];
+              const isDisabling = busyState === 'DISABLE';
+              const isConfirming = confirmDisableApi === api.name;
+              const isHighImpact = HIGH_IMPACT_SET.has(api.name);
+
+              return (
+                <div
+                  key={api.name}
+                  className={`relative overflow-hidden p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-2.5 ${
+                    isDisabling
+                      ? 'border-rose-500/40 bg-rose-500/5 opacity-55 grayscale select-none pointer-events-none'
+                      : isHighImpact
+                      ? 'border-emerald-500/30 dark:border-emerald-500/25 bg-emerald-500/[0.03] dark:bg-[#09090b]'
+                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#09090b]'
+                  }`}
+                >
+                  {isDisabling && (
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500/20 overflow-hidden">
+                      <div className="h-full w-1/2 bg-rose-500 animate-pulse" />
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {isHighImpact && !isDisabling && (
+                          <Flame
+                            className="w-3.5 h-3.5 text-amber-500 shrink-0"
+                            title="High-impact billable service API"
+                          />
+                        )}
+                        <div
+                          className={`text-xs font-bold truncate ${
+                            isDisabling
+                              ? 'line-through text-zinc-400'
+                              : 'text-zinc-900 dark:text-zinc-100'
+                          }`}
+                        >
+                          {api.title}
+                        </div>
+                      </div>
+                      <div className="text-[11px] font-mono text-zinc-500 truncate mt-0.5">
+                        {api.name}
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                        isDisabling
+                          ? 'bg-rose-500/20 text-rose-500'
+                          : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
+                      }`}
+                    >
+                      {isDisabling ? 'DISABLING...' : 'ENABLED'}
+                    </span>
+                  </div>
+
+                  {/* Action Footer */}
+                  <div className="pt-2 border-t border-zinc-200/70 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+                    {isDisabling ? (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-rose-500">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span>Disabling API on GCP...</span>
+                      </span>
+                    ) : isConfirming ? (
+                      <div className="w-full flex items-center justify-between gap-1.5 bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-1">
+                        <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 shrink-0" />
+                          <span>Kill API?</span>
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleApi(api.name, 'DISABLE')}
+                            className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[10px] font-bold"
+                          >
+                            Yes, Disable
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDisableApi(null)}
+                            className="text-[10px] text-zinc-500 px-1"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-[10px] font-mono text-zinc-400">
+                          {isHighImpact ? 'Core Billable API' : 'Active Service'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDisableApi(api.name)}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 px-2.5 py-1 rounded-md transition-colors"
+                        >
+                          <Power className="w-3 h-3" />
+                          <span>Emergency Disable</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Expand / Collapse all enabled APIs */}
+          {!searchQuery.trim() && filteredApis.length > 18 && (
+            <div className="flex justify-center pt-1">
+              <button
+                type="button"
+                onClick={() => setShowAllApis((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 text-xs font-mono text-blue-600 dark:text-blue-400 hover:underline px-3 py-1.5 rounded-lg bg-blue-500/5 border border-blue-500/20"
+              >
+                {showAllApis ? (
+                  <>
+                    <ChevronUp className="w-3.5 h-3.5" />
+                    <span>Show Top 18 High-Priority APIs</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span>
+                      View All {filteredApis.length} Enabled APIs on {projectId}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* RESTORE DISABLED CORE APIS OR ENABLE NEW API */}
+      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {disabledCorePresets.length > 0 ? (
+            <>
+              <span className="text-[11px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 mr-1">
+                Disabled Core APIs (1-Tap Re-Enable):
+              </span>
+              {disabledCorePresets.map((preset) => (
+                <button
+                  key={preset.service}
+                  type="button"
+                  disabled={enabling || Boolean(busyApis[preset.service])}
+                  onClick={() => handleEnableSubmit(null, preset.service)}
+                  className="text-[11px] font-mono bg-white dark:bg-zinc-900 hover:bg-emerald-500/15 text-zinc-700 dark:text-zinc-300 hover:text-emerald-500 border border-zinc-200 dark:border-zinc-800 px-2.5 py-1 rounded-md transition-colors disabled:opacity-50"
+                >
+                  + Re-Enable {preset.label}
+                </button>
+              ))}
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                All core APIs (Compute Engine, Vertex AI, Cloud Run, BigQuery,
+                Cloud Storage, GKE) are currently ENABLED above.
+              </span>
+            </span>
+          )}
+        </div>
+
+        <form
+          onSubmit={(e) => handleEnableSubmit(e)}
+          className="flex items-center gap-2"
+        >
+          <input
+            type="text"
+            value={enableServiceInput}
+            onChange={(e) => setEnableServiceInput(e.target.value)}
+            placeholder="Enable other API (e.g. secretmanager.googleapis.com)"
+            className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100 w-full md:w-72"
+          />
+          <button
+            type="submit"
+            disabled={enabling || !enableServiceInput.trim()}
+            className="inline-flex items-center gap-1 bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-3 py-1.5 text-xs font-bold transition-colors whitespace-nowrap disabled:opacity-50"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>Enable New API</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
