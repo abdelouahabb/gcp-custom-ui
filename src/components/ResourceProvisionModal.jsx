@@ -18,10 +18,10 @@ import {
 
 const SERVICE_TABS = [
   {
-    id: 'GCS_BUCKET',
-    label: 'Cloud Storage',
-    icon: HardDrive,
-    desc: 'Create real GCS Bucket (storage.googleapis.com)',
+    id: 'CLOUD_RUN',
+    label: 'Cloud Run',
+    icon: Cpu,
+    desc: 'Deploy real Cloud Run Service (run.googleapis.com)',
   },
   {
     id: 'COMPUTE_VM',
@@ -42,16 +42,16 @@ const SERVICE_TABS = [
     desc: 'Create real VPC Firewall Rule (global/firewalls)',
   },
   {
+    id: 'GCS_BUCKET',
+    label: 'Cloud Storage',
+    icon: HardDrive,
+    desc: 'Create real GCS Bucket (storage.googleapis.com)',
+  },
+  {
     id: 'BIGQUERY_DATASET',
     label: 'BigQuery Dataset',
     icon: Database,
     desc: 'Create real BQ Dataset (bigquery.googleapis.com)',
-  },
-  {
-    id: 'CLOUD_RUN',
-    label: 'Cloud Run',
-    icon: Cpu,
-    desc: 'Deploy real Cloud Run Service (run.googleapis.com)',
   },
 ];
 

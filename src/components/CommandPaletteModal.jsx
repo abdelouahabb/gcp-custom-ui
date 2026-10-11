@@ -296,6 +296,48 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-bigquery-studio',
+        category: 'Data Lakehouse & Sovereign SRE Studios',
+        title: 'Open BigQuery 2026 Lakehouse & Compliance Studio ★',
+        subtitle: 'Physical compressed billing (-54%), Pre-Crime SQL Dry-Run X-Ray & 168h Time-Machine',
+        keywords: 'bigquery sql dataset table physical billing dry run time travel',
+        badge: 'BIGQUERY',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab('BIGQUERY_STUDIO');
+          onClose();
+        }
+      },
+      {
+        id: 'open-sovereign-studio',
+        category: 'Data Lakehouse & Sovereign SRE Studios',
+        title: 'Open Sovereign Cloud Time-Machine, IAM Surgeon & Drift Radar 🧬',
+        subtitle: '24h JIT CEL IAM conditions, SHA-256 Merkle drift detection & Sovereign Secret Manager',
+        keywords: 'sovereign iam surgeon jit condition drift merkle time machine secret manager kms',
+        badge: 'WAVE 7',
+        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        icon: Key,
+        run: () => {
+          onSelectTab('SOVEREIGN_STUDIO');
+          onClose();
+        }
+      },
+      {
+        id: 'open-sre-war-room',
+        category: 'Data Lakehouse & Sovereign SRE Studios',
+        title: 'Open Autonomous SRE Incident War-Room & VPC-SC Perimeter Studio 🚨',
+        subtitle: 'LogRCA root-cause clusters, 14.4x SLO Burn Radar, VPC-SC Exfiltration Shield & Pub/Sub DLQ',
+        keywords: 'sre war room incident slo burn rate vpc-sc exfiltration pubsub dlq postmortem',
+        badge: 'WAVE 8',
+        badgeColor: 'text-rose-300 bg-rose-500/15 border-rose-500/30',
+        icon: ShieldAlert,
+        run: () => {
+          onSelectTab('SRE_WAR_ROOM');
+          onClose();
+        }
+      },
+      {
         id: 'open-shell-logs',
         category: 'AI & Developer Tools',
         title: 'Open Mobile Cloud Shell & Real-Time Log Streamer',

@@ -321,86 +321,109 @@ function CloudPulseCockpit() {
   const liveBurn = calculateLiveBurnRate(overview);
 
   const navTabs = [
+    // I. Global Command & Topology
     {
       id: 'OVERVIEW',
+      group: 'COMMAND',
       label: '2026 SRE Cockpit',
       tip: 'Unified 2026 SRE Cockpit: KPIs, Beyond-Console Innovation Lab, Cloud Run, VM Fleet, VPCs, Resources, API Kill-Switch, Telemetry & Cloud Shell',
       icon: LayoutDashboard,
     },
     {
       id: 'GLOBAL_MAP',
+      group: 'COMMAND',
       label: 'Global Map 🌍',
-      tip: 'Interactive 42-Region Global Submarine Cable & Data Center Map with live pricing, carbon intensity, and click-to-deploy',
+      tip: 'Interactive 40-Region & 121-Zone Global Subsea Cable, Carbon Intensity & Chaos Failover Map with click-to-deploy',
       icon: Globe,
     },
-    {
-      id: 'INNOVATION_LAB',
-      label: '2026 Lab ✦',
-      tip: '14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, DLP X-Ray, Cold-Start Surgeon & Zero-Sniffing Gemini 3.8 Vault',
-      icon: Sparkles,
-    },
-    {
-      id: 'CLOUD_STORAGE',
-      label: 'Cloud Storage ★',
-      tip: 'Cloud Storage Studio: Create/manage buckets, inspect live objects, configure Soft-Delete & WORM retention locks, and run lifecycle rules',
-      icon: HardDrive,
-    },
-    {
-      id: 'BIGQUERY_STUDIO',
-      label: 'BigQuery Studio ★',
-      tip: 'BigQuery 2026 Enterprise Lakehouse & Compliance Studio: Physical vs Logical Compressed Billing (-54%), Pre-Crime SQL Dry-Run X-Ray, Auto-SQL Optimizer, and 168h FOR SYSTEM_TIME AS OF Time-Machine',
-      icon: Database,
-    },
-    {
-      id: 'SOVEREIGN_STUDIO',
-      label: 'Sovereign & Drift 🧬',
-      tip: 'Wave-7 Sovereign Cloud Time-Machine, Autonomous IAM Least-Privilege Surgeon (24h JIT CEL Conditions), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
-      icon: ShieldCheck,
-    },
-    {
-      id: 'SRE_WAR_ROOM',
-      label: 'SRE War-Room 🚨',
-      tip: 'Wave-8 Autonomous SRE Incident War-Room, Cloud Logging Root-Cause Correlator, 14.4x SLO Burn Radar, VPC Service Controls (VPC-SC) Exfiltration Shield & Pub/Sub DLQ Studio',
-      icon: Flame,
-    },
+
+    // II. Compute, Serverless & Network Studios
     {
       id: 'CLOUD_RUN',
+      group: 'COMPUTE_NET',
       label: 'Cloud Run Studio ★',
       tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, tune min/max autoscaling, and switch Request vs Instance billing',
       icon: Rocket,
     },
     {
       id: 'VM_SSH',
+      group: 'COMPUTE_NET',
       label: 'VM Fleet & Web SSH',
       tip: 'Compute Engine VM Fleet & Browser Web-SSH Terminal: Start, stop, resize, or SSH directly into your Linux VMs',
       icon: Server,
     },
     {
       id: 'VPC_NETWORKS',
-      label: 'VPC Networks & Firewalls',
-      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or delete 0.0.0.0/0 ingress rules',
+      group: 'COMPUTE_NET',
+      label: 'VPC & Firewalls',
+      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
       icon: Network,
     },
+
+    // III. Data Lakehouse & Storage Studios
+    {
+      id: 'CLOUD_STORAGE',
+      group: 'DATA_LAKEHOUSE',
+      label: 'Cloud Storage ★',
+      tip: 'Cloud Storage Studio: 5-Step Compliance Bucket Wizard, strict SEC/GDPR/HIPAA locks, Soft-Delete & WORM retention, and live object explorer',
+      icon: HardDrive,
+    },
+    {
+      id: 'BIGQUERY_STUDIO',
+      group: 'DATA_LAKEHOUSE',
+      label: 'BigQuery Studio ★',
+      tip: 'BigQuery 2026 Enterprise Lakehouse & Compliance Studio: Physical vs Logical Compressed Billing (-54%), Pre-Crime SQL Dry-Run X-Ray, Auto-SQL Optimizer, and 168h FOR SYSTEM_TIME AS OF Time-Machine',
+      icon: Database,
+    },
+
+    // IV. Zero-Trust Sovereignty, Incident SRE & 2026 Lab
+    {
+      id: 'SOVEREIGN_STUDIO',
+      group: 'SECURITY_SRE',
+      label: 'Sovereign & Drift 🧬',
+      tip: 'Wave-7 Sovereign Cloud Time-Machine, Autonomous IAM Least-Privilege Surgeon (24h JIT CEL Conditions), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
+      icon: ShieldCheck,
+    },
+    {
+      id: 'SRE_WAR_ROOM',
+      group: 'SECURITY_SRE',
+      label: 'SRE War-Room 🚨',
+      tip: 'Wave-8 Autonomous SRE Incident War-Room, Cloud Logging Root-Cause Correlator, 14.4x SLO Burn Radar, VPC Service Controls (VPC-SC) Exfiltration Shield & Pub/Sub DLQ Studio',
+      icon: Flame,
+    },
+    {
+      id: 'INNOVATION_LAB',
+      group: 'SECURITY_SRE',
+      label: '2026 Lab ✦',
+      tip: '14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, DLP X-Ray, Cold-Start Surgeon & Zero-Sniffing Gemini 3.8 Vault',
+      icon: Sparkles,
+    },
+
+    // V. Inventory, FinOps, Cloud Shell & Docs
     {
       id: 'RESOURCES',
-      label: 'Live GCP Resources',
+      group: 'OPS_DOCS',
+      label: 'Live Resources',
       tip: 'Unified Live GCP Resource Inventory & Emergency Service Usage API Kill-Switch',
       icon: Layers,
     },
     {
       id: 'FINOPS',
-      label: 'Footprint & Telemetry',
+      group: 'OPS_DOCS',
+      label: 'FinOps & Telemetry',
       tip: 'Real-Time Cloud Monitoring Metrics, CPU/Memory/Network Telemetry Charts & FinOps Footprint',
       icon: BarChart3,
     },
     {
       id: 'LOGS_SHELL',
+      group: 'OPS_DOCS',
       label: 'Logs & Cloud Shell',
       tip: 'Live Cloud Logging Streamer & Interactive gcloud / bq / gsutil Web Cloud Shell',
       icon: Terminal,
     },
     {
       id: 'DOCS_GUIDE',
+      group: 'OPS_DOCS',
       label: 'Docs & Guide 📖',
       tip: 'Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide',
       icon: BookOpen,
@@ -630,26 +653,35 @@ function CloudPulseCockpit() {
             </div>
           </div>
 
-          {/* Underline Navigation Tabs */}
-          <nav className="flex items-center gap-6 mt-4 border-b border-zinc-200 dark:border-zinc-800 -mb-4 overflow-x-auto">
-            {navTabs.map((tab) => {
+          {/* Underline Navigation Tabs (Sorted into 5 Logical Architectural Domains) */}
+          <nav className="flex items-center gap-4 sm:gap-5 mt-4 border-b border-zinc-200 dark:border-zinc-800 -mb-4 overflow-x-auto">
+            {navTabs.map((tab, idx) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
+              const showGroupDivider =
+                idx > 0 && navTabs[idx - 1].group !== tab.group;
               return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  title={tab.tip}
-                  className={`inline-flex items-center gap-2 pb-3 text-xs font-semibold whitespace-nowrap transition-colors border-b-2 ${
-                    isActive
-                      ? 'border-[#3b82f6] text-[#2563eb] dark:text-[#60a5fa]'
-                      : 'text-zinc-500 hover:text-[#334155] dark:hover:text-[#e2e8f0] border-transparent hover:border-[#3b82f6]'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
-                </button>
+                <React.Fragment key={tab.id}>
+                  {showGroupDivider && (
+                    <span
+                      className="h-4 w-px bg-zinc-300 dark:bg-zinc-700/80 mb-3 shrink-0"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    title={tab.tip}
+                    className={`inline-flex items-center gap-1.5 pb-3 text-xs font-semibold whitespace-nowrap transition-colors border-b-2 cursor-pointer ${
+                      isActive
+                        ? 'border-[#3b82f6] text-[#2563eb] dark:text-[#60a5fa]'
+                        : 'text-zinc-500 hover:text-[#334155] dark:hover:text-[#e2e8f0] border-transparent hover:border-[#3b82f6]'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{tab.label}</span>
+                  </button>
+                </React.Fragment>
               );
             })}
           </nav>
