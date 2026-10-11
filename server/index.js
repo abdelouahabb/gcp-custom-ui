@@ -11792,6 +11792,160 @@ app.get('/api/project/:projectId/wave9/gke-vertex', async (req, res) => {
   }
 });
 
+// 5. POST /api/project/:projectId/cloudrun/:region/:name/convert-to-gke — Live Cloud Run to GKE Kubernetes Transpiler & Cluster Deployer
+app.post(
+  '/api/project/:projectId/cloudrun/:region/:name/convert-to-gke',
+  async (req, res) => {
+    const { projectId, region, name } = req.params;
+    const {
+      gkeCluster = '',
+      gkeLocation = 'us-central1',
+      namespace = 'production',
+      manifestYaml = '',
+      createAutopilotCluster = false,
+      newClusterName = 'cloudpulse-gke-autopilot',
+    } = req.body || {};
+
+    if (!manifestYaml || !String(manifestYaml).trim()) {
+      return res.status(400).json({
+        error: 'Kubernetes manifestYaml is required to graduate Cloud Run service to GKE.',
+      });
+    }
+
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+
+      await ensureServiceApiEnabled(projectId, 'container.googleapis.com', token);
+      await ensureServiceApiEnabled(projectId, 'cloudbuild.googleapis.com', token);
+
+      const targetCluster = createAutopilotCluster
+        ? String(newClusterName || 'cloudpulse-gke-autopilot')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-')
+        : String(gkeCluster || '').trim();
+      const targetLocation = String(gkeLocation || region || 'us-central1').trim();
+
+      let clusterOperation = null;
+      if (createAutopilotCluster) {
+        clusterOperation = await gcpApiRequest({
+          method: 'POST',
+          url: `https://container.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(targetLocation)}/clusters`,
+          token,
+          quotaProject: projectId,
+          data: {
+            cluster: {
+              name: targetCluster,
+              description: `Auto-provisioned GKE Autopilot cluster for Cloud Run graduation (${name})`,
+              autopilot: { enabled: true },
+              releaseChannel: { channel: 'REGULAR' },
+              workloadIdentityConfig: {
+                workloadPool: `${projectId}.svc.id.goog`,
+              },
+            },
+          },
+        });
+      }
+
+      if (!targetCluster) {
+        return res.status(400).json({
+          error:
+            'Select an active GKE cluster or enable "Auto-Create GKE Autopilot Cluster" to deploy.',
+        });
+      }
+
+      const b64Manifest = Buffer.from(String(manifestYaml), 'utf8').toString(
+        'base64'
+      );
+
+      const buildPayload = {
+        steps: [
+          {
+            name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim',
+            entrypoint: 'bash',
+            args: [
+              '-c',
+              `set -e
+echo "=== CloudPulse 2026: Graduating Cloud Run (${name}) to GKE Cluster (${targetCluster} in ${targetLocation}) ==="
+echo "${b64Manifest}" | base64 -d > /workspace/gke-graduated-${name}.yaml
+gcloud container clusters get-credentials "${targetCluster}" --location="${targetLocation}" --project="${projectId}"
+kubectl create namespace "${namespace}" --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f /workspace/gke-graduated-${name}.yaml
+kubectl rollout status deployment/${name} -n "${namespace}" --timeout=180s || true
+kubectl get pods,svc,hpa -n "${namespace}" -l app="${name}"`,
+            ],
+          },
+        ],
+        timeout: '900s',
+        tags: [
+          'cloudpulse-2026',
+          'cloudrun-to-gke-graduation',
+          `service-${name.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`,
+        ],
+        options: {
+          logging: 'CLOUD_LOGGING_ONLY',
+        },
+      };
+
+      let buildOp = null;
+      if (!createAutopilotCluster) {
+        buildOp = await gcpApiRequest({
+          method: 'POST',
+          url: `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/builds`,
+          token,
+          quotaProject: projectId,
+          data: buildPayload,
+        });
+      }
+
+      const buildId =
+        buildOp?.metadata?.build?.id ||
+        buildOp?.name?.split('/').pop() ||
+        'cluster-provisioning';
+
+      recordFlightEvent(projectId, {
+        action: 'CLOUD_RUN_GRADUATED_TO_GKE',
+        resourceType: 'GKE_WORKLOAD',
+        resourceName: `${name} -> GKE ${targetCluster}/${namespace}`,
+        region: targetLocation,
+        summary: createAutopilotCluster
+          ? `Provisioning GKE Autopilot cluster ${targetCluster} (${targetLocation}) + graduating Cloud Run service ${name}`
+          : `Triggered live GKE kubectl rollout (Cloud Build #${String(
+              buildId
+            ).slice(0, 8)}) graduating Cloud Run service ${name} -> GKE ${targetCluster} (${namespace})`,
+      });
+
+      return res.json({
+        ok: true,
+        buildId,
+        targetCluster,
+        targetLocation,
+        namespace,
+        clusterOperation,
+        message: createAutopilotCluster
+          ? `Provisioning GKE Autopilot Cluster "${targetCluster}" in ${targetLocation}! Once RUNNING, click Apply to GKE to roll out ${name}.`
+          : `Graduating Cloud Run "${name}" → GKE Cluster "${targetCluster}" (Namespace: ${namespace}) via live Cloud Build kubectl pipeline (#${String(
+              buildId
+            ).slice(0, 8)})!`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to graduate Cloud Run service ${name} to GKE.`,
+      });
+    }
+  }
+);
+
 // Serve static production frontend (dist/) when deployed on Cloud Run!
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
