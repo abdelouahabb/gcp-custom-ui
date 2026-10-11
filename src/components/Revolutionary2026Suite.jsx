@@ -589,21 +589,25 @@ export default function Revolutionary2026Suite({
           {
             id: 'DREAM_BRAIN',
             label: '🔮 1. Pre-Crime Bill & Dream Stack Compiler (NEW)',
+            tip: 'Simulate 30-day billing trajectories, detect Pre-Crime runaway spend anomalies, and compile natural-language architectures into live GCP resources',
             icon: Sparkles,
           },
           {
             id: 'TOPOLOGY',
             label: '2. Live Cloud Topology & Blast Radius',
+            tip: 'Visualize your live 4-Layer GCP Architecture (Public Internet Edge, VPC Backbone, Compute/Serverless, Storage/Lakehouse) and inspect blast radius',
             icon: Share2,
           },
           {
             id: 'FINOPS_SLEEP',
             label: '3. Burn-Rate Radar & Night-Mode Sleep',
+            tip: 'Inspect real-time hourly & 30-day cost breakdown per resource and park all non-production VMs & Cloud Run services to $0/hr overnight',
             icon: DollarSign,
           },
           {
             id: 'TERRAFORM',
             label: '4. Reverse-Terraform (main.tf) Exporter',
+            tip: 'Reverse-engineer your live GCP VPCs, Firewall Rules, VMs, Cloud Run services, and Storage Buckets into Terraform HCL (main.tf) or a reproducible gcloud script',
             icon: FileCode2,
           },
           {
@@ -611,51 +615,61 @@ export default function Revolutionary2026Suite({
             label: `5. Zero-Trust Security Scanner (${
               (auditData?.findings?.length || 0) + publicRun.length
             })`,
+            tip: 'Audit open 0.0.0.0/0 firewall rules, public Cloud Run endpoints, and active IAM Service Accounts with 1-Tap remediation',
             icon: ShieldAlert,
           },
           {
             id: 'BENCHMARK',
             label: '6. ⚡ Latency & HTTP X-Ray Arena',
+            tip: 'Benchmark live HTTP/TLS latency and throughput against your Cloud Run endpoints and GCP regions',
             icon: Zap,
           },
           {
             id: 'ZOMBIES',
             label: '7. 🧟 Zombie Resource & Waste Hunter',
+            tip: 'Hunt idle VMs, unattached disks, and over-provisioned resources to reclaim wasted cloud spend in 1 click',
             icon: AlertTriangle,
           },
           {
             id: 'TELEPORT_DIFF',
             label: '8. 🌍 Cross-Region Teleport, FinOps & GPU SKU',
+            tip: 'Compare regional carbon intensity, FinOps pricing, and NVIDIA GPU (L4 / H100 / A100) availability across 42 global GCP regions',
             icon: Leaf,
           },
           {
             id: 'X1',
             label: '9. 🧬 Storage DLP, Secret Leak & PII X-Ray (NEW)',
+            tip: 'Moonshot X1: Stream live Cloud Storage objects into ephemeral RAM, scan against 11 credential & GDPR/PCI PII detectors, and redact leaks in-place',
             icon: ShieldAlert,
           },
           {
             id: 'X2',
             label: '10. ⚡ Serverless Cold-Start & Diet Surgeon (NEW)',
+            tip: 'Moonshot X2: Dissect Cloud Run P99 cold-start phases, generate multi-stage Distroless Dockerfiles, and patch Startup CPU Boost + Gen2 in 1 click',
             icon: Zap,
           },
           {
             id: 'X3',
             label: '11. 🕸️ Hidden Egress & Data-Gravity Tollbooth (NEW)',
+            tip: 'Moonshot X3: Expose hidden $/GB cross-region and inter-continental bandwidth taxes between Compute VMs, Cloud Run, GCS Buckets, and BigQuery',
             icon: DollarSign,
           },
           {
             id: 'X4',
             label: '12. 🔐 Ransomware Air-Gap & Clean-Room Auditor (NEW)',
+            tip: 'Moonshot X4: Audit every Cloud Storage bucket against NIST & SEC 17a-4 ransomware survival criteria and apply 30-day Soft-Delete + Uniform IAM in 1 click',
             icon: Lock,
           },
           {
             id: 'X5',
             label: '13. ⏱️ 12-Metropolis Speed-of-Light UX Matrix (NEW)',
+            tip: 'Moonshot X5: Calculate optical-fiber RTT and TLS 1.3 latency from 12 global cities to your active GCP origin and preview Google Anycast Edge CDN speedup',
             icon: Globe,
           },
           {
             id: 'X6',
             label: '14. 🤖 AES-256-GCM AI Studio Vault (Option 3 · NEW)',
+            tip: 'Moonshot X6: Zero-Sniffing Browser WebCrypto (Direct HTTPS TLS 1.3) & RSA-OAEP-256 RAM Vault for live Gemini 3.8 Flash / 3.1 Pro SRE Co-Architect',
             icon: Sparkles,
           },
         ].map((t) => {
@@ -666,6 +680,7 @@ export default function Revolutionary2026Suite({
               key={t.id}
               type="button"
               onClick={() => setSubTab(t.id)}
+              title={t.tip}
               className={`p-3 rounded-xl border text-left transition-all flex items-center gap-2.5 cursor-pointer ${
                 active
                   ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
@@ -782,6 +797,7 @@ export default function Revolutionary2026Suite({
                 <button
                   type="button"
                   onClick={() => onOpenProvision && onOpenProvision('VPC_NETWORK')}
+                  title="Open the Live Resource Provisioner pre-set to create a new custom or auto-mode VPC Network"
                   className="w-full py-1.5 rounded-lg border border-blue-500/30 hover:bg-blue-500/15 text-[11px] font-mono text-blue-400 cursor-pointer"
                 >
                   + Provision VPC Network
@@ -846,6 +862,7 @@ export default function Revolutionary2026Suite({
                   <button
                     type="button"
                     onClick={() => onOpenProvision && onOpenProvision('CLOUD_RUN')}
+                    title="Open the Live Resource Provisioner to deploy a new serverless Cloud Run container service"
                     className="py-1.5 rounded-lg border border-violet-500/30 hover:bg-violet-500/15 text-[10px] font-mono text-violet-300 cursor-pointer"
                   >
                     + Deploy Run
@@ -855,6 +872,7 @@ export default function Revolutionary2026Suite({
                     onClick={() =>
                       onOpenProvision && onOpenProvision('COMPUTE_VM')
                     }
+                    title="Open the Live Resource Provisioner to launch a new Compute Engine VM instance"
                     className="py-1.5 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/15 text-[10px] font-mono text-emerald-300 cursor-pointer"
                   >
                     + Launch VM
@@ -889,6 +907,7 @@ export default function Revolutionary2026Suite({
                 <button
                   type="button"
                   onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
+                  title="Open the Live Resource Provisioner to create a compliant Cloud Storage bucket"
                   className="w-full py-1.5 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/15 text-[11px] font-mono text-emerald-400 cursor-pointer"
                 >
                   + Create GCS Bucket
@@ -945,6 +964,7 @@ export default function Revolutionary2026Suite({
                   type="button"
                   disabled={hibernateBusy}
                   onClick={() => handleHibernateToggle('SLEEP')}
+                  title="Stop all running Compute VMs and scale warm Cloud Run instances to minInstances=0 so overnight compute cost drops to $0.00/hr"
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded-lg inline-flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Moon className="w-3.5 h-3.5" />
@@ -954,6 +974,7 @@ export default function Revolutionary2026Suite({
                   type="button"
                   disabled={hibernateBusy}
                   onClick={() => handleHibernateToggle('WAKE')}
+                  title="Restart parked Compute Engine VMs and restore Cloud Run services for active daytime workloads"
                   className="bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold py-2 px-3 rounded-lg inline-flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Sun className="w-3.5 h-3.5" />
@@ -1008,6 +1029,7 @@ export default function Revolutionary2026Suite({
               <button
                 type="button"
                 onClick={() => setIacFormat('TERRAFORM')}
+                title="Switch view to HashiCorp Terraform HCL (main.tf) synthesized from your live GCP resources"
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
                   iacFormat === 'TERRAFORM'
                     ? 'bg-violet-600 text-white border-violet-600'
@@ -1019,6 +1041,7 @@ export default function Revolutionary2026Suite({
               <button
                 type="button"
                 onClick={() => setIacFormat('GCLOUD_SH')}
+                title="Switch view to a reproducible bash gcloud CLI script (deploy.sh) to clone your project infrastructure"
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
                   iacFormat === 'GCLOUD_SH'
                     ? 'bg-emerald-600 text-white border-emerald-600'
@@ -1040,6 +1063,7 @@ export default function Revolutionary2026Suite({
                 setCopiedType(iacFormat);
                 setTimeout(() => setCopiedType(null), 1800);
               }}
+              title="Copy the complete generated Infrastructure-as-Code blueprint to your clipboard"
               className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg cursor-pointer"
             >
               {copiedType === iacFormat ? (
@@ -1080,6 +1104,7 @@ export default function Revolutionary2026Suite({
               type="button"
               onClick={fetchExtraData}
               disabled={loadingAudit}
+              title="Re-query live GCP Compute Firewalls, Cloud Run ingress policies, and IAM Service Accounts"
               className="inline-flex items-center gap-1.5 text-xs font-mono bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 cursor-pointer"
             >
               <RefreshCw
@@ -1127,6 +1152,7 @@ export default function Revolutionary2026Suite({
                         region: 'global',
                       })
                     }
+                    title={`Immediately delete open firewall rule "${f.resourceName}" from project ${projectId}`}
                     className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-rose-500 hover:underline"
                   >
                     <Trash2 className="w-3 h-3" />

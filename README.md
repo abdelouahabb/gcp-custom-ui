@@ -78,9 +78,15 @@
     - **🔐 `X6` Option 3 AES-256-GCM Encrypted Google AI Studio BYOK RAM Vault (`gemini-3.8-flash` & `gemini-3.1-pro`)**: Seals your Google AI Studio API key (`AIzaSy...`) in volatile server RAM using `crypto.createCipheriv('aes-256-gcm')` with an `8,192`-token output budget, live `/v1beta/models` auto-discovery, and a 3-step interactive onboarding guide when empty.
 
 15. **🗄️ 5-Step Enterprise Cloud Storage Compliance & Location Wizard (`CloudStorageStudio.jsx` + `ResourceProvisionModal.jsx`)**
-    - Full Google Cloud Console parity across 5 steps: **1. Location Type** (`Region`, `Dual-region` custom pairs + 15m Turbo Replication RPO, `Multi-region` US/EU/ASIA), **2. Storage Class** (`Autoclass` vs `Standard`/`Nearline`/`Coldline`/`Archive` + Hierarchical Namespace HNS), **3. Access Control** (`Public Access Prevention` + `Uniform` vs `Fine-grained ACLs`), **4. Data Protection & Encryption** (`Soft Delete 0–90d`, `Object Versioning + max versions`, `WORM Retention Policy + Lock`, `Google-managed` vs `Cloud KMS CMEK`), and **5. Lifecycle, FinOps & Labels**—plus 1-Tap Regulatory Blueprints (`SEC Rule 17a-4`, `HIPAA`, `GDPR Sovereign`, `FinOps Tiering`, `Ransomware Air-Gap`).
+    - Full Google Cloud Console parity across 5 steps: **1. Location Type** (`Region`, `Dual-region` custom pairs + 15m Turbo Replication RPO, `Multi-region` US/EU/ASIA), **2. Storage Class** (`Autoclass` vs `Standard`/`Nearline`/`Coldline`/`Archive` + Hierarchical Namespace HNS), **3. Access Control** (`Public Access Prevention` + `Uniform` vs `Fine-grained ACLs`), **4. Data Protection & Encryption** (`Soft Delete 0–90d`, `Object Versioning + max versions`, `WORM Retention Policy + Lock`, `Google-managed` vs `Cloud KMS CMEK`), and **5. Lifecycle, FinOps & Labels**—plus **Strict Regulatory Compliance Enforcement Locks (`🔒`)** that automatically disable non-compliant downstream options when `SEC Rule 17a-4`, `GDPR EU Sovereign`, `HIPAA / SOC2`, or `AI Lakehouse (HNS)` is selected.
 
-16. **🔄 Live Google Cloud Billing Catalog Price Sync & Enterprise Discount Override (`GET /api/pricing/live-sync`)**
+16. **🔷 BigQuery 2026 Enterprise Lakehouse & Compliance Studio (`BigQueryStudio.jsx` + `ResourceProvisionModal.jsx`)**
+    - **🛡️ Dataset Posture & Compliance Matrix**: Scores every BigQuery dataset (`0–100`) and enforces 1-tap `PATCH` hardening across **Storage Billing Model** (`PHYSICAL` Compressed vs `LOGICAL` Uncompressed), **Time-Travel Window** (`48h` / `72h` / `120h` / `168h`), **Numeric Rounding** (`ROUND_HALF_EVEN` Banker's Rounding vs `ROUND_HALF_AWAY_FROM_ZERO`), **Partition & Table TTL**, **Collation (`und:ci` vs Binary)**, and **Strict Blueprint Enforcement Locks (`🔒`)** inside the Dataset Provisioning Editor.
+    - **⚡ Pre-Flight SQL Dry-Run Gatekeeper, Auto-Optimizer & Byte-Cost Firewall**: Validates every query via `jobs.query (dryRun: true)` before execution, blocks queries exceeding your configurable **Hard Byte-Scan Firewall Cap (`maxBytesBilled`)**, compares **On-Demand (`$6.25/TiB`)** vs **Enterprise Autoscaling Editions (`$0.06/slot-hr`)**, and automatically rewrites suboptimal SQL (`SELECT *`, late `LIMIT`, `REGEXP_CONTAINS`, `NOT IN`) with a **"Summary of Optimizations"**.
+    - **💎 Storage FinOps Crystal**: Simulates project-wide savings from switching datasets from `LOGICAL` to `PHYSICAL` compressed billing (`4.2x–6.5x` columnar ZSTD compression).
+    - **⏳ `FOR SYSTEM_TIME AS OF` Time-Travel Machine**: Generates point-in-time historical recovery SQL (`1h` to `168h` ago) and runs live dry-run or point-in-time queries.
+
+17. **🔄 Live Google Cloud Billing Catalog Price Sync & Enterprise Discount Override (`GET /api/pricing/live-sync`)**
     - Eliminates stale hardcoded prices by querying `cloudbilling.googleapis.com/v1/services/6F81-5844-456A/skus` on demand and allowing global (`0.50x–1.50x`) or per-SKU price overrides across the entire app.
 
 > 📖 **Full Engineering & User Manual**: Read [**`docs/REVOLUTIONARY_FEATURES_GUIDE.md`**](docs/REVOLUTIONARY_FEATURES_GUIDE.md) or click the **`Docs & Guide 📖`** tab directly inside the app for step-by-step explanations of every feature, the exact GCP REST APIs called, and billing impact.
@@ -104,7 +110,7 @@
   - **Emergency Mobile API Kill-Switch (`serviceusage.googleapis.com/v1`)**: Inspect all enabled APIs on your project with priority sorting and disable/enable services in 1 tap (`disableDependentServices: true`).
 
 - **🌐 VPC Networks, Enterprise Firewalls, Storage, BigQuery & Mobile Cloud Shell**
-  - Provision and manage custom/auto-mode VPC Networks (`REGIONAL` / `GLOBAL` BGP routing, Jumbo Frames MTU `8896`), `ALLOW`/`DENY` Ingress & Egress Firewall Rules with live `PATCH` editing and IAP lockdown, Cloud Storage Buckets, BigQuery Datasets, real-time Cloud Logging streams, and an interactive Mobile Cloud Shell (`gcloud` / `bq`).
+  - Provision and manage custom/auto-mode VPC Networks (`REGIONAL` / `GLOBAL` BGP routing, Jumbo Frames MTU `8896`), `ALLOW`/`DENY` Ingress & Egress Firewall Rules with live `PATCH` editing and IAP lockdown, Cloud Storage Buckets, BigQuery Datasets & Partitioned/Clustered Tables, real-time Cloud Logging streams, and an interactive Mobile Cloud Shell (`gcloud` / `bq`).
 
 - **🔐 Zero-Hardcoded-Credentials Multi-Account Onboarding Gate**
   - Sign in from mobile or desktop using:
@@ -122,9 +128,9 @@
 | `/api/auth/discover` | `GET` | Discovers local `gcloud` / ADC accounts and accessible GCP projects |
 | `/api/context` | `GET` | Returns active authenticated session account and project list |
 | `/api/pricing/live-sync` | `GET` | **Live Cloud Billing Price Sync**: Queries `cloudbilling.googleapis.com/v1` for live SKU rates |
-| `/api/ai-vault/status` | `GET` | Returns AES-256-GCM RAM Vault status, masked key fingerprint, and available Gemini 3.8/3.1 models |
+| `/api/ai-vault/status` | `GET` | Returns AES-256-GCM RAM Vault status, ECDH P-256 public key (`SPKI`), and available Gemini 3.8/3.1 models |
 | `/api/ai-vault/models` | `GET` | Queries `generativelanguage.googleapis.com/v1beta/models` to auto-discover live Gemini models |
-| `/api/ai-vault/configure` | `POST` | Seals a Google AI Studio API Key in volatile RAM using `crypto.createCipheriv('aes-256-gcm')` |
+| `/api/ai-vault/configure` | `POST` | Accepts an **ECDH P-256 + HKDF-SHA256 + AES-256-GCM** encrypted client envelope and seals the key in volatile RAM |
 | `/api/project/:id/ai-vault/ask` | `POST` | Runs live `gemini-3.8-flash` / `gemini-3.1-pro` SRE & FinOps reasoning (`8,192` token budget) |
 | `/api/project/:id/overview` | `GET` | Parallel live fetch of VMs, Cloud Run, GKE, VPCs, Firewalls, GCS, BigQuery, APIs & Logs |
 | `/api/project/:id/cloudrun` | `GET / PATCH` | Lists and live-patches Cloud Run Gen2 services (CPU, RAM, Min/Max scale, GPUs, Billing mode) |
@@ -132,6 +138,10 @@
 | `/api/project/:id/vms/:zone/:name/power` | `POST` | Executes `start`, `stop`, `reset`, `suspend`, `resume`, `setMachineType`, or `setDeletionProtection` |
 | `/api/project/:id/vms/:zone/:name/ssh` | `POST` | Runs live commands over `gcloud compute ssh` or reads Serial Port 1 console output |
 | `/api/project/:id/provision` | `POST` | Creates live Compute VMs, Cloud Run services, VPCs, Firewalls (`ALLOW`/`DENY`), 5-Step GCS Buckets, or BigQuery Datasets |
+| `/api/project/:id/bigquery/datasets` | `GET` | **BigQuery Studio**: Enriches all datasets with Compliance Score (`0–100`), Billing Model, Time-Travel & FinOps delta |
+| `/api/project/:id/bigquery/datasets/:d` | `PATCH` | **BigQuery Studio**: Live-patches `storageBillingModel`, `maxTimeTravelHours`, `defaultRoundingMode`, TTLs & KMS |
+| `/api/project/:id/bigquery/datasets/:d/tables` | `GET / POST` | **BigQuery Studio**: Lists tables or provisions Partitioned + Clustered + BigLake tables |
+| `/api/project/:id/bigquery/query` | `POST` | **BigQuery Studio**: Pre-Flight Dry-Run Gatekeeper, Auto-SQL Optimizer, Byte-Cost Firewall & Live Execution |
 | `/api/project/:id/storage/buckets/:b/dlp-scan` | `POST` | **Moonshot X1**: Streams object bytes in RAM to scan for leaked secrets & regulated PII |
 | `/api/project/:id/storage/buckets/:b/dlp-redact` | `POST` | **Moonshot X1**: Redacts sensitive secrets/PII in-place inside a Cloud Storage object |
 | `/api/project/:id/storage/buckets/:b/security-patch` | `POST` | **Storage Compliance**: Applies 1-tap PAP, Uniform Access, Soft Delete, Versioning, or Lifecycle rules |

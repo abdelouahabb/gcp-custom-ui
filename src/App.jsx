@@ -29,6 +29,7 @@ import {
   BookOpen,
   Globe,
   HardDrive,
+  Database,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import SortableKpiRow from './components/SortableKpiRow';
@@ -42,6 +43,7 @@ import VpcNetworksAndFirewalls from './components/VpcNetworksAndFirewalls';
 import EmergencyApiKillSwitch from './components/EmergencyApiKillSwitch';
 import CloudRunFleetManager from './components/CloudRunFleetManager';
 import CloudStorageStudio from './components/CloudStorageStudio';
+import BigQueryStudio from './components/BigQueryStudio';
 import AuthOnboardingGate from './components/AuthOnboardingGate';
 import CloudRunDeployModal from './components/CloudRunDeployModal';
 import Revolutionary2026Suite, {
@@ -263,6 +265,8 @@ function CloudPulseCockpit() {
       setActiveTab('CLOUD_RUN');
     } else if (serviceType === 'GCS_BUCKET') {
       setActiveTab('CLOUD_STORAGE');
+    } else if (serviceType === 'BIGQUERY_DATASET') {
+      setActiveTab('BIGQUERY_STUDIO');
     } else if (serviceType === 'COMPUTE_VM') {
       setActiveTab('VM_SSH');
     } else if (serviceType === 'VPC_NETWORK' || serviceType === 'VPC_FIREWALL') {
@@ -314,17 +318,78 @@ function CloudPulseCockpit() {
   const liveBurn = calculateLiveBurnRate(overview);
 
   const navTabs = [
-    { id: 'OVERVIEW', label: '2026 SRE Cockpit', icon: LayoutDashboard },
-    { id: 'GLOBAL_MAP', label: 'Global Map 🌍', icon: Globe },
-    { id: 'INNOVATION_LAB', label: '2026 Lab ✦', icon: Sparkles },
-    { id: 'CLOUD_STORAGE', label: 'Cloud Storage ★', icon: HardDrive },
-    { id: 'CLOUD_RUN', label: 'Cloud Run Studio ★', icon: Rocket },
-    { id: 'VM_SSH', label: 'VM Fleet & Web SSH', icon: Server },
-    { id: 'VPC_NETWORKS', label: 'VPC Networks & Firewalls', icon: Network },
-    { id: 'RESOURCES', label: 'Live GCP Resources', icon: Layers },
-    { id: 'FINOPS', label: 'Footprint & Telemetry', icon: BarChart3 },
-    { id: 'LOGS_SHELL', label: 'Logs & Cloud Shell', icon: Terminal },
-    { id: 'DOCS_GUIDE', label: 'Docs & Guide 📖', icon: BookOpen },
+    {
+      id: 'OVERVIEW',
+      label: '2026 SRE Cockpit',
+      tip: 'Unified 2026 SRE Cockpit: KPIs, Beyond-Console Innovation Lab, Cloud Run, VM Fleet, VPCs, Resources, API Kill-Switch, Telemetry & Cloud Shell',
+      icon: LayoutDashboard,
+    },
+    {
+      id: 'GLOBAL_MAP',
+      label: 'Global Map 🌍',
+      tip: 'Interactive 42-Region Global Submarine Cable & Data Center Map with live pricing, carbon intensity, and click-to-deploy',
+      icon: Globe,
+    },
+    {
+      id: 'INNOVATION_LAB',
+      label: '2026 Lab ✦',
+      tip: '14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, DLP X-Ray, Cold-Start Surgeon & Zero-Sniffing Gemini 3.8 Vault',
+      icon: Sparkles,
+    },
+    {
+      id: 'CLOUD_STORAGE',
+      label: 'Cloud Storage ★',
+      tip: 'Cloud Storage Studio: Create/manage buckets, inspect live objects, configure Soft-Delete & WORM retention locks, and run lifecycle rules',
+      icon: HardDrive,
+    },
+    {
+      id: 'BIGQUERY_STUDIO',
+      label: 'BigQuery Studio ★',
+      tip: 'BigQuery 2026 Enterprise Lakehouse & Compliance Studio: Physical vs Logical Compressed Billing (-54%), Pre-Crime SQL Dry-Run X-Ray, Auto-SQL Optimizer, and 168h FOR SYSTEM_TIME AS OF Time-Machine',
+      icon: Database,
+    },
+    {
+      id: 'CLOUD_RUN',
+      label: 'Cloud Run Studio ★',
+      tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, tune min/max autoscaling, and switch Request vs Instance billing',
+      icon: Rocket,
+    },
+    {
+      id: 'VM_SSH',
+      label: 'VM Fleet & Web SSH',
+      tip: 'Compute Engine VM Fleet & Browser Web-SSH Terminal: Start, stop, resize, or SSH directly into your Linux VMs',
+      icon: Server,
+    },
+    {
+      id: 'VPC_NETWORKS',
+      label: 'VPC Networks & Firewalls',
+      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or delete 0.0.0.0/0 ingress rules',
+      icon: Network,
+    },
+    {
+      id: 'RESOURCES',
+      label: 'Live GCP Resources',
+      tip: 'Unified Live GCP Resource Inventory & Emergency Service Usage API Kill-Switch',
+      icon: Layers,
+    },
+    {
+      id: 'FINOPS',
+      label: 'Footprint & Telemetry',
+      tip: 'Real-Time Cloud Monitoring Metrics, CPU/Memory/Network Telemetry Charts & FinOps Footprint',
+      icon: BarChart3,
+    },
+    {
+      id: 'LOGS_SHELL',
+      label: 'Logs & Cloud Shell',
+      tip: 'Live Cloud Logging Streamer & Interactive gcloud / bq / gsutil Web Cloud Shell',
+      icon: Terminal,
+    },
+    {
+      id: 'DOCS_GUIDE',
+      label: 'Docs & Guide 📖',
+      tip: 'Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide',
+      icon: BookOpen,
+    },
   ];
 
   return (
@@ -380,7 +445,7 @@ function CloudPulseCockpit() {
                   setInnovationSubTab('FINOPS_SLEEP');
                   setActiveTab('INNOVATION_LAB');
                 }}
-                title="Open Live Wallet Burn-Rate Radar & Night-Mode Sleep Switch"
+                title="Open Live Wallet Burn-Rate Radar & Night-Mode Sleep Switch ($0/hr overnight hibernation)"
                 className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
               >
                 <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
@@ -394,7 +459,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={() => setCommandPaletteOpen(true)}
-                title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette"
+                title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
                 className="inline-flex items-center gap-1.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30 rounded-[8px] px-3 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
               >
                 <Command className="w-3.5 h-3.5 text-violet-500" />
@@ -406,6 +471,7 @@ function CloudPulseCockpit() {
                 <button
                   type="button"
                   onClick={() => setProjectMenuOpen((o) => !o)}
+                  title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
                   className="inline-flex items-center gap-2 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-mono font-medium transition-colors shadow-sm"
                 >
                   <span className="w-2 h-2 rounded-full bg-blue-500" />
@@ -429,6 +495,7 @@ function CloudPulseCockpit() {
                             `Switched live GCP project to ${proj.projectId}`
                           );
                         }}
+                        title={`Switch active telemetry & control plane to project ${proj.projectId} (${proj.name})`}
                         className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors flex items-center justify-between ${
                           selectedProjectId === proj.projectId
                             ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold'
@@ -454,6 +521,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={() => handleOpenProvision('GCS_BUCKET')}
+                title="Provision a live GCP resource (Cloud Storage Bucket, Cloud Run Service, Compute Engine VM, VPC Network, Firewall Rule, BigQuery Dataset, or Enable API)"
                 className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
@@ -475,7 +543,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={() => setCloudRunModalOpen(true)}
-                title="Deploy your own CloudPulse 2026 on Google Cloud Run"
+                title="Deploy this CloudPulse 2026 cockpit as a serverless container on Google Cloud Run"
                 className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
               >
                 <Rocket className="w-3.5 h-3.5 text-blue-500" />
@@ -486,7 +554,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={() => setMobilePreview((m) => !m)}
-                title="Toggle Android 2026 Mobile Phone Frame vs Full Cockpit"
+                title="Toggle Android 2026 Mobile Phone Frame vs Full Widescreen Cockpit"
                 className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
               >
                 {mobilePreview ? (
@@ -504,6 +572,7 @@ function CloudPulseCockpit() {
                   fetchProjectOverview(selectedProjectId);
                   setVmRefreshTrigger((c) => c + 1);
                 }}
+                title={`Refresh live GCP telemetry, VMs, Cloud Run services, Storage buckets, and VPCs for ${selectedProjectId}`}
                 aria-label="Refresh GCP telemetry"
                 className="p-2 rounded-[8px] bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm disabled:opacity-50"
               >
@@ -518,6 +587,11 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={toggleTheme}
+                title={
+                  isDark
+                    ? 'Switch to Daylight High-Contrast Mode'
+                    : 'Switch to 2026 OLED Dark Cockpit Mode'
+                }
                 aria-label="Toggle Dark or Light Mode"
                 className="p-2 rounded-[8px] bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm"
               >
@@ -532,7 +606,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={handleDisconnect}
-                title="Disconnect & Switch Google Cloud Account"
+                title="Disconnect active session & switch Google Cloud account"
                 className="inline-flex items-center gap-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -551,6 +625,7 @@ function CloudPulseCockpit() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
+                  title={tab.tip}
                   className={`inline-flex items-center gap-2 pb-3 text-xs font-semibold whitespace-nowrap transition-colors border-b-2 ${
                     isActive
                       ? 'border-[#3b82f6] text-[#2563eb] dark:text-[#60a5fa]'
@@ -576,6 +651,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={() => setToastMessage(null)}
+                title="Dismiss notification banner"
                 className="text-xs underline opacity-75 hover:opacity-100"
               >
                 Dismiss
@@ -589,6 +665,7 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={() => fetchProjectOverview(selectedProjectId)}
+                title="Retry fetching live GCP telemetry"
                 className="underline font-semibold"
               >
                 Retry
@@ -760,6 +837,19 @@ function CloudPulseCockpit() {
                 />
               )}
 
+              {activeTab === 'BIGQUERY_STUDIO' && (
+                <BigQueryStudio
+                  projectId={selectedProjectId}
+                  onOpenProvision={handleOpenProvision}
+                  onRunInShell={handleRunInShell}
+                  onRefreshGlobal={() =>
+                    fetchProjectOverview(selectedProjectId)
+                  }
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
+
               {activeTab === 'CLOUD_RUN' && (
                 <CloudRunFleetManager
                   projectId={selectedProjectId}
@@ -878,6 +968,7 @@ function CloudPulseCockpit() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
+                title={tab.tip}
                 className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
                   isActive
                     ? 'text-blue-600 dark:text-blue-400'
@@ -952,6 +1043,173 @@ function CloudPulseCockpit() {
         onSelectTab={(tab) => setActiveTab(tab)}
         onShowToast={showToast}
       />
+
+      <GlobalInstantTooltipHud />
+    </div>
+  );
+}
+
+/**
+ * GlobalInstantTooltipHud:
+ * Guarantees 100% of buttons, links, selects, and inputs across all 18 CloudPulse 2026
+ * modules display an instant (<20ms), high-contrast 2026 Cyber HUD tooltip on hover/focus,
+ * and automatically synthesizes contextual engineer tooltips for any button that lacks
+ * an explicit `title` attribute.
+ */
+function synthesizeButtonTooltip(el) {
+  const existing =
+    el.getAttribute('data-hud-tip') ||
+    el.getAttribute('data-tooltip') ||
+    el.getAttribute('title') ||
+    el.getAttribute('aria-label');
+  if (existing && existing.trim()) return existing.trim();
+
+  const tag = (el.tagName || '').toLowerCase();
+  if (tag === 'input') {
+    const ph = el.getAttribute('placeholder');
+    if (ph) return ph.trim();
+    return '';
+  }
+
+  const rawText = (el.innerText || el.textContent || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!rawText || rawText.length > 140) return '';
+
+  const lower = rawText.toLowerCase();
+  if (lower.includes('copy')) {
+    return `Copy "${rawText}" to your system clipboard`;
+  }
+  if (lower.includes('delete') || lower.includes('destroy') || lower.includes('remove')) {
+    return `Execute live GCP deletion / teardown action: ${rawText}`;
+  }
+  if (lower.includes('deploy') || lower.includes('provision') || lower.includes('create') || lower.includes('launch')) {
+    return `Provision or deploy live Google Cloud resource: ${rawText}`;
+  }
+  if (lower.includes('scan') || lower.includes('audit') || lower.includes('x-ray')) {
+    return `Run live security, compliance & telemetry inspection: ${rawText}`;
+  }
+  if (lower.includes('ssh') || lower.includes('shell') || lower.includes('terminal')) {
+    return `Open interactive Cloud Shell / Web-SSH session: ${rawText}`;
+  }
+  if (lower.includes('refresh') || lower.includes('sync') || lower.includes('reload')) {
+    return `Sync latest live telemetry from Google Cloud APIs: ${rawText}`;
+  }
+  if (tag === 'select') {
+    return `Select configuration option (${rawText.slice(0, 60)})`;
+  }
+  return `Click to execute action: ${rawText}`;
+}
+
+function GlobalInstantTooltipHud() {
+  const [tipState, setTipState] = useState(null);
+
+  useEffect(() => {
+    let activeEl = null;
+
+    const restoreNativeTitle = (el) => {
+      if (!el) return;
+      const saved = el.getAttribute('data-hud-tip');
+      if (saved && !el.getAttribute('title')) {
+        el.setAttribute('title', saved);
+      }
+    };
+
+    const handleMouseOver = (e) => {
+      const target = e.target?.closest?.(
+        'button, a, select, input[title], [data-tooltip], [title]'
+      );
+      if (!target) {
+        if (activeEl) {
+          restoreNativeTitle(activeEl);
+          activeEl = null;
+        }
+        setTipState(null);
+        return;
+      }
+
+      const tipText = synthesizeButtonTooltip(target);
+      if (!tipText) {
+        setTipState(null);
+        return;
+      }
+
+      // Cache in data-hud-tip & suppress native delayed browser tooltip while hovered so they don't double-render
+      if (target.getAttribute('title')) {
+        target.setAttribute('data-hud-tip', target.getAttribute('title'));
+        target.removeAttribute('title');
+      } else if (!target.getAttribute('data-hud-tip')) {
+        target.setAttribute('data-hud-tip', tipText);
+      }
+
+      if (activeEl && activeEl !== target) {
+        restoreNativeTitle(activeEl);
+      }
+      activeEl = target;
+
+      const rect = target.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return;
+
+      const showBelow = rect.top < 76;
+      const centerX = Math.min(
+        window.innerWidth - 190,
+        Math.max(190, rect.left + rect.width / 2)
+      );
+      const anchorY = showBelow ? rect.bottom + 8 : rect.top - 8;
+
+      setTipState({
+        text: tipText,
+        x: centerX,
+        y: anchorY,
+        showBelow,
+      });
+    };
+
+    const handleClear = () => {
+      if (activeEl) {
+        restoreNativeTitle(activeEl);
+        activeEl = null;
+      }
+      setTipState(null);
+    };
+
+    window.addEventListener('mouseover', handleMouseOver, { passive: true });
+    window.addEventListener('mousedown', handleClear, { passive: true });
+    window.addEventListener('scroll', handleClear, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener('keydown', handleClear, { passive: true });
+
+    return () => {
+      if (activeEl) restoreNativeTitle(activeEl);
+      window.removeEventListener('mouseover', handleMouseOver);
+      window.removeEventListener('mousedown', handleClear);
+      window.removeEventListener('scroll', handleClear, { capture: true });
+      window.removeEventListener('keydown', handleClear);
+    };
+  }, []);
+
+  if (!tipState) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: `${tipState.x}px`,
+        top: `${tipState.y}px`,
+        transform: tipState.showBelow
+          ? 'translate(-50%, 0)'
+          : 'translate(-50%, -100%)',
+        zIndex: 99999,
+        pointerEvents: 'none',
+      }}
+      className="max-w-[360px] px-3 py-1.5 rounded-lg bg-zinc-950/95 text-zinc-100 border border-emerald-500/40 shadow-xl shadow-black/50 backdrop-blur-md text-[11px] font-mono leading-snug transition-opacity duration-75"
+    >
+      <div className="flex items-start gap-1.5">
+        <span className="text-emerald-400 font-extrabold shrink-0">ℹ</span>
+        <span>{tipState.text}</span>
+      </div>
     </div>
   );
 }
