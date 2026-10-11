@@ -143,4 +143,39 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   - Choose an architecture blueprint (*LLM Inference GPU API*, *Global Zero-Trust Microservice*, *High-Throughput Event Pipeline*, *Green FinOps Batch Compute*) or write a natural-language specification, and select your optimization priority (**Balanced**, **Lowest Cost `$`**, **Zero-Carbon `CFE%`**, or **Ultra-Low Latency**).
   - Evaluates all **40 Google Cloud regions** against hardware SKU availability (`NVIDIA L4 GPU` / `A3 H100`) + regional pricing multipliers + Carbon-Free Energy % to select the mathematically optimal region, generate a complete **Itemized Monthly Bill of Materials (`$/mo`)**, output a ready-to-run **`gcloud` / Infrastructure-as-Code script**, or **1-Click Live Deploy** directly into your active GCP project (`POST /api/project/:id/cloudrun`).
 
+---
+
+## ☸️ Wave 7–9 — Dedicated GKE Studio, Cloud SQL & AlloyDB, Cloud Build CI/CD & Cloud Run 2026 Evolution
+
+### 18. ☸️ Dedicated GKE Kubernetes Studio (`GkeFleetStudio.jsx` + `ResourceProvisionModal.jsx`)
+- **Where to find it**: Top navigation tab **`GKE Studio ☸️`** and inside the **`+ Provision Resource` (`GKE Cluster ☸️`)** modal.
+- **How it Works**:
+  - **1-Click GKE Autopilot & Standard Spot GPU Provisioner (`container.googleapis.com/v1`)**: Supports strict regulatory compliance locks (`🔒`) across **SEC / FedRAMP**, **GDPR EU Sovereign**, **HIPAA BAA**, and **AI Spot GPU Factory** blueprints (auto-locking Workload Identity OIDC, Private Nodes, Shielded Nodes, and Binary Authorization).
+  - **📦 K8s Workload YAML Composer & Live Deployer**: Synthesizes production Kubernetes `Deployment` + `Service` + `HorizontalPodAutoscaler` manifests and deploys workloads via `kubectl apply` or direct GitHub Cloud Build integration.
+
+### 19. 🐘 Dedicated Cloud SQL (MySQL 8.4 & PostgreSQL 16/17) & Google Cloud AlloyDB Studio (`CloudSqlAlloyStudio.jsx` + `ResourceProvisionModal.jsx`)
+- **Where to find it**: Top navigation tab **`Cloud SQL & AlloyDB 🐘`** and inside the **`+ Provision Resource` (`Cloud SQL / AlloyDB 🐘`)** modal.
+- **How it Works**:
+  - **Engine Family & Architecture Fork**: Choose **MySQL (`8.4 LTS` / `8.0`)** or **PostgreSQL (`16` / `17` / `15`)**. When PostgreSQL is selected, fork between **Classic / Enterprise Plus Cloud SQL (`sqladmin.googleapis.com/v1`)** and **Google Cloud AlloyDB (`alloydb.googleapis.com/v1`)**. Selecting MySQL automatically locks out AlloyDB with a `🔒` badge.
+  - **⚖️ Classic Cloud SQL vs. AlloyDB TCO Comparator**: Simulates vCPUs, Storage GB, Read Replicas, Vector RAG, and HTAP workloads across failover SLA (`<60s` vs `<2s` vs `<1s`) and Cost per 1,000 TPS.
+  - **🧠 AI Vector (`alloydb_scann` / `pgvector` / `MySQL 8.4 VECTOR`) & Slow-Query Index Surgeon + Zero-Password IAM Auth Proxy v2 Vault**.
+
+### 20. 🏗️ Cloud Build & GitHub Source-to-Container CI/CD Studio (`CloudBuildStudio.jsx`)
+- **Where to find it**: Top navigation tab **`Cloud Build 🏗️`** and inline inside both **Cloud Run** and **GKE** provisioning flows.
+- **How it Works**:
+  - **🐙 3-Way Container Source Selector**: Pick from **Project Artifact Registry Images**, **Public Docker/GCR URIs**, or **Build from GitHub Repository**.
+  - **🛠️ Zero-Dockerfile Cloud Buildpacks & Dockerfile Engine (`POST /api/project/:id/cloudbuild/github-build`)**: Clones any GitHub repository URL + branch, auto-creates the target Artifact Registry repository if missing, builds & pushes the container image on Google Cloud Build, and optionally deploys the built image straight to **Cloud Run** or **GKE**.
+
+### 21. 🚀 Cloud Run 2026 Direct VPC Egress, Beta Storage Volume Mounts & 1-Click GKE Kubernetes Transpiler (`CloudRunFleetManager.jsx` + `ResourceProvisionModal.jsx`)
+- **Where to find it**: Top navigation tab **`Cloud Run ★`** (`Scale & Tune` drawer + `☸️ To GKE K8s` drawer) and inside the **`+ Provision Resource` (`Cloud Run`)** modal (`1220px` wide studio).
+- **How it Works**:
+  - **🌐 2026 Direct VPC Egress (`template.vpcAccess`)**: Attach Cloud Run revisions directly to any VPC Network & Subnetwork with `PRIVATE_RANGES_ONLY` or `ALL_TRAFFIC` routing and custom Firewall Network Tags (`$0.00` Serverless VPC Connector tax).
+  - **💾 2026 Beta Storage Volume Mounts (`template.volumes` + `container.volumeMounts`)**: Mount a live **Cloud Storage Bucket via GCS FUSE** (`Read-Write` or `Read-Only`), an **In-Memory RAM Disk (`emptyDir` up to `32Gi`)**, or a **VPC Filestore NFSv3 Share** at any container `mountPath`.
+  - **☸️ 1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator (`POST /api/project/:id/cloudrun/convert-to-gke`)**: Transpiles any running Cloud Run service into a **6-Resource Production Kubernetes Bundle** (`Namespace`, Workload Identity `ServiceAccount`, Spot VM/GPU `Deployment` with `/dev/shm` RAM disk, `Service`, `HorizontalPodAutoscaler v2`, `PodDisruptionBudget`, and Zero-Trust L3/L4 `NetworkPolicy`) and applies it directly to your live GKE cluster in 1 click.
+
+### 22. 📦 Artifact Registry SLSA-3 Supply-Chain & 1-Click Orphan Digest Sweeper (`Wave9EnterpriseStudio.jsx`)
+- **Where to find it**: Top navigation tab **`Artifact Registry & SBOM 📦`**.
+- **How it Works**:
+  - Enforces `dockerConfig.immutableTags = true` across compliance blueprints, deletes individual container digests/tags in 1 click (`POST /api/project/:id/wave9/supply-chain/delete-image`), or batch-sweeps all untagged orphan layers (`POST /api/project/:id/wave9/supply-chain/sweep-orphans`) to reclaim wasted monthly Artifact Registry storage spend.
+
 

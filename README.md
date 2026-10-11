@@ -89,6 +89,27 @@
 17. **🔄 Live Google Cloud Billing Catalog Price Sync & Enterprise Discount Override (`GET /api/pricing/live-sync`)**
     - Eliminates stale hardcoded prices by querying `cloudbilling.googleapis.com/v1/services/6F81-5844-456A/skus` on demand and allowing global (`0.50x–1.50x`) or per-SKU price overrides across the entire app.
 
+18. **☸️ Dedicated GKE Kubernetes Studio — Autopilot, Spot GPUs & Workload YAML Composer (`GkeFleetStudio.jsx` + `ResourceProvisionModal.jsx`)**
+    - **1-Click GKE Autopilot & Standard Spot GPU Cluster Provisioner (`container.googleapis.com/v1`)**: Provision regional GKE Autopilot or Standard multi-zone GPU clusters (`NVIDIA L4` / `H100`) with strict compliance locks (`🔒`) across **SEC / FedRAMP**, **GDPR EU Sovereign**, **HIPAA BAA**, and **AI Spot GPU Factory** blueprints (auto-enforcing Workload Identity OIDC, Private Nodes, Shielded Nodes, and Binary Authorization).
+    - **📦 K8s Workload YAML Composer & 1-Click Live Deployer**: Generates production Kubernetes `Deployment` + `Service` + `HorizontalPodAutoscaler` manifests and applies them directly to your live GKE cluster or via **GitHub → Cloud Build → GKE** source deployment.
+
+19. **🐘 Dedicated Cloud SQL (MySQL 8.4 & PostgreSQL 16/17) & Google Cloud AlloyDB Studio (`CloudSqlAlloyStudio.jsx` + `ResourceProvisionModal.jsx`)**
+    - **Relational Engine & Architecture Fork**: Deploy **MySQL (`8.4 LTS` / `8.0`)** or **PostgreSQL (`16` / `17` / `15`)**. When PostgreSQL is selected, choose between **Classic / Enterprise Plus Cloud SQL (`sqladmin.googleapis.com/v1`)** and **Google Cloud AlloyDB (`alloydb.googleapis.com/v1`)** (selecting MySQL automatically locks out AlloyDB with a `🔒` badge).
+    - **⚖️ Classic Cloud SQL vs. AlloyDB TCO Comparator**: Compare Cloud SQL Enterprise, Cloud SQL Enterprise Plus (`99.99%` SLA, `<2s` failover), and AlloyDB (`4x` transactional throughput, `100x` columnar engine, `<1s` failover) across vCPUs, Storage, Read Pool nodes, and Cost per 1,000 TPS.
+    - **🧠 AI Vector (`alloydb_scann` / `pgvector` / `MySQL 8.4 VECTOR`) & Slow-Query Index Surgeon + Zero-Password IAM Auth Proxy v2 Vault**.
+
+20. **🏗️ Cloud Build & GitHub Source-to-Container Studio (`CloudBuildStudio.jsx` + Inline Cloud Run / GKE Integration)**
+    - **🐙 3-Way Container Source Selector**: Available both in the dedicated **`Cloud Build 🏗️`** tab and inline inside **Cloud Run** and **GKE** provisioning—choose **Project Artifact Registry Images**, **Public Docker/GCR URIs**, or **Build from GitHub Repository**.
+    - **🛠️ Zero-Dockerfile Cloud Buildpacks & Dockerfile Pipeline (`cloudbuild.googleapis.com/v1`)**: Clones any GitHub repository URL + branch, auto-creates the target **Artifact Registry** Docker repository if missing, builds & pushes the OCI container image, and optionally auto-deploys directly to **Cloud Run** or **GKE**.
+
+21. **🚀 Cloud Run 2026 Direct VPC Egress, Beta Storage Volume Mounts & 1-Click GKE Kubernetes Transpiler (`CloudRunFleetManager.jsx` + `ResourceProvisionModal.jsx`)**
+    - **🌐 2026 Direct VPC Egress (`template.vpcAccess`)**: Attach Cloud Run directly to any VPC Network & Subnetwork with `PRIVATE_RANGES_ONLY` or `ALL_TRAFFIC` routing and custom Firewall Network Tags (`$0.00` Serverless VPC Connector tax).
+    - **💾 2026 Beta Storage Volume Mounts (`template.volumes` + `container.volumeMounts`)**: Mount a live **Cloud Storage Bucket via GCS FUSE** (`Read-Write` or `Read-Only`), an **In-Memory RAM Disk (`emptyDir` up to `32Gi`)**, or a **VPC Filestore NFSv3 Share** at any container `mountPath` (both during initial provisioning and live in the **Scale & Tune** drawer).
+    - **☸️ 1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator**: Unlike the standard GCP Console (which only exports a bare Knative YAML), CloudPulse transpiles any running Cloud Run service into a **6-Resource Production Kubernetes Bundle** (`Namespace`, Workload Identity `ServiceAccount`, Spot VM/GPU `Deployment` with `/dev/shm` RAM disk, `Service`, `HorizontalPodAutoscaler v2`, `PodDisruptionBudget`, and Zero-Trust L3/L4 `NetworkPolicy`), computes live **GKE Autopilot (`-42%`) & GKE Spot (`-68%`) savings**, and deploys directly onto your GKE cluster in 1 click.
+
+22. **📦 Artifact Registry SLSA-3 Supply-Chain & 1-Click Orphan Digest Sweeper (`Wave9EnterpriseStudio.jsx`)**
+    - Audit container repositories (`artifactregistry.googleapis.com/v1`), enforce immutable tags (`dockerConfig.immutableTags = true`), delete individual container digests in 1 click, or batch-sweep all untagged orphan layers to reclaim wasted monthly storage spend.
+
 > 📖 **Full Engineering & User Manual**: Read [**`docs/REVOLUTIONARY_FEATURES_GUIDE.md`**](docs/REVOLUTIONARY_FEATURES_GUIDE.md) or click the **`Docs & Guide 📖`** tab directly inside the app for step-by-step explanations of every feature, the exact GCP REST APIs called, and billing impact.
 
 ---
@@ -98,10 +119,20 @@
 - **★ Cloud Run Serverless Studio (`run.googleapis.com/v2`)**
   - **2026 Serverless GPU Accelerators**: Attach `1x NVIDIA L4 (24GB VRAM)` or `1x NVIDIA RTX PRO 6000 Blackwell (96GB VRAM)` with configurable **GPU Zonal Redundancy** (`--no-gpu-zonal-redundancy` vs `--gpu-zonal-redundancy`) and automatic hardware minimum enforcement (`≥4 vCPU`, `≥16Gi RAM`, `GEN2`).
   - **2026 Billing Modes**: Switch between **Request-based Billing** (`cpuIdle: true` / `--billing=request`, `$0` when idle) and **Instance-based Billing** (`cpuIdle: false` / `--billing=instance`, CPU/GPU allocated for the entire instance lifetime).
-  - **Live Revision Tuner & Canary Traffic Splitting**: Scale Min/Max instances (`0` to `200`), Concurrency, CPU/Memory, Environment Variables, Public (`allUsers`) vs Private IAM authentication, and 1-tap revision rollback.
+  - **2026 Direct VPC Egress & Storage Volume Mounts (Beta)**: Native `template.vpcAccess` Direct VPC Egress (`PRIVATE_RANGES_ONLY` / `ALL_TRAFFIC` + firewall tags) and stateful/ephemeral volume mounts (`GCS_BUCKET` FUSE, `IN_MEMORY` RAM disk, `NFS_FILESTORE`).
+  - **1-Click Cloud Run → GKE Kubernetes Migration & Live Revision Tuner**: Transpile any Cloud Run service into a 6-resource Kubernetes manifest bundle and deploy straight to GKE, or scale Min/Max instances (`0` to `200`), Concurrency, CPU/Memory, Environment Variables, and Canary Traffic Splitting in place.
+
+- **☸️ Google Kubernetes Engine (GKE) Studio (`container.googleapis.com/v1`)**
+  - Dedicated GKE Autopilot & Standard Spot GPU cluster provisioner with SEC/GDPR/HIPAA compliance locks, Workload YAML Composer, GitHub-to-GKE Cloud Build integration, and 1-tap `kubeconfig` / `kubectl` commands.
+
+- **🐘 Cloud SQL & Google Cloud AlloyDB Studio (`sqladmin.googleapis.com/v1` + `alloydb.googleapis.com/v1`)**
+  - Dedicated MySQL 8.4 LTS, PostgreSQL 16/17 Cloud SQL (`Enterprise` & `Enterprise Plus`), and Google Cloud AlloyDB cluster provisioner, TCO Architecture Comparator, ScaNN / `pgvector` AI Vector Index Surgeon, and IAM Auth Proxy v2 Vault.
+
+- **🏗️ Cloud Build & Artifact Registry Supply-Chain Studios (`cloudbuild.googleapis.com/v1` + `artifactregistry.googleapis.com/v1`)**
+  - Build container images directly from GitHub repositories using Zero-Dockerfile Google Cloud Buildpacks or Dockerfiles, auto-create Artifact Registry repositories, inspect SLSA-3 provenance, and delete or batch-sweep untagged orphan digests in 1 click.
 
 - **🖥️ Compute Engine Multi-Region Studio & Web SSH (`compute.googleapis.com/v1`)**
-  - **13 Global Regions & Dynamic Availability Zones**: Americas, Europe, Asia-Pacific, and MENA.
+  - **40 Global Regions & 121 Availability Zones**: Americas, Europe, Asia-Pacific, MENA, and Africa.
   - **5 Machine Series**: `E2` (Cost-Optimized/Free Tier), `N2/N2D`, `C3/C4` (Gen-4/5 Sapphire/Emerald Rapids), `T2A Arm64` (Ampere Altra), and `G2/A2` GPU VMs.
   - **Advanced VM Configuration**: Spot VM (`up to 91% off`) vs Standard VM, `pd-balanced` / `pd-ssd` / `hyperdisk-balanced` boot disks, dedicated NVIDIA GPUs (`T4`, `L4`, `V100`, `A100`), Shielded VM (`Secure Boot` + `vTPM`), Deletion Protection toggle, Startup Scripts (`metadata.startup-script`), Live Machine Type Resizing (`setMachineType`), Suspend/Resume, and interactive **Web SSH + Serial Port 1 Console**.
 
@@ -133,11 +164,20 @@
 | `/api/ai-vault/configure` | `POST` | Accepts an **ECDH P-256 + HKDF-SHA256 + AES-256-GCM** encrypted client envelope and seals the key in volatile RAM |
 | `/api/project/:id/ai-vault/ask` | `POST` | Runs live `gemini-3.8-flash` / `gemini-3.1-pro` SRE & FinOps reasoning (`8,192` token budget) |
 | `/api/project/:id/overview` | `GET` | Parallel live fetch of VMs, Cloud Run, GKE, VPCs, Firewalls, GCS, BigQuery, APIs & Logs |
-| `/api/project/:id/cloudrun` | `GET / PATCH` | Lists and live-patches Cloud Run Gen2 services (CPU, RAM, Min/Max scale, GPUs, Billing mode) |
+| `/api/project/:id/cloudrun` | `GET / PATCH` | Lists and live-patches Cloud Run Gen2 services (CPU, RAM, Min/Max scale, GPUs, Billing mode, Direct VPC Egress & Storage Volume Mounts) |
+| `/api/project/:id/cloudrun/convert-to-gke` | `POST` | **Cloud Run → GKE Migrator**: Transpiles & deploys a 6-resource K8s bundle onto a live GKE cluster |
+| `/api/project/:id/cloudbuild/overview` | `GET` | **Cloud Build Studio**: Lists Cloud Build history (`cloudbuild.googleapis.com/v1`) & Artifact Registry images |
+| `/api/project/:id/cloudbuild/github-build` | `POST` | **GitHub Source-to-Container**: Clones GitHub repo, builds via Buildpacks/Dockerfile, pushes to Artifact Registry & optionally deploys to Cloud Run / GKE |
+| `/api/project/:id/wave9/gke-vertex` | `GET` | **GKE Studio**: Lists live GKE Autopilot & Standard clusters (`container.googleapis.com/v1`) + Vertex AI endpoints |
+| `/api/project/:id/gke/clusters/:loc/:name` | `DELETE` | **GKE Studio**: Deletes a live GKE cluster |
+| `/api/project/:id/wave9/cloud-sql` | `GET` | **Cloud SQL & AlloyDB Studio**: Lists Cloud SQL (`sqladmin.googleapis.com`) & AlloyDB (`alloydb.googleapis.com`) instances |
+| `/api/project/:id/wave9/supply-chain` | `GET` | **Artifact Registry SBOM Studio**: Lists repositories, container digests, and untagged orphan layers |
+| `/api/project/:id/wave9/supply-chain/delete-image` | `POST` | **Artifact Registry**: Deletes a specific container digest or tag via `artifactregistry.googleapis.com/v1` |
+| `/api/project/:id/wave9/supply-chain/sweep-orphans` | `POST` | **Artifact Registry**: Batch-deletes all untagged orphan digests across a repository |
 | `/api/project/:id/vms` | `GET` | Lists all Compute Engine VMs across all zones with machine types, IPs, Spot status & disks |
 | `/api/project/:id/vms/:zone/:name/power` | `POST` | Executes `start`, `stop`, `reset`, `suspend`, `resume`, `setMachineType`, or `setDeletionProtection` |
 | `/api/project/:id/vms/:zone/:name/ssh` | `POST` | Runs live commands over `gcloud compute ssh` or reads Serial Port 1 console output |
-| `/api/project/:id/provision` | `POST` | Creates live Compute VMs, Cloud Run services, VPCs, Firewalls (`ALLOW`/`DENY`), 5-Step GCS Buckets, or BigQuery Datasets |
+| `/api/project/:id/provision` | `POST` | Creates live Compute VMs, Cloud Run services (with Direct VPC & Storage Volumes), GKE Clusters, Cloud SQL / AlloyDB, VPCs, Firewalls, 5-Step GCS Buckets, or BigQuery Datasets |
 | `/api/project/:id/bigquery/datasets` | `GET` | **BigQuery Studio**: Enriches all datasets with Compliance Score (`0–100`), Billing Model, Time-Travel & FinOps delta |
 | `/api/project/:id/bigquery/datasets/:d` | `PATCH` | **BigQuery Studio**: Live-patches `storageBillingModel`, `maxTimeTravelHours`, `defaultRoundingMode`, TTLs & KMS |
 | `/api/project/:id/bigquery/datasets/:d/tables` | `GET / POST` | **BigQuery Studio**: Lists tables or provisions Partitioned + Clustered + BigLake tables |

@@ -338,6 +338,34 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-cloud-build-studio',
+        category: 'Compute & Containers Studios',
+        title: 'Open Cloud Build & GitHub Source-to-Container Studio 🏗️',
+        subtitle: 'Clone any GitHub repo, build via Buildpacks or Dockerfile, push to Artifact Registry & auto-deploy to Cloud Run or GKE',
+        keywords: 'cloud build github repo dockerfile buildpacks container ci cd artifact registry deploy',
+        badge: 'CLOUD BUILD CI/CD',
+        badgeColor: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
+        icon: Rocket,
+        run: () => {
+          onSelectTab('CLOUD_BUILD_STUDIO');
+          onClose();
+        }
+      },
+      {
+        id: 'open-cloudrun-gke-migrator',
+        category: 'Compute & Containers Studios',
+        title: 'Convert Cloud Run to GKE Kubernetes + Tune Direct VPC & Storage Volumes 🚀',
+        subtitle: '6-Resource K8s Transpiler (Deployment, HPA v2, PDB, NetworkPolicy, Workload Identity), Direct VPC Egress & GCS/RAM/NFS Volume Mounts',
+        keywords: 'cloud run to kubernetes gke convert migrate yaml direct vpc egress storage volume gcs fuse ramdisk nfs',
+        badge: 'CLOUD RUN 2026',
+        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        icon: Globe,
+        run: () => {
+          onSelectTab('CLOUD_RUN');
+          onClose();
+        }
+      },
+      {
         id: 'open-bigquery-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
         title: 'Open BigQuery 2026 Lakehouse & Compliance Studio ★',

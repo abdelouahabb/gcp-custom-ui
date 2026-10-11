@@ -102,6 +102,51 @@ const DOC_SECTIONS = [
       'GKE Autopilot empty clusters cost $0.00/hr under the GKE Free Tier management credit ($74.40/mo); Spot GPU node pools save up to 68%.',
   },
   {
+    id: 'cloud-run-2026-vpc-storage-gke-migrator',
+    wave: 'CLOUD RUN 2026 · DIRECT VPC, STORAGE VOLUMES & 1-CLICK GKE MIGRATOR',
+    title:
+      '🚀 Cloud Run 2026 Direct VPC Egress, Beta Storage Volume Mounts (GCS FUSE / RAM Disk / NFS) & 1-Click GKE Kubernetes Transpiler',
+    badge: 'CLOUD RUN ★ TAB + PROVISION MODAL',
+    badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+    icon: Rocket,
+    targetTab: 'CLOUD_RUN',
+    problemSolved:
+      'In the standard Google Cloud Console, migrating a Cloud Run service to Kubernetes only gives you a bare Knative YAML file with no HPA, PDB, NetworkPolicy, or live cluster deployment—and configuring 2026 Direct VPC Egress or Stateful Storage Volume Mounts requires hunting through nested YAML tabs.',
+    howItWorks: [
+      '🌐 2026 Direct VPC Egress Network (template.vpcAccess): Attach your Cloud Run revision directly to any VPC Network & Subnetwork with PRIVATE_RANGES_ONLY or ALL_TRAFFIC routing and custom Firewall Network Tags ($0.00 Serverless VPC Connector tax).',
+      '💾 2026 Beta Storage Volume Mounts (template.volumes + container.volumeMounts): Mount a live Cloud Storage Bucket via GCS FUSE (Read-Write or Read-Only), an ultra-fast In-Memory RAM Disk (emptyDir up to 32Gi), or a VPC Filestore NFSv3 Share at any container mountPath.',
+      '☸️ 1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator: Converts any running Cloud Run service into a 6-resource production Kubernetes bundle (Namespace, Workload Identity ServiceAccount, Spot VM/GPU Deployment with /dev/shm RAM disk, Service, HPA v2, PDB, and L3/L4 NetworkPolicy) and deploys it directly to your live GKE cluster in 1 click.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/provision (serviceType: "CLOUD_RUN") & PATCH /api/project/:id/cloudrun/:region/:name',
+      'POST /api/project/:id/cloudrun/convert-to-gke → container.googleapis.com/v1 + kubectl apply',
+    ],
+    billingImpact:
+      'Direct VPC Egress eliminates ~$14.60/mo Serverless VPC Connector instance charges; migrating warm Cloud Run services to GKE Spot VMs/GPUs cuts compute spend by up to 68%.',
+  },
+  {
+    id: 'cloud-build-github-cicd-studio',
+    wave: 'CLOUD BUILD CI/CD · GITHUB SOURCE-TO-CONTAINER STUDIO',
+    title:
+      '🏗️ Dedicated Cloud Build & GitHub Source-to-Container Studio (Zero-Dockerfile Buildpacks + Dockerfile + Auto-Deploy)',
+    badge: 'CLOUD BUILD 🏗️ TAB + CLOUD RUN / GKE MODAL',
+    badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    icon: Zap,
+    targetTab: 'CLOUD_BUILD_STUDIO',
+    problemSolved:
+      'Deploying custom applications to Cloud Run or GKE shouldn’t require local Docker builds or manual Artifact Registry repository creation.',
+    howItWorks: [
+      '🐙 3-Way Container Source Selector: Available both in the dedicated Cloud Build 🏗️ tab and inline inside Cloud Run and GKE provisioning—choose Project Artifact Registry images, Public Docker/GCR URIs, or build directly from any GitHub Repository URL + branch.',
+      '🛠️ Zero-Dockerfile Cloud Buildpacks & Dockerfile Engine: Automatically creates your target Artifact Registry Docker repository if missing, builds the container image on Google Cloud Build, and optionally deploys the built image straight to Cloud Run or GKE.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/cloudbuild/overview → cloudbuild.googleapis.com/v1 + artifactregistry.googleapis.com/v1',
+      'POST /api/project/:id/cloudbuild/github-build',
+    ],
+    billingImpact:
+      'Google Cloud Build includes 120 free build-minutes per day on the standard pool.',
+  },
+  {
     id: 'dedicated-bigquery-2026-studio',
     wave: 'BIGQUERY STUDIO · PHYSICAL COMPRESSED LAKEHOUSE',
     title:
