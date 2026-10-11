@@ -913,6 +913,10 @@ function CloudPulseCockpit() {
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
+                  onOpenProvision={(svcType) => {
+                    setProvisionInitialService(svcType || 'GKE_CLUSTER');
+                    setProvisionModalOpen(true);
+                  }}
                 />
               )}
 

@@ -24,6 +24,12 @@ const SERVICE_TABS = [
     desc: 'Deploy real Cloud Run Service (run.googleapis.com)',
   },
   {
+    id: 'GKE_CLUSTER',
+    label: 'GKE Cluster ☸️',
+    icon: Sparkles,
+    desc: 'Create real GKE Autopilot or Standard GPU Cluster (container.googleapis.com)',
+  },
+  {
     id: 'COMPUTE_VM',
     label: 'Compute VM',
     icon: Server,
@@ -513,6 +519,81 @@ export default function ResourceProvisionModal({
     }
   };
 
+  // GKE 2026 Autopilot & Standard GPU Cluster Compliance Studio State
+  const [gkeComplianceRegime, setGkeComplianceRegime] = useState('custom');
+  const [gkeMode, setGkeMode] = useState('AUTOPILOT'); // AUTOPILOT | STANDARD
+  const [gkeLocation, setGkeLocation] = useState('us-central1');
+  const [gkeReleaseChannel, setGkeReleaseChannel] = useState('REGULAR'); // RAPID | REGULAR | STABLE
+  const [gkeNetwork, setGkeNetwork] = useState('default');
+  const [gkeEnablePrivateNodes, setGkeEnablePrivateNodes] = useState(true);
+  const [gkeEnableWorkloadIdentity, setGkeEnableWorkloadIdentity] = useState(true);
+  const [gkeEnableShieldedNodes, setGkeEnableShieldedNodes] = useState(true);
+  const [gkeEnableBinaryAuth, setGkeEnableBinaryAuth] = useState(false);
+  const [gkeNodeMachineType, setGkeNodeMachineType] = useState('e2-standard-4');
+  const [gkeInitialNodeCount, setGkeInitialNodeCount] = useState(2);
+  const [gkeSpotNodes, setGkeSpotNodes] = useState(true);
+  const [gkeGpuAcceleratorType, setGkeGpuAcceleratorType] = useState('NONE'); // NONE | nvidia-l4 | nvidia-tesla-t4 | nvidia-a100-80gb
+  const [gkeGpuAcceleratorCount, setGkeGpuAcceleratorCount] = useState(1);
+
+  const applyGkeCompliancePreset = (presetId) => {
+    setGkeComplianceRegime(presetId);
+    if (presetId === 'sec-fedramp-gke') {
+      // SEC / FedRAMP Zero-Trust Enclave
+      setGkeMode('AUTOPILOT');
+      setGkeLocation('us-east4');
+      setGkeReleaseChannel('STABLE');
+      setGkeEnablePrivateNodes(true);
+      setGkeEnableWorkloadIdentity(true);
+      setGkeEnableShieldedNodes(true);
+      setGkeEnableBinaryAuth(true);
+      setGkeGpuAcceleratorType('NONE');
+    } else if (presetId === 'gdpr-eu-gke') {
+      // GDPR EU Sovereign Cluster
+      setGkeMode('AUTOPILOT');
+      setGkeLocation('europe-west4');
+      setGkeReleaseChannel('REGULAR');
+      setGkeEnablePrivateNodes(true);
+      setGkeEnableWorkloadIdentity(true);
+      setGkeEnableShieldedNodes(true);
+      setGkeEnableBinaryAuth(true);
+      setGkeGpuAcceleratorType('NONE');
+    } else if (presetId === 'hipaa-clinical-gke') {
+      // HIPAA / BAA Clinical K8s Enclave
+      setGkeMode('AUTOPILOT');
+      setGkeLocation('us-central1');
+      setGkeReleaseChannel('STABLE');
+      setGkeEnablePrivateNodes(true);
+      setGkeEnableWorkloadIdentity(true);
+      setGkeEnableShieldedNodes(true);
+      setGkeEnableBinaryAuth(true);
+      setGkeGpuAcceleratorType('NONE');
+    } else if (presetId === 'ai-gpu-cluster') {
+      // AI / Spot GPU Training & Inference Cluster
+      setGkeMode('STANDARD');
+      setGkeLocation('us-central1');
+      setGkeReleaseChannel('RAPID');
+      setGkeNodeMachineType('g2-standard-4');
+      setGkeInitialNodeCount(1);
+      setGkeSpotNodes(true);
+      setGkeGpuAcceleratorType('nvidia-l4');
+      setGkeGpuAcceleratorCount(1);
+      setGkeEnablePrivateNodes(false);
+      setGkeEnableWorkloadIdentity(true);
+      setGkeEnableShieldedNodes(true);
+      setGkeEnableBinaryAuth(false);
+    } else {
+      // Custom Mode
+      setGkeMode('AUTOPILOT');
+      setGkeLocation('us-central1');
+      setGkeReleaseChannel('REGULAR');
+      setGkeEnablePrivateNodes(true);
+      setGkeEnableWorkloadIdentity(true);
+      setGkeEnableShieldedNodes(true);
+      setGkeEnableBinaryAuth(false);
+      setGkeGpuAcceleratorType('NONE');
+    }
+  };
+
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [copiedCmd, setCopiedCmd] = useState(false);
@@ -520,6 +601,7 @@ export default function ResourceProvisionModal({
   const generateDefaultName = (type, proj) => {
     const suffix = Math.floor(1000 + Math.random() * 8999);
     if (type === 'COMPUTE_VM') return `${proj}-vm-${suffix}`;
+    if (type === 'GKE_CLUSTER') return `${proj}-gke-${suffix}`;
     if (type === 'VPC_NETWORK') return `${proj}-vpc-${suffix}`;
     if (type === 'VPC_FIREWALL') return `allow-web-${suffix}`;
     if (type === 'GCS_BUCKET') return `${proj}-bucket-${suffix}`;
@@ -534,6 +616,7 @@ export default function ResourceProvisionModal({
       if (initialLocation?.region) {
         setRegion(initialLocation.region);
         setVmRegion(initialLocation.region);
+        setGkeLocation(initialLocation.region);
         setBqLocationType('REGIONAL');
         setBqLocation(initialLocation.region);
       }
@@ -557,6 +640,32 @@ export default function ResourceProvisionModal({
 
   const gcloudPreview = useMemo(() => {
     const clean = (name || 'resource').trim().toLowerCase();
+    if (serviceType === 'GKE_CLUSTER') {
+      const cleanGke = clean.replace(/[^a-z0-9-]/g, '-');
+      const secFlags = [
+        `--release-channel=${gkeReleaseChannel.toLowerCase()}`,
+        `--network=${gkeNetwork}`,
+        gkeEnablePrivateNodes ? '--enable-private-nodes' : '',
+        gkeEnableWorkloadIdentity
+          ? `--workload-pool=${projectId}.svc.id.goog`
+          : '',
+        gkeEnableBinaryAuth ? '--binauthz-evaluation-mode=PROJECT_SINGLETON_POLICY_ENFORCE' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+      if (gkeMode === 'AUTOPILOT') {
+        return `gcloud container clusters create-auto ${cleanGke} --project=${projectId} --region=${gkeLocation} ${secFlags}`;
+      }
+      const spotFlag = gkeSpotNodes ? ' --spot' : '';
+      const shieldFlag = gkeEnableShieldedNodes
+        ? ' --enable-shielded-nodes --shielded-secure-boot --shielded-integrity-monitoring'
+        : '';
+      const gpuFlag =
+        gkeGpuAcceleratorType !== 'NONE'
+          ? ` --accelerator=type=${gkeGpuAcceleratorType},count=${gkeGpuAcceleratorCount}`
+          : '';
+      return `gcloud container clusters create ${cleanGke} --project=${projectId} --location=${gkeLocation} --machine-type=${gkeNodeMachineType} --num-nodes=${gkeInitialNodeCount}${spotFlag}${gpuFlag}${shieldFlag} ${secFlags}`;
+    }
     if (serviceType === 'COMPUTE_VM') {
       const tags = [
         ...(allowHttp ? ['http-server'] : []),
@@ -696,6 +805,19 @@ export default function ResourceProvisionModal({
     serviceType,
     name,
     projectId,
+    gkeMode,
+    gkeLocation,
+    gkeReleaseChannel,
+    gkeNetwork,
+    gkeEnablePrivateNodes,
+    gkeEnableWorkloadIdentity,
+    gkeEnableShieldedNodes,
+    gkeEnableBinaryAuth,
+    gkeNodeMachineType,
+    gkeInitialNodeCount,
+    gkeSpotNodes,
+    gkeGpuAcceleratorType,
+    gkeGpuAcceleratorCount,
     zone,
     machineType,
     diskSizeGb,
@@ -781,6 +903,42 @@ export default function ResourceProvisionModal({
       'g2-standard-8': 0.853,
       'a2-highgpu-1g': 3.673,
     };
+
+    if (serviceType === 'GKE_CLUSTER') {
+      // GKE Free Tier provides $74.40/mo credit covering 1 cluster management fee ($0.10/hr)
+      if (gkeMode === 'AUTOPILOT') {
+        return {
+          hourly: 0,
+          monthly: 0,
+          badge: 'GKE AUTOPILOT ($0.00 EMPTY CLUSTER · POD-LEVEL BILLING)',
+          detail:
+            '1st cluster management fee ($74.40/mo) covered by GKE Free Tier · Billed strictly per running Pod vCPU/GiB request',
+        };
+      }
+      const nodeRate = baseRates[gkeNodeMachineType] || 0.134;
+      const gpuRate =
+        gkeGpuAcceleratorType !== 'NONE' &&
+        !gkeNodeMachineType.startsWith('g2-') &&
+        !gkeNodeMachineType.startsWith('a2-')
+          ? (gkeGpuAcceleratorType === 'nvidia-a100-80gb'
+              ? 3.67
+              : gkeGpuAcceleratorType === 'nvidia-l4'
+              ? 0.56
+              : 0.35) * Number(gkeGpuAcceleratorCount || 1)
+          : 0;
+      const singleNodeHr = (nodeRate + gpuRate) * (gkeSpotNodes ? 0.32 : 1.0);
+      const totalHr = singleNodeHr * Number(gkeInitialNodeCount || 1);
+      return {
+        hourly: totalHr,
+        monthly: totalHr * 730,
+        badge: gkeSpotNodes
+          ? `GKE STANDARD · ${gkeInitialNodeCount}x SPOT NODE(S) (-68% SAVED)`
+          : `GKE STANDARD · ${gkeInitialNodeCount}x ON-DEMAND NODE(S)`,
+        detail: `${gkeInitialNodeCount}x ${gkeNodeMachineType}${
+          gkeGpuAcceleratorType !== 'NONE' ? ` + ${gkeGpuAcceleratorCount}x ${gkeGpuAcceleratorType}` : ''
+        } (${gkeSpotNodes ? 'Spot VM Nodes' : 'On-Demand'})`,
+      };
+    }
 
     if (serviceType === 'COMPUTE_VM') {
       const baseMachine = baseRates[machineType] || 0.067;
@@ -919,6 +1077,12 @@ export default function ResourceProvisionModal({
     };
   }, [
     serviceType,
+    gkeMode,
+    gkeNodeMachineType,
+    gkeInitialNodeCount,
+    gkeSpotNodes,
+    gkeGpuAcceleratorType,
+    gkeGpuAcceleratorCount,
     machineType,
     spotInstance,
     vmGpuType,
@@ -956,9 +1120,26 @@ export default function ResourceProvisionModal({
         {
           serviceType,
           name: name.trim(),
-          region: serviceType === 'COMPUTE_VM' ? vmRegion : region,
+          region:
+            serviceType === 'COMPUTE_VM'
+              ? vmRegion
+              : serviceType === 'GKE_CLUSTER'
+              ? gkeLocation
+              : region,
           zone,
           config: {
+            gkeMode,
+            gkeLocation,
+            releaseChannel: gkeReleaseChannel,
+            enablePrivateNodes: gkeEnablePrivateNodes,
+            enableWorkloadIdentity: gkeEnableWorkloadIdentity,
+            enableShieldedNodes: gkeEnableShieldedNodes,
+            enableBinaryAuth: gkeEnableBinaryAuth,
+            nodeMachineType: gkeNodeMachineType,
+            initialNodeCount: Number(gkeInitialNodeCount || 1),
+            spotNodes: gkeSpotNodes,
+            gpuAcceleratorType: gkeGpuAcceleratorType,
+            gpuAcceleratorCount: Number(gkeGpuAcceleratorCount || 1),
             machineType,
             osImage,
             diskSizeGb,
@@ -978,7 +1159,8 @@ export default function ResourceProvisionModal({
             autoCreateSubnetworks,
             routingMode,
             mtu,
-            network: firewallNetwork,
+            network:
+              serviceType === 'GKE_CLUSTER' ? gkeNetwork : firewallNetwork,
             action: firewallAction,
             direction: firewallDirection,
             priority: Number(firewallPriority),
@@ -1036,6 +1218,8 @@ export default function ResourceProvisionModal({
             complianceRegime:
               serviceType === 'BIGQUERY_DATASET'
                 ? bqComplianceRegime
+                : serviceType === 'GKE_CLUSTER'
+                ? gkeComplianceRegime
                 : gcsComplianceRegime,
             dataClassification:
               serviceType === 'BIGQUERY_DATASET'
@@ -1260,6 +1444,23 @@ export default function ResourceProvisionModal({
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {serviceType === 'GKE_CLUSTER' && (
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                  Active GKE Control Plane Posture
+                </label>
+                <div className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono text-zinc-800 dark:text-zinc-200 flex items-center justify-between gap-2">
+                  <span className="truncate font-bold text-indigo-600 dark:text-indigo-400">
+                    ☸️ {gkeMode} · {gkeLocation} ({gkeReleaseChannel})
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                    {gkeEnableWorkloadIdentity ? 'WI + ' : ''}
+                    {gkeEnablePrivateNodes ? 'PRIVATE' : 'PUBLIC'}
+                  </span>
+                </div>
               </div>
             )}
 
@@ -4132,6 +4333,457 @@ export default function ResourceProvisionModal({
                         className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {serviceType === 'GKE_CLUSTER' && (() => {
+            const isSecGke = gkeComplianceRegime === 'sec-fedramp-gke';
+            const isGdprGke = gkeComplianceRegime === 'gdpr-eu-gke';
+            const isHipaaGke = gkeComplianceRegime === 'hipaa-clinical-gke';
+            const isAiGpuGke = gkeComplianceRegime === 'ai-gpu-cluster';
+            const isZeroTrustEnclave = isSecGke || isGdprGke || isHipaaGke;
+
+            const lockModeAutopilot = isZeroTrustEnclave;
+            const lockModeStandard = isAiGpuGke;
+            const lockPrivateNodesOn = isZeroTrustEnclave;
+            const lockWorkloadIdentityOn = isZeroTrustEnclave || isAiGpuGke;
+            const lockBinaryAuthOn = isZeroTrustEnclave;
+            const lockStableChannel = isSecGke || isHipaaGke;
+
+            const allowedGkeRegions = Object.entries(GCP_REGION_ZONES).filter(
+              ([regKey]) => {
+                if (isGdprGke) return regKey.startsWith('europe-');
+                if (isSecGke || isHipaaGke) return regKey.startsWith('us-');
+                return true;
+              }
+            );
+
+            return (
+              <div className="space-y-4">
+                {/* STEP 0: 1-Click GKE Sovereign & AI Cluster Compliance Blueprints */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-emerald-500/10 border border-indigo-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
+                        Step 0 · 2026 GKE Sovereign & AI Cluster Compliance Blueprints
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 font-bold">
+                      {gkeComplianceRegime === 'custom'
+                        ? 'UNLOCKED CUSTOM ARCHITECTURE'
+                        : `🔒 ENFORCING ${gkeComplianceRegime.toUpperCase()}`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                    {[
+                      {
+                        id: 'sec-fedramp-gke',
+                        title: 'SEC / FedRAMP Enclave',
+                        sub: 'Autopilot · Private Nodes · BinaryAuth · STABLE · US',
+                      },
+                      {
+                        id: 'gdpr-eu-gke',
+                        title: 'GDPR EU Sovereign',
+                        sub: 'Autopilot · EU Residency Lock · Workload ID · BinaryAuth',
+                      },
+                      {
+                        id: 'hipaa-clinical-gke',
+                        title: 'HIPAA Clinical K8s',
+                        sub: 'Autopilot · Shielded + Private Nodes · STABLE · US BAA',
+                      },
+                      {
+                        id: 'ai-gpu-cluster',
+                        title: 'AI / Spot GPU Cluster',
+                        sub: 'Standard Mode · g2-standard-4 (NVIDIA L4) · Spot -68%',
+                      },
+                      {
+                        id: 'custom',
+                        title: 'Custom Mode (Unlocked)',
+                        sub: 'Full manual control over Autopilot vs Standard & GPUs',
+                      },
+                    ].map((preset) => {
+                      const active = gkeComplianceRegime === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => applyGkeCompliancePreset(preset.id)}
+                          title={`Activate ${preset.title}: ${preset.sub}`}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            active
+                              ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
+                              : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-indigo-500/50'
+                          }`}
+                        >
+                          <div className="text-[11px] font-extrabold flex items-center justify-between gap-1">
+                            <span className="truncate">{preset.title}</span>
+                            {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                          </div>
+                          <div
+                            className={`text-[10px] mt-0.5 line-clamp-2 ${
+                              active
+                                ? 'text-indigo-100'
+                                : 'text-zinc-500 dark:text-zinc-400'
+                            }`}
+                          >
+                            {preset.sub}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* STEP 1: GKE Architecture Mode (Autopilot vs Standard Node Pool) */}
+                <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                      Step 1 · Control Plane & Operation Mode (`autopilot.enabled`)
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-500 font-bold">
+                      $74.40/mo GKE Free Tier Credit Included
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      disabled={lockModeStandard}
+                      onClick={() => !lockModeStandard && setGkeMode('AUTOPILOT')}
+                      title={
+                        lockModeStandard
+                          ? '🔒 Locked by AI / Spot GPU Blueprint: Direct GPU node pool tuning requires GKE Standard mode'
+                          : 'Google manages all nodes, security hardening, and auto-provisioning. Billed strictly per running Pod vCPU/GiB.'
+                      }
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        lockModeStandard
+                          ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
+                          : gkeMode === 'AUTOPILOT'
+                          ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 cursor-pointer shadow-sm'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer hover:border-emerald-500/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold">
+                          ☸️ GKE Autopilot (Serverless K8s · Zero Idle Node Cost)
+                        </span>
+                        {lockModeStandard && <span>🔒</span>}
+                      </div>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
+                        $0.00/hr empty cluster · Google manages nodes, Seccomp, Shielded VMs & Workload Identity automatically.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={lockModeAutopilot}
+                      onClick={() => !lockModeAutopilot && setGkeMode('STANDARD')}
+                      title={
+                        lockModeAutopilot
+                          ? `🔒 Locked by ${gkeComplianceRegime.toUpperCase()}: Zero-Trust Enclaves require GKE Autopilot immutable node hardening`
+                          : 'Full control over GCE machine types, Spot VM discounts (-68%), and dedicated NVIDIA L4 / T4 / A100 GPUs.'
+                      }
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        lockModeAutopilot
+                          ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
+                          : gkeMode === 'STANDARD'
+                          ? 'bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-300 cursor-pointer shadow-sm'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer hover:border-indigo-500/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold">
+                          🖥️ GKE Standard (Custom Node Pools + Spot GPUs)
+                        </span>
+                        {lockModeAutopilot && <span>🔒</span>}
+                      </div>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
+                        Direct control over `initialNodeCount`, `Spot VM (-68%)`, and `NVIDIA L4 / T4 / A100` GPU accelerators.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* STEP 2: Region Sovereignty, Release Channel & VPC Network */}
+                <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block">
+                    Step 2 · Regional Control Plane Sovereignty & Release Channel
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        GKE Cluster Region {isGdprGke ? '(🔒 EU Only)' : isSecGke || isHipaaGke ? '(🔒 US Only)' : ''}
+                      </label>
+                      <select
+                        value={gkeLocation}
+                        onChange={(e) => setGkeLocation(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        {allowedGkeRegions.map(([regKey, info]) => (
+                          <option key={regKey} value={regKey}>
+                            {info.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        K8s Release Channel (`releaseChannel.channel`)
+                      </label>
+                      <select
+                        value={gkeReleaseChannel}
+                        disabled={lockStableChannel}
+                        onChange={(e) => setGkeReleaseChannel(e.target.value)}
+                        title={
+                          lockStableChannel
+                            ? '🔒 Locked to STABLE channel by SEC/HIPAA compliance regime'
+                            : 'Select Kubernetes control plane upgrade cadence'
+                        }
+                        className={`w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 ${
+                          lockStableChannel ? 'opacity-60 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        <option value="RAPID">RAPID (Newest K8s + AI/GPU Features)</option>
+                        <option value="REGULAR">REGULAR (Recommended Production)</option>
+                        <option value="STABLE">STABLE (Mission-Critical Regulated)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        VPC Network (`IP_ALIASES` VPC-Native)
+                      </label>
+                      <input
+                        type="text"
+                        value={gkeNetwork}
+                        onChange={(e) => setGkeNetwork(e.target.value)}
+                        placeholder="default"
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* STEP 3: Standard Mode Node Pool & GPU Accelerators (Shown when STANDARD is active) */}
+                {gkeMode === 'STANDARD' && (
+                  <div className="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/25 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
+                        Step 3 · Standard Node Pool Sizing, Spot VMs & NVIDIA GPUs
+                      </span>
+                      <span className="text-[10px] font-mono text-emerald-500 font-bold">
+                        {gkeSpotNodes ? 'SPOT PREEMPTIBLE (-68% OFF)' : 'STANDARD ON-DEMAND'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Node Machine Type
+                        </label>
+                        <select
+                          value={gkeNodeMachineType}
+                          onChange={(e) => setGkeNodeMachineType(e.target.value)}
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          <option value="e2-medium">e2-medium (2 vCPU · 4GB)</option>
+                          <option value="e2-standard-2">e2-standard-2 (2 vCPU · 8GB)</option>
+                          <option value="e2-standard-4">e2-standard-4 (4 vCPU · 16GB)</option>
+                          <option value="n2-standard-4">n2-standard-4 (4 vCPU · 16GB)</option>
+                          <option value="c3-standard-4">c3-standard-4 (4 vCPU Gen3 · 16GB)</option>
+                          <option value="g2-standard-4">g2-standard-4 (4 vCPU · 16GB · L4 GPU)</option>
+                          <option value="g2-standard-8">g2-standard-8 (8 vCPU · 32GB · L4 GPU)</option>
+                          <option value="a2-highgpu-1g">a2-highgpu-1g (12 vCPU · 85GB · A100)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          Initial Node Count (`1-12`)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={12}
+                          value={gkeInitialNodeCount}
+                          onChange={(e) =>
+                            setGkeInitialNodeCount(
+                              Math.max(1, Math.min(12, Number(e.target.value) || 1))
+                            )
+                          }
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                          GPU Accelerator (`accelerators`)
+                        </label>
+                        <select
+                          value={gkeGpuAcceleratorType}
+                          onChange={(e) => setGkeGpuAcceleratorType(e.target.value)}
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          <option value="NONE">None (CPU-Only Nodes)</option>
+                          <option value="nvidia-l4">NVIDIA L4 (24GB Ada Lovelace)</option>
+                          <option value="nvidia-tesla-t4">NVIDIA Tesla T4 (16GB Inference)</option>
+                          <option value="nvidia-a100-80gb">NVIDIA A100 (80GB HBM2e Training)</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col justify-end">
+                        <label className="flex items-center gap-2 p-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={gkeSpotNodes}
+                            onChange={(e) => setGkeSpotNodes(e.target.checked)}
+                            className="rounded"
+                          />
+                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                            Spot Nodes (-68% FinOps)
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 4: Zero-Trust Security Enclave Locks (Workload Identity, Private Nodes, Shielded Nodes, Binary Auth) */}
+                <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block">
+                    Step 4 · Zero-Trust K8s Enclave Hardening (Strict Compliance Locks)
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <label
+                      title={
+                        lockWorkloadIdentityOn
+                          ? `🔒 Enforced by ${gkeComplianceRegime.toUpperCase()}: Workload Identity OIDC federation is mandatory to eliminate static JSON service account keys.`
+                          : 'Bind Kubernetes ServiceAccounts directly to Google Cloud IAM roles via OIDC.'
+                      }
+                      className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
+                        lockWorkloadIdentityOn
+                          ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={gkeEnableWorkloadIdentity}
+                        disabled={lockWorkloadIdentityOn}
+                        onChange={(e) =>
+                          !lockWorkloadIdentityOn &&
+                          setGkeEnableWorkloadIdentity(e.target.checked)
+                        }
+                        className="mt-0.5 rounded"
+                      />
+                      <div className="text-xs">
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                          <span>Workload Identity Federation (`{projectId}.svc.id.goog`)</span>
+                          {lockWorkloadIdentityOn && <span>🔒</span>}
+                        </div>
+                        <p className="text-[10px] text-zinc-500">
+                          Eliminates static SA keys; Pods authenticate via short-lived OIDC tokens.
+                        </p>
+                      </div>
+                    </label>
+
+                    <label
+                      title={
+                        lockPrivateNodesOn
+                          ? `🔒 Enforced by ${gkeComplianceRegime.toUpperCase()}: Worker nodes must not have public RFC-1918 external IPv4 addresses.`
+                          : 'Provision worker nodes with internal RFC-1918 IPs only (no public internet exposure).'
+                      }
+                      className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
+                        lockPrivateNodesOn
+                          ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={gkeEnablePrivateNodes}
+                        disabled={lockPrivateNodesOn}
+                        onChange={(e) =>
+                          !lockPrivateNodesOn &&
+                          setGkeEnablePrivateNodes(e.target.checked)
+                        }
+                        className="mt-0.5 rounded"
+                      />
+                      <div className="text-xs">
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                          <span>Private Cluster Nodes (`enablePrivateNodes`)</span>
+                          {lockPrivateNodesOn && <span>🔒</span>}
+                        </div>
+                        <p className="text-[10px] text-zinc-500">
+                          Isolates worker nodes from public internet ingress (RFC-1918 only).
+                        </p>
+                      </div>
+                    </label>
+
+                    <label
+                      title={
+                        lockBinaryAuthOn
+                          ? `🔒 Enforced by ${gkeComplianceRegime.toUpperCase()}: Only cryptographically attested container images may run.`
+                          : 'Require cryptographic Binary Authorization attestations before Pod admission.'
+                      }
+                      className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
+                        lockBinaryAuthOn
+                          ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={gkeEnableBinaryAuth}
+                        disabled={lockBinaryAuthOn}
+                        onChange={(e) =>
+                          !lockBinaryAuthOn && setGkeEnableBinaryAuth(e.target.checked)
+                        }
+                        className="mt-0.5 rounded"
+                      />
+                      <div className="text-xs">
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                          <span>Binary Authorization SLSA Gatekeeper (`PROJECT_SINGLETON_POLICY_ENFORCE`)</span>
+                          {lockBinaryAuthOn && <span>🔒</span>}
+                        </div>
+                        <p className="text-[10px] text-zinc-500">
+                          Blocks unsigned or unverified container images at admission time.
+                        </p>
+                      </div>
+                    </label>
+
+                    <label
+                      title="Enforces vTPM Secure Boot and kernel integrity monitoring across all GKE worker nodes."
+                      className="flex items-start gap-2.5 p-2.5 rounded-xl border bg-emerald-500/5 border-emerald-500/30 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={gkeEnableShieldedNodes}
+                        disabled={isZeroTrustEnclave}
+                        onChange={(e) =>
+                          !isZeroTrustEnclave &&
+                          setGkeEnableShieldedNodes(e.target.checked)
+                        }
+                        className="mt-0.5 rounded"
+                      />
+                      <div className="text-xs">
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                          <span>Shielded GKE Nodes (`enableSecureBoot` + `vTPM`)</span>
+                          {isZeroTrustEnclave && <span>🔒</span>}
+                        </div>
+                        <p className="text-[10px] text-zinc-500">
+                          Cryptographically verifies boot loader & kernel integrity against rootkits.
+                        </p>
+                      </div>
+                    </label>
                   </div>
                 </div>
               </div>

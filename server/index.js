@@ -2726,6 +2726,148 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       });
     }
 
+    // G) Create Real GKE Autopilot or Standard GPU Cluster (`container.googleapis.com/v1/projects/:id/locations/:loc/clusters`)
+    if (serviceType === 'GKE_CLUSTER') {
+      const gkeMode = String(config.gkeMode || 'AUTOPILOT').toUpperCase(); // 'AUTOPILOT' | 'STANDARD'
+      const gkeLocation = (config.gkeLocation || region || 'us-central1').trim();
+      const releaseChannel = config.releaseChannel || 'REGULAR'; // 'RAPID' | 'REGULAR' | 'STABLE'
+      const networkName = (config.network || 'default').trim();
+      const enablePrivateNodes = Boolean(config.enablePrivateNodes);
+      const enableWorkloadIdentity = config.enableWorkloadIdentity !== false;
+      const enableShieldedNodes = config.enableShieldedNodes !== false;
+      const enableBinaryAuth = Boolean(config.enableBinaryAuth);
+      const nodeMachineType = config.nodeMachineType || 'e2-standard-4';
+      const initialNodeCount = Math.max(
+        1,
+        Math.min(12, Number(config.initialNodeCount || 1))
+      );
+      const spotNodes = Boolean(config.spotNodes);
+      const gpuAcceleratorType = config.gpuAcceleratorType || 'NONE';
+      const gpuAcceleratorCount = Number(config.gpuAcceleratorCount || 0);
+
+      // Ensure container.googleapis.com is enabled first
+      try {
+        await gcpFetch(
+          `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/services/container.googleapis.com:enable`,
+          token,
+          projectId,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: {} }
+        );
+      } catch {
+        // ignore if already enabled
+      }
+
+      const clusterObj = {
+        name: cleanName,
+        description:
+          config.description ||
+          `Provisioned via CloudPulse 2026 GKE ${gkeMode} Studio`,
+        network: `projects/${projectId}/global/networks/${networkName}`,
+        releaseChannel: {
+          channel: releaseChannel,
+        },
+        ipAllocationPolicy: {
+          useIpAliases: true,
+        },
+        resourceLabels: {
+          'managed-by': 'cloudpulse-2026',
+          'gke-mode': gkeMode.toLowerCase(),
+        },
+      };
+
+      if (enableWorkloadIdentity) {
+        clusterObj.workloadIdentityConfig = {
+          workloadPool: `${projectId}.svc.id.goog`,
+        };
+      }
+
+      if (enablePrivateNodes) {
+        clusterObj.privateClusterConfig = {
+          enablePrivateNodes: true,
+          enablePrivateEndpoint: false,
+        };
+      }
+
+      if (enableBinaryAuth) {
+        clusterObj.binaryAuthorization = {
+          evaluationMode: 'PROJECT_SINGLETON_POLICY_ENFORCE',
+        };
+      }
+
+      if (gkeMode === 'AUTOPILOT') {
+        clusterObj.autopilot = { enabled: true };
+      } else {
+        clusterObj.shieldedNodes = { enabled: enableShieldedNodes };
+        const nodeConfig = {
+          machineType: nodeMachineType,
+          diskSizeGb: 50,
+          diskType: 'pd-balanced',
+          spot: spotNodes,
+          oauthScopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          shieldedInstanceConfig: {
+            enableSecureBoot: enableShieldedNodes,
+            enableIntegrityMonitoring: enableShieldedNodes,
+          },
+        };
+        if (
+          gpuAcceleratorType &&
+          gpuAcceleratorType !== 'NONE' &&
+          gpuAcceleratorCount > 0
+        ) {
+          nodeConfig.accelerators = [
+            {
+              acceleratorType: gpuAcceleratorType,
+              acceleratorCount: String(gpuAcceleratorCount),
+            },
+          ];
+        }
+        clusterObj.nodePools = [
+          {
+            name: spotNodes ? 'spot-gpu-pool' : 'default-pool',
+            initialNodeCount,
+            config: nodeConfig,
+            autoscaling: {
+              enabled: true,
+              minNodeCount: 1,
+              maxNodeCount: Math.max(initialNodeCount, 4),
+            },
+          },
+        ];
+      }
+
+      const op = await gcpFetch(
+        `https://container.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(gkeLocation)}/clusters`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { cluster: clusterObj },
+          timeout: 10000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'GKE_CLUSTER_PROVISIONED',
+        resourceType: 'GKE_CLUSTER',
+        resourceName: cleanName,
+        region: gkeLocation,
+        summary: `Dispatched GKE ${gkeMode} cluster "${cleanName}" in ${gkeLocation} (${releaseChannel} channel)`,
+      });
+
+      return res.json({
+        ok: true,
+        message: `Dispatched real GKE ${gkeMode} Cluster creation for "${cleanName}" in ${gkeLocation} (${releaseChannel} channel${
+          enablePrivateNodes ? ', Private Nodes' : ''
+        }${enableBinaryAuth ? ', Binary Auth Enforced' : ''})!`,
+        operation: op,
+      });
+    }
+
     res.status(400).json({ error: `Unsupported serviceType: ${serviceType}` });
   } catch (err) {
     const gcpErrMsg =
@@ -2735,6 +2877,49 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
     res.status(400).json({ error: gcpErrMsg });
   }
 });
+
+// 9a-gke. DELETE /api/project/:projectId/gke/clusters/:location/:clusterName
+app.delete(
+  '/api/project/:projectId/gke/clusters/:location/:clusterName',
+  async (req, res) => {
+    const { projectId, location, clusterName } = req.params;
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+      const op = await gcpFetch(
+        `https://container.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          location
+        )}/clusters/${encodeURIComponent(clusterName)}`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 8000 }
+      );
+      recordFlightEvent(projectId, {
+        action: 'GKE_CLUSTER_DELETED',
+        resourceType: 'GKE_CLUSTER',
+        resourceName: clusterName,
+        region: location,
+        summary: `Deleted GKE cluster "${clusterName}" in ${location}`,
+      });
+      res.json({
+        ok: true,
+        message: `Dispatched deletion of GKE cluster "${clusterName}" in ${location}.`,
+        operation: op,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to delete GKE cluster.',
+      });
+    }
+  }
+);
 
 // 9b. PATCH /api/project/:projectId/firewalls/:firewallName -> Edit, Toggle Enable/Disable, Change ALLOW/DENY, Priority, Ranges, Tags & Logging on Live GCP Firewall Rule
 app.patch('/api/project/:projectId/firewalls/:firewallName', async (req, res) => {

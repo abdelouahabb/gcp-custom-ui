@@ -254,6 +254,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'create-gke',
+        category: 'Provisioning & Deploy',
+        title: 'Create New GKE Cluster (Autopilot Serverless K8s or Standard Spot GPU Pool)',
+        subtitle: 'Provision GKE cluster with SEC/GDPR/HIPAA compliance locks, Workload Identity & Binary Auth',
+        keywords: 'create gke kubernetes cluster autopilot standard gpu l4 a100 spot k8s',
+        badge: 'PROVISION K8S',
+        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        icon: Cpu,
+        run: () => {
+          onClose();
+          onOpenCreateModal('GKE_CLUSTER');
+        }
+      },
+      {
         id: 'create-vm',
         category: 'Provisioning & Deploy',
         title: 'Create New Compute Engine VM (13 Regions, Spot VM, C3/C4/Arm64/GPU)',

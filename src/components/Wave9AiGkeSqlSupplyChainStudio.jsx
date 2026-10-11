@@ -48,6 +48,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   projectId,
   onTriggerToast,
   onRefreshOverview,
+  onOpenProvision,
 }) {
   const [activeSubTab, setActiveSubTab] = useState('SUPPLY_CHAIN_AR');
   const [copiedText, setCopiedText] = useState('');
@@ -81,12 +82,16 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   const [gkeBlueprint, setGkeBlueprint] = useState('zero-trust-autopilot');
   const [clusterName, setClusterName] = useState('cloudpulse-ai-autopilot');
   const [clusterRegion, setClusterRegion] = useState('us-central1');
+  const [gkeMode, setGkeMode] = useState('AUTOPILOT'); // AUTOPILOT | STANDARD
+  const [releaseChannel, setReleaseChannel] = useState('REGULAR');
   const [gpuSku, setGpuSku] = useState('nvidia-l4');
   const [gpuCount, setGpuCount] = useState(2);
   const [useSpotGpu, setUseSpotGpu] = useState(true);
   const [privateNodes, setPrivateNodes] = useState(true);
   const [binaryAuth, setBinaryAuth] = useState(true);
   const [workloadIdentity, setWorkloadIdentity] = useState(true);
+  const [creatingGke, setCreatingGke] = useState(false);
+  const [deletingGkeName, setDeletingGkeName] = useState('');
 
   const handleCopy = (text, label = 'command') => {
     navigator.clipboard.writeText(text);
@@ -241,15 +246,107 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
 
   const applyGkeBlueprint = (bp) => {
     setGkeBlueprint(bp);
-    if (bp !== 'custom') {
+    if (bp === 'zero-trust-autopilot') {
+      setGkeMode('AUTOPILOT');
+      setClusterRegion('us-central1');
+      setReleaseChannel('STABLE');
       setPrivateNodes(true);
       setBinaryAuth(true);
       setWorkloadIdentity(true);
-      if (bp === 'gdpr-eu-ai-cluster') {
-        setClusterRegion('europe-west1');
-      } else {
-        setClusterRegion('us-central1');
+    } else if (bp === 'gdpr-eu-ai-cluster') {
+      setGkeMode('AUTOPILOT');
+      setClusterRegion('europe-west1');
+      setReleaseChannel('REGULAR');
+      setPrivateNodes(true);
+      setBinaryAuth(true);
+      setWorkloadIdentity(true);
+    } else if (bp === 'ai-spot-gpu-standard') {
+      setGkeMode('STANDARD');
+      setClusterRegion('us-central1');
+      setReleaseChannel('RAPID');
+      setUseSpotGpu(true);
+      setPrivateNodes(false);
+      setBinaryAuth(false);
+      setWorkloadIdentity(true);
+    }
+  };
+
+  const handleCreateGkeCluster = async (e) => {
+    e.preventDefault();
+    if (!clusterName.trim() || creatingGke) return;
+    setCreatingGke(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/provision`,
+        {
+          serviceType: 'GKE_CLUSTER',
+          name: clusterName.trim(),
+          region: clusterRegion,
+          config: {
+            gkeMode,
+            gkeLocation: clusterRegion,
+            releaseChannel,
+            network: 'default',
+            enablePrivateNodes: privateNodes,
+            enableWorkloadIdentity: workloadIdentity,
+            enableShieldedNodes: true,
+            enableBinaryAuth: binaryAuth,
+            nodeMachineType:
+              gkeMode === 'STANDARD' && gpuSku === 'nvidia-l4'
+                ? 'g2-standard-4'
+                : 'e2-standard-4',
+            initialNodeCount: Math.min(4, Math.max(1, Number(gpuCount) || 1)),
+            spotNodes: useSpotGpu,
+            gpuAcceleratorType:
+              gkeMode === 'STANDARD' && gpuSku !== 'tpu-v5litepod'
+                ? gpuSku
+                : 'NONE',
+            gpuAcceleratorCount: 1,
+          },
+        }
+      );
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message || `Provisioning GKE Cluster ${clusterName} on GCP`
+        );
       }
+      await fetchGkeVertex();
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || 'Failed to provision GKE cluster'
+        );
+      }
+    } finally {
+      setCreatingGke(false);
+    }
+  };
+
+  const handleDeleteGkeCluster = async (loc, cName) => {
+    if (!loc || !cName || deletingGkeName) return;
+    setDeletingGkeName(cName);
+    try {
+      const res = await axios.delete(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/gke/clusters/${encodeURIComponent(loc)}/${encodeURIComponent(cName)}`
+      );
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message || `Decommissioning GKE cluster ${cName}`
+        );
+      }
+      await fetchGkeVertex();
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || `Failed to delete GKE cluster ${cName}`
+        );
+      }
+    } finally {
+      setDeletingGkeName('');
     }
   };
 
@@ -266,6 +363,9 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
 
   const isGkeCustom = gkeBlueprint === 'custom';
   const isGkeGdpr = gkeBlueprint === 'gdpr-eu-ai-cluster';
+  const isGkeZeroTrust =
+    gkeBlueprint === 'zero-trust-autopilot' ||
+    gkeBlueprint === 'gdpr-eu-ai-cluster';
 
   // GPU FinOps math
   const selectedGpuObj = GPU_SKUS[gpuSku] || GPU_SKUS['nvidia-l4'];
@@ -288,12 +388,30 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   --deletion-protection \\
   --project=${projectId}`;
 
-  const gkeCli = `gcloud container clusters create-auto ${clusterName} \\
+  const gkeCli =
+    gkeMode === 'AUTOPILOT'
+      ? `gcloud container clusters create-auto ${clusterName} \\
   --region=${clusterRegion} \\
-  --enable-private-nodes \\
-  --binauthz-evaluation-mode=PROJECT_SINGLETON_POLICY_ENFORCE \\
-  --workload-pool=${projectId}.svc.id.goog \\
-  --project=${projectId}`;
+  --release-channel=${releaseChannel.toLowerCase()} \\
+  ${privateNodes ? '--enable-private-nodes \\\n  ' : ''}${
+          binaryAuth
+            ? '--binauthz-evaluation-mode=PROJECT_SINGLETON_POLICY_ENFORCE \\\n  '
+            : ''
+        }${
+          workloadIdentity ? `--workload-pool=${projectId}.svc.id.goog \\\n  ` : ''
+        }--project=${projectId}`
+      : `gcloud container clusters create ${clusterName} \\
+  --location=${clusterRegion} \\
+  --release-channel=${releaseChannel.toLowerCase()} \\
+  --machine-type=g2-standard-4 \\
+  --num-nodes=${Math.min(4, Math.max(1, Number(gpuCount) || 1))} \\
+  ${useSpotGpu ? '--spot \\\n  ' : ''}--accelerator=type=${
+          selectedGpuObj.flag
+        },count=1 \\
+  --enable-shielded-nodes \\
+  ${
+    workloadIdentity ? `--workload-pool=${projectId}.svc.id.goog \\\n  ` : ''
+  }--project=${projectId}`;
 
   return (
     <div className="space-y-5">
@@ -818,16 +936,141 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
          ===================================================================== */}
       {activeSubTab === 'GKE_VERTEX_STUDIO' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Left: GKE Autopilot & Spot GPU FinOps Architect */}
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5">
-            <div className="flex items-center justify-between">
+          {/* Left: Live GKE Autopilot & Spot GPU Provisioning Studio */}
+          <form
+            onSubmit={handleCreateGkeCluster}
+            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-cyan-400" />
-                <span>GKE Autopilot & Spot GPU FinOps Architect</span>
+                <span>GKE Autopilot & Spot GPU Cluster Studio</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
-                Save ${monthlyGpuSavingsUsd.toLocaleString()}/mo with Spot GPUs
-              </span>
+              <div className="flex items-center gap-2">
+                {onOpenProvision && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenProvision('GKE_CLUSTER')}
+                    title="Open the full 5-Step GKE Compliance & Architecture Wizard in the Provisioning Modal"
+                    className="px-2.5 py-1 rounded-[7px] bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer shadow-sm"
+                  >
+                    ☸️ + Full 5-Step GKE Wizard
+                  </button>
+                )}
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                  Save ${monthlyGpuSavingsUsd.toLocaleString()}/mo with Spot GPUs
+                </span>
+              </div>
+            </div>
+
+            {/* GKE Compliance Blueprint Selector */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                {
+                  id: 'zero-trust-autopilot',
+                  label: 'SEC/FedRAMP Autopilot',
+                  sub: 'Private + BinAuth + WI 🔒',
+                },
+                {
+                  id: 'gdpr-eu-ai-cluster',
+                  label: 'GDPR EU Sovereign',
+                  sub: 'EU Region + Private 🔒',
+                },
+                {
+                  id: 'ai-spot-gpu-standard',
+                  label: 'AI Spot GPU Pool',
+                  sub: 'Standard + L4 Spot (-69%)',
+                },
+                {
+                  id: 'custom',
+                  label: 'Custom Mode',
+                  sub: 'Unlocked Architecture',
+                },
+              ].map((bp) => {
+                const active = gkeBlueprint === bp.id;
+                return (
+                  <button
+                    key={bp.id}
+                    type="button"
+                    onClick={() => applyGkeBlueprint(bp.id)}
+                    className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
+                      active
+                        ? 'bg-cyan-500/15 border-cyan-500 text-cyan-700 dark:text-cyan-300'
+                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold truncate">{bp.label}</div>
+                    <div className="text-[9.5px] text-zinc-500 truncate">{bp.sub}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  GKE Cluster Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={clusterName}
+                  onChange={(e) => setClusterName(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Control Plane Mode {isGkeZeroTrust ? '🔒' : ''}
+                </label>
+                <select
+                  value={gkeMode}
+                  disabled={isGkeZeroTrust}
+                  onChange={(e) => setGkeMode(e.target.value)}
+                  title={
+                    isGkeZeroTrust
+                      ? '🔒 Locked to GKE Autopilot by Zero-Trust Enclave Blueprint'
+                      : 'Choose GKE Autopilot ($0.00 idle nodes) or GKE Standard (Custom GPU node pools)'
+                  }
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 disabled:opacity-60"
+                >
+                  <option value="AUTOPILOT">AUTOPILOT (Serverless K8s)</option>
+                  <option value="STANDARD">STANDARD (Custom GPU Nodes)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Sovereign Region {!isGkeCustom ? '🔒' : ''}
+                </label>
+                <select
+                  value={clusterRegion}
+                  onChange={(e) => setClusterRegion(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="us-central1" disabled={isGkeGdpr}>
+                    {isGkeGdpr ? '🔒 ' : ''}us-central1 (Iowa — Low Carbon)
+                  </option>
+                  <option value="us-east4" disabled={isGkeGdpr}>
+                    {isGkeGdpr ? '🔒 ' : ''}us-east4 (N. Virginia — FedRAMP)
+                  </option>
+                  <option
+                    value="europe-west1"
+                    disabled={gkeBlueprint === 'zero-trust-autopilot'}
+                  >
+                    {gkeBlueprint === 'zero-trust-autopilot' ? '🔒 ' : ''}
+                    europe-west1 (Belgium — EU GDPR)
+                  </option>
+                  <option
+                    value="europe-west4"
+                    disabled={gkeBlueprint === 'zero-trust-autopilot'}
+                  >
+                    {gkeBlueprint === 'zero-trust-autopilot' ? '🔒 ' : ''}
+                    europe-west4 (Netherlands — EU AI Hub)
+                  </option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -850,7 +1093,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Accelerator Count (`1–16 GPUs`)
+                  Accelerator / Node Count (`1–16`)
                 </label>
                 <input
                   type="number"
@@ -893,23 +1136,106 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
               {gkeCli}
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleCopy(gkeCli, 'GKE Autopilot Zero-Trust CLI')}
-              className="w-full py-2 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold cursor-pointer"
-            >
-              📋 Copy GKE Autopilot + Binary Authorization Deployment CLI
-            </button>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="submit"
+                disabled={creatingGke || !clusterName.trim()}
+                className="w-full py-2.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                {creatingGke
+                  ? '☸️ Provisioning Live GKE Cluster...'
+                  : `🚀 Create Live GKE ${gkeMode} Cluster`}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleCopy(gkeCli, 'GKE Autopilot Zero-Trust CLI')}
+                className="w-full py-2.5 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold cursor-pointer"
+              >
+                📋 Copy Equivalent gcloud CLI
+              </button>
+            </div>
+          </form>
 
           {/* Right: Live GKE Clusters & Vertex AI Endpoints */}
           <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
-            <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              Live GKE Clusters ({gkeData?.summary?.clustersCount || 0}) & Vertex AI Endpoints ({gkeData?.summary?.vertexEndpointsCount || 0})
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                Live GKE Clusters ({gkeData?.summary?.clustersCount || 0}) & Vertex AI Endpoints ({gkeData?.summary?.vertexEndpointsCount || 0})
+              </div>
+              <button
+                type="button"
+                onClick={fetchGkeVertex}
+                className="text-xs font-mono text-cyan-400 hover:text-cyan-300 cursor-pointer flex items-center gap-1"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${loadingGke ? 'animate-spin' : ''}`}
+                />
+                <span>Refresh</span>
+              </button>
             </div>
-            <div className="text-xs font-mono text-zinc-500 py-8 text-center">
-              Zero idle GKE control-plane management fees ($0.10/hr saved per cluster while running serverless Cloud Run Gen2 on `{projectId}`).
-            </div>
+
+            {gkeData?.clusters?.length > 0 ? (
+              <div className="space-y-2.5">
+                {gkeData.clusters.map((c) => {
+                  const kubeCmd = `gcloud container clusters get-credentials ${c.name} --location=${c.location} --project=${projectId}`;
+                  return (
+                    <div
+                      key={`${c.location}-${c.name}`}
+                      className="p-3 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                            <span>☸️ {c.name}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 text-[10px]">
+                              {c.autopilot ? 'AUTOPILOT' : 'STANDARD'}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
+                              {c.status}
+                            </span>
+                          </div>
+                          <div className="text-[11px] font-mono text-zinc-500 mt-0.5">
+                            Location: {c.location} · K8s v{c.currentMasterVersion || '1.30'} · Nodes: {c.currentNodeCount ?? 0} · Posture: {c.postureScore}/100
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(kubeCmd, 'kubeconfig command')}
+                            title={`Copy: ${kubeCmd}`}
+                            className="px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            kubeconfig
+                          </button>
+                          <button
+                            type="button"
+                            disabled={deletingGkeName === c.name}
+                            onClick={() =>
+                              handleDeleteGkeCluster(c.location, c.name)
+                            }
+                            title={`Delete GKE Cluster ${c.name}`}
+                            className="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            {deletingGkeName === c.name ? '...' : 'Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-xs font-mono text-zinc-500 py-8 text-center space-y-2">
+                <div>
+                  Zero idle GKE control-plane management fees ($0.10/hr saved per cluster while running serverless Cloud Run Gen2 on `{projectId}`).
+                </div>
+                <div className="text-[11px] text-zinc-400">
+                  Ready to deploy Kubernetes? Click <strong>🚀 Create Live GKE {gkeMode} Cluster</strong> on the left or open the <strong>☸️ + Full 5-Step GKE Wizard</strong>!
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
