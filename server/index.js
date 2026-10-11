@@ -213,6 +213,212 @@ function parseEnvVarsInput(envInput) {
   return [];
 }
 
+function buildCloudRunVpcAndVolumes(config = {}, existingTemplate = {}) {
+  const existingContainer = existingTemplate?.containers?.[0] || {};
+  const existingVpc = existingTemplate?.vpcAccess || null;
+
+  // 1) 2026 Cloud Run Direct VPC Egress (`template.vpcAccess`)
+  const enableDirectVpc =
+    config.enableDirectVpc !== undefined
+      ? Boolean(config.enableDirectVpc)
+      : Boolean(
+          existingVpc?.networkInterfaces?.length || existingVpc?.connector
+        );
+
+  let vpcAccess = null;
+  let vpcSummary = '';
+  if (enableDirectVpc) {
+    const existingIface = existingVpc?.networkInterfaces?.[0] || {};
+    const network = (
+      config.vpcNetwork ||
+      existingIface.network ||
+      'default'
+    ).trim();
+    const subnetwork = (
+      config.vpcSubnetwork !== undefined
+        ? config.vpcSubnetwork
+        : existingIface.subnetwork || ''
+    ).trim();
+    const egress =
+      config.vpcEgress || existingVpc?.egress || 'PRIVATE_RANGES_ONLY';
+    const rawTags =
+      config.vpcNetworkTags !== undefined
+        ? config.vpcNetworkTags
+        : existingIface.tags || [];
+    const tags = (Array.isArray(rawTags) ? rawTags : String(rawTags).split(','))
+      .map((t) => t.trim().toLowerCase().replace(/[^a-z0-9-]/g, ''))
+      .filter(Boolean);
+
+    const netInterface = { network };
+    if (subnetwork) netInterface.subnetwork = subnetwork;
+    if (tags.length > 0) netInterface.tags = tags;
+
+    vpcAccess = {
+      egress,
+      networkInterfaces: [netInterface],
+    };
+    vpcSummary = `Direct VPC (${network} · ${
+      egress === 'ALL_TRAFFIC' ? 'All Traffic' : 'Private Ranges'
+    })`;
+  }
+
+  // 2) 2026 Cloud Run Storage Volume Mounts (`template.volumes` + `containers[0].volumeMounts`)
+  const existingVol = existingTemplate?.volumes?.[0] || null;
+  const existingMount = existingContainer?.volumeMounts?.[0] || null;
+  const inferredExistingType = existingVol?.gcs
+    ? 'GCS_BUCKET'
+    : existingVol?.emptyDir
+    ? 'IN_MEMORY'
+    : existingVol?.nfs
+    ? 'NFS_FILESTORE'
+    : 'NONE';
+
+  const storageVolumeType =
+    config.storageVolumeType !== undefined
+      ? String(config.storageVolumeType).toUpperCase()
+      : inferredExistingType;
+
+  const volumeName =
+    (
+      config.storageVolumeName ||
+      existingVol?.name ||
+      existingMount?.name ||
+      'cloudrun-vol-1'
+    )
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'cloudrun-vol-1';
+
+  let volumes = [];
+  let volumeMounts = [];
+  let storageSummary = '';
+  let requiresGen2 = false;
+
+  if (storageVolumeType === 'GCS_BUCKET') {
+    const bucket = (
+      config.storageGcsBucket ||
+      existingVol?.gcs?.bucket ||
+      ''
+    )
+      .trim()
+      .replace(/^gs:\/\//, '');
+    const mountPath =
+      (
+        config.storageMountPath ||
+        existingMount?.mountPath ||
+        '/mnt/gcs'
+      ).trim() || '/mnt/gcs';
+    const readOnly =
+      config.storageReadOnly !== undefined
+        ? Boolean(config.storageReadOnly)
+        : Boolean(existingVol?.gcs?.readOnly);
+
+    if (bucket) {
+      volumes = [
+        {
+          name: volumeName,
+          gcs: {
+            bucket,
+            readOnly,
+          },
+        },
+      ];
+      volumeMounts = [
+        {
+          name: volumeName,
+          mountPath: mountPath.startsWith('/') ? mountPath : `/${mountPath}`,
+        },
+      ];
+      requiresGen2 = true;
+      storageSummary = `GCS FUSE gs://${bucket} → ${mountPath}${
+        readOnly ? ' (RO)' : ' (RW)'
+      }`;
+    }
+  } else if (storageVolumeType === 'IN_MEMORY') {
+    const sizeLimit =
+      (
+        config.storageMemorySizeLimit ||
+        existingVol?.emptyDir?.sizeLimit ||
+        '1Gi'
+      ).trim() || '1Gi';
+    const mountPath =
+      (
+        config.storageMountPath ||
+        existingMount?.mountPath ||
+        '/mnt/ramdisk'
+      ).trim() || '/mnt/ramdisk';
+
+    volumes = [
+      {
+        name: volumeName,
+        emptyDir: {
+          medium: 'MEMORY',
+          sizeLimit,
+        },
+      },
+    ];
+    volumeMounts = [
+      {
+        name: volumeName,
+        mountPath: mountPath.startsWith('/') ? mountPath : `/${mountPath}`,
+      },
+    ];
+    storageSummary = `In-Memory RAM Disk (${sizeLimit}) → ${mountPath}`;
+  } else if (storageVolumeType === 'NFS_FILESTORE') {
+    const server = (
+      config.storageNfsServer ||
+      existingVol?.nfs?.server ||
+      ''
+    ).trim();
+    const nfsPath =
+      (config.storageNfsPath || existingVol?.nfs?.path || '/vol1').trim() ||
+      '/vol1';
+    const mountPath =
+      (
+        config.storageMountPath ||
+        existingMount?.mountPath ||
+        '/mnt/nfs'
+      ).trim() || '/mnt/nfs';
+    const readOnly =
+      config.storageReadOnly !== undefined
+        ? Boolean(config.storageReadOnly)
+        : Boolean(existingVol?.nfs?.readOnly);
+
+    if (server) {
+      volumes = [
+        {
+          name: volumeName,
+          nfs: {
+            server,
+            path: nfsPath.startsWith('/') ? nfsPath : `/${nfsPath}`,
+            readOnly,
+          },
+        },
+      ];
+      volumeMounts = [
+        {
+          name: volumeName,
+          mountPath: mountPath.startsWith('/') ? mountPath : `/${mountPath}`,
+        },
+      ];
+      requiresGen2 = true;
+      storageSummary = `NFS ${server}:${nfsPath} → ${mountPath}`;
+    }
+  }
+
+  return {
+    enableDirectVpc,
+    vpcAccess,
+    vpcSummary,
+    storageVolumeType,
+    volumes,
+    volumeMounts,
+    storageSummary,
+    requiresGen2,
+  };
+}
+
 function formatCloudRunService(s, projectId, extra = {}) {
   const shortName = s.name?.split('/').pop() || 'service';
   const region = s.name?.split('/')[3] || 'us-east1';
@@ -241,6 +447,52 @@ function formatCloudRunService(s, projectId, extra = {}) {
       ? Boolean(container.resources.cpuIdle)
       : true;
   const billingMode = cpuIdle ? 'REQUEST_BASED' : 'INSTANCE_BASED';
+
+  // Extract 2026 Direct VPC Egress (`template.vpcAccess`)
+  const vpcAccess = s.template?.vpcAccess || null;
+  const vpcIface = vpcAccess?.networkInterfaces?.[0] || null;
+  const enableDirectVpc = Boolean(vpcIface || vpcAccess?.connector);
+  const vpcNetwork =
+    vpcIface?.network ||
+    (vpcAccess?.connector ? vpcAccess.connector.split('/').pop() : 'default');
+  const vpcSubnetwork = vpcIface?.subnetwork || 'default';
+  const vpcEgress = vpcAccess?.egress || 'PRIVATE_RANGES_ONLY';
+  const vpcNetworkTags = (vpcIface?.tags || []).join(', ');
+
+  // Extract 2026 Storage Volume Mounts (`template.volumes` + `container.volumeMounts`)
+  const volumes = s.template?.volumes || [];
+  const volumeMounts = container.volumeMounts || [];
+  const firstVol = volumes[0] || null;
+  const firstMount =
+    volumeMounts.find((m) => m.name === firstVol?.name) ||
+    volumeMounts[0] ||
+    null;
+
+  const storageVolumeType = firstVol?.gcs
+    ? 'GCS_BUCKET'
+    : firstVol?.emptyDir
+    ? 'IN_MEMORY'
+    : firstVol?.nfs
+    ? 'NFS_FILESTORE'
+    : 'NONE';
+  const storageVolumeName =
+    firstVol?.name || firstMount?.name || 'cloudrun-vol-1';
+  const storageMountPath =
+    firstMount?.mountPath ||
+    (storageVolumeType === 'GCS_BUCKET'
+      ? '/mnt/gcs'
+      : storageVolumeType === 'IN_MEMORY'
+      ? '/mnt/ramdisk'
+      : storageVolumeType === 'NFS_FILESTORE'
+      ? '/mnt/nfs'
+      : '/mnt/storage');
+  const storageGcsBucket = firstVol?.gcs?.bucket || '';
+  const storageReadOnly = Boolean(
+    firstVol?.gcs?.readOnly || firstVol?.nfs?.readOnly
+  );
+  const storageMemorySizeLimit = firstVol?.emptyDir?.sizeLimit || '1Gi';
+  const storageNfsServer = firstVol?.nfs?.server || '';
+  const storageNfsPath = firstVol?.nfs?.path || '/vol1';
 
   const traffic = (s.traffic || []).map((t) => ({
     type: t.type || 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST',
@@ -277,6 +529,22 @@ function formatCloudRunService(s, projectId, extra = {}) {
     timeoutSeconds,
     executionEnvironment:
       s.template?.executionEnvironment || 'EXECUTION_ENVIRONMENT_GEN2',
+    enableDirectVpc,
+    vpcNetwork,
+    vpcSubnetwork,
+    vpcEgress,
+    vpcNetworkTags,
+    vpcAccess,
+    storageVolumeType,
+    storageVolumeName,
+    storageMountPath,
+    storageGcsBucket,
+    storageReadOnly,
+    storageMemorySizeLimit,
+    storageNfsServer,
+    storageNfsPath,
+    volumes,
+    volumeMounts,
     envVars,
     latestReadyRevision:
       s.latestReadyRevision?.split('/').pop() ||
@@ -2362,7 +2630,7 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       });
     }
 
-    // D) Create Real Cloud Run Service (`run.googleapis.com/v2`) with Full 2026 Studio Options (GPUs + Request/Instance Billing)
+    // D) Create Real Cloud Run Service (`run.googleapis.com/v2`) with Full 2026 Studio Options (GPUs + Request/Instance Billing + Direct VPC + Storage Volumes)
     if (serviceType === 'CLOUD_RUN') {
       const containerImage =
         config.containerImage || 'us-docker.pkg.dev/cloudrun/container/hello';
@@ -2375,6 +2643,16 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         config.gpuZonalRedundancy !== undefined
           ? Boolean(config.gpuZonalRedundancy)
           : false;
+
+      // 2026 Direct VPC Egress + Storage Volume Mounts (GCS FUSE / In-Memory RAM / NFS Filestore)
+      const {
+        vpcAccess,
+        vpcSummary,
+        volumes,
+        volumeMounts,
+        storageSummary,
+        requiresGen2,
+      } = buildCloudRunVpcAndVolumes(config, {});
 
       // Cloud Run GPU requires minimum 4 vCPU, 16Gi memory, and Instance-based billing (cpuIdle: false)
       let cpu = String(config.cpu || (gpuCount > 0 ? '4' : '1'));
@@ -2411,7 +2689,7 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       const timeoutSeconds = Math.max(10, Number(config.timeoutSeconds ?? 300));
       const ingress = config.ingress || 'INGRESS_TRAFFIC_ALL';
       const executionEnvironment =
-        gpuCount > 0
+        gpuCount > 0 || requiresGen2
           ? 'EXECUTION_ENVIRONMENT_GEN2'
           : config.executionEnvironment || 'EXECUTION_ENVIRONMENT_GEN2';
       const allowUnauthenticated =
@@ -2436,6 +2714,8 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
           maxInstanceRequestConcurrency: concurrency,
           timeout: `${timeoutSeconds}s`,
           executionEnvironment,
+          ...(vpcAccess ? { vpcAccess } : {}),
+          ...(volumes.length > 0 ? { volumes } : {}),
           ...(gpuCount > 0
             ? {
                 nodeSelector: { accelerator: gpuType },
@@ -2451,6 +2731,7 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
                 cpuIdle,
                 startupCpuBoost,
               },
+              ...(volumeMounts.length > 0 ? { volumeMounts } : {}),
               ...(envList.length > 0 ? { env: envList } : {}),
             },
           ],
@@ -2510,10 +2791,12 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       const billingBadge = cpuIdle
         ? 'Request-Based Billing'
         : 'Instance-Based Billing';
+      const vpcBadge = vpcSummary ? `, ${vpcSummary}` : '';
+      const storageBadge = storageSummary ? `, ${storageSummary}` : '';
 
       return res.json({
         ok: true,
-        message: `Dispatched real Cloud Run deployment for "${cleanName}" in ${region} (${cpu} vCPU, ${memory}${gpuBadge}, ${billingBadge}, scale ${minInstances}→${maxInstances}, ${
+        message: `Dispatched real Cloud Run deployment for "${cleanName}" in ${region} (${cpu} vCPU, ${memory}${gpuBadge}, ${billingBadge}${vpcBadge}${storageBadge}, scale ${minInstances}→${maxInstances}, ${
           allowUnauthenticated ? 'Public HTTPS' : 'IAM Auth'
         })!`,
         operation: op,
@@ -4164,8 +4447,19 @@ app.patch(
       );
       const ingress =
         config.ingress || existing.ingress || 'INGRESS_TRAFFIC_ALL';
+
+      // 2026 Direct VPC Egress + Storage Volume Mounts (GCS FUSE / In-Memory RAM / NFS Filestore)
+      const {
+        vpcAccess,
+        vpcSummary,
+        volumes,
+        volumeMounts,
+        storageSummary,
+        requiresGen2,
+      } = buildCloudRunVpcAndVolumes(config, existing.template || {});
+
       const executionEnvironment =
-        gpuCount > 0
+        gpuCount > 0 || requiresGen2
           ? 'EXECUTION_ENVIRONMENT_GEN2'
           : config.executionEnvironment ||
             existing.template?.executionEnvironment ||
@@ -4181,6 +4475,23 @@ app.patch(
         resourceLimits['nvidia.com/gpu'] = String(gpuCount);
       }
 
+      const nextContainer = {
+        ...currentContainer,
+        image: containerImage,
+        ports: [{ name: 'http1', containerPort }],
+        resources: {
+          limits: resourceLimits,
+          cpuIdle,
+          startupCpuBoost,
+        },
+        env: envList,
+      };
+      if (volumeMounts.length > 0) {
+        nextContainer.volumeMounts = volumeMounts;
+      } else {
+        delete nextContainer.volumeMounts;
+      }
+
       const templateObj = {
         scaling: {
           minInstanceCount: minInstances,
@@ -4189,19 +4500,9 @@ app.patch(
         maxInstanceRequestConcurrency: concurrency,
         timeout: `${timeoutSeconds}s`,
         executionEnvironment,
-        containers: [
-          {
-            ...currentContainer,
-            image: containerImage,
-            ports: [{ name: 'http1', containerPort }],
-            resources: {
-              limits: resourceLimits,
-              cpuIdle,
-              startupCpuBoost,
-            },
-            env: envList,
-          },
-        ],
+        ...(vpcAccess ? { vpcAccess } : {}),
+        ...(volumes.length > 0 ? { volumes } : {}),
+        containers: [nextContainer],
       };
 
       if (gpuCount > 0) {
@@ -4227,11 +4528,13 @@ app.patch(
       const billingSummary = cpuIdle
         ? 'Request-based billing'
         : 'Instance-based billing';
+      const vpcBadge = vpcSummary ? `, ${vpcSummary}` : '';
+      const storageBadge = storageSummary ? `, ${storageSummary}` : '';
 
       res.json({
         ok: true,
         operation: op,
-        message: `Deployed new Cloud Run revision for "${serviceName}" (${cpu} vCPU, ${memory}${gpuSummary}, ${billingSummary}, scale ${minInstances}→${maxInstances})!`,
+        message: `Deployed new Cloud Run revision for "${serviceName}" (${cpu} vCPU, ${memory}${gpuSummary}, ${billingSummary}${vpcBadge}${storageBadge}, scale ${minInstances}→${maxInstances})!`,
       });
     } catch (err) {
       res.status(400).json({

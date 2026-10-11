@@ -18,6 +18,8 @@ import {
   Terminal,
   Layers,
   Rocket,
+  Network,
+  HardDrive,
 } from 'lucide-react';
 
 const QUICK_TEMPLATES = [
@@ -85,6 +87,8 @@ export default function CloudRunFleetManager({
   // Per-service Cloud Run -> GKE Graduation state
   const [gkeConvertForms, setGkeConvertForms] = useState({});
   const [gkeClusters, setGkeClusters] = useState([]);
+  const [projectVpcs, setProjectVpcs] = useState(['default']);
+  const [projectBuckets, setProjectBuckets] = useState([]);
   const [showGlobalGkeTranspiler, setShowGlobalGkeTranspiler] = useState(false);
   // Per-service transitional busy state: { [serviceId]: 'UPDATING' | 'DELETING' | 'IAM' | 'TRAFFIC' | 'GRADUATING_GKE' }
   const [busyMap, setBusyMap] = useState({});
@@ -102,17 +106,29 @@ export default function CloudRunFleetManager({
       if (!projectId) return;
       if (!silent) setLoading(true);
       try {
-        const [res, gkeRes] = await Promise.all([
+        const [res, gkeRes, ovRes] = await Promise.all([
           axios.get(`/api/project/${encodeURIComponent(projectId)}/cloudrun`),
           axios
             .get(
               `/api/project/${encodeURIComponent(projectId)}/wave9/gke-vertex`
             )
             .catch(() => ({ data: { clusters: [] } })),
+          axios
+            .get(`/api/project/${encodeURIComponent(projectId)}/overview`)
+            .catch(() => ({ data: { resources: [] } })),
         ]);
         if (Array.isArray(gkeRes.data?.clusters)) {
           setGkeClusters(gkeRes.data.clusters);
         }
+        const ovResources = ovRes.data?.resources || [];
+        const vpcs = ovResources
+          .filter((r) => r.type === 'VPC Network' && r.name)
+          .map((r) => r.name);
+        if (vpcs.length > 0) setProjectVpcs(vpcs);
+        const buckets = ovResources
+          .filter((r) => r.type === 'Cloud Storage Bucket' && r.name)
+          .map((r) => r.name);
+        if (buckets.length > 0) setProjectBuckets(buckets);
         if (Array.isArray(res.data?.services)) {
           setServices(res.data.services);
           // Clear DELETING state for services that have finished deprovisioning
@@ -179,6 +195,69 @@ export default function CloudRunFleetManager({
     const enableWorkloadIdentity = cfg.enableWorkloadIdentity !== false;
     const isInternalLoadBalancer =
       srv.ingress === 'INGRESS_TRAFFIC_INTERNAL_ONLY';
+
+    // Translate attached Cloud Run 2026 Storage Volumes (GCS FUSE / In-Memory / NFS) into native GKE volumes
+    const volType = srv.storageVolumeType || 'NONE';
+    const volName = (srv.storageVolumeName || 'cloudrun-vol-1')
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-');
+    const volMountPath = srv.storageMountPath || '/mnt/storage';
+
+    const k8sVolumeEntries = [];
+    const k8sMountEntries = [];
+    if (enableShmRamDisk) {
+      k8sVolumeEntries.push(
+        `        - name: dshm-ram\n          emptyDir:\n            medium: Memory\n            sizeLimit: 8Gi`
+      );
+      k8sMountEntries.push(
+        `            - mountPath: /dev/shm\n              name: dshm-ram`
+      );
+    }
+    if (volType === 'GCS_BUCKET' && srv.storageGcsBucket) {
+      k8sVolumeEntries.push(
+        `        - name: ${volName}\n          csi:\n            driver: gcsfuse.csi.storage.gke.io\n            readOnly: ${Boolean(
+          srv.storageReadOnly
+        )}\n            volumeAttributes:\n              bucketName: "${
+          srv.storageGcsBucket
+        }"`
+      );
+      k8sMountEntries.push(
+        `            - mountPath: ${volMountPath}\n              name: ${volName}\n              readOnly: ${Boolean(
+          srv.storageReadOnly
+        )}`
+      );
+    } else if (volType === 'IN_MEMORY') {
+      k8sVolumeEntries.push(
+        `        - name: ${volName}\n          emptyDir:\n            medium: Memory\n            sizeLimit: ${
+          srv.storageMemorySizeLimit || '1Gi'
+        }`
+      );
+      k8sMountEntries.push(
+        `            - mountPath: ${volMountPath}\n              name: ${volName}`
+      );
+    } else if (volType === 'NFS_FILESTORE' && srv.storageNfsServer) {
+      k8sVolumeEntries.push(
+        `        - name: ${volName}\n          nfs:\n            server: "${
+          srv.storageNfsServer
+        }"\n            path: "${
+          srv.storageNfsPath || '/vol1'
+        }"\n            readOnly: ${Boolean(srv.storageReadOnly)}`
+      );
+      k8sMountEntries.push(
+        `            - mountPath: ${volMountPath}\n              name: ${volName}\n              readOnly: ${Boolean(
+          srv.storageReadOnly
+        )}`
+      );
+    }
+
+    const volumesBlock =
+      k8sVolumeEntries.length > 0
+        ? `\n      volumes:\n${k8sVolumeEntries.join('\n')}`
+        : '';
+    const volumeMountsBlock =
+      k8sMountEntries.length > 0
+        ? `\n          volumeMounts:\n${k8sMountEntries.join('\n')}`
+        : '';
 
     const envYamlLines =
       Array.isArray(srv.envVars) && srv.envVars.length > 0
@@ -277,7 +356,11 @@ spec:
   template:
     metadata:
       labels:
-        app: ${k8sName}
+        app: ${k8sName}${
+      volType === 'GCS_BUCKET'
+        ? `\n      annotations:\n        gke-gcsfuse/volumes: "true"`
+        : ''
+    }
     spec:${
       enableWorkloadIdentity
         ? `\n      serviceAccountName: ${k8sName}-sa`
@@ -306,21 +389,13 @@ spec:
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              app: ${k8sName}${
-      enableShmRamDisk
-        ? `\n      volumes:\n        - name: dshm-ram\n          emptyDir:\n            medium: Memory\n            sizeLimit: 8Gi`
-        : ''
-    }
+              app: ${k8sName}${volumesBlock}
       containers:
         - name: ${k8sName}
           image: ${image}
           ports:
             - containerPort: ${port}
-              protocol: TCP${envYamlLines}${
-      enableShmRamDisk
-        ? `\n          volumeMounts:\n            - mountPath: /dev/shm\n              name: dshm-ram`
-        : ''
-    }
+              protocol: TCP${envYamlLines}${volumeMountsBlock}
           readinessProbe:
             tcpSocket:
               port: ${port}
@@ -474,6 +549,26 @@ spec:
           ingress: srv.ingress || 'INGRESS_TRAFFIC_ALL',
           executionEnvironment:
             srv.executionEnvironment || 'EXECUTION_ENVIRONMENT_GEN2',
+          enableDirectVpc: Boolean(srv.enableDirectVpc),
+          vpcNetwork: srv.vpcNetwork || projectVpcs[0] || 'default',
+          vpcSubnetwork: srv.vpcSubnetwork || 'default',
+          vpcEgress: srv.vpcEgress || 'PRIVATE_RANGES_ONLY',
+          vpcNetworkTags: srv.vpcNetworkTags || 'cloud-run-egress',
+          storageVolumeType: srv.storageVolumeType || 'NONE',
+          storageVolumeName: srv.storageVolumeName || 'cloudrun-vol-1',
+          storageMountPath:
+            srv.storageMountPath ||
+            (srv.storageVolumeType === 'IN_MEMORY'
+              ? '/mnt/ramdisk'
+              : srv.storageVolumeType === 'NFS_FILESTORE'
+              ? '/mnt/nfs'
+              : '/mnt/gcs'),
+          storageGcsBucket:
+            srv.storageGcsBucket || projectBuckets[0] || '',
+          storageReadOnly: Boolean(srv.storageReadOnly),
+          storageMemorySizeLimit: srv.storageMemorySizeLimit || '1Gi',
+          storageNfsServer: srv.storageNfsServer || '10.0.0.2',
+          storageNfsPath: srv.storageNfsPath || '/vol1',
           envVarsText: (srv.envVars || [])
             .map((e) => `${e.name}=${e.value}`)
             .join('\n'),
@@ -1398,6 +1493,41 @@ spec:
                           </>
                         )}
                       </button>
+
+                      {/* 2026 Direct VPC Egress Badge */}
+                      {srv.enableDirectVpc && (
+                        <span
+                          title={`Direct VPC Egress Network: ${srv.vpcNetwork} / Subnet: ${srv.vpcSubnetwork} (${srv.vpcEgress})`}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30"
+                        >
+                          <Network className="w-3 h-3" />
+                          <span>
+                            VPC: {srv.vpcNetwork || 'default'} (
+                            {srv.vpcEgress === 'ALL_TRAFFIC'
+                              ? 'All Traffic'
+                              : 'Private Ranges'}
+                            )
+                          </span>
+                        </span>
+                      )}
+
+                      {/* 2026 Storage Volume Mount Badge */}
+                      {srv.storageVolumeType &&
+                        srv.storageVolumeType !== 'NONE' && (
+                          <span
+                            title={`Mounted Volume (${srv.storageVolumeType}) at ${srv.storageMountPath}`}
+                            className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30"
+                          >
+                            <HardDrive className="w-3 h-3" />
+                            <span>
+                              {srv.storageVolumeType === 'GCS_BUCKET'
+                                ? `🪣 gs://${srv.storageGcsBucket} → ${srv.storageMountPath}`
+                                : srv.storageVolumeType === 'IN_MEMORY'
+                                ? `⚡ RAM (${srv.storageMemorySizeLimit || '1Gi'}) → ${srv.storageMountPath}`
+                                : `📁 NFS ${srv.storageNfsServer}:${srv.storageNfsPath} → ${srv.storageMountPath}`}
+                            </span>
+                          </span>
+                        )}
                     </div>
 
                     {/* Live HTTPS URL */}
@@ -2054,6 +2184,408 @@ spec:
                           placeholder="NODE_ENV=production, PORT_MODE=fast"
                           className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
+                      </div>
+                    </div>
+
+                    {/* 🌐 2026 Direct VPC Egress & 💾 Attached Storage Volumes inside Scale & Tune */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {/* Direct VPC Egress */}
+                      <div className="p-3 rounded-xl bg-cyan-500/[0.05] border border-cyan-500/30 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-300 flex items-center gap-1.5">
+                            <Network className="w-3.5 h-3.5" />
+                            <span>2026 Direct VPC Egress (`template.vpcAccess`)</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditForms((prev) => ({
+                                ...prev,
+                                [srv.id]: {
+                                  ...form,
+                                  enableDirectVpc: !form.enableDirectVpc,
+                                },
+                              }))
+                            }
+                            className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                              form.enableDirectVpc
+                                ? 'bg-cyan-600 text-white border-cyan-500'
+                                : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-500'
+                            }`}
+                          >
+                            {form.enableDirectVpc
+                              ? '✓ Direct VPC ON'
+                              : '+ Enable VPC'}
+                          </button>
+                        </div>
+
+                        {form.enableDirectVpc && (
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                VPC Network
+                              </label>
+                              <select
+                                value={form.vpcNetwork || 'default'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      vpcNetwork: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              >
+                                {projectVpcs.map((v) => (
+                                  <option key={v} value={v}>
+                                    🌐 {v}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                Subnetwork
+                              </label>
+                              <input
+                                type="text"
+                                value={form.vpcSubnetwork ?? 'default'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      vpcSubnetwork: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                Egress Routing
+                              </label>
+                              <select
+                                value={form.vpcEgress || 'PRIVATE_RANGES_ONLY'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      vpcEgress: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              >
+                                <option value="PRIVATE_RANGES_ONLY">
+                                  private-ranges-only
+                                </option>
+                                <option value="ALL_TRAFFIC">
+                                  all-traffic (Cloud NAT)
+                                </option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                Network Tags
+                              </label>
+                              <input
+                                type="text"
+                                value={form.vpcNetworkTags ?? ''}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      vpcNetworkTags: e.target.value,
+                                    },
+                                  }))
+                                }
+                                placeholder="cloud-run-egress"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 2026 Storage Volume Mounts (Beta) */}
+                      <div className="p-3 rounded-xl bg-amber-500/[0.05] border border-amber-500/30 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-amber-600 dark:text-amber-300 flex items-center gap-1.5">
+                            <HardDrive className="w-3.5 h-3.5" />
+                            <span>
+                              2026 Storage Volume Mounts (Beta · GCS / RAM / NFS)
+                            </span>
+                          </span>
+                          <span className="text-[9.5px] font-mono text-zinc-500">
+                            {form.storageVolumeType &&
+                            form.storageVolumeType !== 'NONE'
+                              ? form.storageMountPath
+                              : 'Stateless'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[
+                            { id: 'NONE', label: 'No Vol' },
+                            { id: 'GCS_BUCKET', label: '🪣 GCS FUSE' },
+                            { id: 'IN_MEMORY', label: '⚡ RAM Disk' },
+                            { id: 'NFS_FILESTORE', label: '📁 NFS' },
+                          ].map((vOpt) => {
+                            const active =
+                              (form.storageVolumeType || 'NONE') === vOpt.id;
+                            return (
+                              <button
+                                key={vOpt.id}
+                                type="button"
+                                onClick={() =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      storageVolumeType: vOpt.id,
+                                      storageMountPath:
+                                        vOpt.id === 'GCS_BUCKET'
+                                          ? '/mnt/gcs'
+                                          : vOpt.id === 'IN_MEMORY'
+                                          ? '/mnt/ramdisk'
+                                          : vOpt.id === 'NFS_FILESTORE'
+                                          ? '/mnt/nfs'
+                                          : form.storageMountPath,
+                                      storageGcsBucket:
+                                        form.storageGcsBucket ||
+                                        projectBuckets[0] ||
+                                        '',
+                                      enableDirectVpc:
+                                        vOpt.id === 'NFS_FILESTORE'
+                                          ? true
+                                          : form.enableDirectVpc,
+                                    },
+                                  }))
+                                }
+                                className={`p-1.5 rounded border text-[10px] font-mono font-bold cursor-pointer ${
+                                  active
+                                    ? 'bg-amber-500/20 border-amber-500 text-amber-600 dark:text-amber-300'
+                                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                                }`}
+                              >
+                                {vOpt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {form.storageVolumeType === 'GCS_BUCKET' && (
+                          <div className="grid grid-cols-3 gap-2 pt-1">
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                GCS Bucket
+                              </label>
+                              {projectBuckets.length > 0 ? (
+                                <select
+                                  value={form.storageGcsBucket || ''}
+                                  onChange={(e) =>
+                                    setEditForms((prev) => ({
+                                      ...prev,
+                                      [srv.id]: {
+                                        ...form,
+                                        storageGcsBucket: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                >
+                                  {projectBuckets.map((b) => (
+                                    <option key={b} value={b}>
+                                      gs://{b}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={form.storageGcsBucket || ''}
+                                  onChange={(e) =>
+                                    setEditForms((prev) => ({
+                                      ...prev,
+                                      [srv.id]: {
+                                        ...form,
+                                        storageGcsBucket: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder={`${projectId}-bucket`}
+                                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                />
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                Mount Path
+                              </label>
+                              <input
+                                type="text"
+                                value={form.storageMountPath || '/mnt/gcs'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      storageMountPath: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                Mode
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      storageReadOnly: !form.storageReadOnly,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                              >
+                                {form.storageReadOnly
+                                  ? '🔒 Read-Only'
+                                  : '✏️ Read-Write'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {form.storageVolumeType === 'IN_MEMORY' && (
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                RAM Size Limit
+                              </label>
+                              <select
+                                value={form.storageMemorySizeLimit || '1Gi'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      storageMemorySizeLimit: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              >
+                                <option value="256Mi">256Mi</option>
+                                <option value="512Mi">512Mi</option>
+                                <option value="1Gi">1Gi</option>
+                                <option value="2Gi">2Gi</option>
+                                <option value="4Gi">4Gi</option>
+                                <option value="8Gi">8Gi</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                Mount Path
+                              </label>
+                              <input
+                                type="text"
+                                value={form.storageMountPath || '/mnt/ramdisk'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      storageMountPath: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {form.storageVolumeType === 'NFS_FILESTORE' && (
+                          <div className="grid grid-cols-3 gap-2 pt-1">
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                NFS Server IP
+                              </label>
+                              <input
+                                type="text"
+                                value={form.storageNfsServer || '10.0.0.2'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      storageNfsServer: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                Export Path
+                              </label>
+                              <input
+                                type="text"
+                                value={form.storageNfsPath || '/vol1'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      storageNfsPath: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                                Mount Path
+                              </label>
+                              <input
+                                type="text"
+                                value={form.storageMountPath || '/mnt/nfs'}
+                                onChange={(e) =>
+                                  setEditForms((prev) => ({
+                                    ...prev,
+                                    [srv.id]: {
+                                      ...form,
+                                      storageMountPath: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

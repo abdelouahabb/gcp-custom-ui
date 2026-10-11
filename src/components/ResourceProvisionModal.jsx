@@ -421,6 +421,44 @@ export default function ResourceProvisionModal({
   const [runGpuAccelerator, setRunGpuAccelerator] = useState('NONE');
   const [runGpuZonalRedundancy, setRunGpuZonalRedundancy] = useState(false);
 
+  // 2026 Cloud Run Direct VPC Egress Network (`template.vpcAccess`)
+  const [runEnableDirectVpc, setRunEnableDirectVpc] = useState(false);
+  const [runVpcNetwork, setRunVpcNetwork] = useState('default');
+  const [runVpcSubnetwork, setRunVpcSubnetwork] = useState('default');
+  const [runVpcEgress, setRunVpcEgress] = useState('PRIVATE_RANGES_ONLY'); // PRIVATE_RANGES_ONLY | ALL_TRAFFIC
+  const [runVpcTags, setRunVpcTags] = useState('cloud-run-egress');
+
+  // 2026 Cloud Run Storage Volume Mounts (Beta — `template.volumes` + `volumeMounts`)
+  const [runStorageVolumeType, setRunStorageVolumeType] = useState('NONE'); // NONE | GCS_BUCKET | IN_MEMORY | NFS_FILESTORE
+  const [runStorageVolumeName, setRunStorageVolumeName] =
+    useState('cloudrun-vol-1');
+  const [runStorageMountPath, setRunStorageMountPath] = useState('/mnt/gcs');
+  const [runStorageGcsBucket, setRunStorageGcsBucket] = useState('');
+  const [runStorageReadOnly, setRunStorageReadOnly] = useState(false);
+  const [runStorageMemorySizeLimit, setRunStorageMemorySizeLimit] =
+    useState('1Gi');
+  const [runStorageNfsServer, setRunStorageNfsServer] = useState('10.0.0.2');
+  const [runStorageNfsPath, setRunStorageNfsPath] = useState('/vol1');
+  const [projectVpcs, setProjectVpcs] = useState(['default']);
+  const [projectBuckets, setProjectBuckets] = useState([]);
+
+  const handleSelectRunStorageType = (newVolType) => {
+    setRunStorageVolumeType(newVolType);
+    if (newVolType === 'GCS_BUCKET') {
+      setRunStorageMountPath('/mnt/gcs');
+      setRunExecEnv('EXECUTION_ENVIRONMENT_GEN2');
+      if (!runStorageGcsBucket && projectBuckets.length > 0) {
+        setRunStorageGcsBucket(projectBuckets[0]);
+      }
+    } else if (newVolType === 'IN_MEMORY') {
+      setRunStorageMountPath('/mnt/ramdisk');
+    } else if (newVolType === 'NFS_FILESTORE') {
+      setRunStorageMountPath('/mnt/nfs');
+      setRunExecEnv('EXECUTION_ENVIRONMENT_GEN2');
+      setRunEnableDirectVpc(true);
+    }
+  };
+
   const handleSelectGpuAccelerator = (accel) => {
     setRunGpuAccelerator(accel);
     if (accel !== 'NONE') {
@@ -763,6 +801,24 @@ export default function ResourceProvisionModal({
             }
           })
           .catch(() => {});
+
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/overview`)
+          .then((res) => {
+            const resources = res.data?.resources || [];
+            const vpcs = resources
+              .filter((r) => r.type === 'VPC Network' && r.name)
+              .map((r) => r.name);
+            setProjectVpcs(vpcs.length > 0 ? vpcs : ['default']);
+            const buckets = resources
+              .filter((r) => r.type === 'Cloud Storage Bucket' && r.name)
+              .map((r) => r.name);
+            setProjectBuckets(buckets);
+            if (buckets.length > 0) {
+              setRunStorageGcsBucket((prev) => prev || buckets[0]);
+            }
+          })
+          .catch(() => {});
       }
     }
   }, [isOpen, initialServiceType, initialLocation, projectId]);
@@ -900,7 +956,49 @@ export default function ResourceProvisionModal({
               : '--no-gpu-zonal-redundancy'
           }`
         : '';
-      return `gcloud run deploy ${clean} --project=${projectId} --region=${region} --image=${containerImage} --port=${runPort} --cpu=${runCpu} --memory=${runMemory}${gpuFlags} --min-instances=${runMinInstances} --max-instances=${runMaxInstances} --concurrency=${runConcurrency} --timeout=${runTimeout}s --ingress=${ingressFlag} --execution-environment=${
+      const vpcFlags = runEnableDirectVpc
+        ? ` --network=${runVpcNetwork || 'default'}${
+            runVpcSubnetwork ? ` --subnet=${runVpcSubnetwork}` : ''
+          } --vpc-egress=${
+            runVpcEgress === 'ALL_TRAFFIC'
+              ? 'all-traffic'
+              : 'private-ranges-only'
+          }${
+            runVpcTags.trim()
+              ? ` --network-tags=${runVpcTags.trim().replace(/\s+/g, '')}`
+              : ''
+          }`
+        : '';
+      const volName = (runStorageVolumeName || 'cloudrun-vol-1')
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-');
+      const volFlags =
+        runStorageVolumeType === 'GCS_BUCKET'
+          ? ` --add-volume=name=${volName},type=cloud-storage,bucket=${
+              runStorageGcsBucket || `${projectId}-bucket`
+            },readonly=${runStorageReadOnly} --add-volume-mount=volume=${volName},mount-path=${
+              runStorageMountPath || '/mnt/gcs'
+            }`
+          : runStorageVolumeType === 'IN_MEMORY'
+          ? ` --add-volume=name=${volName},type=in-memory,size-limit=${
+              runStorageMemorySizeLimit || '1Gi'
+            } --add-volume-mount=volume=${volName},mount-path=${
+              runStorageMountPath || '/mnt/ramdisk'
+            }`
+          : runStorageVolumeType === 'NFS_FILESTORE'
+          ? ` --add-volume=name=${volName},type=nfs,location=${
+              runStorageNfsServer || '10.0.0.2'
+            }:${
+              runStorageNfsPath || '/vol1'
+            },readonly=${runStorageReadOnly} --add-volume-mount=volume=${volName},mount-path=${
+              runStorageMountPath || '/mnt/nfs'
+            }`
+          : '';
+      const cmdPrefix =
+        runStorageVolumeType !== 'NONE' || runEnableDirectVpc
+          ? 'gcloud beta run deploy'
+          : 'gcloud run deploy';
+      return `${cmdPrefix} ${clean} --project=${projectId} --region=${region} --image=${containerImage} --port=${runPort} --cpu=${runCpu} --memory=${runMemory}${gpuFlags}${vpcFlags}${volFlags} --min-instances=${runMinInstances} --max-instances=${runMaxInstances} --concurrency=${runConcurrency} --timeout=${runTimeout}s --ingress=${ingressFlag} --execution-environment=${
         runExecEnv === 'EXECUTION_ENVIRONMENT_GEN2' ? 'gen2' : 'gen1'
       } ${billingFlag} ${
         runAllowUnauth ? '--allow-unauthenticated' : '--no-allow-unauthenticated'
@@ -1025,6 +1123,19 @@ export default function ResourceProvisionModal({
     runGpuAccelerator,
     runGpuZonalRedundancy,
     runAllowUnauth,
+    runEnableDirectVpc,
+    runVpcNetwork,
+    runVpcSubnetwork,
+    runVpcEgress,
+    runVpcTags,
+    runStorageVolumeType,
+    runStorageVolumeName,
+    runStorageMountPath,
+    runStorageGcsBucket,
+    runStorageReadOnly,
+    runStorageMemorySizeLimit,
+    runStorageNfsServer,
+    runStorageNfsPath,
     bqLocation,
     bqStorageBillingModel,
     bqMaxTimeTravelHours,
@@ -1472,6 +1583,19 @@ export default function ResourceProvisionModal({
             gpuZonalRedundancy: runGpuZonalRedundancy,
             startupCpuBoost: runStartupBoost,
             executionEnvironment: runExecEnv,
+            enableDirectVpc: runEnableDirectVpc,
+            vpcNetwork: runVpcNetwork,
+            vpcSubnetwork: runVpcSubnetwork,
+            vpcEgress: runVpcEgress,
+            vpcNetworkTags: runVpcTags,
+            storageVolumeType: runStorageVolumeType,
+            storageVolumeName: runStorageVolumeName,
+            storageMountPath: runStorageMountPath,
+            storageGcsBucket: runStorageGcsBucket,
+            storageReadOnly: runStorageReadOnly,
+            storageMemorySizeLimit: runStorageMemorySizeLimit,
+            storageNfsServer: runStorageNfsServer,
+            storageNfsPath: runStorageNfsPath,
             envVars: runEnvVars,
             location: bqLocation,
             storageBillingModel: bqStorageBillingModel,
@@ -4113,6 +4237,352 @@ export default function ResourceProvisionModal({
                       : 'Startup CPU Boost OFF'}
                   </button>
                 </div>
+              </div>
+
+              {/* 🌐 2026 Direct VPC Egress Network (`template.vpcAccess`) */}
+              <div className="p-3 rounded-xl bg-cyan-500/[0.05] border border-cyan-500/30 space-y-2.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Network className="w-3.5 h-3.5 text-cyan-500" />
+                    <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                      🌐 2026 Direct VPC Egress Network (`template.vpcAccess`)
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-cyan-500/20 text-cyan-600 dark:text-cyan-300">
+                      $0.00 Connector Tax
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setRunEnableDirectVpc((v) => !v)}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer ${
+                      runEnableDirectVpc
+                        ? 'bg-cyan-600 text-white border-cyan-500 shadow-sm'
+                        : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    {runEnableDirectVpc
+                      ? '✓ Direct VPC Egress Enabled'
+                      : '+ Attach VPC Network'}
+                  </button>
+                </div>
+
+                <p className="text-[10.5px] text-zinc-500">
+                  Sends outbound traffic directly into your VPC subnetwork without legacy Serverless VPC Access Connector VMs — ideal for Private-IP Cloud SQL, AlloyDB, Memorystore Redis & NFS Filestore.
+                </p>
+
+                {runEnableDirectVpc && (
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1 border-t border-cyan-500/20">
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        VPC Network (`--network`)
+                      </label>
+                      <select
+                        value={runVpcNetwork}
+                        onChange={(e) => setRunVpcNetwork(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        {projectVpcs.map((v) => (
+                          <option key={v} value={v}>
+                            🌐 {v}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Subnetwork (`--subnet`)
+                      </label>
+                      <input
+                        type="text"
+                        value={runVpcSubnetwork}
+                        onChange={(e) => setRunVpcSubnetwork(e.target.value)}
+                        placeholder="default"
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        VPC Egress Routing (`--vpc-egress`)
+                      </label>
+                      <select
+                        value={runVpcEgress}
+                        onChange={(e) => setRunVpcEgress(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="PRIVATE_RANGES_ONLY">
+                          private-ranges-only (RFC1918 Private IPs)
+                        </option>
+                        <option value="ALL_TRAFFIC">
+                          all-traffic (Route 100% via VPC / Cloud NAT)
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Firewall Network Tags (`--network-tags`)
+                      </label>
+                      <input
+                        type="text"
+                        value={runVpcTags}
+                        onChange={(e) => setRunVpcTags(e.target.value)}
+                        placeholder="cloud-run-egress,internal-api"
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 💾 2026 Cloud Run Storage Volume Mounts (Beta — `template.volumes` + `volumeMounts`) */}
+              <div className="p-3 rounded-xl bg-amber-500/[0.05] border border-amber-500/30 space-y-2.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                      💾 2026 Cloud Run Attached Storage Volume Mounts
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                      BETA · Gen2 FUSE / RAM / NFS
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    {runStorageVolumeType === 'NONE'
+                      ? 'Stateless Container Filesystem'
+                      : `Mounted at ${runStorageMountPath}`}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  {[
+                    {
+                      id: 'NONE',
+                      title: '🚫 No Volume',
+                      sub: 'Stateless container only',
+                    },
+                    {
+                      id: 'GCS_BUCKET',
+                      title: '🪣 Cloud Storage FUSE',
+                      sub: `Mount gs:// bucket (${projectBuckets.length} in project)`,
+                    },
+                    {
+                      id: 'IN_MEMORY',
+                      title: '⚡ In-Memory RAM Disk',
+                      sub: 'Ultra-fast /mnt/ramdisk scratch',
+                    },
+                    {
+                      id: 'NFS_FILESTORE',
+                      title: '📁 NFS / Cloud Filestore',
+                      sub: 'Shared POSIX NFSv3 over VPC',
+                    },
+                  ].map((volOpt) => {
+                    const active = runStorageVolumeType === volOpt.id;
+                    return (
+                      <button
+                        key={volOpt.id}
+                        type="button"
+                        onClick={() => handleSelectRunStorageType(volOpt.id)}
+                        className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
+                          active
+                            ? 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-300 shadow-sm'
+                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold font-mono">
+                          {volOpt.title}
+                        </div>
+                        <div className="text-[9.5px] text-zinc-500 mt-0.5">
+                          {volOpt.sub}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {runStorageVolumeType === 'GCS_BUCKET' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1 border-t border-amber-500/20">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Target Cloud Storage Bucket (`gcs.bucket`)
+                      </label>
+                      {projectBuckets.length > 0 ? (
+                        <div className="flex gap-1.5">
+                          <select
+                            value={runStorageGcsBucket}
+                            onChange={(e) =>
+                              setRunStorageGcsBucket(e.target.value)
+                            }
+                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          >
+                            {projectBuckets.map((b) => (
+                              <option key={b} value={b}>
+                                🪣 gs://{b}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          value={runStorageGcsBucket}
+                          onChange={(e) =>
+                            setRunStorageGcsBucket(e.target.value)
+                          }
+                          placeholder={`${projectId}-models-bucket`}
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Container Mount Path (`mountPath`)
+                      </label>
+                      <input
+                        type="text"
+                        value={runStorageMountPath}
+                        onChange={(e) => setRunStorageMountPath(e.target.value)}
+                        placeholder="/mnt/gcs"
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Mount Mode (`readOnly`)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setRunStorageReadOnly((v) => !v)}
+                        className={`w-full rounded-[8px] px-2.5 py-1.5 text-xs font-mono border text-left cursor-pointer ${
+                          runStorageReadOnly
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
+                            : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                        }`}
+                      >
+                        {runStorageReadOnly
+                          ? '🔒 Read-Only (RO)'
+                          : '✏️ Read-Write (RW)'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {runStorageVolumeType === 'IN_MEMORY' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 border-t border-amber-500/20">
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Volume Name (`volumes[].name`)
+                      </label>
+                      <input
+                        type="text"
+                        value={runStorageVolumeName}
+                        onChange={(e) =>
+                          setRunStorageVolumeName(e.target.value)
+                        }
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        RAM Disk Size Limit (`emptyDir.sizeLimit`)
+                      </label>
+                      <select
+                        value={runStorageMemorySizeLimit}
+                        onChange={(e) =>
+                          setRunStorageMemorySizeLimit(e.target.value)
+                        }
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="256Mi">256Mi RAM Disk</option>
+                        <option value="512Mi">512Mi RAM Disk</option>
+                        <option value="1Gi">1Gi RAM Disk</option>
+                        <option value="2Gi">2Gi RAM Disk</option>
+                        <option value="4Gi">4Gi RAM Disk</option>
+                        <option value="8Gi">8Gi RAM Disk</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Container Mount Path (`mountPath`)
+                      </label>
+                      <input
+                        type="text"
+                        value={runStorageMountPath}
+                        onChange={(e) => setRunStorageMountPath(e.target.value)}
+                        placeholder="/mnt/ramdisk"
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {runStorageVolumeType === 'NFS_FILESTORE' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1 border-t border-amber-500/20">
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        NFS / Filestore IP (`nfs.server`)
+                      </label>
+                      <input
+                        type="text"
+                        value={runStorageNfsServer}
+                        onChange={(e) => setRunStorageNfsServer(e.target.value)}
+                        placeholder="10.0.0.2"
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Export Path (`nfs.path`)
+                      </label>
+                      <input
+                        type="text"
+                        value={runStorageNfsPath}
+                        onChange={(e) => setRunStorageNfsPath(e.target.value)}
+                        placeholder="/vol1"
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Container Mount Path (`mountPath`)
+                      </label>
+                      <input
+                        type="text"
+                        value={runStorageMountPath}
+                        onChange={(e) => setRunStorageMountPath(e.target.value)}
+                        placeholder="/mnt/nfs"
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Mount Mode (`readOnly`)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setRunStorageReadOnly((v) => !v)}
+                        className={`w-full rounded-[8px] px-2.5 py-1.5 text-xs font-mono border text-left cursor-pointer ${
+                          runStorageReadOnly
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
+                            : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
+                        }`}
+                      >
+                        {runStorageReadOnly
+                          ? '🔒 Read-Only (RO)'
+                          : '✏️ Read-Write (RW)'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
