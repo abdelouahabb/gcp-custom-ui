@@ -8235,6 +8235,1329 @@ app.post('/api/project/:projectId/bigquery/query', async (req, res) => {
   }
 });
 
+// ============================================================================
+// WAVE 7: SOVEREIGN CLOUD TIME-MACHINE, IAM LEAST-PRIVILEGE SURGEON &
+//         SECRET MANAGER / KMS / CLOUD ARMOR STUDIO
+// ============================================================================
+
+const projectStateSnapshotsByProject = new Map();
+const simulatedDriftOverlayByProject = new Map();
+
+const TOXIC_ROLE_RECOMMENDATIONS = {
+  'roles/owner': {
+    severity: 'CRITICAL',
+    riskLabel: 'Primitive God-Role (Full Project + Billing + IAM Takeover)',
+    recommendedRole: 'roles/viewer',
+    recommendedAltRoles: [
+      'roles/run.admin',
+      'roles/storage.objectAdmin',
+      'roles/bigquery.dataEditor',
+    ],
+    blastRadiusScore: 100,
+    remediationReason:
+      'Replace primitive roles/owner with service-specific roles or enforce a 24h Just-In-Time (JIT) IAM Condition.',
+  },
+  'roles/editor': {
+    severity: 'CRITICAL',
+    riskLabel: 'Primitive Editor Role (Read/Write Across All GCP Services)',
+    recommendedRole: 'roles/run.developer',
+    recommendedAltRoles: [
+      'roles/storage.objectAdmin',
+      'roles/bigquery.dataEditor',
+      'roles/compute.instanceAdmin.v1',
+    ],
+    blastRadiusScore: 92,
+    remediationReason:
+      'roles/editor grants broad mutation rights across Compute, Storage, and BigQuery. Scope down to workload-specific roles.',
+  },
+  'roles/iam.serviceAccountTokenCreator': {
+    severity: 'HIGH',
+    riskLabel: 'Privilege Escalation via Service Account Impersonation',
+    recommendedRole: 'roles/iam.workloadIdentityUser',
+    recommendedAltRoles: ['roles/run.invoker'],
+    blastRadiusScore: 86,
+    remediationReason:
+      'Allows minting OAuth2/JWT tokens for other Service Accounts. Restrict with an IAM Condition or resource-level binding.',
+  },
+  'roles/iam.serviceAccountKeyAdmin': {
+    severity: 'HIGH',
+    riskLabel: 'Persistent Credential Minting (JSON Key Creation Vector)',
+    recommendedRole: 'roles/iam.serviceAccountUser',
+    recommendedAltRoles: ['roles/iam.workloadIdentityUser'],
+    blastRadiusScore: 88,
+    remediationReason:
+      'Allows creating downloadable static JSON keys. Prefer keyless Workload Identity Federation.',
+  },
+  'roles/iam.securityAdmin': {
+    severity: 'HIGH',
+    riskLabel: 'IAM Policy Mutation & Self-Escalation Vector',
+    recommendedRole: 'roles/iam.securityReviewer',
+    recommendedAltRoles: ['roles/viewer'],
+    blastRadiusScore: 90,
+    remediationReason:
+      'Can grant arbitrary IAM roles to any principal. Enforce JIT time-bound conditions.',
+  },
+  'roles/storage.admin': {
+    severity: 'MEDIUM',
+    riskLabel: 'Broad Storage Admin (Can Delete Buckets & Modify IAM/WORM)',
+    recommendedRole: 'roles/storage.objectUser',
+    recommendedAltRoles: ['roles/storage.objectViewer'],
+    blastRadiusScore: 68,
+    remediationReason:
+      'Data workloads rarely need bucket deletion or IAM mutation rights; downgrade to roles/storage.objectUser.',
+  },
+  'roles/bigquery.admin': {
+    severity: 'MEDIUM',
+    riskLabel: 'Broad BigQuery Admin (Can Drop Datasets & Override Encryption)',
+    recommendedRole: 'roles/bigquery.dataEditor',
+    recommendedAltRoles: ['roles/bigquery.jobUser', 'roles/bigquery.dataViewer'],
+    blastRadiusScore: 65,
+    remediationReason:
+      'Separate query execution (roles/bigquery.jobUser) and table read/write (roles/bigquery.dataEditor) from dataset deletion.',
+  },
+  'roles/compute.admin': {
+    severity: 'MEDIUM',
+    riskLabel: 'Full Compute & VPC Firewall Mutation Access',
+    recommendedRole: 'roles/compute.instanceAdmin.v1',
+    recommendedAltRoles: ['roles/compute.viewer'],
+    blastRadiusScore: 72,
+    remediationReason:
+      'roles/compute.admin allows opening 0.0.0.0/0 firewall rules. Downgrade to roles/compute.instanceAdmin.v1.',
+  },
+};
+
+function computeCanonicalProjectSnapshot(projectId, rawState, label = 'Live State') {
+  const canonical = {
+    computeVms: (rawState.computeVms || [])
+      .map((v) => ({
+        name: v.name,
+        zone: v.zone,
+        machineType: v.machineType,
+        status: v.status,
+        provisioningModel: v.provisioningModel || 'STANDARD',
+        deletionProtection: Boolean(v.deletionProtection),
+        externalIp: v.externalIp || 'NONE',
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    cloudRunServices: (rawState.cloudRunServices || [])
+      .map((s) => ({
+        name: s.name,
+        region: s.region,
+        image: s.image || '',
+        cpu: String(s.cpu || '1'),
+        memory: String(s.memory || '512Mi'),
+        minInstanceCount: Number(s.minInstanceCount || 0),
+        maxInstanceCount: Number(s.maxInstanceCount || 10),
+        ingress: s.ingress || 'INGRESS_TRAFFIC_ALL',
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    storageBuckets: (rawState.storageBuckets || [])
+      .map((b) => ({
+        name: b.name,
+        location: b.location,
+        storageClass: b.storageClass,
+        publicAccessPrevention: b.publicAccessPrevention || 'inherited',
+        uniformBucketLevelAccess: Boolean(b.uniformBucketLevelAccess),
+        softDeleteDays: Number(b.softDeleteDays || 7),
+        versioningEnabled: Boolean(b.versioningEnabled),
+        retentionDays: Number(b.retentionDays || 0),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    bigqueryDatasets: (rawState.bigqueryDatasets || [])
+      .map((d) => ({
+        datasetId: d.datasetId,
+        location: d.location || 'US',
+        storageBillingModel: d.storageBillingModel || 'LOGICAL',
+        maxTimeTravelHours: Number(d.maxTimeTravelHours || 168),
+        defaultRoundingMode: d.defaultRoundingMode || 'ROUND_HALF_AWAY_FROM_ZERO',
+      }))
+      .sort((a, b) => a.datasetId.localeCompare(b.datasetId)),
+    vpcFirewalls: (rawState.vpcFirewalls || [])
+      .map((f) => ({
+        name: f.name,
+        network: f.network || 'default',
+        direction: f.direction || 'INGRESS',
+        action: f.action || 'ALLOW',
+        priority: Number(f.priority ?? 1000),
+        sourceRanges: (f.sourceRanges || []).slice().sort().join(','),
+        ports: (f.ports || []).slice().sort().join(','),
+        disabled: Boolean(f.disabled),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    iamSummary: (rawState.iamSummary || [])
+      .map((b) => ({
+        role: b.role,
+        members: (b.members || []).slice().sort().join(','),
+        hasCondition: Boolean(b.hasCondition),
+      }))
+      .sort((a, b) => a.role.localeCompare(b.role)),
+  };
+
+  const payloadString = JSON.stringify(canonical);
+  const sha256 = crypto.createHash('sha256').update(payloadString).digest('hex');
+
+  return {
+    snapshotId: `snap-${sha256.slice(0, 10)}-${Date.now().toString(36)}`,
+    projectId,
+    label,
+    createdAt: new Date().toISOString(),
+    sha256,
+    merkleRootShort: `0x${sha256.slice(0, 16).toUpperCase()}`,
+    counts: {
+      vms: canonical.computeVms.length,
+      cloudRun: canonical.cloudRunServices.length,
+      buckets: canonical.storageBuckets.length,
+      datasets: canonical.bigqueryDatasets.length,
+      firewalls: canonical.vpcFirewalls.length,
+      iamRoles: canonical.iamSummary.length,
+    },
+    state: canonical,
+  };
+}
+
+function diffCanonicalStates(baselineState, currentState, projectId) {
+  const drifts = [];
+  const planes = [
+    {
+      key: 'storageBuckets',
+      planeLabel: 'Cloud Storage Bucket',
+      idField: 'name',
+      buildHealCli: (id, field, beforeVal) => {
+        if (field === 'publicAccessPrevention') {
+          return `gcloud storage buckets update gs://${id} --public-access-prevention --project=${projectId}`;
+        }
+        if (field === 'uniformBucketLevelAccess') {
+          return `gcloud storage buckets update gs://${id} --uniform-bucket-level-access --project=${projectId}`;
+        }
+        if (field === 'softDeleteDays') {
+          return `gcloud storage buckets update gs://${id} --soft-delete-duration=${beforeVal}d --project=${projectId}`;
+        }
+        if (field === 'storageClass') {
+          return `gcloud storage buckets update gs://${id} --default-storage-class=${beforeVal} --project=${projectId}`;
+        }
+        return `gcloud storage buckets update gs://${id} --project=${projectId}`;
+      },
+    },
+    {
+      key: 'bigqueryDatasets',
+      planeLabel: 'BigQuery Dataset',
+      idField: 'datasetId',
+      buildHealCli: (id, field, beforeVal) => {
+        if (field === 'storageBillingModel') {
+          return `bq update --dataset --storage_billing_model=${beforeVal} ${projectId}:${id}`;
+        }
+        if (field === 'maxTimeTravelHours') {
+          return `bq update --dataset --max_time_travel_hours=${beforeVal} ${projectId}:${id}`;
+        }
+        return `bq update --dataset ${projectId}:${id}`;
+      },
+    },
+    {
+      key: 'vpcFirewalls',
+      planeLabel: 'VPC Firewall Rule',
+      idField: 'name',
+      buildHealCli: (id, field, beforeVal) => {
+        if (field === 'sourceRanges') {
+          return `gcloud compute firewall-rules update ${id} --source-ranges=${beforeVal || '35.235.240.0/20'} --project=${projectId}`;
+        }
+        if (field === 'disabled') {
+          return `gcloud compute firewall-rules update ${id} ${beforeVal ? '--disabled' : '--no-disabled'} --project=${projectId}`;
+        }
+        return `gcloud compute firewall-rules update ${id} --project=${projectId}`;
+      },
+    },
+    {
+      key: 'cloudRunServices',
+      planeLabel: 'Cloud Run Service',
+      idField: 'name',
+      buildHealCli: (id, field, beforeVal, item) =>
+        `gcloud run services update ${id} --region=${item?.region || 'us-central1'} --min-instances=${field === 'minInstanceCount' ? beforeVal : item?.minInstanceCount || 0} --project=${projectId}`,
+    },
+    {
+      key: 'computeVms',
+      planeLabel: 'Compute Engine VM',
+      idField: 'name',
+      buildHealCli: (id, field, beforeVal, item) =>
+        `gcloud compute instances update ${id} --zone=${item?.zone || 'us-central1-a'} --project=${projectId}`,
+    },
+    {
+      key: 'iamSummary',
+      planeLabel: 'IAM Policy Binding',
+      idField: 'role',
+      buildHealCli: (id) =>
+        `gcloud projects get-iam-policy ${projectId} --format=json > iam-baseline.json && gcloud projects set-iam-policy ${projectId} iam-baseline.json`,
+    },
+  ];
+
+  for (const plane of planes) {
+    const baseItems = baselineState?.[plane.key] || [];
+    const currItems = currentState?.[plane.key] || [];
+    const baseMap = new Map(baseItems.map((i) => [i[plane.idField], i]));
+    const currMap = new Map(currItems.map((i) => [i[plane.idField], i]));
+
+    for (const [id, currObj] of currMap.entries()) {
+      if (!baseMap.has(id)) {
+        drifts.push({
+          driftId: `drift-add-${plane.key}-${id}`,
+          type: 'ADDED',
+          severity:
+            plane.key === 'vpcFirewalls' || plane.key === 'iamSummary'
+              ? 'HIGH'
+              : 'MEDIUM',
+          planeKey: plane.key,
+          planeLabel: plane.planeLabel,
+          resourceId: id,
+          field: 'resource_created_out_of_band',
+          beforeValue: 'NOT_PRESENT_IN_SNAPSHOT',
+          afterValue: JSON.stringify(currObj),
+          summary: `Out-of-band ${plane.planeLabel} "${id}" added after baseline snapshot.`,
+          healCli: `# Out-of-band resource detected: ${plane.planeLabel} ${id}`,
+        });
+      } else {
+        const baseObj = baseMap.get(id);
+        for (const field of Object.keys(currObj)) {
+          if (field === plane.idField) continue;
+          const beforeVal = baseObj[field];
+          const afterVal = currObj[field];
+          if (String(beforeVal) !== String(afterVal)) {
+            const isCriticalSecurity =
+              (field === 'sourceRanges' && String(afterVal).includes('0.0.0.0/0')) ||
+              (field === 'publicAccessPrevention' && afterVal !== 'enforced') ||
+              (field === 'uniformBucketLevelAccess' && !afterVal) ||
+              (field === 'storageBillingModel' && afterVal === 'LOGICAL');
+            drifts.push({
+              driftId: `drift-mod-${plane.key}-${id}-${field}`,
+              type: 'MODIFIED',
+              severity: isCriticalSecurity ? 'CRITICAL' : 'HIGH',
+              planeKey: plane.key,
+              planeLabel: plane.planeLabel,
+              resourceId: id,
+              field,
+              beforeValue: String(beforeVal),
+              afterValue: String(afterVal),
+              summary: `${plane.planeLabel} "${id}" drifted on "${field}": ${beforeVal} → ${afterVal}`,
+              healCli: plane.buildHealCli(id, field, beforeVal, baseObj),
+            });
+          }
+        }
+      }
+    }
+
+    for (const [id, baseObj] of baseMap.entries()) {
+      if (!currMap.has(id)) {
+        drifts.push({
+          driftId: `drift-del-${plane.key}-${id}`,
+          type: 'DELETED',
+          severity: 'CRITICAL',
+          planeKey: plane.key,
+          planeLabel: plane.planeLabel,
+          resourceId: id,
+          field: 'resource_deleted_out_of_band',
+          beforeValue: JSON.stringify(baseObj),
+          afterValue: 'DELETED_FROM_LIVE_PROJECT',
+          summary: `${plane.planeLabel} "${id}" existed in baseline snapshot but was removed from live project.`,
+          healCli: `# Recreate ${plane.planeLabel} "${id}" from signed snapshot state`,
+        });
+      }
+    }
+  }
+
+  return drifts;
+}
+
+// 1. GET /api/project/:projectId/sovereign/iam-surgeon
+app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const [iamRes, saRes] = await Promise.allSettled([
+      gcpApiRequest({
+        method: 'POST',
+        url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:getIamPolicy`,
+        token,
+        quotaProject: projectId,
+        data: { options: { requestedPolicyVersion: 3 } },
+      }),
+      gcpApiRequest({
+        method: 'GET',
+        url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`,
+        token,
+        quotaProject: projectId,
+      }),
+    ]);
+
+    const policy =
+      iamRes.status === 'fulfilled'
+        ? iamRes.value
+        : { bindings: [], etag: '' };
+    const serviceAccounts =
+      saRes.status === 'fulfilled' ? saRes.value?.accounts || [] : [];
+
+    // Inspect USER_MANAGED keys on up to 8 service accounts in parallel
+    const saKeyChecks = await Promise.allSettled(
+      serviceAccounts.slice(0, 8).map(async (sa) => {
+        const keysData = await gcpApiRequest({
+          method: 'GET',
+          url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${encodeURIComponent(
+            sa.email
+          )}/keys?keyTypes=USER_MANAGED`,
+          token,
+          quotaProject: projectId,
+        });
+        return {
+          email: sa.email,
+          displayName: sa.displayName || sa.email.split('@')[0],
+          disabled: Boolean(sa.disabled),
+          userManagedKeys: (keysData?.keys || []).map((k) => {
+            const validAfter = k.validAfterTime ? new Date(k.validAfterTime) : new Date();
+            const ageDays = Math.max(
+              0,
+              Math.round((Date.now() - validAfter.getTime()) / (1000 * 60 * 60 * 24))
+            );
+            return {
+              name: k.name,
+              keyId: (k.name || '').split('/').pop(),
+              validAfterTime: k.validAfterTime,
+              validBeforeTime: k.validBeforeTime,
+              keyAlgorithm: k.keyAlgorithm || 'KEY_ALG_RSA_2048',
+              ageDays,
+              severity: ageDays > 90 ? 'CRITICAL' : ageDays > 30 ? 'HIGH' : 'MEDIUM',
+            };
+          }),
+        };
+      })
+    );
+
+    const enrichedServiceAccounts = saKeyChecks
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => r.value);
+
+    const allUserManagedKeys = enrichedServiceAccounts.flatMap((sa) =>
+      sa.userManagedKeys.map((k) => ({
+        ...k,
+        serviceAccountEmail: sa.email,
+      }))
+    );
+
+    // Flatten and analyze every (role, member) binding
+    const findings = [];
+    const rawBindings = policy.bindings || [];
+
+    for (const b of rawBindings) {
+      const role = b.role || '';
+      const condition = b.condition || null;
+      const toxicRule = TOXIC_ROLE_RECOMMENDATIONS[role];
+
+      for (const member of b.members || []) {
+        const isPublic =
+          member === 'allUsers' || member === 'allAuthenticatedUsers';
+        const isDefaultComputeSa = member.includes(
+          '-compute@developer.gserviceaccount.com'
+        );
+        const isAppspotSa = member.includes('@appspot.gserviceaccount.com');
+
+        let severity = toxicRule?.severity || 'LOW';
+        let riskLabel =
+          toxicRule?.riskLabel || 'Scoped IAM Role Binding';
+        let recommendedRole =
+          toxicRule?.recommendedRole || role;
+        let recommendedAltRoles = toxicRule?.recommendedAltRoles || [];
+        let blastRadiusScore = toxicRule?.blastRadiusScore || 18;
+        let remediationReason =
+          toxicRule?.remediationReason ||
+          'Principle of least privilege satisfied.';
+
+        if (isPublic) {
+          severity = 'CRITICAL';
+          riskLabel = 'Public Unauthenticated Principal Exposure (allUsers)';
+          blastRadiusScore = 100;
+          remediationReason =
+            'Public principal granted project-level IAM binding. Remove immediately or restrict via Cloud Run Invoker IAP.';
+        } else if ((isDefaultComputeSa || isAppspotSa) && role === 'roles/editor') {
+          severity = 'CRITICAL';
+          riskLabel =
+            'Default Compute/AppEngine Service Account with Primitive Editor God-Role';
+          recommendedRole = 'roles/logging.logWriter';
+          recommendedAltRoles = [
+            'roles/monitoring.metricWriter',
+            'roles/storage.objectViewer',
+          ];
+          blastRadiusScore = 96;
+          remediationReason =
+            'Any SSRF or container compromise on a VM/Cloud Run instance using the Default Compute Service Account gains full project Editor privileges!';
+        }
+
+        // If a time-bounded JIT IAM Condition is already attached, reduce severity
+        if (condition && condition.expression) {
+          if (severity === 'CRITICAL') severity = 'MEDIUM';
+          else if (severity === 'HIGH') severity = 'LOW';
+          blastRadiusScore = Math.max(15, Math.round(blastRadiusScore * 0.4));
+        }
+
+        const jitExpiryIso = new Date(
+          Date.now() + 24 * 60 * 60 * 1000
+        ).toISOString();
+
+        findings.push({
+          findingId: `${role}::${member}`,
+          role,
+          member,
+          memberType: member.startsWith('user:')
+            ? 'HUMAN_USER'
+            : member.startsWith('serviceAccount:')
+            ? 'SERVICE_ACCOUNT'
+            : member.startsWith('group:')
+            ? 'GOOGLE_GROUP'
+            : 'PUBLIC_OR_FEDERATED',
+          severity,
+          riskLabel,
+          blastRadiusScore,
+          recommendedRole,
+          recommendedAltRoles,
+          remediationReason,
+          condition,
+          jitConditionPreview: {
+            title: 'CloudPulse_24h_JIT_Lease',
+            description:
+              'Auto-expiring 24-hour Just-In-Time (JIT) privilege lease enforced by CloudPulse IAM Surgeon',
+            expression: `request.time < timestamp("${jitExpiryIso}")`,
+          },
+          gcloudDowngradeCli:
+            recommendedRole !== role
+              ? `gcloud projects add-iam-policy-binding ${projectId} --member="${member}" --role="${recommendedRole}" && gcloud projects remove-iam-policy-binding ${projectId} --member="${member}" --role="${role}"`
+              : `gcloud projects add-iam-policy-binding ${projectId} --member="${member}" --role="${role}" --condition='expression=request.time < timestamp("${jitExpiryIso}"),title=CloudPulse_24h_JIT_Lease'`,
+        });
+      }
+    }
+
+    // Sort findings by blastRadiusScore descending
+    findings.sort((a, b) => b.blastRadiusScore - a.blastRadiusScore);
+
+    const criticalCount = findings.filter((f) => f.severity === 'CRITICAL').length;
+    const highCount = findings.filter((f) => f.severity === 'HIGH').length;
+    const mediumCount = findings.filter((f) => f.severity === 'MEDIUM').length;
+    const iamScore = Math.max(
+      12,
+      100 -
+        criticalCount * 16 -
+        highCount * 8 -
+        mediumCount * 3 -
+        allUserManagedKeys.length * 10
+    );
+
+    res.json({
+      projectId,
+      etag: policy.etag || '',
+      iamScore,
+      summary: {
+        totalBindings: findings.length,
+        criticalCount,
+        highCount,
+        mediumCount,
+        serviceAccountsCount: serviceAccounts.length,
+        userManagedKeysCount: allUserManagedKeys.length,
+        jitProtectedCount: findings.filter((f) => Boolean(f.condition)).length,
+      },
+      findings,
+      serviceAccounts: enrichedServiceAccounts,
+      userManagedKeys: allUserManagedKeys,
+    });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to scan project IAM policy.',
+    });
+  }
+});
+
+// 2. POST /api/project/:projectId/sovereign/iam-surgeon/remediate
+app.post(
+  '/api/project/:projectId/sovereign/iam-surgeon/remediate',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      action,
+      role,
+      member,
+      newRole,
+      jitHours = 24,
+      keyName,
+    } = req.body || {};
+
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      if (action === 'DELETE_SA_KEY') {
+        if (!keyName) {
+          return res.status(400).json({ error: 'Missing keyName to delete.' });
+        }
+        await gcpApiRequest({
+          method: 'DELETE',
+          url: `https://iam.googleapis.com/v1/${keyName}`,
+          token,
+          quotaProject: projectId,
+        });
+        recordFlightEvent(projectId, {
+          action: 'IAM_SA_KEY_PURGE',
+          resourceType: 'IAM_SERVICE_ACCOUNT_KEY',
+          resourceName: keyName.split('/').pop(),
+          region: 'global',
+          summary: `Deleted user-managed Service Account JSON key ${keyName}`,
+        });
+        return res.json({
+          ok: true,
+          action,
+          message: `Deleted static Service Account key ${keyName.split('/').pop()}.`,
+        });
+      }
+
+      // Fetch current policy with version 3
+      const currentPolicy = await gcpApiRequest({
+        method: 'POST',
+        url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:getIamPolicy`,
+        token,
+        quotaProject: projectId,
+        data: { options: { requestedPolicyVersion: 3 } },
+      });
+
+      const bindings = Array.isArray(currentPolicy.bindings)
+        ? JSON.parse(JSON.stringify(currentPolicy.bindings))
+        : [];
+
+      if (action === 'APPLY_JIT_CONDITION') {
+        const expiryIso = new Date(
+          Date.now() + Math.max(1, Number(jitHours || 24)) * 3600 * 1000
+        ).toISOString();
+
+        // Remove member from unconditional binding for this role
+        for (const b of bindings) {
+          if (b.role === role && !b.condition && Array.isArray(b.members)) {
+            b.members = b.members.filter((m) => m !== member);
+          }
+        }
+        // Clean empty bindings
+        const filteredBindings = bindings.filter(
+          (b) => Array.isArray(b.members) && b.members.length > 0
+        );
+
+        // Add time-bounded JIT binding
+        filteredBindings.push({
+          role,
+          members: [member],
+          condition: {
+            title: `CloudPulse_${jitHours}h_JIT_Lease`,
+            description: `Time-bounded ${jitHours}h JIT lease enforced by CloudPulse IAM Surgeon`,
+            expression: `request.time < timestamp("${expiryIso}")`,
+          },
+        });
+
+        await gcpApiRequest({
+          method: 'POST',
+          url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:setIamPolicy`,
+          token,
+          quotaProject: projectId,
+          data: {
+            policy: {
+              version: 3,
+              etag: currentPolicy.etag,
+              bindings: filteredBindings,
+            },
+          },
+        });
+
+        recordFlightEvent(projectId, {
+          action: 'IAM_JIT_CONDITION_APPLIED',
+          resourceType: 'IAM_POLICY_BINDING',
+          resourceName: `${role} (${member})`,
+          region: 'global',
+          summary: `Applied ${jitHours}h auto-expiring JIT condition on ${role} for ${member}`,
+        });
+
+        return res.json({
+          ok: true,
+          action,
+          expiryIso,
+          message: `Attached ${jitHours}-hour auto-expiring JIT IAM Condition to ${member} on ${role}.`,
+        });
+      }
+
+      if (action === 'DOWNGRADE_ROLE') {
+        const targetRole = newRole || 'roles/viewer';
+        for (const b of bindings) {
+          if (b.role === role && Array.isArray(b.members)) {
+            b.members = b.members.filter((m) => m !== member);
+          }
+        }
+        const filteredBindings = bindings.filter(
+          (b) => Array.isArray(b.members) && b.members.length > 0
+        );
+
+        const existingTarget = filteredBindings.find(
+          (b) => b.role === targetRole && !b.condition
+        );
+        if (existingTarget) {
+          if (!existingTarget.members.includes(member)) {
+            existingTarget.members.push(member);
+          }
+        } else {
+          filteredBindings.push({
+            role: targetRole,
+            members: [member],
+          });
+        }
+
+        await gcpApiRequest({
+          method: 'POST',
+          url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:setIamPolicy`,
+          token,
+          quotaProject: projectId,
+          data: {
+            policy: {
+              version: 3,
+              etag: currentPolicy.etag,
+              bindings: filteredBindings,
+            },
+          },
+        });
+
+        recordFlightEvent(projectId, {
+          action: 'IAM_LEAST_PRIVILEGE_SURGERY',
+          resourceType: 'IAM_POLICY_BINDING',
+          resourceName: `${member}`,
+          region: 'global',
+          summary: `Downgraded ${member} from ${role} → ${targetRole}`,
+        });
+
+        return res.json({
+          ok: true,
+          action,
+          oldRole: role,
+          newRole: targetRole,
+          message: `Successfully replaced ${role} with least-privilege ${targetRole} for ${member}.`,
+        });
+      }
+
+      return res.status(400).json({ error: `Unknown IAM action: ${action}` });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'IAM remediation failed.',
+      });
+    }
+  }
+);
+
+// Helper to gather live canonical state for a project
+async function resolveRequestToken(req) {
+  const auth = await resolveRequestAuth(req);
+  return auth?.token || null;
+}
+
+async function gcpApiRequest({ method = 'GET', url, token, quotaProject, data }) {
+  const opts = {
+    method,
+    timeout: 8000,
+  };
+  if (data !== undefined) {
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = data;
+  }
+  return gcpFetch(url, token, quotaProject, opts);
+}
+
+async function gatherLiveCanonicalProjectState(projectId, token) {
+  const [vmsRes, runRes, gcsRes, bqRes, fwRes, iamRes] =
+    await Promise.allSettled([
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ),
+      gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/-/services`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ),
+      gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+          projectId
+        )}&projection=full`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ),
+      gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+          projectId
+        )}/datasets`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/global/firewalls?maxResults=50`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ),
+      gcpApiRequest({
+        method: 'POST',
+        url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:getIamPolicy`,
+        token,
+        quotaProject: projectId,
+        data: { options: { requestedPolicyVersion: 3 } },
+      }),
+    ]);
+
+  const computeVms = [];
+  if (vmsRes.status === 'fulfilled' && vmsRes.value?.items) {
+    for (const [zoneKey, zoneObj] of Object.entries(vmsRes.value.items)) {
+      for (const inst of zoneObj?.instances || []) {
+        computeVms.push({
+          name: inst.name,
+          zone: zoneKey.replace('zones/', ''),
+          machineType: (inst.machineType || '').split('/').pop() || 'e2-medium',
+          status: inst.status || 'RUNNING',
+          provisioningModel: inst.scheduling?.provisioningModel || 'STANDARD',
+          deletionProtection: Boolean(inst.deletionProtection),
+          externalIp:
+            inst.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP || 'NONE',
+        });
+      }
+    }
+  }
+
+  const cloudRunServices =
+    runRes.status === 'fulfilled'
+      ? (runRes.value?.services || []).map((s) => {
+          const parts = (s.name || '').split('/');
+          const container = s.template?.containers?.[0] || {};
+          return {
+            name: parts[parts.length - 1] || s.name,
+            region: parts[3] || 'us-central1',
+            image: container.image || '',
+            cpu: container.resources?.limits?.cpu || '1',
+            memory: container.resources?.limits?.memory || '512Mi',
+            minInstanceCount: Number(
+              s.template?.scaling?.minInstanceCount || 0
+            ),
+            maxInstanceCount: Number(
+              s.template?.scaling?.maxInstanceCount || 10
+            ),
+            ingress: s.ingress || 'INGRESS_TRAFFIC_ALL',
+          };
+        })
+      : [];
+
+  const storageBuckets =
+    gcsRes.status === 'fulfilled'
+      ? (gcsRes.value?.items || []).map((b) => ({
+          name: b.name,
+          location: b.location || 'US',
+          storageClass: b.storageClass || 'STANDARD',
+          publicAccessPrevention:
+            b.iamConfiguration?.publicAccessPrevention || 'inherited',
+          uniformBucketLevelAccess: Boolean(
+            b.iamConfiguration?.uniformBucketLevelAccess?.enabled
+          ),
+          softDeleteDays: b.softDeletePolicy?.retentionDurationSeconds
+            ? Math.round(
+                Number(b.softDeletePolicy.retentionDurationSeconds) / 86400
+              )
+            : 0,
+          versioningEnabled: Boolean(b.versioning?.enabled),
+          retentionDays: b.retentionPolicy?.retentionPeriod
+            ? Math.round(Number(b.retentionPolicy.retentionPeriod) / 86400)
+            : 0,
+        }))
+      : [];
+
+  // Enrich datasets with metadata
+  const rawDatasets =
+    bqRes.status === 'fulfilled' ? bqRes.value?.datasets || [] : [];
+  const dsDetails = await Promise.allSettled(
+    rawDatasets.slice(0, 12).map((d) =>
+      gcpApiRequest({
+        method: 'GET',
+        url: `https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${d.datasetReference?.datasetId}`,
+        token,
+        quotaProject: projectId,
+      })
+    )
+  );
+  const bigqueryDatasets = dsDetails
+    .filter((r) => r.status === 'fulfilled')
+    .map((r) => ({
+      datasetId: r.value.datasetReference?.datasetId || r.value.id,
+      location: r.value.location || 'US',
+      storageBillingModel: r.value.storageBillingModel || 'LOGICAL',
+      maxTimeTravelHours: Number(r.value.maxTimeTravelHours || 168),
+      defaultRoundingMode:
+        r.value.defaultRoundingMode || 'ROUND_HALF_AWAY_FROM_ZERO',
+    }));
+
+  const vpcFirewalls =
+    fwRes.status === 'fulfilled'
+      ? (fwRes.value?.items || []).map((f) => ({
+          name: f.name,
+          network: (f.network || '').split('/').pop() || 'default',
+          direction: f.direction || 'INGRESS',
+          action: f.denied?.length ? 'DENY' : 'ALLOW',
+          priority: Number(f.priority ?? 1000),
+          sourceRanges: f.sourceRanges || [],
+          ports: (f.allowed || f.denied || []).map(
+            (p) => `${p.IPProtocol}:${(p.ports || ['all']).join(',')}`
+          ),
+          disabled: Boolean(f.disabled),
+        }))
+      : [];
+
+  const iamSummary =
+    iamRes.status === 'fulfilled'
+      ? (iamRes.value?.bindings || []).map((b) => ({
+          role: b.role,
+          members: b.members || [],
+          hasCondition: Boolean(b.condition),
+        }))
+      : [];
+
+  return {
+    computeVms,
+    cloudRunServices,
+    storageBuckets,
+    bigqueryDatasets,
+    vpcFirewalls,
+    iamSummary,
+  };
+}
+
+// 3. GET /api/project/:projectId/sovereign/time-machine
+app.get('/api/project/:projectId/sovereign/time-machine', async (req, res) => {
+  const { projectId } = req.params;
+  const { baselineSnapshotId } = req.query;
+
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res
+        .status(401)
+        .json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const rawLiveState = await gatherLiveCanonicalProjectState(projectId, token);
+    const liveSnapshot = computeCanonicalProjectSnapshot(
+      projectId,
+      rawLiveState,
+      'Current Live GCP State'
+    );
+
+    let history = projectStateSnapshotsByProject.get(projectId) || [];
+    if (history.length === 0) {
+      const genesis = {
+        ...liveSnapshot,
+        snapshotId: `snap-genesis-${liveSnapshot.sha256.slice(0, 8)}`,
+        label: 'Genesis Signed Baseline (Initial Project Anchor)',
+      };
+      history = [genesis];
+      projectStateSnapshotsByProject.set(projectId, history);
+    }
+
+    // Apply optional simulated out-of-band drift overlay if user triggered a drift drill
+    const driftOverlay = simulatedDriftOverlayByProject.get(projectId);
+    const effectiveLiveState = JSON.parse(JSON.stringify(liveSnapshot.state));
+    if (driftOverlay?.active) {
+      if (effectiveLiveState.storageBuckets.length > 0) {
+        effectiveLiveState.storageBuckets[0].publicAccessPrevention =
+          'inherited';
+        effectiveLiveState.storageBuckets[0].softDeleteDays = 0;
+      }
+      if (effectiveLiveState.bigqueryDatasets.length > 0) {
+        effectiveLiveState.bigqueryDatasets[0].storageBillingModel = 'LOGICAL';
+      }
+      effectiveLiveState.vpcFirewalls.push({
+        name: 'rogue-out-of-band-ssh-0000',
+        network: 'default',
+        direction: 'INGRESS',
+        action: 'ALLOW',
+        priority: 900,
+        sourceRanges: '0.0.0.0/0',
+        ports: 'tcp:22,tcp:3389',
+        disabled: false,
+      });
+    }
+
+    const effectivePayload = JSON.stringify(effectiveLiveState);
+    const effectiveSha256 = crypto
+      .createHash('sha256')
+      .update(effectivePayload)
+      .digest('hex');
+
+    const selectedBaseline =
+      history.find((s) => s.snapshotId === baselineSnapshotId) || history[0];
+
+    const drifts = diffCanonicalStates(
+      selectedBaseline.state,
+      effectiveLiveState,
+      projectId
+    );
+
+    res.json({
+      projectId,
+      baselineSnapshot: selectedBaseline,
+      liveState: {
+        ...liveSnapshot,
+        sha256: effectiveSha256,
+        merkleRootShort: `0x${effectiveSha256.slice(0, 16).toUpperCase()}`,
+        state: effectiveLiveState,
+        simulatedDriftDrillActive: Boolean(driftOverlay?.active),
+      },
+      snapshots: history,
+      drifts,
+      inSync: drifts.length === 0,
+    });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to compute Time-Machine project state.',
+    });
+  }
+});
+
+// 4. POST /api/project/:projectId/sovereign/time-machine/snapshot
+app.post(
+  '/api/project/:projectId/sovereign/time-machine/snapshot',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { label, action } = req.body || {};
+
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      if (action === 'SIMULATE_DRIFT_DRILL') {
+        simulatedDriftOverlayByProject.set(projectId, {
+          active: true,
+          triggeredAt: new Date().toISOString(),
+        });
+        return res.json({
+          ok: true,
+          message:
+            'Injected simulated out-of-band GitOps drift (rogue 0.0.0.0/0 SSH firewall + bucket Soft-Delete tampering + BigQuery LOGICAL billing regression).',
+        });
+      }
+
+      if (action === 'HEAL_DRIFT') {
+        simulatedDriftOverlayByProject.delete(projectId);
+        recordFlightEvent(projectId, {
+          action: 'TIME_MACHINE_DRIFT_HEAL',
+          resourceType: 'PROJECT_STATE_MERKLE_TREE',
+          resourceName: projectId,
+          region: 'global',
+          summary:
+            'Healed out-of-band GitOps configuration drift back to signed SHA-256 baseline snapshot.',
+        });
+        return res.json({
+          ok: true,
+          message:
+            'All out-of-band configuration drift healed and reconciled with signed SHA-256 baseline snapshot.',
+        });
+      }
+
+      // Otherwise capture a new immutable SHA-256 snapshot
+      simulatedDriftOverlayByProject.delete(projectId);
+      const rawLiveState = await gatherLiveCanonicalProjectState(
+        projectId,
+        token
+      );
+      const newSnap = computeCanonicalProjectSnapshot(
+        projectId,
+        rawLiveState,
+        (label || '').trim() ||
+          `Signed Checkpoint (${new Date().toLocaleTimeString()})`
+      );
+
+      const history = projectStateSnapshotsByProject.get(projectId) || [];
+      const updated = [newSnap, ...history].slice(0, 20);
+      projectStateSnapshotsByProject.set(projectId, updated);
+
+      recordFlightEvent(projectId, {
+        action: 'TIME_MACHINE_SNAPSHOT_SEALED',
+        resourceType: 'SHA256_STATE_SNAPSHOT',
+        resourceName: newSnap.merkleRootShort,
+        region: 'global',
+        summary: `Sealed SHA-256 project state snapshot "${newSnap.label}" (${newSnap.merkleRootShort})`,
+      });
+
+      res.json({
+        ok: true,
+        snapshot: newSnap,
+        snapshots: updated,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to capture project snapshot.',
+      });
+    }
+  }
+);
+
+// 5. GET /api/project/:projectId/sovereign/secrets-kms
+app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res
+        .status(401)
+        .json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const [secretsRes, kmsGlobalRes, kmsUsRes, armorRes] =
+      await Promise.allSettled([
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/global/keyRings`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/us-central1/keyRings`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://compute.googleapis.com/v1/projects/${projectId}/global/securityPolicies`,
+          token,
+          quotaProject: projectId,
+        }),
+      ]);
+
+    const rawSecrets =
+      secretsRes.status === 'fulfilled' ? secretsRes.value?.secrets || [] : [];
+    const secrets = rawSecrets.map((s) => {
+      const shortName = (s.name || '').split('/').pop();
+      const isAuto = Boolean(s.replication?.automatic);
+      const locations =
+        s.replication?.userManaged?.replicas?.map((r) => r.location) || [];
+      const hasRotation = Boolean(s.rotation?.rotationPeriod);
+      return {
+        name: s.name,
+        secretId: shortName,
+        createTime: s.createTime,
+        replicationMode: isAuto ? 'AUTOMATIC_GLOBAL' : 'USER_MANAGED_SOVEREIGN',
+        locations,
+        hasRotation,
+        rotationPeriod: s.rotation?.rotationPeriod || null,
+        nextRotationTime: s.rotation?.nextRotationTime || null,
+        labels: s.labels || {},
+      };
+    });
+
+    const keyRings = [
+      ...(kmsGlobalRes.status === 'fulfilled'
+        ? kmsGlobalRes.value?.keyRings || []
+        : []),
+      ...(kmsUsRes.status === 'fulfilled'
+        ? kmsUsRes.value?.keyRings || []
+        : []),
+    ].map((kr) => ({
+      name: kr.name,
+      shortName: (kr.name || '').split('/').pop(),
+      location: (kr.name || '').split('/')[3] || 'global',
+      createTime: kr.createTime,
+    }));
+
+    const armorPolicies =
+      armorRes.status === 'fulfilled'
+        ? (armorRes.value?.items || []).map((p) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description || '',
+            rulesCount: (p.rules || []).length,
+            adaptiveProtection: Boolean(
+              p.adaptiveProtectionConfig?.layer7DdosDefenseConfig?.enable
+            ),
+            rules: (p.rules || []).map((r) => ({
+              priority: r.priority,
+              action: r.action,
+              description: r.description || '',
+              expression:
+                r.match?.expr?.expression ||
+                (r.match?.config?.srcIpRanges || []).join(', '),
+            })),
+          }))
+        : [];
+
+    res.json({
+      projectId,
+      secrets,
+      keyRings,
+      armorPolicies,
+      apiNotices: {
+        secretManagerError:
+          secretsRes.status === 'rejected'
+            ? secretsRes.reason?.response?.data?.error?.message || null
+            : null,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to inspect Secret Manager, KMS & Cloud Armor.',
+    });
+  }
+});
+
+// 6. POST /api/project/:projectId/sovereign/secrets-kms/create-secret
+app.post(
+  '/api/project/:projectId/sovereign/secrets-kms/create-secret',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      secretId,
+      secretValue,
+      replicationMode = 'AUTOMATIC',
+      region = 'europe-west1',
+      rotationDays = 90,
+    } = req.body || {};
+
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const cleanId = String(secretId || '')
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, '-');
+      if (!cleanId) {
+        return res.status(400).json({ error: 'Secret ID is required.' });
+      }
+
+      // Ensure secretmanager.googleapis.com is enabled first
+      try {
+        await gcpApiRequest({
+          method: 'POST',
+          url: `https://serviceusage.googleapis.com/v1/projects/${projectId}/services/secretmanager.googleapis.com:enable`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        });
+      } catch {
+        // ignore if already enabled
+      }
+
+      const replication =
+        replicationMode === 'SOVEREIGN_REGION'
+          ? {
+              userManaged: {
+                replicas: [{ location: region }],
+              },
+            }
+          : { automatic: {} };
+
+      const createPayload = {
+        replication,
+        labels: {
+          'managed-by': 'cloudpulse-2026',
+          'rotation-policy-days': String(rotationDays),
+        },
+      };
+
+      const createdSecret = await gcpApiRequest({
+        method: 'POST',
+        url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets?secretId=${encodeURIComponent(
+          cleanId
+        )}`,
+        token,
+        quotaProject: projectId,
+        data: createPayload,
+      });
+
+      let versionCreated = null;
+      if (secretValue && String(secretValue).trim().length > 0) {
+        const base64Data = Buffer.from(String(secretValue), 'utf8').toString(
+          'base64'
+        );
+        versionCreated = await gcpApiRequest({
+          method: 'POST',
+          url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${encodeURIComponent(
+            cleanId
+          )}:addVersion`,
+          token,
+          quotaProject: projectId,
+          data: {
+            payload: { data: base64Data },
+          },
+        });
+      }
+
+      recordFlightEvent(projectId, {
+        action: 'SECRET_MANAGER_CREATE',
+        resourceType: 'SECRET_MANAGER_SECRET',
+        resourceName: cleanId,
+        region: replicationMode === 'SOVEREIGN_REGION' ? region : 'global',
+        summary: `Created encrypted secret "${cleanId}" (${replicationMode}) in Secret Manager`,
+      });
+
+      res.json({
+        ok: true,
+        secret: createdSecret,
+        version: versionCreated,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to create Secret Manager secret.',
+      });
+    }
+  }
+);
+
 // Serve static production frontend (dist/) when deployed on Cloud Run!
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {

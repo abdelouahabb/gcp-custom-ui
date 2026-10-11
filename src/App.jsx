@@ -44,6 +44,7 @@ import EmergencyApiKillSwitch from './components/EmergencyApiKillSwitch';
 import CloudRunFleetManager from './components/CloudRunFleetManager';
 import CloudStorageStudio from './components/CloudStorageStudio';
 import BigQueryStudio from './components/BigQueryStudio';
+import SovereignTimeMachineIamStudio from './components/SovereignTimeMachineIamStudio';
 import AuthOnboardingGate from './components/AuthOnboardingGate';
 import CloudRunDeployModal from './components/CloudRunDeployModal';
 import Revolutionary2026Suite, {
@@ -347,6 +348,12 @@ function CloudPulseCockpit() {
       label: 'BigQuery Studio ★',
       tip: 'BigQuery 2026 Enterprise Lakehouse & Compliance Studio: Physical vs Logical Compressed Billing (-54%), Pre-Crime SQL Dry-Run X-Ray, Auto-SQL Optimizer, and 168h FOR SYSTEM_TIME AS OF Time-Machine',
       icon: Database,
+    },
+    {
+      id: 'SOVEREIGN_STUDIO',
+      label: 'Sovereign & Drift 🧬',
+      tip: 'Wave-7 Sovereign Cloud Time-Machine, Autonomous IAM Least-Privilege Surgeon (24h JIT CEL Conditions), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
+      icon: ShieldCheck,
     },
     {
       id: 'CLOUD_RUN',
@@ -847,6 +854,16 @@ function CloudPulseCockpit() {
                   }
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'SOVEREIGN_STUDIO' && (
+                <SovereignTimeMachineIamStudio
+                  projectId={selectedProjectId}
+                  onTriggerToast={showToast}
+                  onRefreshOverview={() =>
+                    fetchProjectOverview(selectedProjectId)
+                  }
                 />
               )}
 
