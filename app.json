@@ -1,6 +1,7 @@
 {
   "name": "cloudpulse-2026",
   "description": "CloudPulse 2026 — Next-Gen Google Cloud Mobile & Desktop PWA Cockpit with FinOps Burn Radar, 40-Region Orbital Map, 5-Step Storage Compliance Studio & AES-256-GCM Gemini 3.8 / 3.1 SRE Vault",
+  "repository": "https://github.com/abdelouahabb/gcp-custom-ui",
   "keywords": [
     "google-cloud",
     "cloud-run",

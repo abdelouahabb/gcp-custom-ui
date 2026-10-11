@@ -1,6 +1,14 @@
 # CloudPulse 2026 — Google Cloud Mobile & Desktop PWA Cockpit
 
-**CloudPulse 2026** is a high-speed, mobile-first Progressive Web App (PWA) and desktop command center for managing live **Google Cloud Platform (GCP)** infrastructure directly via official Google Cloud REST APIs (`run.googleapis.com/v2`, `compute.googleapis.com/v1`, `storage.googleapis.com`, `bigquery.googleapis.com`, `iam.googleapis.com/v1`, `serviceusage.googleapis.com/v1`, `cloudbilling.googleapis.com/v1`, and `aiplatform.googleapis.com`).
+[![Google Cloud Platform](https://img.shields.io/badge/Google_Cloud-REST_API_v1%2Fv2-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://github.com/abdelouahabb/gcp-custom-ui)
+[![Gemini 3.8 Flash & 3.1 Pro](https://img.shields.io/badge/Gemini_3.8_Flash_%2B_3.1_Pro-AES--256--GCM_RAM_Vault-10b981?style=for-the-badge)](https://github.com/abdelouahabb/gcp-custom-ui)
+[![Cloud Storage Compliance](https://img.shields.io/badge/Storage-SEC_17a--4_%7C_HIPAA_%7C_GDPR-f59e0b?style=for-the-badge)](https://github.com/abdelouahabb/gcp-custom-ui)
+[![40 GCP Regions](https://img.shields.io/badge/Global_Map-40_Regions_%2B_121_Zones-8b5cf6?style=for-the-badge)](https://github.com/abdelouahabb/gcp-custom-ui)
+
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/abdelouahabb/gcp-custom-ui&cloudshell_git_branch=main&cloudshell_tutorial=CLOUD_RUN_TUTORIAL.md)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/abdelouahabb/gcp-custom-ui&cloudshell_git_branch=main&cloudshell_tutorial=CLOUD_RUN_TUTORIAL.md)
+
+**CloudPulse 2026** is a high-speed, mobile-first Progressive Web App (PWA) and desktop command center for managing live **Google Cloud Platform (GCP)** infrastructure directly via official Google Cloud REST APIs (`run.googleapis.com/v2`, `compute.googleapis.com/v1`, `storage.googleapis.com`, `bigquery.googleapis.com`, `iam.googleapis.com/v1`, `serviceusage.googleapis.com/v1`, `cloudbilling.googleapis.com/v1`, and `generativelanguage.googleapis.com/v1beta`).
 
 ---
 
@@ -158,19 +166,32 @@ npm run prod
 
 ---
 
-## ☁️ Deploy to Production on Google Cloud Run (`deploy-cloud-run.sh`)
+## ☁️ Deploy to Google Cloud Run (1-Click Button & CLI Guide)
 
-Includes our quota-safe deployment script ([`deploy-cloud-run.sh`](deploy-cloud-run.sh)) with `CLOUDSDK_BILLING_QUOTA_PROJECT` binding, `65s` per-minute quota window backoff, automatic least-privilege Service Account creation, and Cloud Run Gen2 + Startup CPU Boost:
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/abdelouahabb/gcp-custom-ui&cloudshell_git_branch=main&cloudshell_tutorial=CLOUD_RUN_TUTORIAL.md)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/abdelouahabb/gcp-custom-ui&cloudshell_git_branch=main&cloudshell_tutorial=CLOUD_RUN_TUTORIAL.md)
+
+- **1-Click "Run on Google Cloud" / "Open in Cloud Shell" Guided Wizard:** Opens Google Cloud Shell with [`abdelouahabb/gcp-custom-ui`](https://github.com/abdelouahabb/gcp-custom-ui) cloned and launches an interactive tutorial panel ([`CLOUD_RUN_TUTORIAL.md`](CLOUD_RUN_TUTORIAL.md)) that runs our quota-safe [`./deploy-cloud-run.sh`](deploy-cloud-run.sh) script (bypassing `deploy.cloud.run`'s shared `serviceusage.googleapis.com` `Error 429` rate limit by pinning `CLOUDSDK_BILLING_QUOTA_PROJECT` to your selected project).
 
 ```bash
-# Option 1 — Standard Public Deployment with Custom Runtime Service Account
+# Option 1 — Interactive Mode (prompts for your GCP Project ID and optional Service Account)
+./deploy-cloud-run.sh
+
+# Option 2 — Standard Public Deployment with Custom Runtime Service Account & 10s Cooldown
 ./deploy-cloud-run.sh \
   --project YOUR_GCP_PROJECT_ID \
   --region us-central1 \
   --service-account cloudpulse-run-sa \
   --sleep 10
 
-# Option 2 — Private Zero-Trust IAM / IAP Deployment
+# Option 3 — Skip API Enablement if APIs are Already Active (or if serviceusage quota is rate-limited)
+./deploy-cloud-run.sh \
+  --project YOUR_GCP_PROJECT_ID \
+  --region us-central1 \
+  --service-account cloudpulse-run-sa \
+  --skip-api-enable
+
+# Option 4 — Private Zero-Trust IAM / IAP Deployment
 ./deploy-cloud-run.sh \
   --project YOUR_GCP_PROJECT_ID \
   --region us-central1 \
@@ -178,7 +199,7 @@ Includes our quota-safe deployment script ([`deploy-cloud-run.sh`](deploy-cloud-
   --sleep 10 \
   --private
 
-# Option 3 — Google Cloud Build CI/CD Pipeline (cloudbuild.yaml)
+# Option 5 — Google Cloud Build CI/CD Pipeline (cloudbuild.yaml)
 gcloud builds submit --config cloudbuild.yaml \
   --substitutions=_REGION="us-central1",_SERVICE_NAME="cloudpulse-2026"
 ```
