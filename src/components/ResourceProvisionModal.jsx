@@ -1626,9 +1626,9 @@ export default function ResourceProvisionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-[#ffffff] dark:bg-[#0c0c0f] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-3xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden my-auto">
-        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-5 pb-4 bg-[#ffffff] dark:bg-[#0c0c0f]">
+    <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-[#ffffff] dark:bg-[#0c0c0f] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-[1220px] max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto">
+        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-4 pb-3.5 bg-[#ffffff] dark:bg-[#0c0c0f]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
               <PlusCircle className="w-5 h-5" />
@@ -1657,8 +1657,8 @@ export default function ResourceProvisionModal({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-          {/* Service Type Selector Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          {/* Service Type Selector Grid (8 Services: 4x2 on tablet/laptop, 8x1 on wide desktop) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2">
             {SERVICE_TABS.map((t) => {
               const Icon = t.icon;
               const active = serviceType === t.id;
@@ -1667,15 +1667,16 @@ export default function ResourceProvisionModal({
                   key={t.id}
                   type="button"
                   onClick={() => handleTabSwitch(t.id)}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  title={t.desc}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer min-w-0 ${
                     active
                       ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
                       : 'bg-zinc-50/70 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
                   }`}
                 >
-                  <Icon className="w-4 h-4 mb-1.5" />
-                  <div className="text-xs font-bold">{t.label}</div>
-                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                  <Icon className="w-4 h-4 mb-1" />
+                  <div className="text-xs font-bold truncate whitespace-nowrap">{t.label}</div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate whitespace-nowrap">
                     {t.desc}
                   </div>
                 </button>
