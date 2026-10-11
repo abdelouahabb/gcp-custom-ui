@@ -10282,6 +10282,443 @@ app.post(
   }
 );
 
+// ============================================================================
+// WAVE 9: ARTIFACT REGISTRY SUPPLY-CHAIN SBOM, CLOUD SQL SOVEREIGN DB &
+//         GKE AUTOPILOT / VERTEX AI GPU CLUSTER STUDIO
+// ============================================================================
+
+// 1. GET /api/project/:projectId/wave9/supply-chain
+app.get('/api/project/:projectId/wave9/supply-chain', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const locations = ['us-central1', 'us', 'europe-west1', 'us-east1'];
+    const repoCalls = await Promise.allSettled(
+      locations.map((loc) =>
+        gcpFetch(
+          `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${loc}/repositories`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        )
+      )
+    );
+
+    const rawRepos = [];
+    for (const r of repoCalls) {
+      if (r.status === 'fulfilled' && Array.isArray(r.value?.repositories)) {
+        rawRepos.push(...r.value.repositories);
+      }
+    }
+
+    // Fetch dockerImages for up to 6 repositories in parallel
+    const imageCalls = await Promise.allSettled(
+      rawRepos.slice(0, 6).map(async (repo) => {
+        const imgRes = await gcpFetch(
+          `https://artifactregistry.googleapis.com/v1/${repo.name}/dockerImages?pageSize=30`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        ).catch(() => ({ dockerImages: [] }));
+        return {
+          repoName: repo.name,
+          images: imgRes?.dockerImages || [],
+        };
+      })
+    );
+
+    const imagesByRepo = new Map();
+    for (const ic of imageCalls) {
+      if (ic.status === 'fulfilled') {
+        imagesByRepo.set(ic.value.repoName, ic.value.images);
+      }
+    }
+
+    let totalBytes = 0;
+    let orphanDigestBytes = 0;
+    let orphanDigestCount = 0;
+    const allImages = [];
+
+    const repositories = rawRepos.map((repo) => {
+      const parts = (repo.name || '').split('/');
+      const shortName = parts[parts.length - 1] || repo.name;
+      const location = parts[3] || 'us-central1';
+      const immutableTags = Boolean(repo.dockerConfig?.immutableTags);
+      const hasKms = Boolean(repo.kmsKeyName);
+      const hasCleanupPolicy =
+        Array.isArray(repo.cleanupPolicies) && repo.cleanupPolicies.length > 0;
+
+      const repoImages = imagesByRepo.get(repo.name) || [];
+      let repoBytes = 0;
+      let repoOrphans = 0;
+
+      for (const img of repoImages) {
+        const sz = Number(img.imageSizeBytes || 0);
+        const tags = Array.isArray(img.tags) ? img.tags : [];
+        const isOrphan = tags.length === 0;
+        totalBytes += sz;
+        repoBytes += sz;
+        if (isOrphan) {
+          orphanDigestBytes += sz;
+          orphanDigestCount += 1;
+          repoOrphans += 1;
+        }
+        allImages.push({
+          name: img.name,
+          uri: img.uri,
+          shortImage: (img.uri || '').split('/').pop() || img.name,
+          repository: shortName,
+          location,
+          tags,
+          isOrphan,
+          sizeBytes: sz,
+          sizeMb: Number((sz / (1024 * 1024)).toFixed(1)),
+          uploadTime: img.uploadTime || img.buildTime || null,
+        });
+      }
+
+      const postureScore =
+        40 +
+        (immutableTags ? 25 : 0) +
+        (hasCleanupPolicy ? 20 : 0) +
+        (hasKms ? 15 : 0);
+
+      return {
+        name: repo.name,
+        shortName,
+        location,
+        format: repo.format || 'DOCKER',
+        immutableTags,
+        kmsKeyName: repo.kmsKeyName || null,
+        hasCleanupPolicy,
+        imagesCount: repoImages.length,
+        orphanDigestsCount: repoOrphans,
+        totalSizeGb: Number((repoBytes / 1e9).toFixed(2)),
+        postureScore,
+        createTime: repo.createTime,
+      };
+    });
+
+    const totalSizeGb = Number((totalBytes / 1e9).toFixed(2));
+    const orphanSizeGb = Number((orphanDigestBytes / 1e9).toFixed(2));
+    const monthlyStorageUsd = Number((totalSizeGb * 0.1).toFixed(2));
+    const reclaimableMonthlyUsd = Number((orphanSizeGb * 0.1).toFixed(2));
+
+    res.json({
+      projectId,
+      summary: {
+        repositoriesCount: repositories.length,
+        totalImagesCount: allImages.length,
+        orphanDigestCount,
+        totalSizeGb,
+        orphanSizeGb,
+        monthlyStorageUsd,
+        reclaimableMonthlyUsd,
+        immutableReposCount: repositories.filter((r) => r.immutableTags).length,
+      },
+      repositories,
+      images: allImages.slice(0, 40),
+    });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to inspect Artifact Registry Supply-Chain.',
+    });
+  }
+});
+
+// 2. POST /api/project/:projectId/wave9/supply-chain/create-repo
+app.post(
+  '/api/project/:projectId/wave9/supply-chain/create-repo',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      repositoryId,
+      location = 'us-central1',
+      format = 'DOCKER',
+      immutableTags = true,
+      description = 'Provisioned via CloudPulse 2026 SLSA Supply-Chain Studio',
+    } = req.body || {};
+
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+
+      const cleanId = String(repositoryId || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-');
+      if (!cleanId) {
+        return res.status(400).json({ error: 'Repository ID is required.' });
+      }
+
+      // Ensure artifactregistry.googleapis.com is enabled
+      try {
+        await gcpApiRequest({
+          method: 'POST',
+          url: `https://serviceusage.googleapis.com/v1/projects/${projectId}/services/artifactregistry.googleapis.com:enable`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        });
+      } catch {
+        // ignore
+      }
+
+      const payload = {
+        format,
+        description,
+        labels: {
+          'managed-by': 'cloudpulse-2026',
+          'slsa-immutable': immutableTags ? 'enforced' : 'false',
+        },
+      };
+
+      if (format === 'DOCKER') {
+        payload.dockerConfig = {
+          immutableTags: Boolean(immutableTags),
+        };
+      }
+
+      const op = await gcpApiRequest({
+        method: 'POST',
+        url: `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          location
+        )}/repositories?repositoryId=${encodeURIComponent(cleanId)}`,
+        token,
+        quotaProject: projectId,
+        data: payload,
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'ARTIFACT_REGISTRY_REPO_CREATED',
+        resourceType: 'ARTIFACT_REGISTRY_REPO',
+        resourceName: `${cleanId} (${location})`,
+        region: location,
+        summary: `Created ${format} Artifact Registry "${cleanId}" in ${location} (immutableTags=${immutableTags})`,
+      });
+
+      res.json({
+        ok: true,
+        operation: op,
+        message: `Provisioned Artifact Registry repository "${cleanId}" in ${location} (immutableTags=${immutableTags}).`,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to create Artifact Registry repository.',
+      });
+    }
+  }
+);
+
+// 3. GET /api/project/:projectId/wave9/cloud-sql
+app.get('/api/project/:projectId/wave9/cloud-sql', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const sqlRes = await gcpFetch(
+      `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/instances`,
+      token,
+      projectId,
+      { timeout: 6000 }
+    ).catch(() => ({ items: [] }));
+
+    const rawInstances = sqlRes?.items || [];
+    const instances = rawInstances.map((inst) => {
+      const settings = inst.settings || {};
+      const ipConfig = settings.ipConfiguration || {};
+      const backupConfig = settings.backupConfiguration || {};
+      const dbFlags = settings.databaseFlags || [];
+
+      const ipv4Enabled = ipConfig.ipv4Enabled !== false;
+      const authorizedNetworks = ipConfig.authorizedNetworks || [];
+      const hasWorldOpenCidr = authorizedNetworks.some(
+        (n) => n.value === '0.0.0.0/0'
+      );
+      const sslMode =
+        ipConfig.sslMode ||
+        (ipConfig.requireSsl ? 'ENCRYPTED_ONLY' : 'ALLOW_UNENCRYPTED_AND_ENCRYPTED');
+      const isSslEnforced =
+        sslMode === 'ENCRYPTED_ONLY' ||
+        sslMode === 'TRUSTED_CLIENT_CERTIFICATE_REQUIRED';
+      const isRegionalHa = settings.availabilityType === 'REGIONAL';
+      const pitrEnabled = Boolean(
+        backupConfig.pointInTimeRecoveryEnabled ||
+          backupConfig.binaryLogEnabled
+      );
+      const deletionProtection = Boolean(settings.deletionProtectionEnabled);
+      const iamAuthEnabled = dbFlags.some(
+        (f) =>
+          f.name === 'cloudsql.iam_authentication' &&
+          String(f.value).toLowerCase() === 'on'
+      );
+
+      let score = 100;
+      if (hasWorldOpenCidr) score -= 35;
+      else if (ipv4Enabled) score -= 15;
+      if (!isSslEnforced) score -= 20;
+      if (!isRegionalHa) score -= 15;
+      if (!pitrEnabled) score -= 15;
+      if (!deletionProtection) score -= 10;
+      if (!iamAuthEnabled) score -= 5;
+
+      return {
+        name: inst.name,
+        databaseVersion: inst.databaseVersion || 'POSTGRES_16',
+        region: inst.region || 'us-central1',
+        tier: settings.tier || 'db-custom-2-8192',
+        state: inst.state || 'RUNNABLE',
+        availabilityType: settings.availabilityType || 'ZONAL',
+        ipv4Enabled,
+        hasWorldOpenCidr,
+        sslMode,
+        isSslEnforced,
+        pitrEnabled,
+        deletionProtection,
+        iamAuthEnabled,
+        storageGb: Number(settings.dataDiskSizeGb || 20),
+        postureScore: Math.max(10, score),
+      };
+    });
+
+    res.json({
+      projectId,
+      instances,
+      summary: {
+        instancesCount: instances.length,
+        haCount: instances.filter((i) => i.availabilityType === 'REGIONAL')
+          .length,
+        privateOnlyCount: instances.filter((i) => !i.ipv4Enabled).length,
+        pitrCount: instances.filter((i) => i.pitrEnabled).length,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to inspect Cloud SQL instances.',
+    });
+  }
+});
+
+// 4. GET /api/project/:projectId/wave9/gke-vertex
+app.get('/api/project/:projectId/wave9/gke-vertex', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const [gkeRes, vertexRes] = await Promise.allSettled([
+      gcpFetch(
+        `https://container.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/-/clusters`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ),
+      gcpFetch(
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/us-central1/endpoints`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ),
+    ]);
+
+    const rawClusters =
+      gkeRes.status === 'fulfilled' ? gkeRes.value?.clusters || [] : [];
+    const clusters = rawClusters.map((c) => {
+      const isAutopilot = Boolean(c.autopilot?.enabled);
+      const hasWorkloadIdentity = Boolean(
+        c.workloadIdentityConfig?.workloadPool
+      );
+      const isPrivateNodes = Boolean(
+        c.privateClusterConfig?.enablePrivateNodes
+      );
+      const isShieldedNodes = Boolean(c.shieldedNodes?.enabled);
+      const hasBinaryAuth =
+        c.binaryAuthorization?.evaluationMode &&
+        c.binaryAuthorization.evaluationMode !== 'DISABLED';
+
+      const score =
+        30 +
+        (isAutopilot ? 20 : 0) +
+        (hasWorkloadIdentity ? 20 : 0) +
+        (isPrivateNodes ? 15 : 0) +
+        (isShieldedNodes ? 10 : 0) +
+        (hasBinaryAuth ? 5 : 0);
+
+      return {
+        name: c.name,
+        location: c.location || 'us-central1',
+        status: c.status || 'RUNNING',
+        kubernetesVersion: c.currentMasterVersion || '1.31',
+        nodeCount: Number(c.currentNodeCount || 0),
+        isAutopilot,
+        hasWorkloadIdentity,
+        isPrivateNodes,
+        isShieldedNodes,
+        hasBinaryAuth: Boolean(hasBinaryAuth),
+        postureScore: Math.min(100, score),
+      };
+    });
+
+    const vertexEndpoints =
+      vertexRes.status === 'fulfilled'
+        ? (vertexRes.value?.endpoints || []).map((ep) => ({
+            name: ep.name,
+            displayName: ep.displayName || ep.name.split('/').pop(),
+            deployedModelsCount: (ep.deployedModels || []).length,
+            createTime: ep.createTime,
+          }))
+        : [];
+
+    res.json({
+      projectId,
+      clusters,
+      vertexEndpoints,
+      summary: {
+        clustersCount: clusters.length,
+        autopilotCount: clusters.filter((c) => c.isAutopilot).length,
+        vertexEndpointsCount: vertexEndpoints.length,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to inspect GKE Autopilot & Vertex AI endpoints.',
+    });
+  }
+});
+
 // Serve static production frontend (dist/) when deployed on Cloud Run!
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {

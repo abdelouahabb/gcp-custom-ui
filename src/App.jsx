@@ -31,6 +31,7 @@ import {
   HardDrive,
   Database,
   Flame,
+  PackageCheck,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import SortableKpiRow from './components/SortableKpiRow';
@@ -47,6 +48,7 @@ import CloudStorageStudio from './components/CloudStorageStudio';
 import BigQueryStudio from './components/BigQueryStudio';
 import SovereignTimeMachineIamStudio from './components/SovereignTimeMachineIamStudio';
 import SreWarRoomPerimeterStudio from './components/SreWarRoomPerimeterStudio';
+import Wave9AiGkeSqlSupplyChainStudio from './components/Wave9AiGkeSqlSupplyChainStudio';
 import AuthOnboardingGate from './components/AuthOnboardingGate';
 import CloudRunDeployModal from './components/CloudRunDeployModal';
 import Revolutionary2026Suite, {
@@ -374,6 +376,13 @@ function CloudPulseCockpit() {
       label: 'BigQuery Studio ★',
       tip: 'BigQuery 2026 Enterprise Lakehouse & Compliance Studio: Physical vs Logical Compressed Billing (-54%), Pre-Crime SQL Dry-Run X-Ray, Auto-SQL Optimizer, and 168h FOR SYSTEM_TIME AS OF Time-Machine',
       icon: Database,
+    },
+    {
+      id: 'WAVE9_STUDIO',
+      group: 'DATA_LAKEHOUSE',
+      label: 'GKE, SQL & SBOM ☸️',
+      tip: 'Wave-9 Artifact Registry SLSA-3 Supply-Chain & Orphan Digest Sweeper, Zero-Trust Cloud SQL / AlloyDB Compiler, and GKE Autopilot + Spot GPU Studio',
+      icon: PackageCheck,
     },
 
     // IV. Zero-Trust Sovereignty, Incident SRE & 2026 Lab
@@ -894,6 +903,16 @@ function CloudPulseCockpit() {
                   }
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'WAVE9_STUDIO' && (
+                <Wave9AiGkeSqlSupplyChainStudio
+                  projectId={selectedProjectId}
+                  onTriggerToast={showToast}
+                  onRefreshOverview={() =>
+                    fetchProjectOverview(selectedProjectId)
+                  }
                 />
               )}
 
