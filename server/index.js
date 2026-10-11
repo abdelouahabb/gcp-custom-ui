@@ -10990,6 +10990,214 @@ app.post(
   }
 );
 
+// Helper to delete a single Artifact Registry dockerImage resource
+async function deleteArtifactDockerImage({ projectId, token, imageName, imageUri }) {
+  // imageName format: projects/{project}/locations/{loc}/repositories/{repo}/dockerImages/{pkg}@{digest}
+  if (imageName && imageName.includes('/dockerImages/')) {
+    const [repoPrefix, pkgAndDigest] = imageName.split('/dockerImages/');
+    const atIdx = pkgAndDigest.lastIndexOf('@');
+    if (repoPrefix && atIdx > 0) {
+      const pkgName = pkgAndDigest.slice(0, atIdx);
+      const digest = pkgAndDigest.slice(atIdx + 1);
+      // First delete any tags pointing to this version if needed, or try deleting the version directly
+      const versionUrl = `https://artifactregistry.googleapis.com/v1/${repoPrefix}/packages/${encodeURIComponent(
+        pkgName
+      )}/versions/${encodeURIComponent(digest)}`;
+      try {
+        return await gcpApiRequest({
+          method: 'DELETE',
+          url: versionUrl,
+          token,
+          quotaProject: projectId,
+        });
+      } catch (restErr) {
+        // If version has tags attached, fallback to gcloud artifacts docker images delete --delete-tags
+        if (imageUri) {
+          execFileSync(
+            'gcloud',
+            [
+              'artifacts',
+              'docker',
+              'images',
+              'delete',
+              imageUri,
+              '--delete-tags',
+              '--quiet',
+              `--project=${projectId}`,
+            ],
+            { timeout: 15000, stdio: 'pipe' }
+          );
+          return { deletedViaGcloud: true, uri: imageUri };
+        }
+        throw restErr;
+      }
+    }
+  }
+  if (imageUri) {
+    execFileSync(
+      'gcloud',
+      [
+        'artifacts',
+        'docker',
+        'images',
+        'delete',
+        imageUri,
+        '--delete-tags',
+        '--quiet',
+        `--project=${projectId}`,
+      ],
+      { timeout: 15000, stdio: 'pipe' }
+    );
+    return { deletedViaGcloud: true, uri: imageUri };
+  }
+  throw new Error('Either imageName or imageUri is required to delete container image.');
+}
+
+// 2b. POST /api/project/:projectId/wave9/supply-chain/delete-image
+app.post(
+  '/api/project/:projectId/wave9/supply-chain/delete-image',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { name: imageName, uri: imageUri } = req.body || {};
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+      const op = await deleteArtifactDockerImage({
+        projectId,
+        token,
+        imageName,
+        imageUri,
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'ARTIFACT_IMAGE_DIGEST_DELETED',
+        resourceType: 'ARTIFACT_DOCKER_IMAGE',
+        resourceName: imageUri || imageName,
+        region: 'multi-region',
+        summary: `Deleted container image digest "${imageUri || imageName}" from Artifact Registry`,
+      });
+
+      return res.json({
+        ok: true,
+        operation: op,
+        message: `Deleted container image digest "${
+          (imageUri || imageName || '').split('/').pop()
+        }" from Artifact Registry.`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to delete container image digest from Artifact Registry.',
+      });
+    }
+  }
+);
+
+// 2c. POST /api/project/:projectId/wave9/supply-chain/sweep-orphans
+app.post(
+  '/api/project/:projectId/wave9/supply-chain/sweep-orphans',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { orphans = [] } = req.body || {};
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+      if (!Array.isArray(orphans) || orphans.length === 0) {
+        return res.status(400).json({ error: 'No untagged orphan digests provided to sweep.' });
+      }
+
+      const results = await Promise.allSettled(
+        orphans.map((img) =>
+          deleteArtifactDockerImage({
+            projectId,
+            token,
+            imageName: img.name,
+            imageUri: img.uri,
+          })
+        )
+      );
+
+      const deletedCount = results.filter((r) => r.status === 'fulfilled').length;
+      const failedCount = results.length - deletedCount;
+
+      recordFlightEvent(projectId, {
+        action: 'ARTIFACT_ORPHAN_DIGESTS_SWEPT',
+        resourceType: 'ARTIFACT_DOCKER_IMAGE',
+        resourceName: `${deletedCount} untagged orphan digests`,
+        region: 'multi-region',
+        summary: `Swept ${deletedCount} untagged orphan container digests from Artifact Registry`,
+      });
+
+      return res.json({
+        ok: true,
+        deletedCount,
+        failedCount,
+        message: `Swept ${deletedCount} untagged orphan container digest(s) from Artifact Registry${
+          failedCount > 0 ? ` (${failedCount} failed)` : ''
+        }!`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to sweep untagged orphan digests.',
+      });
+    }
+  }
+);
+
+// 2d. DELETE /api/project/:projectId/wave9/supply-chain/repositories/:location/:repositoryId
+app.delete(
+  '/api/project/:projectId/wave9/supply-chain/repositories/:location/:repositoryId',
+  async (req, res) => {
+    const { projectId, location, repositoryId } = req.params;
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+      const op = await gcpApiRequest({
+        method: 'DELETE',
+        url: `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          location
+        )}/repositories/${encodeURIComponent(repositoryId)}`,
+        token,
+        quotaProject: projectId,
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'ARTIFACT_REGISTRY_REPO_DELETED',
+        resourceType: 'ARTIFACT_REGISTRY_REPO',
+        resourceName: `${repositoryId} (${location})`,
+        region: location,
+        summary: `Deleted Artifact Registry repository "${repositoryId}" in ${location}`,
+      });
+
+      return res.json({
+        ok: true,
+        operation: op,
+        message: `Deleted Artifact Registry repository "${repositoryId}" in ${location}.`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to delete Artifact Registry repository "${repositoryId}".`,
+      });
+    }
+  }
+);
+
 // 3. GET /api/project/:projectId/wave9/cloud-sql
 app.get('/api/project/:projectId/wave9/cloud-sql', async (req, res) => {
   const { projectId } = req.params;
