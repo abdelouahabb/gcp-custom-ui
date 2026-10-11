@@ -271,6 +271,10 @@ function CloudPulseCockpit() {
     setVmRefreshTrigger((c) => c + 1);
     if (serviceType === 'CLOUD_RUN') {
       setActiveTab('CLOUD_RUN');
+    } else if (serviceType === 'GKE_CLUSTER') {
+      setActiveTab('GKE_STUDIO');
+    } else if (serviceType === 'CLOUD_SQL') {
+      setActiveTab('CLOUD_SQL_STUDIO');
     } else if (serviceType === 'GCS_BUCKET') {
       setActiveTab('CLOUD_STORAGE');
     } else if (serviceType === 'BIGQUERY_DATASET') {
@@ -1129,12 +1133,18 @@ function CloudPulseCockpit() {
         }}
         onOpenCreateModal={(type) => {
           if (type === 'CLOUD_RUN') handleOpenProvision('CLOUD_RUN');
-          else if (type === 'VM') handleOpenProvision('COMPUTE_VM');
+          else if (type === 'GKE_CLUSTER') handleOpenProvision('GKE_CLUSTER');
+          else if (type === 'CLOUD_SQL') handleOpenProvision('CLOUD_SQL');
+          else if (type === 'BIGQUERY_DATASET')
+            handleOpenProvision('BIGQUERY_DATASET');
+          else if (type === 'VM' || type === 'COMPUTE_VM')
+            handleOpenProvision('COMPUTE_VM');
           else if (type === 'VPC_NETWORK') handleOpenProvision('VPC_NETWORK');
           else if (type === 'VPC_FIREWALL') handleOpenProvision('VPC_FIREWALL');
-          else if (type === 'BUCKET') handleOpenProvision('GCS_BUCKET');
+          else if (type === 'BUCKET' || type === 'GCS_BUCKET')
+            handleOpenProvision('GCS_BUCKET');
           else if (type === 'API') setActiveTab('RESOURCES');
-          else handleOpenProvision('GCS_BUCKET');
+          else handleOpenProvision(type || 'GCS_BUCKET');
         }}
         onOpenKillSwitch={() => setActiveTab('RESOURCES')}
         onOpenCopilot={() => handleOpenCopilotWithPrompt('')}

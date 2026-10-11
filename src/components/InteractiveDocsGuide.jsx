@@ -56,14 +56,105 @@ const DOC_SECTIONS = [
       '100% free telemetry & in-memory security inspection. Prevents compliance fines, egress waste, and cold-start latency.',
   },
   {
+    id: 'dedicated-cloud-sql-alloydb-studio',
+    wave: 'CLOUD SQL & ALLOYDB · RELATIONAL & AI VECTOR STUDIO',
+    title:
+      '🐘 Dedicated Cloud SQL (MySQL 8.4 LTS & PostgreSQL 16/17) + Google Cloud AlloyDB Studio',
+    badge: 'CLOUD SQL & ALLOYDB 🐘 TAB + PROVISION MODAL',
+    badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+    icon: Layers,
+    targetTab: 'CLOUD_SQL_STUDIO',
+    problemSolved:
+      'Choosing between MySQL and PostgreSQL—and when using PostgreSQL, deciding whether to deploy Classic/Enterprise Plus Cloud SQL or Google Cloud AlloyDB—requires comparing storage architectures, failover SLAs, AI vector indexes, and strict regulatory compliance locks.',
+    howItWorks: [
+      '🐘 Engine Family & Architecture Fork: Select MySQL (8.4 LTS / 8.0) or PostgreSQL (16 / 17 / 15). When PostgreSQL is selected, fork between Classic / Enterprise Plus Cloud SQL (sqladmin.googleapis.com/v1) and Google Cloud AlloyDB (alloydb.googleapis.com/v1). Selecting MySQL automatically locks out AlloyDB with a 🔒 badge.',
+      '⚖️ Classic Cloud SQL vs. AlloyDB TCO Comparator: Simulates vCPUs, Storage GB, Read Replicas, Vector RAG, and HTAP workloads to compare Cloud SQL Enterprise, Cloud SQL Enterprise Plus, and AlloyDB across failover SLA (<60s vs <2s vs <1s) and Cost per 1,000 TPS.',
+      '🧠 AI Vector (ScaNN / pgvector / MySQL 8.4 VECTOR) & Slow-Query Index Surgeon + Zero-Password IAM Auth Proxy v2 Vault.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/wave9/cloud-sql → sqladmin.googleapis.com/v1 + alloydb.googleapis.com/v1',
+      'POST /api/project/:id/provision (serviceType: "CLOUD_SQL", sqlArchitecture: "CLOUD_SQL" | "ALLOYDB")',
+    ],
+    billingImpact:
+      'Displays exact pre-deploy hourly and monthly FinOps estimates before provisioning any database instance or cluster.',
+  },
+  {
+    id: 'dedicated-gke-studio',
+    wave: 'GKE STUDIO · AUTOPILOT & SPOT GPU KUBERNETES',
+    title:
+      '☸️ Dedicated Google Kubernetes Engine (GKE) Autopilot, Spot GPU & Workload Studio',
+    badge: 'GKE STUDIO ☸️ TAB + PROVISION MODAL',
+    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    icon: Server,
+    targetTab: 'GKE_STUDIO',
+    problemSolved:
+      'Provisioning hardened GKE Autopilot or Standard Spot GPU clusters with Workload Identity OIDC, Private Nodes, Shielded Nodes, and Binary Authorization normally requires dozens of complex gcloud flags and manual Kubernetes manifests.',
+    howItWorks: [
+      '☸️ 1-Click GKE Autopilot & Standard Spot GPU Cluster Provisioner: Enforces strict compliance locks (🔒) across SEC/FedRAMP, GDPR EU, HIPAA BAA, and AI Spot GPU presets.',
+      '📦 K8s Workload YAML & Spot GPU Deployment Composer: Generates production Kubernetes Deployment + Service + HorizontalPodAutoscaler manifests and 1-click kubectl apply commands.',
+      '🔐 Live GKE Fleet & 1-Tap kubeconfig / Cloud Shell Connector.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/wave9/gke-vertex → container.googleapis.com/v1/projects/:id/locations/-/clusters',
+      'POST /api/project/:id/provision (serviceType: "GKE_CLUSTER") & DELETE /api/project/:id/gke/clusters/:location/:name',
+    ],
+    billingImpact:
+      'GKE Autopilot empty clusters cost $0.00/hr under the GKE Free Tier management credit ($74.40/mo); Spot GPU node pools save up to 68%.',
+  },
+  {
+    id: 'dedicated-bigquery-2026-studio',
+    wave: 'BIGQUERY STUDIO · PHYSICAL COMPRESSED LAKEHOUSE',
+    title:
+      '📊 BigQuery 2026 Enterprise Lakehouse, Physical Billing (-54%) & 168h Time-Machine Studio',
+    badge: 'BIGQUERY STUDIO ★ TAB + PROVISION MODAL',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    icon: Layers,
+    targetTab: 'BIGQUERY_STUDIO',
+    problemSolved:
+      'Uncompressed Logical BigQuery billing overcharges high-compression datasets by up to 2.2x, while unpartitioned SELECT * queries can accidentally scan terabytes of data.',
+    howItWorks: [
+      '🏛️ Strict Compliance Blueprints (SEC/FINRA, GDPR EU, HIPAA, AI Vector BigLake): Locks jurisdiction, Physical Capacitor compressed billing (-54%), and 48h–168h Time-Travel windows.',
+      '🔬 Pre-Crime SQL Dry-Run X-Ray & Auto-SQL Partition/Cluster Optimizer: Estimates exact bytes billed and query cost before execution.',
+      '⏪ 168-Hour FOR SYSTEM_TIME AS OF Time-Machine & 1-Tap Storage Billing Model Switcher (LOGICAL ↔ PHYSICAL).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/bigquery/datasets & POST /api/project/:id/provision (serviceType: "BIGQUERY_DATASET")',
+      'POST /api/project/:id/bigquery/dry-run → bigquery.googleapis.com/bigquery/v2/projects/:id/jobs',
+    ],
+    billingImpact:
+      'Empty datasets cost $0.00/mo; Physical Compressed billing reduces active storage spend by up to 54% on compressible analytical tables.',
+  },
+  {
+    id: 'artifact-registry-sbom-studio',
+    wave: 'ARTIFACT REGISTRY · SLSA-3 SUPPLY-CHAIN & ORPHAN SWEEPER',
+    title:
+      '📦 Artifact Registry SLSA-3 Supply-Chain & 1-Click Orphan Digest Sweeper Studio',
+    badge: 'ARTIFACT REGISTRY & SBOM 📦 TAB',
+    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    icon: Layers,
+    targetTab: 'WAVE9_STUDIO',
+    problemSolved:
+      'CI/CD pipelines leave behind dozens of untagged orphan container digests that silently bill $0.10/GB-month forever, and mutable image tags (:latest / :v1.0) allow tag-mutation supply-chain attacks.',
+    howItWorks: [
+      '🔒 Immutable Tag Repository Provisioner: Enforces dockerConfig.immutableTags = true across SEC/FedRAMP, GDPR EU, and HIPAA container registries.',
+      '🧹 1-Click Live Digest Deletion & Batch Orphan Sweeper: Delete individual container digests, sweep all untagged orphan layers in one click, or delete repositories directly from the UI.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/wave9/supply-chain & POST /api/project/:id/wave9/supply-chain/create-repo',
+      'POST /api/project/:id/wave9/supply-chain/delete-image & POST /api/project/:id/wave9/supply-chain/sweep-orphans',
+    ],
+    billingImpact:
+      'Directly reclaims wasted monthly Artifact Registry storage spend by sweeping untagged orphan container digests.',
+  },
+  {
     id: 'cloud-storage-5step-compliance-studio',
     wave: 'CLOUD STORAGE · ENTERPRISE COMPLIANCE & 5-STEP WIZARD',
     title:
       '🗄️ 5-Step Fine-Grained Cloud Storage Provisioning Wizard & Regulatory Compliance Studio (SEC 17a-4, HIPAA, GDPR, Sovereign Zero-Trust)',
-    badge: 'STORAGE & DATA + PROVISION MODAL',
+    badge: 'CLOUD STORAGE ★ TAB + PROVISION MODAL',
     badgeColor: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
     icon: Layers,
-    targetTab: 'STORAGE_BQ',
+    targetTab: 'CLOUD_STORAGE',
     problemSolved:
       'Creating a production Cloud Storage bucket requires fine-grained control over Region vs Dual-Region (custom pair + 15-minute Turbo Replication RPO) vs Multi-Region topology, Autoclass vs manual storage classes, Uniform vs Fine-grained ACLs, WORM Retention Locks, Soft-Delete windows, CMEK encryption, and Lifecycle policies.',
     howItWorks: [
