@@ -915,7 +915,7 @@ function CloudPulseCockpit() {
                   }
                   onOpenProvision={(svcType) => {
                     setProvisionInitialService(svcType || 'GKE_CLUSTER');
-                    setProvisionModalOpen(true);
+                    setProvisionOpen(true);
                   }}
                 />
               )}
