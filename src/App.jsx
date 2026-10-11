@@ -32,6 +32,7 @@ import {
   Database,
   Flame,
   PackageCheck,
+  Cpu,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import SortableKpiRow from './components/SortableKpiRow';
@@ -44,6 +45,7 @@ import VmFleetAndSsh from './components/VmFleetAndSsh';
 import VpcNetworksAndFirewalls from './components/VpcNetworksAndFirewalls';
 import EmergencyApiKillSwitch from './components/EmergencyApiKillSwitch';
 import CloudRunFleetManager from './components/CloudRunFleetManager';
+import GkeFleetStudio from './components/GkeFleetStudio';
 import CloudStorageStudio from './components/CloudStorageStudio';
 import BigQueryStudio from './components/BigQueryStudio';
 import SovereignTimeMachineIamStudio from './components/SovereignTimeMachineIamStudio';
@@ -348,6 +350,13 @@ function CloudPulseCockpit() {
       icon: Rocket,
     },
     {
+      id: 'GKE_STUDIO',
+      group: 'COMPUTE_NET',
+      label: 'GKE Studio ☸️',
+      tip: 'Dedicated Google Kubernetes Engine (GKE) Studio: 1-Click Autopilot & Spot GPU Cluster Provisioner, strict SEC/GDPR/HIPAA compliance locks, K8s Workload YAML Composer & kubeconfig Fleet Manager',
+      icon: Cpu,
+    },
+    {
       id: 'VM_SSH',
       group: 'COMPUTE_NET',
       label: 'VM Fleet & Web SSH',
@@ -380,8 +389,8 @@ function CloudPulseCockpit() {
     {
       id: 'WAVE9_STUDIO',
       group: 'DATA_LAKEHOUSE',
-      label: 'GKE, SQL & SBOM ☸️',
-      tip: 'Wave-9 Artifact Registry SLSA-3 Supply-Chain & Orphan Digest Sweeper, Zero-Trust Cloud SQL / AlloyDB Compiler, and GKE Autopilot + Spot GPU Studio',
+      label: 'Cloud SQL & SBOM 📦',
+      tip: 'Artifact Registry SLSA-3 Supply-Chain & Orphan Digest Sweeper, and Zero-Trust Cloud SQL / AlloyDB Compiler (Private IP + mTLS + 35-day PITR)',
       icon: PackageCheck,
     },
 
@@ -913,10 +922,6 @@ function CloudPulseCockpit() {
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
-                  onOpenProvision={(svcType) => {
-                    setProvisionInitialService(svcType || 'GKE_CLUSTER');
-                    setProvisionOpen(true);
-                  }}
                 />
               )}
 
@@ -953,6 +958,18 @@ function CloudPulseCockpit() {
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'GKE_STUDIO' && (
+                <GkeFleetStudio
+                  projectId={selectedProjectId}
+                  onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}
+                  onRunInShell={handleRunInShell}
+                  onRefreshOverview={() =>
+                    fetchProjectOverview(selectedProjectId)
+                  }
+                  onShowToast={showToast}
                 />
               )}
 

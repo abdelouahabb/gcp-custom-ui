@@ -310,6 +310,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-gke-studio',
+        category: 'Compute & Containers Studios',
+        title: 'Open Dedicated GKE Studio (Autopilot, Spot GPUs & K8s Workloads) ☸️',
+        subtitle: '1-Click GKE Autopilot / Spot GPU Cluster Provisioner, K8s YAML Composer & kubeconfig Fleet Manager',
+        keywords: 'gke studio kubernetes cluster autopilot spot gpu k8s yaml kubeconfig',
+        badge: 'GKE STUDIO',
+        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        icon: Cpu,
+        run: () => {
+          onSelectTab('GKE_STUDIO');
+          onClose();
+        }
+      },
+      {
         id: 'open-bigquery-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
         title: 'Open BigQuery 2026 Lakehouse & Compliance Studio ★',
@@ -320,6 +334,20 @@ export default function CommandPaletteModal({
         icon: Database,
         run: () => {
           onSelectTab('BIGQUERY_STUDIO');
+          onClose();
+        }
+      },
+      {
+        id: 'open-sql-sbom-studio',
+        category: 'Data Lakehouse & Sovereign SRE Studios',
+        title: 'Open Cloud SQL & Artifact Registry SLSA-3 SBOM Studio 📦',
+        subtitle: 'Audit container digests & orphan layers, and enforce Private-IP + 35d PITR Cloud SQL',
+        keywords: 'cloud sql postgres alloydb artifact registry sbom slsa container digest',
+        badge: 'SQL & SBOM',
+        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab('WAVE9_STUDIO');
           onClose();
         }
       },

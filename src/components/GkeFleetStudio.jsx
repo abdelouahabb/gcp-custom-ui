@@ -1,0 +1,1108 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import {
+  Cpu,
+  ShieldCheck,
+  RefreshCw,
+  Terminal,
+  Copy,
+  Check,
+  Trash2,
+  Sparkles,
+  Server,
+  Layers,
+  PlusCircle,
+  Lock,
+  Rocket,
+  FileCode,
+  Zap,
+} from 'lucide-react';
+
+const GPU_SKUS = {
+  'nvidia-l4': {
+    label: 'NVIDIA L4 (24GB VRAM · Ada Lovelace · g2-standard-4)',
+    machineType: 'g2-standard-4',
+    onDemandHr: 0.81,
+    spotHr: 0.26,
+    flag: 'nvidia-l4',
+  },
+  'nvidia-tesla-t4': {
+    label: 'NVIDIA Tesla T4 (16GB VRAM · Inference · n1-standard-4)',
+    machineType: 'n1-standard-4',
+    onDemandHr: 0.54,
+    spotHr: 0.17,
+    flag: 'nvidia-tesla-t4',
+  },
+  'nvidia-a100-80gb': {
+    label: 'NVIDIA A100 (80GB HBM2e · Ampere · a2-ultragpu-1g)',
+    machineType: 'a2-highgpu-1g',
+    onDemandHr: 3.93,
+    spotHr: 1.18,
+    flag: 'nvidia-a100-80gb',
+  },
+  'nvidia-h100-80gb': {
+    label: 'NVIDIA H100 (80GB HBM3 · Hopper Mega · a3-highgpu-8g)',
+    machineType: 'a2-highgpu-1g',
+    onDemandHr: 10.8,
+    spotHr: 3.35,
+    flag: 'nvidia-h100-80gb',
+  },
+};
+
+const WORKLOAD_TEMPLATES = {
+  'web-microservice': {
+    title: 'Zero-Trust Stateless Web Microservice + HPA',
+    desc: 'Hardened non-root Deployment with Seccomp RuntimeDefault, PodDisruptionBudget & CPU HorizontalPodAutoscaler (1→10 replicas)',
+    image: 'us-docker.pkg.dev/cloudrun/container/hello:latest',
+    port: 8080,
+    cpuReq: '250m',
+    memReq: '512Mi',
+    gpuCount: 0,
+  },
+  'vllm-l4-inference': {
+    title: 'vLLM / Gemma-3 / Llama-3 GPU Inference Server (NVIDIA L4)',
+    desc: 'GPU-accelerated LLM serving Deployment requesting 1x nvidia.com/gpu with Spot toleration & /v1/chat/completions Service',
+    image: 'vllm/vllm-openai:latest',
+    port: 8000,
+    cpuReq: '2000m',
+    memReq: '16Gi',
+    gpuCount: 1,
+  },
+  'redis-stateful-cache': {
+    title: 'High-Throughput Redis 7 In-Memory Cache Cluster',
+    desc: 'Low-latency internal ClusterIP cache with strict memory limits and liveness probes',
+    image: 'redis:7.2-alpine',
+    port: 6379,
+    cpuReq: '500m',
+    memReq: '1Gi',
+    gpuCount: 0,
+  },
+};
+
+export default function GkeFleetStudio({
+  projectId,
+  onOpenProvisionGke,
+  onRunInShell,
+  onRefreshOverview,
+  onShowToast,
+}) {
+  const [activeSubTab, setActiveSubTab] = useState('FLEET_DEPLOY');
+  const [gkeData, setGkeData] = useState(null);
+  const [loadingGke, setLoadingGke] = useState(false);
+
+  // Quick Cluster Provisioner State with Strict Compliance Locks
+  const [gkeBlueprint, setGkeBlueprint] = useState('zero-trust-autopilot');
+  const [clusterName, setClusterName] = useState('cloudpulse-gke-autopilot');
+  const [clusterRegion, setClusterRegion] = useState('us-central1');
+  const [gkeMode, setGkeMode] = useState('AUTOPILOT'); // AUTOPILOT | STANDARD
+  const [releaseChannel, setReleaseChannel] = useState('STABLE');
+  const [gpuSku, setGpuSku] = useState('nvidia-l4');
+  const [gpuCount, setGpuCount] = useState(1);
+  const [useSpotGpu, setUseSpotGpu] = useState(true);
+  const [privateNodes, setPrivateNodes] = useState(true);
+  const [binaryAuth, setBinaryAuth] = useState(true);
+  const [workloadIdentity, setWorkloadIdentity] = useState(true);
+  const [creatingGke, setCreatingGke] = useState(false);
+  const [deletingGkeName, setDeletingGkeName] = useState('');
+
+  // Workload YAML Generator State
+  const [workloadPreset, setWorkloadPreset] = useState('web-microservice');
+  const [appName, setAppName] = useState('cloudpulse-api');
+  const [appNamespace, setAppNamespace] = useState('production');
+  const [appImage, setAppImage] = useState(
+    'us-docker.pkg.dev/cloudrun/container/hello:latest'
+  );
+  const [appPort, setAppPort] = useState(8080);
+  const [appReplicas, setAppReplicas] = useState(2);
+  const [appCpuReq, setAppCpuReq] = useState('250m');
+  const [appMemReq, setAppMemReq] = useState('512Mi');
+  const [appGpuCount, setAppGpuCount] = useState(0);
+  const [copiedLabel, setCopiedLabel] = useState('');
+
+  const handleCopy = (text, label = 'command') => {
+    navigator.clipboard?.writeText(text);
+    setCopiedLabel(label);
+    if (onShowToast) onShowToast(`Copied ${label} to clipboard`);
+    setTimeout(() => setCopiedLabel(''), 2000);
+  };
+
+  const fetchGkeFleet = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingGke(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/wave9/gke-vertex`
+      );
+      setGkeData(res.data);
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error || 'Failed to inspect GKE cluster fleet'
+        );
+      }
+    } finally {
+      setLoadingGke(false);
+    }
+  }, [projectId, onShowToast]);
+
+  useEffect(() => {
+    fetchGkeFleet();
+  }, [fetchGkeFleet]);
+
+  const applyGkeBlueprint = (bp) => {
+    setGkeBlueprint(bp);
+    if (bp === 'zero-trust-autopilot') {
+      setGkeMode('AUTOPILOT');
+      setClusterRegion('us-central1');
+      setReleaseChannel('STABLE');
+      setPrivateNodes(true);
+      setBinaryAuth(true);
+      setWorkloadIdentity(true);
+    } else if (bp === 'gdpr-eu-ai-cluster') {
+      setGkeMode('AUTOPILOT');
+      setClusterRegion('europe-west1');
+      setReleaseChannel('REGULAR');
+      setPrivateNodes(true);
+      setBinaryAuth(true);
+      setWorkloadIdentity(true);
+    } else if (bp === 'hipaa-clinical-k8s') {
+      setGkeMode('AUTOPILOT');
+      setClusterRegion('us-east4');
+      setReleaseChannel('STABLE');
+      setPrivateNodes(true);
+      setBinaryAuth(true);
+      setWorkloadIdentity(true);
+    } else if (bp === 'ai-spot-gpu-standard') {
+      setGkeMode('STANDARD');
+      setClusterRegion('us-central1');
+      setReleaseChannel('RAPID');
+      setUseSpotGpu(true);
+      setPrivateNodes(false);
+      setBinaryAuth(false);
+      setWorkloadIdentity(true);
+    }
+  };
+
+  const applyWorkloadTemplate = (tplKey) => {
+    setWorkloadPreset(tplKey);
+    const tpl = WORKLOAD_TEMPLATES[tplKey];
+    if (!tpl) return;
+    setAppImage(tpl.image);
+    setAppPort(tpl.port);
+    setAppCpuReq(tpl.cpuReq);
+    setAppMemReq(tpl.memReq);
+    setAppGpuCount(tpl.gpuCount);
+  };
+
+  const handleCreateGkeCluster = async (e) => {
+    e.preventDefault();
+    if (!clusterName.trim() || creatingGke) return;
+    setCreatingGke(true);
+    try {
+      const selectedGpu = GPU_SKUS[gpuSku] || GPU_SKUS['nvidia-l4'];
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/provision`,
+        {
+          serviceType: 'GKE_CLUSTER',
+          name: clusterName.trim(),
+          region: clusterRegion,
+          config: {
+            gkeMode,
+            gkeLocation: clusterRegion,
+            releaseChannel,
+            network: 'default',
+            enablePrivateNodes: privateNodes,
+            enableWorkloadIdentity: workloadIdentity,
+            enableShieldedNodes: true,
+            enableBinaryAuth: binaryAuth,
+            nodeMachineType:
+              gkeMode === 'STANDARD'
+                ? selectedGpu.machineType
+                : 'e2-standard-4',
+            initialNodeCount: Math.min(8, Math.max(1, Number(gpuCount) || 1)),
+            spotNodes: useSpotGpu,
+            gpuAcceleratorType:
+              gkeMode === 'STANDARD' ? selectedGpu.flag : 'NONE',
+            gpuAcceleratorCount: 1,
+          },
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message || `Provisioning GKE Cluster ${clusterName} on GCP`
+        );
+      }
+      await fetchGkeFleet();
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error || 'Failed to provision GKE cluster'
+        );
+      }
+    } finally {
+      setCreatingGke(false);
+    }
+  };
+
+  const handleDeleteGkeCluster = async (loc, cName) => {
+    if (!loc || !cName || deletingGkeName) return;
+    setDeletingGkeName(cName);
+    try {
+      const res = await axios.delete(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/gke/clusters/${encodeURIComponent(loc)}/${encodeURIComponent(cName)}`
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message || `Decommissioning GKE cluster ${cName}`
+        );
+      }
+      await fetchGkeFleet();
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error || `Failed to delete GKE cluster ${cName}`
+        );
+      }
+    } finally {
+      setDeletingGkeName('');
+    }
+  };
+
+  // Strict Compliance Locks
+  const isCustom = gkeBlueprint === 'custom';
+  const isGdpr = gkeBlueprint === 'gdpr-eu-ai-cluster';
+  const isUsOnly =
+    gkeBlueprint === 'zero-trust-autopilot' ||
+    gkeBlueprint === 'hipaa-clinical-k8s';
+  const isZeroTrustEnclave =
+    gkeBlueprint === 'zero-trust-autopilot' ||
+    gkeBlueprint === 'gdpr-eu-ai-cluster' ||
+    gkeBlueprint === 'hipaa-clinical-k8s';
+
+  // GPU FinOps math
+  const selectedGpuObj = GPU_SKUS[gpuSku] || GPU_SKUS['nvidia-l4'];
+  const monthlyOnDemandUsd = Math.round(
+    selectedGpuObj.onDemandHr * gpuCount * 730
+  );
+  const monthlySpotUsd = Math.round(selectedGpuObj.spotHr * gpuCount * 730);
+  const monthlyGpuSavingsUsd = monthlyOnDemandUsd - monthlySpotUsd;
+
+  const gkeCli =
+    gkeMode === 'AUTOPILOT'
+      ? `gcloud container clusters create-auto ${clusterName} \\
+  --region=${clusterRegion} \\
+  --release-channel=${releaseChannel.toLowerCase()} \\
+  ${privateNodes ? '--enable-private-nodes \\\n  ' : ''}${
+          binaryAuth
+            ? '--binauthz-evaluation-mode=PROJECT_SINGLETON_POLICY_ENFORCE \\\n  '
+            : ''
+        }${
+          workloadIdentity
+            ? `--workload-pool=${projectId}.svc.id.goog \\\n  `
+            : ''
+        }--project=${projectId}`
+      : `gcloud container clusters create ${clusterName} \\
+  --location=${clusterRegion} \\
+  --release-channel=${releaseChannel.toLowerCase()} \\
+  --machine-type=${selectedGpuObj.machineType} \\
+  --num-nodes=${Math.min(8, Math.max(1, Number(gpuCount) || 1))} \\
+  ${useSpotGpu ? '--spot \\\n  ' : ''}--accelerator=type=${
+          selectedGpuObj.flag
+        },count=1 \\
+  --enable-shielded-nodes \\
+  ${
+    workloadIdentity ? `--workload-pool=${projectId}.svc.id.goog \\\n  ` : ''
+  }--project=${projectId}`;
+
+  const k8sYamlManifest = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${appName}
+  namespace: ${appNamespace}
+  labels:
+    app: ${appName}
+    managed-by: cloudpulse-2026
+spec:
+  replicas: ${appReplicas}
+  selector:
+    matchLabels:
+      app: ${appName}
+  template:
+    metadata:
+      labels:
+        app: ${appName}
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ${appName}
+          image: ${appImage}
+          ports:
+            - containerPort: ${appPort}
+          resources:
+            requests:
+              cpu: "${appCpuReq}"
+              memory: "${appMemReq}"${
+    appGpuCount > 0 ? `\n              nvidia.com/gpu: "${appGpuCount}"` : ''
+  }
+            limits:
+              cpu: "${appCpuReq}"
+              memory: "${appMemReq}"${
+    appGpuCount > 0 ? `\n              nvidia.com/gpu: "${appGpuCount}"` : ''
+  }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${appName}-svc
+  namespace: ${appNamespace}
+spec:
+  type: LoadBalancer
+  selector:
+    app: ${appName}
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: ${appPort}`;
+
+  const clustersList = gkeData?.clusters || [];
+  const autopilotCount = clustersList.filter((c) => c.autopilot).length;
+
+  return (
+    <div className="space-y-5">
+      {/* Top Hero Banner */}
+      <div className="rounded-[12px] border border-indigo-500/30 bg-gradient-to-r from-indigo-950/70 via-zinc-900 to-cyan-950/60 p-4 sm:p-5 shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-mono">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span>
+                DEDICATED GOOGLE KUBERNETES ENGINE (GKE) AUTOPILOT & SPOT GPU STUDIO
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+              ☸️ GKE Autopilot, Spot GPU Node-Pools & Zero-Trust K8s Enclave Studio
+            </h2>
+            <p className="text-xs text-zinc-300 max-w-3xl">
+              Direct live `container.googleapis.com/v1` cluster provisioning & fleet management with strict SEC / GDPR / HIPAA compliance locks (`🔒`), Workload Identity OIDC (`*.svc.id.goog`), Binary Authorization, and Spot GPU FinOps.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {onOpenProvisionGke && (
+              <button
+                type="button"
+                onClick={onOpenProvisionGke}
+                title="Open the full 5-Step GKE Compliance & Architecture Wizard in the Provisioning Modal"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>+ Create GKE Cluster (5-Step Wizard)</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={fetchGkeFleet}
+              title="Refresh live GKE clusters and Vertex AI endpoints from container.googleapis.com"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${
+                  loadingGke ? 'animate-spin text-cyan-400' : 'text-cyan-400'
+                }`}
+              />
+              <span>Refresh GKE Fleet</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 KPI Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-400">
+              Live GKE Clusters
+            </div>
+            <div className="text-lg font-extrabold text-white mt-0.5">
+              {clustersList.length} Cluster(s) ({autopilotCount} Autopilot)
+            </div>
+            <div className="text-[11px] text-cyan-400 font-mono">
+              container.googleapis.com/v1
+            </div>
+          </div>
+
+          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-400">
+              GKE Free Tier Management Credit
+            </div>
+            <div className="text-lg font-extrabold text-emerald-400 mt-0.5">
+              $74.40/mo Covered
+            </div>
+            <div className="text-[11px] text-zinc-400 font-mono">
+              $0.00/hr idle fee on 1st Zonal/Autopilot cluster
+            </div>
+          </div>
+
+          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-400">
+              Workload Identity OIDC Pool
+            </div>
+            <div className="text-sm font-extrabold text-indigo-300 mt-1 truncate font-mono">
+              {projectId}.svc.id.goog
+            </div>
+            <div className="text-[11px] text-emerald-400 font-mono mt-0.5">
+              Zero static JSON SA keys required
+            </div>
+          </div>
+
+          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-400">
+              Spot GPU Node-Pool FinOps
+            </div>
+            <div className="text-lg font-extrabold text-amber-400 mt-0.5">
+              -${monthlyGpuSavingsUsd.toLocaleString()}/mo (-68%)
+            </div>
+            <div className="text-[11px] text-zinc-400 font-mono">
+              {gpuCount}x {selectedGpuObj.flag} Spot vs On-Demand
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sub-Navigation Pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          {
+            id: 'FLEET_DEPLOY',
+            label: '☸️ Live GKE Fleet & 1-Click Cluster Provisioner',
+            icon: Cpu,
+          },
+          {
+            id: 'WORKLOAD_YAML',
+            label: '🚀 K8s Workload & GPU Pod YAML Deployer',
+            icon: FileCode,
+          },
+          {
+            id: 'GPU_FINOPS',
+            label: '⚡ Spot GPU & AI Node-Pool FinOps Calculator',
+            icon: Zap,
+          },
+        ].map((t) => {
+          const Icon = t.icon;
+          const active = activeSubTab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveSubTab(t.id)}
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold border transition-all cursor-pointer ${
+                active
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                  : 'bg-[#ffffff] dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ===================================================================
+          SUB-TAB 1: LIVE GKE FLEET & 1-CLICK CLUSTER PROVISIONER
+         =================================================================== */}
+      {activeSubTab === 'FLEET_DEPLOY' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Left: 1-Click Live GKE Cluster Provisioner with Strict Compliance Locks */}
+          <form
+            onSubmit={handleCreateGkeCluster}
+            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                <span>1-Click GKE Compliance & Cluster Deployer</span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 text-[10px] font-mono font-bold">
+                {isCustom
+                  ? 'UNLOCKED CUSTOM'
+                  : `🔒 ENFORCING ${gkeBlueprint.toUpperCase()}`}
+              </span>
+            </div>
+
+            {/* 5 Compliance Blueprint Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {[
+                {
+                  id: 'zero-trust-autopilot',
+                  label: 'SEC / FedRAMP',
+                  sub: 'Autopilot · US 🔒',
+                },
+                {
+                  id: 'gdpr-eu-ai-cluster',
+                  label: 'GDPR EU Sovereign',
+                  sub: 'Autopilot · EU 🔒',
+                },
+                {
+                  id: 'hipaa-clinical-k8s',
+                  label: 'HIPAA Clinical',
+                  sub: 'Autopilot · STABLE 🔒',
+                },
+                {
+                  id: 'ai-spot-gpu-standard',
+                  label: 'AI Spot GPU Pool',
+                  sub: 'Standard · L4 -68%',
+                },
+                {
+                  id: 'custom',
+                  label: 'Custom Mode',
+                  sub: 'Full Manual Control',
+                },
+              ].map((bp) => {
+                const active = gkeBlueprint === bp.id;
+                return (
+                  <button
+                    key={bp.id}
+                    type="button"
+                    onClick={() => applyGkeBlueprint(bp.id)}
+                    title={`Select ${bp.label} GKE Blueprint (${bp.sub})`}
+                    className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
+                      active
+                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/40'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold truncate">
+                      {bp.label}
+                    </div>
+                    <div
+                      className={`text-[9.5px] truncate ${
+                        active ? 'text-indigo-100' : 'text-zinc-500'
+                      }`}
+                    >
+                      {bp.sub}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  GKE Cluster Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={clusterName}
+                  onChange={(e) => setClusterName(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Operation Mode {isZeroTrustEnclave ? '🔒' : ''}
+                </label>
+                <select
+                  value={gkeMode}
+                  disabled={isZeroTrustEnclave}
+                  onChange={(e) => setGkeMode(e.target.value)}
+                  title={
+                    isZeroTrustEnclave
+                      ? '🔒 Locked to GKE Autopilot by Zero-Trust Enclave Blueprint'
+                      : 'Choose GKE Autopilot ($0.00 idle nodes) or GKE Standard (Custom GPU node pools)'
+                  }
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 disabled:opacity-60"
+                >
+                  <option value="AUTOPILOT">AUTOPILOT (Serverless K8s)</option>
+                  <option value="STANDARD">STANDARD (Custom GPU Nodes)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Sovereign Region {!isCustom ? '🔒' : ''}
+                </label>
+                <select
+                  value={clusterRegion}
+                  onChange={(e) => setClusterRegion(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="us-central1" disabled={isGdpr}>
+                    {isGdpr ? '🔒 ' : ''}us-central1 (Iowa — Low Carbon)
+                  </option>
+                  <option value="us-east4" disabled={isGdpr}>
+                    {isGdpr ? '🔒 ' : ''}us-east4 (N. Virginia — FedRAMP/HIPAA)
+                  </option>
+                  <option value="us-west1" disabled={isGdpr}>
+                    {isGdpr ? '🔒 ' : ''}us-west1 (Oregon — Hydroelectric)
+                  </option>
+                  <option value="europe-west1" disabled={isUsOnly}>
+                    {isUsOnly ? '🔒 ' : ''}europe-west1 (Belgium — EU GDPR)
+                  </option>
+                  <option value="europe-west4" disabled={isUsOnly}>
+                    {isUsOnly ? '🔒 ' : ''}europe-west4 (Netherlands — EU AI Hub)
+                  </option>
+                  <option value="europe-west3" disabled={isUsOnly}>
+                    {isUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt — EU BaFin)
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            {/* Security Hardening Toggles with Compliance Locks */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <label
+                title={
+                  isZeroTrustEnclave
+                    ? '🔒 Locked ON by Zero-Trust Compliance Blueprint'
+                    : 'Isolate worker nodes from public internet IPv4 addresses'
+                }
+                className={`flex items-center gap-2 p-2 rounded-[8px] border text-xs font-mono ${
+                  isZeroTrustEnclave
+                    ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
+                    : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={privateNodes}
+                  disabled={isZeroTrustEnclave}
+                  onChange={(e) => setPrivateNodes(e.target.checked)}
+                />
+                <span className="truncate">
+                  Private Nodes {isZeroTrustEnclave ? '🔒' : ''}
+                </span>
+              </label>
+
+              <label
+                title={
+                  !isCustom
+                    ? '🔒 Locked ON: Workload Identity eliminates static JSON keys'
+                    : 'Enable OIDC Workload Identity Federation (*.svc.id.goog)'
+                }
+                className={`flex items-center gap-2 p-2 rounded-[8px] border text-xs font-mono ${
+                  !isCustom
+                    ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
+                    : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={workloadIdentity}
+                  disabled={!isCustom}
+                  onChange={(e) => setWorkloadIdentity(e.target.checked)}
+                />
+                <span className="truncate">
+                  Workload ID {!isCustom ? '🔒' : ''}
+                </span>
+              </label>
+
+              <label
+                title={
+                  isZeroTrustEnclave
+                    ? '🔒 Locked ON: Cryptographic Binary Authorization required'
+                    : 'Enforce Binary Authorization container image attestation'
+                }
+                className={`flex items-center gap-2 p-2 rounded-[8px] border text-xs font-mono ${
+                  isZeroTrustEnclave
+                    ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
+                    : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={binaryAuth}
+                  disabled={isZeroTrustEnclave}
+                  onChange={(e) => setBinaryAuth(e.target.checked)}
+                />
+                <span className="truncate">
+                  Binary Auth {isZeroTrustEnclave ? '🔒' : ''}
+                </span>
+              </label>
+            </div>
+
+            <div className="p-2.5 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto">
+              {gkeCli}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="submit"
+                disabled={creatingGke || !clusterName.trim()}
+                className="w-full py-2.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                {creatingGke
+                  ? '☸️ Provisioning Live GKE Cluster...'
+                  : `🚀 Create Live GKE ${gkeMode} Cluster`}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleCopy(gkeCli, 'GKE gcloud CLI')}
+                className="w-full py-2.5 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+              >
+                {copiedLabel === 'GKE gcloud CLI'
+                  ? '✓ Copied gcloud CLI'
+                  : '📋 Copy Equivalent gcloud CLI'}
+              </button>
+            </div>
+          </form>
+
+          {/* Right: Live GKE Clusters Fleet Inspector */}
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                Live GKE Clusters in `{projectId}` ({clustersList.length})
+              </div>
+              {onOpenProvisionGke && (
+                <button
+                  type="button"
+                  onClick={onOpenProvisionGke}
+                  className="text-xs font-mono font-bold text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                >
+                  + Full 5-Step Wizard →
+                </button>
+              )}
+            </div>
+
+            {clustersList.length > 0 ? (
+              <div className="space-y-2.5">
+                {clustersList.map((c) => {
+                  const kubeCmd = `gcloud container clusters get-credentials ${c.name} --location=${c.location} --project=${projectId}`;
+                  return (
+                    <div
+                      key={`${c.location}-${c.name}`}
+                      className="p-3 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div>
+                          <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                            <span>☸️ {c.name}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 text-[10px]">
+                              {c.autopilot ? 'AUTOPILOT' : 'STANDARD'}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
+                              {c.status}
+                            </span>
+                          </div>
+                          <div className="text-[11px] font-mono text-zinc-500 mt-0.5">
+                            Location: {c.location} · K8s v
+                            {c.currentMasterVersion || '1.30'} · Nodes:{' '}
+                            {c.currentNodeCount ?? 0} · Security Posture:{' '}
+                            {c.postureScore}/100
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopy(kubeCmd, `kubeconfig (${c.name})`)
+                            }
+                            title={`Copy: ${kubeCmd}`}
+                            className="px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            kubeconfig
+                          </button>
+                          {onRunInShell && (
+                            <button
+                              type="button"
+                              onClick={() => onRunInShell(kubeCmd)}
+                              title="Connect kubectl in Web Cloud Shell"
+                              className="px-2 py-1 rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-400 text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              Shell
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={deletingGkeName === c.name}
+                            onClick={() =>
+                              handleDeleteGkeCluster(c.location, c.name)
+                            }
+                            title={`Delete GKE Cluster ${c.name}`}
+                            className="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            {deletingGkeName === c.name ? '...' : 'Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-6 rounded-[10px] border border-dashed border-zinc-300 dark:border-zinc-800 text-center space-y-2.5">
+                <div className="text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                  No active GKE clusters running in `{projectId}` ($0.00/hr Kubernetes burn)
+                </div>
+                <p className="text-[11px] font-mono text-zinc-500 max-w-md mx-auto">
+                  Use the <strong>1-Click GKE Compliance Deployer</strong> on the left or open the <strong>5-Step GKE Compliance Wizard</strong> to launch an Autopilot or Spot GPU cluster.
+                </p>
+                {onOpenProvisionGke && (
+                  <button
+                    type="button"
+                    onClick={onOpenProvisionGke}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Launch 5-Step GKE Compliance Wizard</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================
+          SUB-TAB 2: K8S WORKLOAD & GPU POD YAML MANIFEST DEPLOYER
+         =================================================================== */}
+      {activeSubTab === 'WORKLOAD_YAML' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5">
+            <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+              <FileCode className="w-4 h-4 text-indigo-400" />
+              <span>Zero-Trust Kubernetes Deployment & GPU Pod Composer</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {Object.entries(WORKLOAD_TEMPLATES).map(([k, tpl]) => {
+                const active = workloadPreset === k;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => applyWorkloadTemplate(k)}
+                    className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
+                      active
+                        ? 'bg-indigo-600 text-white border-indigo-500'
+                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold line-clamp-1">
+                      {tpl.title}
+                    </div>
+                    <div
+                      className={`text-[10px] mt-0.5 line-clamp-2 ${
+                        active ? 'text-indigo-100' : 'text-zinc-500'
+                      }`}
+                    >
+                      {tpl.desc}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Deployment Name
+                </label>
+                <input
+                  type="text"
+                  value={appName}
+                  onChange={(e) => setAppName(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Namespace
+                </label>
+                <input
+                  type="text"
+                  value={appNamespace}
+                  onChange={(e) => setAppNamespace(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Pod Replicas
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={appReplicas}
+                  onChange={(e) =>
+                    setAppReplicas(Math.max(1, Number(e.target.value || 1)))
+                  }
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                Container Image URI (Artifact Registry / Docker Hub)
+              </label>
+              <input
+                type="text"
+                value={appImage}
+                onChange={(e) => setAppImage(e.target.value)}
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  CPU Request
+                </label>
+                <input
+                  type="text"
+                  value={appCpuReq}
+                  onChange={(e) => setAppCpuReq(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Memory Request
+                </label>
+                <input
+                  type="text"
+                  value={appMemReq}
+                  onChange={(e) => setAppMemReq(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  GPU (`nvidia.com/gpu`)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={8}
+                  value={appGpuCount}
+                  onChange={(e) =>
+                    setAppGpuCount(Math.max(0, Number(e.target.value || 0)))
+                  }
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-500 font-mono">
+                Generated Seccomp-Hardened K8s Manifest (`deployment.yaml`)
+              </span>
+              <button
+                type="button"
+                onClick={() => handleCopy(k8sYamlManifest, 'K8s Manifest YAML')}
+                className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+              >
+                📋 Copy YAML Manifest
+              </button>
+            </div>
+            <pre className="p-3 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto max-h-80">
+              {k8sYamlManifest}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================
+          SUB-TAB 3: SPOT GPU & AI NODE-POOL FINOPS CALCULATOR
+         =================================================================== */}
+      {activeSubTab === 'GPU_FINOPS' && (
+        <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span>GKE Spot GPU vs. On-Demand Node-Pool FinOps Calculator</span>
+            </div>
+            <span className="px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold">
+              Spot GPU Savings: -${monthlyGpuSavingsUsd.toLocaleString()}/month
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                Select NVIDIA GPU Accelerator SKU
+              </label>
+              <select
+                value={gpuSku}
+                onChange={(e) => setGpuSku(e.target.value)}
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+              >
+                {Object.entries(GPU_SKUS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                GPU Node Count (`1–16 Nodes`)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={16}
+                value={gpuCount}
+                onChange={(e) =>
+                  setGpuCount(
+                    Math.max(1, Math.min(16, Number(e.target.value || 1)))
+                  )
+                }
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 font-mono">
+            <div>
+              <div className="text-xs text-zinc-500">On-Demand 24/7 Burn</div>
+              <div className="text-lg font-extrabold text-rose-400 mt-0.5">
+                ${monthlyOnDemandUsd.toLocaleString()}/mo
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                ${(selectedGpuObj.onDemandHr * gpuCount).toFixed(2)}/hr
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-zinc-500">Spot Preemptible GPU (-68%)</div>
+              <div className="text-lg font-extrabold text-emerald-400 mt-0.5">
+                ${monthlySpotUsd.toLocaleString()}/mo
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                ${(selectedGpuObj.spotHr * gpuCount).toFixed(2)}/hr
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-zinc-500">Net Monthly FinOps Savings</div>
+              <div className="text-lg font-extrabold text-cyan-400 mt-0.5">
+                -${monthlyGpuSavingsUsd.toLocaleString()}/mo
+              </div>
+              <div className="text-[11px] text-emerald-400">
+                -${(monthlyGpuSavingsUsd * 12).toLocaleString()}/yr saved
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
