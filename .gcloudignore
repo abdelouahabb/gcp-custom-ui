@@ -1,0 +1,17 @@
+.git
+.gitignore
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+.env.*
+*.pem
+*.key
+*credentials*.json
+*service-account*.json
+adc.json
+application_default_credentials.json
+coverage/
+.vscode/
+.idea/

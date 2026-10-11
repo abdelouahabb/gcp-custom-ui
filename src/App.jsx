@@ -24,6 +24,11 @@ import {
   LogOut,
   Rocket,
   Network,
+  Command,
+  DollarSign,
+  BookOpen,
+  Globe,
+  HardDrive,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import SortableKpiRow from './components/SortableKpiRow';
@@ -36,8 +41,16 @@ import VmFleetAndSsh from './components/VmFleetAndSsh';
 import VpcNetworksAndFirewalls from './components/VpcNetworksAndFirewalls';
 import EmergencyApiKillSwitch from './components/EmergencyApiKillSwitch';
 import CloudRunFleetManager from './components/CloudRunFleetManager';
+import CloudStorageStudio from './components/CloudStorageStudio';
 import AuthOnboardingGate from './components/AuthOnboardingGate';
 import CloudRunDeployModal from './components/CloudRunDeployModal';
+import Revolutionary2026Suite, {
+  calculateLiveBurnRate,
+} from './components/Revolutionary2026Suite';
+import CommandPaletteModal from './components/CommandPaletteModal';
+import FuturisticOrbitalHud from './components/FuturisticOrbitalHud';
+import InteractiveDocsGuide from './components/InteractiveDocsGuide';
+import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
 
 function CloudPulseCockpit() {
   const { isDark, toggleTheme, mobilePreview, setMobilePreview } = useTheme();
@@ -60,6 +73,8 @@ function CloudPulseCockpit() {
   const [toastMessage, setToastMessage] = useState(null);
 
   const [activeTab, setActiveTab] = useState('OVERVIEW');
+  const [innovationSubTab, setInnovationSubTab] = useState('TOPOLOGY');
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
   const [shellSeedCommand, setShellSeedCommand] = useState('');
@@ -67,8 +82,21 @@ function CloudPulseCockpit() {
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [provisionInitialService, setProvisionInitialService] =
     useState('GCS_BUCKET');
+  const [provisionInitialLocation, setProvisionInitialLocation] = useState(null);
   const [vmRefreshTrigger, setVmRefreshTrigger] = useState(0);
   const [cloudRunModalOpen, setCloudRunModalOpen] = useState(false);
+
+  // Global Cmd+K / Ctrl+K shortcut for 2026 Command & Voice Palette
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -221,8 +249,9 @@ function CloudPulseCockpit() {
     showToast(`Loaded command into Mobile Cloud Shell: ${cmd}`);
   };
 
-  const handleOpenProvision = (serviceType = 'GCS_BUCKET') => {
+  const handleOpenProvision = (serviceType = 'GCS_BUCKET', locationSpec = null) => {
     setProvisionInitialService(serviceType);
+    setProvisionInitialLocation(locationSpec);
     setProvisionOpen(true);
   };
 
@@ -232,6 +261,8 @@ function CloudPulseCockpit() {
     setVmRefreshTrigger((c) => c + 1);
     if (serviceType === 'CLOUD_RUN') {
       setActiveTab('CLOUD_RUN');
+    } else if (serviceType === 'GCS_BUCKET') {
+      setActiveTab('CLOUD_STORAGE');
     } else if (serviceType === 'COMPUTE_VM') {
       setActiveTab('VM_SSH');
     } else if (serviceType === 'VPC_NETWORK' || serviceType === 'VPC_FIREWALL') {
@@ -280,14 +311,20 @@ function CloudPulseCockpit() {
     );
   }
 
+  const liveBurn = calculateLiveBurnRate(overview);
+
   const navTabs = [
     { id: 'OVERVIEW', label: '2026 SRE Cockpit', icon: LayoutDashboard },
+    { id: 'GLOBAL_MAP', label: 'Global Map 🌍', icon: Globe },
+    { id: 'INNOVATION_LAB', label: '2026 Lab ✦', icon: Sparkles },
+    { id: 'CLOUD_STORAGE', label: 'Cloud Storage ★', icon: HardDrive },
     { id: 'CLOUD_RUN', label: 'Cloud Run Studio ★', icon: Rocket },
     { id: 'VM_SSH', label: 'VM Fleet & Web SSH', icon: Server },
     { id: 'VPC_NETWORKS', label: 'VPC Networks & Firewalls', icon: Network },
     { id: 'RESOURCES', label: 'Live GCP Resources', icon: Layers },
     { id: 'FINOPS', label: 'Footprint & Telemetry', icon: BarChart3 },
     { id: 'LOGS_SHELL', label: 'Logs & Cloud Shell', icon: Terminal },
+    { id: 'DOCS_GUIDE', label: 'Docs & Guide 📖', icon: BookOpen },
   ];
 
   return (
@@ -336,6 +373,34 @@ function CloudPulseCockpit() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Live Burn-Rate Radar Ticker Pill */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInnovationSubTab('FINOPS_SLEEP');
+                  setActiveTab('INNOVATION_LAB');
+                }}
+                title="Open Live Wallet Burn-Rate Radar & Night-Mode Sleep Switch"
+                className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
+              >
+                <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                <span>${liveBurn.hourly.toFixed(4)}/hr</span>
+                <span className="hidden xl:inline text-[10px] opacity-75">
+                  (~${liveBurn.monthly.toFixed(2)}/mo)
+                </span>
+              </button>
+
+              {/* ⌘K Global Command & Voice Action Bar */}
+              <button
+                type="button"
+                onClick={() => setCommandPaletteOpen(true)}
+                title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette"
+                className="inline-flex items-center gap-1.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30 rounded-[8px] px-3 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
+              >
+                <Command className="w-3.5 h-3.5 text-violet-500" />
+                <span>⌘K Ops</span>
+              </button>
+
               {/* Live GCP Project Dropdown */}
               <div className="relative z-40">
                 <button
@@ -395,14 +460,15 @@ function CloudPulseCockpit() {
                 <span>+ Provision Resource</span>
               </button>
 
-              {/* Gemini SRE Co-Pilot Button */}
+              {/* 1-Tap Project Health, Drift & FinOps Scanner Button */}
               <button
                 type="button"
                 onClick={() => handleOpenCopilotWithPrompt('')}
-                className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors shadow-sm"
+                title="Run 1-Tap Project Health, Zombie Waste, Firewall Perimeter & Live Pricing Drift Scan"
+                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[8px] px-3 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Gemini SRE</span>
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Health & Drift Scan</span>
               </button>
 
               {/* Deploy to Cloud Run Modal Button */}
@@ -544,11 +610,40 @@ function CloudPulseCockpit() {
             </div>
           ) : (
             <>
+              <FuturisticOrbitalHud
+                projectId={selectedProjectId}
+                overview={overview}
+                liveBurn={liveBurn}
+                onRefreshOverview={() => {
+                  fetchProjectOverview(selectedProjectId);
+                  setVmRefreshTrigger((c) => c + 1);
+                }}
+                onDeleteResource={handleDeleteResource}
+                onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+                onOpenDocsGuide={() => setActiveTab('DOCS_GUIDE')}
+                onShowToast={showToast}
+                onShowError={setErrorBanner}
+              />
+
               {activeTab === 'OVERVIEW' && (
                 <div className="space-y-6">
                   <SortableKpiRow
                     summary={overview?.summary}
                     fetchLatencyMs={overview?.fetchLatencyMs}
+                  />
+
+                  <Revolutionary2026Suite
+                    projectId={selectedProjectId}
+                    overview={overview}
+                    initialSubTab={innovationSubTab}
+                    onRefreshOverview={() => {
+                      fetchProjectOverview(selectedProjectId);
+                      setVmRefreshTrigger((c) => c + 1);
+                    }}
+                    onOpenProvision={handleOpenProvision}
+                    onDeleteResource={handleDeleteResource}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
                   />
 
                   <CloudRunFleetManager
@@ -621,6 +716,50 @@ function CloudPulseCockpit() {
                 </div>
               )}
 
+              {activeTab === 'GLOBAL_MAP' && (
+                <GlobalNetworkWorldMap
+                  projectId={selectedProjectId}
+                  overview={overview}
+                  firewalls={overview?.firewalls || []}
+                  vpcs={overview?.vpcs || []}
+                  onOpenProvision={handleOpenProvision}
+                  onRunInShell={handleRunInShell}
+                  onSelectTab={(tabId) => setActiveTab(tabId)}
+                  onRefresh={() => fetchProjectOverview(selectedProjectId)}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'INNOVATION_LAB' && (
+                <Revolutionary2026Suite
+                  projectId={selectedProjectId}
+                  overview={overview}
+                  initialSubTab={innovationSubTab}
+                  onRefreshOverview={() => {
+                    fetchProjectOverview(selectedProjectId);
+                    setVmRefreshTrigger((c) => c + 1);
+                  }}
+                  onOpenProvision={handleOpenProvision}
+                  onDeleteResource={handleDeleteResource}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'CLOUD_STORAGE' && (
+                <CloudStorageStudio
+                  projectId={selectedProjectId}
+                  onOpenProvision={handleOpenProvision}
+                  onRunInShell={handleRunInShell}
+                  onRefreshGlobal={() =>
+                    fetchProjectOverview(selectedProjectId)
+                  }
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
+
               {activeTab === 'CLOUD_RUN' && (
                 <CloudRunFleetManager
                   projectId={selectedProjectId}
@@ -659,6 +798,8 @@ function CloudPulseCockpit() {
                   onDeleteResource={handleDeleteResource}
                   onRefresh={() => fetchProjectOverview(selectedProjectId)}
                   loading={loadingOverview}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
                 />
               )}
 
@@ -708,6 +849,16 @@ function CloudPulseCockpit() {
                   onAskCopilot={handleOpenCopilotWithPrompt}
                 />
               )}
+
+              {activeTab === 'DOCS_GUIDE' && (
+                <InteractiveDocsGuide
+                  onNavigateToFeature={(tabId, subTab) => {
+                    if (subTab) setInnovationSubTab(subTab);
+                    setActiveTab(tabId);
+                  }}
+                  onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+                />
+              )}
             </>
           )}
         </main>
@@ -741,11 +892,44 @@ function CloudPulseCockpit() {
         </div>
       </div>
 
+      <CommandPaletteModal
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        projectId={selectedProjectId}
+        overview={{
+          ...overview,
+          cloudRun: overview?.cloudRunServices || [],
+        }}
+        vms={(overview?.resources || []).filter(
+          (r) => r.type === 'Compute Engine VM'
+        )}
+        onSelectTab={(tabId, subTab) => {
+          if (subTab) setInnovationSubTab(subTab);
+          setActiveTab(tabId);
+        }}
+        onOpenCreateModal={(type) => {
+          if (type === 'CLOUD_RUN') handleOpenProvision('CLOUD_RUN');
+          else if (type === 'VM') handleOpenProvision('COMPUTE_VM');
+          else if (type === 'VPC_NETWORK') handleOpenProvision('VPC_NETWORK');
+          else if (type === 'VPC_FIREWALL') handleOpenProvision('VPC_FIREWALL');
+          else if (type === 'BUCKET') handleOpenProvision('GCS_BUCKET');
+          else if (type === 'API') setActiveTab('RESOURCES');
+          else handleOpenProvision('GCS_BUCKET');
+        }}
+        onOpenKillSwitch={() => setActiveTab('RESOURCES')}
+        onOpenCopilot={() => handleOpenCopilotWithPrompt('')}
+        onRefreshAll={() => {
+          fetchProjectOverview(selectedProjectId);
+          setVmRefreshTrigger((c) => c + 1);
+        }}
+      />
+
       <ResourceProvisionModal
         isOpen={provisionOpen}
         onClose={() => setProvisionOpen(false)}
         projectId={selectedProjectId}
         initialServiceType={provisionInitialService}
+        initialLocation={provisionInitialLocation}
         onProvisionSuccess={handleProvisionSuccess}
       />
 
@@ -759,20 +943,14 @@ function CloudPulseCockpit() {
         isOpen={copilotOpen}
         onClose={() => setCopilotOpen(false)}
         projectId={selectedProjectId}
-        initialPrompt={copilotInitialPrompt}
-        contextSummary={{
-          buckets: (overview?.resources || [])
-            .filter((r) => r.category === 'storage')
-            .map((r) => r.name),
-          datasets: (overview?.resources || [])
-            .filter((r) => r.category === 'data')
-            .map((r) => r.name),
-          vms: (overview?.resources || [])
-            .filter((r) => r.type === 'Compute Engine VM')
-            .map((r) => r.name),
-          enabledApisCount: overview?.summary?.enabledApisCount || 0,
+        overview={overview}
+        liveBurn={liveBurn}
+        onRefresh={() => {
+          fetchProjectOverview(selectedProjectId);
+          setVmRefreshTrigger((c) => c + 1);
         }}
-        onTriggerAction={handleTriggerAction}
+        onSelectTab={(tab) => setActiveTab(tab)}
+        onShowToast={showToast}
       />
     </div>
   );

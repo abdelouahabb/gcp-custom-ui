@@ -60,6 +60,7 @@ export default function ResourceProvisionModal({
   onClose,
   projectId,
   initialServiceType = 'GCS_BUCKET',
+  initialLocation = null,
   onProvisionSuccess,
 }) {
   const [serviceType, setServiceType] = useState(initialServiceType);
@@ -218,12 +219,163 @@ export default function ResourceProvisionModal({
   const [routingMode, setRoutingMode] = useState('REGIONAL');
   const [mtu, setMtu] = useState(1460);
   const [firewallNetwork, setFirewallNetwork] = useState('default');
+  const [firewallAction, setFirewallAction] = useState('ALLOW');
+  const [firewallDirection, setFirewallDirection] = useState('INGRESS');
+  const [firewallPriority, setFirewallPriority] = useState(1000);
   const [firewallProtocol, setFirewallProtocol] = useState('tcp');
   const [firewallPorts, setFirewallPorts] = useState('80,443');
   const [firewallSourceRanges, setFirewallSourceRanges] = useState('0.0.0.0/0');
+  const [firewallTargetTags, setFirewallTargetTags] = useState('');
+  const [firewallEnableLogging, setFirewallEnableLogging] = useState(false);
+  const [firewallDisabled, setFirewallDisabled] = useState(false);
+  const [firewallDescription, setFirewallDescription] = useState('');
 
-  // GCS specific
+  // GCS Fine-Grained Console + Enterprise Compliance Studio Options
   const [storageClass, setStorageClass] = useState('STANDARD');
+  const [gcsLocationType, setGcsLocationType] = useState('REGIONAL'); // REGIONAL | DUAL_REGION | MULTI_REGION
+  const [gcsMultiRegion, setGcsMultiRegion] = useState('US'); // US | EU | ASIA
+  const [gcsDualPreset, setGcsDualPreset] = useState('CUSTOM'); // CUSTOM | NAM4 | EUR4 | ASIA1
+  const [gcsDualContinent, setGcsDualContinent] = useState('us'); // us | europe | asia
+  const [gcsDualRegionA, setGcsDualRegionA] = useState('us-central1');
+  const [gcsDualRegionB, setGcsDualRegionB] = useState('us-east1');
+  const [gcsRpo, setGcsRpo] = useState('DEFAULT'); // DEFAULT | ASYNC_TURBO
+  const [gcsAutoclass, setGcsAutoclass] = useState(false);
+  const [gcsAutoclassTerminal, setGcsAutoclassTerminal] = useState('NEARLINE');
+  const [gcsPublicAccessPrevention, setGcsPublicAccessPrevention] =
+    useState('enforced');
+  const [gcsUniformAccess, setGcsUniformAccess] = useState(true); // true = Uniform IAM, false = Fine-grained Object ACLs
+  const [gcsSoftDeleteEnabled, setGcsSoftDeleteEnabled] = useState(true);
+  const [gcsSoftDeleteDays, setGcsSoftDeleteDays] = useState(7); // 7..90 days (or 0 if disabled)
+  const [gcsVersioning, setGcsVersioning] = useState(false);
+  const [gcsMaxNumVersions, setGcsMaxNumVersions] = useState(0); // 0 = unlimited
+  const [gcsPurgeNoncurrentDays, setGcsPurgeNoncurrentDays] = useState(30);
+  const [gcsRetentionEnabled, setGcsRetentionEnabled] = useState(false);
+  const [gcsRetentionValue, setGcsRetentionValue] = useState(30);
+  const [gcsRetentionUnit, setGcsRetentionUnit] = useState('days'); // seconds | days | months | years
+  const [gcsHierarchicalNamespace, setGcsHierarchicalNamespace] =
+    useState(false);
+  const [gcsEncryptionType, setGcsEncryptionType] =
+    useState('GOOGLE_MANAGED'); // GOOGLE_MANAGED | CMEK
+  const [gcsCmekKeyName, setGcsCmekKeyName] = useState('');
+  const [gcsEnableSmartLifecycle, setGcsEnableSmartLifecycle] = useState(false);
+  const [gcsNearlineDays, setGcsNearlineDays] = useState(30);
+  const [gcsColdlineDays, setGcsColdlineDays] = useState(90);
+  const [gcsArchiveDays, setGcsArchiveDays] = useState(365);
+  const [gcsDeleteAfterDays, setGcsDeleteAfterDays] = useState(0);
+  const [gcsAbortMultipartDays, setGcsAbortMultipartDays] = useState(7);
+  const [gcsRequesterPays, setGcsRequesterPays] = useState(false);
+  const [gcsEnableCors, setGcsEnableCors] = useState(false);
+  const [gcsCustomLabels, setGcsCustomLabels] = useState(
+    'env=production,team=platform'
+  );
+  const [gcsComplianceRegime, setGcsComplianceRegime] = useState('custom');
+  const [gcsDataClassification, setGcsDataClassification] =
+    useState('internal');
+
+  const gcsRetentionDays = useMemo(() => {
+    if (!gcsRetentionEnabled) return 0;
+    const v = Math.max(1, Number(gcsRetentionValue || 1));
+    if (gcsRetentionUnit === 'seconds') return Math.max(1, Math.ceil(v / 86400));
+    if (gcsRetentionUnit === 'months') return v * 30;
+    if (gcsRetentionUnit === 'years') return v * 365;
+    return v;
+  }, [gcsRetentionEnabled, gcsRetentionValue, gcsRetentionUnit]);
+
+  const gcsRetentionSeconds = useMemo(() => {
+    if (!gcsRetentionEnabled) return 0;
+    const v = Math.max(1, Number(gcsRetentionValue || 1));
+    if (gcsRetentionUnit === 'seconds') return v;
+    if (gcsRetentionUnit === 'months') return v * 30 * 86400;
+    if (gcsRetentionUnit === 'years') return v * 365 * 86400;
+    return v * 86400;
+  }, [gcsRetentionEnabled, gcsRetentionValue, gcsRetentionUnit]);
+
+  const applyGcsCompliancePreset = (presetId) => {
+    setGcsComplianceRegime(presetId);
+    if (presetId === 'sec-17a4-worm') {
+      // SEC Rule 17a-4 / FINRA Immutable WORM Vault
+      setGcsLocationType('MULTI_REGION');
+      setGcsMultiRegion('US');
+      setGcsRpo('DEFAULT');
+      setStorageClass('COLDLINE');
+      setGcsAutoclass(false);
+      setGcsPublicAccessPrevention('enforced');
+      setGcsUniformAccess(true);
+      setGcsRetentionEnabled(true);
+      setGcsRetentionValue(1);
+      setGcsRetentionUnit('years');
+      setGcsVersioning(false); // WORM Retention replaces Versioning per GCP spec
+      setGcsSoftDeleteEnabled(true);
+      setGcsSoftDeleteDays(30);
+      setGcsHierarchicalNamespace(false);
+      setGcsEnableSmartLifecycle(true);
+      setGcsDataClassification('restricted');
+    } else if (presetId === 'gdpr-eu-sovereign') {
+      // GDPR EU Data Sovereignty Dual-Region + Turbo Replication
+      setGcsLocationType('DUAL_REGION');
+      setGcsDualPreset('EUR4');
+      setGcsDualContinent('europe');
+      setGcsDualRegionA('europe-west4');
+      setGcsDualRegionB('europe-north1');
+      setGcsRpo('ASYNC_TURBO');
+      setStorageClass('STANDARD');
+      setGcsAutoclass(false);
+      setGcsPublicAccessPrevention('enforced');
+      setGcsUniformAccess(true);
+      setGcsRetentionEnabled(false);
+      setGcsVersioning(true);
+      setGcsSoftDeleteEnabled(true);
+      setGcsSoftDeleteDays(14);
+      setGcsHierarchicalNamespace(false);
+      setGcsEnableSmartLifecycle(true);
+      setGcsDataClassification('restricted');
+    } else if (presetId === 'hipaa-soc2-vault') {
+      // HIPAA / SOC2 Healthcare & Audit Vault
+      setGcsLocationType('REGIONAL');
+      setRegion('us-central1');
+      setStorageClass('STANDARD');
+      setGcsAutoclass(false);
+      setGcsPublicAccessPrevention('enforced');
+      setGcsUniformAccess(true);
+      setGcsRetentionEnabled(false);
+      setGcsVersioning(true);
+      setGcsSoftDeleteEnabled(true);
+      setGcsSoftDeleteDays(30);
+      setGcsPurgeNoncurrentDays(90);
+      setGcsHierarchicalNamespace(false);
+      setGcsEnableSmartLifecycle(true);
+      setGcsDataClassification('restricted');
+    } else if (presetId === 'ai-lakehouse-hns') {
+      // AI / Spark / Dataflow Lakehouse with Hierarchical Namespace (HNS)
+      setGcsLocationType('REGIONAL');
+      setRegion('us-central1');
+      setStorageClass('STANDARD');
+      setGcsAutoclass(false);
+      setGcsPublicAccessPrevention('enforced');
+      setGcsUniformAccess(true);
+      setGcsRetentionEnabled(false);
+      setGcsVersioning(false);
+      setGcsSoftDeleteEnabled(true);
+      setGcsSoftDeleteDays(7);
+      setGcsHierarchicalNamespace(true);
+      setGcsEnableSmartLifecycle(false);
+      setGcsDataClassification('internal');
+    } else {
+      // GCP Console Default / Zero-Trust Standard
+      setGcsLocationType('REGIONAL');
+      setStorageClass('STANDARD');
+      setGcsAutoclass(false);
+      setGcsPublicAccessPrevention('enforced');
+      setGcsUniformAccess(true);
+      setGcsRetentionEnabled(false);
+      setGcsVersioning(false);
+      setGcsSoftDeleteEnabled(true);
+      setGcsSoftDeleteDays(7);
+      setGcsHierarchicalNamespace(false);
+      setGcsEnableSmartLifecycle(false);
+      setGcsDataClassification('internal');
+    }
+  };
 
   // Cloud Run specific
   const [containerImage, setContainerImage] = useState(
@@ -279,9 +431,21 @@ export default function ResourceProvisionModal({
     if (isOpen) {
       setServiceType(initialServiceType);
       setName(generateDefaultName(initialServiceType, projectId));
+      if (initialLocation?.region) {
+        setRegion(initialLocation.region);
+        setVmRegion(initialLocation.region);
+      }
+      if (initialLocation?.zone) {
+        setZone(initialLocation.zone);
+      } else if (initialLocation?.region) {
+        const firstZone =
+          GCP_REGION_ZONES[initialLocation.region]?.zones?.[0] ||
+          `${initialLocation.region}-a`;
+        setZone(firstZone);
+      }
       setErrorMsg(null);
     }
-  }, [isOpen, initialServiceType, projectId]);
+  }, [isOpen, initialServiceType, initialLocation, projectId]);
 
   const handleTabSwitch = (newType) => {
     setServiceType(newType);
@@ -324,7 +488,52 @@ export default function ResourceProvisionModal({
       } --source-ranges=${firewallSourceRanges}`;
     }
     if (serviceType === 'GCS_BUCKET') {
-      return `gcloud storage buckets create gs://${clean} --project=${projectId} --location=${region.toUpperCase()} --default-storage-class=${storageClass} --uniform-bucket-level-access`;
+      const locFlag =
+        gcsLocationType === 'MULTI_REGION'
+          ? gcsMultiRegion
+          : gcsLocationType === 'DUAL_REGION'
+          ? gcsDualPreset === 'CUSTOM'
+            ? `${gcsDualRegionA.toUpperCase()}+${gcsDualRegionB.toUpperCase()}`
+            : gcsDualPreset
+          : region.toUpperCase();
+      const flags = [
+        `--project=${projectId}`,
+        `--location=${locFlag}`,
+        gcsAutoclass
+          ? `--enable-autoclass --autoclass-terminal-storage-class=${gcsAutoclassTerminal}`
+          : `--default-storage-class=${storageClass}`,
+        gcsUniformAccess || gcsHierarchicalNamespace
+          ? '--uniform-bucket-level-access'
+          : '--no-uniform-bucket-level-access',
+        gcsPublicAccessPrevention === 'enforced'
+          ? '--public-access-prevention'
+          : '--no-public-access-prevention',
+      ];
+      if (gcsLocationType === 'DUAL_REGION' && gcsDualPreset === 'CUSTOM') {
+        flags.push(
+          `--placement=${gcsDualRegionA.toUpperCase()},${gcsDualRegionB.toUpperCase()}`
+        );
+      }
+      if (
+        (gcsLocationType === 'DUAL_REGION' ||
+          gcsLocationType === 'MULTI_REGION') &&
+        gcsRpo === 'ASYNC_TURBO'
+      ) {
+        flags.push('--recovery-point-objective=ASYNC_TURBO');
+      }
+      if (Number(gcsRetentionDays) > 0) {
+        flags.push(`--retention-period=${Number(gcsRetentionDays)}d`);
+      }
+      if (gcsSoftDeleteDays !== 7) {
+        flags.push(`--soft-delete-duration=${Number(gcsSoftDeleteDays)}d`);
+      }
+      if (gcsHierarchicalNamespace) {
+        flags.push('--enable-hierarchical-namespace');
+      }
+      if (gcsCmekKeyName.trim()) {
+        flags.push(`--default-encryption-key=${gcsCmekKeyName.trim()}`);
+      }
+      return `gcloud storage buckets create gs://${clean} ${flags.join(' ')}`;
     }
     if (serviceType === 'CLOUD_RUN') {
       const ingressFlag =
@@ -380,6 +589,20 @@ export default function ResourceProvisionModal({
     firewallSourceRanges,
     region,
     storageClass,
+    gcsLocationType,
+    gcsMultiRegion,
+    gcsDualPreset,
+    gcsDualRegionA,
+    gcsDualRegionB,
+    gcsRpo,
+    gcsAutoclass,
+    gcsAutoclassTerminal,
+    gcsUniformAccess,
+    gcsPublicAccessPrevention,
+    gcsRetentionDays,
+    gcsSoftDeleteDays,
+    gcsHierarchicalNamespace,
+    gcsCmekKeyName,
     containerImage,
     runPort,
     runCpu,
@@ -395,6 +618,155 @@ export default function ResourceProvisionModal({
     runGpuZonalRedundancy,
     runAllowUnauth,
     bqLocation,
+  ]);
+
+  const liveCostEstimate = useMemo(() => {
+    const baseRates = {
+      'e2-micro': 0.0084,
+      'e2-small': 0.0168,
+      'e2-medium': 0.0335,
+      'e2-standard-2': 0.067,
+      'e2-standard-4': 0.134,
+      'e2-standard-8': 0.268,
+      'n2-standard-2': 0.0971,
+      'n2-standard-4': 0.1942,
+      'n2-standard-8': 0.3885,
+      'n2d-standard-4': 0.1685,
+      'c3-standard-4': 0.2088,
+      'c3-highcpu-8': 0.3456,
+      'c4-standard-4': 0.231,
+      't2a-standard-2': 0.077,
+      't2a-standard-4': 0.154,
+      'g2-standard-4': 0.7068,
+      'g2-standard-8': 0.853,
+      'a2-highgpu-1g': 3.673,
+    };
+
+    if (serviceType === 'COMPUTE_VM') {
+      const baseMachine = baseRates[machineType] || 0.067;
+      const extraGpuRate =
+        vmGpuType !== 'NONE' &&
+        !machineType.startsWith('g2-') &&
+        !machineType.startsWith('a2-')
+          ? (vmGpuType.includes('l4') ? 0.56 : vmGpuType.includes('v100') ? 2.48 : 0.35) *
+            Number(vmGpuCount || 1)
+          : 0;
+      const computeRaw = baseMachine + extraGpuRate;
+      const computeEffective = spotInstance ? computeRaw * 0.32 : computeRaw;
+      const diskRatePerGbMonth =
+        diskType === 'pd-extreme' || diskType === 'hyperdisk-balanced'
+          ? 0.125
+          : diskType === 'pd-ssd'
+          ? 0.17
+          : diskType === 'pd-balanced'
+          ? 0.1
+          : 0.04;
+      const diskHourly = (Number(diskSizeGb || 20) * diskRatePerGbMonth) / 730;
+      const hourly = computeEffective + diskHourly;
+      return {
+        hourly,
+        monthly: hourly * 730,
+        badge: spotInstance ? 'SPOT VM (-68% SAVED)' : 'ON-DEMAND VM',
+        detail: `${machineType} (${spotInstance ? 'Spot' : 'Standard'}) + ${diskSizeGb}GB ${diskType}`,
+      };
+    }
+
+    if (serviceType === 'CLOUD_RUN') {
+      const hasGpu = runGpuAccelerator !== 'NONE';
+      const gpuHr =
+        runGpuAccelerator === 'nvidia-rtx-pro-6000'
+          ? 1.85
+          : runGpuAccelerator === 'nvidia-l4'
+          ? 0.67
+          : 0;
+      const cpuHr = Number(runCpu || 1) * 0.0864;
+      const memGb = String(runMemory).includes('Mi')
+        ? parseFloat(runMemory) / 1024
+        : parseFloat(runMemory) || 0.5;
+      const memHr = memGb * 0.009;
+      const singleInstHr = cpuHr + memHr + gpuHr;
+      const minInst = Number(runMinInstances || 0);
+
+      if (minInst === 0 && runBillingMode === 'REQUEST_BASED' && !hasGpu) {
+        return {
+          hourly: 0,
+          monthly: 0,
+          activeInstanceHourly: singleInstHr,
+          badge: '$0.00 IDLE (SCALE-TO-ZERO)',
+          detail: `Billed only per active request (~$${singleInstHr.toFixed(3)}/active-instance-hr)`,
+        };
+      }
+      const effectiveInst = Math.max(minInst, hasGpu ? 1 : minInst);
+      const hourly = singleInstHr * effectiveInst;
+      return {
+        hourly,
+        monthly: hourly * 730,
+        activeInstanceHourly: singleInstHr,
+        badge: hasGpu ? `SERVERLESS GPU (${runGpuAccelerator})` : `${minInst} WARM INSTANCE(S)`,
+        detail: `${runCpu} vCPU · ${runMemory} RAM${hasGpu ? ` · ${runGpuAccelerator}` : ''} (${
+          runBillingMode === 'REQUEST_BASED' ? 'Request-based' : 'Instance-based'
+        })`,
+      };
+    }
+
+    if (serviceType === 'GCS_BUCKET') {
+      const basePerGb = gcsAutoclass
+        ? 0.02
+        : storageClass === 'STANDARD'
+        ? 0.02
+        : storageClass === 'NEARLINE'
+        ? 0.01
+        : storageClass === 'COLDLINE'
+        ? 0.004
+        : 0.0012;
+      const topologyMult =
+        gcsLocationType === 'MULTI_REGION'
+          ? 1.3
+          : gcsLocationType === 'DUAL_REGION'
+          ? 1.8
+          : 1.0;
+      const perGb = +(basePerGb * topologyMult).toFixed(4);
+      const badgeLabel =
+        Number(gcsRetentionDays) > 0
+          ? `WORM LOCK (${gcsRetentionDays}d) · ${gcsLocationType}`
+          : gcsAutoclass
+          ? `AUTOCLASS → ${gcsAutoclassTerminal}`
+          : `${storageClass} · ${gcsLocationType}`;
+      return {
+        hourly: 0,
+        monthly: perGb * 50,
+        badge: badgeLabel,
+        detail: `$${perGb}/GB-month (${gcsLocationType}${
+          gcsRpo === 'ASYNC_TURBO' ? ' + 15m Turbo RPO' : ''
+        } · est. $${(perGb * 50).toFixed(2)}/mo for 50 GB)`,
+      };
+    }
+
+    return {
+      hourly: 0,
+      monthly: 0,
+      badge: 'FREE CONTROL PLANE',
+      detail: 'No fixed hourly idle charge for VPCs, Firewalls, or empty BigQuery datasets',
+    };
+  }, [
+    serviceType,
+    machineType,
+    spotInstance,
+    vmGpuType,
+    vmGpuCount,
+    diskSizeGb,
+    diskType,
+    runCpu,
+    runMemory,
+    runMinInstances,
+    runBillingMode,
+    runGpuAccelerator,
+    storageClass,
+    gcsLocationType,
+    gcsRpo,
+    gcsAutoclass,
+    gcsAutoclassTerminal,
+    gcsRetentionDays,
   ]);
 
   if (!isOpen) return null;
@@ -436,10 +808,50 @@ export default function ResourceProvisionModal({
             routingMode,
             mtu,
             network: firewallNetwork,
+            action: firewallAction,
+            direction: firewallDirection,
+            priority: Number(firewallPriority),
             protocol: firewallProtocol,
             ports: firewallPorts,
             sourceRanges: firewallSourceRanges,
+            destinationRanges: firewallSourceRanges,
+            targetTags: firewallTargetTags,
+            enableLogging: firewallEnableLogging,
+            disabled: firewallDisabled,
+            description: firewallDescription,
             storageClass,
+            locationType: gcsLocationType,
+            multiRegion: gcsMultiRegion,
+            dualRegionPreset: gcsDualPreset,
+            dualRegionA: gcsDualRegionA,
+            dualRegionB: gcsDualRegionB,
+            rpo: gcsRpo,
+            autoclassEnabled: gcsAutoclass,
+            autoclassTerminalClass: gcsAutoclassTerminal,
+            publicAccessPrevention: gcsPublicAccessPrevention,
+            uniformBucketLevelAccess: gcsUniformAccess,
+            versioningEnabled: gcsVersioning,
+            maxNumVersions: Number(gcsMaxNumVersions || 0),
+            softDeleteRetentionDays: gcsSoftDeleteEnabled
+              ? Number(gcsSoftDeleteDays || 7)
+              : 0,
+            retentionPeriodDays: gcsRetentionDays,
+            retentionPeriodSeconds: gcsRetentionSeconds,
+            hierarchicalNamespaceEnabled: gcsHierarchicalNamespace,
+            kmsKeyName:
+              gcsEncryptionType === 'CMEK' ? gcsCmekKeyName.trim() : '',
+            enableSmartLifecycle: gcsEnableSmartLifecycle,
+            nearlineAfterDays: Number(gcsNearlineDays || 0),
+            coldlineAfterDays: Number(gcsColdlineDays || 0),
+            archiveAfterDays: Number(gcsArchiveDays || 0),
+            deleteAfterDays: Number(gcsDeleteAfterDays || 0),
+            purgeNoncurrentDays: Number(gcsPurgeNoncurrentDays || 0),
+            abortIncompleteMultipartDays: Number(gcsAbortMultipartDays || 0),
+            requesterPays: gcsRequesterPays,
+            enableCors: gcsEnableCors,
+            customLabels: gcsCustomLabels,
+            complianceRegime: gcsComplianceRegime,
+            dataClassification: gcsDataClassification,
             containerImage,
             containerPort: runPort,
             cpu: runCpu,
@@ -476,9 +888,9 @@ export default function ResourceProvisionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#ffffff] dark:bg-[#0c0c0f] rounded-[12px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-2xl p-6 space-y-5 my-8">
-        <div className="flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-4">
+    <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 overflow-y-auto">
+      <div className="bg-[#ffffff] dark:bg-[#0c0c0f] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-3xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden my-auto">
+        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-5 pb-4 bg-[#ffffff] dark:bg-[#0c0c0f]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
               <PlusCircle className="w-5 h-5" />
@@ -500,39 +912,40 @@ export default function ResourceProvisionModal({
             type="button"
             aria-label="Close Provisioning Studio"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Service Type Selector Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          {SERVICE_TABS.map((t) => {
-            const Icon = t.icon;
-            const active = serviceType === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => handleTabSwitch(t.id)}
-                className={`p-3 rounded-xl border text-left transition-all ${
-                  active
-                    ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'bg-zinc-50/70 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
-                }`}
-              >
-                <Icon className="w-4 h-4 mb-1.5" />
-                <div className="text-xs font-bold">{t.label}</div>
-                <div className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
-                  {t.desc}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+          {/* Service Type Selector Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {SERVICE_TABS.map((t) => {
+              const Icon = t.icon;
+              const active = serviceType === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleTabSwitch(t.id)}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    active
+                      ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'bg-zinc-50/70 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 mb-1.5" />
+                  <div className="text-xs font-bold">{t.label}</div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                    {t.desc}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">
@@ -551,13 +964,18 @@ export default function ResourceProvisionModal({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                    GCP Region (13 Global)
+                    GCP Region (40 Global Ready)
                   </label>
                   <select
                     value={vmRegion}
                     onChange={(e) => handleSelectVmRegion(e.target.value)}
                     className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   >
+                    {!GCP_REGION_ZONES[vmRegion] && (
+                      <option value={vmRegion}>
+                        🛰️ {vmRegion} (Map Drop-Pod Target)
+                      </option>
+                    )}
                     {Object.entries(GCP_REGION_ZONES).map(([regKey, info]) => (
                       <option key={regKey} value={regKey}>
                         {info.label}
@@ -574,13 +992,17 @@ export default function ResourceProvisionModal({
                     onChange={(e) => setZone(e.target.value)}
                     className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   >
-                    {(GCP_REGION_ZONES[vmRegion]?.zones || [`${vmRegion}-b`]).map(
-                      (z) => (
-                        <option key={z} value={z}>
-                          {z}
-                        </option>
-                      )
-                    )}
+                    {(
+                      GCP_REGION_ZONES[vmRegion]?.zones || [
+                        `${vmRegion}-a`,
+                        `${vmRegion}-b`,
+                        `${vmRegion}-c`,
+                      ]
+                    ).map((z) => (
+                      <option key={z} value={z}>
+                        {z}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -617,21 +1039,49 @@ export default function ResourceProvisionModal({
               </div>
             )}
 
-            {(serviceType === 'GCS_BUCKET' || serviceType === 'CLOUD_RUN') && (
+            {serviceType === 'CLOUD_RUN' && (
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  GCP Region
+                  GCP Region (40 Global Ready)
                 </label>
                 <select
                   value={region}
                   onChange={(e) => setRegion(e.target.value)}
                   className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                 >
+                  {!GCP_REGION_ZONES[region] && (
+                    <option value={region}>
+                      🛰️ {region} (Map Drop-Pod Target)
+                    </option>
+                  )}
                   {Object.entries(GCP_REGION_ZONES).map(([regKey, info]) => (
                     <option key={regKey} value={regKey}>
                       {info.label}
                     </option>
                   ))}
+                </select>
+              </div>
+            )}
+
+            {serviceType === 'GCS_BUCKET' && (
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                  Location Topology & Geo-Redundancy
+                </label>
+                <select
+                  value={gcsLocationType}
+                  onChange={(e) => setGcsLocationType(e.target.value)}
+                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                >
+                  <option value="REGIONAL">
+                    📍 REGIONAL — Single Region Low Latency (99.99% SLA)
+                  </option>
+                  <option value="DUAL_REGION">
+                    🛡️ DUAL_REGION — 2-Region Sovereign Pair + 15m RPO (99.999% SLA)
+                  </option>
+                  <option value="MULTI_REGION">
+                    🌐 MULTI_REGION — Continental Geo-Redundant (US / EU / ASIA)
+                  </option>
                 </select>
               </div>
             )}
@@ -707,47 +1157,190 @@ export default function ResourceProvisionModal({
           )}
 
           {serviceType === 'VPC_FIREWALL' && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  IP Protocol
-                </label>
-                <select
-                  value={firewallProtocol}
-                  onChange={(e) => setFirewallProtocol(e.target.value)}
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
-                >
-                  <option value="tcp">tcp</option>
-                  <option value="udp">udp</option>
-                  <option value="icmp">icmp (Ping)</option>
-                </select>
+            <div className="space-y-3 border-t border-zinc-200 dark:border-zinc-800 pt-3">
+              {/* Row 1: Action (ALLOW vs DENY), Direction (INGRESS vs EGRESS), Priority */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                    Action on Match
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFirewallAction('ALLOW')}
+                      className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                        firewallAction === 'ALLOW'
+                          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      ✓ ALLOW
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFirewallAction('DENY')}
+                      className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                        firewallAction === 'DENY'
+                          ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400'
+                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      ✕ DENY
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                    Traffic Direction
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFirewallDirection('INGRESS')}
+                      className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                        firewallDirection === 'INGRESS'
+                          ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      ↙ INGRESS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFirewallDirection('EGRESS')}
+                      className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
+                        firewallDirection === 'EGRESS'
+                          ? 'bg-violet-500/15 border-violet-500 text-violet-600 dark:text-violet-400'
+                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      ↗ EGRESS
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                    Rule Priority (0 – 65535)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={65535}
+                    value={firewallPriority}
+                    onChange={(e) => setFirewallPriority(Number(e.target.value))}
+                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  Allowed Ports
-                </label>
-                <input
-                  type="text"
-                  disabled={firewallProtocol === 'icmp'}
-                  value={firewallPorts}
-                  onChange={(e) => setFirewallPorts(e.target.value)}
-                  placeholder="22,80,443"
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100 disabled:opacity-40"
-                />
+              {/* Row 2: Protocol, Ports, Source/Destination CIDR */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                    IP Protocol
+                  </label>
+                  <select
+                    value={firewallProtocol}
+                    onChange={(e) => setFirewallProtocol(e.target.value)}
+                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  >
+                    <option value="tcp">tcp</option>
+                    <option value="udp">udp</option>
+                    <option value="icmp">icmp (Ping)</option>
+                    <option value="all">all (All Protocols)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                    {firewallAction === 'DENY' ? 'Blocked Ports' : 'Allowed Ports'}
+                  </label>
+                  <input
+                    type="text"
+                    disabled={firewallProtocol === 'icmp' || firewallProtocol === 'all'}
+                    value={firewallPorts}
+                    onChange={(e) => setFirewallPorts(e.target.value)}
+                    placeholder="22,80,443 or 8000-9000"
+                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100 disabled:opacity-40"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                    {firewallDirection === 'EGRESS'
+                      ? 'Destination IPv4 CIDR'
+                      : 'Source IPv4 CIDR'}
+                  </label>
+                  <input
+                    type="text"
+                    value={firewallSourceRanges}
+                    onChange={(e) => setFirewallSourceRanges(e.target.value)}
+                    placeholder="0.0.0.0/0"
+                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                  Source IPv4 Ranges (CIDR)
-                </label>
-                <input
-                  type="text"
-                  value={firewallSourceRanges}
-                  onChange={(e) => setFirewallSourceRanges(e.target.value)}
-                  placeholder="0.0.0.0/0"
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
-                />
+              {/* 1-Tap Zero-Trust CIDR Presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono text-zinc-400">
+                  CIDR Presets:
+                </span>
+                {[
+                  { label: 'IAP Zero-Trust (35.235.240.0/20)', cidr: '35.235.240.0/20' },
+                  { label: 'GCLB Health Checks', cidr: '130.211.0.0/22, 35.191.0.0/16' },
+                  { label: 'VPC Internal (10.128.0.0/9)', cidr: '10.128.0.0/9' },
+                  { label: 'Any Public IPv4 (0.0.0.0/0)', cidr: '0.0.0.0/0' },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setFirewallSourceRanges(preset.cidr)}
+                    className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-blue-500/15 text-[10px] font-mono text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Row 3: Target Network Tags, Description, and Firewall Logging */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                    Target Network Tags (Optional — blank = all instances)
+                  </label>
+                  <input
+                    type="text"
+                    value={firewallTargetTags}
+                    onChange={(e) => setFirewallTargetTags(e.target.value)}
+                    placeholder="web-server, https-server"
+                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                    Rule Description & Audit Options
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={firewallDescription}
+                      onChange={(e) => setFirewallDescription(e.target.value)}
+                      placeholder="Zero-trust firewall rule..."
+                      className="flex-1 bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    />
+                    <label className="inline-flex items-center gap-1.5 text-[11px] font-mono text-zinc-600 dark:text-zinc-300 shrink-0 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={firewallEnableLogging}
+                        onChange={(e) => setFirewallEnableLogging(e.target.checked)}
+                      />
+                      <span>Logs</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1020,25 +1613,1069 @@ export default function ResourceProvisionModal({
           )}
 
           {serviceType === 'GCS_BUCKET' && (
-            <div>
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                Default Storage Class
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {['STANDARD', 'NEARLINE', 'COLDLINE', 'ARCHIVE'].map((sc) => (
+            <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-800 pt-3">
+              {/* Optional 1-Tap Regulatory & Compliance Blueprints (Pre-fills the Fine-Grained Console Controls below) */}
+              <div className="p-3 rounded-[10px] border border-emerald-500/30 bg-emerald-500/5 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    🛡️ Optional 1-Tap Regulatory Blueprints (Or Customize Every Fine-Grained Setting Below)
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                    Mode: {gcsComplianceRegime.toUpperCase()} · {gcsDataClassification.toUpperCase()}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-1.5">
+                  {[
+                    {
+                      id: 'custom',
+                      title: '🎛️ GCP Console Standard',
+                      desc: 'Single Region · Standard · Uniform IAM · 7d Soft-Delete',
+                    },
+                    {
+                      id: 'sec-17a4-worm',
+                      title: '🏛️ SEC 17a-4 / FINRA WORM',
+                      desc: '1-Yr WORM Lock · Multi-Region US · Coldline',
+                    },
+                    {
+                      id: 'gdpr-eu-sovereign',
+                      title: '🇪🇺 GDPR EU Dual-Region',
+                      desc: 'EUR4 (NL + FI) · 15m Turbo RPO · Versioning',
+                    },
+                    {
+                      id: 'hipaa-soc2-vault',
+                      title: '🏥 HIPAA / SOC2 Vault',
+                      desc: '30d Soft-Delete · 90d Noncurrent · CMEK Ready',
+                    },
+                    {
+                      id: 'ai-lakehouse-hns',
+                      title: '🤖 AI / Spark HNS Tree',
+                      desc: 'Hierarchical Namespace Folder Tree · Low Latency',
+                    },
+                  ].map((bp) => {
+                    const active = gcsComplianceRegime === bp.id;
+                    return (
+                      <button
+                        key={bp.id}
+                        type="button"
+                        onClick={() => applyGcsCompliancePreset(bp.id)}
+                        className={`text-left p-2 rounded-[8px] border transition-all cursor-pointer ${
+                          active
+                            ? 'bg-emerald-500/15 border-emerald-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
+                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold">{bp.title}</div>
+                        <div className="text-[9.5px] font-mono text-zinc-500 dark:text-zinc-400 mt-0.5 leading-tight">
+                          {bp.desc}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* STEP 1: Choose where to store your data (Single Region / Dual-region / Multi-region like original GCP Console) */}
+              <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    1. Choose where to store your data (Location type)
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    Permanent after bucket creation
+                  </span>
+                </div>
+
+                {/* 3 GCP Console Location Type Radio Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {[
+                    {
+                      id: 'REGIONAL',
+                      title: 'Region',
+                      subtitle: 'Lowest latency within a single region',
+                      sla: '99.99% Availability SLA · 40 Regions',
+                    },
+                    {
+                      id: 'DUAL_REGION',
+                      title: 'Dual-region',
+                      subtitle: 'High availability and low latency across 2 regions',
+                      sla: '99.999% SLA · Custom Pair or Predefined + 15m Turbo RPO',
+                    },
+                    {
+                      id: 'MULTI_REGION',
+                      title: 'Multi-region',
+                      subtitle: 'Highest availability across largest area',
+                      sla: '99.999% SLA · Geo-redundant across US, EU, or ASIA',
+                    },
+                  ].map((locCard) => {
+                    const selected = gcsLocationType === locCard.id;
+                    return (
+                      <button
+                        key={locCard.id}
+                        type="button"
+                        onClick={() => setGcsLocationType(locCard.id)}
+                        className={`text-left p-3 rounded-[10px] border transition-all cursor-pointer flex items-start gap-2.5 ${
+                          selected
+                            ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50 shadow-sm'
+                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                        }`}
+                      >
+                        <span
+                          className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            selected
+                              ? 'border-blue-500 bg-blue-500/20'
+                              : 'border-zinc-400 dark:border-zinc-600'
+                          }`}
+                        >
+                          {selected && (
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          )}
+                        </span>
+                        <div>
+                          <div className="text-xs font-extrabold">{locCard.title}</div>
+                          <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">
+                            {locCard.subtitle}
+                          </div>
+                          <div className="text-[9.5px] font-mono text-blue-600 dark:text-blue-400 mt-1">
+                            {locCard.sla}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Single Region Configuration */}
+                {gcsLocationType === 'REGIONAL' && (
+                  <div className="pt-1">
+                    <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+                      Location (Select Single Region — 40 Global Regions)
+                    </label>
+                    <select
+                      value={region}
+                      onChange={(e) => setRegion(e.target.value)}
+                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    >
+                      {!GCP_REGION_ZONES[region] && (
+                        <option value={region}>
+                          🛰️ {region} (Map Drop-Pod Target)
+                        </option>
+                      )}
+                      {Object.entries(GCP_REGION_ZONES).map(([regKey, info]) => (
+                        <option key={regKey} value={regKey}>
+                          {regKey} — {info.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Dual-Region Fine-Grained Configuration */}
+                {gcsLocationType === 'DUAL_REGION' && (
+                  <div className="space-y-3 pt-1 border-t border-zinc-200/70 dark:border-zinc-800/70">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+                          Dual-Region Pairing Mode
+                        </label>
+                        <select
+                          value={gcsDualPreset}
+                          onChange={(e) => setGcsDualPreset(e.target.value)}
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          <option value="CUSTOM">
+                            🛠️ Custom Dual-Region Pair (Pick Any 2 Regions in Continent)
+                          </option>
+                          <option value="NAM4">
+                            🇺🇸 Predefined NAM4 (us-central1 Iowa + us-east1 South Carolina)
+                          </option>
+                          <option value="EUR4">
+                            🇪🇺 Predefined EUR4 (europe-west4 Netherlands + europe-north1 Finland)
+                          </option>
+                          <option value="ASIA1">
+                            🇯🇵 Predefined ASIA1 (asia-northeast1 Tokyo + asia-northeast2 Osaka)
+                          </option>
+                        </select>
+                      </div>
+
+                      {gcsDualPreset === 'CUSTOM' && (
+                        <div>
+                          <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+                            Location Continent Filter
+                          </label>
+                          <select
+                            value={gcsDualContinent}
+                            onChange={(e) => {
+                              const cont = e.target.value;
+                              setGcsDualContinent(cont);
+                              if (cont === 'europe') {
+                                setGcsDualRegionA('europe-west1');
+                                setGcsDualRegionB('europe-west4');
+                              } else if (cont === 'asia') {
+                                setGcsDualRegionA('asia-northeast1');
+                                setGcsDualRegionB('asia-northeast2');
+                              } else {
+                                setGcsDualRegionA('us-central1');
+                                setGcsDualRegionB('us-east1');
+                              }
+                            }}
+                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          >
+                            <option value="us">Americas (United States / North America)</option>
+                            <option value="europe">Europe (European Union & EEA)</option>
+                            <option value="asia">Asia Pacific</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    {gcsDualPreset === 'CUSTOM' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                            Region 1 (Primary Placement)
+                          </label>
+                          <select
+                            value={gcsDualRegionA}
+                            onChange={(e) => setGcsDualRegionA(e.target.value)}
+                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          >
+                            {Object.entries(GCP_REGION_ZONES)
+                              .filter(([regKey]) =>
+                                gcsDualContinent === 'europe'
+                                  ? regKey.startsWith('europe-')
+                                  : gcsDualContinent === 'asia'
+                                  ? regKey.startsWith('asia-') || regKey.startsWith('australia-')
+                                  : regKey.startsWith('us-') ||
+                                    regKey.startsWith('northamerica-') ||
+                                    regKey.startsWith('southamerica-')
+                              )
+                              .map(([regKey, info]) => (
+                                <option key={regKey} value={regKey}>
+                                  {regKey} — {info.label}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                            Region 2 (Secondary Sovereign Placement)
+                          </label>
+                          <select
+                            value={gcsDualRegionB}
+                            onChange={(e) => setGcsDualRegionB(e.target.value)}
+                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          >
+                            {Object.entries(GCP_REGION_ZONES)
+                              .filter(([regKey]) =>
+                                gcsDualContinent === 'europe'
+                                  ? regKey.startsWith('europe-')
+                                  : gcsDualContinent === 'asia'
+                                  ? regKey.startsWith('asia-') || regKey.startsWith('australia-')
+                                  : regKey.startsWith('us-') ||
+                                    regKey.startsWith('northamerica-') ||
+                                    regKey.startsWith('southamerica-')
+                              )
+                              .map(([regKey, info]) => (
+                                <option key={regKey} value={regKey}>
+                                  {regKey} — {info.label}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Turbo Replication RPO */}
+                    <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] flex flex-wrap items-center justify-between gap-2">
+                      <label className="flex items-start gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={gcsRpo === 'ASYNC_TURBO'}
+                          onChange={(e) =>
+                            setGcsRpo(e.target.checked ? 'ASYNC_TURBO' : 'DEFAULT')
+                          }
+                          className="mt-0.5 rounded border-zinc-400"
+                        />
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                            ⚡ Enable Turbo Replication (15-minute RPO SLA)
+                          </div>
+                          <div className="text-[10px] font-mono text-zinc-500">
+                            Replicates 100% of newly written objects across both regions within 15 minutes (`rpo: ASYNC_TURBO`).
+                          </div>
+                        </div>
+                      </label>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                        RPO: {gcsRpo}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Multi-Region Fine-Grained Configuration */}
+                {gcsLocationType === 'MULTI_REGION' && (
+                  <div className="space-y-3 pt-1 border-t border-zinc-200/70 dark:border-zinc-800/70">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1.5">
+                        Multi-Region Location (Choose Continental Geo-Redundancy)
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {[
+                          {
+                            id: 'US',
+                            label: 'us (multiple regions in United States)',
+                            desc: 'Geo-redundant across US data centers',
+                          },
+                          {
+                            id: 'EU',
+                            label: 'eu (multiple regions in European Union)',
+                            desc: 'Strict EU member-state data residency',
+                          },
+                          {
+                            id: 'ASIA',
+                            label: 'asia (multiple regions in Asia)',
+                            desc: 'Geo-redundant across Asia-Pacific hubs',
+                          },
+                        ].map((mr) => (
+                          <button
+                            key={mr.id}
+                            type="button"
+                            onClick={() => setGcsMultiRegion(mr.id)}
+                            className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer ${
+                              gcsMultiRegion === mr.id
+                                ? 'bg-blue-500/15 border-blue-500 text-zinc-950 dark:text-zinc-100'
+                                : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                            }`}
+                          >
+                            <div className="text-xs font-mono font-bold">{mr.label}</div>
+                            <div className="text-[10px] text-zinc-500 mt-0.5">{mr.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] flex flex-wrap items-center justify-between gap-2">
+                      <label className="flex items-start gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={gcsRpo === 'ASYNC_TURBO'}
+                          onChange={(e) =>
+                            setGcsRpo(e.target.checked ? 'ASYNC_TURBO' : 'DEFAULT')
+                          }
+                          className="mt-0.5 rounded border-zinc-400"
+                        />
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                            ⚡ Enable Turbo Replication (15-minute RPO SLA)
+                          </div>
+                          <div className="text-[10px] font-mono text-zinc-500">
+                            Guarantees 15-minute cross-region replication recovery point objective (`ASYNC_TURBO`).
+                          </div>
+                        </div>
+                      </label>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                        RPO: {gcsRpo}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* STEP 2: Choose a storage class for your data (Autoclass vs Set a default class + HNS) */}
+              <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                  2. Choose a storage class for your data
+                </div>
+
+                {/* Radio Mode: Autoclass vs Set a default class */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <button
-                    key={sc}
                     type="button"
-                    onClick={() => setStorageClass(sc)}
-                    className={`py-2 px-3 rounded-lg border text-xs font-mono font-semibold transition-colors ${
-                      storageClass === sc
-                        ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    onClick={() => setGcsAutoclass(true)}
+                    className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
+                      gcsAutoclass
+                        ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
+                        : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
-                    {sc}
+                    <span
+                      className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                        gcsAutoclass ? 'border-blue-500 bg-blue-500/20' : 'border-zinc-400'
+                      }`}
+                    >
+                      {gcsAutoclass && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold">
+                        Autoclass (Automatic Tiering)
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">
+                        Automatically transitions each object to hotter or colder classes based on access patterns
+                      </div>
+                    </div>
                   </button>
-                ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setGcsAutoclass(false)}
+                    className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
+                      !gcsAutoclass
+                        ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
+                        : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                        !gcsAutoclass ? 'border-blue-500 bg-blue-500/20' : 'border-zinc-400'
+                      }`}
+                    >
+                      {!gcsAutoclass && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold">
+                        Set a default class (Manual Selection)
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">
+                        Choose Standard, Nearline, Coldline, or Archive as the default class for new objects
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                {!gcsAutoclass ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    {[
+                      {
+                        id: 'STANDARD',
+                        rate: '$0.020/GB-mo',
+                        minDur: 'None (0d min)',
+                        desc: 'Best for short-term storage and frequently accessed hot data',
+                      },
+                      {
+                        id: 'NEARLINE',
+                        rate: '$0.010/GB-mo',
+                        minDur: '30-day min duration',
+                        desc: 'Best for backups and data accessed less than once a month',
+                      },
+                      {
+                        id: 'COLDLINE',
+                        rate: '$0.004/GB-mo',
+                        minDur: '90-day min duration',
+                        desc: 'Best for disaster recovery accessed less than once a quarter',
+                      },
+                      {
+                        id: 'ARCHIVE',
+                        rate: '$0.0012/GB-mo',
+                        minDur: '365-day min duration',
+                        desc: 'Best for long-term digital preservation (< once a year)',
+                      },
+                    ].map((sc) => (
+                      <button
+                        key={sc.id}
+                        type="button"
+                        onClick={() => setStorageClass(sc.id)}
+                        className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
+                          storageClass === sc.id
+                            ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
+                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-extrabold">{sc.id}</span>
+                          <span className="text-[10px] font-mono opacity-85">{sc.rate}</span>
+                        </div>
+                        <div className="text-[9.5px] font-mono text-amber-600 dark:text-amber-400 mt-0.5">
+                          {sc.minDur}
+                        </div>
+                        <div className="text-[9.5px] opacity-75 mt-1 leading-tight">
+                          {sc.desc}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center bg-blue-500/5 border border-blue-500/20 rounded-[8px] p-2.5">
+                    <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                      Objects enter as <strong>STANDARD</strong> and transition to colder tiers automatically with <strong>$0 retrieval fees</strong>.
+                    </div>
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Terminal Storage Class (Coldest Tier)
+                      </label>
+                      <select
+                        value={gcsAutoclassTerminal}
+                        onChange={(e) => setGcsAutoclassTerminal(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="NEARLINE">Nearline ($0.010/GB — default GCP floor)</option>
+                        <option value="ARCHIVE">Archive ($0.0012/GB — maximum cold savings)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hierarchical Namespace (HNS) Option */}
+                <label
+                  className={`flex items-start gap-2.5 p-2.5 rounded-[8px] border text-xs cursor-pointer ${
+                    gcsRetentionEnabled
+                      ? 'opacity-50 border-zinc-200 dark:border-zinc-800'
+                      : 'border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={gcsHierarchicalNamespace}
+                    disabled={gcsRetentionEnabled}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setGcsHierarchicalNamespace(checked);
+                      if (checked) {
+                        setGcsUniformAccess(true);
+                        setGcsVersioning(false);
+                      }
+                    }}
+                    className="mt-0.5 rounded border-zinc-400"
+                  />
+                  <div>
+                    <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                      Enable Hierarchical Namespace (HNS) on this bucket
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-500">
+                      Organizes objects into a true file-system folder tree for atomic directory renames and 8× faster listing on Spark, Hadoop, Dataflow, and AI workloads (Requires Uniform access).
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* STEP 3: Choose how to control access to objects (PAP + Uniform vs Fine-grained ACLs) */}
+              <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                  3. Choose how to control access to objects
+                </div>
+
+                {/* Prevent Public Access Checkbox */}
+                <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] flex flex-wrap items-center justify-between gap-2">
+                  <label className="flex items-start gap-2.5 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={gcsPublicAccessPrevention === 'enforced'}
+                      onChange={(e) =>
+                        setGcsPublicAccessPrevention(
+                          e.target.checked ? 'enforced' : 'inherited'
+                        )
+                      }
+                      className="mt-0.5 rounded border-zinc-400"
+                    />
+                    <div>
+                      <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                        Prevent public access — Enforce public access prevention on this bucket
+                      </div>
+                      <div className="text-[10px] font-mono text-zinc-500">
+                        {gcsPublicAccessPrevention === 'enforced'
+                          ? 'Blocks allUsers & allAuthenticatedUsers IAM bindings (Zero-Trust Recommended)'
+                          : 'Inherited from organization policy — allows public object sharing if org policy permits'}
+                      </div>
+                    </div>
+                  </label>
+                  <span
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                      gcsPublicAccessPrevention === 'enforced'
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    }`}
+                  >
+                    PAP: {gcsPublicAccessPrevention.toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Access Control Model: Uniform vs Fine-grained (Object ACLs) */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1.5">
+                    Access control model (Bucket-level IAM vs Object-level ACLs)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setGcsUniformAccess(true)}
+                      className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
+                        gcsUniformAccess || gcsHierarchicalNamespace
+                          ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          gcsUniformAccess || gcsHierarchicalNamespace
+                            ? 'border-blue-500 bg-blue-500/20'
+                            : 'border-zinc-400'
+                        }`}
+                      >
+                        {(gcsUniformAccess || gcsHierarchicalNamespace) && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                      </span>
+                      <div>
+                        <div className="text-xs font-bold">
+                          Uniform (Recommended)
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5">
+                          Ensure uniform access to all objects in the bucket by using only bucket-level permissions (IAM).
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={gcsHierarchicalNamespace}
+                      onClick={() => {
+                        if (!gcsHierarchicalNamespace) setGcsUniformAccess(false);
+                      }}
+                      className={`text-left p-2.5 rounded-[8px] border transition-all flex items-start gap-2.5 ${
+                        gcsHierarchicalNamespace
+                          ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
+                          : !gcsUniformAccess
+                          ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50 cursor-pointer'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          !gcsUniformAccess && !gcsHierarchicalNamespace
+                            ? 'border-blue-500 bg-blue-500/20'
+                            : 'border-zinc-400'
+                        }`}
+                      >
+                        {!gcsUniformAccess && !gcsHierarchicalNamespace && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                      </span>
+                      <div>
+                        <div className="text-xs font-bold">
+                          Fine-grained (Legacy Object ACLs)
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5">
+                          Specify access to individual objects by using object-level Access Control Lists (ACLs) in addition to IAM.
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* STEP 4: Choose how to protect object data (Soft Delete, Versioning, Retention Policy / Bucket Lock, Encryption) */}
+              <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                  4. Choose how to protect object data
+                </div>
+
+                {/* 4A. Soft Delete Policy (Fine-Grained Days) */}
+                <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-xs font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={gcsSoftDeleteEnabled}
+                        onChange={(e) => {
+                          setGcsSoftDeleteEnabled(e.target.checked);
+                          if (e.target.checked && gcsSoftDeleteDays < 7) {
+                            setGcsSoftDeleteDays(7);
+                          }
+                        }}
+                        className="rounded border-zinc-400"
+                      />
+                      Soft delete policy (For data recovery)
+                    </label>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Retains deleted objects so they can be restored
+                    </span>
+                  </div>
+
+                  {gcsSoftDeleteEnabled && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1 pl-6">
+                      <span className="text-[11px] font-mono text-zinc-500">
+                        Retention duration (7 to 90 days):
+                      </span>
+                      <input
+                        type="number"
+                        min={7}
+                        max={90}
+                        value={gcsSoftDeleteDays}
+                        onChange={(e) =>
+                          setGcsSoftDeleteDays(
+                            Math.max(7, Math.min(90, Number(e.target.value || 7)))
+                          )
+                        }
+                        className="w-20 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                      <span className="text-[11px] font-mono text-zinc-500">days</span>
+                      <div className="flex items-center gap-1 ml-auto">
+                        {[7, 14, 30, 60, 90].map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setGcsSoftDeleteDays(d)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono border cursor-pointer ${
+                              gcsSoftDeleteDays === d
+                                ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 font-bold'
+                                : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                            }`}
+                          >
+                            {d}d
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4B. Object Versioning (Fine-Grained Max Versions & Noncurrent Expiration) */}
+                <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label
+                      className={`flex items-center gap-2 text-xs font-bold cursor-pointer ${
+                        gcsRetentionEnabled
+                          ? 'opacity-50 text-zinc-400'
+                          : 'text-zinc-900 dark:text-zinc-100'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={gcsVersioning && !gcsRetentionEnabled}
+                        disabled={gcsRetentionEnabled}
+                        onChange={(e) => setGcsVersioning(e.target.checked)}
+                        className="rounded border-zinc-400"
+                      />
+                      Object versioning (For version control)
+                    </label>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      {gcsRetentionEnabled
+                        ? 'Cannot be combined with Retention Policy'
+                        : 'Keeps noncurrent versions when objects are overwritten or deleted'}
+                    </span>
+                  </div>
+
+                  {gcsVersioning && !gcsRetentionEnabled && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 pl-6">
+                      <div>
+                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                          Max number of versions per object (0 = Unlimited)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={1000}
+                          value={gcsMaxNumVersions}
+                          onChange={(e) =>
+                            setGcsMaxNumVersions(Math.max(0, Number(e.target.value || 0)))
+                          }
+                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                          Expire noncurrent versions after (Days, 0 = Never)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={3650}
+                          value={gcsPurgeNoncurrentDays}
+                          onChange={(e) =>
+                            setGcsPurgeNoncurrentDays(
+                              Math.max(0, Number(e.target.value || 0))
+                            )
+                          }
+                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4C. Retention Policy / Bucket Lock (Fine-Grained Duration + Unit) */}
+                <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-xs font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={gcsRetentionEnabled}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setGcsRetentionEnabled(checked);
+                          if (checked) {
+                            setGcsVersioning(false);
+                            setGcsHierarchicalNamespace(false);
+                          }
+                        }}
+                        className="rounded border-zinc-400"
+                      />
+                      Retention policy / Bucket Lock (For WORM compliance)
+                    </label>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Prevents deletion or modification of objects until retention duration expires
+                    </span>
+                  </div>
+
+                  {gcsRetentionEnabled && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1 pl-6">
+                      <span className="text-[11px] font-mono text-zinc-500">
+                        Duration:
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={36500}
+                        value={gcsRetentionValue}
+                        onChange={(e) =>
+                          setGcsRetentionValue(Math.max(1, Number(e.target.value || 1)))
+                        }
+                        className="w-24 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                      <select
+                        value={gcsRetentionUnit}
+                        onChange={(e) => setGcsRetentionUnit(e.target.value)}
+                        className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="seconds">Seconds</option>
+                        <option value="days">Days</option>
+                        <option value="months">Months (30d)</option>
+                        <option value="years">Years (365d)</option>
+                      </select>
+                      <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                        (= {gcsRetentionDays} days / {gcsRetentionSeconds.toLocaleString()}s)
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4D. Data Encryption (Google-managed vs Customer-managed KMS Key) */}
+                <div className="space-y-2 pt-1">
+                  <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
+                    Data encryption
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setGcsEncryptionType('GOOGLE_MANAGED')}
+                      className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
+                        gcsEncryptionType === 'GOOGLE_MANAGED'
+                          ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          gcsEncryptionType === 'GOOGLE_MANAGED'
+                            ? 'border-blue-500 bg-blue-500/20'
+                            : 'border-zinc-400'
+                        }`}
+                      >
+                        {gcsEncryptionType === 'GOOGLE_MANAGED' && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                      </span>
+                      <div>
+                        <div className="text-xs font-bold">
+                          Google-managed encryption key
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5">
+                          Default AES-256 server-side encryption — no configuration required
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setGcsEncryptionType('CMEK')}
+                      className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
+                        gcsEncryptionType === 'CMEK'
+                          ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          gcsEncryptionType === 'CMEK'
+                            ? 'border-blue-500 bg-blue-500/20'
+                            : 'border-zinc-400'
+                        }`}
+                      >
+                        {gcsEncryptionType === 'CMEK' && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                      </span>
+                      <div>
+                        <div className="text-xs font-bold">
+                          Customer-managed encryption key (CMEK)
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5">
+                          Manage encryption & key rotation through Google Cloud KMS
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {gcsEncryptionType === 'CMEK' && (
+                    <div className="pt-1">
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Cloud KMS Key Resource Name (`projects/.../locations/.../keyRings/.../cryptoKeys/...`)
+                      </label>
+                      <input
+                        type="text"
+                        value={gcsCmekKeyName}
+                        onChange={(e) => setGcsCmekKeyName(e.target.value)}
+                        placeholder={`projects/${projectId}/locations/${region}/keyRings/my-ring/cryptoKeys/my-key`}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* STEP 5: Fine-Grained Object Lifecycle Rules, Labels, Requester Pays & CORS */}
+              <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    5. Fine-Grained Lifecycle Rules, Labels & Billing Options
+                  </span>
+                  <label className="flex items-center gap-2 text-xs font-mono text-blue-600 dark:text-blue-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={gcsEnableSmartLifecycle}
+                      onChange={(e) => setGcsEnableSmartLifecycle(e.target.checked)}
+                      className="rounded border-zinc-400"
+                    />
+                    Enable Custom Storage Class Transition Rules
+                  </label>
+                </div>
+
+                {gcsEnableSmartLifecycle && !gcsAutoclass && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b]">
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        → Nearline after (Days)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={gcsNearlineDays}
+                        onChange={(e) =>
+                          setGcsNearlineDays(Math.max(0, Number(e.target.value || 0)))
+                        }
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        → Coldline after (Days)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={gcsColdlineDays}
+                        onChange={(e) =>
+                          setGcsColdlineDays(Math.max(0, Number(e.target.value || 0)))
+                        }
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        → Archive after (Days)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={gcsArchiveDays}
+                        onChange={(e) =>
+                          setGcsArchiveDays(Math.max(0, Number(e.target.value || 0)))
+                        }
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        Delete objects after (0=Off)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={gcsDeleteAfterDays}
+                        onChange={(e) =>
+                          setGcsDeleteAfterDays(
+                            Math.max(0, Number(e.target.value || 0))
+                          )
+                        }
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+                      Bucket Labels (Comma-separated `key=value` pairs)
+                    </label>
+                    <input
+                      type="text"
+                      value={gcsCustomLabels}
+                      onChange={(e) => setGcsCustomLabels(e.target.value)}
+                      placeholder="env=production,team=data-eng,cost-center=ai"
+                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+                      Abort Incomplete Multipart Uploads After (Days, 0 = Disabled)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={gcsAbortMultipartDays}
+                      onChange={(e) =>
+                        setGcsAbortMultipartDays(
+                          Math.max(0, Number(e.target.value || 0))
+                        )
+                      }
+                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer p-2 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b]">
+                    <input
+                      type="checkbox"
+                      checked={gcsRequesterPays}
+                      onChange={(e) => setGcsRequesterPays(e.target.checked)}
+                      className="rounded border-zinc-400"
+                    />
+                    <div>
+                      <div className="font-bold">Requester Pays (`billing.requesterPays`)</div>
+                      <div className="text-[10px] font-mono text-zinc-500">
+                        Requesters pay for data access & network egress costs
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer p-2 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b]">
+                    <input
+                      type="checkbox"
+                      checked={gcsEnableCors}
+                      onChange={(e) => setGcsEnableCors(e.target.checked)}
+                      className="rounded border-zinc-400"
+                    />
+                    <div>
+                      <div className="font-bold">Browser Direct Upload CORS Policy</div>
+                      <div className="text-[10px] font-mono text-zinc-500">
+                        Allow signed URL / browser `PUT` & `POST` uploads
+                      </div>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
           )}
@@ -1442,6 +3079,44 @@ export default function ResourceProvisionModal({
             </div>
           )}
 
+          {/* 2026 Live Pre-Deploy FinOps Price Calculator */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/[0.08] via-cyan-500/[0.06] to-violet-500/[0.08] border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Live Pre-Deploy FinOps Cost Calculator
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                  {liveCostEstimate.badge}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+                {liveCostEstimate.detail}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="text-right">
+                <div className="text-[10px] font-mono uppercase text-zinc-500">
+                  Est. Hourly Burn
+                </div>
+                <div className="text-sm font-black font-mono text-zinc-900 dark:text-white">
+                  ${liveCostEstimate.hourly.toFixed(4)}
+                  <span className="text-[10px] font-normal text-zinc-500">/hr</span>
+                </div>
+              </div>
+              <div className="text-right pl-3 border-l border-zinc-300 dark:border-zinc-800">
+                <div className="text-[10px] font-mono uppercase text-zinc-500">
+                  Est. Monthly (730h)
+                </div>
+                <div className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  ${liveCostEstimate.monthly.toFixed(2)}
+                  <span className="text-[10px] font-normal text-zinc-500">/mo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Live gcloud CLI Equivalent Preview */}
           <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3.5 space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-zinc-400">
@@ -1481,34 +3156,35 @@ export default function ResourceProvisionModal({
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>Direct Live GCP API Execution ({projectId})</span>
-            </div>
+            <div className="sticky bottom-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 pb-1 border-t border-zinc-200 dark:border-zinc-800 bg-[#ffffff]/95 dark:bg-[#0c0c0f]/95 backdrop-blur-md">
+              <div className="flex items-center gap-2 text-xs text-zinc-500">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <span>Direct Live GCP API Execution ({projectId})</span>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-[16px] py-[8px] text-xs font-[500] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting || !name.trim()}
-                className="bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-[18px] py-[8px] text-xs font-[700] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting
-                  ? 'Creating on Google Cloud...'
-                  : `Create Live ${
-                      SERVICE_TABS.find((s) => s.id === serviceType)?.label
-                    }`}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-[16px] py-[8px] text-xs font-[500] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || !name.trim()}
+                  className="bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-[18px] py-[8px] text-xs font-[700] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {submitting
+                    ? 'Creating on Google Cloud...'
+                    : `Create Live ${
+                        SERVICE_TABS.find((s) => s.id === serviceType)?.label
+                      }`}
+                </button>
+              </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );
