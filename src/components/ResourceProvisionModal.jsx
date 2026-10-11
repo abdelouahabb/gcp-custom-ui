@@ -389,7 +389,17 @@ export default function ResourceProvisionModal({
     }
   };
 
-  // Cloud Run specific
+  // Cloud Run specific + 3-Way Container Source (Artifact Registry | GitHub Repo | Public URI)
+  const [runSourceMode, setRunSourceMode] = useState('PUBLIC_URI'); // ARTIFACT_REGISTRY | GITHUB_REPO | PUBLIC_URI
+  const [arImages, setArImages] = useState([]);
+  const [runGhRepoUrl, setRunGhRepoUrl] = useState(
+    'https://github.com/GoogleCloudPlatform/golang-samples.git'
+  );
+  const [runGhBranch, setRunGhBranch] = useState('main');
+  const [runGhContextDir, setRunGhContextDir] = useState('run/helloworld');
+  const [runGhBuildMethod, setRunGhBuildMethod] = useState('BUILDPACKS'); // DOCKERFILE | BUILDPACKS
+  const [runGhArRepo, setRunGhArRepo] = useState('cloudpulse-containers');
+
   const [containerImage, setContainerImage] = useState(
     'us-docker.pkg.dev/cloudrun/container/hello'
   );
@@ -738,6 +748,22 @@ export default function ResourceProvisionModal({
         setZone(firstZone);
       }
       setErrorMsg(null);
+      if (projectId) {
+        axios
+          .get(
+            `/api/project/${encodeURIComponent(projectId)}/wave9/supply-chain`
+          )
+          .then((res) => {
+            const imgs = res.data?.images || [];
+            setArImages(imgs);
+            if (imgs.length > 0) {
+              setRunSourceMode('ARTIFACT_REGISTRY');
+              const firstTag = imgs[0].tags?.[0] || 'latest';
+              setContainerImage(`${imgs[0].uri}:${firstTag}`);
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [isOpen, initialServiceType, initialLocation, projectId]);
 
@@ -1279,6 +1305,30 @@ export default function ResourceProvisionModal({
     const hasGpu = runGpuAccelerator !== 'NONE';
 
     try {
+      if (serviceType === 'CLOUD_RUN' && runSourceMode === 'GITHUB_REPO') {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/cloud-build/trigger-github`,
+          {
+            repoUrl: runGhRepoUrl.trim(),
+            branch: runGhBranch.trim() || 'main',
+            contextDir: runGhContextDir.trim() || '.',
+            buildMethod: runGhBuildMethod,
+            arLocation: region,
+            arRepository: runGhArRepo.trim() || 'cloudpulse-containers',
+            imageName: name.trim(),
+            imageTag: 'latest',
+            deployTarget: 'CLOUD_RUN',
+            cloudRunService: name.trim(),
+            cloudRunRegion: region,
+            cloudRunPort: Number(runPort || 8080),
+            cloudRunAllowUnauth: runAllowUnauth,
+          }
+        );
+        onProvisionSuccess(res.data, serviceType);
+        onClose();
+        return;
+      }
+
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/provision`,
         {
@@ -3509,70 +3559,244 @@ export default function ResourceProvisionModal({
 
           {serviceType === 'CLOUD_RUN' && (
             <div className="space-y-3.5 border-t border-zinc-200 dark:border-zinc-800 pt-3">
-              {/* Quick Image Presets */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-mono text-zinc-500">
-                  Quick Image Preset:
-                </span>
-                {[
-                  {
-                    label: 'Cloud Run Hello',
-                    uri: 'us-docker.pkg.dev/cloudrun/container/hello',
-                    port: 8080,
-                  },
-                  {
-                    label: 'Google Hello Web v1',
-                    uri: 'gcr.io/google-samples/hello-app:1.0',
-                    port: 8080,
-                  },
-                  {
-                    label: 'NGINX Unprivileged',
-                    uri: 'nginxinc/nginx-unprivileged:alpine',
-                    port: 8080,
-                  },
-                ].map((preset) => (
-                  <button
-                    key={preset.uri}
-                    type="button"
-                    onClick={() => {
-                      setContainerImage(preset.uri);
-                      setRunPort(preset.port);
-                    }}
-                    className={`text-[11px] font-mono px-2.5 py-1 rounded border transition-colors ${
-                      containerImage === preset.uri
-                        ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-zinc-500 mb-1">
-                    Container Image URI (Artifact Registry / GCR / Docker)
+              {/* 3-Way Container Source Selector: Artifact Registry | GitHub Repo | Public URI */}
+              <div className="p-3 rounded-[10px] border border-blue-500/30 bg-blue-500/5 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    Container Source (Artifact Registry · GitHub Repo · Custom URI)
                   </label>
-                  <input
-                    type="text"
-                    value={containerImage}
-                    onChange={(e) => setContainerImage(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
-                  />
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    {arImages.length} Image(s) in `{projectId}` Artifact Registry
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-500 mb-1">
-                    Container Port
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={65535}
-                    value={runPort}
-                    onChange={(e) => setRunPort(Number(e.target.value))}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
-                  />
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    {
+                      id: 'ARTIFACT_REGISTRY',
+                      label: '📦 1. Project Artifact Registry',
+                      sub: `Pick from ${arImages.length} live GCP image(s)`,
+                    },
+                    {
+                      id: 'GITHUB_REPO',
+                      label: '🐙 2. Build & Deploy from GitHub',
+                      sub: 'Cloud Build → AR → Cloud Run',
+                    },
+                    {
+                      id: 'PUBLIC_URI',
+                      label: '🌐 3. Public / Custom URI',
+                      sub: 'Docker Hub / GCR / Quick Presets',
+                    },
+                  ].map((m) => {
+                    const active = runSourceMode === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setRunSourceMode(m.id)}
+                        className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
+                          active
+                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold">{m.label}</div>
+                        <div
+                          className={`text-[9.5px] mt-0.5 ${
+                            active ? 'text-blue-100' : 'text-zinc-500'
+                          }`}
+                        >
+                          {m.sub}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {runSourceMode === 'ARTIFACT_REGISTRY' && (
+                  <div className="space-y-2">
+                    {arImages.length > 0 ? (
+                      <div>
+                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                          Select Container from `{projectId}` Artifact Registry:
+                        </label>
+                        <select
+                          value={containerImage}
+                          onChange={(e) => setContainerImage(e.target.value)}
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          {arImages.map((img, i) => {
+                            const tag = img.tags?.[0] || 'latest';
+                            const fullUri = `${img.uri}:${tag}`;
+                            return (
+                              <option key={`${img.uri}-${i}`} value={fullUri}>
+                                📦 {fullUri} ({img.sizeMb} MB · {img.location})
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-[8px] border border-dashed border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-500 flex items-center justify-between gap-2">
+                        <span>
+                          No container images found in `{projectId}` Artifact Registry yet.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setRunSourceMode('GITHUB_REPO')}
+                          className="px-2.5 py-1 rounded bg-blue-600 text-white text-[10px] font-bold cursor-pointer shrink-0"
+                        >
+                          🐙 Build from GitHub →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {runSourceMode === 'GITHUB_REPO' && (
+                  <div className="space-y-2.5 pt-1 border-t border-blue-500/20">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                          GitHub Repository HTTPS URL
+                        </label>
+                        <input
+                          type="text"
+                          value={runGhRepoUrl}
+                          onChange={(e) => setRunGhRepoUrl(e.target.value)}
+                          placeholder="https://github.com/owner/repo.git"
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                          Branch & Context Dir
+                        </label>
+                        <div className="grid grid-cols-2 gap-1">
+                          <input
+                            type="text"
+                            value={runGhBranch}
+                            onChange={(e) => setRunGhBranch(e.target.value)}
+                            placeholder="main"
+                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          />
+                          <input
+                            type="text"
+                            value={runGhContextDir}
+                            onChange={(e) => setRunGhContextDir(e.target.value)}
+                            placeholder="."
+                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                          Cloud Build Method
+                        </label>
+                        <select
+                          value={runGhBuildMethod}
+                          onChange={(e) => setRunGhBuildMethod(e.target.value)}
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          <option value="BUILDPACKS">
+                            Zero-Dockerfile Google Cloud Buildpacks
+                          </option>
+                          <option value="DOCKERFILE">
+                            Standard Dockerfile (`docker build`)
+                          </option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                          Target Artifact Registry Repo (Auto-Created)
+                        </label>
+                        <input
+                          type="text"
+                          value={runGhArRepo}
+                          onChange={(e) => setRunGhArRepo(e.target.value)}
+                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {runSourceMode === 'PUBLIC_URI' && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-mono text-zinc-500">
+                      Quick Image Preset:
+                    </span>
+                    {[
+                      {
+                        label: 'Cloud Run Hello',
+                        uri: 'us-docker.pkg.dev/cloudrun/container/hello',
+                        port: 8080,
+                      },
+                      {
+                        label: 'Google Hello Web v1',
+                        uri: 'gcr.io/google-samples/hello-app:1.0',
+                        port: 8080,
+                      },
+                      {
+                        label: 'NGINX Unprivileged',
+                        uri: 'nginxinc/nginx-unprivileged:alpine',
+                        port: 8080,
+                      },
+                    ].map((preset) => (
+                      <button
+                        key={preset.uri}
+                        type="button"
+                        onClick={() => {
+                          setContainerImage(preset.uri);
+                          setRunPort(preset.port);
+                        }}
+                        className={`text-[11px] font-mono px-2.5 py-1 rounded border transition-colors ${
+                          containerImage === preset.uri
+                            ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-zinc-500 mb-1">
+                      {runSourceMode === 'GITHUB_REPO'
+                        ? 'Target Artifact Registry Image URI (Auto-Built by Cloud Build)'
+                        : 'Container Image URI (Artifact Registry / GCR / Docker)'}
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        runSourceMode === 'GITHUB_REPO'
+                          ? `${region}-docker.pkg.dev/${projectId}/${runGhArRepo}/${name}:latest`
+                          : containerImage
+                      }
+                      readOnly={runSourceMode === 'GITHUB_REPO'}
+                      onChange={(e) => setContainerImage(e.target.value)}
+                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500 mb-1">
+                      Container Port
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={runPort}
+                      onChange={(e) => setRunPort(Number(e.target.value))}
+                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
                 </div>
               </div>
 

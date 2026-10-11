@@ -11198,6 +11198,363 @@ app.delete(
   }
 );
 
+// 2e. GET /api/project/:projectId/cloud-build/builds
+app.get('/api/project/:projectId/cloud-build/builds', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const [buildsRes, triggersRes] = await Promise.all([
+      gcpFetch(
+        `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/builds?pageSize=20`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => ({ builds: [] })),
+      gcpFetch(
+        `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/triggers`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ).catch(() => ({ triggers: [] })),
+    ]);
+
+    const rawBuilds = buildsRes?.builds || [];
+    const builds = rawBuilds.map((b) => {
+      const startMs = b.startTime ? new Date(b.startTime).getTime() : 0;
+      const finishMs = b.finishTime
+        ? new Date(b.finishTime).getTime()
+        : Date.now();
+      const durationSeconds =
+        startMs > 0 ? Math.max(1, Math.round((finishMs - startMs) / 1000)) : 0;
+      const builtImages =
+        b.results?.images?.map((i) => i.name) || b.images || [];
+      return {
+        id: b.id,
+        status: b.status || 'UNKNOWN',
+        createTime: b.createTime,
+        startTime: b.startTime,
+        finishTime: b.finishTime,
+        durationSeconds,
+        logUrl: b.logUrl || null,
+        images: builtImages,
+        stepsCount: Array.isArray(b.steps) ? b.steps.length : 0,
+        machineType: b.options?.machineType || 'STANDARD',
+        slsaVerified: b.options?.requestedVerifyOption === 'VERIFIED',
+        tags: b.tags || [],
+      };
+    });
+
+    const rawTriggers = triggersRes?.triggers || [];
+    const triggers = rawTriggers.map((t) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description || '',
+      githubRepo:
+        t.github?.name ||
+        t.repositoryEventConfig?.repository ||
+        t.triggerTemplate?.repoName ||
+        'GitHub Repo',
+      disabled: Boolean(t.disabled),
+      createTime: t.createTime,
+    }));
+
+    return res.json({
+      projectId,
+      builds,
+      triggers,
+      summary: {
+        totalBuilds: builds.length,
+        workingBuilds: builds.filter(
+          (b) => b.status === 'WORKING' || b.status === 'QUEUED'
+        ).length,
+        successBuilds: builds.filter((b) => b.status === 'SUCCESS').length,
+        failedBuilds: builds.filter(
+          (b) => b.status === 'FAILURE' || b.status === 'TIMEOUT'
+        ).length,
+        triggersCount: triggers.length,
+      },
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to fetch Cloud Build history.',
+    });
+  }
+});
+
+// 2f. POST /api/project/:projectId/cloud-build/trigger-github
+app.post(
+  '/api/project/:projectId/cloud-build/trigger-github',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      gitUrl = 'https://github.com/GoogleCloudPlatform/cloud-run-hello.git',
+      branch = 'main',
+      contextDir = '.',
+      buildMode = 'DOCKERFILE', // 'DOCKERFILE' | 'BUILDPACKS'
+      dockerfilePath = 'Dockerfile',
+      arLocation = 'us-central1',
+      arRepository = 'cloudpulse-containers',
+      imageName = 'cloudpulse-app',
+      imageTag = 'latest',
+      deployTarget = 'NONE', // 'NONE' | 'CLOUD_RUN' | 'GKE'
+      cloudRunService = 'cloudpulse-github-srv',
+      cloudRunRegion = 'us-central1',
+      cloudRunPort = 8080,
+      allowUnauthenticated = true,
+      gkeCluster = '',
+      gkeLocation = 'us-central1',
+      gkeDeployment = 'cloudpulse-workload',
+      gkeNamespace = 'default',
+      gkePort = 8080,
+      machineType = 'E2_HIGHCPU_8',
+      slsaProvenance = true,
+      immutableRepo = true,
+    } = req.body || {};
+
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+
+      const cleanRepoUrl = String(gitUrl || '').trim();
+      if (!cleanRepoUrl.startsWith('https://') && !cleanRepoUrl.startsWith('git@')) {
+        return res.status(400).json({
+          error: 'Valid GitHub / Git HTTPS URL (https://github.com/owner/repo) is required.',
+        });
+      }
+
+      const cleanArRepo =
+        String(arRepository || 'cloudpulse-containers')
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-') || 'cloudpulse-containers';
+      const cleanImgName =
+        String(imageName || 'app')
+          .toLowerCase()
+          .replace(/[^a-z0-9-_]/g, '-') || 'app';
+      const cleanTag =
+        String(imageTag || 'latest').replace(/[^a-zA-Z0-9._-]/g, '-') || 'latest';
+
+      const targetImageUri = `${arLocation}-docker.pkg.dev/${projectId}/${cleanArRepo}/${cleanImgName}:${cleanTag}`;
+
+      // 1. Enable cloudbuild.googleapis.com & artifactregistry.googleapis.com in parallel
+      await Promise.allSettled([
+        gcpApiRequest({
+          method: 'POST',
+          url: `https://serviceusage.googleapis.com/v1/projects/${projectId}/services/cloudbuild.googleapis.com:enable`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        }),
+        gcpApiRequest({
+          method: 'POST',
+          url: `https://serviceusage.googleapis.com/v1/projects/${projectId}/services/artifactregistry.googleapis.com:enable`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        }),
+      ]);
+
+      // 2. Ensure target Artifact Registry repository exists (ignore if already exists)
+      try {
+        await gcpApiRequest({
+          method: 'POST',
+          url: `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(
+            arLocation
+          )}/repositories?repositoryId=${encodeURIComponent(cleanArRepo)}`,
+          token,
+          quotaProject: projectId,
+          data: {
+            format: 'DOCKER',
+            description: 'Auto-provisioned by CloudPulse 2026 GitHub-to-Cloud-Build Pipeline',
+            dockerConfig: {
+              immutableTags: Boolean(immutableRepo),
+            },
+          },
+        });
+      } catch {
+        // Repository likely already exists
+      }
+
+      const workDir =
+        contextDir && contextDir.trim() !== '.' && contextDir.trim() !== '/'
+          ? `/workspace/repo/${contextDir.trim().replace(/^\/+|\/+$/g, '')}`
+          : '/workspace/repo';
+
+      const steps = [
+        {
+          id: 'clone-github-repository',
+          name: 'gcr.io/cloud-builders/git',
+          args: [
+            'clone',
+            '--depth',
+            '1',
+            '--branch',
+            String(branch || 'main').trim(),
+            cleanRepoUrl,
+            '/workspace/repo',
+          ],
+        },
+      ];
+
+      if (buildMode === 'BUILDPACKS') {
+        steps.push({
+          id: 'buildpack-compile-and-push',
+          name: 'gcr.io/k8s-skaffold/pack',
+          dir: workDir,
+          args: [
+            'build',
+            targetImageUri,
+            '--builder=gcr.io/buildpacks/builder:latest',
+            '--publish',
+          ],
+        });
+      } else {
+        steps.push({
+          id: 'docker-build-image',
+          name: 'gcr.io/cloud-builders/docker',
+          dir: workDir,
+          args: [
+            'build',
+            '-t',
+            targetImageUri,
+            '-f',
+            String(dockerfilePath || 'Dockerfile').trim(),
+            '.',
+          ],
+        });
+        steps.push({
+          id: 'docker-push-artifact-registry',
+          name: 'gcr.io/cloud-builders/docker',
+          args: ['push', targetImageUri],
+        });
+      }
+
+      if (deployTarget === 'CLOUD_RUN' && cloudRunService) {
+        const cleanRunSvc = String(cloudRunService)
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-');
+        steps.push({
+          id: 'deploy-to-cloud-run',
+          name: 'gcr.io/google.com/cloudsdktool/cloud-sdk',
+          entrypoint: 'gcloud',
+          args: [
+            'run',
+            'deploy',
+            cleanRunSvc,
+            `--image=${targetImageUri}`,
+            `--region=${cloudRunRegion || arLocation}`,
+            `--port=${Number(cloudRunPort || 8080)}`,
+            '--platform=managed',
+            allowUnauthenticated
+              ? '--allow-unauthenticated'
+              : '--no-allow-unauthenticated',
+            `--project=${projectId}`,
+          ],
+        });
+      } else if (deployTarget === 'GKE' && gkeCluster) {
+        const cleanDeploy = String(gkeDeployment || cleanImgName)
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-');
+        const cleanNs = String(gkeNamespace || 'default')
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-');
+        steps.push({
+          id: 'deploy-to-gke-cluster',
+          name: 'gcr.io/google.com/cloudsdktool/cloud-sdk',
+          entrypoint: 'bash',
+          args: [
+            '-c',
+            `gcloud container clusters get-credentials "${gkeCluster}" --location="${gkeLocation}" --project="${projectId}" && kubectl create namespace "${cleanNs}" --dry-run=client -o yaml | kubectl apply -f - && kubectl create deployment "${cleanDeploy}" --image="${targetImageUri}" --port=${Number(
+              gkePort || 8080
+            )} -n "${cleanNs}" --dry-run=client -o yaml | kubectl apply -f - && kubectl set image deployment/"${cleanDeploy}" *="${targetImageUri}" -n "${cleanNs}"`,
+          ],
+        });
+      }
+
+      const buildPayload = {
+        steps,
+        images: buildMode === 'BUILDPACKS' ? [] : [targetImageUri],
+        timeout: '1200s',
+        tags: [
+          'cloudpulse-2026',
+          `mode-${buildMode.toLowerCase()}`,
+          deployTarget !== 'NONE' ? `deploy-${deployTarget.toLowerCase()}` : 'build-only',
+        ],
+        options: {
+          logging: 'CLOUD_LOGGING_ONLY',
+          ...(machineType && machineType !== 'STANDARD'
+            ? { machineType }
+            : {}),
+          ...(slsaProvenance && buildMode !== 'BUILDPACKS'
+            ? { requestedVerifyOption: 'VERIFIED' }
+            : {}),
+        },
+      };
+
+      const op = await gcpApiRequest({
+        method: 'POST',
+        url: `https://cloudbuild.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/builds`,
+        token,
+        quotaProject: projectId,
+        data: buildPayload,
+      });
+
+      const buildId = op?.metadata?.build?.id || op?.name?.split('/').pop() || 'running';
+
+      recordFlightEvent(projectId, {
+        action: 'CLOUD_BUILD_GITHUB_PIPELINE_TRIGGERED',
+        resourceType: 'CLOUD_BUILD',
+        resourceName: `${cleanRepoUrl} (${branch}) -> ${targetImageUri}`,
+        region: arLocation,
+        summary: `Triggered Cloud Build #${String(buildId).slice(0, 8)} from ${cleanRepoUrl}#${branch} -> ${targetImageUri}${
+          deployTarget !== 'NONE' ? ` (+ auto-deploy to ${deployTarget})` : ''
+        }`,
+      });
+
+      return res.json({
+        ok: true,
+        buildId,
+        targetImageUri,
+        deployTarget,
+        operation: op,
+        message: `Triggered live Cloud Build (#${String(buildId).slice(
+          0,
+          8
+        )}) from GitHub (${cleanRepoUrl}#${branch}) → ${targetImageUri}${
+          deployTarget === 'CLOUD_RUN'
+            ? ` + Auto-Deploy to Cloud Run (${cloudRunService})`
+            : deployTarget === 'GKE'
+            ? ` + Auto-Deploy to GKE (${gkeCluster})`
+            : ''
+        }!`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to trigger Cloud Build from GitHub repository.',
+      });
+    }
+  }
+);
+
 // 3. GET /api/project/:projectId/wave9/cloud-sql
 app.get('/api/project/:projectId/wave9/cloud-sql', async (req, res) => {
   const { projectId } = req.params;

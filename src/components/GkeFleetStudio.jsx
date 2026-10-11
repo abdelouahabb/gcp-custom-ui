@@ -105,8 +105,20 @@ export default function GkeFleetStudio({
   const [creatingGke, setCreatingGke] = useState(false);
   const [deletingGkeName, setDeletingGkeName] = useState('');
 
-  // Workload YAML Generator State
+  // Workload YAML Generator & 3-Way Container Source State
   const [workloadPreset, setWorkloadPreset] = useState('web-microservice');
+  const [containerSourceMode, setContainerSourceMode] = useState('ARTIFACT_REGISTRY'); // ARTIFACT_REGISTRY | GITHUB_REPO | PUBLIC_URI
+  const [arImages, setArImages] = useState([]);
+  const [ghRepoUrl, setGhRepoUrl] = useState(
+    'https://github.com/GoogleCloudPlatform/golang-samples.git'
+  );
+  const [ghBranch, setGhBranch] = useState('main');
+  const [ghContextDir, setGhContextDir] = useState('run/helloworld');
+  const [ghBuildMethod, setGhBuildMethod] = useState('BUILDPACKS'); // DOCKERFILE | BUILDPACKS
+  const [ghArRepo, setGhArRepo] = useState('cloudpulse-containers');
+  const [ghTargetCluster, setGhTargetCluster] = useState('');
+  const [triggeringGkeBuild, setTriggeringGkeBuild] = useState(false);
+
   const [appName, setAppName] = useState('cloudpulse-api');
   const [appNamespace, setAppNamespace] = useState('production');
   const [appImage, setAppImage] = useState(
@@ -130,10 +142,25 @@ export default function GkeFleetStudio({
     if (!projectId) return;
     setLoadingGke(true);
     try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/wave9/gke-vertex`
-      );
-      setGkeData(res.data);
+      const [resGke, resAr] = await Promise.all([
+        axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/wave9/gke-vertex`
+        ),
+        axios
+          .get(
+            `/api/project/${encodeURIComponent(projectId)}/wave9/supply-chain`
+          )
+          .catch(() => ({ data: { images: [] } })),
+      ]);
+      setGkeData(resGke.data);
+      const imgs = resAr.data?.images || [];
+      setArImages(imgs);
+      if (
+        resGke.data?.clusters?.length > 0 &&
+        !ghTargetCluster
+      ) {
+        setGhTargetCluster(resGke.data.clusters[0].name);
+      }
     } catch (err) {
       if (onShowToast) {
         onShowToast(
@@ -143,11 +170,60 @@ export default function GkeFleetStudio({
     } finally {
       setLoadingGke(false);
     }
-  }, [projectId, onShowToast]);
+  }, [projectId, onShowToast, ghTargetCluster]);
 
   useEffect(() => {
     fetchGkeFleet();
   }, [fetchGkeFleet]);
+
+  const handleTriggerGithubToGkeBuild = async () => {
+    if (!ghRepoUrl.trim() || triggeringGkeBuild) return;
+    setTriggeringGkeBuild(true);
+    try {
+      const targetClusterObj = (gkeData?.clusters || []).find(
+        (c) => c.name === ghTargetCluster
+      );
+      const targetLoc = targetClusterObj?.location || clusterRegion;
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/cloud-build/trigger-github`,
+        {
+          repoUrl: ghRepoUrl.trim(),
+          branch: ghBranch.trim() || 'main',
+          contextDir: ghContextDir.trim() || '.',
+          buildMethod: ghBuildMethod,
+          arLocation: clusterRegion,
+          arRepository: ghArRepo.trim() || 'cloudpulse-containers',
+          imageName: appName.trim() || 'cloudpulse-api',
+          imageTag: 'latest',
+          deployTarget: ghTargetCluster ? 'GKE' : 'NONE',
+          gkeCluster: ghTargetCluster || clusterName,
+          gkeLocation: targetLoc,
+          gkeNamespace: appNamespace || 'default',
+          gkeDeploymentName: appName || 'cloudpulse-api',
+          gkePort: Number(appPort || 8080),
+        }
+      );
+      if (res.data?.fullImageUri) {
+        setAppImage(res.data.fullImageUri);
+      }
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Cloud Build started for ${ghRepoUrl} → Artifact Registry → GKE`
+        );
+      }
+      await fetchGkeFleet();
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error ||
+            'Failed to trigger GitHub Cloud Build for GKE'
+        );
+      }
+    } finally {
+      setTriggeringGkeBuild(false);
+    }
+  };
 
   const applyGkeBlueprint = (bp) => {
     setGkeBlueprint(bp);
@@ -945,16 +1021,212 @@ spec:
               </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Container Image URI (Artifact Registry / Docker Hub)
-              </label>
-              <input
-                type="text"
-                value={appImage}
-                onChange={(e) => setAppImage(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-              />
+            {/* 3-Way Container Image Source Selector */}
+            <div className="p-3 rounded-[10px] border border-indigo-500/30 bg-indigo-500/5 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-indigo-400">
+                  Container Source (Artifact Registry · GitHub Repo · Custom URI)
+                </label>
+                <span className="text-[10px] font-mono text-zinc-500">
+                  {arImages.length} Image(s) in Project Artifact Registry
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  {
+                    id: 'ARTIFACT_REGISTRY',
+                    label: '📦 1. Project Artifact Registry',
+                    sub: `Pick from ${arImages.length} live GCP image(s)`,
+                  },
+                  {
+                    id: 'GITHUB_REPO',
+                    label: '🐙 2. Build from GitHub Repo',
+                    sub: 'Cloud Build → AR → GKE Deploy',
+                  },
+                  {
+                    id: 'PUBLIC_URI',
+                    label: '🌐 3. Public / Custom URI',
+                    sub: 'Docker Hub / GCR / Custom URI',
+                  },
+                ].map((m) => {
+                  const active = containerSourceMode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setContainerSourceMode(m.id)}
+                      className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
+                        active
+                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                          : 'bg-[#ffffff] dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold">{m.label}</div>
+                      <div
+                        className={`text-[9.5px] mt-0.5 ${
+                          active ? 'text-indigo-100' : 'text-zinc-500'
+                        }`}
+                      >
+                        {m.sub}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {containerSourceMode === 'ARTIFACT_REGISTRY' && (
+                <div className="space-y-2">
+                  {arImages.length > 0 ? (
+                    <div>
+                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                        Select Container from `{projectId}` Artifact Registry:
+                      </label>
+                      <select
+                        value={appImage}
+                        onChange={(e) => setAppImage(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      >
+                        {arImages.map((img, i) => {
+                          const tag = img.tags?.[0] || 'latest';
+                          const fullUri = `${img.uri}:${tag}`;
+                          return (
+                            <option key={`${img.uri}-${i}`} value={fullUri}>
+                              📦 {fullUri} ({img.sizeMb} MB · {img.location})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-[8px] border border-dashed border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-500 flex items-center justify-between gap-2">
+                      <span>
+                        No images found in `{projectId}` Artifact Registry yet.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setContainerSourceMode('GITHUB_REPO')}
+                        className="px-2 py-1 rounded bg-indigo-600 text-white text-[10px] font-bold cursor-pointer shrink-0"
+                      >
+                        🐙 Build from GitHub →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {containerSourceMode === 'GITHUB_REPO' && (
+                <div className="space-y-2.5 pt-1 border-t border-indigo-500/20">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        GitHub Repository HTTPS URL
+                      </label>
+                      <input
+                        type="text"
+                        value={ghRepoUrl}
+                        onChange={(e) => setGhRepoUrl(e.target.value)}
+                        placeholder="https://github.com/owner/repo.git"
+                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        Branch & Context Dir
+                      </label>
+                      <div className="grid grid-cols-2 gap-1">
+                        <input
+                          type="text"
+                          value={ghBranch}
+                          onChange={(e) => setGhBranch(e.target.value)}
+                          placeholder="main"
+                          className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        />
+                        <input
+                          type="text"
+                          value={ghContextDir}
+                          onChange={(e) => setGhContextDir(e.target.value)}
+                          placeholder="."
+                          className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        Cloud Build Method
+                      </label>
+                      <select
+                        value={ghBuildMethod}
+                        onChange={(e) => setGhBuildMethod(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      >
+                        <option value="BUILDPACKS">
+                          Zero-Dockerfile Buildpacks
+                        </option>
+                        <option value="DOCKERFILE">Standard Dockerfile</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        Target Artifact Registry Repo
+                      </label>
+                      <input
+                        type="text"
+                        value={ghArRepo}
+                        onChange={(e) => setGhArRepo(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        Auto-Deploy to GKE Cluster
+                      </label>
+                      <select
+                        value={ghTargetCluster}
+                        onChange={(e) => setGhTargetCluster(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      >
+                        <option value="">Build Image Only (No Auto-Rollout)</option>
+                        {clustersList.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            ☸️ {c.name} ({c.location})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={triggeringGkeBuild || !ghRepoUrl.trim()}
+                    onClick={handleTriggerGithubToGkeBuild}
+                    className="w-full py-2 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {triggeringGkeBuild
+                      ? '🏗️ Submitting Cloud Build Pipeline...'
+                      : `🚀 Trigger Cloud Build (${ghBuildMethod}) → Push to Artifact Registry${
+                          ghTargetCluster
+                            ? ` → Rollout to GKE (${ghTargetCluster})`
+                            : ''
+                        }`}
+                  </button>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                  Active Container Image URI (Injected into K8s `deployment.yaml`)
+                </label>
+                <input
+                  type="text"
+                  value={appImage}
+                  onChange={(e) => setAppImage(e.target.value)}
+                  className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">

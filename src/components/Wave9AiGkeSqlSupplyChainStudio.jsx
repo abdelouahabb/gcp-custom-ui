@@ -2,57 +2,55 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   PackageCheck,
-  Database,
-  Cpu,
-  ShieldCheck,
-  Lock,
   RefreshCw,
-  Terminal,
   Copy,
   Check,
   Trash2,
   Sparkles,
-  Server,
-  Layers,
-  AlertTriangle,
+  Rocket,
+  Cpu,
+  GitBranch,
+  Play,
+  ExternalLink,
+  FileCode,
+  ShieldCheck,
 } from 'lucide-react';
-
-const GPU_SKUS = {
-  'nvidia-l4': {
-    label: 'NVIDIA L4 (24GB VRAM · Ada Lovelace)',
-    onDemandHr: 0.81,
-    spotHr: 0.26,
-    flag: 'nvidia-l4',
-  },
-  'nvidia-a100-80gb': {
-    label: 'NVIDIA A100 (80GB HBM2e · Ampere)',
-    onDemandHr: 3.93,
-    spotHr: 1.18,
-    flag: 'nvidia-a100-80gb',
-  },
-  'nvidia-h100-80gb': {
-    label: 'NVIDIA H100 (80GB HBM3 · Hopper Mega)',
-    onDemandHr: 10.8,
-    spotHr: 3.35,
-    flag: 'nvidia-h100-80gb',
-  },
-  'tpu-v5litepod': {
-    label: 'Google Cloud TPU v5e (16GB HBM · 197 TFLOPS)',
-    onDemandHr: 1.2,
-    spotHr: 0.36,
-    flag: 'tpu-v5-lite-podslice',
-  },
-};
 
 export default function Wave9AiGkeSqlSupplyChainStudio({
   projectId,
   onTriggerToast,
   onRefreshOverview,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('SUPPLY_CHAIN_AR');
+  const [activeSubTab, setActiveSubTab] = useState('CLOUD_BUILD_GITHUB');
   const [copiedText, setCopiedText] = useState('');
 
-  // --- Tab 1: Artifact Registry & Supply Chain State ---
+  // --- Sub-Tab 1: Cloud Build & GitHub-to-Container CI/CD State ---
+  const [cbData, setCbData] = useState(null);
+  const [loadingCb, setLoadingCb] = useState(false);
+  const [triggeringBuild, setTriggeringBuild] = useState(false);
+  const [cbBlueprint, setCbBlueprint] = useState('slsa3-verified');
+  const [gitUrl, setGitUrl] = useState(
+    'https://github.com/GoogleCloudPlatform/cloud-run-hello.git'
+  );
+  const [gitBranch, setGitBranch] = useState('main');
+  const [contextDir, setContextDir] = useState('.');
+  const [buildMode, setBuildMode] = useState('DOCKERFILE'); // DOCKERFILE | BUILDPACKS
+  const [dockerfilePath, setDockerfilePath] = useState('Dockerfile');
+  const [arLocation, setArLocation] = useState('us-central1');
+  const [arRepository, setArRepository] = useState('cloudpulse-containers');
+  const [imageName, setImageName] = useState('cloudpulse-service');
+  const [imageTag, setImageTag] = useState('v1.0.0');
+  const [deployTarget, setDeployTarget] = useState('CLOUD_RUN'); // NONE | CLOUD_RUN | GKE
+  const [cloudRunService, setCloudRunService] = useState('cloudpulse-github-app');
+  const [cloudRunPort, setCloudRunPort] = useState(8080);
+  const [gkeCluster, setGkeCluster] = useState('cloudpulse-autopilot-prod');
+  const [gkeDeployment, setGkeDeployment] = useState('cloudpulse-web');
+  const [gkeNamespace, setGkeNamespace] = useState('default');
+  const [machineType, setMachineType] = useState('E2_HIGHCPU_8');
+  const [slsaProvenance, setSlsaProvenance] = useState(true);
+  const [immutableRepo, setImmutableRepo] = useState(true);
+
+  // --- Sub-Tab 2: Artifact Registry & Supply Chain State ---
   const [arData, setArData] = useState(null);
   const [loadingAr, setLoadingAr] = useState(false);
   const [arBlueprint, setArBlueprint] = useState('slsa3-immutable');
@@ -75,6 +73,25 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
     setTimeout(() => setCopiedText(''), 2000);
   };
 
+  const fetchCloudBuild = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingCb(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/cloud-build/builds`
+      );
+      setCbData(res.data);
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || 'Failed to load Cloud Build history'
+        );
+      }
+    } finally {
+      setLoadingCb(false);
+    }
+  }, [projectId, onTriggerToast]);
+
   const fetchSupplyChain = useCallback(async () => {
     if (!projectId) return;
     setLoadingAr(true);
@@ -96,8 +113,82 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   }, [projectId, onTriggerToast]);
 
   useEffect(() => {
+    fetchCloudBuild();
     fetchSupplyChain();
-  }, [fetchSupplyChain]);
+  }, [fetchCloudBuild, fetchSupplyChain]);
+
+  const applyCbBlueprint = (bp) => {
+    setCbBlueprint(bp);
+    if (bp === 'slsa3-verified') {
+      setArLocation('us-central1');
+      setSlsaProvenance(true);
+      setImmutableRepo(true);
+      setMachineType('E2_HIGHCPU_8');
+    } else if (bp === 'gdpr-eu-build') {
+      setArLocation('europe-west1');
+      setSlsaProvenance(true);
+      setImmutableRepo(true);
+      setMachineType('E2_HIGHCPU_8');
+    } else if (bp === 'hipaa-clinical-build') {
+      setArLocation('us-east4');
+      setSlsaProvenance(true);
+      setImmutableRepo(true);
+      setMachineType('E2_HIGHCPU_32');
+    }
+  };
+
+  const handleTriggerGitHubBuild = async (e) => {
+    e.preventDefault();
+    if (!projectId || !gitUrl.trim() || triggeringBuild) return;
+    setTriggeringBuild(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloud-build/trigger-github`,
+        {
+          gitUrl: gitUrl.trim(),
+          branch: gitBranch.trim() || 'main',
+          contextDir: contextDir.trim() || '.',
+          buildMode,
+          dockerfilePath: dockerfilePath.trim() || 'Dockerfile',
+          arLocation,
+          arRepository: arRepository.trim() || 'cloudpulse-containers',
+          imageName: imageName.trim() || 'cloudpulse-service',
+          imageTag: imageTag.trim() || 'latest',
+          deployTarget,
+          cloudRunService: cloudRunService.trim(),
+          cloudRunRegion: arLocation,
+          cloudRunPort: Number(cloudRunPort || 8080),
+          allowUnauthenticated: true,
+          gkeCluster: gkeCluster.trim(),
+          gkeLocation: arLocation,
+          gkeDeployment: gkeDeployment.trim(),
+          gkeNamespace: gkeNamespace.trim() || 'default',
+          gkePort: Number(cloudRunPort || 8080),
+          machineType,
+          slsaProvenance,
+          immutableRepo,
+        }
+      );
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message || 'Triggered live Cloud Build pipeline from GitHub!'
+        );
+      }
+      await Promise.all([fetchCloudBuild(), fetchSupplyChain()]);
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error ||
+            'Failed to trigger Cloud Build from GitHub repository'
+        );
+      }
+    } finally {
+      setTriggeringBuild(false);
+    }
+  };
 
   const applyArBlueprint = (bp) => {
     setArBlueprint(bp);
@@ -168,7 +259,8 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
       );
       if (onTriggerToast) {
         onTriggerToast(
-          res.data?.message || 'Deleted container image digest from Artifact Registry'
+          res.data?.message ||
+            'Deleted container image digest from Artifact Registry'
         );
       }
       await fetchSupplyChain();
@@ -176,8 +268,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error ||
-            'Failed to delete container image digest'
+          err.response?.data?.error || 'Failed to delete container image digest'
         );
       }
     } finally {
@@ -231,7 +322,8 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
       );
       if (onTriggerToast) {
         onTriggerToast(
-          res.data?.message || `Deleted Artifact Registry repository ${repo.shortName}`
+          res.data?.message ||
+            `Deleted Artifact Registry repository ${repo.shortName}`
         );
       }
       await fetchSupplyChain();
@@ -249,11 +341,65 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   };
 
   // Strict compliance lock booleans
+  const isCbCustom = cbBlueprint === 'custom';
+  const isCbGdpr = cbBlueprint === 'gdpr-eu-build';
+  const isCbUsOnly =
+    cbBlueprint === 'slsa3-verified' || cbBlueprint === 'hipaa-clinical-build';
+
   const isArCustom = arBlueprint === 'custom';
   const isArGdpr = arBlueprint === 'gdpr-eu-registry';
   const isArUsOnly =
     arBlueprint === 'slsa3-immutable' || arBlueprint === 'hipaa-signed-oci';
   const orphanImages = (arData?.images || []).filter((i) => i.isOrphan);
+
+  const targetImageUriPreview = `${arLocation}-docker.pkg.dev/${projectId}/${
+    arRepository.trim() || 'cloudpulse-containers'
+  }/${imageName.trim() || 'cloudpulse-service'}:${imageTag.trim() || 'v1.0.0'}`;
+
+  const cloudBuildYamlPreview = `# Generated by CloudPulse 2026 · GitHub → Cloud Build → Artifact Registry${
+    deployTarget !== 'NONE' ? ` → ${deployTarget}` : ''
+  }
+steps:
+  - id: 'clone-github-repository'
+    name: 'gcr.io/cloud-builders/git'
+    args: ['clone', '--depth', '1', '--branch', '${gitBranch}', '${gitUrl}', '/workspace/repo']
+${
+  buildMode === 'BUILDPACKS'
+    ? `  - id: 'buildpack-compile-and-push'
+    name: 'gcr.io/k8s-skaffold/pack'
+    dir: '/workspace/repo${contextDir !== '.' ? '/' + contextDir : ''}'
+    args: ['build', '${targetImageUriPreview}', '--builder=gcr.io/buildpacks/builder:latest', '--publish']`
+    : `  - id: 'docker-build-image'
+    name: 'gcr.io/cloud-builders/docker'
+    dir: '/workspace/repo${contextDir !== '.' ? '/' + contextDir : ''}'
+    args: ['build', '-t', '${targetImageUriPreview}', '-f', '${dockerfilePath}', '.']
+  - id: 'docker-push-artifact-registry'
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${targetImageUriPreview}']`
+}${
+    deployTarget === 'CLOUD_RUN'
+      ? `
+  - id: 'deploy-to-cloud-run'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args: ['run', 'deploy', '${cloudRunService}', '--image=${targetImageUriPreview}', '--region=${arLocation}', '--port=${cloudRunPort}', '--allow-unauthenticated']`
+      : deployTarget === 'GKE'
+      ? `
+  - id: 'deploy-to-gke-cluster'
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud container clusters get-credentials "${gkeCluster}" --location="${arLocation}" --project="${projectId}"
+        kubectl set image deployment/${gkeDeployment} *=${targetImageUriPreview} -n ${gkeNamespace}`
+      : ''
+  }
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: '${machineType}'${
+    slsaProvenance ? `\n  requestedVerifyOption: 'VERIFIED'` : ''
+  }`;
 
   return (
     <div className="space-y-5">
@@ -264,451 +410,981 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
               <span>
-                ARTIFACT REGISTRY SLSA-3 SUPPLY-CHAIN & ORPHAN DIGEST SWEEPER STUDIO
+                GITHUB → GOOGLE CLOUD BUILD (`cloudbuild.googleapis.com`) → ARTIFACT REGISTRY → CLOUD RUN / GKE
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              📦 Artifact Registry SLSA-3 Supply-Chain & OCI SBOM Studio
+              🏗️📦 Cloud Build CI/CD, GitHub Repo Builder & Artifact Registry SBOM Studio
             </h2>
             <p className="text-xs text-zinc-300 max-w-3xl">
-              Audits live `artifactregistry.googleapis.com/v1` container digests & untagged orphan bloat, executes 1-click live digest & orphan sweeping, and enforces strict compliance locks (`🔒`) on `dockerConfig.immutableTags`.
+              Clone any GitHub repository into Google Cloud Build (`Dockerfile` or Zero-Dockerfile `Google Buildpacks`), push SLSA-3 attested images into `artifactregistry.googleapis.com/v1`, auto-deploy straight to Cloud Run or GKE, and sweep untagged orphan digests in 1 click.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={fetchSupplyChain}
-            title="Refresh live Artifact Registry telemetry"
+            onClick={() => {
+              fetchCloudBuild();
+              fetchSupplyChain();
+            }}
+            title="Refresh live Cloud Build jobs and Artifact Registry container digests"
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-xs font-bold cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
-                loadingAr ? 'animate-spin text-cyan-400' : ''
+                loadingCb || loadingAr ? 'animate-spin text-cyan-400' : ''
               }`}
             />
-            <span>Sync Telemetry</span>
+            <span>Sync Build & Registry</span>
           </button>
+        </div>
+
+        {/* Sub-Tabs */}
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-zinc-800/80">
+          {[
+            {
+              id: 'CLOUD_BUILD_GITHUB',
+              label:
+                '🏗️ 1. GitHub → Cloud Build → Artifact Registry → Cloud Run / GKE',
+              badge: `${cbData?.summary?.totalBuilds || 0} Builds`,
+              tip: 'Build container images directly from a GitHub repository via Google Cloud Build and push to Artifact Registry + deploy to Cloud Run or GKE',
+            },
+            {
+              id: 'SUPPLY_CHAIN_AR',
+              label:
+                '📦 2. Artifact Registry Repositories & 1-Click Orphan Digest Sweeper',
+              badge: `${arData?.summary?.totalImagesCount || 0} Digests (${
+                arData?.summary?.orphanDigestCount || 0
+              } Orphans)`,
+              tip: 'Inspect live Artifact Registry repositories and container digests, sweep untagged orphans in 1 click, and enforce immutable tag locks',
+            },
+          ].map((tab) => {
+            const active = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                title={tab.tip}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold transition-all cursor-pointer border ${
+                  active
+                    ? 'bg-cyan-600 text-white border-cyan-400 shadow-md'
+                    : 'bg-zinc-900/80 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                    active
+                      ? 'bg-black/30 text-cyan-100'
+                      : 'bg-zinc-800 text-zinc-400'
+                  }`}
+                >
+                  {tab.badge}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* =====================================================================
-          ARTIFACT REGISTRY, ORPHAN DIGEST SWEEPER & SLSA-3 STUDIO
+          SUB-TAB 1: GITHUB -> CLOUD BUILD -> ARTIFACT REGISTRY -> CLOUD RUN / GKE
          ===================================================================== */}
-      <div className="space-y-4">
-        {/* KPI Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
-            <div className="text-[11px] font-mono text-zinc-500">
-              Live Artifact Repositories
+      {activeSubTab === 'CLOUD_BUILD_GITHUB' && (
+        <div className="space-y-4">
+          {/* KPI Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
+              <div className="text-[11px] font-mono text-zinc-500">
+                Recent Cloud Builds
+              </div>
+              <div className="text-2xl font-black text-cyan-500 mt-1">
+                {cbData?.summary?.totalBuilds ?? 0}
+              </div>
+              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                Active / Queued: {cbData?.summary?.workingBuilds ?? 0}
+              </div>
             </div>
-            <div className="text-2xl font-black text-cyan-500 mt-1">
-              {arData?.summary?.repositoriesCount ?? 0}
+
+            <div className="p-3.5 rounded-[10px] border border-emerald-500/30 bg-emerald-500/5">
+              <div className="text-[11px] font-mono text-emerald-400">
+                Succeeded Builds
+              </div>
+              <div className="text-2xl font-black text-emerald-400 mt-1">
+                {cbData?.summary?.successBuilds ?? 0}
+              </div>
+              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                Failed: {cbData?.summary?.failedBuilds ?? 0}
+              </div>
             </div>
-            <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-              Immutable Tag Repos: {arData?.summary?.immutableReposCount ?? 0}
+
+            <div className="p-3.5 rounded-[10px] border border-indigo-500/30 bg-indigo-500/5">
+              <div className="text-[11px] font-mono text-indigo-400">
+                Artifact Registry Images Ready
+              </div>
+              <div className="text-2xl font-black text-indigo-400 mt-1">
+                {arData?.summary?.totalImagesCount ?? 0}
+              </div>
+              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                Across {arData?.summary?.repositoriesCount ?? 0} Repo(s)
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-[10px] border border-purple-500/30 bg-purple-500/5">
+              <div className="text-[11px] font-mono text-purple-400">
+                Cloud Build Free Tier
+              </div>
+              <div className="text-2xl font-black text-purple-400 mt-1">
+                120 min/day
+              </div>
+              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                SLSA Level 3 Provenance Ready
+              </div>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
-            <div className="text-[11px] font-mono text-zinc-500">
-              Total Container Image Footprint
-            </div>
-            <div className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1">
-              {arData?.summary?.totalSizeGb ?? 0} GB
-            </div>
-            <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-              {arData?.summary?.totalImagesCount ?? 0} Digests · $
-              {arData?.summary?.monthlyStorageUsd ?? 0}/mo
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-[10px] border border-amber-500/30 bg-amber-500/5">
-            <div className="text-[11px] font-mono text-amber-500">
-              Untagged Orphan Image Digests
-            </div>
-            <div className="text-2xl font-black text-amber-500 mt-1">
-              {arData?.summary?.orphanDigestCount ?? 0}
-            </div>
-            <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-              {arData?.summary?.orphanSizeGb ?? 0} GB ($
-              {arData?.summary?.reclaimableMonthlyUsd ?? 0}/mo waste)
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-[10px] border border-emerald-500/30 bg-emerald-500/5">
-            <div className="text-[11px] font-mono text-emerald-400">
-              Supply-Chain SLSA Level
-            </div>
-            <div className="text-2xl font-black text-emerald-400 mt-1">
-              SLSA L3
-            </div>
-            <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-              Cloud Build Provenance Ready
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Left: Provision Immutable Artifact Registry with Strict Compliance Locks + Live Repositories */}
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Left 7 Cols: GitHub -> Cloud Build -> Artifact Registry -> Cloud Run/GKE Form */}
             <form
-              onSubmit={handleCreateArRepo}
-              className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+              onSubmit={handleTriggerGitHubBuild}
+              className="lg:col-span-7 p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                  <PackageCheck className="w-4 h-4 text-cyan-400" />
-                  <span>Provision Artifact Registry (`artifactregistry.googleapis.com`)</span>
+                  <GitBranch className="w-4 h-4 text-cyan-400" />
+                  <span>
+                    1-Click GitHub Repo → Cloud Build → Artifact Registry Pipeline
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                  🔒 Tag-Mutation Lock
+                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono">
+                  🔒 SLSA L3 Provenance Lock
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              {/* Step 0: Compliance Blueprints */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   {
-                    id: 'slsa3-immutable',
-                    label: '🏛️ SEC / FedRAMP Immutable SLSA-3',
-                    desc: 'Locks immutableTags=true + US jurisdiction',
+                    id: 'slsa3-verified',
+                    label: '🏛️ SLSA L3 Attested',
+                    desc: 'Locks US + VERIFIED provenance',
                   },
                   {
-                    id: 'gdpr-eu-registry',
-                    label: '🇪🇺 GDPR EU Sovereign Registry',
-                    desc: 'Locks europe-* residency + immutableTags=true',
+                    id: 'gdpr-eu-build',
+                    label: '🇪🇺 GDPR EU Build',
+                    desc: 'Locks europe-west1 + Immutable',
                   },
                   {
-                    id: 'hipaa-signed-oci',
-                    label: '🏥 HIPAA Signed Container Vault',
-                    desc: 'Locks US BAA region + immutable image tags',
+                    id: 'hipaa-clinical-build',
+                    label: '🏥 HIPAA BAA Build',
+                    desc: 'Locks us-east4 + 32-vCPU + SLSA',
                   },
                   {
                     id: 'custom',
-                    label: '🎛️ Custom GCP Standard',
-                    desc: 'Unlocks mutable tags & all formats',
+                    label: '🎛️ Custom Pipeline',
+                    desc: 'Unlocks all regions & options',
                   },
                 ].map((bp) => (
                   <button
                     key={bp.id}
                     type="button"
-                    onClick={() => applyArBlueprint(bp.id)}
-                    className={`p-2.5 rounded-[8px] border text-left cursor-pointer ${
-                      arBlueprint === bp.id
+                    onClick={() => applyCbBlueprint(bp.id)}
+                    className={`p-2 rounded-[8px] border text-left cursor-pointer ${
+                      cbBlueprint === bp.id
                         ? 'bg-cyan-600/15 border-cyan-500 text-zinc-900 dark:text-zinc-100'
                         : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                     }`}
                   >
-                    <div className="text-xs font-bold">{bp.label}</div>
-                    <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                    <div className="text-[11px] font-bold">{bp.label}</div>
+                    <div className="text-[9.5px] font-mono text-zinc-400 mt-0.5">
                       {bp.desc}
                     </div>
                   </button>
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+              {/* Step 1: GitHub Repository URL, Branch & Context Dir */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                <div className="sm:col-span-2">
                   <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                    Repository ID
+                    GitHub Repository HTTPS URL
                   </label>
                   <input
                     type="text"
                     required
-                    value={repoId}
-                    onChange={(e) => setRepoId(e.target.value)}
-                    placeholder="prod-signed-containers"
+                    value={gitUrl}
+                    onChange={(e) => setGitUrl(e.target.value)}
+                    placeholder="https://github.com/owner/repo.git"
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Branch / Tag
+                  </label>
+                  <input
+                    type="text"
+                    value={gitBranch}
+                    onChange={(e) => setGitBranch(e.target.value)}
+                    placeholder="main"
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Context Dir
+                  </label>
+                  <input
+                    type="text"
+                    value={contextDir}
+                    onChange={(e) => setContextDir(e.target.value)}
+                    placeholder="."
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              {/* Step 2: Build Strategy (Dockerfile vs Zero-Dockerfile Google Cloud Buildpacks) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setBuildMode('DOCKERFILE')}
+                  className={`p-2.5 rounded-[8px] border text-left cursor-pointer ${
+                    buildMode === 'DOCKERFILE'
+                      ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                  }`}
+                >
+                  <div className="text-xs font-extrabold flex items-center justify-between">
+                    <span>🐳 Standard Dockerfile Build</span>
+                    <span className="text-[10px] font-mono text-blue-400">
+                      gcr.io/cloud-builders/docker
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-zinc-400 mt-0.5">
+                    Builds using your repository&apos;s `Dockerfile` with full SLSA L3 attestation.
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setBuildMode('BUILDPACKS')}
+                  className={`p-2.5 rounded-[8px] border text-left cursor-pointer ${
+                    buildMode === 'BUILDPACKS'
+                      ? 'bg-emerald-600/15 border-emerald-500 text-zinc-900 dark:text-zinc-100'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                  }`}
+                >
+                  <div className="text-xs font-extrabold flex items-center justify-between">
+                    <span>⚡ Zero-Dockerfile Google Buildpacks</span>
+                    <span className="text-[10px] font-mono text-emerald-400">
+                      Auto-Detect Language
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-zinc-400 mt-0.5">
+                    No Dockerfile needed! Auto-compiles Node.js, Python, Go, Java, or Rust into an OCI image.
+                  </div>
+                </button>
+              </div>
+
+              {/* Step 3: Target Artifact Registry Destination */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Registry Region {!isCbCustom ? '🔒' : ''}
+                  </label>
+                  <select
+                    value={arLocation}
+                    onChange={(e) => setArLocation(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="us-central1" disabled={isCbGdpr}>
+                      {isCbGdpr ? '🔒 ' : ''}us-central1 (Iowa)
+                    </option>
+                    <option value="us-east4" disabled={isCbGdpr}>
+                      {isCbGdpr ? '🔒 ' : ''}us-east4 (Virginia)
+                    </option>
+                    <option value="europe-west1" disabled={isCbUsOnly}>
+                      {isCbUsOnly ? '🔒 ' : ''}europe-west1 (EU GDPR)
+                    </option>
+                    <option value="europe-west3" disabled={isCbUsOnly}>
+                      {isCbUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt)
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    AR Repository
+                  </label>
+                  <input
+                    type="text"
+                    value={arRepository}
+                    onChange={(e) => setArRepository(e.target.value)}
+                    placeholder="cloudpulse-containers"
                     className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                    Jurisdiction Location {!isArCustom ? '🔒' : ''}
+                    Container Image Name
                   </label>
-                  <select
-                    value={repoLocation}
-                    onChange={(e) => setRepoLocation(e.target.value)}
+                  <input
+                    type="text"
+                    value={imageName}
+                    onChange={(e) => setImageName(e.target.value)}
+                    placeholder="cloudpulse-service"
                     className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                  >
-                    <option value="us-central1" disabled={isArGdpr}>
-                      {isArGdpr ? '🔒 ' : ''}us-central1 (Iowa — US Sovereign)
-                    </option>
-                    <option value="us-east4" disabled={isArGdpr}>
-                      {isArGdpr ? '🔒 ' : ''}us-east4 (N. Virginia — US Sovereign)
-                    </option>
-                    <option value="europe-west1" disabled={isArUsOnly}>
-                      {isArUsOnly ? '🔒 ' : ''}europe-west1 (Belgium — EU GDPR)
-                    </option>
-                    <option value="europe-west3" disabled={isArUsOnly}>
-                      {isArUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt — EU GDPR)
-                    </option>
-                  </select>
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Image Tag
+                  </label>
+                  <input
+                    type="text"
+                    value={imageTag}
+                    onChange={(e) => setImageTag(e.target.value)}
+                    placeholder="v1.0.0"
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  />
                 </div>
               </div>
 
-              <label
-                className={`flex items-center gap-2 p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-xs font-bold ${
-                  !isArCustom ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={immutableTags}
-                  disabled={!isArCustom}
-                  onChange={(e) => setImmutableTags(e.target.checked)}
-                />
-                <span>
-                  Enforce Immutable Image Tags (`dockerConfig.immutableTags = true`){' '}
-                  {!isArCustom
-                    ? '— 🔒 Locked ON (Prevents :v1.0 Tag Hijacking)'
-                    : ''}
+              {/* Step 4: Auto-Deploy After Build (Artifact Registry Only vs Cloud Run vs GKE) */}
+              <div className="space-y-2">
+                <label className="block text-[11px] font-mono text-zinc-500">
+                  Step 4 · Post-Build Continuous Deployment Target
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    {
+                      id: 'CLOUD_RUN',
+                      label: '🚀 Build + Deploy to Cloud Run',
+                      sub: 'Runs gcloud run deploy automatically',
+                    },
+                    {
+                      id: 'GKE',
+                      label: '☸️ Build + Deploy to GKE Cluster',
+                      sub: 'Updates K8s Deployment image in-place',
+                    },
+                    {
+                      id: 'NONE',
+                      label: '📦 Push to Artifact Registry Only',
+                      sub: 'Stores OCI image for later use',
+                    },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setDeployTarget(t.id)}
+                      className={`p-2.5 rounded-[8px] border text-left cursor-pointer ${
+                        deployTarget === t.id
+                          ? 'bg-indigo-600/15 border-indigo-500 text-zinc-900 dark:text-zinc-100'
+                          : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{t.label}</div>
+                      <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                        {t.sub}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {deployTarget === 'CLOUD_RUN' && (
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        Target Cloud Run Service Name
+                      </label>
+                      <input
+                        type="text"
+                        value={cloudRunService}
+                        onChange={(e) => setCloudRunService(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        Container Port
+                      </label>
+                      <input
+                        type="number"
+                        value={cloudRunPort}
+                        onChange={(e) => setCloudRunPort(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {deployTarget === 'GKE' && (
+                  <div className="grid grid-cols-3 gap-2.5 pt-1">
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        Target GKE Cluster Name
+                      </label>
+                      <input
+                        type="text"
+                        value={gkeCluster}
+                        onChange={(e) => setGkeCluster(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        K8s Deployment Name
+                      </label>
+                      <input
+                        type="text"
+                        value={gkeDeployment}
+                        onChange={(e) => setGkeDeployment(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                        K8s Namespace
+                      </label>
+                      <input
+                        type="text"
+                        value={gkeNamespace}
+                        onChange={(e) => setGkeNamespace(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-2.5 rounded-[8px] bg-zinc-950 border border-zinc-800 text-[10.5px] font-mono text-cyan-300 flex items-center justify-between gap-2">
+                <span className="truncate">
+                  Output Image URI: {targetImageUriPreview}
                 </span>
-              </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(targetImageUriPreview, 'Artifact Registry Image URI')
+                  }
+                  className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] shrink-0 cursor-pointer"
+                >
+                  Copy URI
+                </button>
+              </div>
 
               <button
                 type="submit"
-                disabled={creatingRepo || !repoId.trim()}
-                className="w-full py-2 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                disabled={triggeringBuild || !gitUrl.trim()}
+                className="w-full py-2.5 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
               >
-                {creatingRepo
-                  ? 'Provisioning Artifact Registry...'
-                  : '📦 Provision SLSA-3 Artifact Registry Repository'}
+                <Play className="w-3.5 h-3.5" />
+                <span>
+                  {triggeringBuild
+                    ? 'Dispatching GitHub → Cloud Build Pipeline...'
+                    : `🏗️ Trigger Live Cloud Build from GitHub${
+                        deployTarget === 'CLOUD_RUN'
+                          ? ` + Deploy to Cloud Run (${cloudRunService})`
+                          : deployTarget === 'GKE'
+                          ? ` + Deploy to GKE (${gkeCluster})`
+                          : ''
+                      }`}
+                </span>
               </button>
             </form>
 
-            {/* Live Repositories List with 1-Click Delete */}
-            <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
-                  Live Artifact Registry Repositories ({arData?.repositories?.length || 0})
+            {/* Right 5 Cols: Live Cloud Build Execution History + cloudbuild.yaml Compiler */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Live Cloud Build Jobs ({cbData?.builds?.length || 0})
+                  </div>
+                  <span className="text-[10px] font-mono text-cyan-400">
+                    cloudbuild.googleapis.com/v1
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-400">
-                  1-Click Repository Control
-                </span>
-              </div>
 
-              {(arData?.repositories || []).length > 0 ? (
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {arData.repositories.map((repo) => (
-                    <div
-                      key={repo.name}
-                      className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 flex items-center justify-between gap-2 text-xs font-mono"
-                    >
-                      <div className="min-w-0">
-                        <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap">
-                          <span>{repo.shortName}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400">
-                            {repo.location}
+                {(cbData?.builds || []).length > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {cbData.builds.map((b) => (
+                      <div
+                        key={b.id}
+                        className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 space-y-1.5 text-xs font-mono"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                            Build #{String(b.id).slice(0, 8)}
                           </span>
                           <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded ${
-                              repo.immutableTags
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              b.status === 'SUCCESS'
                                 ? 'bg-emerald-500/15 text-emerald-400'
-                                : 'bg-amber-500/15 text-amber-400'
+                                : b.status === 'WORKING' || b.status === 'QUEUED'
+                                ? 'bg-cyan-500/20 text-cyan-300 animate-pulse'
+                                : 'bg-rose-500/15 text-rose-400'
                             }`}
                           >
-                            {repo.immutableTags ? '🔒 Immutable Tags' : 'Mutable Tags'}
+                            {b.status} · {b.durationSeconds}s
                           </span>
                         </div>
-                        <div className="text-[10px] text-zinc-500 mt-0.5">
-                          {repo.imagesCount} Digests ({repo.orphanDigestsCount} Orphans) · {repo.totalSizeGb} GB · Score {repo.postureScore}/100
+                        {b.images?.length > 0 && (
+                          <div className="text-[10px] text-zinc-400 truncate">
+                            Image: {b.images[0]}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <span className="text-[10px] text-zinc-500">
+                            {b.machineType} · {b.stepsCount} step(s)
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {b.images?.[0] && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCopy(b.images[0], 'Built Image URI')
+                                }
+                                className="px-2 py-0.5 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 text-[10px] cursor-pointer"
+                              >
+                                Copy Image URI
+                              </button>
+                            )}
+                            {b.logUrl && (
+                              <a
+                                href={b.logUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px]"
+                              >
+                                <span>Logs</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs font-mono text-zinc-500 py-6 text-center">
+                    No Cloud Build executions yet in `{projectId}`. Enter a GitHub repository URL on the left and click &quot;Trigger Live Cloud Build from GitHub&quot;!
+                  </div>
+                )}
+              </div>
+
+              {/* Generated cloudbuild.yaml */}
+              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <FileCode className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Generated `cloudbuild.yaml` Pipeline Spec</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(cloudBuildYamlPreview, 'cloudbuild.yaml')
+                    }
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-cyan-300 text-[10px] font-mono cursor-pointer"
+                  >
+                    {copiedText === cloudBuildYamlPreview ? (
+                      <Check className="w-3 h-3 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    <span>Copy YAML</span>
+                  </button>
+                </div>
+                <pre className="p-2.5 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10px] overflow-x-auto max-h-52">
+                  {cloudBuildYamlPreview}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUB-TAB 2: ARTIFACT REGISTRY, ORPHAN DIGEST SWEEPER & SLSA-3 STUDIO
+         ===================================================================== */}
+      {activeSubTab === 'SUPPLY_CHAIN_AR' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Left: Provision Immutable Artifact Registry with Strict Compliance Locks + Live Repositories */}
+            <div className="space-y-4">
+              <form
+                onSubmit={handleCreateArRepo}
+                className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <PackageCheck className="w-4 h-4 text-cyan-400" />
+                    <span>
+                      Provision Artifact Registry (`artifactregistry.googleapis.com`)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                    🔒 Tag-Mutation Lock
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      id: 'slsa3-immutable',
+                      label: '🏛️ SEC / FedRAMP Immutable SLSA-3',
+                      desc: 'Locks immutableTags=true + US jurisdiction',
+                    },
+                    {
+                      id: 'gdpr-eu-registry',
+                      label: '🇪🇺 GDPR EU Sovereign Registry',
+                      desc: 'Locks europe-* residency + immutableTags=true',
+                    },
+                    {
+                      id: 'hipaa-signed-oci',
+                      label: '🏥 HIPAA Signed Container Vault',
+                      desc: 'Locks US BAA region + immutable image tags',
+                    },
+                    {
+                      id: 'custom',
+                      label: '🎛️ Custom GCP Standard',
+                      desc: 'Unlocks mutable tags & all formats',
+                    },
+                  ].map((bp) => (
+                    <button
+                      key={bp.id}
+                      type="button"
+                      onClick={() => applyArBlueprint(bp.id)}
+                      className={`p-2.5 rounded-[8px] border text-left cursor-pointer ${
+                        arBlueprint === bp.id
+                          ? 'bg-cyan-600/15 border-cyan-500 text-zinc-900 dark:text-zinc-100'
+                          : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{bp.label}</div>
+                      <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                        {bp.desc}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                      Repository ID
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={repoId}
+                      onChange={(e) => setRepoId(e.target.value)}
+                      placeholder="prod-signed-containers"
+                      className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                      Jurisdiction Location {!isArCustom ? '🔒' : ''}
+                    </label>
+                    <select
+                      value={repoLocation}
+                      onChange={(e) => setRepoLocation(e.target.value)}
+                      className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                    >
+                      <option value="us-central1" disabled={isArGdpr}>
+                        {isArGdpr ? '🔒 ' : ''}us-central1 (Iowa — US Sovereign)
+                      </option>
+                      <option value="us-east4" disabled={isArGdpr}>
+                        {isArGdpr ? '🔒 ' : ''}us-east4 (N. Virginia — US Sovereign)
+                      </option>
+                      <option value="europe-west1" disabled={isArUsOnly}>
+                        {isArUsOnly ? '🔒 ' : ''}europe-west1 (Belgium — EU GDPR)
+                      </option>
+                      <option value="europe-west3" disabled={isArUsOnly}>
+                        {isArUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt — EU GDPR)
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <label
+                  className={`flex items-center gap-2 p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-xs font-bold ${
+                    !isArCustom
+                      ? 'opacity-75 cursor-not-allowed'
+                      : 'cursor-pointer'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={immutableTags}
+                    disabled={!isArCustom}
+                    onChange={(e) => setImmutableTags(e.target.checked)}
+                  />
+                  <span>
+                    Enforce Immutable Image Tags (`dockerConfig.immutableTags = true`){' '}
+                    {!isArCustom
+                      ? '— 🔒 Locked ON (Prevents :v1.0 Tag Hijacking)'
+                      : ''}
+                  </span>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={creatingRepo || !repoId.trim()}
+                  className="w-full py-2 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {creatingRepo
+                    ? 'Provisioning Artifact Registry...'
+                    : '📦 Provision SLSA-3 Artifact Registry Repository'}
+                </button>
+              </form>
+
+              {/* Live Repositories List with 1-Click Delete */}
+              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
+                    Live Artifact Registry Repositories (
+                    {arData?.repositories?.length || 0})
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    1-Click Repository Control
+                  </span>
+                </div>
+
+                {(arData?.repositories || []).length > 0 ? (
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {arData.repositories.map((repo) => (
+                      <div
+                        key={repo.name}
+                        className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 flex items-center justify-between gap-2 text-xs font-mono"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap">
+                            <span>{repo.shortName}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400">
+                              {repo.location}
+                            </span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                repo.immutableTags
+                                  ? 'bg-emerald-500/15 text-emerald-400'
+                                  : 'bg-amber-500/15 text-amber-400'
+                              }`}
+                            >
+                              {repo.immutableTags
+                                ? '🔒 Immutable Tags'
+                                : 'Mutable Tags'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-zinc-500 mt-0.5">
+                            {repo.imagesCount} Digests ({repo.orphanDigestsCount}{' '}
+                            Orphans) · {repo.totalSizeGb} GB · Score{' '}
+                            {repo.postureScore}/100
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {confirmRepoName === repo.name ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={deletingRepoName === repo.name}
+                                onClick={() => handleDeleteRepository(repo)}
+                                className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold cursor-pointer"
+                              >
+                                {deletingRepoName === repo.name
+                                  ? 'Deleting...'
+                                  : 'Confirm Delete'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmRepoName(null)}
+                                className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={deletingRepoName === repo.name}
+                              onClick={() => setConfirmRepoName(repo.name)}
+                              title={`Delete repository ${repo.shortName} (${repo.location})`}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-[10px] font-bold cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Delete Repo</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs font-mono text-zinc-500 py-4 text-center">
+                    No Artifact Registry repositories found in `{projectId}`.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Live Container Digests & 1-Click Orphan Sweeper */}
+            <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Live Container Digests ({arData?.images?.length || 0})
+                  </div>
+                  <div className="text-[10px] font-mono text-amber-400">
+                    Untagged Orphans: {arData?.summary?.orphanDigestCount || 0} (
+                    {arData?.summary?.orphanSizeGb || 0} GB · $
+                    {arData?.summary?.reclaimableMonthlyUsd || 0}/mo waste)
+                  </div>
+                </div>
+
+                {/* 1-Click Batch Orphan Sweeper Button */}
+                {orphanImages.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    {confirmSweepAll ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={sweepingOrphans}
+                          onClick={handleSweepAllOrphans}
+                          className="px-2.5 py-1.5 rounded-[8px] bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
+                        >
+                          {sweepingOrphans
+                            ? 'Sweeping Orphans...'
+                            : `Confirm Sweep (${orphanImages.length})`}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmSweepAll(false)}
+                          className="px-2 py-1.5 rounded-[8px] bg-zinc-700 text-zinc-200 text-[11px] cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={sweepingOrphans}
+                        onClick={() => setConfirmSweepAll(true)}
+                        title="Delete all untagged orphan container digests directly from Artifact Registry"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[11px] font-extrabold cursor-pointer shadow-sm"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>
+                          Sweep All {orphanImages.length} Orphans Now
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 max-h-[430px] overflow-y-auto pr-1">
+                {(arData?.images || []).map((img) => {
+                  const isDeletingThis = deletingDigestName === img.name;
+                  const isConfirmingThis = confirmDigestName === img.name;
+                  const taggedUri =
+                    img.tags?.length > 0
+                      ? `${img.uri.split('@')[0]}:${img.tags[0]}`
+                      : img.uri;
+                  return (
+                    <div
+                      key={img.name}
+                      className={`p-2.5 rounded-[8px] border flex items-center justify-between gap-2 text-xs font-mono ${
+                        img.isOrphan
+                          ? 'border-amber-500/30 bg-amber-500/5'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                          {img.repository} · {img.sizeMb} MB
+                        </div>
+                        <div className="text-[10px] text-zinc-500 truncate">
+                          {img.tags?.length > 0
+                            ? `Tags: ${img.tags.join(', ')}`
+                            : '⚠️ UNTAGGED ORPHAN DIGEST'}
+                        </div>
+                        <div className="text-[9.5px] text-zinc-400 truncate">
+                          {taggedUri}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {confirmRepoName === repo.name ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(taggedUri, 'Artifact Registry Image URI')
+                          }
+                          title="Copy full Artifact Registry Image URI for Cloud Run or GKE"
+                          className="px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold cursor-pointer"
+                        >
+                          Copy URI
+                        </button>
+
+                        {isConfirmingThis ? (
                           <>
                             <button
                               type="button"
-                              disabled={deletingRepoName === repo.name}
-                              onClick={() => handleDeleteRepository(repo)}
+                              disabled={isDeletingThis}
+                              onClick={() => handleDeleteDigest(img)}
                               className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold cursor-pointer"
                             >
-                              {deletingRepoName === repo.name
-                                ? 'Deleting...'
-                                : 'Confirm Delete'}
+                              {isDeletingThis ? 'Deleting...' : 'Confirm Delete'}
                             </button>
                             <button
                               type="button"
-                              onClick={() => setConfirmRepoName(null)}
+                              onClick={() => setConfirmDigestName(null)}
                               className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
                             >
                               Cancel
                             </button>
                           </>
                         ) : (
-                          <button
-                            type="button"
-                            disabled={deletingRepoName === repo.name}
-                            onClick={() => setConfirmRepoName(repo.name)}
-                            title={`Delete repository ${repo.shortName} (${repo.location})`}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-[10px] font-bold cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Delete Repo</span>
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              disabled={isDeletingThis}
+                              onClick={() => setConfirmDigestName(img.name)}
+                              title={
+                                img.isOrphan
+                                  ? 'Delete this untagged orphan container digest directly from Artifact Registry'
+                                  : 'Delete this container image digest (and its tags) directly from Artifact Registry'
+                              }
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
+                                img.isOrphan
+                                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                                  : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30'
+                              }`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>
+                                {isDeletingThis
+                                  ? 'Deleting...'
+                                  : img.isOrphan
+                                  ? 'Sweep Now'
+                                  : 'Delete'}
+                              </span>
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs font-mono text-zinc-500 py-4 text-center">
-                  No Artifact Registry repositories found in `{projectId}`.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Live Container Digests & 1-Click Orphan Sweeper */}
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                  Live Container Digests ({arData?.images?.length || 0})
-                </div>
-                <div className="text-[10px] font-mono text-amber-400">
-                  Untagged Orphans: {arData?.summary?.orphanDigestCount || 0} ({arData?.summary?.orphanSizeGb || 0} GB · ${arData?.summary?.reclaimableMonthlyUsd || 0}/mo waste)
-                </div>
+                  );
+                })}
               </div>
-
-              {/* 1-Click Batch Orphan Sweeper Button */}
-              {orphanImages.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  {confirmSweepAll ? (
-                    <>
-                      <button
-                        type="button"
-                        disabled={sweepingOrphans}
-                        onClick={handleSweepAllOrphans}
-                        className="px-2.5 py-1.5 rounded-[8px] bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
-                      >
-                        {sweepingOrphans
-                          ? 'Sweeping Orphans...'
-                          : `Confirm Sweep (${orphanImages.length})`}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmSweepAll(false)}
-                        className="px-2 py-1.5 rounded-[8px] bg-zinc-700 text-zinc-200 text-[11px] cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={sweepingOrphans}
-                      onClick={() => setConfirmSweepAll(true)}
-                      title="Delete all untagged orphan container digests directly from Artifact Registry"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[11px] font-extrabold cursor-pointer shadow-sm"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>
-                        Sweep All {orphanImages.length} Orphans Now
-                      </span>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2 max-h-[430px] overflow-y-auto pr-1">
-              {(arData?.images || []).map((img) => {
-                const isDeletingThis = deletingDigestName === img.name;
-                const isConfirmingThis = confirmDigestName === img.name;
-                return (
-                  <div
-                    key={img.name}
-                    className={`p-2.5 rounded-[8px] border flex items-center justify-between gap-2 text-xs font-mono ${
-                      img.isOrphan
-                        ? 'border-amber-500/30 bg-amber-500/5'
-                        : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70'
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                        {img.repository} · {img.sizeMb} MB
-                      </div>
-                      <div className="text-[10px] text-zinc-500 truncate">
-                        {img.tags?.length > 0
-                          ? `Tags: ${img.tags.join(', ')}`
-                          : '⚠️ UNTAGGED ORPHAN DIGEST'}
-                      </div>
-                      <div className="text-[9.5px] text-zinc-400 truncate">
-                        {img.shortImage}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {isConfirmingThis ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={isDeletingThis}
-                            onClick={() => handleDeleteDigest(img)}
-                            className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold cursor-pointer"
-                          >
-                            {isDeletingThis ? 'Deleting...' : 'Confirm Delete'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDigestName(null)}
-                            className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            disabled={isDeletingThis}
-                            onClick={() => setConfirmDigestName(img.name)}
-                            title={
-                              img.isOrphan
-                                ? 'Delete this untagged orphan container digest directly from Artifact Registry'
-                                : 'Delete this container image digest (and its tags) directly from Artifact Registry'
-                            }
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
-                              img.isOrphan
-                                ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
-                                : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30'
-                            }`}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>
-                              {isDeletingThis
-                                ? 'Deleting...'
-                                : img.isOrphan
-                                ? 'Sweep Now'
-                                : 'Delete'}
-                            </span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopy(
-                                `gcloud artifacts docker images delete "${img.uri}" --delete-tags --quiet`,
-                                'Image digest delete CLI'
-                              )
-                            }
-                            title="Copy equivalent gcloud delete command"
-                            className="px-1.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[10px] cursor-pointer"
-                          >
-                            CLI
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

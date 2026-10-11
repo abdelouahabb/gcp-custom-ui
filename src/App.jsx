@@ -401,8 +401,8 @@ function CloudPulseCockpit() {
     {
       id: 'WAVE9_STUDIO',
       group: 'DATA_LAKEHOUSE',
-      label: 'Artifact Registry & SBOM 📦',
-      tip: 'Artifact Registry SLSA-3 Supply-Chain & OCI SBOM Studio: Live container digest inspector, untagged orphan layer sweeper, and immutable tag compliance locks',
+      label: 'Cloud Build & Artifact SBOM 🏗️',
+      tip: 'Cloud Build GitHub CI/CD + Artifact Registry SLSA-3 Supply-Chain Studio: 1-Click GitHub Repo → Cloud Build (Dockerfile or Zero-Dockerfile Buildpacks) → Artifact Registry → Auto-Deploy to Cloud Run or GKE + 1-Click Orphan Digest Sweeper',
       icon: PackageCheck,
     },
 
