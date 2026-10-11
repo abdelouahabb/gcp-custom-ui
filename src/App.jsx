@@ -30,6 +30,7 @@ import {
   Globe,
   HardDrive,
   Database,
+  Flame,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import SortableKpiRow from './components/SortableKpiRow';
@@ -45,6 +46,7 @@ import CloudRunFleetManager from './components/CloudRunFleetManager';
 import CloudStorageStudio from './components/CloudStorageStudio';
 import BigQueryStudio from './components/BigQueryStudio';
 import SovereignTimeMachineIamStudio from './components/SovereignTimeMachineIamStudio';
+import SreWarRoomPerimeterStudio from './components/SreWarRoomPerimeterStudio';
 import AuthOnboardingGate from './components/AuthOnboardingGate';
 import CloudRunDeployModal from './components/CloudRunDeployModal';
 import Revolutionary2026Suite, {
@@ -354,6 +356,12 @@ function CloudPulseCockpit() {
       label: 'Sovereign & Drift 🧬',
       tip: 'Wave-7 Sovereign Cloud Time-Machine, Autonomous IAM Least-Privilege Surgeon (24h JIT CEL Conditions), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
       icon: ShieldCheck,
+    },
+    {
+      id: 'SRE_WAR_ROOM',
+      label: 'SRE War-Room 🚨',
+      tip: 'Wave-8 Autonomous SRE Incident War-Room, Cloud Logging Root-Cause Correlator, 14.4x SLO Burn Radar, VPC Service Controls (VPC-SC) Exfiltration Shield & Pub/Sub DLQ Studio',
+      icon: Flame,
     },
     {
       id: 'CLOUD_RUN',
@@ -859,6 +867,16 @@ function CloudPulseCockpit() {
 
               {activeTab === 'SOVEREIGN_STUDIO' && (
                 <SovereignTimeMachineIamStudio
+                  projectId={selectedProjectId}
+                  onTriggerToast={showToast}
+                  onRefreshOverview={() =>
+                    fetchProjectOverview(selectedProjectId)
+                  }
+                />
+              )}
+
+              {activeTab === 'SRE_WAR_ROOM' && (
+                <SreWarRoomPerimeterStudio
                   projectId={selectedProjectId}
                   onTriggerToast={showToast}
                   onRefreshOverview={() =>
