@@ -48,6 +48,7 @@ import CloudRunFleetManager from './components/CloudRunFleetManager';
 import GkeFleetStudio from './components/GkeFleetStudio';
 import CloudStorageStudio from './components/CloudStorageStudio';
 import BigQueryStudio from './components/BigQueryStudio';
+import CloudSqlAndAlloyDbStudio from './components/CloudSqlAndAlloyDbStudio';
 import SovereignTimeMachineIamStudio from './components/SovereignTimeMachineIamStudio';
 import SreWarRoomPerimeterStudio from './components/SreWarRoomPerimeterStudio';
 import Wave9AiGkeSqlSupplyChainStudio from './components/Wave9AiGkeSqlSupplyChainStudio';
@@ -387,10 +388,17 @@ function CloudPulseCockpit() {
       icon: Database,
     },
     {
+      id: 'CLOUD_SQL_STUDIO',
+      group: 'DATA_LAKEHOUSE',
+      label: 'Cloud SQL & AlloyDB 🐘',
+      tip: 'Dedicated Cloud SQL (MySQL 8.4 LTS & PostgreSQL 16/17) + Google Cloud AlloyDB Studio: Classic Cloud SQL vs. AlloyDB Architecture Fork, strict SEC/GDPR/HIPAA compliance locks, AI Vector (alloydb_scann / pgvector / MySQL 8.4 VECTOR) Surgeon & Zero-Password IAM Auth Proxy v2 Vault',
+      icon: Database,
+    },
+    {
       id: 'WAVE9_STUDIO',
       group: 'DATA_LAKEHOUSE',
-      label: 'Cloud SQL & SBOM 📦',
-      tip: 'Artifact Registry SLSA-3 Supply-Chain & Orphan Digest Sweeper, and Zero-Trust Cloud SQL / AlloyDB Compiler (Private IP + mTLS + 35-day PITR)',
+      label: 'Artifact Registry & SBOM 📦',
+      tip: 'Artifact Registry SLSA-3 Supply-Chain & OCI SBOM Studio: Live container digest inspector, untagged orphan layer sweeper, and immutable tag compliance locks',
       icon: PackageCheck,
     },
 
@@ -912,6 +920,20 @@ function CloudPulseCockpit() {
                   }
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'CLOUD_SQL_STUDIO' && (
+                <CloudSqlAndAlloyDbStudio
+                  projectId={selectedProjectId}
+                  onOpenProvisionCloudSql={() =>
+                    handleOpenProvision('CLOUD_SQL')
+                  }
+                  onRunInShell={handleRunInShell}
+                  onRefreshOverview={() =>
+                    fetchProjectOverview(selectedProjectId)
+                  }
+                  onShowToast={showToast}
                 />
               )}
 

@@ -2868,6 +2868,205 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       });
     }
 
+    if (serviceType === 'CLOUD_SQL') {
+      const cleanName = name
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60);
+      const sqlArchitecture = config.sqlArchitecture || 'CLOUD_SQL'; // CLOUD_SQL | ALLOYDB
+      const sqlEngineFamily = config.sqlEngineFamily || 'POSTGRES'; // POSTGRES | MYSQL
+      const databaseVersion =
+        config.databaseVersion ||
+        (sqlEngineFamily === 'MYSQL' ? 'MYSQL_8_4' : 'POSTGRES_16');
+      const dbRegion = region || config.sqlRegion || 'us-central1';
+      const availabilityType = config.availabilityType || 'REGIONAL'; // REGIONAL | ZONAL
+      const edition = config.edition || 'ENTERPRISE_PLUS'; // ENTERPRISE | ENTERPRISE_PLUS
+      const tier =
+        config.tier ||
+        (edition === 'ENTERPRISE_PLUS'
+          ? 'db-perf-optimized-N-2'
+          : 'db-custom-2-8192');
+      const storageSizeGb = Math.max(10, Number(config.storageSizeGb || 20));
+      const networkMode = config.networkMode || 'PRIVATE_VPC_ONLY'; // PRIVATE_VPC_ONLY | PUBLIC_IPV4
+      const sslMode = config.sslMode || 'ENCRYPTED_ONLY';
+      const pitrDays = Math.max(1, Math.min(35, Number(config.pitrDays || 7)));
+      const iamAuth = config.iamAuth !== false;
+      const deletionProtection = config.deletionProtection !== false;
+      const rootPassword =
+        config.rootPassword || `CloudPulse2026!${Math.floor(1000 + Math.random() * 8999)}`;
+
+      // If PostgreSQL + ALLOYDB Disaggregated Architecture is selected:
+      if (sqlArchitecture === 'ALLOYDB' && sqlEngineFamily === 'POSTGRES') {
+        for (const svc of ['alloydb.googleapis.com', 'compute.googleapis.com']) {
+          try {
+            await gcpFetch(
+              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/services/${svc}:enable`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: {},
+                timeout: 8000,
+              }
+            );
+          } catch {
+            // continue
+          }
+        }
+
+        const alloyClusterBody = {
+          databaseVersion:
+            databaseVersion === 'POSTGRES_17' ? 'POSTGRES_16' : databaseVersion,
+          networkConfig: {
+            network: `projects/${projectId}/global/networks/default`,
+          },
+          initialUser: {
+            user: 'postgres',
+            password: rootPassword,
+          },
+          continuousBackupConfig: {
+            enabled: true,
+            recoveryWindowDays: Math.min(35, pitrDays),
+          },
+          labels: {
+            managed_by: 'cloudpulse_2026',
+            engine: 'alloydb_postgres',
+            scann_vector: config.enableVectorScann ? 'enabled' : 'ready',
+          },
+        };
+
+        const op = await gcpFetch(
+          `https://alloydb.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(
+            dbRegion
+          )}/clusters?clusterId=${encodeURIComponent(cleanName)}`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: alloyClusterBody,
+            timeout: 10000,
+          }
+        );
+
+        recordFlightEvent(projectId, {
+          action: 'ALLOYDB_CLUSTER_PROVISIONED',
+          resourceType: 'ALLOYDB_CLUSTER',
+          resourceName: cleanName,
+          region: dbRegion,
+          summary: `Dispatched Google Cloud AlloyDB for PostgreSQL cluster "${cleanName}" in ${dbRegion} (${databaseVersion})`,
+        });
+
+        return res.json({
+          ok: true,
+          message: `Dispatched Google Cloud AlloyDB for PostgreSQL cluster "${cleanName}" in ${dbRegion} (${databaseVersion}, ${pitrDays}d Continuous Backup)!`,
+          operation: op,
+        });
+      }
+
+      // Otherwise provision Classic / Enterprise Plus Cloud SQL (PostgreSQL or MySQL)
+      for (const svc of ['sqladmin.googleapis.com', 'compute.googleapis.com']) {
+        try {
+          await gcpFetch(
+            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/services/${svc}:enable`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {},
+              timeout: 8000,
+            }
+          );
+        } catch {
+          // continue
+        }
+      }
+
+      const isMySql = databaseVersion.startsWith('MYSQL');
+      const dbFlags = [];
+      if (!isMySql && iamAuth) {
+        dbFlags.push({ name: 'cloudsql.iam_authentication', value: 'on' });
+      }
+      if (!isMySql && config.enablePgAudit) {
+        dbFlags.push({ name: 'cloudsql.enable_pgaudit', value: 'on' });
+      }
+
+      const sqlInstanceBody = {
+        name: cleanName,
+        project: projectId,
+        databaseVersion,
+        region: dbRegion,
+        rootPassword,
+        settings: {
+          tier,
+          edition,
+          availabilityType,
+          dataDiskSizeGb: String(storageSizeGb),
+          dataDiskType: 'PD_SSD',
+          storageAutoResize: true,
+          deletionProtectionEnabled: deletionProtection,
+          ipConfiguration: {
+            ipv4Enabled: networkMode === 'PUBLIC_IPV4',
+            sslMode,
+          },
+          backupConfiguration: {
+            enabled: true,
+            startTime: '02:00',
+            ...(isMySql
+              ? { binaryLogEnabled: true }
+              : { pointInTimeRecoveryEnabled: true }),
+            transactionLogRetentionDays: Math.min(7, pitrDays),
+            backupRetentionSettings: {
+              retentionUnit: 'COUNT',
+              retainedBackups: pitrDays,
+            },
+          },
+          ...(dbFlags.length > 0 ? { databaseFlags: dbFlags } : {}),
+          userLabels: {
+            managed_by: 'cloudpulse_2026',
+            engine_family: isMySql ? 'mysql' : 'postgresql',
+          },
+        },
+      };
+
+      const op = await gcpFetch(
+        `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/instances`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: sqlInstanceBody,
+          timeout: 10000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'CLOUD_SQL_PROVISIONED',
+        resourceType: 'CLOUD_SQL',
+        resourceName: cleanName,
+        region: dbRegion,
+        summary: `Dispatched Cloud SQL ${databaseVersion} (${edition}, ${availabilityType}) instance "${cleanName}" in ${dbRegion}`,
+      });
+
+      return res.json({
+        ok: true,
+        message: `Dispatched live Cloud SQL ${databaseVersion} (${edition} · ${availabilityType}) instance "${cleanName}" in ${dbRegion}!`,
+        operation: op,
+      });
+    }
+
     res.status(400).json({ error: `Unsupported serviceType: ${serviceType}` });
   } catch (err) {
     const gcpErrMsg =
@@ -2877,6 +3076,86 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
     res.status(400).json({ error: gcpErrMsg });
   }
 });
+
+// 9a-sql. DELETE /api/project/:projectId/cloud-sql/instances/:instanceName
+app.delete(
+  '/api/project/:projectId/cloud-sql/instances/:instanceName',
+  async (req, res) => {
+    const { projectId, instanceName } = req.params;
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+      const op = await gcpFetch(
+        `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/instances/${encodeURIComponent(instanceName)}`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 8000 }
+      );
+      recordFlightEvent(projectId, {
+        action: 'CLOUD_SQL_DELETED',
+        resourceType: 'CLOUD_SQL',
+        resourceName: instanceName,
+        region: 'global',
+        summary: `Deleted Cloud SQL instance "${instanceName}"`,
+      });
+      res.json({
+        ok: true,
+        message: `Dispatched deletion of Cloud SQL instance "${instanceName}".`,
+        operation: op,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to delete Cloud SQL instance.',
+      });
+    }
+  }
+);
+
+// 9a-alloydb. DELETE /api/project/:projectId/alloydb/clusters/:location/:clusterName
+app.delete(
+  '/api/project/:projectId/alloydb/clusters/:location/:clusterName',
+  async (req, res) => {
+    const { projectId, location, clusterName } = req.params;
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+      const op = await gcpFetch(
+        `https://alloydb.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          location
+        )}/clusters/${encodeURIComponent(clusterName)}?force=true`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 8000 }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_CLUSTER_DELETED',
+        resourceType: 'ALLOYDB_CLUSTER',
+        resourceName: clusterName,
+        region: location,
+        summary: `Deleted AlloyDB cluster "${clusterName}" in ${location}`,
+      });
+      res.json({
+        ok: true,
+        message: `Dispatched deletion of AlloyDB cluster "${clusterName}" in ${location}.`,
+        operation: op,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to delete AlloyDB cluster.',
+      });
+    }
+  }
+);
 
 // 9a-gke. DELETE /api/project/:projectId/gke/clusters/:location/:clusterName
 app.delete(
@@ -10720,14 +10999,24 @@ app.get('/api/project/:projectId/wave9/cloud-sql', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated.' });
     }
 
-    const sqlRes = await gcpFetch(
-      `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
-        projectId
-      )}/instances`,
-      token,
-      projectId,
-      { timeout: 6000 }
-    ).catch(() => ({ items: [] }));
+    const [sqlRes, alloyRes] = await Promise.all([
+      gcpFetch(
+        `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/instances`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => ({ items: [] })),
+      gcpFetch(
+        `https://alloydb.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/-/clusters`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => ({ clusters: [] })),
+    ]);
 
     const rawInstances = sqlRes?.items || [];
     const instances = rawInstances.map((inst) => {
@@ -10743,7 +11032,9 @@ app.get('/api/project/:projectId/wave9/cloud-sql', async (req, res) => {
       );
       const sslMode =
         ipConfig.sslMode ||
-        (ipConfig.requireSsl ? 'ENCRYPTED_ONLY' : 'ALLOW_UNENCRYPTED_AND_ENCRYPTED');
+        (ipConfig.requireSsl
+          ? 'ENCRYPTED_ONLY'
+          : 'ALLOW_UNENCRYPTED_AND_ENCRYPTED');
       const isSslEnforced =
         sslMode === 'ENCRYPTED_ONLY' ||
         sslMode === 'TRUSTED_CLIENT_CERTIFICATE_REQUIRED';
@@ -10770,7 +11061,9 @@ app.get('/api/project/:projectId/wave9/cloud-sql', async (req, res) => {
 
       return {
         name: inst.name,
+        architecture: 'CLOUD_SQL',
         databaseVersion: inst.databaseVersion || 'POSTGRES_16',
+        edition: settings.edition || 'ENTERPRISE',
         region: inst.region || 'us-central1',
         tier: settings.tier || 'db-custom-2-8192',
         state: inst.state || 'RUNNABLE',
@@ -10787,15 +11080,45 @@ app.get('/api/project/:projectId/wave9/cloud-sql', async (req, res) => {
       };
     });
 
+    const rawAlloyClusters = alloyRes?.clusters || [];
+    const alloyDbClusters = rawAlloyClusters.map((c) => {
+      const parts = (c.name || '').split('/');
+      const shortName = parts[parts.length - 1] || c.name;
+      const locIdx = parts.indexOf('locations');
+      const location = locIdx >= 0 ? parts[locIdx + 1] : 'us-central1';
+      const continuousBackup = Boolean(c.continuousBackupConfig?.enabled);
+      return {
+        name: shortName,
+        fullName: c.name,
+        architecture: 'ALLOYDB',
+        databaseVersion: c.databaseVersion || 'POSTGRES_16',
+        location,
+        state: c.state || 'READY',
+        continuousBackup,
+        recoveryWindowDays: Number(
+          c.continuousBackupConfig?.recoveryWindowDays || 14
+        ),
+        postureScore: continuousBackup ? 98 : 85,
+      };
+    });
+
     res.json({
       projectId,
       instances,
+      alloyDbClusters,
       summary: {
         instancesCount: instances.length,
-        haCount: instances.filter((i) => i.availabilityType === 'REGIONAL')
-          .length,
-        privateOnlyCount: instances.filter((i) => !i.ipv4Enabled).length,
-        pitrCount: instances.filter((i) => i.pitrEnabled).length,
+        alloyDbCount: alloyDbClusters.length,
+        totalDatabasesCount: instances.length + alloyDbClusters.length,
+        haCount:
+          instances.filter((i) => i.availabilityType === 'REGIONAL').length +
+          alloyDbClusters.length,
+        privateOnlyCount:
+          instances.filter((i) => !i.ipv4Enabled).length +
+          alloyDbClusters.length,
+        pitrCount:
+          instances.filter((i) => i.pitrEnabled).length +
+          alloyDbClusters.filter((c) => c.continuousBackup).length,
       },
     });
   } catch (err) {
@@ -10803,7 +11126,7 @@ app.get('/api/project/:projectId/wave9/cloud-sql', async (req, res) => {
       error:
         err.response?.data?.error?.message ||
         err.message ||
-        'Failed to inspect Cloud SQL instances.',
+        'Failed to inspect Cloud SQL & AlloyDB instances.',
     });
   }
 });

@@ -296,6 +296,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'create-cloud-sql',
+        category: 'Provisioning & Deploy',
+        title: 'Create Cloud SQL (MySQL 8.4 / Postgres 16) or Google Cloud AlloyDB Cluster 🐘',
+        subtitle: 'Choose MySQL or PostgreSQL, and for PostgreSQL fork between Classic Cloud SQL vs. AlloyDB with SEC/GDPR/HIPAA locks',
+        keywords: 'create cloud sql mysql postgres postgresql alloydb database vector scann pgvector',
+        badge: 'PROVISION DB',
+        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        icon: Database,
+        run: () => {
+          onClose();
+          onOpenCreateModal('CLOUD_SQL');
+        }
+      },
+      {
         id: 'create-bucket',
         category: 'Provisioning & Deploy',
         title: 'Create Cloud Storage Bucket or BigQuery Lakehouse Dataset',
@@ -338,12 +352,26 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-cloud-sql-studio',
+        category: 'Data Lakehouse & Sovereign SRE Studios',
+        title: 'Open Dedicated Cloud SQL (MySQL & PostgreSQL) & AlloyDB Studio 🐘',
+        subtitle: 'Classic Cloud SQL vs. AlloyDB Architecture Fork, AI Vector (alloydb_scann / pgvector / MySQL VECTOR) Surgeon & IAM Auth Proxy v2 Vault',
+        keywords: 'cloud sql mysql postgres postgresql alloydb database vector scann pgvector proxy',
+        badge: 'CLOUD SQL & ALLOYDB',
+        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab('CLOUD_SQL_STUDIO');
+          onClose();
+        }
+      },
+      {
         id: 'open-sql-sbom-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
-        title: 'Open Cloud SQL & Artifact Registry SLSA-3 SBOM Studio 📦',
-        subtitle: 'Audit container digests & orphan layers, and enforce Private-IP + 35d PITR Cloud SQL',
-        keywords: 'cloud sql postgres alloydb artifact registry sbom slsa container digest',
-        badge: 'SQL & SBOM',
+        title: 'Open Artifact Registry SLSA-3 Supply-Chain & OCI SBOM Studio 📦',
+        subtitle: 'Audit container digests, sweep untagged orphan layers, and enforce immutable tag compliance locks',
+        keywords: 'artifact registry sbom slsa container digest docker immutable tags',
+        badge: 'ARTIFACT SBOM',
         badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
         icon: Database,
         run: () => {

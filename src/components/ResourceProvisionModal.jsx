@@ -59,6 +59,12 @@ const SERVICE_TABS = [
     icon: Database,
     desc: 'Create real BQ Dataset (bigquery.googleapis.com)',
   },
+  {
+    id: 'CLOUD_SQL',
+    label: 'Cloud SQL / AlloyDB 🐘',
+    icon: Database,
+    desc: 'Create MySQL 8.4 / Postgres 16 Cloud SQL or AlloyDB Cluster',
+  },
 ];
 
 export default function ResourceProvisionModal({
@@ -594,6 +600,107 @@ export default function ResourceProvisionModal({
     }
   };
 
+  // Cloud SQL (MySQL & PostgreSQL) + Google Cloud AlloyDB Studio State
+  const [sqlComplianceRegime, setSqlComplianceRegime] = useState('custom');
+  const [sqlEngineFamily, setSqlEngineFamily] = useState('POSTGRES'); // POSTGRES | MYSQL
+  const [sqlArchitecture, setSqlArchitecture] = useState('CLOUD_SQL'); // CLOUD_SQL | ALLOYDB (for POSTGRES)
+  const [sqlDatabaseVersion, setSqlDatabaseVersion] = useState('POSTGRES_16');
+  const [sqlEdition, setSqlEdition] = useState('ENTERPRISE_PLUS');
+  const [sqlTier, setSqlTier] = useState('db-perf-optimized-N-2');
+  const [sqlRegion, setSqlRegion] = useState('us-central1');
+  const [sqlAvailabilityType, setSqlAvailabilityType] = useState('REGIONAL');
+  const [sqlStorageSizeGb, setSqlStorageSizeGb] = useState(100);
+  const [sqlNetworkMode, setSqlNetworkMode] = useState('PRIVATE_VPC_ONLY');
+  const [sqlSslMode, setSqlSslMode] = useState('ENCRYPTED_ONLY');
+  const [sqlPitrDays, setSqlPitrDays] = useState(14);
+  const [sqlIamAuth, setSqlIamAuth] = useState(true);
+  const [sqlEnableVectorScann, setSqlEnableVectorScann] = useState(true);
+  const [sqlEnableColumnarEngine, setSqlEnableColumnarEngine] = useState(true);
+
+  const handleSelectModalSqlEngine = (family) => {
+    setSqlEngineFamily(family);
+    if (family === 'MYSQL') {
+      setSqlArchitecture('CLOUD_SQL');
+      setSqlDatabaseVersion('MYSQL_8_4');
+      setSqlTier(
+        sqlEdition === 'ENTERPRISE_PLUS'
+          ? 'db-perf-optimized-N-2'
+          : 'db-custom-2-8192'
+      );
+      if (sqlComplianceRegime === 'ai-vector-alloydb') {
+        setSqlComplianceRegime('custom');
+      }
+    } else {
+      setSqlDatabaseVersion('POSTGRES_16');
+    }
+  };
+
+  const handleSelectModalSqlArchitecture = (arch) => {
+    if (arch === 'ALLOYDB' && sqlEngineFamily === 'MYSQL') return;
+    setSqlArchitecture(arch);
+    if (arch === 'ALLOYDB') {
+      setSqlEngineFamily('POSTGRES');
+      setSqlDatabaseVersion('POSTGRES_16');
+      setSqlAvailabilityType('REGIONAL');
+      setSqlNetworkMode('PRIVATE_VPC_ONLY');
+      setSqlSslMode('ENCRYPTED_ONLY');
+      setSqlTier('alloydb-4vcpu-32gb');
+    } else {
+      setSqlTier(
+        sqlEdition === 'ENTERPRISE_PLUS'
+          ? 'db-perf-optimized-N-2'
+          : 'db-custom-2-8192'
+      );
+    }
+  };
+
+  const applySqlCompliancePreset = (presetId) => {
+    setSqlComplianceRegime(presetId);
+    if (presetId === 'pci-sec-ledger') {
+      setSqlRegion('us-east4');
+      setSqlEdition('ENTERPRISE_PLUS');
+      setSqlAvailabilityType('REGIONAL');
+      setSqlNetworkMode('PRIVATE_VPC_ONLY');
+      setSqlSslMode('TRUSTED_CLIENT_CERTIFICATE_REQUIRED');
+      setSqlPitrDays(35);
+      setSqlIamAuth(true);
+    } else if (presetId === 'gdpr-eu-db') {
+      setSqlRegion('europe-west1');
+      setSqlAvailabilityType('REGIONAL');
+      setSqlNetworkMode('PRIVATE_VPC_ONLY');
+      setSqlSslMode('ENCRYPTED_ONLY');
+      setSqlPitrDays(14);
+      setSqlIamAuth(true);
+    } else if (presetId === 'hipaa-clinical-db') {
+      setSqlRegion('us-central1');
+      setSqlEdition('ENTERPRISE_PLUS');
+      setSqlAvailabilityType('REGIONAL');
+      setSqlNetworkMode('PRIVATE_VPC_ONLY');
+      setSqlSslMode('TRUSTED_CLIENT_CERTIFICATE_REQUIRED');
+      setSqlPitrDays(30);
+      setSqlIamAuth(true);
+    } else if (presetId === 'ai-vector-alloydb') {
+      setSqlEngineFamily('POSTGRES');
+      setSqlArchitecture('ALLOYDB');
+      setSqlDatabaseVersion('POSTGRES_16');
+      setSqlTier('alloydb-4vcpu-32gb');
+      setSqlRegion('us-central1');
+      setSqlAvailabilityType('REGIONAL');
+      setSqlNetworkMode('PRIVATE_VPC_ONLY');
+      setSqlSslMode('ENCRYPTED_ONLY');
+      setSqlPitrDays(14);
+      setSqlIamAuth(true);
+      setSqlEnableVectorScann(true);
+      setSqlEnableColumnarEngine(true);
+    } else {
+      setSqlAvailabilityType('REGIONAL');
+      setSqlNetworkMode('PRIVATE_VPC_ONLY');
+      setSqlSslMode('ENCRYPTED_ONLY');
+      setSqlPitrDays(7);
+      setSqlIamAuth(true);
+    }
+  };
+
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [copiedCmd, setCopiedCmd] = useState(false);
@@ -602,6 +709,7 @@ export default function ResourceProvisionModal({
     const suffix = Math.floor(1000 + Math.random() * 8999);
     if (type === 'COMPUTE_VM') return `${proj}-vm-${suffix}`;
     if (type === 'GKE_CLUSTER') return `${proj}-gke-${suffix}`;
+    if (type === 'CLOUD_SQL') return `${proj}-db-${suffix}`;
     if (type === 'VPC_NETWORK') return `${proj}-vpc-${suffix}`;
     if (type === 'VPC_FIREWALL') return `allow-web-${suffix}`;
     if (type === 'GCS_BUCKET') return `${proj}-bucket-${suffix}`;
@@ -617,6 +725,7 @@ export default function ResourceProvisionModal({
         setRegion(initialLocation.region);
         setVmRegion(initialLocation.region);
         setGkeLocation(initialLocation.region);
+        setSqlRegion(initialLocation.region);
         setBqLocationType('REGIONAL');
         setBqLocation(initialLocation.region);
       }
@@ -771,6 +880,14 @@ export default function ResourceProvisionModal({
         runAllowUnauth ? '--allow-unauthenticated' : '--no-allow-unauthenticated'
       }`;
     }
+    if (serviceType === 'CLOUD_SQL') {
+      const cleanSql = clean.replace(/[^a-z0-9-]/g, '-');
+      if (sqlArchitecture === 'ALLOYDB' && sqlEngineFamily === 'POSTGRES') {
+        const cpuCount = sqlTier === 'alloydb-8vcpu-64gb' ? 8 : sqlTier === 'alloydb-2vcpu-16gb' ? 2 : 4;
+        return `gcloud alloydb clusters create ${cleanSql} --region=${sqlRegion} --database-version=${sqlDatabaseVersion} --network=projects/${projectId}/global/networks/default --continuous-backup-recovery-window-days=${sqlPitrDays} --project=${projectId} && gcloud alloydb instances create ${cleanSql}-primary --cluster=${cleanSql} --region=${sqlRegion} --instance-type=PRIMARY --cpu-count=${cpuCount} --availability-type=${sqlAvailabilityType} --ssl-mode=${sqlSslMode} --database-flags=alloydb.iam_authentication=${sqlIamAuth ? 'on' : 'off'},alloydb.enable_pgaudit=on${sqlEnableColumnarEngine ? ',google_columnar_engine.enabled=on' : ''} --project=${projectId}`;
+      }
+      return `gcloud sql instances create ${cleanSql} --database-version=${sqlDatabaseVersion} --edition=${sqlEdition} --tier=${sqlTier} --region=${sqlRegion} --availability-type=${sqlAvailabilityType} --storage-type=SSD --storage-size=${sqlStorageSizeGb}GB ${sqlNetworkMode === 'PRIVATE_VPC_ONLY' ? `--no-assign-ip --network=projects/${projectId}/global/networks/default` : '--assign-ip'} --ssl-mode=${sqlSslMode} --enable-point-in-time-recovery --retained-backups-count=${sqlPitrDays} --database-flags=${sqlEngineFamily === 'POSTGRES' ? 'cloudsql.iam_authentication' : 'cloudsql_iam_authentication'}=${sqlIamAuth ? 'on' : 'off'} --deletion-protection --project=${projectId}`;
+    }
     const ds = clean.replace(/[^a-zA-Z0-9_]/g, '_');
     const bqFlags = [
       `--location=${bqLocation}`,
@@ -805,6 +922,19 @@ export default function ResourceProvisionModal({
     serviceType,
     name,
     projectId,
+    sqlArchitecture,
+    sqlEngineFamily,
+    sqlDatabaseVersion,
+    sqlEdition,
+    sqlTier,
+    sqlRegion,
+    sqlAvailabilityType,
+    sqlStorageSizeGb,
+    sqlNetworkMode,
+    sqlSslMode,
+    sqlPitrDays,
+    sqlIamAuth,
+    sqlEnableColumnarEngine,
     gkeMode,
     gkeLocation,
     gkeReleaseChannel,
@@ -903,6 +1033,32 @@ export default function ResourceProvisionModal({
       'g2-standard-8': 0.853,
       'a2-highgpu-1g': 3.673,
     };
+
+    if (serviceType === 'CLOUD_SQL') {
+      const sqlTierRates = {
+        'db-f1-micro': 0.015,
+        'db-custom-2-8192': 0.138,
+        'db-custom-4-16384': 0.276,
+        'db-perf-optimized-N-2': 0.278,
+        'db-perf-optimized-N-4': 0.556,
+        'alloydb-2vcpu-16gb': 0.276,
+        'alloydb-4vcpu-32gb': 0.552,
+        'alloydb-8vcpu-64gb': 1.104,
+      };
+      const baseHr = sqlTierRates[sqlTier] || 0.278;
+      const haMult = sqlAvailabilityType === 'REGIONAL' ? 2.0 : 1.0;
+      const storageHourly = (Number(sqlStorageSizeGb || 100) * 0.17) / 730;
+      const hourly = baseHr * haMult + storageHourly;
+      return {
+        hourly,
+        monthly: hourly * 730,
+        badge:
+          sqlArchitecture === 'ALLOYDB'
+            ? `GOOGLE CLOUD ALLOYDB · ${sqlDatabaseVersion} · 99.99% SLA`
+            : `CLOUD SQL (${sqlEdition}) · ${sqlDatabaseVersion} · ${sqlAvailabilityType}`,
+        detail: `${sqlTier} (${sqlAvailabilityType}) + ${sqlStorageSizeGb} GB SSD + ${sqlPitrDays}d PITR (${sqlNetworkMode})`,
+      };
+    }
 
     if (serviceType === 'GKE_CLUSTER') {
       // GKE Free Tier provides $74.40/mo credit covering 1 cluster management fee ($0.10/hr)
@@ -1077,6 +1233,14 @@ export default function ResourceProvisionModal({
     };
   }, [
     serviceType,
+    sqlArchitecture,
+    sqlEdition,
+    sqlDatabaseVersion,
+    sqlTier,
+    sqlAvailabilityType,
+    sqlStorageSizeGb,
+    sqlPitrDays,
+    sqlNetworkMode,
     gkeMode,
     gkeNodeMachineType,
     gkeInitialNodeCount,
@@ -1125,9 +1289,25 @@ export default function ResourceProvisionModal({
               ? vmRegion
               : serviceType === 'GKE_CLUSTER'
               ? gkeLocation
+              : serviceType === 'CLOUD_SQL'
+              ? sqlRegion
               : region,
           zone,
           config: {
+            sqlArchitecture,
+            sqlEngineFamily,
+            databaseVersion: sqlDatabaseVersion,
+            edition: sqlEdition,
+            tier: sqlTier,
+            availabilityType: sqlAvailabilityType,
+            storageSizeGb: Number(sqlStorageSizeGb || 100),
+            networkMode: sqlNetworkMode,
+            sslMode: sqlSslMode,
+            pitrDays: Number(sqlPitrDays || 14),
+            iamAuth: sqlIamAuth,
+            enablePgAudit: true,
+            enableVectorScann: sqlEnableVectorScann,
+            enableColumnarEngine: sqlEnableColumnarEngine,
             gkeMode,
             gkeLocation,
             releaseChannel: gkeReleaseChannel,
@@ -4784,6 +4964,348 @@ export default function ResourceProvisionModal({
                         </p>
                       </div>
                     </label>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {serviceType === 'CLOUD_SQL' && (() => {
+            const isSqlCustom = sqlComplianceRegime === 'custom';
+            const isSqlGdpr = sqlComplianceRegime === 'gdpr-eu-db';
+            const isSqlUsOnly =
+              sqlComplianceRegime === 'pci-sec-ledger' ||
+              sqlComplianceRegime === 'hipaa-clinical-db' ||
+              sqlComplianceRegime === 'ai-vector-alloydb';
+            const lockAlloyDbOnly = sqlComplianceRegime === 'ai-vector-alloydb';
+            const lockPrivateNet = !isSqlCustom || sqlArchitecture === 'ALLOYDB';
+            const lockRegionalHa = !isSqlCustom || sqlArchitecture === 'ALLOYDB';
+            const lockMtls =
+              sqlComplianceRegime === 'pci-sec-ledger' ||
+              sqlComplianceRegime === 'hipaa-clinical-db';
+
+            return (
+              <div className="space-y-4">
+                {/* STEP 0: Compliance Blueprint Presets */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-500/[0.08] via-purple-500/[0.06] to-emerald-500/[0.08] border border-indigo-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                      Step 0 · Database Compliance Blueprint (MySQL 8.4 · PostgreSQL 16 · AlloyDB)
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Enforces strict compliance locks (🔒) on Engine, Architecture, Region & PITR
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                    {[
+                      {
+                        id: 'pci-sec-ledger',
+                        title: '🏛️ PCI / SEC Ledger',
+                        badge: 'mTLS + 35d PITR',
+                        sub: 'Locks US + Regional HA + Private IP + mTLS',
+                      },
+                      {
+                        id: 'gdpr-eu-db',
+                        title: '🇪🇺 GDPR EU DB',
+                        badge: 'EU ONLY',
+                        sub: 'Locks europe-* residency + Private VPC + HA',
+                      },
+                      {
+                        id: 'hipaa-clinical-db',
+                        title: '🏥 HIPAA Clinical',
+                        badge: 'BAA + 30d PITR',
+                        sub: 'Locks US BAA + Regional HA + mTLS + 30d PITR',
+                      },
+                      {
+                        id: 'ai-vector-alloydb',
+                        title: '⚡ AI Vector AlloyDB',
+                        badge: 'ScaNN + Columnar',
+                        sub: 'Locks Postgres 16 + AlloyDB + ScaNN Vector',
+                      },
+                      {
+                        id: 'custom',
+                        title: '🎛️ Custom Mode',
+                        badge: 'UNLOCKED',
+                        sub: 'Full manual control over MySQL/Postgres/AlloyDB',
+                      },
+                    ].map((preset) => {
+                      const active = sqlComplianceRegime === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => applySqlCompliancePreset(preset.id)}
+                          className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer ${
+                            active
+                              ? 'bg-indigo-600/15 border-indigo-500 shadow-sm'
+                              : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100">
+                              {preset.title}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-500/20 text-indigo-600 dark:text-indigo-300">
+                              {preset.badge}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500 leading-snug">
+                            {preset.sub}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* STEP 1: Engine Family (PostgreSQL vs MySQL) & Architecture Fork (Classic Cloud SQL vs AlloyDB) */}
+                <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block">
+                    Step 1 · Relational Engine Family & PostgreSQL Architecture Fork (Cloud SQL vs. AlloyDB)
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectModalSqlEngine('POSTGRES')}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        sqlEngineFamily === 'POSTGRES'
+                          ? 'bg-indigo-600/15 border-indigo-500 text-zinc-900 dark:text-zinc-100'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      <div className="text-xs font-extrabold flex items-center justify-between">
+                        <span>🐘 PostgreSQL (16 / 17 / 15)</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">
+                          Unlocks Cloud SQL + AlloyDB
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 mt-1">
+                        Choose between Classic / Enterprise Plus Cloud SQL or Google Cloud AlloyDB (4x faster OLTP + 100x Analytical Columnar Engine).
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={lockAlloyDbOnly}
+                      onClick={() => handleSelectModalSqlEngine('MYSQL')}
+                      title={
+                        lockAlloyDbOnly
+                          ? '🔒 AI Vector AlloyDB blueprint requires PostgreSQL 16 (`alloydb_scann`). Switch to Custom Mode to select MySQL.'
+                          : 'Select MySQL 8.4 LTS or 8.0 on Cloud SQL'
+                      }
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        lockAlloyDbOnly
+                          ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
+                          : sqlEngineFamily === 'MYSQL'
+                          ? 'bg-cyan-600/15 border-cyan-500 text-zinc-900 dark:text-zinc-100 cursor-pointer'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
+                      }`}
+                    >
+                      <div className="text-xs font-extrabold flex items-center justify-between">
+                        <span>🐬 MySQL (8.4 LTS / 8.0) {lockAlloyDbOnly ? '🔒' : ''}</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
+                          Cloud SQL Dedicated
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 mt-1">
+                        Managed Cloud SQL for MySQL with InnoDB Group Replication, 128 GB Data Cache, and MySQL 8.4 native `VECTOR` search.
+                      </p>
+                    </button>
+                  </div>
+
+                  {/* Architecture Fork (Classic Cloud SQL vs AlloyDB) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      disabled={lockAlloyDbOnly}
+                      onClick={() => handleSelectModalSqlArchitecture('CLOUD_SQL')}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        lockAlloyDbOnly
+                          ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
+                          : sqlArchitecture === 'CLOUD_SQL'
+                          ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100 cursor-pointer'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
+                      }`}
+                    >
+                      <div className="text-xs font-extrabold flex items-center justify-between">
+                        <span>🏛️ Classic / Enterprise Plus Cloud SQL {lockAlloyDbOnly ? '🔒' : ''}</span>
+                        <span className="text-[10px] font-mono text-blue-400">sqladmin.googleapis.com</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 mt-1">
+                        Traditional VM + Regional Persistent Disk architecture for both PostgreSQL and MySQL workloads.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={sqlEngineFamily === 'MYSQL'}
+                      onClick={() => handleSelectModalSqlArchitecture('ALLOYDB')}
+                      title={
+                        sqlEngineFamily === 'MYSQL'
+                          ? '🔒 Google Cloud AlloyDB is a 100% PostgreSQL-compatible engine. Switch Engine Family to PostgreSQL to unlock AlloyDB.'
+                          : 'Select Google Cloud AlloyDB Disaggregated Colossus + Columnar + ScaNN Architecture'
+                      }
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        sqlEngineFamily === 'MYSQL'
+                          ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
+                          : sqlArchitecture === 'ALLOYDB'
+                          ? 'bg-purple-600/15 border-purple-500 text-zinc-900 dark:text-zinc-100 cursor-pointer'
+                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
+                      }`}
+                    >
+                      <div className="text-xs font-extrabold flex items-center justify-between">
+                        <span>
+                          ⚡ Google Cloud AlloyDB (PostgreSQL) {sqlEngineFamily === 'MYSQL' ? '🔒' : ''}
+                        </span>
+                        <span className="text-[10px] font-mono text-purple-400">alloydb.googleapis.com</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 mt-1">
+                        {sqlEngineFamily === 'MYSQL'
+                          ? '🔒 Disabled because MySQL is selected. Switch to PostgreSQL to unlock AlloyDB.'
+                          : 'Disaggregated Colossus log-structured storage, 4x faster OLTP, 100x Columnar Engine & ScaNN Vector Index.'}
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* STEP 2: Version, Tier, Sovereign Region & Strict Compliance Locks */}
+                <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block">
+                    Step 2 · Engine Version, Compute Tier, Sovereign Region & Zero-Trust Locks
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Engine Version
+                      </label>
+                      <select
+                        value={sqlDatabaseVersion}
+                        onChange={(e) => setSqlDatabaseVersion(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        {sqlEngineFamily === 'POSTGRES' ? (
+                          <>
+                            <option value="POSTGRES_16">POSTGRES_16 (Recommended LTS)</option>
+                            <option value="POSTGRES_17">POSTGRES_17 (2026 Latest)</option>
+                            <option value="POSTGRES_15">POSTGRES_15</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="MYSQL_8_4">MYSQL_8_4 (LTS · Native VECTOR)</option>
+                            <option value="MYSQL_8_0">MYSQL_8_0</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Sovereign Region {!isSqlCustom ? '🔒' : ''}
+                      </label>
+                      <select
+                        value={sqlRegion}
+                        onChange={(e) => setSqlRegion(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        <option value="us-central1" disabled={isSqlGdpr}>
+                          {isSqlGdpr ? '🔒 ' : ''}us-central1 (Iowa — US SEC/HIPAA)
+                        </option>
+                        <option value="us-east4" disabled={isSqlGdpr}>
+                          {isSqlGdpr ? '🔒 ' : ''}us-east4 (Virginia — US Financial)
+                        </option>
+                        <option value="europe-west1" disabled={isSqlUsOnly}>
+                          {isSqlUsOnly ? '🔒 ' : ''}europe-west1 (Belgium — EU GDPR)
+                        </option>
+                        <option value="europe-west3" disabled={isSqlUsOnly}>
+                          {isSqlUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt — EU BaFin)
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Compute Machine Tier
+                      </label>
+                      <select
+                        value={sqlTier}
+                        onChange={(e) => setSqlTier(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      >
+                        {sqlArchitecture === 'ALLOYDB' ? (
+                          <>
+                            <option value="alloydb-2vcpu-16gb">AlloyDB 2 vCPU · 16 GB RAM</option>
+                            <option value="alloydb-4vcpu-32gb">AlloyDB 4 vCPU · 32 GB RAM</option>
+                            <option value="alloydb-8vcpu-64gb">AlloyDB 8 vCPU · 64 GB RAM</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="db-perf-optimized-N-2">Enterprise Plus 2 vCPU · 16 GB</option>
+                            <option value="db-perf-optimized-N-4">Enterprise Plus 4 vCPU · 32 GB</option>
+                            <option value="db-custom-2-8192">Enterprise 2 vCPU · 8 GB</option>
+                            <option value="db-f1-micro">Shared Dev db-f1-micro</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        High-Availability Topology {lockRegionalHa ? '🔒' : ''}
+                      </label>
+                      <select
+                        value={sqlAvailabilityType}
+                        disabled={lockRegionalHa}
+                        onChange={(e) => setSqlAvailabilityType(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
+                      >
+                        <option value="REGIONAL">REGIONAL (Multi-Zone Automatic Failover)</option>
+                        <option value="ZONAL" disabled={lockRegionalHa}>
+                          🔒 ZONAL (Single Zone — Forbidden by SLA)
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        Network Exposure {lockPrivateNet ? '🔒' : ''}
+                      </label>
+                      <select
+                        value={sqlNetworkMode}
+                        disabled={lockPrivateNet}
+                        onChange={(e) => setSqlNetworkMode(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
+                      >
+                        <option value="PRIVATE_VPC_ONLY">Private VPC Peering Only (--no-assign-ip)</option>
+                        <option value="PUBLIC_IPV4" disabled={lockPrivateNet}>
+                          🔒 Public IPv4 (Blocked by Zero-Trust)
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                        TLS / mTLS Mode {lockMtls ? '🔒' : ''}
+                      </label>
+                      <select
+                        value={sqlSslMode}
+                        disabled={lockMtls}
+                        onChange={(e) => setSqlSslMode(e.target.value)}
+                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
+                      >
+                        <option value="TRUSTED_CLIENT_CERTIFICATE_REQUIRED">
+                          TRUSTED_CLIENT_CERTIFICATE_REQUIRED (Strict mTLS)
+                        </option>
+                        <option value="ENCRYPTED_ONLY" disabled={lockMtls}>
+                          {lockMtls ? '🔒 ' : ''}ENCRYPTED_ONLY (TLS 1.3 Required)
+                        </option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
