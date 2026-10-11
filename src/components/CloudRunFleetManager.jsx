@@ -1891,9 +1891,12 @@ spec:
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                      <div className="min-w-0">
+                        <label
+                          title="vCPU Allocation per Container Instance"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
                           vCPU Allocation
                         </label>
                         <select
@@ -1904,7 +1907,7 @@ spec:
                               [srv.id]: { ...form, cpu: e.target.value },
                             }))
                           }
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         >
                           <option
                             value="1"
@@ -1929,8 +1932,11 @@ spec:
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      <div className="min-w-0">
+                        <label
+                          title="Memory Limit per Container Instance"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
                           Memory Limit
                         </label>
                         <select
@@ -1941,7 +1947,7 @@ spec:
                               [srv.id]: { ...form, memory: e.target.value },
                             }))
                           }
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         >
                           <option
                             value="256Mi"
@@ -2002,9 +2008,12 @@ spec:
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Min Instances (0 = Scale to $0)
+                      <div className="min-w-0">
+                        <label
+                          title="Min Instances (0 = Scale to $0 Idle)"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
+                          Min Instances (0=$0)
                         </label>
                         <input
                           type="number"
@@ -2020,13 +2029,16 @@ spec:
                               },
                             }))
                           }
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Max Instances (Cost Cap)
+                      <div className="min-w-0">
+                        <label
+                          title="Max Instances (Cost Cap)"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
+                          Max Instances (Cap)
                         </label>
                         <input
                           type="number"
@@ -2042,13 +2054,16 @@ spec:
                               },
                             }))
                           }
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Max Concurrency (req/inst)
+                      <div className="min-w-0">
+                        <label
+                          title="Max Concurrent Requests per Instance"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
+                          Concurrency (req/inst)
                         </label>
                         <input
                           type="number"
@@ -2064,12 +2079,15 @@ spec:
                               },
                             }))
                           }
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      <div className="min-w-0">
+                        <label
+                          title="Container Listening Port"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
                           Container Port
                         </label>
                         <input
@@ -2086,13 +2104,16 @@ spec:
                               },
                             }))
                           }
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Ingress Network Policy
+                      <div className="min-w-0">
+                        <label
+                          title="Ingress Network Policy"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
+                          Ingress Policy
                         </label>
                         <select
                           value={form.ingress || 'INGRESS_TRAFFIC_ALL'}
@@ -2102,7 +2123,7 @@ spec:
                               [srv.id]: { ...form, ingress: e.target.value },
                             }))
                           }
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         >
                           <option value="INGRESS_TRAFFIC_ALL">
                             All Traffic (Public Internet)
@@ -2116,8 +2137,11 @@ spec:
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                      <div className="min-w-0">
+                        <label
+                          title="Startup CPU Boost"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
                           Startup CPU Boost
                         </label>
                         <button
@@ -2131,7 +2155,7 @@ spec:
                               },
                             }))
                           }
-                          className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border text-left ${
+                          className={`w-full h-[34px] rounded-lg px-2.5 text-xs font-mono border text-left flex items-center truncate ${
                             form.startupCpuBoost
                               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                               : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-500'
@@ -2144,9 +2168,12 @@ spec:
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                      <div className="min-w-0">
+                        <label
+                          title="Container Image URI"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
                           Container Image URI
                         </label>
                         <input
@@ -2161,13 +2188,16 @@ spec:
                               },
                             }))
                           }
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                          Environment Variables (KEY=VALUE per line or comma)
+                      <div className="min-w-0">
+                        <label
+                          title="Environment Variables (KEY=VALUE per line or comma)"
+                          className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
+                          Environment Variables (KEY=VALUE)
                         </label>
                         <input
                           type="text"
@@ -2182,7 +2212,7 @@ spec:
                             }))
                           }
                           placeholder="NODE_ENV=production, PORT_MODE=fast"
-                          className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
                     </div>
@@ -2192,9 +2222,9 @@ spec:
                       {/* Direct VPC Egress */}
                       <div className="p-3 rounded-xl bg-cyan-500/[0.05] border border-cyan-500/30 space-y-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-300 flex items-center gap-1.5">
-                            <Network className="w-3.5 h-3.5" />
-                            <span>2026 Direct VPC Egress (`template.vpcAccess`)</span>
+                          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-300 flex items-center gap-1.5 truncate">
+                            <Network className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">2026 Direct VPC Egress (`template.vpcAccess`)</span>
                           </span>
                           <button
                             type="button"
@@ -2207,7 +2237,7 @@ spec:
                                 },
                               }))
                             }
-                            className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                            className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer shrink-0 ${
                               form.enableDirectVpc
                                 ? 'bg-cyan-600 text-white border-cyan-500'
                                 : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-500'
@@ -2220,9 +2250,12 @@ spec:
                         </div>
 
                         {form.enableDirectVpc && (
-                          <div className="grid grid-cols-2 gap-2 pt-1">
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                          <div className="grid grid-cols-2 gap-2 pt-1 items-end">
+                            <div className="min-w-0">
+                              <label
+                                title="VPC Network (--network)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 VPC Network
                               </label>
                               <select
@@ -2236,7 +2269,7 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               >
                                 {projectVpcs.map((v) => (
                                   <option key={v} value={v}>
@@ -2246,8 +2279,11 @@ spec:
                               </select>
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                            <div className="min-w-0">
+                              <label
+                                title="Subnetwork (--subnet)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 Subnetwork
                               </label>
                               <input
@@ -2262,12 +2298,15 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               />
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                            <div className="min-w-0">
+                              <label
+                                title="Egress Routing (--vpc-egress)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 Egress Routing
                               </label>
                               <select
@@ -2281,7 +2320,7 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               >
                                 <option value="PRIVATE_RANGES_ONLY">
                                   private-ranges-only
@@ -2292,8 +2331,11 @@ spec:
                               </select>
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                            <div className="min-w-0">
+                              <label
+                                title="VPC Firewall Network Tags (--network-tags)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 Network Tags
                               </label>
                               <input
@@ -2309,7 +2351,7 @@ spec:
                                   }))
                                 }
                                 placeholder="cloud-run-egress"
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               />
                             </div>
                           </div>
@@ -2319,13 +2361,13 @@ spec:
                       {/* 2026 Storage Volume Mounts (Beta) */}
                       <div className="p-3 rounded-xl bg-amber-500/[0.05] border border-amber-500/30 space-y-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-amber-600 dark:text-amber-300 flex items-center gap-1.5">
-                            <HardDrive className="w-3.5 h-3.5" />
-                            <span>
+                          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-amber-600 dark:text-amber-300 flex items-center gap-1.5 truncate">
+                            <HardDrive className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">
                               2026 Storage Volume Mounts (Beta · GCS / RAM / NFS)
                             </span>
                           </span>
-                          <span className="text-[9.5px] font-mono text-zinc-500">
+                          <span className="text-[9.5px] font-mono text-zinc-500 shrink-0">
                             {form.storageVolumeType &&
                             form.storageVolumeType !== 'NONE'
                               ? form.storageMountPath
@@ -2371,7 +2413,7 @@ spec:
                                     },
                                   }))
                                 }
-                                className={`p-1.5 rounded border text-[10px] font-mono font-bold cursor-pointer ${
+                                className={`p-1.5 rounded border text-[10px] font-mono font-bold cursor-pointer truncate ${
                                   active
                                     ? 'bg-amber-500/20 border-amber-500 text-amber-600 dark:text-amber-300'
                                     : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
@@ -2384,9 +2426,12 @@ spec:
                         </div>
 
                         {form.storageVolumeType === 'GCS_BUCKET' && (
-                          <div className="grid grid-cols-3 gap-2 pt-1">
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                          <div className="grid grid-cols-3 gap-2 pt-1 items-end">
+                            <div className="min-w-0">
+                              <label
+                                title="Cloud Storage Bucket (gcs.bucket)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 GCS Bucket
                               </label>
                               {projectBuckets.length > 0 ? (
@@ -2401,7 +2446,7 @@ spec:
                                       },
                                     }))
                                   }
-                                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                  className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                                 >
                                   {projectBuckets.map((b) => (
                                     <option key={b} value={b}>
@@ -2423,13 +2468,16 @@ spec:
                                     }))
                                   }
                                   placeholder={`${projectId}-bucket`}
-                                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                  className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                                 />
                               )}
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                            <div className="min-w-0">
+                              <label
+                                title="Container Mount Path (mountPath)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 Mount Path
                               </label>
                               <input
@@ -2444,13 +2492,16 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               />
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
-                                Mode
+                            <div className="min-w-0">
+                              <label
+                                title="Access Mode (readOnly)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
+                                Access Mode
                               </label>
                               <button
                                 type="button"
@@ -2463,7 +2514,7 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 cursor-pointer flex items-center justify-center truncate"
                               >
                                 {form.storageReadOnly
                                   ? '🔒 Read-Only'
@@ -2474,9 +2525,12 @@ spec:
                         )}
 
                         {form.storageVolumeType === 'IN_MEMORY' && (
-                          <div className="grid grid-cols-2 gap-2 pt-1">
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                          <div className="grid grid-cols-2 gap-2 pt-1 items-end">
+                            <div className="min-w-0">
+                              <label
+                                title="RAM Disk Size Limit (emptyDir.sizeLimit)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 RAM Size Limit
                               </label>
                               <select
@@ -2490,7 +2544,7 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               >
                                 <option value="256Mi">256Mi</option>
                                 <option value="512Mi">512Mi</option>
@@ -2501,8 +2555,11 @@ spec:
                               </select>
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                            <div className="min-w-0">
+                              <label
+                                title="Container Mount Path (mountPath)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 Mount Path
                               </label>
                               <input
@@ -2517,16 +2574,19 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               />
                             </div>
                           </div>
                         )}
 
                         {form.storageVolumeType === 'NFS_FILESTORE' && (
-                          <div className="grid grid-cols-3 gap-2 pt-1">
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                          <div className="grid grid-cols-3 gap-2 pt-1 items-end">
+                            <div className="min-w-0">
+                              <label
+                                title="Filestore / NFS Server IP (nfs.server)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 NFS Server IP
                               </label>
                               <input
@@ -2541,12 +2601,15 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               />
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                            <div className="min-w-0">
+                              <label
+                                title="NFS Export Share Path (nfs.path)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 Export Path
                               </label>
                               <input
@@ -2561,12 +2624,15 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               />
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono text-zinc-500 mb-0.5">
+                            <div className="min-w-0">
+                              <label
+                                title="Container Mount Path (mountPath)"
+                                className="block text-[10px] font-mono text-zinc-500 mb-0.5 truncate whitespace-nowrap"
+                              >
                                 Mount Path
                               </label>
                               <input
@@ -2581,7 +2647,7 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                               />
                             </div>
                           </div>

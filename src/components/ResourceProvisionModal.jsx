@@ -3779,9 +3779,12 @@ export default function ResourceProvisionModal({
 
                 {runSourceMode === 'GITHUB_REPO' && (
                   <div className="space-y-2.5 pt-1 border-t border-blue-500/20">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <div className="sm:col-span-2">
-                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                      <div className="sm:col-span-2 min-w-0">
+                        <label
+                          title="GitHub Repository HTTPS URL"
+                          className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
                           GitHub Repository HTTPS URL
                         </label>
                         <input
@@ -3789,11 +3792,14 @@ export default function ResourceProvisionModal({
                           value={runGhRepoUrl}
                           onChange={(e) => setRunGhRepoUrl(e.target.value)}
                           placeholder="https://github.com/owner/repo.git"
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       </div>
-                      <div>
-                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                      <div className="min-w-0">
+                        <label
+                          title="Git Branch & Context Directory"
+                          className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
                           Branch & Context Dir
                         </label>
                         <div className="grid grid-cols-2 gap-1">
@@ -3802,28 +3808,31 @@ export default function ResourceProvisionModal({
                             value={runGhBranch}
                             onChange={(e) => setRunGhBranch(e.target.value)}
                             placeholder="main"
-                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                            className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                           />
                           <input
                             type="text"
                             value={runGhContextDir}
                             onChange={(e) => setRunGhContextDir(e.target.value)}
                             placeholder="."
-                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                            className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                           />
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
+                      <div className="min-w-0">
+                        <label
+                          title="Cloud Build Containerization Method"
+                          className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
                           Cloud Build Method
                         </label>
                         <select
                           value={runGhBuildMethod}
                           onChange={(e) => setRunGhBuildMethod(e.target.value)}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           <option value="BUILDPACKS">
                             Zero-Dockerfile Google Cloud Buildpacks
@@ -3833,15 +3842,18 @@ export default function ResourceProvisionModal({
                           </option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                          Target Artifact Registry Repo (Auto-Created)
+                      <div className="min-w-0">
+                        <label
+                          title="Target Artifact Registry Repository (Auto-Created)"
+                          className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                        >
+                          Artifact Registry Repo (Auto-Created)
                         </label>
                         <input
                           type="text"
                           value={runGhArRepo}
                           onChange={(e) => setRunGhArRepo(e.target.value)}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       </div>
                     </div>
@@ -3889,12 +3901,19 @@ export default function ResourceProvisionModal({
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-zinc-500 mb-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  <div className="sm:col-span-2 min-w-0">
+                    <label
+                      title={
+                        runSourceMode === 'GITHUB_REPO'
+                          ? 'Target Artifact Registry Image URI (Auto-Built by Cloud Build)'
+                          : 'Container Image URI (Artifact Registry / GCR / Docker)'
+                      }
+                      className="block text-xs font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                    >
                       {runSourceMode === 'GITHUB_REPO'
-                        ? 'Target Artifact Registry Image URI (Auto-Built by Cloud Build)'
-                        : 'Container Image URI (Artifact Registry / GCR / Docker)'}
+                        ? 'Target Artifact Registry Image URI (Auto-Built)'
+                        : 'Container Image URI (Artifact Registry / Docker)'}
                     </label>
                     <input
                       type="text"
@@ -3905,11 +3924,14 @@ export default function ResourceProvisionModal({
                       }
                       readOnly={runSourceMode === 'GITHUB_REPO'}
                       onChange={(e) => setContainerImage(e.target.value)}
-                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                      className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-500 mb-1">
+                  <div className="min-w-0">
+                    <label
+                      title="Container Listening Port (PORT)"
+                      className="block text-xs font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                    >
                       Container Port
                     </label>
                     <input
@@ -3918,7 +3940,7 @@ export default function ResourceProvisionModal({
                       max={65535}
                       value={runPort}
                       onChange={(e) => setRunPort(Number(e.target.value))}
-                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                      className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                     />
                   </div>
                 </div>
@@ -4069,15 +4091,18 @@ export default function ResourceProvisionModal({
               </div>
 
               {/* CPU, Memory, Min/Max Instances, Concurrency */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 items-end">
+                <div className="min-w-0">
+                  <label
+                    title="vCPU Allocation per Container Instance"
+                    className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                  >
                     vCPU
                   </label>
                   <select
                     value={runCpu}
                     onChange={(e) => setRunCpu(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
                     <option
                       value="1"
@@ -4096,14 +4121,17 @@ export default function ResourceProvisionModal({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                <div className="min-w-0">
+                  <label
+                    title="Memory Limit per Container Instance"
+                    className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                  >
                     Memory
                   </label>
                   <select
                     value={runMemory}
                     onChange={(e) => setRunMemory(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
                     <option
                       value="256Mi"
@@ -4134,8 +4162,11 @@ export default function ResourceProvisionModal({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                <div className="min-w-0">
+                  <label
+                    title="Minimum Instances (0 = Scale to $0 Idle)"
+                    className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                  >
                     Min Inst (0=$0)
                   </label>
                   <input
@@ -4144,12 +4175,15 @@ export default function ResourceProvisionModal({
                     max={50}
                     value={runMinInstances}
                     onChange={(e) => setRunMinInstances(Number(e.target.value))}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                <div className="min-w-0">
+                  <label
+                    title="Maximum Instances (Cost & Scaling Cap)"
+                    className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                  >
                     Max Inst (Cap)
                   </label>
                   <input
@@ -4158,12 +4192,15 @@ export default function ResourceProvisionModal({
                     max={200}
                     value={runMaxInstances}
                     onChange={(e) => setRunMaxInstances(Number(e.target.value))}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
 
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                <div className="col-span-2 sm:col-span-1 min-w-0">
+                  <label
+                    title="Max Concurrent Requests per Instance"
+                    className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                  >
                     Concurrency
                   </label>
                   <input
@@ -4172,21 +4209,24 @@ export default function ResourceProvisionModal({
                     max={1000}
                     value={runConcurrency}
                     onChange={(e) => setRunConcurrency(Number(e.target.value))}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
               </div>
 
               {/* Ingress, IAM Public/Private, Startup CPU Boost & Environment Variables */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div className="min-w-0">
+                  <label
+                    title="Ingress Network Traffic Control"
+                    className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                  >
                     Ingress Control
                   </label>
                   <select
                     value={runIngress}
                     onChange={(e) => setRunIngress(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
                     <option value="INGRESS_TRAFFIC_ALL">
                       All Traffic (Public Internet)
@@ -4200,14 +4240,17 @@ export default function ResourceProvisionModal({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                    Authentication (IAM Invoker)
+                <div className="min-w-0">
+                  <label
+                    title="Authentication (IAM Invoker Policy)"
+                    className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                  >
+                    Authentication (IAM)
                   </label>
                   <button
                     type="button"
                     onClick={() => setRunAllowUnauth((v) => !v)}
-                    className={`w-full rounded-[8px] px-3 py-[8px] text-xs font-mono border text-left transition-colors ${
+                    className={`w-full h-[34px] rounded-[8px] px-3 text-xs font-mono border text-left transition-colors flex items-center truncate ${
                       runAllowUnauth
                         ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
                         : 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
@@ -4219,14 +4262,17 @@ export default function ResourceProvisionModal({
                   </button>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                <div className="min-w-0">
+                  <label
+                    title="Cold-Start Startup CPU Boost"
+                    className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
+                  >
                     Cold-Start CPU Boost
                   </label>
                   <button
                     type="button"
                     onClick={() => setRunStartupBoost((v) => !v)}
-                    className={`w-full rounded-[8px] px-3 py-[8px] text-xs font-mono border text-left transition-colors ${
+                    className={`w-full h-[34px] rounded-[8px] px-3 text-xs font-mono border text-left transition-colors flex items-center truncate ${
                       runStartupBoost
                         ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400'
                         : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300'
@@ -4272,15 +4318,18 @@ export default function ResourceProvisionModal({
                 </p>
 
                 {runEnableDirectVpc && (
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1 border-t border-cyan-500/20">
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        VPC Network (`--network`)
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end pt-1 border-t border-cyan-500/20">
+                    <div className="min-w-0">
+                      <label
+                        title="VPC Network (--network)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        VPC Network
                       </label>
                       <select
                         value={runVpcNetwork}
                         onChange={(e) => setRunVpcNetwork(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         {projectVpcs.map((v) => (
                           <option key={v} value={v}>
@@ -4290,47 +4339,56 @@ export default function ResourceProvisionModal({
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Subnetwork (`--subnet`)
+                    <div className="min-w-0">
+                      <label
+                        title="Subnetwork (--subnet)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Subnetwork
                       </label>
                       <input
                         type="text"
                         value={runVpcSubnetwork}
                         onChange={(e) => setRunVpcSubnetwork(e.target.value)}
                         placeholder="default"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        VPC Egress Routing (`--vpc-egress`)
+                    <div className="min-w-0">
+                      <label
+                        title="VPC Egress Routing (--vpc-egress)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Egress Routing
                       </label>
                       <select
                         value={runVpcEgress}
                         onChange={(e) => setRunVpcEgress(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         <option value="PRIVATE_RANGES_ONLY">
-                          private-ranges-only (RFC1918 Private IPs)
+                          private-ranges-only (Private IPs)
                         </option>
                         <option value="ALL_TRAFFIC">
-                          all-traffic (Route 100% via VPC / Cloud NAT)
+                          all-traffic (100% via VPC / NAT)
                         </option>
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Firewall Network Tags (`--network-tags`)
+                    <div className="min-w-0">
+                      <label
+                        title="Firewall Network Tags (--network-tags)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Network Tags
                       </label>
                       <input
                         type="text"
                         value={runVpcTags}
                         onChange={(e) => setRunVpcTags(e.target.value)}
                         placeholder="cloud-run-egress,internal-api"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                   </div>
@@ -4356,27 +4414,27 @@ export default function ResourceProvisionModal({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     {
                       id: 'NONE',
                       title: '🚫 No Volume',
-                      sub: 'Stateless container only',
+                      sub: 'Stateless container',
                     },
                     {
                       id: 'GCS_BUCKET',
-                      title: '🪣 Cloud Storage FUSE',
-                      sub: `Mount gs:// bucket (${projectBuckets.length} in project)`,
+                      title: '🪣 Cloud Storage',
+                      sub: `FUSE (${projectBuckets.length} buckets)`,
                     },
                     {
                       id: 'IN_MEMORY',
-                      title: '⚡ In-Memory RAM Disk',
-                      sub: 'Ultra-fast /mnt/ramdisk scratch',
+                      title: '⚡ RAM Disk',
+                      sub: 'In-memory /mnt/ramdisk',
                     },
                     {
                       id: 'NFS_FILESTORE',
-                      title: '📁 NFS / Cloud Filestore',
-                      sub: 'Shared POSIX NFSv3 over VPC',
+                      title: '📁 NFS Filestore',
+                      sub: 'POSIX NFSv3 over VPC',
                     },
                   ].map((volOpt) => {
                     const active = runStorageVolumeType === volOpt.id;
@@ -4385,16 +4443,16 @@ export default function ResourceProvisionModal({
                         key={volOpt.id}
                         type="button"
                         onClick={() => handleSelectRunStorageType(volOpt.id)}
-                        className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
+                        className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer flex flex-col justify-between min-w-0 ${
                           active
                             ? 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-300 shadow-sm'
                             : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
                         }`}
                       >
-                        <div className="text-[11px] font-bold font-mono">
+                        <div className="text-[11px] font-bold font-mono truncate">
                           {volOpt.title}
                         </div>
-                        <div className="text-[9.5px] text-zinc-500 mt-0.5">
+                        <div className="text-[9.5px] text-zinc-500 mt-0.5 truncate">
                           {volOpt.sub}
                         </div>
                       </button>
@@ -4403,27 +4461,28 @@ export default function ResourceProvisionModal({
                 </div>
 
                 {runStorageVolumeType === 'GCS_BUCKET' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1 border-t border-amber-500/20">
-                    <div className="sm:col-span-2">
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Target Cloud Storage Bucket (`gcs.bucket`)
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end pt-1 border-t border-amber-500/20">
+                    <div className="sm:col-span-2 min-w-0">
+                      <label
+                        title="Target Cloud Storage Bucket (gcs.bucket)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Cloud Storage Bucket (`gcs.bucket`)
                       </label>
                       {projectBuckets.length > 0 ? (
-                        <div className="flex gap-1.5">
-                          <select
-                            value={runStorageGcsBucket}
-                            onChange={(e) =>
-                              setRunStorageGcsBucket(e.target.value)
-                            }
-                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
-                          >
-                            {projectBuckets.map((b) => (
-                              <option key={b} value={b}>
-                                🪣 gs://{b}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <select
+                          value={runStorageGcsBucket}
+                          onChange={(e) =>
+                            setRunStorageGcsBucket(e.target.value)
+                          }
+                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          {projectBuckets.map((b) => (
+                            <option key={b} value={b}>
+                              🪣 gs://{b}
+                            </option>
+                          ))}
+                        </select>
                       ) : (
                         <input
                           type="text"
@@ -4432,32 +4491,38 @@ export default function ResourceProvisionModal({
                             setRunStorageGcsBucket(e.target.value)
                           }
                           placeholder={`${projectId}-models-bucket`}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       )}
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Container Mount Path (`mountPath`)
+                    <div className="min-w-0">
+                      <label
+                        title="Container Mount Path (volumeMounts[].mountPath)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Mount Path
                       </label>
                       <input
                         type="text"
                         value={runStorageMountPath}
                         onChange={(e) => setRunStorageMountPath(e.target.value)}
                         placeholder="/mnt/gcs"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Mount Mode (`readOnly`)
+                    <div className="min-w-0">
+                      <label
+                        title="Mount Mode (gcs.readOnly)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Access Mode
                       </label>
                       <button
                         type="button"
                         onClick={() => setRunStorageReadOnly((v) => !v)}
-                        className={`w-full rounded-[8px] px-2.5 py-1.5 text-xs font-mono border text-left cursor-pointer ${
+                        className={`w-full h-[34px] rounded-[8px] px-2.5 text-xs font-mono border text-left cursor-pointer truncate ${
                           runStorageReadOnly
                             ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
                             : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
@@ -4472,10 +4537,13 @@ export default function ResourceProvisionModal({
                 )}
 
                 {runStorageVolumeType === 'IN_MEMORY' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 border-t border-amber-500/20">
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Volume Name (`volumes[].name`)
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end pt-1 border-t border-amber-500/20">
+                    <div className="min-w-0">
+                      <label
+                        title="Volume Name (volumes[].name)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Volume Name
                       </label>
                       <input
                         type="text"
@@ -4483,20 +4551,23 @@ export default function ResourceProvisionModal({
                         onChange={(e) =>
                           setRunStorageVolumeName(e.target.value)
                         }
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        RAM Disk Size Limit (`emptyDir.sizeLimit`)
+                    <div className="min-w-0">
+                      <label
+                        title="RAM Disk Size Limit (emptyDir.sizeLimit)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        RAM Size Limit
                       </label>
                       <select
                         value={runStorageMemorySizeLimit}
                         onChange={(e) =>
                           setRunStorageMemorySizeLimit(e.target.value)
                         }
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         <option value="256Mi">256Mi RAM Disk</option>
                         <option value="512Mi">512Mi RAM Disk</option>
@@ -4507,70 +4578,85 @@ export default function ResourceProvisionModal({
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Container Mount Path (`mountPath`)
+                    <div className="min-w-0">
+                      <label
+                        title="Container Mount Path (volumeMounts[].mountPath)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Mount Path
                       </label>
                       <input
                         type="text"
                         value={runStorageMountPath}
                         onChange={(e) => setRunStorageMountPath(e.target.value)}
                         placeholder="/mnt/ramdisk"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                   </div>
                 )}
 
                 {runStorageVolumeType === 'NFS_FILESTORE' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1 border-t border-amber-500/20">
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        NFS / Filestore IP (`nfs.server`)
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end pt-1 border-t border-amber-500/20">
+                    <div className="min-w-0">
+                      <label
+                        title="NFS / Filestore Server IP (nfs.server)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        NFS Server IP
                       </label>
                       <input
                         type="text"
                         value={runStorageNfsServer}
                         onChange={(e) => setRunStorageNfsServer(e.target.value)}
                         placeholder="10.0.0.2"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Export Path (`nfs.path`)
+                    <div className="min-w-0">
+                      <label
+                        title="Export Path (nfs.path)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Export Path
                       </label>
                       <input
                         type="text"
                         value={runStorageNfsPath}
                         onChange={(e) => setRunStorageNfsPath(e.target.value)}
                         placeholder="/vol1"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Container Mount Path (`mountPath`)
+                    <div className="min-w-0">
+                      <label
+                        title="Container Mount Path (volumeMounts[].mountPath)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Mount Path
                       </label>
                       <input
                         type="text"
                         value={runStorageMountPath}
                         onChange={(e) => setRunStorageMountPath(e.target.value)}
                         placeholder="/mnt/nfs"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
-                        Mount Mode (`readOnly`)
+                    <div className="min-w-0">
+                      <label
+                        title="Mount Mode (nfs.readOnly)"
+                        className="block text-[10.5px] font-mono text-zinc-500 mb-1 truncate whitespace-nowrap"
+                      >
+                        Access Mode
                       </label>
                       <button
                         type="button"
                         onClick={() => setRunStorageReadOnly((v) => !v)}
-                        className={`w-full rounded-[8px] px-2.5 py-1.5 text-xs font-mono border text-left cursor-pointer ${
+                        className={`w-full h-[34px] rounded-[8px] px-2.5 text-xs font-mono border text-left cursor-pointer truncate ${
                           runStorageReadOnly
                             ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300'
                             : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300'
