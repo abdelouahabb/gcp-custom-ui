@@ -116,13 +116,13 @@ export default function GeminiCopilotModal({
           description: `${fw.description || ''} [Locked to Google IAP 35.235.240.0/20 via Health Scanner]`.trim(),
         }
       );
-      const msg = `🔒 Locked firewall "${fw.name}" to Google IAP (35.235.240.0/20)!`;
+      const msg = `Locked firewall "${fw.name}" to Google IAP (35.235.240.0/20)!`;
       setActionBanner(msg);
       if (onShowToast) onShowToast(msg);
       if (onRefresh) await onRefresh();
     } catch (err) {
       setActionBanner(
-        `⚠️ Failed to lock ${fw.name}: ${err.response?.data?.error || err.message}`
+        `Failed to lock ${fw.name}: ${err.response?.data?.error || err.message}`
       );
     } finally {
       setBusyActionId(null);
@@ -141,14 +141,14 @@ export default function GeminiCopilotModal({
       );
       const msg =
         res.data?.message ||
-        `🧹 Remediated ${zombie.name} (+$${Number(zombie.annualCostUsd || 0).toFixed(2)}/yr saved)!`;
+        `Remediated ${zombie.name} (+$${Number(zombie.annualCostUsd || 0).toFixed(2)}/yr saved)!`;
       setActionBanner(msg);
       if (onShowToast) onShowToast(msg);
       await runLiveProjectAudit();
       if (onRefresh) await onRefresh();
     } catch (err) {
       setActionBanner(
-        `⚠️ Remediation error: ${err.response?.data?.error || err.message}`
+        `Remediation error: ${err.response?.data?.error || err.message}`
       );
     } finally {
       setBusyActionId(null);
@@ -178,7 +178,7 @@ export default function GeminiCopilotModal({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 font-mono">
-                  🛡️ 1-Tap Project Health, Drift & FinOps Scanner
+                  1-Tap Project Health, Drift & FinOps Scanner
                 </h3>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
                   {projectId}
@@ -191,8 +191,8 @@ export default function GeminiCopilotModal({
                   }`}
                 >
                   {totalFindings === 0
-                    ? '✅ 0 Active Findings'
-                    : `⚠️ ${totalFindings} Actionable Finding${totalFindings > 1 ? 's' : ''}`}
+                    ? '0 Active Findings'
+                    : `${totalFindings} Actionable Finding${totalFindings > 1 ? 's' : ''}`}
                 </span>
               </div>
               <p className="text-[11px] text-zinc-500">
@@ -211,7 +211,7 @@ export default function GeminiCopilotModal({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer hover:bg-zinc-700"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${loadingScan ? 'animate-spin text-cyan-400' : ''}`}
+                className={`w-3.5 h-3.5 ${loadingScan ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
               />
               <span>{loadingScan ? 'Scanning...' : 'Re-Scan Live'}</span>
             </button>

@@ -229,7 +229,7 @@ export default function XtermWebSshTerminal({
         activeVm.status !== 'RUNNING'
       ) {
         term.writeln(
-          `\x1b[38;5;214m⚠️  VM "${activeVm.name}" is currently ${activeVm.status}. Start the VM to SSH into it, or switch engine to "Local GCloud / Bash PTY".\x1b[0m`
+          `\x1b[38;5;214mVM "${activeVm.name}" is currently ${activeVm.status}. Start the VM to SSH into it, or switch engine to "Local GCloud / Bash PTY".\x1b[0m`
         );
       }
 
@@ -383,7 +383,7 @@ export default function XtermWebSshTerminal({
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
           </div>
-          <Terminal className="w-4 h-4 text-emerald-400 shrink-0" />
+          <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
           <span className="font-mono text-xs font-bold text-zinc-100 truncate">
             {isCloudRun && cloudRunService
               ? `root@${cloudRunService.name} (${cloudRunService.region} · Cloud Run Container SSH)`
@@ -584,13 +584,13 @@ export default function XtermWebSshTerminal({
                 className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-emerald-500"
               >
                 <option value="cloudrun_ssh">
-                  🚀 gcloud beta run services ssh (Container SSH PTY)
+                  gcloud beta run services ssh (Container SSH PTY)
                 </option>
                 <option value="cloudrun_proxy">
-                  🔌 gcloud beta run services proxy (Auth Local Proxy PTY)
+                  gcloud beta run services proxy (Auth Local Proxy PTY)
                 </option>
                 <option value="cloudrun_logs">
-                  📜 Live Cloud Run Logs + Container Admin PTY
+                  Live Cloud Run Logs + Container Admin PTY
                 </option>
               </select>
             ) : (
@@ -600,19 +600,19 @@ export default function XtermWebSshTerminal({
                 className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-emerald-500"
               >
                 <option value="auto">
-                  ⚡ Auto (Native SSH2 + gcloud PTY Fallback)
+                  Auto (Native SSH2 + gcloud PTY Fallback)
                 </option>
                 <option value="ssh2">
-                  🔑 Direct SSH2 Protocol (Node.js ssh2 :22)
+                  Direct SSH2 Protocol (Node.js ssh2 :22)
                 </option>
                 <option value="gcloud_pty">
-                  🛡️ gcloud compute ssh Full Linux PTY
+                  gcloud compute ssh Full Linux PTY
                 </option>
                 <option value="iap">
-                  🔒 Cloud IAP TCP Tunnel (--tunnel-through-iap)
+                  Cloud IAP TCP Tunnel (--tunnel-through-iap)
                 </option>
                 <option value="cloud_shell">
-                  💻 Local GCloud / Bash PTY Shell
+                  Local GCloud / Bash PTY Shell
                 </option>
               </select>
             )}
@@ -794,8 +794,8 @@ export default function XtermWebSshTerminal({
           <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-500">
             <span>
               {isCloudRun
-                ? '🟢 Real Cloud Run Interactive Container SSH (@xterm/xterm + gcloud beta run services ssh PTY)'
-                : '🟢 Real Full-Duplex PTY (@xterm/xterm + WebSocket SSH2 / Linux pty.openpty) — supports interactive apt update, vim, htop, nano, tab-completion & Ctrl+C'}
+                ? 'Real Cloud Run Interactive Container SSH (@xterm/xterm + gcloud beta run services ssh PTY)'
+                : 'Real Full-Duplex PTY (@xterm/xterm + WebSocket SSH2 / Linux pty.openpty) — supports interactive apt update, vim, htop, nano, tab-completion & Ctrl+C'}
             </span>
             <span>{connStatus.message}</span>
           </div>

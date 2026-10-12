@@ -1072,11 +1072,11 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
     try {
       const cat = await syncLiveGcpPricingCatalog(projectId);
       setStatusBanner(
-        `✅ Synced live GCP Billing & Accelerator Catalog (${cat?.skusInspected || 350} SKUs, ${cat?.acceleratorZonesInspected || 121} GPU zones inspected).`
+        `Synced live GCP Billing & Accelerator Catalog (${cat?.skusInspected || 350} SKUs, ${cat?.acceleratorZonesInspected || 121} GPU zones inspected).`
       );
     } catch (err) {
       setStatusBanner(
-        `⚠️ Live API sync fallback applied (${err.response?.data?.error || err.message})`
+        `Live API sync fallback applied (${err.response?.data?.error || err.message})`
       );
     } finally {
       setIsSyncing(false);
@@ -1135,13 +1135,13 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
       regionalMultipliers: hikedMultipliers,
     });
     setStatusBanner(
-      '⚡ Simulated +18% GPU & +15% Non-Tier-1 Regional Price Hike — all migration ROIs & 30-day forecasts updated!'
+      'Simulated +18% GPU & +15% Non-Tier-1 Regional Price Hike — all migration ROIs & 30-day forecasts updated!'
     );
   };
 
   const handleReset = async () => {
     await resetLivePricingCatalog();
-    setStatusBanner('🔄 Restored default Google Cloud baseline pricing & regional SKU matrix.');
+    setStatusBanner('Restored default Google Cloud baseline pricing & regional SKU matrix.');
   };
 
   const sourceBadgeColor =
@@ -1184,7 +1184,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
               fontFamily: 'var(--font-mono)',
             }}
           >
-            💲 PRICING ENGINE: {meta.source}
+            PRICING ENGINE: {meta.source}
           </span>
           <span style={{ fontSize: 11, color: '#cbd5e1', fontFamily: 'var(--font-mono)' }}>
             vCPU: <strong style={{ color: '#38bdf8' }}>${unitPricing.vcpuPerHourUsd}/hr</strong> · L4 GPU:{' '}
@@ -1213,7 +1213,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
                 border: '1px solid rgba(244, 63, 94, 0.4)',
               }}
             >
-              ⚠️ {meta.driftAlerts.length} Price Drift{meta.driftAlerts.length > 1 ? 's' : ''} Detected
+              {meta.driftAlerts.length} Price Drift{meta.driftAlerts.length > 1 ? 's' : ''} Detected
             </span>
           )}
         </div>
@@ -1239,7 +1239,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
             title="Fetch live SKU pricing and GPU regional availability from Google Cloud Billing & Compute Accelerator APIs"
           >
             <RefreshCw size={12} className={isSyncing ? 'spin' : ''} />
-            {isSyncing ? 'Syncing GCP SKUs...' : '🔄 Sync Live GCP Pricing & SKUs'}
+            {isSyncing ? 'Syncing GCP SKUs...' : 'Sync Live GCP Pricing & SKUs'}
           </button>
 
           <button
@@ -1260,7 +1260,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
                 : '1px solid rgba(148, 163, 184, 0.3)',
             }}
           >
-            🎛️ {showEditor ? 'Hide Variable Rate Matrix' : 'Variable Rates & CUD%'}
+            {showEditor ? 'Hide Variable Rate Matrix' : 'Variable Rates & CUD%'}
           </button>
         </div>
       </div>
@@ -1318,7 +1318,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: '#f8fafc' }}>
-              ⚡ Live Variable Unit Pricing & Enterprise CUD Override (Updates All Calculators Instantly)
+              Live Variable Unit Pricing & Enterprise CUD Override (Updates All Calculators Instantly)
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <button
@@ -1335,7 +1335,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
                   border: '1px solid rgba(244, 63, 94, 0.4)',
                 }}
               >
-                📈 Simulate +18% GPU / Price Hike
+                Simulate +18% GPU / Price Hike
               </button>
               <button
                 type="button"
@@ -1445,7 +1445,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: '#cbd5e1' }}>
-                🌍 Region Multiplier & GPU SKU Override:
+                Region Multiplier & GPU SKU Override:
               </span>
               <select
                 value={inspectRegion}
@@ -1531,7 +1531,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
                   }}
                   title="Click to toggle hardware SKU availability in this region"
                 >
-                  {cap.active ? '✅' : '🚫'} {cap.label}
+                  {cap.active ? '✓' : '×'} {cap.label}
                 </button>
               ))}
             </div>
@@ -1550,7 +1550,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
               }}
             >
               <strong style={{ color: '#fda4af' }}>
-                📡 Active Price Drift vs Hardcoded Baseline ({meta.driftAlerts.length}):
+                Active Price Drift vs Hardcoded Baseline ({meta.driftAlerts.length}):
               </strong>{' '}
               {meta.driftAlerts.slice(0, 6).map((d, idx) => (
                 <span key={idx} style={{ marginRight: 10, fontFamily: 'var(--font-mono)' }}>
@@ -2818,7 +2818,7 @@ export default function GlobalNetworkWorldMap({
                 className="px-3 py-1.5 rounded-lg text-xs font-mono font-extrabold bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-sm cursor-pointer flex items-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>🔮 Pre-Crime Bill & Dream Stack</span>
+                <span>Pre-Crime Bill & Dream Stack</span>
               </button>
             )}
           </div>
@@ -2828,7 +2828,7 @@ export default function GlobalNetworkWorldMap({
         <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5 text-cyan-500" />
+              <RefreshCw className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
                 UI Render Refresh Rate:
               </span>
@@ -2896,25 +2896,25 @@ export default function GlobalNetworkWorldMap({
           {[
             {
               id: 'LIVE_MIX',
-              title: '🌐 Global Live Traffic & VPC Mesh',
+              title: 'Global Live Traffic & VPC Mesh',
               desc: 'HTTPS :443, ICMP Ping, Inter-Region Fiber & Background Scans',
               color: 'cyan',
             },
             {
               id: 'SSH_BRUTEFORCE',
-              title: '🚨 Global SSH/RDP Brute-Force Wave',
+              title: 'Global SSH/RDP Brute-Force Wave',
               desc: 'Tests whether your VPC Firewall blocks public :22 & :3389',
               color: 'rose',
             },
             {
               id: 'IAP_ZERO_TRUST',
-              title: '🔒 IAP Zero-Trust Tunnel Verification',
+              title: 'IAP Zero-Trust Tunnel Verification',
               desc: 'Compares Google IAP (35.235.240.0/20) vs Public Internet SSH',
               color: 'emerald',
             },
             {
               id: 'GLOBAL_LOAD_TEST',
-              title: '⚡ Multi-Region Edge Surge (:443)',
+              title: 'Multi-Region Edge Surge (:443)',
               desc: 'High-volume GCLB & global user HTTPS routing into active regions',
               color: 'blue',
             },
@@ -3001,16 +3001,16 @@ export default function GlobalNetworkWorldMap({
             {/* Continent Camera Presets */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-zinc-400 flex items-center gap-1 font-bold">
-                <Navigation className="w-3 h-3 text-cyan-400" />
+                <Navigation className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                 <span>Zoom To:</span>
               </span>
               {[
-                { id: 'WORLD', label: '🌍 World (1x)' },
-                { id: 'AMERICAS', label: '🌎 North America' },
-                { id: 'SOUTH_AMERICA', label: '🌎 South America' },
-                { id: 'EUROPE', label: '🇪🇺 Europe (12)' },
-                { id: 'MIDDLE_EAST', label: '🌍 Middle East & Africa' },
-                { id: 'ASIA_PACIFIC', label: '🌏 Asia & Oceania (11)' },
+                { id: 'WORLD', label: 'World (1x)' },
+                { id: 'AMERICAS', label: 'North America' },
+                { id: 'SOUTH_AMERICA', label: 'South America' },
+                { id: 'EUROPE', label: 'Europe (12)' },
+                { id: 'MIDDLE_EAST', label: 'Middle East & Africa' },
+                { id: 'ASIA_PACIFIC', label: 'Asia & Oceania (11)' },
               ].map((c) => (
                 <button
                   key={c.id}
@@ -3046,7 +3046,7 @@ export default function GlobalNetworkWorldMap({
                         const cnt = regionWorkloadsMap[r.id]?.totalCount || 0;
                         return (
                           <option key={r.id} value={r.id}>
-                            🎯 {r.name} — {r.city}
+                            {r.name} — {r.city}
                             {cnt > 0 ? ` · [${cnt} live]` : ''}
                           </option>
                         );
@@ -3066,7 +3066,7 @@ export default function GlobalNetworkWorldMap({
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                {spotlightMode ? '🎯 Spotlight Focus: ON' : '👁️ Show All Labels'}
+                {spotlightMode ? 'Spotlight Focus: ON' : 'Show All Labels'}
               </button>
 
               <div className="inline-flex items-center rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
@@ -3108,9 +3108,9 @@ export default function GlobalNetworkWorldMap({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-zinc-400 font-bold">Map Lens:</span>
               {[
-                { id: 'TRAFFIC', label: '📡 Live Network & Firewall' },
-                { id: 'CARBON_GRID', label: '🌱 Carbon-Free Grid (CFE %)' },
-                { id: 'SPOT_ARBITRAGE', label: '💸 Spot VM Price Heatmap' },
+                { id: 'TRAFFIC', label: 'Live Network & Firewall' },
+                { id: 'CARBON_GRID', label: 'Carbon-Free Grid (CFE %)' },
+                { id: 'SPOT_ARBITRAGE', label: 'Spot VM Price Heatmap' },
               ].map((lens) => (
                 <button
                   key={lens.id}
@@ -3135,7 +3135,7 @@ export default function GlobalNetworkWorldMap({
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400'
                 }`}
               >
-                🔐 Hybrid VPN/IAP Tunnel
+                Hybrid VPN/IAP Tunnel
               </button>
             </div>
 
@@ -3150,7 +3150,7 @@ export default function GlobalNetworkWorldMap({
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400'
                 }`}
               >
-                📏 Fiber RTT & Egress Laser
+                Fiber RTT & Egress Laser
               </button>
               {routeAnalyzerEnabled && (
                 <>
@@ -3214,9 +3214,9 @@ export default function GlobalNetworkWorldMap({
                   : 'bg-zinc-950/80 border-zinc-800 text-zinc-300'
               }`}
             >
-              <Move className="w-3 h-3 text-cyan-400" />
+              <Move className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
               <span>
-                {isPointerInsideMap ? '🔒 Map Controls Active: ' : ''}
+                {isPointerInsideMap ? 'Map Controls Active: ' : ''}
                 Wheel to Zoom ({zoom.toFixed(1)}x) · Drag or Arrows/WASD to Pan ·
                 +/−/0 Shortcuts
               </span>
@@ -3225,7 +3225,7 @@ export default function GlobalNetworkWorldMap({
             {/* Chaos Outage Active Alert Pill */}
             {(severedRegions.length > 0 || severedZones.length > 0) && (
               <div className="absolute top-10 left-3 z-10 flex items-center gap-2 px-3 py-1 rounded-lg bg-rose-950/90 border border-rose-500 text-rose-200 text-[10px] font-mono font-bold shadow-lg">
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-400 animate-bounce" />
+                <AlertTriangle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-bounce" />
                 <span>
                   CHAOS MODE: {severedRegions.length} Region(s), {severedZones.length}{' '}
                   Zone(s) Severed · {chaosBlastRadius.impactedResources} Project
@@ -3250,7 +3250,7 @@ export default function GlobalNetworkWorldMap({
                 onClick={handleResetMapCamera}
                 className="absolute top-2.5 right-3 z-10 px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
               >
-                🌍 Reset to Global View (1.0x)
+                Reset to Global View (1.0x)
               </button>
             )}
 
@@ -3411,7 +3411,7 @@ export default function GlobalNetworkWorldMap({
                       fontWeight="bold"
                       fontFamily="monospace"
                     >
-                      🔐 On-Prem / IAP Gateway
+                      On-Prem / IAP Gateway
                     </text>
                   </g>
                 </g>
@@ -3451,7 +3451,7 @@ export default function GlobalNetworkWorldMap({
                         fontWeight="bold"
                         fontFamily="monospace"
                       >
-                        {`⚡ ${routeTelemetry.rttMs}ms RTT · ${routeTelemetry.fiberKm.toLocaleString()}km · $${routeTelemetry.ratePerGb}/GB`}
+                        {`${routeTelemetry.rttMs}ms RTT · ${routeTelemetry.fiberKm.toLocaleString()}km · $${routeTelemetry.ratePerGb}/GB`}
                       </text>
                     </g>
                   </g>
@@ -3574,7 +3574,7 @@ export default function GlobalNetworkWorldMap({
                       fontWeight="bold"
                       fontFamily="monospace"
                     >
-                      🛡️ BLOCKED
+                      BLOCKED
                     </text>
                   )}
                 </g>
@@ -3865,7 +3865,7 @@ export default function GlobalNetworkWorldMap({
                           }
                           fontFamily="monospace"
                         >
-                          {isSevered ? `💥 ${reg.name}` : reg.name}
+                          {isSevered ? `${reg.name}` : reg.name}
                         </text>
                       </g>
                     )}
@@ -4156,7 +4156,7 @@ export default function GlobalNetworkWorldMap({
                         </span>
                         {isZoneDown ? (
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-500 font-extrabold">
-                            💥 OUTAGE
+                            OUTAGE
                           </span>
                         ) : (
                           isZoneActive && (
@@ -4214,7 +4214,7 @@ export default function GlobalNetworkWorldMap({
                       : 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30'
                   }`}
                 >
-                  💲 {selectedRegionProfile.priceMultiplier.toFixed(2)}x Rate (
+                  {selectedRegionProfile.priceMultiplier.toFixed(2)}x Rate (
                   {selectedRegionProfile.pricingTier})
                 </span>
               </div>
@@ -4227,8 +4227,8 @@ export default function GlobalNetworkWorldMap({
                   }`}
                 >
                   {selectedRegionProfile.capabilities.cloudRunGpuL4
-                    ? '✅ Cloud Run L4 GPU'
-                    : '⛔ No Cloud Run GPU'}
+                    ? 'Cloud Run L4 GPU'
+                    : 'No Cloud Run GPU'}
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded border font-bold ${
@@ -4238,8 +4238,8 @@ export default function GlobalNetworkWorldMap({
                   }`}
                 >
                   {selectedRegionProfile.capabilities.computeGpuG2L4
-                    ? '✅ G2/L4 GPU VMs'
-                    : '⛔ No G2 GPU VMs'}
+                    ? 'G2/L4 GPU VMs'
+                    : 'No G2 GPU VMs'}
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded border font-bold ${
@@ -4249,7 +4249,7 @@ export default function GlobalNetworkWorldMap({
                   }`}
                 >
                   {selectedRegionProfile.capabilities.computeAiMegaHub
-                    ? '⚡ A3 H100 / TPU Hub'
+                    ? 'A3 H100 / TPU Hub'
                     : 'Standard CPU/Web'}
                 </span>
               </div>
@@ -4273,7 +4273,7 @@ export default function GlobalNetworkWorldMap({
                 >
                   {severedRegions.includes(selectedRegion.id)
                     ? `Restore ${selectedRegion.name}`
-                    : `💥 Simulate Outage`}
+                    : `Simulate Outage`}
                 </button>
               </div>
 
@@ -4323,8 +4323,8 @@ export default function GlobalNetworkWorldMap({
                         {r.name} ({r.city}) · {r.cfePercent}% CFE ·{' '}
                         {prof.priceMultiplier.toFixed(2)}x $ ·{' '}
                         {prof.capabilities.cloudRunGpuL4
-                          ? '✅ Run GPU'
-                          : '⛔ No Run GPU'}
+                          ? 'Run GPU'
+                          : 'No Run GPU'}
                       </option>
                     );
                   })}
@@ -4345,7 +4345,7 @@ export default function GlobalNetworkWorldMap({
                     className="p-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-left cursor-pointer"
                   >
                     <div className="font-extrabold text-emerald-600 dark:text-emerald-300 truncate">
-                      🌱 Greenest Valid
+                      Greenest Valid
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-200 font-bold truncate">
                       {
@@ -4380,7 +4380,7 @@ export default function GlobalNetworkWorldMap({
                     className="p-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-left cursor-pointer"
                   >
                     <div className="font-extrabold text-cyan-600 dark:text-cyan-300 truncate">
-                      💸 Cheapest + Green
+                      Cheapest + Green
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-200 font-bold truncate">
                       {
@@ -4417,7 +4417,7 @@ export default function GlobalNetworkWorldMap({
                     className="p-1.5 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 text-left cursor-pointer"
                   >
                     <div className="font-extrabold text-violet-600 dark:text-violet-300 truncate">
-                      ⚡ Local Continent
+                      Local Continent
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-200 font-bold truncate">
                       {
@@ -4443,7 +4443,7 @@ export default function GlobalNetworkWorldMap({
                   <div className="font-extrabold text-rose-600 dark:text-rose-300 flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>
-                      ⛔ Hardware SKU Blocked in{' '}
+                      Hardware SKU Blocked in{' '}
                       {liveMigrationAnalysis.evaluation.dst.name}
                     </span>
                   </div>
@@ -4467,7 +4467,7 @@ export default function GlobalNetworkWorldMap({
                       }}
                       className="w-full mt-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
                     >
-                      💡 Switch to Greenest GPU-Capable Region:{' '}
+                      Switch to Greenest GPU-Capable Region:{' '}
                       {
                         liveMigrationAnalysis.recommendations.greenestCompatible
                           .dst.name
@@ -4484,7 +4484,7 @@ export default function GlobalNetworkWorldMap({
               ) : (
                 <div className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold flex items-center justify-between">
                   <span>
-                    ✅ 100% SKU Compatible in{' '}
+                    100% SKU Compatible in{' '}
                     {liveMigrationAnalysis.evaluation.dst.name}
                   </span>
                   <span>
@@ -4627,7 +4627,7 @@ export default function GlobalNetworkWorldMap({
                 }
                 className="py-2 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
               >
-                🛰️ Drop-Pod VM in {selectedZoneName}
+                Drop-Pod VM in {selectedZoneName}
               </button>
               <button
                 type="button"
@@ -4640,7 +4640,7 @@ export default function GlobalNetworkWorldMap({
                 }
                 className="py-2 px-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] font-mono font-bold cursor-pointer"
               >
-                🚀 Deploy Cloud Run in {selectedRegion.id}
+                Deploy Cloud Run in {selectedRegion.id}
               </button>
             </div>
           </div>
@@ -4649,7 +4649,7 @@ export default function GlobalNetworkWorldMap({
           <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="text-xs font-mono font-bold uppercase text-zinc-700 dark:text-zinc-200 flex items-center gap-1.5">
-                <Radio className="w-3.5 h-3.5 text-cyan-500 animate-pulse" />
+                <Radio className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-pulse" />
                 <span>Live Global Packet & Firewall Verdict Stream</span>
               </div>
               <span className="text-[10px] font-mono text-zinc-400">
@@ -4717,7 +4717,7 @@ export default function GlobalNetworkWorldMap({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-3">
           <div>
             <h3 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-              <Globe className="w-4 h-4 text-cyan-500" />
+              <Globe className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               <span>
                 Complete Google Cloud Global Region & Zone Directory (40 Regions ·
                 121 Availability Zones)

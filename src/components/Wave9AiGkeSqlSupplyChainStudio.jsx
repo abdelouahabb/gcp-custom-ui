@@ -408,13 +408,13 @@ options:
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[11px] font-mono">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 GITHUB → GOOGLE CLOUD BUILD (`cloudbuild.googleapis.com`) → ARTIFACT REGISTRY → CLOUD RUN / GKE
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              🏗️📦 Cloud Build CI/CD, GitHub Repo Builder & Artifact Registry SBOM Studio
+              Cloud Build CI/CD, GitHub Repo Builder & Artifact Registry SBOM Studio
             </h2>
             <p className="text-xs text-zinc-300 max-w-3xl">
               Clone any GitHub repository into Google Cloud Build (`Dockerfile` or Zero-Dockerfile `Google Buildpacks`), push SLSA-3 attested images into `artifactregistry.googleapis.com/v1`, auto-deploy straight to Cloud Run or GKE, and sweep untagged orphan digests in 1 click.
@@ -432,7 +432,7 @@ options:
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
-                loadingCb || loadingAr ? 'animate-spin text-cyan-400' : ''
+                loadingCb || loadingAr ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''
               }`}
             />
             <span>Sync Build & Registry</span>
@@ -445,14 +445,14 @@ options:
             {
               id: 'CLOUD_BUILD_GITHUB',
               label:
-                '🏗️ 1. GitHub → Cloud Build → Artifact Registry → Cloud Run / GKE',
+                '1. GitHub → Cloud Build → Artifact Registry → Cloud Run / GKE',
               badge: `${cbData?.summary?.totalBuilds || 0} Builds`,
               tip: 'Build container images directly from a GitHub repository via Google Cloud Build and push to Artifact Registry + deploy to Cloud Run or GKE',
             },
             {
               id: 'SUPPLY_CHAIN_AR',
               label:
-                '📦 2. Artifact Registry Repositories & 1-Click Orphan Digest Sweeper',
+                '2. Artifact Registry Repositories & 1-Click Orphan Digest Sweeper',
               badge: `${arData?.summary?.totalImagesCount || 0} Digests (${
                 arData?.summary?.orphanDigestCount || 0
               } Orphans)`,
@@ -552,13 +552,13 @@ options:
             >
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                  <GitBranch className="w-4 h-4 text-cyan-400" />
+                  <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>
                     1-Click GitHub Repo → Cloud Build → Artifact Registry Pipeline
                   </span>
                 </div>
                 <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono">
-                  🔒 SLSA L3 Provenance Lock
+                  SLSA L3 Provenance Lock
                 </span>
               </div>
 
@@ -567,22 +567,22 @@ options:
                 {[
                   {
                     id: 'slsa3-verified',
-                    label: '🏛️ SLSA L3 Attested',
+                    label: 'SLSA L3 Attested',
                     desc: 'Locks US + VERIFIED provenance',
                   },
                   {
                     id: 'gdpr-eu-build',
-                    label: '🇪🇺 GDPR EU Build',
+                    label: 'GDPR EU Build',
                     desc: 'Locks europe-west1 + Immutable',
                   },
                   {
                     id: 'hipaa-clinical-build',
-                    label: '🏥 HIPAA BAA Build',
+                    label: 'HIPAA BAA Build',
                     desc: 'Locks us-east4 + 32-vCPU + SLSA',
                   },
                   {
                     id: 'custom',
-                    label: '🎛️ Custom Pipeline',
+                    label: 'Custom Pipeline',
                     desc: 'Unlocks all regions & options',
                   },
                 ].map((bp) => (
@@ -657,7 +657,7 @@ options:
                   }`}
                 >
                   <div className="text-xs font-extrabold flex items-center justify-between">
-                    <span>🐳 Standard Dockerfile Build</span>
+                    <span>Standard Dockerfile Build</span>
                     <span className="text-[10px] font-mono text-blue-400">
                       gcr.io/cloud-builders/docker
                     </span>
@@ -677,7 +677,7 @@ options:
                   }`}
                 >
                   <div className="text-xs font-extrabold flex items-center justify-between">
-                    <span>⚡ Zero-Dockerfile Google Buildpacks</span>
+                    <span>Zero-Dockerfile Google Buildpacks</span>
                     <span className="text-[10px] font-mono text-emerald-400">
                       Auto-Detect Language
                     </span>
@@ -692,7 +692,7 @@ options:
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div>
                   <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                    Registry Region {!isCbCustom ? '🔒' : ''}
+                    Registry Region {!isCbCustom ? '[LOCKED]' : ''}
                   </label>
                   <select
                     value={arLocation}
@@ -700,16 +700,16 @@ options:
                     className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                   >
                     <option value="us-central1" disabled={isCbGdpr}>
-                      {isCbGdpr ? '🔒 ' : ''}us-central1 (Iowa)
+                      {isCbGdpr ? '[LOCKED] ' : ''}us-central1 (Iowa)
                     </option>
                     <option value="us-east4" disabled={isCbGdpr}>
-                      {isCbGdpr ? '🔒 ' : ''}us-east4 (Virginia)
+                      {isCbGdpr ? '[LOCKED] ' : ''}us-east4 (Virginia)
                     </option>
                     <option value="europe-west1" disabled={isCbUsOnly}>
-                      {isCbUsOnly ? '🔒 ' : ''}europe-west1 (EU GDPR)
+                      {isCbUsOnly ? '[LOCKED] ' : ''}europe-west1 (EU GDPR)
                     </option>
                     <option value="europe-west3" disabled={isCbUsOnly}>
-                      {isCbUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt)
+                      {isCbUsOnly ? '[LOCKED] ' : ''}europe-west3 (Frankfurt)
                     </option>
                   </select>
                 </div>
@@ -763,17 +763,17 @@ options:
                   {[
                     {
                       id: 'CLOUD_RUN',
-                      label: '🚀 Build + Deploy to Cloud Run',
+                      label: 'Build + Deploy to Cloud Run',
                       sub: 'Runs gcloud run deploy automatically',
                     },
                     {
                       id: 'GKE',
-                      label: '☸️ Build + Deploy to GKE Cluster',
+                      label: 'Build + Deploy to GKE Cluster',
                       sub: 'Updates K8s Deployment image in-place',
                     },
                     {
                       id: 'NONE',
-                      label: '📦 Push to Artifact Registry Only',
+                      label: 'Push to Artifact Registry Only',
                       sub: 'Stores OCI image for later use',
                     },
                   ].map((t) => (
@@ -885,7 +885,7 @@ options:
                 <span>
                   {triggeringBuild
                     ? 'Dispatching GitHub → Cloud Build Pipeline...'
-                    : `🏗️ Trigger Live Cloud Build from GitHub${
+                    : `Trigger Live Cloud Build from GitHub${
                         deployTarget === 'CLOUD_RUN'
                           ? ` + Deploy to Cloud Run (${cloudRunService})`
                           : deployTarget === 'GKE'
@@ -979,7 +979,7 @@ options:
               <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                    <FileCode className="w-3.5 h-3.5 text-cyan-400" />
+                    <FileCode className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                     <span>Generated `cloudbuild.yaml` Pipeline Spec</span>
                   </div>
                   <button
@@ -990,7 +990,7 @@ options:
                     className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-cyan-300 text-[10px] font-mono cursor-pointer"
                   >
                     {copiedText === cloudBuildYamlPreview ? (
-                      <Check className="w-3 h-3 text-emerald-400" />
+                      <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                     ) : (
                       <Copy className="w-3 h-3" />
                     )}
@@ -1020,13 +1020,13 @@ options:
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                    <PackageCheck className="w-4 h-4 text-cyan-400" />
+                    <PackageCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     <span>
                       Provision Artifact Registry (`artifactregistry.googleapis.com`)
                     </span>
                   </div>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                    🔒 Tag-Mutation Lock
+                    Tag-Mutation Lock
                   </span>
                 </div>
 
@@ -1034,22 +1034,22 @@ options:
                   {[
                     {
                       id: 'slsa3-immutable',
-                      label: '🏛️ SEC / FedRAMP Immutable SLSA-3',
+                      label: 'SEC / FedRAMP Immutable SLSA-3',
                       desc: 'Locks immutableTags=true + US jurisdiction',
                     },
                     {
                       id: 'gdpr-eu-registry',
-                      label: '🇪🇺 GDPR EU Sovereign Registry',
+                      label: 'GDPR EU Sovereign Registry',
                       desc: 'Locks europe-* residency + immutableTags=true',
                     },
                     {
                       id: 'hipaa-signed-oci',
-                      label: '🏥 HIPAA Signed Container Vault',
+                      label: 'HIPAA Signed Container Vault',
                       desc: 'Locks US BAA region + immutable image tags',
                     },
                     {
                       id: 'custom',
-                      label: '🎛️ Custom GCP Standard',
+                      label: 'Custom GCP Standard',
                       desc: 'Unlocks mutable tags & all formats',
                     },
                   ].map((bp) => (
@@ -1088,7 +1088,7 @@ options:
 
                   <div>
                     <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                      Jurisdiction Location {!isArCustom ? '🔒' : ''}
+                      Jurisdiction Location {!isArCustom ? '[LOCKED]' : ''}
                     </label>
                     <select
                       value={repoLocation}
@@ -1096,16 +1096,16 @@ options:
                       className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                     >
                       <option value="us-central1" disabled={isArGdpr}>
-                        {isArGdpr ? '🔒 ' : ''}us-central1 (Iowa — US Sovereign)
+                        {isArGdpr ? '[LOCKED] ' : ''}us-central1 (Iowa — US Sovereign)
                       </option>
                       <option value="us-east4" disabled={isArGdpr}>
-                        {isArGdpr ? '🔒 ' : ''}us-east4 (N. Virginia — US Sovereign)
+                        {isArGdpr ? '[LOCKED] ' : ''}us-east4 (N. Virginia — US Sovereign)
                       </option>
                       <option value="europe-west1" disabled={isArUsOnly}>
-                        {isArUsOnly ? '🔒 ' : ''}europe-west1 (Belgium — EU GDPR)
+                        {isArUsOnly ? '[LOCKED] ' : ''}europe-west1 (Belgium — EU GDPR)
                       </option>
                       <option value="europe-west3" disabled={isArUsOnly}>
-                        {isArUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt — EU GDPR)
+                        {isArUsOnly ? '[LOCKED] ' : ''}europe-west3 (Frankfurt — EU GDPR)
                       </option>
                     </select>
                   </div>
@@ -1127,7 +1127,7 @@ options:
                   <span>
                     Enforce Immutable Image Tags (`dockerConfig.immutableTags = true`){' '}
                     {!isArCustom
-                      ? '— 🔒 Locked ON (Prevents :v1.0 Tag Hijacking)'
+                      ? '— Locked ON (Prevents :v1.0 Tag Hijacking)'
                       : ''}
                   </span>
                 </label>
@@ -1139,7 +1139,7 @@ options:
                 >
                   {creatingRepo
                     ? 'Provisioning Artifact Registry...'
-                    : '📦 Provision SLSA-3 Artifact Registry Repository'}
+                    : 'Provision SLSA-3 Artifact Registry Repository'}
                 </button>
               </form>
 
@@ -1176,7 +1176,7 @@ options:
                               }`}
                             >
                               {repo.immutableTags
-                                ? '🔒 Immutable Tags'
+                                ? 'Immutable Tags'
                                 : 'Mutable Tags'}
                             </span>
                           </div>
@@ -1311,7 +1311,7 @@ options:
                         <div className="text-[10px] text-zinc-500 truncate">
                           {img.tags?.length > 0
                             ? `Tags: ${img.tags.join(', ')}`
-                            : '⚠️ UNTAGGED ORPHAN DIGEST'}
+                            : 'UNTAGGED ORPHAN DIGEST'}
                         </div>
                         <div className="text-[9.5px] text-zinc-400 truncate">
                           {taggedUri}

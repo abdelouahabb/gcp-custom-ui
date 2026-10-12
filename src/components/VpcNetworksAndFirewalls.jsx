@@ -142,7 +142,7 @@ function analyzeFirewallRuleRisk(fw) {
 const ZERO_TRUST_TEMPLATES = [
   {
     id: 'iap-zero-trust-ssh',
-    title: '🔒 Allow IAP Zero-Trust SSH & RDP',
+    title: 'Allow IAP Zero-Trust SSH & RDP',
     subtitle: 'ALLOW INGRESS · tcp:22,3389 · Source 35.235.240.0/20 · Priority 90',
     badge: 'RECOMMENDED',
     config: {
@@ -161,7 +161,7 @@ const ZERO_TRUST_TEMPLATES = [
   },
   {
     id: 'block-public-ssh-rdp',
-    title: '🛑 Block Public SSH & RDP Brute-Force',
+    title: 'Block Public SSH & RDP Brute-Force',
     subtitle: 'DENY INGRESS · tcp:22,3389 · Source 0.0.0.0/0 · Priority 100',
     badge: 'HARDENING',
     config: {
@@ -180,7 +180,7 @@ const ZERO_TRUST_TEMPLATES = [
   },
   {
     id: 'allow-gclb-health-checks',
-    title: '⚖️ Allow Google Load Balancer Health Checks',
+    title: 'Allow Google Load Balancer Health Checks',
     subtitle: 'ALLOW INGRESS · tcp:80,443,8080 · Google Probers · Priority 500',
     badge: 'INFRA',
     config: {
@@ -199,7 +199,7 @@ const ZERO_TRUST_TEMPLATES = [
   },
   {
     id: 'deny-malicious-egress',
-    title: '🚫 Block Risky Egress Ports (SMTP/SMB)',
+    title: 'Block Risky Egress Ports (SMTP/SMB)',
     subtitle: 'DENY EGRESS · tcp:25,135-139,445 · Dest 0.0.0.0/0 · Priority 200',
     badge: 'EGRESS LOCK',
     config: {
@@ -1099,7 +1099,7 @@ export default function VpcNetworksAndFirewalls({
         {stats.exposedHighRisk.length > 0 && (
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-2.5">
-              <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <ShieldAlert className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <span className="font-bold text-amber-700 dark:text-amber-300">
                   Security Advisory:{' '}
@@ -1128,7 +1128,7 @@ export default function VpcNetworksAndFirewalls({
         {/* 1-Tap Zero-Trust Security Templates Bar */}
         <div className="space-y-2 pt-1">
           <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center justify-between">
-            <span>⚡ 1-Tap Zero-Trust & Hardening Rule Templates (ALLOW & DENY)</span>
+            <span>1-Tap Zero-Trust & Hardening Rule Templates (ALLOW & DENY)</span>
             <span className="text-[10px] text-zinc-500">
               Loads into Firewall Studio for instant review & deployment
             </span>
@@ -1170,7 +1170,7 @@ export default function VpcNetworksAndFirewalls({
           <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-blue-500" />
+                <Sliders className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   {editingRuleName
                     ? `Edit Live Firewall Rule: ${editingRuleName}`
@@ -1782,7 +1782,7 @@ export default function VpcNetworksAndFirewalls({
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Globe className="w-4 h-4 text-cyan-500" />
+                        <Globe className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                         <span className="text-sm font-bold font-mono text-zinc-950 dark:text-zinc-50">
                           {vpc.name}
                         </span>
@@ -1863,7 +1863,7 @@ export default function VpcNetworksAndFirewalls({
                   {/* Regional Subnets Pills */}
                   <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
                     <div className="text-[11px] text-zinc-500 mb-1.5 flex items-center gap-1.5">
-                      <Layers className="w-3.5 h-3.5 text-blue-500" />
+                      <Layers className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                       <span>
                         Attached Subnetworks ({vpc.subnetsCount || 0} regional
                         subnets):
@@ -1904,7 +1904,7 @@ export default function VpcNetworksAndFirewalls({
                 { id: 'EGRESS', label: `↗ EGRESS (${stats.egressCount})` },
                 {
                   id: 'EXPOSED',
-                  label: `⚠️ 0.0.0.0/0 (${stats.exposedHighRisk.length})`,
+                  label: `0.0.0.0/0 (${stats.exposedHighRisk.length})`,
                 },
                 { id: 'DISABLED', label: `Paused (${stats.disabledCount})` },
               ].map((tab) => (
@@ -2193,7 +2193,7 @@ export default function VpcNetworksAndFirewalls({
                           >
                             {tracker.status === 'DONE'
                               ? '✓ GCP GLOBAL FIREWALL OPERATION DONE'
-                              : `⚡ GCP GLOBAL OPERATION: ${tracker.status}`}
+                              : `GCP GLOBAL OPERATION: ${tracker.status}`}
                           </span>
                           <span className="text-zinc-300 font-bold">
                             {tracker.progress}%

@@ -101,15 +101,15 @@ export default function ResourceControlCenter({
   const getCategoryIcon = (category) => {
     switch (category) {
       case 'network':
-        return <Network className="w-4 h-4 text-cyan-500" />;
+        return <Network className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />;
       case 'storage':
-        return <HardDrive className="w-4 h-4 text-blue-500" />;
+        return <HardDrive className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />;
       case 'data':
-        return <Database className="w-4 h-4 text-emerald-500" />;
+        return <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />;
       case 'ai':
-        return <Sparkles className="w-4 h-4 text-purple-500" />;
+        return <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />;
       default:
-        return <Cpu className="w-4 h-4 text-amber-500" />;
+        return <Cpu className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />;
     }
   };
 
@@ -136,7 +136,7 @@ export default function ResourceControlCenter({
               }}
               className="inline-flex items-center gap-2 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-[14px] py-[8px] text-xs font-[500] transition-colors shadow-sm"
             >
-              <Filter className="w-3.5 h-3.5 text-blue-500" />
+              <Filter className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 {CATEGORY_OPTIONS.find((c) => c.value === selectedCategory)
                   ?.label || 'Service Type'}
@@ -181,7 +181,7 @@ export default function ResourceControlCenter({
               }}
               className="inline-flex items-center gap-2 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-[14px] py-[8px] text-xs font-[500] transition-colors shadow-sm"
             >
-              <Layers className="w-3.5 h-3.5 text-emerald-500" />
+              <Layers className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 {SOURCE_OPTIONS.find((s) => s.value === selectedSource)?.label}
               </span>
@@ -298,7 +298,7 @@ export default function ResourceControlCenter({
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-2.5">
                               {isRowDeleting ? (
-                                <RefreshCw className="w-4 h-4 text-rose-500 animate-spin shrink-0" />
+                                <RefreshCw className="w-4 h-4 text-zinc-500 dark:text-zinc-400 animate-spin shrink-0" />
                               ) : (
                                 getCategoryIcon(row.category)
                               )}
@@ -319,7 +319,7 @@ export default function ResourceControlCenter({
                                     </span>
                                   )}
                                   {row.status === 'WARNING' && !isRowDeleting && (
-                                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                    <AlertTriangle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                                   )}
                                 </div>
                                 <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -499,7 +499,7 @@ export default function ResourceControlCenter({
                   Health Status
                 </div>
                 <div className="text-sm font-bold font-mono text-zinc-950 dark:text-zinc-50 mt-0.5 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                   <span>{selectedResource.status}</span>
                 </div>
               </div>

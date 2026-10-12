@@ -57,8 +57,8 @@ const STUDIO_TABS = [
   },
   {
     id: 'BIGLAKE_ICEBERG',
-    label: '🌊 5. BigLake Metastore Catalogs & Apache Iceberg Studio',
-    shortLabel: '🌊 BigLake Metastore & Iceberg',
+    label: '5. BigLake Metastore Catalogs & Apache Iceberg Studio',
+    shortLabel: 'BigLake Metastore & Iceberg',
     icon: Layers,
     tip: 'Official Google Cloud BigLake Metastore Catalogs (/biglake/metastore/catalogs · biglake.googleapis.com/v1) + BigLake vs. BigQuery Apache Iceberg & Parquet tables in gs://',
   },
@@ -67,7 +67,7 @@ const STUDIO_TABS = [
 const SAMPLE_UNOPTIMIZED_QUERIES = [
   {
     id: 'unpruned_select_star',
-    label: '🚨 Anti-Pattern 1: SELECT * + WHERE IN Subquery + No Partition Filter',
+    label: 'Anti-Pattern 1: SELECT * + WHERE IN Subquery + No Partition Filter',
     sql: `SELECT *
 FROM \`analytics_lakehouse.telemetry_events_2026\`
 WHERE user_id IN (
@@ -80,7 +80,7 @@ LIMIT 100;`,
   },
   {
     id: 'exact_distinct_union',
-    label: '🚨 Anti-Pattern 2: Exact COUNT(DISTINCT) + UNION DISTINCT Shuffle',
+    label: 'Anti-Pattern 2: Exact COUNT(DISTINCT) + UNION DISTINCT Shuffle',
     sql: `SELECT
   region,
   COUNT(DISTINCT user_id) AS unique_users,
@@ -97,7 +97,7 @@ GROUP BY region;`,
   },
   {
     id: 'public_wiki_benchmark',
-    label: '⚡ Live Public Dataset Benchmark (bigquery-public-data)',
+    label: 'Live Public Dataset Benchmark (bigquery-public-data)',
     sql: `SELECT
   title,
   SUM(views) AS total_views
@@ -589,7 +589,7 @@ gcloud storage buckets add-iam-policy-binding gs://${bkt} \\
   --member="serviceAccount:\${CONN_SA}" \\
   --role="${bigLakeUseCase === 'ICEBERG_MANAGED' ? 'roles/storage.objectAdmin' : 'roles/storage.objectViewer'}"`;
 
-    const icebergManagedDdl = `-- 🧊 BigLake Managed Table for Apache Iceberg (2026 Flagship Open Lakehouse)
+    const icebergManagedDdl = `-- BigLake Managed Table for Apache Iceberg (2026 Flagship Open Lakehouse)
 -- Stores open Parquet + Iceberg metadata directly in gs://${bkt}/${cleanFolder}
 -- Supports full ACID INSERT/UPDATE/DELETE/MERGE, Time-Travel, and Zero-Copy Spark/Vertex AI access!
 CREATE OR REPLACE TABLE \`${projectId}.${ds}.${tbl}\` (
@@ -607,7 +607,7 @@ OPTIONS (
   storage_uri = 'gs://${bkt}/${cleanFolder}'
 );`;
 
-    const bigLakeExternalDdl = `-- ⚡ BigLake External Table over existing Cloud Storage files with Object Metadata Caching
+    const bigLakeExternalDdl = `-- BigLake External Table over existing Cloud Storage files with Object Metadata Caching
 -- Zero-copy SQL over gs://${bkt}/${cleanFolder}/* without granting users raw bucket IAM!
 CREATE OR REPLACE EXTERNAL TABLE \`${projectId}.${ds}.${tbl}_ext\`
 WITH CONNECTION \`${fullConn}\`
@@ -618,7 +618,7 @@ OPTIONS (
   metadata_cache_mode = 'AUTOMATIC'
 );`;
 
-    const rowAccessPolicyDdl = `-- 🔐 BigLake Fine-Grained Row-Level Security (Impossible on standard GCS External Tables!)
+    const rowAccessPolicyDdl = `-- BigLake Fine-Grained Row-Level Security (Impossible on standard GCS External Tables!)
 CREATE OR REPLACE ROW ACCESS POLICY eu_sovereign_filter
 ON \`${projectId}.${ds}.${tbl}\`
 GRANT TO ('domain:example.com', 'user:analyst@${projectId}.iam.gserviceaccount.com')
@@ -691,7 +691,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               className="inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>🌊 BigLake Metastore &amp; Iceberg</span>
+              <span>BigLake Metastore &amp; Iceberg</span>
             </button>
 
             <button
@@ -713,7 +713,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
-                  loadingDatasets ? 'animate-spin text-blue-500' : ''
+                  loadingDatasets ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''
                 }`}
               />
               <span>Sync BigQuery</span>
@@ -804,7 +804,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
         <div className="space-y-4">
           {datasets.length === 0 ? (
             <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 text-center space-y-3">
-              <Database className="w-8 h-8 text-blue-500 mx-auto opacity-80" />
+              <Database className="w-8 h-8 text-zinc-500 dark:text-zinc-400 mx-auto opacity-80" />
               <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 No BigQuery Datasets Provisioned Yet in `{projectId}`
               </div>
@@ -840,7 +840,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                             {projectId}.{ds.datasetId}
                           </span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
-                            📍 {ds.location}
+                            {ds.location}
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
@@ -850,8 +850,8 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                             }`}
                           >
                             {isPhysical
-                              ? '⚡ PHYSICAL COMPRESSED BILLING'
-                              : '📦 LOGICAL UNCOMPRESSED BILLING'}
+                              ? 'PHYSICAL COMPRESSED BILLING'
+                              : 'LOGICAL UNCOMPRESSED BILLING'}
                           </span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30">
                             ⏳ {ds.maxTimeTravelHours}h Time-Travel
@@ -866,7 +866,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                             }`}
                           >
-                            🛡️ Posture {ds.postureScore}/100
+                            Posture {ds.postureScore}/100
                           </span>
                         </div>
                         {ds.description && (
@@ -972,7 +972,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                           title={`Explore tables & run Pre-Crime SQL Dry-Run X-Ray in ${ds.datasetId}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
                         >
-                          <Layers className="w-3.5 h-3.5 text-blue-500" />
+                          <Layers className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                           <span>Tables & SQL X-Ray</span>
                         </button>
 
@@ -1029,7 +1029,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                           Encryption
                         </div>
                         <div className="font-bold text-emerald-600 dark:text-emerald-400 truncate">
-                          {ds.kmsKeyName ? '🔑 Cloud KMS CMEK' : '🔐 Google AES-256'}
+                          {ds.kmsKeyName ? 'Cloud KMS CMEK' : 'Google AES-256'}
                         </div>
                       </div>
 
@@ -1062,7 +1062,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-blue-500" />
+                  <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>Partitioned & Clustered Table Designer</span>
                 </div>
                 <select
@@ -1332,8 +1332,8 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                       </div>
                       <div className="text-xs font-bold font-mono text-zinc-900 dark:text-white mt-0.5">
                         {queryResult.dryRun
-                          ? '🛡️ DRY-RUN X-RAY ($0 Billed)'
-                          : `⚡ LIVE (${queryResult.totalRows} rows)`}
+                          ? 'DRY-RUN X-RAY ($0 Billed)'
+                          : `LIVE (${queryResult.totalRows} rows)`}
                       </div>
                     </div>
                   </div>
@@ -1443,7 +1443,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-emerald-500" />
+                <DollarSign className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   BigQuery Capacitor Compression (Logical vs Physical) & Edition Slot Simulator
                 </span>
@@ -1551,7 +1551,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-2">
               <div className="text-xs font-bold font-mono text-zinc-500 uppercase">
-                📦 Logical Uncompressed Billing
+                Logical Uncompressed Billing
               </div>
               <div className="text-2xl font-black font-mono text-zinc-900 dark:text-white">
                 ${finopsComparison.logicalMonthlyTotal.toFixed(2)}
@@ -1564,7 +1564,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
 
             <div className="p-4 rounded-2xl bg-emerald-500/[0.07] border border-emerald-500/30 space-y-2">
               <div className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400 uppercase">
-                ⚡ Physical Compressed Billing ({simCompressionRatio}:1)
+                Physical Compressed Billing ({simCompressionRatio}:1)
               </div>
               <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
                 ${finopsComparison.physicalMonthlyTotal.toFixed(2)}
@@ -1577,7 +1577,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
 
             <div className="p-4 rounded-2xl bg-blue-500/[0.06] border border-blue-500/25 space-y-2">
               <div className="text-xs font-bold font-mono text-blue-600 dark:text-blue-400 uppercase">
-                🚀 Compute: On-Demand vs Enterprise Slots
+                Compute: On-Demand vs Enterprise Slots
               </div>
               <div className="text-sm font-black font-mono text-zinc-900 dark:text-white">
                 On-Demand: ${finopsComparison.onDemandComputeMonthly.toFixed(0)}/mo
@@ -1604,7 +1604,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <History className="w-4 h-4 text-violet-500" />
+                <History className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   BigQuery 168-Hour `FOR SYSTEM_TIME AS OF` Time-Machine & Zero-Copy Clone Restorer
                 </span>
@@ -1737,9 +1737,9 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Database className="w-4 h-4 text-cyan-500" />
+                  <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
-                    🏛️ Official Google Cloud BigLake Metastore Catalogs (`biglake.googleapis.com/v1`)
+                    Official Google Cloud BigLake Metastore Catalogs (`biglake.googleapis.com/v1`)
                   </h3>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
                     CONSOLE PARITY: /biglake/metastore/catalogs
@@ -1769,7 +1769,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 >
                   <RefreshCw
                     className={`w-3.5 h-3.5 ${
-                      loadingBigLakeCatalogs ? 'animate-spin text-cyan-500' : ''
+                      loadingBigLakeCatalogs ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''
                     }`}
                   />
                   <span>Sync Catalogs</span>
@@ -1882,9 +1882,9 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Layers className="w-4 h-4 text-cyan-500" />
+                  <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
-                    🌊 Demystifying BigLake vs. BigQuery in 60 Seconds
+                    Demystifying BigLake vs. BigQuery in 60 Seconds
                   </h3>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
                     OPEN APACHE ICEBERG · ZERO DATA DUPLICATION · ZERO-TRUST BUCKET DELEGATION
@@ -1899,15 +1899,15 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 {[
                   {
                     id: 'ICEBERG_MANAGED',
-                    label: '🧊 BigLake Apache Iceberg (ACID + Open)',
+                    label: 'BigLake Apache Iceberg (ACID + Open)',
                   },
                   {
                     id: 'BIGLAKE_EXTERNAL',
-                    label: '⚡ BigLake Cached External (Read-Only)',
+                    label: 'BigLake Cached External (Read-Only)',
                   },
                   {
                     id: 'NATIVE_BQ',
-                    label: '🏢 Native BigQuery (Capacitor)',
+                    label: 'Native BigQuery (Capacitor)',
                   },
                 ].map((arch) => (
                   <button
@@ -1932,7 +1932,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold font-mono text-rose-500">
-                    ❌ 1. Legacy External Table (Old Way)
+                    1. Legacy External Table (Old Way)
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-400 font-bold">
                     AVOID IN PROD
@@ -1942,10 +1942,10 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   Points BigQuery directly at raw `gs://` files without a BigLake Connection.
                 </p>
                 <ul className="space-y-1 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
-                  <li>• 🚨 **Security Hole**: Every SQL user must be granted raw `roles/storage.objectViewer` on the entire `gs://` bucket!</li>
-                  <li>• ❌ **No Row or Column Masking**: Cannot hide PII columns or filter rows by tenant.</li>
-                  <li>• 🐢 **Slow**: Re-lists `gs://` bucket objects on every query (no metadata cache).</li>
-                  <li>• ❌ **Read-Only**: No `INSERT`, `UPDATE`, `DELETE`, or `MERGE`.</li>
+                  <li>• **Security Hole**: Every SQL user must be granted raw `roles/storage.objectViewer` on the entire `gs://` bucket!</li>
+                  <li>• **No Row or Column Masking**: Cannot hide PII columns or filter rows by tenant.</li>
+                  <li>• **Slow**: Re-lists `gs://` bucket objects on every query (no metadata cache).</li>
+                  <li>• **Read-Only**: No `INSERT`, `UPDATE`, `DELETE`, or `MERGE`.</li>
                 </ul>
               </div>
 
@@ -1960,7 +1960,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold font-mono text-cyan-400">
-                    🌊 2. BigLake + Apache Iceberg (2026 Lakehouse)
+                    2. BigLake + Apache Iceberg (2026 Lakehouse)
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 font-bold">
                     MULTI-ENGINE WINNER
@@ -1970,10 +1970,10 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   Files stay as open **Apache Iceberg / Parquet** in **your `gs://` bucket** via a delegated `CLOUD_RESOURCE` Connection.
                 </p>
                 <ul className="space-y-1 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
-                  <li>• 🔐 **Zero-Trust Bucket**: Only BigLake&apos;s Service Account touches `gs://`; analysts only get SQL table access!</li>
-                  <li>• 🛡️ **Row & Column Security**: Full Policy Tags + Row Access Policies on `gs://` files.</li>
-                  <li>• 🧊 **Full ACID (`table_format=&apos;ICEBERG&apos;`)**: `INSERT`, `UPDATE`, `DELETE`, `MERGE` & Time-Travel in `gs://`!</li>
-                  <li>• 🤝 **Zero Copies**: Spark, Dataproc, Vertex AI & BigQuery read the *exact same* `gs://` Parquet files.</li>
+                  <li>• **Zero-Trust Bucket**: Only BigLake&apos;s Service Account touches `gs://`; analysts only get SQL table access!</li>
+                  <li>• **Row & Column Security**: Full Policy Tags + Row Access Policies on `gs://` files.</li>
+                  <li>• **Full ACID (`table_format=&apos;ICEBERG&apos;`)**: `INSERT`, `UPDATE`, `DELETE`, `MERGE` & Time-Travel in `gs://`!</li>
+                  <li>• **Zero Copies**: Spark, Dataproc, Vertex AI & BigQuery read the *exact same* `gs://` Parquet files.</li>
                 </ul>
               </div>
 
@@ -1988,7 +1988,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold font-mono text-indigo-400">
-                    🏢 3. Native BigQuery Table (`Capacitor`)
+                    3. Native BigQuery Table (`Capacitor`)
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 font-bold">
                     PURE SQL WAREHOUSE
@@ -1998,9 +1998,9 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   Data is ingested into Google-managed proprietary Capacitor storage inside BigQuery.
                 </p>
                 <ul className="space-y-1 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
-                  <li>• ⚡ **Zero Setup**: No `gs://` bucket or `CLOUD_RESOURCE` connection required.</li>
-                  <li>• 🗜️ **5:1 Capacitor Compression**: Best with `PHYSICAL` billing model ($0.04/GB compressed).</li>
-                  <li>• 🔒 **Closed Storage**: Non-BigQuery engines (Spark/Ray) must call the paid BigQuery Storage Read API instead of reading open `gs://` files directly.</li>
+                  <li>• **Zero Setup**: No `gs://` bucket or `CLOUD_RESOURCE` connection required.</li>
+                  <li>• **5:1 Capacitor Compression**: Best with `PHYSICAL` billing model ($0.04/GB compressed).</li>
+                  <li>• **Closed Storage**: Non-BigQuery engines (Spark/Ray) must call the paid BigQuery Storage Read API instead of reading open `gs://` files directly.</li>
                 </ul>
               </div>
             </div>
@@ -2011,7 +2011,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-cyan-500" />
+                  <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>
                     3-Step Guided BigLake &amp; Apache Iceberg Provisioner (No More Missing Connection Errors!)
                   </span>
@@ -2176,7 +2176,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     >
                       {copiedId === 'bl-step1' ? (
                         <>
-                          <Check className="w-3 h-3 text-emerald-400" />
+                          <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                           <span>Copied</span>
                         </>
                       ) : (
@@ -2224,7 +2224,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     >
                       {copiedId === 'bl-step2' ? (
                         <>
-                          <Check className="w-3 h-3 text-emerald-400" />
+                          <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                           <span>Copied</span>
                         </>
                       ) : (
@@ -2271,7 +2271,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     >
                       {copiedId === 'bl-step3' ? (
                         <>
-                          <Check className="w-3 h-3 text-emerald-400" />
+                          <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                           <span>Copied</span>
                         </>
                       ) : (
@@ -2310,7 +2310,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-mono text-violet-300">
-                    🔐 Bonus A: Row-Level Security on `gs://` Parquet Files (BigLake Exclusive)
+                    Bonus A: Row-Level Security on `gs://` Parquet Files (BigLake Exclusive)
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -2342,7 +2342,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-mono text-emerald-300">
-                    🤝 Bonus B: Apache Spark / Vertex AI Zero-Copy Read of Same `gs://` Iceberg Table
+                    Bonus B: Apache Spark / Vertex AI Zero-Copy Read of Same `gs://` Iceberg Table
                   </span>
                   <button
                     type="button"

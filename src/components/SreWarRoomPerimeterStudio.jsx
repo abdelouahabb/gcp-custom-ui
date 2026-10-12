@@ -267,13 +267,13 @@ export default function SreWarRoomPerimeterStudio({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/30 text-rose-300 text-[11px] font-mono">
-              <Flame className="w-3.5 h-3.5 text-rose-400" />
+              <Flame className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 WAVE-8 PRINCIPAL SRE WAR-ROOM, VPC-SC EXFILTRATION SHIELD & PUB/SUB DLQ STUDIO
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              🚨 Autonomous Incident War-Room, Multi-Window SLO Burn Radar & VPC-SC Perimeter Architect
+              Autonomous Incident War-Room, Multi-Window SLO Burn Radar & VPC-SC Perimeter Architect
             </h2>
             <p className="text-xs text-zinc-300 max-w-3xl">
               Correlates live `logging.googleapis.com/v2` stack traces & IAM-403s into root-cause clusters, calculates Google SRE Book `14.4x` 1-Hour / `6.0x` 6-Hour Error-Budget Burn Rates, hardens subnets with Private Google Access (`199.36.153.4/30`), and provisions Exactly-Once Pub/Sub Dead-Letter Queues.
@@ -293,7 +293,7 @@ export default function SreWarRoomPerimeterStudio({
             <RefreshCw
               className={`w-3.5 h-3.5 ${
                 loadingWarRoom || loadingVpcSc || loadingPubsub
-                  ? 'animate-spin text-rose-400'
+                  ? 'animate-spin text-zinc-500 dark:text-zinc-400'
                   : ''
               }`}
             />
@@ -306,16 +306,16 @@ export default function SreWarRoomPerimeterStudio({
           {[
             {
               id: 'SRE_WAR_ROOM',
-              label: '🚨 1. Autonomous SRE War-Room & SLO Burn Radar',
+              label: '1. Autonomous SRE War-Room & SLO Burn Radar',
               badge:
                 slo?.alertStatus === 'P1_PAGE_FAST_BURN'
-                  ? `🔥 ${slo.fastBurn1h}x P1 BURN`
+                  ? `${slo.fastBurn1h}x P1 BURN`
                   : `${slo?.budgetRemainingPct ?? 100}% Budget`,
               tip: 'Correlate live Cloud Logging entries into root-cause clusters, monitor 1h/6h Google SRE Error-Budget Burn Rate, and export blameless postmortems',
             },
             {
               id: 'VPCSC_PERIMETER',
-              label: '🛡️ 2. VPC Service Controls (VPC-SC) & Private Google Access',
+              label: '2. VPC Service Controls (VPC-SC) & Private Google Access',
               badge: vpcScData
                 ? `${vpcScData.pgaCoveragePct}% PGA`
                 : 'Zero-Exfil',
@@ -323,7 +323,7 @@ export default function SreWarRoomPerimeterStudio({
             },
             {
               id: 'PUBSUB_DLQ',
-              label: '⚙️ 3. Pub/Sub Exactly-Once & Dead-Letter Queue (DLQ) Studio',
+              label: '3. Pub/Sub Exactly-Once & Dead-Letter Queue (DLQ) Studio',
               badge: pubsubData
                 ? `${pubsubData.summary?.topicsCount || 0} Topics`
                 : 'Event Mesh',
@@ -405,7 +405,7 @@ export default function SreWarRoomPerimeterStudio({
               </div>
               <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
                 {slo?.fastBurn1h >= 14.4
-                  ? '🚨 P1 PAGE: Exhausts monthly budget in 50h!'
+                  ? 'P1 PAGE: Exhausts monthly budget in 50h!'
                   : '✓ Below 14.4x P1 paging threshold'}
               </div>
             </div>
@@ -444,7 +444,7 @@ export default function SreWarRoomPerimeterStudio({
                     title="Simulate a correlated P1 Multi-Service Cascade Incident (Cloud Run Exit 137 OOM + BigQuery 403 + 16.8x Fast Error-Budget Burn)"
                     className="flex-1 px-2.5 py-1.5 rounded-[8px] bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
                   >
-                    ⚡ Inject P1 Cascade Drill
+                    Inject P1 Cascade Drill
                   </button>
                 ) : (
                   <button
@@ -456,7 +456,7 @@ export default function SreWarRoomPerimeterStudio({
                     title="Mitigate active P1 cascade drill and restore SLO burn rate to nominal"
                     className="flex-1 px-2.5 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer"
                   >
-                    🛡️ Mitigate & Resolve P1
+                    Mitigate & Resolve P1
                   </button>
                 )}
 
@@ -466,7 +466,7 @@ export default function SreWarRoomPerimeterStudio({
                   title="Preview and copy auto-synthesized Google SRE Blameless Postmortem Markdown"
                   className="px-2.5 py-1.5 rounded-[8px] border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-[11px] font-mono cursor-pointer"
                 >
-                  📄 Postmortem
+                  Postmortem
                 </button>
               </div>
             </div>
@@ -490,7 +490,7 @@ export default function SreWarRoomPerimeterStudio({
                   }
                   className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-bold cursor-pointer"
                 >
-                  📋 Copy Postmortem.md
+                  Copy Postmortem.md
                 </button>
               </div>
               <pre className="text-[11px] font-mono text-zinc-200 whitespace-pre-wrap bg-zinc-900/90 p-3 rounded-[8px] border border-zinc-800 max-h-60 overflow-y-auto">
@@ -542,9 +542,9 @@ export default function SreWarRoomPerimeterStudio({
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-zinc-900 text-zinc-100 border border-zinc-700 text-[11px] font-mono cursor-pointer hover:bg-zinc-800"
                     >
                       {copiedText === c.hotfixCli ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                       ) : (
-                        <Terminal className="w-3.5 h-3.5 text-rose-400" />
+                        <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                       )}
                       <span>Copy 1-Tap Hotfix CLI</span>
                     </button>
@@ -569,11 +569,11 @@ export default function SreWarRoomPerimeterStudio({
           <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>VPC-SC Exfiltration Perimeter Architect</span>
               </div>
               <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono">
-                🔒 Compliance Enforcement Active
+                Compliance Enforcement Active
               </span>
             </div>
 
@@ -581,22 +581,22 @@ export default function SreWarRoomPerimeterStudio({
               {[
                 {
                   id: 'sec-17a4-enclave',
-                  label: '🏛️ SEC 17a-4 Air-Gapped Enclave',
+                  label: 'SEC 17a-4 Air-Gapped Enclave',
                   desc: 'Locks Restricted VIP 199.36.153.4/30 + 6 core APIs',
                 },
                 {
                   id: 'gdpr-eu-boundary',
-                  label: '🇪🇺 GDPR EU Sovereign Boundary',
+                  label: 'GDPR EU Sovereign Boundary',
                   desc: 'Prevents cross-project bucket/BQ exfiltration',
                 },
                 {
                   id: 'hipaa-enclave',
-                  label: '🏥 HIPAA PHI Zero-Exfil Enclave',
+                  label: 'HIPAA PHI Zero-Exfil Enclave',
                   desc: 'Locks Storage, BigQuery, Secret Manager & KMS',
                 },
                 {
                   id: 'custom',
-                  label: '🎛️ Custom VPC-SC Perimeter',
+                  label: 'Custom VPC-SC Perimeter',
                   desc: 'Unlocks individual service selection',
                 },
               ].map((bp) => (
@@ -633,7 +633,7 @@ export default function SreWarRoomPerimeterStudio({
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Google API VIP Routing {!isPerimeterCustom ? '🔒' : ''}
+                  Google API VIP Routing {!isPerimeterCustom ? '[LOCKED]' : ''}
                 </label>
                 <select
                   value={vipMode}
@@ -645,7 +645,7 @@ export default function SreWarRoomPerimeterStudio({
                     restricted.googleapis.com (199.36.153.4/30 — VPC-SC Enforced)
                   </option>
                   <option value="PRIVATE_VIP" disabled={!isPerimeterCustom}>
-                    🔒 private.googleapis.com (199.36.153.8/30 — Allows Non-VPC-SC APIs)
+                    private.googleapis.com (199.36.153.8/30 — Allows Non-VPC-SC APIs)
                   </option>
                 </select>
               </div>
@@ -654,7 +654,7 @@ export default function SreWarRoomPerimeterStudio({
             <div className="space-y-1.5">
               <label className="block text-[11px] font-mono text-zinc-500">
                 Restricted Data-Plane APIs Shielded Inside Perimeter{' '}
-                {!isPerimeterCustom ? '🔒 (Locked by Compliance)' : ''}
+                {!isPerimeterCustom ? '(Locked by Compliance)' : ''}
               </label>
               <div className="grid grid-cols-2 gap-1.5">
                 {[
@@ -690,7 +690,7 @@ export default function SreWarRoomPerimeterStudio({
                         }}
                       />
                       <span className="truncate">
-                        {!isPerimeterCustom ? '🔒 ' : ''}
+                        {!isPerimeterCustom ? '[LOCKED] ' : ''}
                         {svc}
                       </span>
                     </label>
@@ -708,7 +708,7 @@ export default function SreWarRoomPerimeterStudio({
               onClick={() => handleCopy(vpcScCli, 'VPC-SC Perimeter CLI')}
               className="w-full py-2 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
             >
-              📋 Copy VPC Service Controls Perimeter Spec (`access-context-manager`)
+              Copy VPC Service Controls Perimeter Spec (`access-context-manager`)
             </button>
           </div>
 
@@ -758,7 +758,7 @@ export default function SreWarRoomPerimeterStudio({
                         title={`Enable Private Google Access on subnet ${sn.name} in ${sn.region} via POST /subnetworks/${sn.name}/setPrivateIpGoogleAccess`}
                         className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
                       >
-                        {busy ? 'Enabling...' : '🛡️ 1-Tap Enable PGA'}
+                        {busy ? 'Enabling...' : '1-Tap Enable PGA'}
                       </button>
                     )}
                   </div>
@@ -781,11 +781,11 @@ export default function SreWarRoomPerimeterStudio({
           >
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <Radio className="w-4 h-4 text-rose-400" />
+                <Radio className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Provision Resilient Pub/Sub Topic + Dead-Letter Queue (`-dlq`)</span>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                🔒 Zero-Message-Loss Lock
+                Zero-Message-Loss Lock
               </span>
             </div>
 
@@ -793,17 +793,17 @@ export default function SreWarRoomPerimeterStudio({
               {[
                 {
                   id: 'zero-loss-financial',
-                  label: '🏛️ Financial Ledger Stream',
+                  label: 'Financial Ledger Stream',
                   desc: 'Locks Exactly-Once + DLQ (5 retries)',
                 },
                 {
                   id: 'hipaa-clinical-events',
-                  label: '🏥 HIPAA HL7/FHIR Stream',
+                  label: 'HIPAA HL7/FHIR Stream',
                   desc: 'Locks Exactly-Once + 60s Ack + DLQ',
                 },
                 {
                   id: 'custom',
-                  label: '🎛️ Custom Event Stream',
+                  label: 'Custom Event Stream',
                   desc: 'Unlocks delivery & retry knobs',
                 },
               ].map((bp) => (
@@ -842,7 +842,7 @@ export default function SreWarRoomPerimeterStudio({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Max Delivery Attempts Before DLQ {!isDlqCustom ? '🔒' : ''}
+                  Max Delivery Attempts Before DLQ {!isDlqCustom ? '[LOCKED]' : ''}
                 </label>
                 <input
                   type="number"
@@ -891,7 +891,7 @@ export default function SreWarRoomPerimeterStudio({
               />
               <span>
                 Enable Pub/Sub Exactly-Once Delivery (`enableExactlyOnceDelivery: true`){' '}
-                {!isDlqCustom ? '— 🔒 Enforced by Blueprint' : ''}
+                {!isDlqCustom ? '— Enforced by Blueprint' : ''}
               </span>
             </label>
 
@@ -902,7 +902,7 @@ export default function SreWarRoomPerimeterStudio({
             >
               {provisioningPubsub
                 ? 'Provisioning Topic + DLQ + Subscription...'
-                : '⚙️ Provision Topic + Companion Dead-Letter Queue (-dlq)'}
+                : 'Provision Topic + Companion Dead-Letter Queue (-dlq)'}
             </button>
           </form>
 
@@ -932,7 +932,7 @@ export default function SreWarRoomPerimeterStudio({
                         Ack: {s.ackDeadlineSeconds}s ·{' '}
                         {s.deadLetterTopic
                           ? `DLQ: ${s.deadLetterTopic} (${s.maxDeliveryAttempts} retries)`
-                          : '⚠️ No Dead-Letter Topic configured'}
+                          : 'No Dead-Letter Topic configured'}
                       </div>
                     </div>
                     <span

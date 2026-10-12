@@ -541,7 +541,7 @@ export default function EngineerWishlistWave2({
                         : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
-                    🚀 {srv.name} ({srv.region})
+                    {srv.name} ({srv.region})
                   </button>
                 ))}
               </div>
@@ -750,7 +750,7 @@ export default function EngineerWishlistWave2({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
                 <div className="text-xs font-mono font-bold text-emerald-400 uppercase">
-                  🕳️ HTTP Response Headers X-Ray (Google Front End / Trace / TLS)
+                  HTTP Response Headers X-Ray (Google Front End / Trace / TLS)
                 </div>
                 <div className="max-h-56 overflow-y-auto divide-y divide-zinc-800/70 text-[11px] font-mono">
                   {Object.entries(benchResult.headers || {}).map(([k, v]) => (
@@ -769,7 +769,7 @@ export default function EngineerWishlistWave2({
 
               <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
                 <div className="text-xs font-mono font-bold text-violet-400 uppercase">
-                  📄 Live Response Payload Preview (First 800 Bytes)
+                  Live Response Payload Preview (First 800 Bytes)
                 </div>
                 <pre className="text-[11px] font-mono text-zinc-300 max-h-56 overflow-y-auto whitespace-pre-wrap break-all">
                   {benchResult.bodyPreview || '(Empty response body)'}
@@ -842,7 +842,7 @@ export default function EngineerWishlistWave2({
 
         {zombies.length === 0 ? (
           <div className="p-6 rounded-xl bg-emerald-500/5 border border-emerald-500/30 text-center space-y-1">
-            <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
+            <CheckCircle2 className="w-6 h-6 text-zinc-500 dark:text-zinc-400 mx-auto" />
             <div className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
               Zero Zombie Waste Detected in {projectId}!
             </div>
@@ -896,7 +896,7 @@ export default function EngineerWishlistWave2({
                             ? '✓ GCP OPERATION DONE'
                             : tracker.status === 'ERROR'
                             ? '✕ OPERATION ERROR'
-                            : `⚡ GCP ZONE OP: ${tracker.status}`}
+                            : `GCP ZONE OP: ${tracker.status}`}
                         </span>
                         <span className="text-zinc-400 font-bold">
                           {tracker.progress}%
@@ -1033,8 +1033,8 @@ export default function EngineerWishlistWave2({
               }`}
             >
               {teleportFeasibility.requiresCloudRunGpu
-                ? '⚡ GPU Workload Mode: NVIDIA L4 Required'
-                : '🖥️ CPU-Only Workload Mode (Click to Test L4 GPU)'}
+                ? 'GPU Workload Mode: NVIDIA L4 Required'
+                : 'CPU-Only Workload Mode (Click to Test L4 GPU)'}
             </button>
 
             <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
@@ -1057,7 +1057,7 @@ export default function EngineerWishlistWave2({
               }`}
             >
               <div className="flex items-center justify-between text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">
-                <span>🌱 GREENEST SKU-COMPATIBLE</span>
+                <span>GREENEST SKU-COMPATIBLE</span>
                 <span>{recs.greenestCompatible.dst.cfePercent}% CFE</span>
               </div>
               <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
@@ -1069,7 +1069,7 @@ export default function EngineerWishlistWave2({
                 {recs.greenestCompatible.dst.priceMultiplier.toFixed(2)}x) ·{' '}
                 {recs.greenestCompatible.dst.gco2}g CO₂/kWh ·{' '}
                 {recs.greenestCompatible.dst.capabilities.cloudRunGpuL4
-                  ? '✅ L4 GPU Ready'
+                  ? 'L4 GPU Ready'
                   : 'CPU Ready'}
               </div>
             </button>
@@ -1088,7 +1088,7 @@ export default function EngineerWishlistWave2({
               }`}
             >
               <div className="flex items-center justify-between text-[10px] font-extrabold text-cyan-600 dark:text-cyan-400">
-                <span>💸 BEST FINOPS + GREEN</span>
+                <span>BEST FINOPS + GREEN</span>
                 <span>
                   {recs.cheapestGreenCompatible.dst.priceMultiplier.toFixed(2)}x
                   TIER-1
@@ -1119,7 +1119,7 @@ export default function EngineerWishlistWave2({
               }`}
             >
               <div className="flex items-center justify-between text-[10px] font-extrabold text-violet-600 dark:text-violet-400">
-                <span>⚡ SAME-CONTINENT LOW-EGRESS</span>
+                <span>SAME-CONTINENT LOW-EGRESS</span>
                 <span>$0.02/GB</span>
               </div>
               <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
@@ -1142,7 +1142,7 @@ export default function EngineerWishlistWave2({
               <div className="font-extrabold text-rose-600 dark:text-rose-300 flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>
-                  ⛔ Hardware SKU Unavailable in {evalResult.dst.name} (
+                  Hardware SKU Unavailable in {evalResult.dst.name} (
                   {evalResult.dst.city})
                 </span>
               </div>
@@ -1169,7 +1169,7 @@ export default function EngineerWishlistWave2({
                   }
                   className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer"
                 >
-                  💡 Switch to Greenest GPU-Compatible Region:{' '}
+                  Switch to Greenest GPU-Compatible Region:{' '}
                   {recs.greenestCompatible.dst.name} (
                   {recs.greenestCompatible.dst.cfePercent}% CFE · $
                   {recs.greenestCompatible.targetMonthlyUsd}/mo)
@@ -1180,14 +1180,14 @@ export default function EngineerWishlistWave2({
                 onClick={() => setSimulateGpuWorkload(false)}
                 className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-bold cursor-pointer"
               >
-                🖥️ Strip GPU & Deploy as CPU-Only in {evalResult.dst.name}
+                Strip GPU & Deploy as CPU-Only in {evalResult.dst.name}
               </button>
             </div>
           </div>
         ) : (
           <div className="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-emerald-800 dark:text-emerald-200">
             <span className="font-bold">
-              ✅ Pre-Flight SKU Check Passed: {evalResult.dst.name} supports{' '}
+              Pre-Flight SKU Check Passed: {evalResult.dst.name} supports{' '}
               {teleportFeasibility.requiresCloudRunGpu
                 ? 'Cloud Run Serverless NVIDIA L4 GPU + CPU'
                 : 'Cloud Run Serverless CPU/Memory'}
@@ -1336,11 +1336,11 @@ export default function EngineerWishlistWave2({
                   const prof = getRegionProfile(r.id);
                   return (
                     <option key={r.id} value={r.id}>
-                      🌱 {r.name} ({r.city}) — {r.cfePercent}% CFE ·{' '}
+                      {r.name} ({r.city}) — {r.cfePercent}% CFE ·{' '}
                       {prof.priceMultiplier.toFixed(2)}x $ ·{' '}
                       {prof.capabilities.cloudRunGpuL4
-                        ? '✅ L4 GPU'
-                        : '⛔ No Run GPU'}
+                        ? 'L4 GPU'
+                        : 'No Run GPU'}
                     </option>
                   );
                 })}
@@ -1379,7 +1379,7 @@ export default function EngineerWishlistWave2({
                   {teleporting
                     ? 'Teleporting...'
                     : !evalResult.isCompatible
-                    ? '⛔ SKU Blocked'
+                    ? 'SKU Blocked'
                     : '1-Tap Teleport'}
                 </span>
               </button>

@@ -443,7 +443,7 @@ export default function VmFleetAndSsh({
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
                   loadingVms || hasTransitionalVm
-                    ? 'animate-spin text-blue-500'
+                    ? 'animate-spin text-zinc-500 dark:text-zinc-400'
                     : ''
                 }`}
               />
@@ -465,7 +465,7 @@ export default function VmFleetAndSsh({
         <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 flex items-center gap-1 mr-1">
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              <Zap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>1-Tap Multi-Region Presets:</span>
             </span>
             {QUICK_VM_TEMPLATES.map((tpl) => {
@@ -479,9 +479,9 @@ export default function VmFleetAndSsh({
                   className="inline-flex items-center gap-1.5 text-[11px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {isDeploying ? (
-                    <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
+                    <RefreshCw className="w-3 h-3 animate-spin text-zinc-500 dark:text-zinc-400" />
                   ) : (
-                    <Cpu className="w-3 h-3 text-blue-500" />
+                    <Cpu className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                   )}
                   <span>{isDeploying ? `Provisioning...` : tpl.label}</span>
                 </button>
@@ -815,7 +815,7 @@ export default function VmFleetAndSsh({
                   {openResizeVm === vm.name && isStopped && (
                     <div className="mb-3 p-3 rounded-xl bg-blue-500/5 border border-blue-500/30 flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <Sliders className="w-3.5 h-3.5 text-blue-500" />
+                        <Sliders className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                         <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">
                           Resize Stopped VM Machine Type:
                         </span>

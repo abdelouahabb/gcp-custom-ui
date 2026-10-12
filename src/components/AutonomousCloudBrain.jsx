@@ -29,7 +29,7 @@ import {
 const ANOMALY_SCENARIOS = [
   {
     id: 'NORMAL',
-    label: '🟢 Steady-State Baseline (1.0x)',
+    label: 'Steady-State Baseline (1.0x)',
     description:
       'Current project resource footprint running at normal daily traffic and autoscaling levels.',
     hourlyAdderUsd: 0,
@@ -39,7 +39,7 @@ const ANOMALY_SCENARIOS = [
   },
   {
     id: 'VIRAL_TRAFFIC',
-    label: '🚀 Viral HackerNews / ProductHunt Surge (35x HTTP)',
+    label: 'Viral HackerNews / ProductHunt Surge (35x HTTP)',
     description:
       'Sudden 35x traffic spike starting on Day 5: Cloud Run scales to maxInstances and egress bandwidth jumps by 1.8 TB.',
     hourlyAdderUsd: 0.42,
@@ -50,7 +50,7 @@ const ANOMALY_SCENARIOS = [
   },
   {
     id: 'INFINITE_LOOP',
-    label: '♾️ Runaway Infinite Retry Loop / Webhook Storm (120x)',
+    label: 'Runaway Infinite Retry Loop / Webhook Storm (120x)',
     description:
       'A misconfigured webhook or pub/sub retry loop pins all serverless instances at 100% vCPU 24/7 starting on Day 4.',
     hourlyAdderUsd: 1.35,
@@ -61,7 +61,7 @@ const ANOMALY_SCENARIOS = [
   },
   {
     id: 'GPU_LLM_SURGE',
-    label: '🧠 Unthrottled LLM GPU Inference Surge (4x NVIDIA L4 24/7)',
+    label: 'Unthrottled LLM GPU Inference Surge (4x NVIDIA L4 24/7)',
     description:
       'Four warm Cloud Run NVIDIA L4 GPU instances remain pinned with min-instances=4 and instance-based billing starting Day 3.',
     hourlyAdderUsd: 2.68,
@@ -72,7 +72,7 @@ const ANOMALY_SCENARIOS = [
   },
   {
     id: 'DDOS_EGRESS',
-    label: '🌊 Cross-Continent Egress Scraping / DDoS Flood (8 TB)',
+    label: 'Cross-Continent Egress Scraping / DDoS Flood (8 TB)',
     description:
       'Automated botnet scrapes large objects from Cloud Storage & Cloud Run across continents (8 TB @ $0.08/GB).',
     hourlyAdderUsd: 0.95,
@@ -86,7 +86,7 @@ const ANOMALY_SCENARIOS = [
 const DREAM_STACK_ARCHETYPES = [
   {
     id: 'AI_RAG_GPU',
-    name: '🧠 Zero-Trust LLM Inference & RAG Stack (L4 GPU)',
+    name: 'Zero-Trust LLM Inference & RAG Stack (L4 GPU)',
     summary:
       'Serverless Cloud Run NVIDIA L4 GPU inference service + Regional Vector/Artifact Bucket + BigQuery Analytics + Priority-100 Zero-Trust Firewall.',
     requiresGpu: true,
@@ -121,7 +121,7 @@ const DREAM_STACK_ARCHETYPES = [
   },
   {
     id: 'EU_GDPR_LAKEHOUSE',
-    name: '🇪🇺 GDPR Sovereign EU FinTech Data Lakehouse',
+    name: 'GDPR Sovereign EU FinTech Data Lakehouse',
     summary:
       '100% EU-resident serverless ingestion API + BigQuery analytical warehouse + locked-down custom VPC & KMS-ready object storage.',
     requiresGpu: false,
@@ -156,7 +156,7 @@ const DREAM_STACK_ARCHETYPES = [
   },
   {
     id: 'FRUGAL_SPOT_MESH',
-    name: '💸 Ultra-Frugal Startup Spot & Scale-to-Zero Mesh',
+    name: 'Ultra-Frugal Startup Spot & Scale-to-Zero Mesh',
     summary:
       'Designed to run a full production SaaS for under $15/mo using Request-billed Cloud Run + Spot E2 worker VM (-68% discount).',
     requiresGpu: false,
@@ -185,7 +185,7 @@ const DREAM_STACK_ARCHETYPES = [
   },
   {
     id: 'GLOBAL_GREEN_HA',
-    name: '🌱 98% Carbon-Free Hydro/Wind High-Availability Core',
+    name: '98% Carbon-Free Hydro/Wind High-Availability Core',
     summary:
       'Ultra-clean hydro/wind regional deployment optimized for ESG compliance, maximum Carbon-Free Energy (CFE%), and Tier-1 pricing.',
     requiresGpu: false,
@@ -661,7 +661,7 @@ export default function AutonomousCloudBrain({
                 WAVE 5 DREAM FEATURE #1
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-violet-500" />
+                <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   &ldquo;Pre-Crime&rdquo; 30-Day Billing Time-Crystal &
                   Autonomous Circuit-Breaker
@@ -688,8 +688,8 @@ export default function AutonomousCloudBrain({
               <ShieldCheck className="w-4 h-4" />
               <span>
                 {autoBreakerArmed
-                  ? '🛡️ Auto-Circuit-Breaker: ARMED'
-                  : '⚠️ Auto-Circuit-Breaker: OFF'}
+                  ? 'Auto-Circuit-Breaker: ARMED'
+                  : 'Auto-Circuit-Breaker: OFF'}
               </span>
             </button>
 
@@ -824,7 +824,7 @@ export default function AutonomousCloudBrain({
         <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-400">
             <span>
-              📈 30-Day Cumulative Spend Trajectory (Day 1 → Day 30)
+              30-Day Cumulative Spend Trajectory (Day 1 → Day 30)
             </span>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 text-cyan-400">
@@ -927,8 +927,8 @@ export default function AutonomousCloudBrain({
                       fontWeight="bold"
                     >
                       {autoBreakerArmed
-                        ? `🛡️ TRIPPED D${pt.day}`
-                        : `💥 BREACH D${pt.day}`}
+                        ? `TRIPPED D${pt.day}`
+                        : `BREACH D${pt.day}`}
                     </text>
                   )}
                   {(pt.day === 1 || pt.day % 5 === 0) && (
@@ -967,7 +967,7 @@ export default function AutonomousCloudBrain({
             >
               {copiedCmd === 'MITIGATION' ? (
                 <>
-                  <Check className="w-3 h-3 text-emerald-400" />
+                  <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                   <span>Copied</span>
                 </>
               ) : (
@@ -992,7 +992,7 @@ export default function AutonomousCloudBrain({
                 WAVE 5 DREAM FEATURE #2
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
-                🧬 &ldquo;What-If&rdquo; Resource Blast-Radius & Failure Cascade
+                &ldquo;What-If&rdquo; Resource Blast-Radius & Failure Cascade
                 X-Ray
               </h4>
             </div>
@@ -1056,7 +1056,7 @@ export default function AutonomousCloudBrain({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
                   <div className="text-[10px] font-bold uppercase text-cyan-500">
-                    ⬆️ Upstream Traffic & Auth Entrypoints
+                    ⬆Upstream Traffic & Auth Entrypoints
                   </div>
                   {blastCascade.upstream.map((u) => (
                     <div
@@ -1070,7 +1070,7 @@ export default function AutonomousCloudBrain({
 
                 <div className="p-2.5 rounded-lg bg-rose-500/[0.06] border border-rose-500/25 space-y-1">
                   <div className="text-[10px] font-bold uppercase text-rose-500">
-                    ⬇️ Downstream Failure Cascade
+                    ⬇Downstream Failure Cascade
                   </div>
                   {blastCascade.downstream.map((d) => (
                     <div
@@ -1096,7 +1096,7 @@ export default function AutonomousCloudBrain({
                 >
                   {copiedCmd === 'BLAST_CMD' ? (
                     <>
-                      <Check className="w-3 h-3 text-emerald-500" />
+                      <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                       <span>Copied</span>
                     </>
                   ) : (
@@ -1123,7 +1123,7 @@ export default function AutonomousCloudBrain({
                 WAVE 5 DREAM FEATURE #3
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
-                ⚡ Autonomous Cloud Architecture Compiler (SKU + FinOps + Carbon
+                Autonomous Cloud Architecture Compiler (SKU + FinOps + Carbon
                 Optimized)
               </h4>
             </div>

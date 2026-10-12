@@ -274,7 +274,7 @@ export default function CloudRunFleetManager({
         : '';
 
     // 1. Raw Knative YAML (What Google Cloud Console exports)
-    const rawKnativeYaml = `# ❌ Standard Google Cloud Console Export (Knative serving.knative.dev/v1 ONLY)
+    const rawKnativeYaml = `# Standard Google Cloud Console Export (Knative serving.knative.dev/v1 ONLY)
 # Cannot run on standard Kubernetes without Knative Serving + lacks HPA, PDB, NetworkPolicy, Spot GPU & /dev/shm
 apiVersion: serving.knative.dev/v1
 kind: Service
@@ -305,7 +305,7 @@ spec:
 
     // 2. Full 6-Resource Production GKE Kubernetes Bundle
     const k8sBundleYaml = `# ============================================================================
-# ✨ CloudPulse 2026: Cloud Run (${k8sName}) → Production GKE Kubernetes Bundle
+# CloudPulse 2026: Cloud Run (${k8sName}) → Production GKE Kubernetes Bundle
 # Source Cloud Run Service : ${srv.name} (${srv.region})
 # Active Container Image   : ${image}
 # Unlocks: ${enableSpot ? 'Spot VM/GPU (-68% Cost) · ' : ''}${
@@ -923,7 +923,7 @@ spec:
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>☸️ Cloud Run → GKE Kubernetes Transpiler</span>
+            <span>Cloud Run → GKE Kubernetes Transpiler</span>
           </button>
 
           <button
@@ -934,7 +934,7 @@ spec:
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
-                loading || hasActiveOps ? 'animate-spin text-blue-500' : ''
+                loading || hasActiveOps ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''
               }`}
             />
             <span>Sync Cloud Run</span>
@@ -994,7 +994,7 @@ spec:
                   <span>BEYOND GCP CONSOLE YAML EXPORT · LIVE KNATIVE → KUBERNETES AST TRANSPILER</span>
                 </div>
                 <h4 className="text-sm sm:text-base font-extrabold text-white mt-1">
-                  ☸️ Graduate Cloud Run Service (`{sampleSrv.name}`) → Production GKE Kubernetes Cluster
+                  Graduate Cloud Run Service (`{sampleSrv.name}`) → Production GKE Kubernetes Cluster
                 </h4>
                 <p className="text-xs text-zinc-300">
                   Google Cloud Console only gives you a raw Knative `serving.knative.dev/v1` YAML and leaves you on your own. CloudPulse transpiles your Cloud Run service into a <strong>6-Resource Native Kubernetes Bundle</strong> (`Deployment` + `HPA v2` + `PDB` + `Service` + `NetworkPolicy` + `Workload Identity SA`) and deploys it to a live GKE cluster in 1 click.
@@ -1065,27 +1065,27 @@ spec:
               {[
                 {
                   key: 'enableSpot',
-                  label: '⚡ Spot VM / GPU (-68%)',
+                  label: 'Spot VM / GPU (-68%)',
                   sub: 'cloud.google.com/gke-spot',
                 },
                 {
                   key: 'enableHpaPdb',
-                  label: '⚖️ HPA v2 + PDB HA',
+                  label: 'HPA v2 + PDB HA',
                   sub: 'Autoscaler + Disruption Budget',
                 },
                 {
                   key: 'enableZeroTrustNetPol',
-                  label: '🛡️ L3/L4 NetworkPolicy',
+                  label: 'L3/L4 NetworkPolicy',
                   sub: 'Strict port firewall + Seccomp',
                 },
                 {
                   key: 'enableShmRamDisk',
-                  label: '🧠 8Gi /dev/shm RAM Disk',
+                  label: '8Gi /dev/shm RAM Disk',
                   sub: 'For vLLM / PyTorch / Chrome',
                 },
                 {
                   key: 'enableWorkloadIdentity',
-                  label: '🔑 Workload Identity SA',
+                  label: 'Workload Identity SA',
                   sub: `${projectId}.svc.id.goog`,
                 },
               ].map((tog) => {
@@ -1163,7 +1163,7 @@ spec:
                       >
                         {gkeClusters.map((c) => (
                           <option key={c.name} value={c.name}>
-                            ☸️ {c.name} ({c.location})
+                            {c.name} ({c.location})
                           </option>
                         ))}
                       </select>
@@ -1215,10 +1215,10 @@ spec:
                     className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {isGraduating
-                      ? '☸️ Graduating Cloud Run Service to GKE...'
+                      ? 'Graduating Cloud Run Service to GKE...'
                       : cfg.createAutopilotCluster
-                      ? `🚀 1-Click Create GKE Autopilot Cluster & Graduate ${sampleSrv.name}`
-                      : `🚀 1-Click Apply 6-Resource K8s Bundle to GKE (${
+                      ? `1-Click Create GKE Autopilot Cluster & Graduate ${sampleSrv.name}`
+                      : `1-Click Apply 6-Resource K8s Bundle to GKE (${
                           cfg.targetCluster || gkeClusters[0]?.name
                         })`}
                   </button>
@@ -1235,7 +1235,7 @@ spec:
                   >
                     {copiedId === `global-gke-yaml-${sampleSrv.id}`
                       ? '✓ Copied K8s YAML'
-                      : '📋 Copy 6-Resource YAML'}
+                      : 'Copy 6-Resource YAML'}
                   </button>
                 </div>
               </div>
@@ -1260,7 +1260,7 @@ spec:
                           : 'bg-zinc-900 text-zinc-400'
                       }`}
                     >
-                      ✨ CloudPulse 6-Resource GKE Bundle
+                      CloudPulse 6-Resource GKE Bundle
                     </button>
                     <button
                       type="button"
@@ -1279,7 +1279,7 @@ spec:
                           : 'bg-zinc-900 text-zinc-400'
                       }`}
                     >
-                      ❌ Raw GCP Console Knative YAML
+                      Raw GCP Console Knative YAML
                     </button>
                   </div>
                 </div>
@@ -1298,7 +1298,7 @@ spec:
       <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <Zap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
             <span>1-Tap Instant Deploy:</span>
           </span>
           {QUICK_TEMPLATES.map((tpl) => {
@@ -1312,9 +1312,9 @@ spec:
                 className="inline-flex items-center gap-1.5 text-xs font-mono bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {isDeployingThis ? (
-                  <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
+                  <RefreshCw className="w-3 h-3 animate-spin text-zinc-500 dark:text-zinc-400" />
                 ) : (
-                  <Rocket className="w-3 h-3 text-blue-500" />
+                  <Rocket className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                 )}
                 <span>
                   {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
@@ -1326,7 +1326,7 @@ spec:
 
         {/* Copy command to deploy CloudPulse 2026 itself to Cloud Run */}
         <div className="flex items-center gap-2 bg-zinc-900/95 text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-800 text-[11px] font-mono">
-          <Terminal className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
           <span className="truncate max-w-xs sm:max-w-md" title={selfDeployCmd}>
             {selfDeployCmd}
           </span>
@@ -1353,7 +1353,7 @@ spec:
       {/* Live Cloud Run Services Grid */}
       {loading && services.length === 0 ? (
         <div className="py-12 text-center text-xs text-zinc-500 flex flex-col items-center gap-2">
-          <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
+          <RefreshCw className="w-5 h-5 animate-spin text-zinc-500 dark:text-zinc-400" />
           <span>
             Querying live Cloud Run services across all regions in{' '}
             <span className="font-mono font-semibold">{projectId}</span>...
@@ -1399,7 +1399,7 @@ spec:
               className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>☸️ Open Cloud Run → GKE Transpiler</span>
+              <span>Open Cloud Run → GKE Transpiler</span>
             </button>
           </div>
         </div>
@@ -1536,10 +1536,10 @@ spec:
                             <HardDrive className="w-3 h-3" />
                             <span>
                               {srv.storageVolumeType === 'GCS_BUCKET'
-                                ? `🪣 gs://${srv.storageGcsBucket} → ${srv.storageMountPath}`
+                                ? `gs://${srv.storageGcsBucket} → ${srv.storageMountPath}`
                                 : srv.storageVolumeType === 'IN_MEMORY'
-                                ? `⚡ RAM (${srv.storageMemorySizeLimit || '1Gi'}) → ${srv.storageMountPath}`
-                                : `📁 NFS ${srv.storageNfsServer}:${srv.storageNfsPath} → ${srv.storageMountPath}`}
+                                ? `RAM (${srv.storageMemorySizeLimit || '1Gi'}) → ${srv.storageMountPath}`
+                                : `NFS ${srv.storageNfsServer}:${srv.storageNfsPath} → ${srv.storageMountPath}`}
                             </span>
                           </span>
                         )}
@@ -1563,7 +1563,7 @@ spec:
                       >
                         {copiedId === `uri-${srv.id}` ? (
                           <>
-                            <Check className="w-3 h-3 text-emerald-400" />
+                            <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                             <span>Copied</span>
                           </>
                         ) : (
@@ -1589,7 +1589,7 @@ spec:
                       }`}
                     >
                       <Layers className="w-3.5 h-3.5" />
-                      <span>☸️ Graduate to GKE</span>
+                      <span>Graduate to GKE</span>
                     </button>
 
                     <button
@@ -2254,7 +2254,7 @@ spec:
                       </div>
                     </div>
 
-                    {/* 🌐 2026 Direct VPC Egress & 💾 Attached Storage Volumes inside Scale & Tune */}
+                    {/* 2026 Direct VPC Egress & Attached Storage Volumes inside Scale & Tune */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                       {/* Direct VPC Egress */}
                       <div className="p-3 rounded-xl bg-cyan-500/[0.05] border border-cyan-500/30 space-y-2.5">
@@ -2310,7 +2310,7 @@ spec:
                               >
                                 {projectVpcs.map((v) => (
                                   <option key={v} value={v}>
-                                    🌐 {v}
+                                    {v}
                                   </option>
                                 ))}
                               </select>
@@ -2415,9 +2415,9 @@ spec:
                         <div className="grid grid-cols-4 gap-1.5">
                           {[
                             { id: 'NONE', label: 'No Vol' },
-                            { id: 'GCS_BUCKET', label: '🪣 GCS FUSE' },
-                            { id: 'IN_MEMORY', label: '⚡ RAM Disk' },
-                            { id: 'NFS_FILESTORE', label: '📁 NFS' },
+                            { id: 'GCS_BUCKET', label: 'GCS FUSE' },
+                            { id: 'IN_MEMORY', label: 'RAM Disk' },
+                            { id: 'NFS_FILESTORE', label: 'NFS' },
                           ].map((vOpt) => {
                             const active =
                               (form.storageVolumeType || 'NONE') === vOpt.id;
@@ -2554,8 +2554,8 @@ spec:
                                 className="w-full h-[32px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 cursor-pointer flex items-center justify-center truncate"
                               >
                                 {form.storageReadOnly
-                                  ? '🔒 Read-Only'
-                                  : '✏️ Read-Write'}
+                                  ? 'Read-Only'
+                                  : 'Read-Write'}
                               </button>
                             </div>
                           </div>
@@ -2882,9 +2882,9 @@ spec:
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider font-mono text-indigo-300 flex items-center gap-1.5">
-                            <Layers className="w-4 h-4 text-indigo-400" />
+                            <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                             <span>
-                              ☸️ Graduate `{srv.name}` ({srv.region}) → Production GKE Kubernetes Cluster
+                              Graduate `{srv.name}` ({srv.region}) → Production GKE Kubernetes Cluster
                             </span>
                           </h4>
                           <p className="text-[11px] text-zinc-400 mt-0.5">
@@ -2937,27 +2937,27 @@ spec:
                         {[
                           {
                             key: 'enableSpot',
-                            label: '⚡ Spot VM/GPU (-68%)',
+                            label: 'Spot VM/GPU (-68%)',
                             sub: 'gke-spot toleration',
                           },
                           {
                             key: 'enableHpaPdb',
-                            label: '⚖️ HPA v2 + PDB HA',
+                            label: 'HPA v2 + PDB HA',
                             sub: `Scale ${bundle.minReplicas}→${bundle.maxReplicas}`,
                           },
                           {
                             key: 'enableZeroTrustNetPol',
-                            label: '🛡️ L3/L4 NetworkPolicy',
+                            label: 'L3/L4 NetworkPolicy',
                             sub: `Strict port :${srv.containerPort}`,
                           },
                           {
                             key: 'enableShmRamDisk',
-                            label: '🧠 8Gi /dev/shm RAM',
+                            label: '8Gi /dev/shm RAM',
                             sub: 'PyTorch / vLLM / Chrome',
                           },
                           {
                             key: 'enableWorkloadIdentity',
-                            label: '🔑 Workload Identity',
+                            label: 'Workload Identity',
                             sub: `${projectId}.svc.id.goog`,
                           },
                         ].map((tog) => {
@@ -3039,7 +3039,7 @@ spec:
                                 >
                                   {gkeClusters.map((c) => (
                                     <option key={c.name} value={c.name}>
-                                      ☸️ {c.name} ({c.location})
+                                      {c.name} ({c.location})
                                     </option>
                                   ))}
                                 </select>
@@ -3093,10 +3093,10 @@ spec:
                               className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                             >
                               {isGraduating
-                                ? '☸️ Graduating to GKE...'
+                                ? 'Graduating to GKE...'
                                 : cfg.createAutopilotCluster
-                                ? `🚀 1-Click Create GKE Autopilot Cluster & Graduate ${srv.name}`
-                                : `🚀 1-Click Apply to Live GKE (${
+                                ? `1-Click Create GKE Autopilot Cluster & Graduate ${srv.name}`
+                                : `1-Click Apply to Live GKE (${
                                     cfg.targetCluster || gkeClusters[0]?.name
                                   })`}
                             </button>
@@ -3113,7 +3113,7 @@ spec:
                             >
                               {copiedId === `gke-yaml-${srv.id}`
                                 ? '✓ Copied YAML'
-                                : '📋 Copy K8s YAML'}
+                                : 'Copy K8s YAML'}
                             </button>
                           </div>
                         </div>
@@ -3137,7 +3137,7 @@ spec:
                                   : 'bg-zinc-900 text-zinc-400'
                               }`}
                             >
-                              ✨ CloudPulse 6-Resource GKE Bundle
+                              CloudPulse 6-Resource GKE Bundle
                             </button>
                             <button
                               type="button"
@@ -3156,7 +3156,7 @@ spec:
                                   : 'bg-zinc-900 text-zinc-400'
                               }`}
                             >
-                              ❌ Raw GCP Console Knative YAML
+                              Raw GCP Console Knative YAML
                             </button>
                           </div>
                           <pre className="text-[10px] font-mono text-emerald-300 overflow-x-auto max-h-48">

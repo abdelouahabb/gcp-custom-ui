@@ -158,7 +158,7 @@ export default function Lab2026QuantumNexus({
       id: 'CAUSAL_GRAPH',
       icon: Share2,
       badge: 'BREAKTHROUGH #1',
-      label: '🕸️ Cross-Cloud Blast-Radius & Causal Graph',
+      label: 'Cross-Cloud Blast-Radius & Causal Graph',
     },
     {
       id: 'TIME_MACHINE',
@@ -170,19 +170,19 @@ export default function Lab2026QuantumNexus({
       id: 'FINOPS_AUTOPILOT',
       icon: DollarSign,
       badge: 'BREAKTHROUGH #3',
-      label: '🤖 Autonomous FinOps Arbitrage & Circuit-Breaker',
+      label: 'Autonomous FinOps Arbitrage & Circuit-Breaker',
     },
     {
       id: 'EPHEMERAL_PR',
       icon: GitBranch,
       badge: 'BREAKTHROUGH #4',
-      label: '🪞 Ephemeral PR Previews & Shadow Traffic Mirror',
+      label: 'Ephemeral PR Previews & Shadow Traffic Mirror',
     },
     {
       id: 'HONEY_GRID',
       icon: ShieldAlert,
       badge: 'BREAKTHROUGH #5',
-      label: '🍯 Zero-Trust Honey-Token & Breach Deception Grid',
+      label: 'Zero-Trust Honey-Token & Breach Deception Grid',
     },
   ];
 
@@ -240,7 +240,7 @@ export default function Lab2026QuantumNexus({
                   <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-500/25 text-violet-200 font-bold">
                     {m.badge}
                   </span>
-                  <Icon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <Icon className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                 </div>
                 <div className="text-xs font-bold leading-snug">{m.label}</div>
               </button>
@@ -257,7 +257,7 @@ export default function Lab2026QuantumNexus({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Share2 className="w-4 h-4 text-violet-500" />
+                <Share2 className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Cross-Cloud Causal Blast-Radius &amp; Failure-Propagation Simulator
                 </span>
@@ -269,9 +269,9 @@ export default function Lab2026QuantumNexus({
 
             <div className="flex flex-wrap items-center gap-1.5">
               {[
-                { id: 'COMPROMISE_CREDENTIAL', label: '🔓 Simulate Credential Breach' },
-                { id: 'OUTAGE_PROPAGATION', label: '⚡ Simulate Cascading Outage' },
-                { id: 'COST_RUNAWAY', label: '💸 Simulate DDoS / Spend Spike' },
+                { id: 'COMPROMISE_CREDENTIAL', label: 'Simulate Credential Breach' },
+                { id: 'OUTAGE_PROPAGATION', label: 'Simulate Cascading Outage' },
+                { id: 'COST_RUNAWAY', label: 'Simulate DDoS / Spend Spike' },
               ].map((sim) => (
                 <button
                   key={sim.id}
@@ -321,9 +321,9 @@ export default function Lab2026QuantumNexus({
                       }`}
                     >
                       {isSelected
-                        ? '🎯 EPICENTER'
+                        ? 'EPICENTER'
                         : isAffected
-                        ? '⚠️ IN BLAST RADIUS'
+                        ? 'IN BLAST RADIUS'
                         : '✓ ISOLATED'}
                     </span>
                   </div>
@@ -456,7 +456,7 @@ export default function Lab2026QuantumNexus({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <History className="w-4 h-4 text-amber-500" />
+                <History className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Time-Machine Project State Flight Recorder &amp; Verified 1-Click Rollback
                 </span>
@@ -549,7 +549,7 @@ export default function Lab2026QuantumNexus({
             <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                  🔍 Visual State Diff Engine (Compare Any 2 Checkpoints)
+                  Visual State Diff Engine (Compare Any 2 Checkpoints)
                 </span>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <select
@@ -681,7 +681,7 @@ export default function Lab2026QuantumNexus({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-emerald-500" />
+                <DollarSign className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Autonomous FinOps Autopilot, Spot/Slot Arbitrage &amp; Budget Circuit-Breaker
                 </span>
@@ -701,7 +701,7 @@ export default function Lab2026QuantumNexus({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h5 className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  ⚡ Automated Hard-Cap Budget Circuit-Breaker Policy
+                  Automated Hard-Cap Budget Circuit-Breaker Policy
                 </h5>
                 <p className="text-xs text-zinc-500">
                   Automatically parks non-critical VMs and scales warm Cloud Run instances to 0 the instant your project burn crosses your threshold.
@@ -807,7 +807,7 @@ export default function Lab2026QuantumNexus({
                   >
                     {copiedCmd === opp.id ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                         <span>Copied Optimization Command!</span>
                       </>
                     ) : (
@@ -832,7 +832,7 @@ export default function Lab2026QuantumNexus({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <GitBranch className="w-4 h-4 text-cyan-500" />
+                <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Live Ephemeral PR Preview Stacks &amp; Canary Shadow-Traffic Mirror
                 </span>
@@ -971,7 +971,7 @@ export default function Lab2026QuantumNexus({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-rose-500" />
+                <ShieldAlert className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Zero-Trust Honey-Token &amp; Active Breach Deception Grid
                 </span>
@@ -1004,13 +1004,13 @@ export default function Lab2026QuantumNexus({
                 className="w-full px-2.5 py-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
               >
                 <option value="SA_JSON_KEY">
-                  🔑 Canary IAM Service Account .json Key
+                  Canary IAM Service Account .json Key
                 </option>
                 <option value="GCS_BIGLAKE_OBJECT">
-                  🪣 Canary BigLake / GCS Parquet File
+                  Canary BigLake / GCS Parquet File
                 </option>
                 <option value="SECRET_MANAGER_DECOY">
-                  🛡️ Secret Manager Honey-Secret
+                  Secret Manager Honey-Secret
                 </option>
               </select>
             </div>
@@ -1067,7 +1067,7 @@ export default function Lab2026QuantumNexus({
                           : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                       }`}
                     >
-                      {tripped ? '🚨 TRIPPED & QUARANTINED' : '🛡️ ARMED TRIPWIRE'}
+                      {tripped ? 'TRIPPED & QUARANTINED' : 'ARMED TRIPWIRE'}
                     </span>
                   </div>
                   <div className="text-xs font-mono font-bold text-zinc-950 dark:text-zinc-100 break-all">
@@ -1088,7 +1088,7 @@ export default function Lab2026QuantumNexus({
           {(data?.honeyGrid?.events || []).length > 0 && (
             <div className="p-4 rounded-xl bg-rose-950/30 border border-rose-500/40 space-y-2">
               <div className="text-xs font-extrabold text-rose-400">
-                🚨 Automated Breach Deception &amp; Quarantine Execution Log
+                Automated Breach Deception &amp; Quarantine Execution Log
               </div>
               {data.honeyGrid.events.map((ev) => (
                 <div

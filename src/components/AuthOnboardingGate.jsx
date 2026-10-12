@@ -290,7 +290,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600/20 via-emerald-500/20 to-amber-500/20 border border-blue-500/30 flex items-center justify-center shadow-sm">
-              <Cloud className="w-6 h-6 text-blue-500" />
+              <Cloud className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -385,7 +385,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                        <Smartphone className="w-4 h-4 text-blue-500" />
+                        <Smartphone className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                         <span>Sign in with Google / Gmail (Mobile & Cloud Run Ready)</span>
                       </div>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
@@ -505,7 +505,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     <span>
                       Detected Google Cloud Credentials (Local ADC / Cloud Run Service Account)
                     </span>
@@ -654,7 +654,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                 <div>
                   <div className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
                     Authenticated as{' '}
@@ -701,7 +701,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                         </div>
                       </div>
                       {isSel && (
-                        <Check className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                        <Check className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0 mt-0.5" />
                       )}
                     </button>
                   );
@@ -731,7 +731,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
         {/* Security & Cloud Run Sharing Note */}
         <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[11px] text-zinc-500">
           <span className="inline-flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-emerald-500" />
+            <Lock className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
             Zero-Trust Mobile OAuth · Direct Google Cloud REST APIs
           </span>
           <span className="font-mono">CloudPulse v2.6</span>

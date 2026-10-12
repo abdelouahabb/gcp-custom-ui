@@ -336,9 +336,9 @@ export default function EmergencyApiKillSwitch({
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
               {isBillingEnabled ? (
-                <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0" />
+                <ShieldAlert className="w-5 h-5 text-zinc-500 dark:text-zinc-400 shrink-0" />
               ) : (
-                <Lock className="w-5 h-5 text-emerald-500 shrink-0" />
+                <Lock className="w-5 h-5 text-zinc-500 dark:text-zinc-400 shrink-0" />
               )}
               <span className="text-sm font-bold text-zinc-950 dark:text-zinc-50">
                 DEFCON-1 Project Emergency Kill-Switch (Billing Circuit Breaker)
@@ -388,7 +388,7 @@ export default function EmergencyApiKillSwitch({
             {billingStatus && (
               <div className="pt-1 flex flex-wrap items-center gap-3 text-xs">
                 <div className="inline-flex items-center gap-1.5 font-mono bg-white/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 px-2.5 py-1 rounded-md">
-                  <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+                  <CreditCard className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                   <span className="text-zinc-500">Active Billing Account:</span>
                   {billingStatus.billingEnabled ? (
                     <span className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -524,7 +524,7 @@ export default function EmergencyApiKillSwitch({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4 pt-1">
         <div>
           <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2 flex-wrap">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
             <span>
               Granular Service API Kill-Switch (
               {loadingApis && activeApis.length === 0
@@ -576,7 +576,7 @@ export default function EmergencyApiKillSwitch({
       {/* ENABLED APIS GRID (Shown FIRST so user immediately sees active APIs to disable) */}
       {loadingApis && activeApis.length === 0 ? (
         <div className="py-10 text-center text-xs text-zinc-500 flex flex-col items-center gap-2">
-          <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
+          <RefreshCw className="w-5 h-5 animate-spin text-zinc-500 dark:text-zinc-400" />
           <span>
             Querying live enabled APIs from{' '}
             <code className="font-mono">serviceusage.googleapis.com</code> for{' '}
@@ -619,7 +619,7 @@ export default function EmergencyApiKillSwitch({
                       <div className="flex items-center gap-1.5">
                         {isHighImpact && !isDisabling && (
                           <Flame
-                            className="w-3.5 h-3.5 text-amber-500 shrink-0"
+                            className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0"
                             title="High-impact billable service API"
                           />
                         )}

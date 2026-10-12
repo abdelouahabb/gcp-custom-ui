@@ -530,10 +530,10 @@ export default function Revolutionary2026Suite({
               <Sparkles className="w-4 h-4" />
             </div>
             <h3 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
-              ✦ 2026 Beyond-Console Innovation Lab ★
+              2026 Beyond-Console Innovation Lab
             </h3>
             <span className="text-[10px] font-mono font-extrabold bg-gradient-to-r from-violet-600 to-amber-500 text-white px-2.5 py-0.5 rounded-full shadow-sm">
-              ★ FLAGSHIP STAR OF CLOUDPULSE 2026
+              FLAGSHIP STAR OF CLOUDPULSE 2026
             </span>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
@@ -599,27 +599,27 @@ export default function Revolutionary2026Suite({
             {[
               {
                 tabId: 'WAVE10_FRONTIER',
-                label: '🕸️ Spanner Graph ($65/mo) & Serverless Spark',
+                label: 'Spanner Graph ($65/mo) & Serverless Spark',
                 style: 'border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-500/25',
               },
               {
                 tabId: 'BIGQUERY_STUDIO',
-                label: '🌊 BigLake & Apache Iceberg vs BigQuery',
+                label: 'BigLake & Apache Iceberg vs BigQuery',
                 style: 'border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/25',
               },
               {
                 tabId: 'SOVEREIGN_IAM',
-                label: '🔑 SA .json Key & OAuth Token Kill-Switch',
+                label: 'SA .json Key & OAuth Token Kill-Switch',
                 style: 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25',
               },
               {
                 tabId: 'FUNCTIONS_STUDIO',
-                label: '⚡ Universal Eventarc (90+ GCP Events)',
+                label: 'Universal Eventarc (90+ GCP Events)',
                 style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
               },
               {
                 tabId: 'WAVE8_STUDIO',
-                label: '🚨 SRE War-Room & VPC-SC Perimeter',
+                label: 'SRE War-Room & VPC-SC Perimeter',
                 style: 'border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25',
               },
             ].map((item) => (
@@ -644,12 +644,12 @@ export default function Revolutionary2026Suite({
               Lab Domain:
             </span>
             {[
-              { id: 'ALL', label: '✦ All 15 Lab Suites' },
-              { id: 'QUANTUM', label: '★ 2026 Quantum Nexus (5 Breakthroughs)' },
-              { id: 'FINOPS', label: '💰 FinOps, Sleep & Egress (4)' },
-              { id: 'PERF_TOPOLOGY', label: '⚡ Topology, Cold-Start & Latency (4)' },
-              { id: 'SECURITY_DLP', label: '🛡️ DLP, Ransomware & Zero-Trust (3)' },
-              { id: 'AI_IAC', label: '🤖 AI Vault, Dream Stack & Terraform (3)' },
+              { id: 'ALL', label: 'All 15 Lab Suites' },
+              { id: 'QUANTUM', label: '2026 Quantum Nexus (5 Breakthroughs)' },
+              { id: 'FINOPS', label: 'FinOps, Sleep & Egress (4)' },
+              { id: 'PERF_TOPOLOGY', label: 'Topology, Cold-Start & Latency (4)' },
+              { id: 'SECURITY_DLP', label: 'DLP, Ransomware & Zero-Trust (3)' },
+              { id: 'AI_IAC', label: 'AI Vault, Dream Stack & Terraform (3)' },
             ].map((cat) => (
               <button
                 key={cat.id}
@@ -676,8 +676,8 @@ export default function Revolutionary2026Suite({
             {
               id: 'QUANTUM_NEXUS',
               category: 'QUANTUM',
-              badge: '★ 5-IN-1 NEXUS',
-              label: '✦ 2026 Quantum Nexus (Causal, Rollback, FinOps, PR, HoneyGrid)',
+              badge: '5-IN-1 NEXUS',
+              label: '2026 Quantum Nexus (Causal, Rollback, FinOps, PR, HoneyGrid)',
               tip: 'Unified Cross-Cloud Causal Blast-Radius Graph, Time-Machine 1-Click State Rollback, Autonomous FinOps Arbitrage, Ephemeral PR Shadow Previews & Zero-Trust Honey-Token Deception Grid',
               icon: Sparkles,
             },
@@ -685,7 +685,7 @@ export default function Revolutionary2026Suite({
               id: 'DREAM_BRAIN',
               category: 'AI_IAC',
               badge: 'AI & FinOps',
-              label: '🔮 Pre-Crime Bill & Dream Stack Compiler',
+              label: 'Pre-Crime Bill & Dream Stack Compiler',
               tip: 'Simulate 30-day billing trajectories, detect Pre-Crime runaway spend anomalies, and compile natural-language architectures into live GCP resources',
               icon: Sparkles,
             },
@@ -693,7 +693,7 @@ export default function Revolutionary2026Suite({
               id: 'TERRAFORM',
               category: 'AI_IAC',
               badge: 'IaC Export',
-              label: '📄 Reverse-Terraform (main.tf) Exporter',
+              label: 'Reverse-Terraform (main.tf) Exporter',
               tip: 'Reverse-engineer your live GCP VPCs, Firewall Rules, VMs, Cloud Run services, and Storage Buckets into Terraform HCL (main.tf) or a reproducible gcloud script',
               icon: FileCode2,
             },
@@ -701,7 +701,7 @@ export default function Revolutionary2026Suite({
               id: 'X6',
               category: 'AI_IAC',
               badge: 'WebCrypto AI',
-              label: '🤖 AES-256-GCM Gemini 3.8 Vault',
+              label: 'AES-256-GCM Gemini 3.8 Vault',
               tip: 'Zero-Sniffing Browser WebCrypto (Direct HTTPS TLS 1.3) & RSA-OAEP-256 RAM Vault for live Gemini 3.8 Flash / 3.1 Pro SRE Co-Architect',
               icon: Sparkles,
             },
@@ -709,7 +709,7 @@ export default function Revolutionary2026Suite({
               id: 'FINOPS_SLEEP',
               category: 'FINOPS',
               badge: 'FinOps',
-              label: '🌙 Burn-Rate Radar & Night-Mode Sleep',
+              label: 'Burn-Rate Radar & Night-Mode Sleep',
               tip: 'Inspect real-time hourly & 30-day cost breakdown per resource and park all non-production VMs & Cloud Run services to $0/hr overnight',
               icon: DollarSign,
             },
@@ -717,7 +717,7 @@ export default function Revolutionary2026Suite({
               id: 'ZOMBIES',
               category: 'FINOPS',
               badge: 'Waste Hunter',
-              label: '🧟 Zombie Resource & Waste Sweeper',
+              label: 'Zombie Resource & Waste Sweeper',
               tip: 'Hunt idle VMs, unattached disks, and over-provisioned resources to reclaim wasted cloud spend in 1 click',
               icon: AlertTriangle,
             },
@@ -725,7 +725,7 @@ export default function Revolutionary2026Suite({
               id: 'TELEPORT_DIFF',
               category: 'FINOPS',
               badge: '42 Regions',
-              label: '🌍 Cross-Region Carbon, FinOps & GPU Arbitrage',
+              label: 'Cross-Region Carbon, FinOps & GPU Arbitrage',
               tip: 'Compare regional carbon intensity, FinOps pricing, and NVIDIA GPU (L4 / H100 / A100) availability across 42 global GCP regions',
               icon: Leaf,
             },
@@ -733,7 +733,7 @@ export default function Revolutionary2026Suite({
               id: 'X3',
               category: 'FINOPS',
               badge: 'Egress Audit',
-              label: '🕸️ Hidden Egress & Data-Gravity Tollbooth',
+              label: 'Hidden Egress & Data-Gravity Tollbooth',
               tip: 'Expose hidden $/GB cross-region and inter-continental bandwidth taxes between Compute VMs, Cloud Run, GCS Buckets, and BigQuery',
               icon: DollarSign,
             },
@@ -741,7 +741,7 @@ export default function Revolutionary2026Suite({
               id: 'TOPOLOGY',
               category: 'PERF_TOPOLOGY',
               badge: '4-Layer Graph',
-              label: '🗺️ Live Cloud Topology & Blast Radius',
+              label: 'Live Cloud Topology & Blast Radius',
               tip: 'Visualize your live 4-Layer GCP Architecture (Public Internet Edge, VPC Backbone, Compute/Serverless, Storage/Lakehouse) and inspect blast radius',
               icon: Share2,
             },
@@ -749,7 +749,7 @@ export default function Revolutionary2026Suite({
               id: 'BENCHMARK',
               category: 'PERF_TOPOLOGY',
               badge: 'HTTP Arena',
-              label: '⚡ Live HTTP/TLS Latency Benchmark Arena',
+              label: 'Live HTTP/TLS Latency Benchmark Arena',
               tip: 'Benchmark live HTTP/TLS latency and throughput against your Cloud Run endpoints and GCP regions',
               icon: Zap,
             },
@@ -757,7 +757,7 @@ export default function Revolutionary2026Suite({
               id: 'X2',
               category: 'PERF_TOPOLOGY',
               badge: 'Cold-Start',
-              label: '🚀 Serverless Cold-Start & Distroless Surgeon',
+              label: 'Serverless Cold-Start & Distroless Surgeon',
               tip: 'Dissect Cloud Run P99 cold-start phases, generate multi-stage Distroless Dockerfiles, and patch Startup CPU Boost + Gen2 in 1 click',
               icon: Zap,
             },
@@ -765,7 +765,7 @@ export default function Revolutionary2026Suite({
               id: 'X5',
               category: 'PERF_TOPOLOGY',
               badge: 'Global RTT',
-              label: '⏱️ 12-Metropolis Speed-of-Light UX Matrix',
+              label: '⏱12-Metropolis Speed-of-Light UX Matrix',
               tip: 'Calculate optical-fiber RTT and TLS 1.3 latency from 12 global cities to your active GCP origin and preview Google Anycast Edge CDN speedup',
               icon: Globe,
             },
@@ -773,7 +773,7 @@ export default function Revolutionary2026Suite({
               id: 'SECURITY',
               category: 'SECURITY_DLP',
               badge: `${(auditData?.findings?.length || 0) + publicRun.length} Alerts`,
-              label: '🛡️ Zero-Trust Exposure & Firewall Scanner',
+              label: 'Zero-Trust Exposure & Firewall Scanner',
               tip: 'Audit open 0.0.0.0/0 firewall rules, public Cloud Run endpoints, and active IAM Service Accounts with 1-Tap remediation',
               icon: ShieldAlert,
             },
@@ -781,7 +781,7 @@ export default function Revolutionary2026Suite({
               id: 'X1',
               category: 'SECURITY_DLP',
               badge: 'RAM DLP',
-              label: '🧬 Storage DLP, Secret Leak & PII X-Ray',
+              label: 'Storage DLP, Secret Leak & PII X-Ray',
               tip: 'Stream live Cloud Storage objects into ephemeral RAM, scan against 11 credential & GDPR/PCI PII detectors, and redact leaks in-place',
               icon: ShieldAlert,
             },
@@ -789,7 +789,7 @@ export default function Revolutionary2026Suite({
               id: 'X4',
               category: 'SECURITY_DLP',
               badge: 'SEC 17a-4',
-              label: '🔐 Ransomware Air-Gap & Clean-Room Auditor',
+              label: 'Ransomware Air-Gap & Clean-Room Auditor',
               tip: 'Audit every Cloud Storage bucket against NIST & SEC 17a-4 ransomware survival criteria and apply 30-day Soft-Delete + Uniform IAM in 1 click',
               icon: Lock,
             },
@@ -831,7 +831,7 @@ export default function Revolutionary2026Suite({
         </div>
       </div>
 
-      {/* ★ FLAGSHIP TAB 0: 2026 QUANTUM NEXUS (5 WORLD-FIRST BREAKTHROUGHS) */}
+      {/* FLAGSHIP TAB 0: 2026 QUANTUM NEXUS (5 WORLD-FIRST BREAKTHROUGHS) */}
       {subTab === 'QUANTUM_NEXUS' && (
         <Lab2026QuantumNexus
           projectId={projectId}

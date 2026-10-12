@@ -38,7 +38,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'nyc',
     city: 'New York, USA',
-    flag: '🇺🇸',
+    flag: '',
     lat: 40.71,
     lon: -74.01,
     nearestEdgeMs: 9,
@@ -46,7 +46,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'sfo',
     city: 'Silicon Valley, USA',
-    flag: '🇺🇸',
+    flag: '',
     lat: 37.39,
     lon: -122.08,
     nearestEdgeMs: 8,
@@ -54,7 +54,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'gru',
     city: 'São Paulo, Brazil',
-    flag: '🇧🇷',
+    flag: '',
     lat: -23.55,
     lon: -46.63,
     nearestEdgeMs: 11,
@@ -62,7 +62,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'lhr',
     city: 'London, UK',
-    flag: '🇬🇧',
+    flag: '',
     lat: 51.51,
     lon: -0.13,
     nearestEdgeMs: 8,
@@ -70,7 +70,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'fra',
     city: 'Frankfurt, Germany',
-    flag: '🇩🇪',
+    flag: '',
     lat: 50.11,
     lon: 8.68,
     nearestEdgeMs: 7,
@@ -78,7 +78,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'cdg',
     city: 'Paris, France',
-    flag: '🇫🇷',
+    flag: '',
     lat: 48.86,
     lon: 2.35,
     nearestEdgeMs: 8,
@@ -86,7 +86,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'dxb',
     city: 'Dubai / Doha, MENA',
-    flag: '🇦🇪',
+    flag: '',
     lat: 25.2,
     lon: 55.27,
     nearestEdgeMs: 14,
@@ -94,7 +94,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'jnb',
     city: 'Johannesburg, ZA',
-    flag: '🇿🇦',
+    flag: '',
     lat: -26.2,
     lon: 28.05,
     nearestEdgeMs: 13,
@@ -102,7 +102,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'bom',
     city: 'Mumbai, India',
-    flag: '🇮🇳',
+    flag: '',
     lat: 19.08,
     lon: 72.88,
     nearestEdgeMs: 10,
@@ -110,7 +110,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'sin',
     city: 'Singapore, APAC',
-    flag: '🇸🇬',
+    flag: '',
     lat: 1.35,
     lon: 103.82,
     nearestEdgeMs: 8,
@@ -118,7 +118,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'nrt',
     city: 'Tokyo, Japan',
-    flag: '🇯🇵',
+    flag: '',
     lat: 35.68,
     lon: 139.77,
     nearestEdgeMs: 8,
@@ -126,7 +126,7 @@ const GLOBAL_CLIENT_HUBS = [
   {
     id: 'syd',
     city: 'Sydney, Australia',
-    flag: '🇦🇺',
+    flag: '',
     lat: -33.87,
     lon: 151.21,
     nearestEdgeMs: 10,
@@ -203,7 +203,7 @@ export default function EngineerMoonshotsWave3({
       setDlpScanResult(res.data);
       if (onShowToast) {
         onShowToast(
-          `🧬 DLP X-Ray scanned ${res.data.scannedObjectsCount} object(s) in gs://${bucketToScan}: ${res.data.totalMatches} secret/PII pattern(s) detected.`
+          `DLP X-Ray scanned ${res.data.scannedObjectsCount} object(s) in gs://${bucketToScan}: ${res.data.totalMatches} secret/PII pattern(s) detected.`
         );
       }
     } catch (err) {
@@ -233,7 +233,7 @@ export default function EngineerMoonshotsWave3({
         'sk-proj-',
         'canaryTestSecretKeyForCloudPulse2026ScannerDemo99',
       ].join('');
-      const canaryPayload = `# ⚠️ CANARY DLP TEST ARTIFACT (SAFE SYNTHETIC TOKENS FOR X-RAY VERIFICATION)
+      const canaryPayload = `# CANARY DLP TEST ARTIFACT (SAFE SYNTHETIC TOKENS FOR X-RAY VERIFICATION)
 SERVICE_ENVIRONMENT=staging
 GCP_TEST_API_KEY=${syntheticGcpKey}
 GITHUB_AUTOMATION_PAT=${syntheticGhPat}
@@ -256,7 +256,7 @@ US_TAXPAYER_SSN=123-45-6789
       );
       if (onShowToast) {
         onShowToast(
-          `🧪 Uploaded synthetic canary file gs://${selectedDlpBucket}/canary-audit/leaked-staging-secrets.env — running DLP X-Ray now!`
+          `Uploaded synthetic canary file gs://${selectedDlpBucket}/canary-audit/leaked-staging-secrets.env — running DLP X-Ray now!`
         );
       }
       await handleRunDlpScan(selectedDlpBucket);
@@ -378,7 +378,7 @@ US_TAXPAYER_SSN=123-45-6789
     if (!projectId || !activeRunObj?.name || cloudRunServices.length === 0) {
       if (onShowToast) {
         onShowToast(
-          '⚡ Simulated Startup CPU Boost + Gen2 Execution Environment patch (Create a live Cloud Run service to patch in production)!'
+          'Simulated Startup CPU Boost + Gen2 Execution Environment patch (Create a live Cloud Run service to patch in production)!'
         );
       }
       return;
@@ -403,7 +403,7 @@ US_TAXPAYER_SSN=123-45-6789
       if (onShowToast) {
         onShowToast(
           res.data?.message ||
-            `⚡ Applied Startup CPU Boost + Gen2 Execution Environment to ${activeRunObj.name}!`
+            `Applied Startup CPU Boost + Gen2 Execution Environment to ${activeRunObj.name}!`
         );
       }
       if (onRefreshGlobal) onRefreshGlobal();
@@ -595,7 +595,7 @@ US_TAXPAYER_SSN=123-45-6789
       if (onShowToast) {
         onShowToast(
           res.data?.message ||
-            `🔐 Air-Gap Hardened gs://${bucketName} (PAP Enforced + Uniform IAM + Versioning + 30d Soft-Delete Recovery)!`
+            `Air-Gap Hardened gs://${bucketName} (PAP Enforced + Uniform IAM + Versioning + 30d Soft-Delete Recovery)!`
         );
       }
       await fetchBucketsForMoonshots();
@@ -686,23 +686,23 @@ US_TAXPAYER_SSN=123-45-6789
   const [availableModels, setAvailableModels] = useState([
     {
       id: 'gemini-3.8-flash',
-      label: '⚡ gemini-3.8-flash (2026 Ultra-Fast SRE & FinOps Engine)',
+      label: 'gemini-3.8-flash (2026 Ultra-Fast SRE & FinOps Engine)',
     },
     {
       id: 'gemini-3.1-pro',
-      label: '🧠 gemini-3.1-pro (2026 Deep Architecture & Security Reasoning)',
+      label: 'gemini-3.1-pro (2026 Deep Architecture & Security Reasoning)',
     },
     {
       id: 'gemini-3.1-flash-lite',
-      label: '🚀 gemini-3.1-flash-lite (Sub-Second Telemetry Triage)',
+      label: 'gemini-3.1-flash-lite (Sub-Second Telemetry Triage)',
     },
     {
       id: 'gemini-2.5-pro',
-      label: '🛡️ gemini-2.5-pro (Legacy Long-Context Fallback)',
+      label: 'gemini-2.5-pro (Legacy Long-Context Fallback)',
     },
     {
       id: 'gemini-2.5-flash',
-      label: '⚙️ gemini-2.5-flash (Legacy Fast Fallback)',
+      label: 'gemini-2.5-flash (Legacy Fast Fallback)',
     },
   ]);
   const [discoveringModels, setDiscoveringModels] = useState(false);
@@ -870,7 +870,7 @@ US_TAXPAYER_SSN=123-45-6789
             const cleanId = String(m.name || '').replace(/^models\//, '');
             return {
               id: cleanId,
-              label: `🟢 ${cleanId} (${
+              label: `${cleanId} (${
                 m.displayName || 'Live AI Studio Model'
               })`,
             };
@@ -882,7 +882,7 @@ US_TAXPAYER_SSN=123-45-6789
         setAvailableModels(mergedList);
         if (onShowToast) {
           onShowToast(
-            `🔒 Synced ${mergedList.length} Gemini models directly over HTTPS TLS 1.3 (0 local HTTP packets)!`
+            `Synced ${mergedList.length} Gemini models directly over HTTPS TLS 1.3 (0 local HTTP packets)!`
           );
         }
         return;
@@ -893,7 +893,7 @@ US_TAXPAYER_SSN=123-45-6789
         setAvailableModels(res.data.models);
         if (onShowToast) {
           onShowToast(
-            `🔄 Synced ${res.data.models.length} Gemini models (${res.data.source})!`
+            `Synced ${res.data.models.length} Gemini models (${res.data.source})!`
           );
         }
       }
@@ -933,7 +933,7 @@ US_TAXPAYER_SSN=123-45-6789
         mode: 'RSA_OAEP_SERVER_VAULT',
         message:
           res.data?.message ||
-          `🛡️ Encrypted key in browser via RSA-OAEP-256 & sealed in Server AES-256-GCM RAM (Zero plaintext over HTTP)!`,
+          `Encrypted key in browser via RSA-OAEP-256 & sealed in Server AES-256-GCM RAM (Zero plaintext over HTTP)!`,
       };
     }
 
@@ -949,7 +949,7 @@ US_TAXPAYER_SSN=123-45-6789
     }));
     return {
       mode: 'BROWSER_DIRECT_TLS13',
-      message: `🔒 Sealed in Browser Non-Extractable WebCrypto Enclave (${browserMeta.keyFingerprint}) — Direct Browser->Google HTTPS TLS 1.3 (0 bytes sent over local HTTP)!`,
+      message: `Sealed in Browser Non-Extractable WebCrypto Enclave (${browserMeta.keyFingerprint}) — Direct Browser->Google HTTPS TLS 1.3 (0 bytes sent over local HTTP)!`,
     };
   };
 
@@ -959,7 +959,7 @@ US_TAXPAYER_SSN=123-45-6789
       focusAndHighlightKeyInput();
       if (onShowToast) {
         onShowToast(
-          '🔑 Paste your Google AI Studio API Key (AIzaSy...) into the input box first!'
+          'Paste your Google AI Studio API Key (AIzaSy...) into the input box first!'
         );
       }
       return;
@@ -1007,7 +1007,7 @@ US_TAXPAYER_SSN=123-45-6789
       if (onShowToast) {
         onShowToast(
           res?.data?.message ||
-            '🧹 Wiped API key from Browser WebCrypto Enclave & Server RAM Vault.'
+            'Wiped API key from Browser WebCrypto Enclave & Server RAM Vault.'
         );
       }
     } catch {
@@ -1049,7 +1049,7 @@ US_TAXPAYER_SSN=123-45-6789
       focusAndHighlightKeyInput();
       if (onShowToast) {
         onShowToast(
-          `🔑 No API Key in Vault yet — showing Offline Deterministic Preview. Paste an AIzaSy... key above to unlock live ${activeModel}!`
+          `No API Key in Vault yet — showing Offline Deterministic Preview. Paste an AIzaSy... key above to unlock live ${activeModel}!`
         );
       }
     }
@@ -1215,7 +1215,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 </span>
               </div>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-                <FileWarning className="w-5 h-5 text-rose-500" />
+                <FileWarning className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Cloud Storage Secret, Credential & Regulated PII X-Ray Scanner
                   + 1-Tap In-Place Redactor
@@ -1389,7 +1389,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
             dlpScanResult && (
               <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
                 <span>
-                  ✅ Zero plaintext credentials, API keys, or regulated PII
+                  Zero plaintext credentials, API keys, or regulated PII
                   detected across {dlpScanResult.scannedObjectsCount} inspected
                   object(s) in gs://{dlpScanResult.bucket}.
                 </span>
@@ -1409,7 +1409,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
   // RENDER X2: SERVERLESS COLD-START PROFILER & CONTAINER DIET SURGEON
   // ==========================================================================
   if (activeTab === 'X2') {
-    const dockerfilePatch = `# 🚀 CloudPulse 2026 Multi-Stage Distroless Container Diet Patch
+    const dockerfilePatch = `# CloudPulse 2026 Multi-Stage Distroless Container Diet Patch
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -1433,7 +1433,7 @@ CMD ["server/index.js"]`;
                 MOONSHOT X2 · SUB-100MS SERVERLESS COLD-START SURGEON
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-violet-500" />
+                <Zap className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Cloud Run Cold-Start Phase Dissector &amp; 1-Tap Startup CPU
                   Boost Surgeon
@@ -1597,7 +1597,7 @@ CMD ["server/index.js"]`;
                 MOONSHOT X3 · HIDDEN BANDWIDTH TAX &amp; DATA-GRAVITY RADAR
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-amber-500" />
+                <DollarSign className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Cross-Region Egress Tollbooth &amp; Zero-Egress Co-Location
                   Planner
@@ -1685,7 +1685,7 @@ CMD ["server/index.js"]`;
                     }`}
                   >
                     {link.ratePerGb === 0
-                      ? '✅ $0.00/GB (Co-Located)'
+                      ? '$0.00/GB (Co-Located)'
                       : `$${link.ratePerGb}/GB · $${link.monthlyTollUsd}/mo Tax`}
                   </span>
                 </div>
@@ -1710,7 +1710,7 @@ CMD ["server/index.js"]`;
                 MOONSHOT X4 · RANSOMWARE SURVIVAL &amp; AIR-GAP AUDITOR
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-                <Lock className="w-5 h-5 text-emerald-500" />
+                <Lock className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Cryptographic Ransomware Air-Gap Resilience &amp; Clean-Room
                   RTO/RPO Auditor
@@ -1804,7 +1804,7 @@ CMD ["server/index.js"]`;
                     >
                       {busyKey === `airgap-${b.name}`
                         ? 'Hardening...'
-                        : '🔐 1-Tap Air-Gap Shield (30d Soft-Delete)'}
+                        : '1-Tap Air-Gap Shield (30d Soft-Delete)'}
                     </button>
                   </div>
                 </div>
@@ -1829,7 +1829,7 @@ CMD ["server/index.js"]`;
                 MOONSHOT X5 · 12-METROPOLIS SPEED-OF-LIGHT UX MATRIX
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-                <Globe className="w-5 h-5 text-cyan-500" />
+                <Globe className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   Global Client-to-Region Fiber RTT + Anycast Edge Load Balancer
                   Simulator
@@ -1868,7 +1868,7 @@ CMD ["server/index.js"]`;
                 }`}
               >
                 {enableGlobalAnycastCdn
-                  ? '⚡ Global Anycast Edge CDN: ENABLED'
+                  ? 'Global Anycast Edge CDN: ENABLED'
                   : 'Toggle Global Anycast Edge CDN'}
               </button>
             </div>
@@ -1926,8 +1926,8 @@ CMD ["server/index.js"]`;
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-emerald-400 border border-emerald-500/30">
                 {vaultStatus.configured
-                  ? `🔐 SEALED IN RAM (${vaultStatus.maskedKey} · ${vaultStatus.keyFingerprint})`
-                  : '🛡️ ZERO-KEY DETERMINISTIC MODE (SEAL KEY TO UNLOCK LIVE GEMINI 3.8 FLASH / 3.1 PRO)'}
+                  ? `SEALED IN RAM (${vaultStatus.maskedKey} · ${vaultStatus.keyFingerprint})`
+                  : 'ZERO-KEY DETERMINISTIC MODE (SEAL KEY TO UNLOCK LIVE GEMINI 3.8 FLASH / 3.1 PRO)'}
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-500 border border-blue-500/30">
                 ACTIVE ENGINE:{' '}
@@ -1937,14 +1937,14 @@ CMD ["server/index.js"]`;
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/15 text-violet-500 border border-violet-500/30">
                 {transportMode === 'BROWSER_DIRECT_TLS13'
-                  ? '🔒 ZERO LOCAL HTTP HOP: Direct Browser -> Google HTTPS TLS 1.3'
-                  : `🛡️ RSA-OAEP-256 WIRE ENVELOPE (${
+                  ? 'ZERO LOCAL HTTP HOP: Direct Browser -> Google HTTPS TLS 1.3'
+                  : `RSA-OAEP-256 WIRE ENVELOPE (${
                       vaultStatus.rsaKeyFingerprint || 'RSA2048-OAEP-SHA256'
                     })`}
               </span>
             </div>
             <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-              <Key className="w-5 h-5 text-emerald-500" />
+              <Key className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 Zero-Sniffing WebCrypto Enclave &amp; Live Gemini 3.8 Flash /
                 3.1 Pro SRE Co-Architect
@@ -1978,7 +1978,7 @@ CMD ["server/index.js"]`;
             <span>
               {discoveringModels
                 ? 'Syncing Models...'
-                : '🔄 Sync Live AI Studio Models'}
+                : 'Sync Live AI Studio Models'}
             </span>
           </button>
         </div>
@@ -2003,7 +2003,7 @@ CMD ["server/index.js"]`;
                   : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-emerald-500/50'
               }`}
             >
-              🔒 Mode 1: Direct Browser → Google HTTPS TLS 1.3 (0 Local HTTP
+              Mode 1: Direct Browser → Google HTTPS TLS 1.3 (0 Local HTTP
               Packets)
             </button>
             <button
@@ -2016,7 +2016,7 @@ CMD ["server/index.js"]`;
                   : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-violet-500/50'
               }`}
             >
-              🛡️ Mode 2: Browser RSA-OAEP-256 Ciphertext → Server AES-256-GCM
+              Mode 2: Browser RSA-OAEP-256 Ciphertext → Server AES-256-GCM
               RAM
             </button>
           </div>
@@ -2033,15 +2033,15 @@ CMD ["server/index.js"]`;
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-xs font-mono font-extrabold text-amber-600 dark:text-amber-300">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                <AlertTriangle className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
                 <span>
                   {missingKeyBanner
-                    ? `⚠️ No API Key Sealed Yet! Follow These 3 Steps to Switch from Offline Deterministic Mode to Live ${
+                    ? `No API Key Sealed Yet! Follow These 3 Steps to Switch from Offline Deterministic Mode to Live ${
                         selectedGeminiModel === 'CUSTOM' && customModelId.trim()
                           ? customModelId.trim()
                           : selectedGeminiModel
                       }:`
-                    : `🔑 How to Activate Live ${
+                    : `How to Activate Live ${
                         selectedGeminiModel === 'CUSTOM' && customModelId.trim()
                           ? customModelId.trim()
                           : selectedGeminiModel
@@ -2099,7 +2099,7 @@ CMD ["server/index.js"]`;
                   STEP 3
                 </span>
                 <span className="text-zinc-700 dark:text-zinc-300">
-                  Click <strong>🔐 Seal in RAM Vault</strong> (or just click{' '}
+                  Click <strong>Seal in RAM Vault</strong> (or just click{' '}
                   <strong>Ask</strong> — we auto-seal it for you!).
                 </span>
               </div>
@@ -2130,7 +2130,7 @@ CMD ["server/index.js"]`;
                 placeholder={
                   vaultStatus.configured
                     ? `Sealed: ${vaultStatus.maskedKey} (Enter new key to rotate)`
-                    : '👉 Paste Google AI Studio Key here (AIzaSy...) to unlock live Gemini 3.8 / 3.1'
+                    : 'Paste Google AI Studio Key here (AIzaSy...) to unlock live Gemini 3.8 / 3.1'
                 }
                 className={`w-full bg-zinc-50 dark:bg-zinc-950 border rounded-lg px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 transition-all ${
                   missingKeyBanner && !vaultStatus.configured
@@ -2152,7 +2152,7 @@ CMD ["server/index.js"]`;
                   </option>
                 ))}
                 <option value="CUSTOM">
-                  ✏️ Custom / Future Gemini Model ID...
+                  Custom / Future Gemini Model ID...
                 </option>
               </select>
             </div>
@@ -2172,8 +2172,8 @@ CMD ["server/index.js"]`;
                 }`}
               >
                 {transportMode === 'BROWSER_DIRECT_TLS13'
-                  ? '🔒 Seal in Browser WebCrypto'
-                  : '🛡️ Seal via RSA-OAEP-256'}
+                  ? 'Seal in Browser WebCrypto'
+                  : 'Seal via RSA-OAEP-256'}
               </button>
               {vaultStatus.configured && (
                 <button
@@ -2197,17 +2197,17 @@ CMD ["server/index.js"]`;
               {[
                 {
                   id: 'gemini-3.8-flash',
-                  badge: '⚡ gemini-3.8-flash (Ultra-Fast SRE)',
+                  badge: 'gemini-3.8-flash (Ultra-Fast SRE)',
                   tip: 'Switch to gemini-3.8-flash: High-speed 2026 SRE, FinOps & gcloud CLI synthesis engine',
                 },
                 {
                   id: 'gemini-3.1-pro',
-                  badge: '🧠 gemini-3.1-pro (Deep Architecture)',
+                  badge: 'gemini-3.1-pro (Deep Architecture)',
                   tip: 'Switch to gemini-3.1-pro: Deep multi-layer cloud architecture, IAM security & compliance reasoning',
                 },
                 {
                   id: 'gemini-3.1-flash-lite',
-                  badge: '🚀 gemini-3.1-flash-lite (Sub-Second)',
+                  badge: 'gemini-3.1-flash-lite (Sub-Second)',
                   tip: 'Switch to gemini-3.1-flash-lite: Ultra-low-latency telemetry triage and rapid command generation',
                 },
               ].map((preset) => (
@@ -2258,7 +2258,7 @@ CMD ["server/index.js"]`;
                 title={`Run this SRE prompt against your live ${projectId} telemetry: "${q}"`}
                 className="text-[10.5px] font-mono px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500 cursor-pointer"
               >
-                ✨ {q}
+                {q}
               </button>
             ))}
           </div>
@@ -2289,7 +2289,7 @@ CMD ["server/index.js"]`;
               {askingAi
                 ? `Synthesizing (${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel})...`
                 : vaultStatus.configured || apiKeyInput.trim().length >= 12
-                ? `⚡ Ask Live ${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel}`
+                ? `Ask Live ${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel}`
                 : `Ask ${selectedGeminiModel === 'CUSTOM' && customModelId.trim() ? customModelId.trim() : selectedGeminiModel} (Seal Key Above for Live AI)`}
             </button>
           </div>
@@ -2299,7 +2299,7 @@ CMD ["server/index.js"]`;
               {!vaultStatus.configured && (
                 <div className="p-3 rounded-lg bg-amber-500/15 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-amber-300">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <AlertTriangle className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
                     <span>
                       <strong>Offline Deterministic Mode Active:</strong> No API
                       key was sealed in the RAM Vault, so the response below was
@@ -2331,7 +2331,7 @@ CMD ["server/index.js"]`;
                       title="Scroll up and focus the encrypted API key input box"
                       className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-amber-500/40 font-bold text-[11px] cursor-pointer"
                     >
-                      🎯 Paste Key Above
+                      Paste Key Above
                     </button>
                   </div>
                 </div>
@@ -2372,7 +2372,7 @@ CMD ["server/index.js"]`;
                 >
                   {copiedKey === 'ai-ans'
                     ? '✓ Copied Full Answer!'
-                    : '📋 Copy Full Response'}
+                    : 'Copy Full Response'}
                 </button>
               </div>
 

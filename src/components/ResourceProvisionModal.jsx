@@ -25,7 +25,7 @@ const SERVICE_TABS = [
   },
   {
     id: 'GKE_CLUSTER',
-    label: 'GKE Cluster ☸️',
+    label: 'GKE Cluster',
     icon: Sparkles,
     desc: 'Create real GKE Autopilot or Standard GPU Cluster (container.googleapis.com)',
   },
@@ -61,7 +61,7 @@ const SERVICE_TABS = [
   },
   {
     id: 'CLOUD_SQL',
-    label: 'Cloud SQL / AlloyDB 🐘',
+    label: 'Cloud SQL / AlloyDB',
     icon: Database,
     desc: 'Create MySQL 8.4 / Postgres 16 Cloud SQL or AlloyDB Cluster',
   },
@@ -1712,7 +1712,7 @@ export default function ResourceProvisionModal({
                   >
                     {!GCP_REGION_ZONES[vmRegion] && (
                       <option value={vmRegion}>
-                        🛰️ {vmRegion} (Map Drop-Pod Target)
+                        {vmRegion} (Map Drop-Pod Target)
                       </option>
                     )}
                     {Object.entries(GCP_REGION_ZONES).map(([regKey, info]) => (
@@ -1790,7 +1790,7 @@ export default function ResourceProvisionModal({
                 >
                   {!GCP_REGION_ZONES[region] && (
                     <option value={region}>
-                      🛰️ {region} (Map Drop-Pod Target)
+                      {region} (Map Drop-Pod Target)
                     </option>
                   )}
                   {Object.entries(GCP_REGION_ZONES).map(([regKey, info]) => (
@@ -1809,7 +1809,7 @@ export default function ResourceProvisionModal({
                 </label>
                 <div className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono text-zinc-800 dark:text-zinc-200 flex items-center justify-between gap-2">
                   <span className="truncate font-bold text-indigo-600 dark:text-indigo-400">
-                    ☸️ {gkeMode} · {gkeLocation} ({gkeReleaseChannel})
+                    {gkeMode} · {gkeLocation} ({gkeReleaseChannel})
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
                     {gkeEnableWorkloadIdentity ? 'WI + ' : ''}
@@ -1825,7 +1825,7 @@ export default function ResourceProvisionModal({
                   <span>Location Topology & Geo-Redundancy</span>
                   {gcsComplianceRegime !== 'custom' && (
                     <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
-                      🔒 Enforced by {gcsComplianceRegime.toUpperCase()}
+                      Enforced by {gcsComplianceRegime.toUpperCase()}
                     </span>
                   )}
                 </label>
@@ -1852,7 +1852,7 @@ export default function ResourceProvisionModal({
                       gcsComplianceRegime === 'gdpr-eu-sovereign'
                     }
                   >
-                    📍 REGIONAL — Single Region Low Latency (99.99% SLA)
+                    REGIONAL — Single Region Low Latency (99.99% SLA)
                   </option>
                   <option
                     value="DUAL_REGION"
@@ -1861,7 +1861,7 @@ export default function ResourceProvisionModal({
                       gcsComplianceRegime === 'ai-lakehouse-hns'
                     }
                   >
-                    🛡️ DUAL_REGION — 2-Region Sovereign Pair + 15m RPO (99.999% SLA)
+                    DUAL_REGION — 2-Region Sovereign Pair + 15m RPO (99.999% SLA)
                   </option>
                   <option
                     value="MULTI_REGION"
@@ -1870,7 +1870,7 @@ export default function ResourceProvisionModal({
                       gcsComplianceRegime === 'ai-lakehouse-hns'
                     }
                   >
-                    🌐 MULTI_REGION — Continental Geo-Redundant (US / EU / ASIA)
+                    MULTI_REGION — Continental Geo-Redundant (US / EU / ASIA)
                   </option>
                 </select>
               </div>
@@ -1887,8 +1887,8 @@ export default function ResourceProvisionModal({
                 <div className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono text-zinc-800 dark:text-zinc-200 flex items-center justify-between">
                   <span>
                     {bqComplianceRegime === 'standard'
-                      ? '🎛️ Custom / GCP Console Standard (All Options Unlocked)'
-                      : `🔒 Enforcing ${bqComplianceRegime.toUpperCase()} Guardrails`}
+                      ? 'Custom / GCP Console Standard (All Options Unlocked)'
+                      : `Enforcing ${bqComplianceRegime.toUpperCase()} Guardrails`}
                   </span>
                   {bqComplianceRegime !== 'standard' && (
                     <button
@@ -2374,8 +2374,8 @@ export default function ResourceProvisionModal({
                   }`}
                 >
                   {deletionProtection
-                    ? '🔒 Deletion Protection ON'
-                    : '🔓 Deletion Protection OFF'}
+                    ? 'Deletion Protection ON'
+                    : 'Deletion Protection OFF'}
                 </button>
               </div>
 
@@ -2429,39 +2429,39 @@ export default function ResourceProvisionModal({
                 <div className="p-3 rounded-[10px] border border-emerald-500/30 bg-emerald-500/5 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                      🛡️ 1-Tap Cloud Storage Regulatory Blueprints (Strict Guardrail Enforcement)
+                      1-Tap Cloud Storage Regulatory Blueprints (Strict Guardrail Enforcement)
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
                       {isGcsCustom
-                        ? '🎛️ Custom Mode: All Options Unlocked'
-                        : `🔒 Enforcing ${gcsComplianceRegime.toUpperCase()} · ${gcsDataClassification.toUpperCase()}`}
+                        ? 'Custom Mode: All Options Unlocked'
+                        : `Enforcing ${gcsComplianceRegime.toUpperCase()} · ${gcsDataClassification.toUpperCase()}`}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-1.5">
                     {[
                       {
                         id: 'custom',
-                        title: '🎛️ GCP Console Standard',
+                        title: 'GCP Console Standard',
                         desc: 'All Options Unlocked · Custom Topology & ACLs',
                       },
                       {
                         id: 'sec-17a4-worm',
-                        title: '🏛️ SEC 17a-4 / FINRA WORM',
+                        title: 'SEC 17a-4 / FINRA WORM',
                         desc: 'Locks: ≥1-Yr WORM · US Only · PAP + Uniform · ≥30d Soft-Delete',
                       },
                       {
                         id: 'gdpr-eu-sovereign',
-                        title: '🇪🇺 GDPR EU Dual-Region',
+                        title: 'GDPR EU Dual-Region',
                         desc: 'Locks: EU Only (EUR4/Europe) · 15m Turbo RPO · PAP + Uniform',
                       },
                       {
                         id: 'hipaa-soc2-vault',
-                        title: '🏥 HIPAA / SOC2 Vault',
+                        title: 'HIPAA / SOC2 Vault',
                         desc: 'Locks: US BAA Region · PAP + Uniform · ≥30d Soft-Delete · Versioning',
                       },
                       {
                         id: 'ai-lakehouse-hns',
-                        title: '🤖 AI / Spark HNS Tree',
+                        title: 'AI / Spark HNS Tree',
                         desc: 'Locks: Single Region · Hierarchical Namespace ON · Uniform IAM',
                       },
                     ].map((bp) => {
@@ -2497,7 +2497,7 @@ export default function ResourceProvisionModal({
                   {!isGcsCustom && (
                     <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-amber-800 dark:text-amber-300">
                       <div>
-                        <strong>🔒 Active Regulatory Lock ({gcsComplianceRegime.toUpperCase()}):</strong>{' '}
+                        <strong>Active Regulatory Lock ({gcsComplianceRegime.toUpperCase()}):</strong>{' '}
                         {isGcsSec &&
                           'Non-US locations, disabling WORM Retention Lock (<365d), Legacy Object ACLs, Public Access, and Soft-Delete <30d are strictly disabled.'}
                         {isGcsGdpr &&
@@ -2527,7 +2527,7 @@ export default function ResourceProvisionModal({
                     </div>
                     <span className="text-[10px] font-mono text-zinc-500">
                       {!isGcsCustom
-                        ? `🔒 Restricted by ${gcsComplianceRegime.toUpperCase()}`
+                        ? `Restricted by ${gcsComplianceRegime.toUpperCase()}`
                         : 'Permanent after bucket creation'}
                     </span>
                   </div>
@@ -2598,7 +2598,7 @@ export default function ResourceProvisionModal({
                           </span>
                           <div>
                             <div className="text-xs font-extrabold">
-                              {locCard.disabled ? '🔒 ' : ''}
+                              {locCard.disabled ? '[LOCKED] ' : ''}
                               {locCard.title}
                             </div>
                             <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">
@@ -2634,7 +2634,7 @@ export default function ResourceProvisionModal({
                                 value={regKey}
                                 disabled={blockedByHipaa}
                               >
-                                {blockedByHipaa ? '🔒 ' : ''}
+                                {blockedByHipaa ? '[LOCKED] ' : ''}
                                 {regKey} — {info.label}
                                 {blockedByHipaa
                                   ? ' (Blocked by US HIPAA Jurisdiction)'
@@ -2661,19 +2661,19 @@ export default function ResourceProvisionModal({
                             className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                           >
                             <option value="CUSTOM">
-                              🛠️ Custom Dual-Region Pair (Pick Any 2 Regions in Continent)
+                              Custom Dual-Region Pair (Pick Any 2 Regions in Continent)
                             </option>
                             <option value="NAM4" disabled={isGcsGdpr}>
-                              {isGcsGdpr ? '🔒 ' : '🇺🇸 '}Predefined NAM4 (us-central1 Iowa + us-east1 South Carolina)
+                              {isGcsGdpr ? '[LOCKED] ' : ''}Predefined NAM4 (us-central1 Iowa + us-east1 South Carolina)
                             </option>
                             <option value="EUR4" disabled={isGcsHipaa || isGcsSec}>
-                              {isGcsHipaa || isGcsSec ? '🔒 ' : '🇪🇺 '}Predefined EUR4 (europe-west4 Netherlands + europe-north1 Finland)
+                              {isGcsHipaa || isGcsSec ? '[LOCKED] ' : ''}Predefined EUR4 (europe-west4 Netherlands + europe-north1 Finland)
                             </option>
                             <option
                               value="ASIA1"
                               disabled={isGcsGdpr || isGcsHipaa || isGcsSec}
                             >
-                              {isGcsGdpr || isGcsHipaa || isGcsSec ? '🔒 ' : '🇯🇵 '}Predefined ASIA1 (asia-northeast1 Tokyo + asia-northeast2 Osaka)
+                              {isGcsGdpr || isGcsHipaa || isGcsSec ? '[LOCKED] ' : ''}Predefined ASIA1 (asia-northeast1 Tokyo + asia-northeast2 Osaka)
                             </option>
                           </select>
                         </div>
@@ -2798,8 +2798,8 @@ export default function ResourceProvisionModal({
                           />
                           <div>
                             <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                              ⚡ Enable Turbo Replication (15-minute RPO SLA)
-                              {isGcsGdpr ? ' — 🔒 Enforced by GDPR Blueprint' : ''}
+                              Enable Turbo Replication (15-minute RPO SLA)
+                              {isGcsGdpr ? ' — Enforced by GDPR Blueprint' : ''}
                             </div>
                             <div className="text-[10px] font-mono text-zinc-500">
                               Replicates 100% of newly written objects across both regions within 15 minutes (`rpo: ASYNC_TURBO`).
@@ -2857,7 +2857,7 @@ export default function ResourceProvisionModal({
                               }`}
                             >
                               <div className="text-xs font-mono font-bold">
-                                {mr.disabled ? '🔒 ' : ''}
+                                {mr.disabled ? '[LOCKED] ' : ''}
                                 {mr.label}
                               </div>
                               <div className="text-[10px] text-zinc-500 mt-0.5">
@@ -2902,7 +2902,7 @@ export default function ResourceProvisionModal({
                       </span>
                       <div>
                         <div className="text-xs font-bold">
-                          {isGcsSec || isGcsAiHns ? '🔒 ' : ''}Autoclass (Automatic Tiering)
+                          {isGcsSec || isGcsAiHns ? '[LOCKED] ' : ''}Autoclass (Automatic Tiering)
                         </div>
                         <div className="text-[10px] text-zinc-500 mt-0.5">
                           Automatically transitions each object to hotter or colder classes based on access patterns
@@ -2986,7 +2986,7 @@ export default function ResourceProvisionModal({
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-mono font-extrabold">
-                              {sc.disabled ? '🔒 ' : ''}
+                              {sc.disabled ? '[LOCKED] ' : ''}
                               {sc.id}
                             </span>
                             <span className="text-[10px] font-mono opacity-85">{sc.rate}</span>
@@ -3046,7 +3046,7 @@ export default function ResourceProvisionModal({
                     <div>
                       <div className="font-bold text-zinc-900 dark:text-zinc-100">
                         Enable Hierarchical Namespace (HNS) on this bucket
-                        {isGcsAiHns ? ' — 🔒 Enforced by AI/Spark HNS Blueprint' : ''}
+                        {isGcsAiHns ? ' — Enforced by AI/Spark HNS Blueprint' : ''}
                       </div>
                       <div className="text-[10px] font-mono text-zinc-500">
                         Organizes objects into a true file-system folder tree for atomic directory renames and 8× faster listing on Spark, Hadoop, Dataflow, and AI workloads (Requires Uniform access).
@@ -3063,7 +3063,7 @@ export default function ResourceProvisionModal({
                     </div>
                     {lockGcsPapAndUniform && (
                       <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                        🔒 Enforced by {gcsComplianceRegime.toUpperCase()}: Zero-Trust PAP + Uniform IAM
+                        Enforced by {gcsComplianceRegime.toUpperCase()}: Zero-Trust PAP + Uniform IAM
                       </span>
                     )}
                   </div>
@@ -3089,7 +3089,7 @@ export default function ResourceProvisionModal({
                       <div>
                         <div className="font-bold text-zinc-900 dark:text-zinc-100">
                           Prevent public access — Enforce public access prevention on this bucket
-                          {lockGcsPapAndUniform ? ' (🔒 Locked ON)' : ''}
+                          {lockGcsPapAndUniform ? ' (Locked ON)' : ''}
                         </div>
                         <div className="text-[10px] font-mono text-zinc-500">
                           Blocks allUsers & allAuthenticatedUsers IAM bindings (Zero-Trust Mandatory under Compliance Blueprints)
@@ -3171,7 +3171,7 @@ export default function ResourceProvisionModal({
                         </span>
                         <div>
                           <div className="text-xs font-bold">
-                            {lockGcsPapAndUniform ? '🔒 ' : ''}Fine-grained (Legacy Object ACLs)
+                            {lockGcsPapAndUniform ? '[LOCKED] ' : ''}Fine-grained (Legacy Object ACLs)
                           </div>
                           <div className="text-[10px] text-zinc-500 mt-0.5">
                             Disabled under Zero-Trust Compliance Blueprints.
@@ -3212,7 +3212,7 @@ export default function ResourceProvisionModal({
                           className="rounded border-zinc-400"
                         />
                         Soft delete policy (For data recovery)
-                        {!isGcsCustom ? ` — 🔒 Min ${minGcsSoftDeleteDays}d Enforced` : ''}
+                        {!isGcsCustom ? ` — Min ${minGcsSoftDeleteDays}d Enforced` : ''}
                       </label>
                       <span className="text-[10px] font-mono text-zinc-500">
                         Retains deleted objects so they can be restored
@@ -3259,7 +3259,7 @@ export default function ResourceProvisionModal({
                                     : 'border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
                                 }`}
                               >
-                                {disabledDay ? '🔒' : ''}
+                                {disabledDay ? '[LOCKED]' : ''}
                                 {d}d
                               </button>
                             );
@@ -3292,7 +3292,7 @@ export default function ResourceProvisionModal({
                           className="rounded border-zinc-400"
                         />
                         Object versioning (For version control)
-                        {isGcsGdpr || isGcsHipaa ? ' — 🔒 Enforced ON' : ''}
+                        {isGcsGdpr || isGcsHipaa ? ' — Enforced ON' : ''}
                       </label>
                       <span className="text-[10px] font-mono text-zinc-500">
                         {gcsRetentionEnabled
@@ -3367,7 +3367,7 @@ export default function ResourceProvisionModal({
                         />
                         Retention policy / Bucket Lock (For WORM compliance)
                         {lockGcsWorm
-                          ? ' — 🔒 Locked ON by SEC Rule 17a-4 (Min 1 Year)'
+                          ? ' — Locked ON by SEC Rule 17a-4 (Min 1 Year)'
                           : ''}
                       </label>
                       <span className="text-[10px] font-mono text-zinc-500">
@@ -3522,8 +3522,8 @@ export default function ResourceProvisionModal({
                     Enable Custom Storage Class Transition Rules
                     {!isGcsCustom
                       ? isGcsAiHns
-                        ? ' — 🔒 Locked OFF (Hot Tensor I/O)'
-                        : ' — 🔒 Locked ON by Compliance'
+                        ? ' — Locked OFF (Hot Tensor I/O)'
+                        : ' — Locked ON by Compliance'
                       : ''}
                   </label>
                 </div>
@@ -3576,9 +3576,9 @@ export default function ResourceProvisionModal({
                       <label className="block text-[10px] font-mono text-zinc-500 mb-1">
                         Delete objects after{' '}
                         {isGcsSec || isGcsHipaa
-                          ? '(🔒 0 = WORM Protected)'
+                          ? '(0 = WORM Protected)'
                           : isGcsGdpr
-                          ? '(🔒 1–365d GDPR Cap)'
+                          ? '(1–365d GDPR Cap)'
                           : '(0=Off)'}
                       </label>
                       <input
@@ -3667,7 +3667,7 @@ export default function ResourceProvisionModal({
                     <div>
                       <div className="font-bold">
                         Browser Direct Upload CORS Policy
-                        {isGcsSec || isGcsGdpr || isGcsHipaa ? ' 🔒' : ''}
+                        {isGcsSec || isGcsGdpr || isGcsHipaa ? ' [LOCKED]' : ''}
                       </div>
                       <div className="text-[10px] font-mono text-zinc-500">
                         {isGcsSec || isGcsGdpr || isGcsHipaa
@@ -3699,17 +3699,17 @@ export default function ResourceProvisionModal({
                   {[
                     {
                       id: 'ARTIFACT_REGISTRY',
-                      label: '📦 1. Project Artifact Registry',
+                      label: '1. Project Artifact Registry',
                       sub: `Pick from ${arImages.length} live GCP image(s)`,
                     },
                     {
                       id: 'GITHUB_REPO',
-                      label: '🐙 2. Build & Deploy from GitHub',
+                      label: '2. Build & Deploy from GitHub',
                       sub: 'Cloud Build → AR → Cloud Run',
                     },
                     {
                       id: 'PUBLIC_URI',
-                      label: '🌐 3. Public / Custom URI',
+                      label: '3. Public / Custom URI',
                       sub: 'Docker Hub / GCR / Quick Presets',
                     },
                   ].map((m) => {
@@ -3755,7 +3755,7 @@ export default function ResourceProvisionModal({
                             const fullUri = `${img.uri}:${tag}`;
                             return (
                               <option key={`${img.uri}-${i}`} value={fullUri}>
-                                📦 {fullUri} ({img.sizeMb} MB · {img.location})
+                                {fullUri} ({img.sizeMb} MB · {img.location})
                               </option>
                             );
                           })}
@@ -3771,7 +3771,7 @@ export default function ResourceProvisionModal({
                           onClick={() => setRunSourceMode('GITHUB_REPO')}
                           className="px-2.5 py-1 rounded bg-blue-600 text-white text-[10px] font-bold cursor-pointer shrink-0"
                         >
-                          🐙 Build from GitHub →
+                          Build from GitHub →
                         </button>
                       </div>
                     )}
@@ -3951,7 +3951,7 @@ export default function ResourceProvisionModal({
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <label className="text-[11px] font-bold font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <Zap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                     <span>
                       2026 Cloud Run Billing Mode (Request-based vs Instance-based)
                     </span>
@@ -4286,13 +4286,13 @@ export default function ResourceProvisionModal({
                 </div>
               </div>
 
-              {/* 🌐 2026 Direct VPC Egress Network (`template.vpcAccess`) */}
+              {/* 2026 Direct VPC Egress Network (`template.vpcAccess`) */}
               <div className="p-3 rounded-xl bg-cyan-500/[0.05] border border-cyan-500/30 space-y-2.5">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <Network className="w-3.5 h-3.5 text-cyan-500" />
+                    <Network className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                     <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
-                      🌐 2026 Direct VPC Egress Network (`template.vpcAccess`)
+                      2026 Direct VPC Egress Network (`template.vpcAccess`)
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-cyan-500/20 text-cyan-600 dark:text-cyan-300">
                       $0.00 Connector Tax
@@ -4334,7 +4334,7 @@ export default function ResourceProvisionModal({
                       >
                         {projectVpcs.map((v) => (
                           <option key={v} value={v}>
-                            🌐 {v}
+                            {v}
                           </option>
                         ))}
                       </select>
@@ -4396,13 +4396,13 @@ export default function ResourceProvisionModal({
                 )}
               </div>
 
-              {/* 💾 2026 Cloud Run Storage Volume Mounts (Beta — `template.volumes` + `volumeMounts`) */}
+              {/* 2026 Cloud Run Storage Volume Mounts (Beta — `template.volumes` + `volumeMounts`) */}
               <div className="p-3 rounded-xl bg-amber-500/[0.05] border border-amber-500/30 space-y-2.5">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <HardDrive className="w-3.5 h-3.5 text-amber-500" />
+                    <HardDrive className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                     <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                      💾 2026 Cloud Run Attached Storage Volume Mounts
+                      2026 Cloud Run Attached Storage Volume Mounts
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300">
                       BETA · Gen2 FUSE / RAM / NFS
@@ -4419,22 +4419,22 @@ export default function ResourceProvisionModal({
                   {[
                     {
                       id: 'NONE',
-                      title: '🚫 No Volume',
+                      title: 'No Volume',
                       sub: 'Stateless container',
                     },
                     {
                       id: 'GCS_BUCKET',
-                      title: '🪣 Cloud Storage',
+                      title: 'Cloud Storage',
                       sub: `FUSE (${projectBuckets.length} buckets)`,
                     },
                     {
                       id: 'IN_MEMORY',
-                      title: '⚡ RAM Disk',
+                      title: 'RAM Disk',
                       sub: 'In-memory /mnt/ramdisk',
                     },
                     {
                       id: 'NFS_FILESTORE',
-                      title: '📁 NFS Filestore',
+                      title: 'NFS Filestore',
                       sub: 'POSIX NFSv3 over VPC',
                     },
                   ].map((volOpt) => {
@@ -4480,7 +4480,7 @@ export default function ResourceProvisionModal({
                         >
                           {projectBuckets.map((b) => (
                             <option key={b} value={b}>
-                              🪣 gs://{b}
+                              gs://{b}
                             </option>
                           ))}
                         </select>
@@ -4530,8 +4530,8 @@ export default function ResourceProvisionModal({
                         }`}
                       >
                         {runStorageReadOnly
-                          ? '🔒 Read-Only (RO)'
-                          : '✏️ Read-Write (RW)'}
+                          ? 'Read-Only (RO)'
+                          : 'Read-Write (RW)'}
                       </button>
                     </div>
                   </div>
@@ -4664,8 +4664,8 @@ export default function ResourceProvisionModal({
                         }`}
                       >
                         {runStorageReadOnly
-                          ? '🔒 Read-Only (RO)'
-                          : '✏️ Read-Write (RW)'}
+                          ? 'Read-Only (RO)'
+                          : 'Read-Write (RW)'}
                       </button>
                     </div>
                   </div>
@@ -4721,8 +4721,8 @@ export default function ResourceProvisionModal({
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                       {isBqCustom
-                        ? '🎛️ Custom Mode: All Controls Unlocked'
-                        : `🔒 Strict Enforcement Active: ${bqComplianceRegime.toUpperCase()}`}
+                        ? 'Custom Mode: All Controls Unlocked'
+                        : `Strict Enforcement Active: ${bqComplianceRegime.toUpperCase()}`}
                     </span>
                   </div>
 
@@ -4730,27 +4730,27 @@ export default function ResourceProvisionModal({
                     {[
                       {
                         id: 'standard',
-                        title: '🎛️ GCP Console Standard',
+                        title: 'GCP Console Standard',
                         sub: 'All Options Unlocked · Custom Location & Billing',
                       },
                       {
                         id: 'sec-finra-ledger',
-                        title: '🏛️ SEC 17a-4 / FINRA Ledger',
+                        title: 'SEC 17a-4 / FINRA Ledger',
                         sub: 'Locks: US Only · Physical Billing · ROUND_HALF_EVEN · ≥7yr TTL · 168h TT',
                       },
                       {
                         id: 'gdpr-eu-sovereign',
-                        title: '🇪🇺 GDPR EU Sovereign',
+                        title: 'GDPR EU Sovereign',
                         sub: 'Locks: EU Only (Blocks US/Asia) · Physical Billing · 30–90d Erasure TTL · ≤72h TT',
                       },
                       {
                         id: 'hipaa-soc2- clinical',
-                        title: '🏥 HIPAA / SOC2 Vault',
+                        title: 'HIPAA / SOC2 Vault',
                         sub: 'Locks: BAA Region · Physical Billing · 168h Audit Time-Travel · ≥365d TTL',
                       },
                       {
                         id: 'ai-vector-biglake',
-                        title: '🤖 AI Vector & Iceberg',
+                        title: 'AI Vector & Iceberg',
                         sub: 'Locks: Single Region Co-Location · Physical 5x Compression · und:ci Collation',
                       },
                     ].map((bp) => {
@@ -4787,7 +4787,7 @@ export default function ResourceProvisionModal({
                   {!isBqCustom && (
                     <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-amber-800 dark:text-amber-300">
                       <div>
-                        <strong>🔒 Active Regulatory Lock ({bqComplianceRegime.toUpperCase()}):</strong>{' '}
+                        <strong>Active Regulatory Lock ({bqComplianceRegime.toUpperCase()}):</strong>{' '}
                         {isSecFinra &&
                           'Non-US regions, Logical uncompressed billing, Standard rounding, Time-Travel <168h, and Partition TTL <2555d (7 yrs) are strictly disabled.'}
                         {isGdprEu &&
@@ -4820,11 +4820,11 @@ export default function ResourceProvisionModal({
                     </div>
                     <span className="text-[10px] font-mono text-zinc-500">
                       {isGdprEu
-                        ? '🔒 GDPR Lock: Only EU Multi-Region or europe-* Single Regions permitted'
+                        ? 'GDPR Lock: Only EU Multi-Region or europe-* Single Regions permitted'
                         : isSecFinra
-                        ? '🔒 SEC/FINRA Lock: Only US Multi-Region or us-* Single Regions permitted'
+                        ? 'SEC/FINRA Lock: Only US Multi-Region or us-* Single Regions permitted'
                         : isAiVector
-                        ? '🔒 AI Vector Lock: Single Region required for low-latency GPU co-location'
+                        ? 'AI Vector Lock: Single Region required for low-latency GPU co-location'
                         : 'Immutable after creation · Choose Multi-Region (US/EU) or Single Region'}
                     </span>
                   </div>
@@ -4862,7 +4862,7 @@ export default function ResourceProvisionModal({
                               : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
                           }`}
                         >
-                          {isAiVector ? '🔒 ' : '🌐 '}MULTI_REGION (US / EU)
+                          {isAiVector ? '[LOCKED] ' : ''}MULTI_REGION (US / EU)
                         </button>
                         <button
                           type="button"
@@ -4887,7 +4887,7 @@ export default function ResourceProvisionModal({
                               : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                           }`}
                         >
-                          📍 SINGLE REGION (Sovereign)
+                          SINGLE REGION (Sovereign)
                         </button>
                       </div>
                     </div>
@@ -4906,14 +4906,14 @@ export default function ResourceProvisionModal({
                             value="US"
                             disabled={isGdprEu}
                           >
-                            {isGdprEu ? '🔒 ' : '🇺🇸 '}US Multi-Region (Continental United States · 99.99% SLA)
+                            {isGdprEu ? '[LOCKED] ' : ''}US Multi-Region (Continental United States · 99.99% SLA)
                             {isGdprEu ? ' — Blocked by GDPR EU Sovereignty' : ''}
                           </option>
                           <option
                             value="EU"
                             disabled={isSecFinra || isHipaa}
                           >
-                            {isSecFinra || isHipaa ? '🔒 ' : '🇪🇺 '}EU Multi-Region (European Union Sovereign Member States · GDPR)
+                            {isSecFinra || isHipaa ? '[LOCKED] ' : ''}EU Multi-Region (European Union Sovereign Member States · GDPR)
                             {isSecFinra || isHipaa ? ' — Blocked by US Regulatory Mandate' : ''}
                           </option>
                         </select>
@@ -4938,7 +4938,7 @@ export default function ResourceProvisionModal({
                                   value={regKey}
                                   disabled={isDisabled}
                                 >
-                                  {isDisabled ? '🔒 ' : ''}
+                                  {isDisabled ? '[LOCKED] ' : ''}
                                   {info.label}
                                   {blockedByGdpr
                                     ? ' (Blocked by GDPR EU Residency)'
@@ -4968,7 +4968,7 @@ export default function ResourceProvisionModal({
                     </div>
                     <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                       {lockPhysicalBilling
-                        ? `🔒 Enforced by ${bqComplianceRegime.toUpperCase()}: PHYSICAL Compressed Billing Required`
+                        ? `Enforced by ${bqComplianceRegime.toUpperCase()}: PHYSICAL Compressed Billing Required`
                         : 'Physical Billing shrinks high-compression analytical & JSON tables by 50%–75%'}
                     </span>
                   </div>
@@ -4986,11 +4986,11 @@ export default function ResourceProvisionModal({
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold font-mono">
-                          ⚡ PHYSICAL (Compressed Bytes)
+                          PHYSICAL (Compressed Bytes)
                         </span>
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold">
                           {lockPhysicalBilling
-                            ? '🔒 Enforced by Blueprint'
+                            ? 'Enforced by Blueprint'
                             : 'Recommended (-54% Cost)'}
                         </span>
                       </div>
@@ -5022,7 +5022,7 @@ export default function ResourceProvisionModal({
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold font-mono">
-                          {lockPhysicalBilling ? '🔒 ' : '📦 '}LOGICAL (Uncompressed Bytes)
+                          {lockPhysicalBilling ? '[LOCKED] ' : ''}LOGICAL (Uncompressed Bytes)
                         </span>
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-500/15 text-zinc-500">
                           {lockPhysicalBilling
@@ -5050,9 +5050,9 @@ export default function ResourceProvisionModal({
                     </div>
                     <span className="text-[10px] font-mono text-zinc-500">
                       {lockTimeTravel168
-                        ? '🔒 Enforced: 168h (7-Day) Full Audit Time-Travel Window'
+                        ? 'Enforced: 168h (7-Day) Full Audit Time-Travel Window'
                         : lockTimeTravelMax72
-                        ? '🔒 GDPR Minimization: Time-Travel capped at ≤72h & Partition TTL 30–90d'
+                        ? 'GDPR Minimization: Time-Travel capped at ≤72h & Partition TTL 30–90d'
                         : 'Plus automatic 7-day Fail-Safe disaster recovery air-gap'}
                     </span>
                   </div>
@@ -5076,22 +5076,22 @@ export default function ResourceProvisionModal({
                         className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value={48} disabled={lockTimeTravel168}>
-                          {lockTimeTravel168 ? '🔒 ' : ''}48 Hours (2 Days · Min Physical Storage Overhead)
+                          {lockTimeTravel168 ? '[LOCKED] ' : ''}48 Hours (2 Days · Min Physical Storage Overhead)
                         </option>
                         <option value={72} disabled={lockTimeTravel168}>
-                          {lockTimeTravel168 ? '🔒 ' : ''}72 Hours (3 Days · Balanced FinOps Recovery)
+                          {lockTimeTravel168 ? '[LOCKED] ' : ''}72 Hours (3 Days · Balanced FinOps Recovery)
                         </option>
                         <option
                           value={120}
                           disabled={lockTimeTravel168 || lockTimeTravelMax72}
                         >
-                          {lockTimeTravel168 || lockTimeTravelMax72 ? '🔒 ' : ''}120 Hours (5 Days · Workweek Recovery)
+                          {lockTimeTravel168 || lockTimeTravelMax72 ? '[LOCKED] ' : ''}120 Hours (5 Days · Workweek Recovery)
                         </option>
                         <option
                           value={168}
                           disabled={lockTimeTravelMax72}
                         >
-                          {lockTimeTravelMax72 ? '🔒 ' : ''}168 Hours (7 Days · Maximum Point-in-Time Rewind)
+                          {lockTimeTravelMax72 ? '[LOCKED] ' : ''}168 Hours (7 Days · Maximum Point-in-Time Rewind)
                         </option>
                       </select>
                     </div>
@@ -5100,7 +5100,7 @@ export default function ResourceProvisionModal({
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
                         Default Partition TTL (
                         {minPartitionTtlDays > 0
-                          ? `🔒 Range: ${minPartitionTtlDays}–${maxPartitionTtlDays}d`
+                          ? `Range: ${minPartitionTtlDays}–${maxPartitionTtlDays}d`
                           : 'Days, 0 = Keep Forever'}
                         )
                       </label>
@@ -5130,9 +5130,9 @@ export default function ResourceProvisionModal({
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
                         Default Table TTL (
                         {isSecFinra
-                          ? '🔒 Locked: 0 (No Auto-Drop)'
+                          ? 'Locked: 0 (No Auto-Drop)'
                           : isGdprEu
-                          ? '🔒 Max 365 Days'
+                          ? 'Max 365 Days'
                           : 'Days, 0 = Keep Forever'}
                         )
                       </label>
@@ -5172,7 +5172,7 @@ export default function ResourceProvisionModal({
                     </div>
                     {lockBankerRounding && (
                       <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
-                        🔒 SEC/FINRA Lock: ROUND_HALF_EVEN (Banker&apos;s Rounding) Enforced
+                        SEC/FINRA Lock: ROUND_HALF_EVEN (Banker&apos;s Rounding) Enforced
                       </span>
                     )}
                   </div>
@@ -5199,7 +5199,7 @@ export default function ResourceProvisionModal({
                           value="ROUND_HALF_AWAY_FROM_ZERO"
                           disabled={lockBankerRounding}
                         >
-                          {lockBankerRounding ? '🔒 ' : ''}ROUND_HALF_AWAY_FROM_ZERO (Standard Arithmetic)
+                          {lockBankerRounding ? '[LOCKED] ' : ''}ROUND_HALF_AWAY_FROM_ZERO (Standard Arithmetic)
                         </option>
                         <option value="ROUND_HALF_EVEN">
                           ROUND_HALF_EVEN (IEEE 754 Banker&apos;s Rounding · GAAP/FINRA)
@@ -5225,13 +5225,13 @@ export default function ResourceProvisionModal({
                         className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="" disabled={isAiVector}>
-                          {isAiVector ? '🔒 ' : ''}Binary Case-Sensitive (`&apos;&apos;` · Exact ID Match)
+                          {isAiVector ? '[LOCKED] ' : ''}Binary Case-Sensitive (`&apos;&apos;` · Exact ID Match)
                         </option>
                         <option
                           value="und:ci"
                           disabled={isSecFinra || isHipaa}
                         >
-                          {isSecFinra || isHipaa ? '🔒 ' : ''}Unicode Case-Insensitive (`und:ci` · Human Search)
+                          {isSecFinra || isHipaa ? '[LOCKED] ' : ''}Unicode Case-Insensitive (`und:ci` · Human Search)
                         </option>
                       </select>
                     </div>
@@ -5246,10 +5246,10 @@ export default function ResourceProvisionModal({
                         className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         <option value="GOOGLE_MANAGED">
-                          🔐 Google-Managed AES-256 Envelope Key
+                          Google-Managed AES-256 Envelope Key
                         </option>
                         <option value="CMEK">
-                          🔑 Cloud KMS Customer-Managed Key (CMEK)
+                          Cloud KMS Customer-Managed Key (CMEK)
                         </option>
                       </select>
                     </div>
@@ -5328,7 +5328,7 @@ export default function ResourceProvisionModal({
                 <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-emerald-500/10 border border-indigo-500/30 space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                      <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                       <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
                         Step 0 · 2026 GKE Sovereign & AI Cluster Compliance Blueprints
                       </span>
@@ -5336,7 +5336,7 @@ export default function ResourceProvisionModal({
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 font-bold">
                       {gkeComplianceRegime === 'custom'
                         ? 'UNLOCKED CUSTOM ARCHITECTURE'
-                        : `🔒 ENFORCING ${gkeComplianceRegime.toUpperCase()}`}
+                        : `ENFORCING ${gkeComplianceRegime.toUpperCase()}`}
                     </span>
                   </div>
 
@@ -5418,7 +5418,7 @@ export default function ResourceProvisionModal({
                       onClick={() => !lockModeStandard && setGkeMode('AUTOPILOT')}
                       title={
                         lockModeStandard
-                          ? '🔒 Locked by AI / Spot GPU Blueprint: Direct GPU node pool tuning requires GKE Standard mode'
+                          ? 'Locked by AI / Spot GPU Blueprint: Direct GPU node pool tuning requires GKE Standard mode'
                           : 'Google manages all nodes, security hardening, and auto-provisioning. Billed strictly per running Pod vCPU/GiB.'
                       }
                       className={`p-3 rounded-xl border text-left transition-all ${
@@ -5431,9 +5431,9 @@ export default function ResourceProvisionModal({
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-extrabold">
-                          ☸️ GKE Autopilot (Serverless K8s · Zero Idle Node Cost)
+                          GKE Autopilot (Serverless K8s · Zero Idle Node Cost)
                         </span>
-                        {lockModeStandard && <span>🔒</span>}
+                        {lockModeStandard && <span>[LOCKED]</span>}
                       </div>
                       <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
                         $0.00/hr empty cluster · Google manages nodes, Seccomp, Shielded VMs & Workload Identity automatically.
@@ -5446,7 +5446,7 @@ export default function ResourceProvisionModal({
                       onClick={() => !lockModeAutopilot && setGkeMode('STANDARD')}
                       title={
                         lockModeAutopilot
-                          ? `🔒 Locked by ${gkeComplianceRegime.toUpperCase()}: Zero-Trust Enclaves require GKE Autopilot immutable node hardening`
+                          ? `Locked by ${gkeComplianceRegime.toUpperCase()}: Zero-Trust Enclaves require GKE Autopilot immutable node hardening`
                           : 'Full control over GCE machine types, Spot VM discounts (-68%), and dedicated NVIDIA L4 / T4 / A100 GPUs.'
                       }
                       className={`p-3 rounded-xl border text-left transition-all ${
@@ -5459,9 +5459,9 @@ export default function ResourceProvisionModal({
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-extrabold">
-                          🖥️ GKE Standard (Custom Node Pools + Spot GPUs)
+                          GKE Standard (Custom Node Pools + Spot GPUs)
                         </span>
-                        {lockModeAutopilot && <span>🔒</span>}
+                        {lockModeAutopilot && <span>[LOCKED]</span>}
                       </div>
                       <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
                         Direct control over `initialNodeCount`, `Spot VM (-68%)`, and `NVIDIA L4 / T4 / A100` GPU accelerators.
@@ -5479,7 +5479,7 @@ export default function ResourceProvisionModal({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        GKE Cluster Region {isGdprGke ? '(🔒 EU Only)' : isSecGke || isHipaaGke ? '(🔒 US Only)' : ''}
+                        GKE Cluster Region {isGdprGke ? '(EU Only)' : isSecGke || isHipaaGke ? '(US Only)' : ''}
                       </label>
                       <select
                         value={gkeLocation}
@@ -5504,7 +5504,7 @@ export default function ResourceProvisionModal({
                         onChange={(e) => setGkeReleaseChannel(e.target.value)}
                         title={
                           lockStableChannel
-                            ? '🔒 Locked to STABLE channel by SEC/HIPAA compliance regime'
+                            ? 'Locked to STABLE channel by SEC/HIPAA compliance regime'
                             : 'Select Kubernetes control plane upgrade cadence'
                         }
                         className={`w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 ${
@@ -5626,7 +5626,7 @@ export default function ResourceProvisionModal({
                     <label
                       title={
                         lockWorkloadIdentityOn
-                          ? `🔒 Enforced by ${gkeComplianceRegime.toUpperCase()}: Workload Identity OIDC federation is mandatory to eliminate static JSON service account keys.`
+                          ? `Enforced by ${gkeComplianceRegime.toUpperCase()}: Workload Identity OIDC federation is mandatory to eliminate static JSON service account keys.`
                           : 'Bind Kubernetes ServiceAccounts directly to Google Cloud IAM roles via OIDC.'
                       }
                       className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
@@ -5648,7 +5648,7 @@ export default function ResourceProvisionModal({
                       <div className="text-xs">
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                           <span>Workload Identity Federation (`{projectId}.svc.id.goog`)</span>
-                          {lockWorkloadIdentityOn && <span>🔒</span>}
+                          {lockWorkloadIdentityOn && <span>[LOCKED]</span>}
                         </div>
                         <p className="text-[10px] text-zinc-500">
                           Eliminates static SA keys; Pods authenticate via short-lived OIDC tokens.
@@ -5659,7 +5659,7 @@ export default function ResourceProvisionModal({
                     <label
                       title={
                         lockPrivateNodesOn
-                          ? `🔒 Enforced by ${gkeComplianceRegime.toUpperCase()}: Worker nodes must not have public RFC-1918 external IPv4 addresses.`
+                          ? `Enforced by ${gkeComplianceRegime.toUpperCase()}: Worker nodes must not have public RFC-1918 external IPv4 addresses.`
                           : 'Provision worker nodes with internal RFC-1918 IPs only (no public internet exposure).'
                       }
                       className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
@@ -5681,7 +5681,7 @@ export default function ResourceProvisionModal({
                       <div className="text-xs">
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                           <span>Private Cluster Nodes (`enablePrivateNodes`)</span>
-                          {lockPrivateNodesOn && <span>🔒</span>}
+                          {lockPrivateNodesOn && <span>[LOCKED]</span>}
                         </div>
                         <p className="text-[10px] text-zinc-500">
                           Isolates worker nodes from public internet ingress (RFC-1918 only).
@@ -5692,7 +5692,7 @@ export default function ResourceProvisionModal({
                     <label
                       title={
                         lockBinaryAuthOn
-                          ? `🔒 Enforced by ${gkeComplianceRegime.toUpperCase()}: Only cryptographically attested container images may run.`
+                          ? `Enforced by ${gkeComplianceRegime.toUpperCase()}: Only cryptographically attested container images may run.`
                           : 'Require cryptographic Binary Authorization attestations before Pod admission.'
                       }
                       className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
@@ -5713,7 +5713,7 @@ export default function ResourceProvisionModal({
                       <div className="text-xs">
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                           <span>Binary Authorization SLSA Gatekeeper (`PROJECT_SINGLETON_POLICY_ENFORCE`)</span>
-                          {lockBinaryAuthOn && <span>🔒</span>}
+                          {lockBinaryAuthOn && <span>[LOCKED]</span>}
                         </div>
                         <p className="text-[10px] text-zinc-500">
                           Blocks unsigned or unverified container images at admission time.
@@ -5738,7 +5738,7 @@ export default function ResourceProvisionModal({
                       <div className="text-xs">
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                           <span>Shielded GKE Nodes (`enableSecureBoot` + `vTPM`)</span>
-                          {isZeroTrustEnclave && <span>🔒</span>}
+                          {isZeroTrustEnclave && <span>[LOCKED]</span>}
                         </div>
                         <p className="text-[10px] text-zinc-500">
                           Cryptographically verifies boot loader & kernel integrity against rootkits.
@@ -5771,11 +5771,11 @@ export default function ResourceProvisionModal({
                 <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-500/[0.08] via-purple-500/[0.06] to-emerald-500/[0.08] border border-indigo-500/30 space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                      <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                       Step 0 · Database Compliance Blueprint (MySQL 8.4 · PostgreSQL 16 · AlloyDB)
                     </span>
                     <span className="text-[10px] font-mono text-zinc-500">
-                      Enforces strict compliance locks (🔒) on Engine, Architecture, Region & PITR
+                      Enforces strict compliance locks () on Engine, Architecture, Region & PITR
                     </span>
                   </div>
 
@@ -5783,31 +5783,31 @@ export default function ResourceProvisionModal({
                     {[
                       {
                         id: 'pci-sec-ledger',
-                        title: '🏛️ PCI / SEC Ledger',
+                        title: 'PCI / SEC Ledger',
                         badge: 'mTLS + 35d PITR',
                         sub: 'Locks US + Regional HA + Private IP + mTLS',
                       },
                       {
                         id: 'gdpr-eu-db',
-                        title: '🇪🇺 GDPR EU DB',
+                        title: 'GDPR EU DB',
                         badge: 'EU ONLY',
                         sub: 'Locks europe-* residency + Private VPC + HA',
                       },
                       {
                         id: 'hipaa-clinical-db',
-                        title: '🏥 HIPAA Clinical',
+                        title: 'HIPAA Clinical',
                         badge: 'BAA + 30d PITR',
                         sub: 'Locks US BAA + Regional HA + mTLS + 30d PITR',
                       },
                       {
                         id: 'ai-vector-alloydb',
-                        title: '⚡ AI Vector AlloyDB',
+                        title: 'AI Vector AlloyDB',
                         badge: 'ScaNN + Columnar',
                         sub: 'Locks Postgres 16 + AlloyDB + ScaNN Vector',
                       },
                       {
                         id: 'custom',
-                        title: '🎛️ Custom Mode',
+                        title: 'Custom Mode',
                         badge: 'UNLOCKED',
                         sub: 'Full manual control over MySQL/Postgres/AlloyDB',
                       },
@@ -5858,7 +5858,7 @@ export default function ResourceProvisionModal({
                       }`}
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
-                        <span>🐘 PostgreSQL (16 / 17 / 15)</span>
+                        <span>PostgreSQL (16 / 17 / 15)</span>
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">
                           Unlocks Cloud SQL + AlloyDB
                         </span>
@@ -5874,7 +5874,7 @@ export default function ResourceProvisionModal({
                       onClick={() => handleSelectModalSqlEngine('MYSQL')}
                       title={
                         lockAlloyDbOnly
-                          ? '🔒 AI Vector AlloyDB blueprint requires PostgreSQL 16 (`alloydb_scann`). Switch to Custom Mode to select MySQL.'
+                          ? 'AI Vector AlloyDB blueprint requires PostgreSQL 16 (`alloydb_scann`). Switch to Custom Mode to select MySQL.'
                           : 'Select MySQL 8.4 LTS or 8.0 on Cloud SQL'
                       }
                       className={`p-3 rounded-xl border text-left transition-all ${
@@ -5886,7 +5886,7 @@ export default function ResourceProvisionModal({
                       }`}
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
-                        <span>🐬 MySQL (8.4 LTS / 8.0) {lockAlloyDbOnly ? '🔒' : ''}</span>
+                        <span>MySQL (8.4 LTS / 8.0) {lockAlloyDbOnly ? '[LOCKED]' : ''}</span>
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
                           Cloud SQL Dedicated
                         </span>
@@ -5912,7 +5912,7 @@ export default function ResourceProvisionModal({
                       }`}
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
-                        <span>🏛️ Classic / Enterprise Plus Cloud SQL {lockAlloyDbOnly ? '🔒' : ''}</span>
+                        <span>Classic / Enterprise Plus Cloud SQL {lockAlloyDbOnly ? '[LOCKED]' : ''}</span>
                         <span className="text-[10px] font-mono text-blue-400">sqladmin.googleapis.com</span>
                       </div>
                       <p className="text-[10px] text-zinc-500 mt-1">
@@ -5926,7 +5926,7 @@ export default function ResourceProvisionModal({
                       onClick={() => handleSelectModalSqlArchitecture('ALLOYDB')}
                       title={
                         sqlEngineFamily === 'MYSQL'
-                          ? '🔒 Google Cloud AlloyDB is a 100% PostgreSQL-compatible engine. Switch Engine Family to PostgreSQL to unlock AlloyDB.'
+                          ? 'Google Cloud AlloyDB is a 100% PostgreSQL-compatible engine. Switch Engine Family to PostgreSQL to unlock AlloyDB.'
                           : 'Select Google Cloud AlloyDB Disaggregated Colossus + Columnar + ScaNN Architecture'
                       }
                       className={`p-3 rounded-xl border text-left transition-all ${
@@ -5939,13 +5939,13 @@ export default function ResourceProvisionModal({
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
                         <span>
-                          ⚡ Google Cloud AlloyDB (PostgreSQL) {sqlEngineFamily === 'MYSQL' ? '🔒' : ''}
+                          Google Cloud AlloyDB (PostgreSQL) {sqlEngineFamily === 'MYSQL' ? '[LOCKED]' : ''}
                         </span>
                         <span className="text-[10px] font-mono text-purple-400">alloydb.googleapis.com</span>
                       </div>
                       <p className="text-[10px] text-zinc-500 mt-1">
                         {sqlEngineFamily === 'MYSQL'
-                          ? '🔒 Disabled because MySQL is selected. Switch to PostgreSQL to unlock AlloyDB.'
+                          ? 'Disabled because MySQL is selected. Switch to PostgreSQL to unlock AlloyDB.'
                           : 'Disaggregated Colossus log-structured storage, 4x faster OLTP, 100x Columnar Engine & ScaNN Vector Index.'}
                       </p>
                     </button>
@@ -5985,7 +5985,7 @@ export default function ResourceProvisionModal({
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Sovereign Region {!isSqlCustom ? '🔒' : ''}
+                        Sovereign Region {!isSqlCustom ? '[LOCKED]' : ''}
                       </label>
                       <select
                         value={sqlRegion}
@@ -5993,16 +5993,16 @@ export default function ResourceProvisionModal({
                         className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         <option value="us-central1" disabled={isSqlGdpr}>
-                          {isSqlGdpr ? '🔒 ' : ''}us-central1 (Iowa — US SEC/HIPAA)
+                          {isSqlGdpr ? '[LOCKED] ' : ''}us-central1 (Iowa — US SEC/HIPAA)
                         </option>
                         <option value="us-east4" disabled={isSqlGdpr}>
-                          {isSqlGdpr ? '🔒 ' : ''}us-east4 (Virginia — US Financial)
+                          {isSqlGdpr ? '[LOCKED] ' : ''}us-east4 (Virginia — US Financial)
                         </option>
                         <option value="europe-west1" disabled={isSqlUsOnly}>
-                          {isSqlUsOnly ? '🔒 ' : ''}europe-west1 (Belgium — EU GDPR)
+                          {isSqlUsOnly ? '[LOCKED] ' : ''}europe-west1 (Belgium — EU GDPR)
                         </option>
                         <option value="europe-west3" disabled={isSqlUsOnly}>
-                          {isSqlUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt — EU BaFin)
+                          {isSqlUsOnly ? '[LOCKED] ' : ''}europe-west3 (Frankfurt — EU BaFin)
                         </option>
                       </select>
                     </div>
@@ -6037,7 +6037,7 @@ export default function ResourceProvisionModal({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        High-Availability Topology {lockRegionalHa ? '🔒' : ''}
+                        High-Availability Topology {lockRegionalHa ? '[LOCKED]' : ''}
                       </label>
                       <select
                         value={sqlAvailabilityType}
@@ -6047,14 +6047,14 @@ export default function ResourceProvisionModal({
                       >
                         <option value="REGIONAL">REGIONAL (Multi-Zone Automatic Failover)</option>
                         <option value="ZONAL" disabled={lockRegionalHa}>
-                          🔒 ZONAL (Single Zone — Forbidden by SLA)
+                          ZONAL (Single Zone — Forbidden by SLA)
                         </option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        Network Exposure {lockPrivateNet ? '🔒' : ''}
+                        Network Exposure {lockPrivateNet ? '[LOCKED]' : ''}
                       </label>
                       <select
                         value={sqlNetworkMode}
@@ -6064,14 +6064,14 @@ export default function ResourceProvisionModal({
                       >
                         <option value="PRIVATE_VPC_ONLY">Private VPC Peering Only (--no-assign-ip)</option>
                         <option value="PUBLIC_IPV4" disabled={lockPrivateNet}>
-                          🔒 Public IPv4 (Blocked by Zero-Trust)
+                          Public IPv4 (Blocked by Zero-Trust)
                         </option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                        TLS / mTLS Mode {lockMtls ? '🔒' : ''}
+                        TLS / mTLS Mode {lockMtls ? '[LOCKED]' : ''}
                       </label>
                       <select
                         value={sqlSslMode}
@@ -6083,7 +6083,7 @@ export default function ResourceProvisionModal({
                           TRUSTED_CLIENT_CERTIFICATE_REQUIRED (Strict mTLS)
                         </option>
                         <option value="ENCRYPTED_ONLY" disabled={lockMtls}>
-                          {lockMtls ? '🔒 ' : ''}ENCRYPTED_ONLY (TLS 1.3 Required)
+                          {lockMtls ? '[LOCKED] ' : ''}ENCRYPTED_ONLY (TLS 1.3 Required)
                         </option>
                       </select>
                     </div>
@@ -6172,7 +6172,7 @@ export default function ResourceProvisionModal({
 
             <div className="sticky bottom-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 pb-1 border-t border-zinc-200 dark:border-zinc-800 bg-[#ffffff]/95 dark:bg-[#0c0c0f]/95 backdrop-blur-md">
               <div className="flex items-center gap-2 text-xs text-zinc-500">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Direct Live GCP API Execution ({projectId})</span>
               </div>
 

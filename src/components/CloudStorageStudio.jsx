@@ -49,25 +49,25 @@ const STORAGE_CLASS_RATES_PER_GB = {
     rate: 0.02,
     retrievalPerGb: 0.0,
     minDays: 0,
-    badge: '🔥 Hot (0d min · $0.020/GB)',
+    badge: 'Hot (0d min · $0.020/GB)',
   },
   NEARLINE: {
     rate: 0.01,
     retrievalPerGb: 0.01,
     minDays: 30,
-    badge: '🌤️ Warm (30d min · $0.010/GB)',
+    badge: 'Warm (30d min · $0.010/GB)',
   },
   COLDLINE: {
     rate: 0.004,
     retrievalPerGb: 0.02,
     minDays: 90,
-    badge: '❄️ Cold (90d min · $0.004/GB)',
+    badge: 'Cold (90d min · $0.004/GB)',
   },
   ARCHIVE: {
     rate: 0.0012,
     retrievalPerGb: 0.05,
     minDays: 365,
-    badge: '🧊 Deep Archive (365d min · $0.0012/GB)',
+    badge: 'Deep Archive (365d min · $0.0012/GB)',
   },
 };
 
@@ -251,7 +251,7 @@ export default function CloudStorageStudio({
       if (onShowToast) {
         onShowToast(
           res.data?.message ||
-            `🔒 Hardened gs://${bucket.name} (Enforced PAP + Uniform IAM + Versioning + 7d Soft-Delete)!`
+            `Hardened gs://${bucket.name} (Enforced PAP + Uniform IAM + Versioning + 7d Soft-Delete)!`
         );
       }
       await fetchBuckets();
@@ -300,7 +300,7 @@ export default function CloudStorageStudio({
       if (onShowToast) {
         onShowToast(
           res.data?.message ||
-            `🌱 Applied 4-Stage FinOps Lifecycle Tiering (30d Nearline → 90d Coldline → 365d Archive) to gs://${bucket.name}!`
+            `Applied 4-Stage FinOps Lifecycle Tiering (30d Nearline → 90d Coldline → 365d Archive) to gs://${bucket.name}!`
         );
       }
       await fetchBuckets();
@@ -373,7 +373,7 @@ export default function CloudStorageStudio({
       );
       if (onShowToast) {
         onShowToast(
-          `🌐 Enabled Web CORS policy (GET/PUT/POST/DELETE) on gs://${bucket.name}!`
+          `Enabled Web CORS policy (GET/PUT/POST/DELETE) on gs://${bucket.name}!`
         );
       }
       await fetchBuckets();
@@ -798,14 +798,14 @@ export default function CloudStorageStudio({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/40">
-                CLOUD STORAGE & OBJECT INTELLIGENCE STUDIO ★
+                CLOUD STORAGE & OBJECT INTELLIGENCE STUDIO
               </span>
               <span className="text-xs font-mono text-zinc-500">
                 Project: <strong className="text-zinc-900 dark:text-zinc-100">{projectId}</strong>
               </span>
             </div>
             <h2 className="text-lg font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-              <HardDrive className="w-5 h-5 text-cyan-500" />
+              <HardDrive className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 Google Cloud Storage Fleet · Object X-Ray, FinOps Lifecycle &
                 Cross-Region Teleporter
@@ -835,7 +835,7 @@ export default function CloudStorageStudio({
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${loadingBuckets ? 'animate-spin text-cyan-400' : ''}`}
+                className={`w-3.5 h-3.5 ${loadingBuckets ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
               />
               <span>Refresh Fleet</span>
             </button>
@@ -914,27 +914,27 @@ export default function CloudStorageStudio({
             {[
               {
                 id: 'BUCKETS',
-                label: `🗄️ Bucket Governance & Security (${buckets.length})`,
+                label: `Bucket Governance & Security (${buckets.length})`,
               },
               {
                 id: 'OBJECTS',
-                label: `📂 Object Browser, Uploader & Live Editor (${objects.length})`,
+                label: `Object Browser, Uploader & Live Editor (${objects.length})`,
               },
               {
                 id: 'FINOPS_LIFECYCLE',
-                label: '🧊 Storage Temperature & Lifecycle Time-Crystal',
+                label: 'Storage Temperature & Lifecycle Time-Crystal',
               },
               {
                 id: 'TELEPORT',
-                label: '🌍 Cross-Region Bucket Teleporter (40 Regions)',
+                label: 'Cross-Region Bucket Teleporter (40 Regions)',
               },
               {
                 id: 'DLP_XRAY',
-                label: '🧬 DLP Secret & PII X-Ray + 1-Tap Redactor',
+                label: 'DLP Secret & PII X-Ray + 1-Tap Redactor',
               },
               {
                 id: 'RANSOMWARE_AIRGAP',
-                label: '🔐 Ransomware Air-Gap & Clean-Room Auditor',
+                label: 'Ransomware Air-Gap & Clean-Room Auditor',
               },
             ].map((t) => (
               <button
@@ -991,7 +991,7 @@ export default function CloudStorageStudio({
         <div className="space-y-4">
           {buckets.length === 0 ? (
             <div className="p-8 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-center space-y-3 font-mono">
-              <HardDrive className="w-8 h-8 text-cyan-500 mx-auto" />
+              <HardDrive className="w-8 h-8 text-zinc-500 dark:text-zinc-400 mx-auto" />
               <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 No Cloud Storage Buckets Provisioned in {projectId} Yet
               </div>
@@ -1054,7 +1054,7 @@ export default function CloudStorageStudio({
                             : 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
                         }`}
                       >
-                        🛡️ {b.postureScore}/100
+                        {b.postureScore}/100
                       </div>
                     </div>
 
@@ -1068,8 +1068,8 @@ export default function CloudStorageStudio({
                         }`}
                       >
                         {b.publicAccessPrevention === 'enforced'
-                          ? '🔒 PAP Enforced'
-                          : '⚠️ PAP Inherited'}
+                          ? 'PAP Enforced'
+                          : 'PAP Inherited'}
                       </span>
 
                       <span
@@ -1080,8 +1080,8 @@ export default function CloudStorageStudio({
                         }`}
                       >
                         {b.uniformBucketLevelAccess
-                          ? '✅ Uniform IAM'
-                          : '⚠️ Legacy ACLs'}
+                          ? 'Uniform IAM'
+                          : 'Legacy ACLs'}
                       </span>
 
                       <span
@@ -1092,7 +1092,7 @@ export default function CloudStorageStudio({
                         }`}
                       >
                         {b.versioningEnabled
-                          ? '🧬 Versioning ON'
+                          ? 'Versioning ON'
                           : 'Versioning OFF'}
                       </span>
 
@@ -1116,10 +1116,10 @@ export default function CloudStorageStudio({
                         }`}
                       >
                         {b.autoclassEnabled
-                          ? '⚡ Autoclass ON'
+                          ? 'Autoclass ON'
                           : b.lifecycleRules?.length > 0
-                          ? `🌱 ${b.lifecycleRules.length} Lifecycle Rule(s)`
-                          : '💸 No Lifecycle Rules'}
+                          ? `${b.lifecycleRules.length} Lifecycle Rule(s)`
+                          : 'No Lifecycle Rules'}
                       </span>
                     </div>
 
@@ -1159,7 +1159,7 @@ export default function CloudStorageStudio({
                         }}
                         className="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 font-extrabold cursor-pointer hover:bg-cyan-500/25"
                       >
-                        📂 Browse & Upload Objects →
+                        Browse & Upload Objects →
                       </button>
                     </div>
 
@@ -1205,7 +1205,7 @@ export default function CloudStorageStudio({
                           onClick={() => handleEnableCors(b)}
                           className="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold cursor-pointer"
                         >
-                          🌐 Enable Web CORS
+                          Enable Web CORS
                         </button>
                       </div>
 
@@ -1242,7 +1242,7 @@ export default function CloudStorageStudio({
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                  <FolderOpen className="w-4 h-4 text-cyan-500" />
+                  <FolderOpen className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>
                     Objects in{' '}
                     <code className="text-cyan-500">
@@ -1270,8 +1270,8 @@ export default function CloudStorageStudio({
                     }`}
                   >
                     {showAllVersions
-                      ? '🧬 All Versions ON'
-                      : '🧬 Live Objects Only'}
+                      ? 'All Versions ON'
+                      : 'Live Objects Only'}
                   </button>
 
                   <label className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1">
@@ -1315,7 +1315,7 @@ export default function CloudStorageStudio({
                       >
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                            <FileText className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                             <span>{o.name}</span>
                             {o.timeDeleted && (
                               <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
@@ -1385,7 +1385,7 @@ export default function CloudStorageStudio({
               className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3"
             >
               <div className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center justify-between">
-                <span>⚡ In-Browser Object Composer (Create / Overwrite in gs://{selectedBucket?.name})</span>
+                <span>In-Browser Object Composer (Create / Overwrite in gs://{selectedBucket?.name})</span>
                 <span className="text-[10px] text-zinc-500">uploadType=media</span>
               </div>
 
@@ -1435,7 +1435,7 @@ export default function CloudStorageStudio({
                 >
                   {uploadingFile
                     ? 'Uploading to GCS...'
-                    : `🚀 Write Object to gs://${selectedBucket?.name}/${newObjectPath}`}
+                    : `Write Object to gs://${selectedBucket?.name}/${newObjectPath}`}
                 </button>
               </div>
             </form>
@@ -1445,7 +1445,7 @@ export default function CloudStorageStudio({
           <div className="lg:col-span-5 p-4 rounded-2xl bg-zinc-950 border border-zinc-800 text-zinc-200 space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-xs font-extrabold text-cyan-400 uppercase">
-                🔬 Live Object Content & Metadata X-Ray
+                Live Object Content & Metadata X-Ray
               </div>
               {inspectedObject && (
                 <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">
@@ -1498,7 +1498,7 @@ export default function CloudStorageStudio({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-emerald-400 font-bold">
-                        ✏️ Live Editable Payload:
+                        Live Editable Payload:
                       </span>
                       <button
                         type="button"
@@ -1552,7 +1552,7 @@ export default function CloudStorageStudio({
                       className="text-zinc-400 hover:text-white shrink-0"
                     >
                       {copiedCmd === 'sign-url' ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
                       )}
@@ -1593,7 +1593,7 @@ export default function CloudStorageStudio({
                 disabled={busyKey === `lifecycle-${selectedBucket.name}`}
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer shadow-sm"
               >
-                🌱 1-Tap Deploy Smart Lifecycle to gs://{selectedBucket.name}
+                1-Tap Deploy Smart Lifecycle to gs://{selectedBucket.name}
               </button>
             )}
           </div>
@@ -1620,7 +1620,7 @@ export default function CloudStorageStudio({
 
               <div>
                 <div className="flex justify-between font-bold">
-                  <span>🔥 Hot Data (0–30d Standard):</span>
+                  <span>Hot Data (0–30d Standard):</span>
                   <span className="text-rose-400">{simHotPercent}%</span>
                 </div>
                 <input
@@ -1635,7 +1635,7 @@ export default function CloudStorageStudio({
 
               <div>
                 <div className="flex justify-between font-bold">
-                  <span>🌤️ Warm Data (30–90d Nearline):</span>
+                  <span>Warm Data (30–90d Nearline):</span>
                   <span className="text-amber-400">{simWarmPercent}%</span>
                 </div>
                 <input
@@ -1650,7 +1650,7 @@ export default function CloudStorageStudio({
 
               <div>
                 <div className="flex justify-between font-bold">
-                  <span>❄️ Cold Data (90–365d Coldline):</span>
+                  <span>Cold Data (90–365d Coldline):</span>
                   <span className="text-sky-400">{simColdPercent}%</span>
                 </div>
                 <input
@@ -1664,7 +1664,7 @@ export default function CloudStorageStudio({
               </div>
 
               <div className="flex justify-between text-[11px] text-violet-400 font-bold pt-1 border-t border-zinc-800">
-                <span>🧊 Deep Archive (&gt;365d):</span>
+                <span>Deep Archive (&gt;365d):</span>
                 <span>{lifecycleSimulation.archivePercent}%</span>
               </div>
             </div>
@@ -1753,7 +1753,7 @@ export default function CloudStorageStudio({
                 className="p-3 rounded-xl bg-white/85 dark:bg-zinc-950/80 border border-emerald-500/40 text-left cursor-pointer hover:border-emerald-500"
               >
                 <div className="text-[10px] font-extrabold text-emerald-500">
-                  🌱 GREENEST REGION ({bucketTeleportAnalysis.recommendations.greenestCompatible.dst.cfePercent}% CFE)
+                  GREENEST REGION ({bucketTeleportAnalysis.recommendations.greenestCompatible.dst.cfePercent}% CFE)
                 </div>
                 <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
                   {bucketTeleportAnalysis.recommendations.greenestCompatible.dst.id} (
@@ -1778,7 +1778,7 @@ export default function CloudStorageStudio({
                 className="p-3 rounded-xl bg-white/85 dark:bg-zinc-950/80 border border-cyan-500/40 text-left cursor-pointer hover:border-cyan-500"
               >
                 <div className="text-[10px] font-extrabold text-cyan-500">
-                  💸 LOWEST COST + CLEAN TIER-1 (1.00x)
+                  LOWEST COST + CLEAN TIER-1 (1.00x)
                 </div>
                 <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
                   {bucketTeleportAnalysis.recommendations.cheapestGreenCompatible.dst.id} (
@@ -1803,7 +1803,7 @@ export default function CloudStorageStudio({
                 className="p-3 rounded-xl bg-white/85 dark:bg-zinc-950/80 border border-violet-500/40 text-left cursor-pointer hover:border-violet-500"
               >
                 <div className="text-[10px] font-extrabold text-violet-400">
-                  ⚡ SAME-CONTINENT LOW-EGRESS ($0.02/GB)
+                  SAME-CONTINENT LOW-EGRESS ($0.02/GB)
                 </div>
                 <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
                   {bucketTeleportAnalysis.recommendations.sameContinentCompatible.dst.id} (
@@ -1880,7 +1880,7 @@ export default function CloudStorageStudio({
             >
               {busyKey === `teleport-${selectedBucket?.name}`
                 ? 'Teleporting Bucket & Objects...'
-                : `🌍 1-Tap Teleport to ${teleportTargetRegion}`}
+                : `1-Tap Teleport to ${teleportTargetRegion}`}
             </button>
           </form>
         </div>

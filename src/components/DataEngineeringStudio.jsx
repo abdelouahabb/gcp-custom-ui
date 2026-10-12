@@ -762,13 +762,13 @@ actions:
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
-                🧑‍🔬 2026 DATA ENGINEERING STUDIO
+                2026 DATA ENGINEERING STUDIO
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
-                ⚡ GCloud SDK {data.gcloudSdkVersion}
+                GCloud SDK {data.gcloudSdkVersion}
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-violet-500/20 text-violet-300 border border-violet-400/40">
-                🥉 Bronze → 🥈 Silver → 🥇 Gold Medallion ELT
+                Bronze → Silver → Gold Medallion ELT
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight">
@@ -844,32 +844,32 @@ actions:
         {[
           {
             id: 'MEDALLION_ELT',
-            label: '1. 🥉🥈🥇 Medallion Pipeline Builder',
+            label: '1. Medallion Pipeline Builder',
             badge: 'Source → Gold',
           },
           {
             id: 'DATAFORM_SQLX',
-            label: '2. 🧩 Dataform & dbt Auto-Clean SQLX',
+            label: '2. Dataform & dbt Auto-Clean SQLX',
             badge: 'QUALIFY Dedup',
           },
           {
             id: 'DATAPLEX_MESH',
-            label: '3. 🛡️ Dataplex Profiling & Data Products',
+            label: '3. Dataplex Profiling & Data Products',
             badge: 'SDK 588.0.0',
           },
           {
             id: 'SCHEMA_CONTRACTS',
-            label: '4. 📐 Visual Schema Mapper & Contracts',
+            label: '4. Visual Schema Mapper & Contracts',
             badge: 'Zero Broken Views',
           },
           {
             id: 'SLOT_DOCTOR_DAGS',
-            label: '5. 🔬 Slot/Skew Doctor & Serverless DAGs',
+            label: '5. Slot/Skew Doctor & Serverless DAGs',
             badge: '-$348/mo',
           },
           {
             id: 'DATA_AGENT_KIT',
-            label: '6. 🤖 Data Agent Kit (deployment.yaml & MCP URIs)',
+            label: '6. Data Agent Kit (deployment.yaml & MCP URIs)',
             badge: 'datacloud:antigravity',
           },
         ].map((t) => (
@@ -905,7 +905,7 @@ actions:
             <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-cyan-500" />
+                  <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>1-Canvas "Source-to-Gold" Medallion Pipeline Builder</span>
                 </h3>
                 <p className="text-xs text-zinc-500">
@@ -941,16 +941,16 @@ actions:
                   className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
                 >
                   <option value="GCS_PARQUET">
-                    📦 Cloud Storage Parquet / CSV / JSON (BigLake)
+                    Cloud Storage Parquet / CSV / JSON (BigLake)
                   </option>
                   <option value="PUBSUB_STREAM">
-                    ⚡ Cloud Pub/Sub Real-Time Stream (Storage Write API)
+                    Cloud Pub/Sub Real-Time Stream (Storage Write API)
                   </option>
                   <option value="BQ_DTS">
-                    🔄 BigQuery Data Transfer Service (SaaS / S3 / Ads)
+                    BigQuery Data Transfer Service (SaaS / S3 / Ads)
                   </option>
                   <option value="CLOUDSQL_CDC">
-                    🐘 Cloud SQL / AlloyDB Change Data Capture (Datastream)
+                    Cloud SQL / AlloyDB Change Data Capture (Datastream)
                   </option>
                 </select>
               </div>
@@ -1033,9 +1033,9 @@ actions:
                   onChange={(e) => setLatencySla(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
                 >
-                  <option value="BATCH_15M">⏱️ Near-Real-Time Micro-Batch (15 min)</option>
-                  <option value="HOURLY">🕐 Hourly Medallion ELT</option>
-                  <option value="STREAMING_SUB_5S">⚡ Sub-5-Second Streaming</option>
+                  <option value="BATCH_15M">⏱Near-Real-Time Micro-Batch (15 min)</option>
+                  <option value="HOURLY">Hourly Medallion ELT</option>
+                  <option value="STREAMING_SUB_5S">Sub-5-Second Streaming</option>
                 </select>
               </div>
             </div>
@@ -1044,7 +1044,7 @@ actions:
             <div className="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-mono font-extrabold text-cyan-600 dark:text-cyan-300">
-                  🧠 Smart Engine Advisor: {engineRecommendation.engine}
+                  Smart Engine Advisor: {engineRecommendation.engine}
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
                   Est. ${engineRecommendation.estMonthlyUsd}/mo
@@ -1059,7 +1059,7 @@ actions:
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
                 <div className="text-[10px] font-mono font-bold text-amber-500">
-                  🥉 STAGE 1 · BRONZE RAW
+                  STAGE 1 · BRONZE RAW
                 </div>
                 <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate mt-0.5">
                   {pipelineName}_bronze_raw
@@ -1070,7 +1070,7 @@ actions:
               </div>
               <div className="p-3 rounded-xl bg-slate-500/10 border border-slate-400/30">
                 <div className="text-[10px] font-mono font-bold text-slate-400">
-                  🥈 STAGE 2 · SILVER CLEANED
+                  STAGE 2 · SILVER CLEANED
                 </div>
                 <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate mt-0.5">
                   {pipelineName}_silver_cleaned
@@ -1081,7 +1081,7 @@ actions:
               </div>
               <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
                 <div className="text-[10px] font-mono font-bold text-yellow-500">
-                  🥇 STAGE 3 · GOLD MARTS
+                  STAGE 3 · GOLD MARTS
                 </div>
                 <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate mt-0.5">
                   {pipelineName}_gold_marts
@@ -1100,7 +1100,7 @@ actions:
             >
               {busyAction === 'DEPLOY_MEDALLION'
                 ? '⏳ Provisioning Bronze → Silver → Gold Datasets & Running Initial Dedup MERGE...'
-                : `🚀 1-Click Provision "${pipelineName}" Bronze → Silver → Gold Medallion Lakehouse`}
+                : `1-Click Provision "${pipelineName}" Bronze → Silver → Gold Medallion Lakehouse`}
             </button>
           </div>
 
@@ -1148,15 +1148,15 @@ actions:
 
                   <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
                     <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/25">
-                      🥉 {p.bronzeDataset}
+                      {p.bronzeDataset}
                     </span>
                     <ArrowRight className="w-3 h-3 text-zinc-500" />
                     <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/25">
-                      🥈 {p.silverDataset}
+                      {p.silverDataset}
                     </span>
                     <ArrowRight className="w-3 h-3 text-zinc-500" />
                     <span className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500 border border-yellow-500/25">
-                      🥇 {p.goldDataset}
+                      {p.goldDataset}
                     </span>
                   </div>
 
@@ -1190,7 +1190,7 @@ actions:
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <FileCode className="w-4 h-4 text-indigo-500" />
+                  <FileCode className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>Auto-Clean, Deduplicate &amp; PII Hash Generator (Dataform `.sqlx` &amp; dbt `.sql`)</span>
                 </h3>
                 <p className="text-xs text-zinc-500">
@@ -1281,7 +1281,7 @@ actions:
               >
                 {copiedKey === 'sqlx' ? (
                   <>
-                    <Check className="w-3 h-3 text-emerald-400" />
+                    <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                     <span>Copied</span>
                   </>
                 ) : (
@@ -1302,7 +1302,7 @@ actions:
               >
                 {busyAction === 'RUN_SQL'
                   ? '⏳ Running Auto-Clean & QUALIFY Deduplication on BigQuery...'
-                  : '▶️ Execute Auto-Clean & Deduplicate SQL Live on BigQuery'}
+                  : '▶Execute Auto-Clean & Deduplicate SQL Live on BigQuery'}
               </button>
             </div>
 
@@ -1351,7 +1351,7 @@ actions:
           <div className="lg:col-span-5 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <GitBranch className="w-4 h-4 text-violet-500" />
+                <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Native Dataform Repositories (`dataform.googleapis.com/v1beta1`)</span>
               </h3>
               <p className="text-xs text-zinc-500">
@@ -1399,7 +1399,7 @@ actions:
                   >
                     <div>
                       <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
-                        📦 {r.id} ({r.region})
+                        {r.id} ({r.region})
                       </div>
                       <div className="text-[10px] font-mono text-zinc-500">
                         {r.gitRemote} · Branch: {r.defaultBranch}
@@ -1430,7 +1430,7 @@ actions:
           <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Dataplex Auto Data Profiling &amp; Quality Scans (`gcloud dataplex datascans`)</span>
               </h3>
               <p className="text-xs text-zinc-500">
@@ -1448,8 +1448,8 @@ actions:
                   onChange={(e) => setScanType(e.target.value)}
                   className="w-full px-2.5 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
                 >
-                  <option value="DATA_PROFILE">📊 DATA_PROFILE (Nulls &amp; Dist)</option>
-                  <option value="DATA_QUALITY">🛡️ DATA_QUALITY (Rules Gate)</option>
+                  <option value="DATA_PROFILE">DATA_PROFILE (Nulls &amp; Dist)</option>
+                  <option value="DATA_QUALITY">DATA_QUALITY (Rules Gate)</option>
                 </select>
               </div>
               <div>
@@ -1484,7 +1484,7 @@ actions:
             >
               {busyAction === 'CREATE_SCAN'
                 ? '⏳ Creating Dataplex Scan via dataplex.googleapis.com/v1...'
-                : `🔬 1-Click Launch Dataplex ${scanType} Scan on ${scanDataset}.${scanTable}`}
+                : `1-Click Launch Dataplex ${scanType} Scan on ${scanDataset}.${scanTable}`}
             </button>
 
             <div className="space-y-2 max-h-[280px] overflow-y-auto">
@@ -1522,7 +1522,7 @@ actions:
           <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Database className="w-4 h-4 text-cyan-500" />
+                <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Dataplex Data Mesh Products &amp; `dbt` Metadata Sync (`gcloud 588.0.0`)</span>
               </h3>
               <p className="text-xs text-zinc-500">
@@ -1574,7 +1574,7 @@ actions:
             >
               {busyAction === 'CREATE_PRODUCT'
                 ? '⏳ Publishing Data Product & Syncing dbt Manifest...'
-                : '📦 1-Click Publish Dataplex Data Product & Sync dbt-core Lineage'}
+                : '1-Click Publish Dataplex Data Product & Sync dbt-core Lineage'}
             </button>
 
             <div className="space-y-2.5 max-h-[280px] overflow-y-auto">
@@ -1585,13 +1585,13 @@ actions:
                 >
                   <div className="space-y-1">
                     <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                      <span>🥇 {dp.displayName}</span>
+                      <span>{dp.displayName}</span>
                       <span className="px-2 py-0.5 rounded text-[9px] bg-cyan-500/15 text-cyan-400">
                         Quality {dp.qualityScore}%
                       </span>
                     </div>
                     <div className="text-[10px] font-mono text-zinc-500">
-                      Domain: {dp.domain} · SLA: {dp.slaFreshnessMinutes}m · dbt Synced: ✅
+                      Domain: {dp.domain} · SLA: {dp.slaFreshnessMinutes}m · dbt Synced:
                     </div>
                   </div>
                   <button
@@ -1616,14 +1616,14 @@ actions:
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white">
-                📐 Interactive Source ↔ Target Schema Mapper &amp; Downstream View Contract Firewall
+                Interactive Source ↔ Target Schema Mapper &amp; Downstream View Contract Firewall
               </h3>
               <p className="text-xs text-zinc-500">
                 Maps raw Bronze fields to strongly-typed Silver/Gold columns and checks downstream BigQuery views &amp; BI dashboards before any schema change.
               </p>
             </div>
             <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-              🛡️ 0 BREAKING DOWNSTREAM CHANGES
+              0 BREAKING DOWNSTREAM CHANGES
             </span>
           </div>
 
@@ -1685,7 +1685,7 @@ actions:
                             : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
                         }`}
                       >
-                        {m.isPii ? '🔒 SHA-256 PII' : 'Public Col'}
+                        {m.isPii ? 'SHA-256 PII' : 'Public Col'}
                       </button>
                     </td>
                     <td className="py-2.5 text-[10px] text-zinc-400">
@@ -1706,7 +1706,7 @@ actions:
           <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-amber-500" />
+                <Cpu className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>BigQuery `JOBS_BY_PROJECT` Slot Contention &amp; Skew Doctor</span>
               </h3>
               <p className="text-xs text-zinc-500">
@@ -1738,7 +1738,7 @@ actions:
                     </div>
                     <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-zinc-200 dark:border-zinc-800">
                       <span className="text-amber-500 font-bold">
-                        💡 {j.recommendation}
+                        {j.recommendation}
                       </span>
                       <span className="text-zinc-400">
                         On-Demand: ${j.onDemandCostUsd}
@@ -1755,7 +1755,7 @@ actions:
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Workflow className="w-4 h-4 text-emerald-500" />
+                  <Workflow className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>&ldquo;Composer-Lite&rdquo; Serverless DAG Transpiler (`workflows.googleapis.com/v1`)</span>
                 </h3>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
@@ -1786,7 +1786,7 @@ actions:
               >
                 {busyAction === 'DEPLOY_DAG'
                   ? 'Deploying...'
-                  : '🚀 1-Click Deploy $0/mo Serverless DAG'}
+                  : '1-Click Deploy $0/mo Serverless DAG'}
               </button>
             </div>
 
@@ -1798,7 +1798,7 @@ actions:
                 >
                   <div>
                     <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
-                      ⏱️ {d.id} ({d.region})
+                      ⏱{d.id} ({d.region})
                     </div>
                     <div className="text-[10px] font-mono text-emerald-500">
                       State: {d.state} · Saving ~$348/mo vs. Cloud Composer
@@ -1830,7 +1830,7 @@ actions:
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <div>
                   <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-cyan-500" />
+                    <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     <span>
                       Data Agent Kit 2-File Declarative Bundle (`deployment.yaml` + `orchestration-pipeline.yaml`)
                     </span>
@@ -1897,7 +1897,7 @@ actions:
                     className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer text-zinc-700 dark:text-zinc-300"
                   >
                     {copiedKey === 'DAK_YAML' ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}
@@ -1911,7 +1911,7 @@ actions:
                   >
                     {busyAction === 'DAK_DEPLOY'
                       ? 'Applying Bundle...'
-                      : `🚀 Validate & Apply (${dakEnvName})`}
+                      : `Validate & Apply (${dakEnvName})`}
                   </button>
                 </div>
               </div>
@@ -1924,7 +1924,7 @@ actions:
 
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono text-emerald-400 flex flex-wrap items-center justify-between gap-2">
                 <span>
-                  🏷️ Enforced Resource Attribution (`enforcing-resource-attribution` v6): `datacloud: &quot;antigravity&quot;` + `--label datacloud:antigravity`
+                  Enforced Resource Attribution (`enforcing-resource-attribution` v6): `datacloud: &quot;antigravity&quot;` + `--label datacloud:antigravity`
                 </span>
                 <span className="font-bold">
                   CLOUDSDK_METRICS_ENVIRONMENT=&quot;datacloud.antigravity&quot;
@@ -1936,7 +1936,7 @@ actions:
             <div className="lg:col-span-5 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
               <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white">
-                  🔗 Canonical Data Agent Kit MCP Resource URIs (`read_resource`)
+                  Canonical Data Agent Kit MCP Resource URIs (`read_resource`)
                 </h3>
                 <p className="text-xs text-zinc-500">
                   Copy-ready MCP URIs (`bq://`, `lakehouse://`, `spark://`, `gcs://`) compatible with Antigravity, VS Code, Gemini CLI, and Claude Code.
@@ -1975,7 +1975,7 @@ actions:
 
               <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
                 <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
-                  📦 Supported `gcloud beta orchestration-pipelines` Resource Types
+                  Supported `gcloud beta orchestration-pipelines` Resource Types
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[165px] overflow-y-auto">
                   {(data.dakSupportedResourceTypes || []).map((rt) => (
@@ -2002,7 +2002,7 @@ actions:
             <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
               <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Database className="w-4 h-4 text-violet-500" />
+                  <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>
                     Dataplex Universal Semantic &amp; Keyword Asset Search (`discovering-gcp-data-assets`)
                   </span>
@@ -2025,8 +2025,8 @@ actions:
                   onChange={(e) => setDakSearchMode(e.target.value)}
                   className="px-2.5 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
                 >
-                  <option value="SEMANTIC">🧠 Semantic (--semantic-search)</option>
-                  <option value="KEYWORD">🔎 Keyword DSL (system=bigquery)</option>
+                  <option value="SEMANTIC">Semantic (--semantic-search)</option>
+                  <option value="KEYWORD">Keyword DSL (system=bigquery)</option>
                 </select>
                 <button
                   type="button"
@@ -2082,7 +2082,7 @@ actions:
             <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
               <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-amber-500" />
+                  <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>
                     Streaming Spark Event Log &amp; OOM Root-Cause Doctor (`gcp-spark-troubleshooting`)
                   </span>
@@ -2107,7 +2107,7 @@ actions:
                 >
                   {busyAction === 'SPARK_RCA'
                     ? 'Streaming...'
-                    : '🔬 Stream & Diagnose RCA'}
+                    : 'Stream & Diagnose RCA'}
                 </button>
               </div>
 
@@ -2115,7 +2115,7 @@ actions:
                 <div className="p-3.5 rounded-xl bg-zinc-950 border border-amber-500/40 space-y-2.5 text-xs font-mono">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
                     <span className="text-amber-400 font-extrabold">
-                      🚨 {sparkRcaReport.rootCauseCategory}
+                      {sparkRcaReport.rootCauseCategory}
                     </span>
                     <span className="text-[10px] text-zinc-400">
                       {sparkRcaReport.fileSizeChecked}
@@ -2152,7 +2152,7 @@ actions:
                   </div>
                   <div className="space-y-1 pt-1">
                     <div className="text-[10px] text-cyan-400 font-bold">
-                      ✅ Prescribed Spark 2.2 Fixes:
+                      Prescribed Spark 2.2 Fixes:
                     </div>
                     {sparkRcaReport.recommendedFixes.map((fix) => (
                       <div key={fix} className="text-[10px] text-zinc-300">

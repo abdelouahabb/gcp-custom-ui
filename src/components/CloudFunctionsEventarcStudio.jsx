@@ -28,10 +28,10 @@ import {
 const TRIGGER_RECIPES = [
   {
     id: 'GCS_OBJECT',
-    title: '🪣 Cloud Storage File Event',
+    title: 'Cloud Storage File Event',
     plainEnglish: 'When a file is uploaded, deleted, or archived in a Bucket',
     transportMode: 'DIRECT_PUBSUB_FREE',
-    transportBadge: '🟢 Direct Native Transport ($0.00 Audit Log Tax)',
+    transportBadge: 'Direct Native Transport ($0.00 Audit Log Tax)',
     eventTypeDefault: 'google.cloud.storage.object.v1.finalized',
     eventSubtypes: [
       {
@@ -58,10 +58,10 @@ const TRIGGER_RECIPES = [
   },
   {
     id: 'PUBSUB_TOPIC',
-    title: '📨 Pub/Sub Message Stream',
+    title: 'Pub/Sub Message Stream',
     plainEnglish: 'When a JSON or binary message is published to a Topic',
     transportMode: 'DIRECT_PUBSUB_FREE',
-    transportBadge: '🟢 Direct Pub/Sub Push ($0.00 Audit Log Tax)',
+    transportBadge: 'Direct Pub/Sub Push ($0.00 Audit Log Tax)',
     eventTypeDefault: 'google.cloud.pubsub.topic.v1.messagePublished',
     eventSubtypes: [
       {
@@ -76,10 +76,10 @@ const TRIGGER_RECIPES = [
   },
   {
     id: 'BIGQUERY_AUDIT',
-    title: '📊 BigQuery Job / Table Finish',
+    title: 'BigQuery Job / Table Finish',
     plainEnglish: 'When a BigQuery query or table load job completes (InsertJob)',
     transportMode: 'CLOUD_AUDIT_LOGS',
-    transportBadge: '🟡 Cloud Audit Logs Transport (Requires DATA_WRITE Logs)',
+    transportBadge: 'Cloud Audit Logs Transport (Requires DATA_WRITE Logs)',
     eventTypeDefault: 'google.cloud.audit.log.v1.written',
     eventSubtypes: [
       {
@@ -94,14 +94,14 @@ const TRIGGER_RECIPES = [
     hiddenIamNote:
       'Requires Eventarc Event Receiver (roles/eventarc.eventReceiver) + BigQuery Audit Logs enabled.',
     costNote:
-      '⚠️ FinOps Guardrail: Audit Log triggers read from Cloud Logging. Use our Scoped Log Exclusion filter below so you only ingest InsertJob logs ($0 within 50 GiB/mo free logging tier).',
+      'FinOps Guardrail: Audit Log triggers read from Cloud Logging. Use our Scoped Log Exclusion filter below so you only ingest InsertJob logs ($0 within 50 GiB/mo free logging tier).',
   },
   {
     id: 'CRON_SCHEDULE',
     title: '⏰ Cloud Scheduler Cron Timer',
     plainEnglish: 'Run automatically on a recurring schedule (every N mins / nightly)',
     transportMode: 'DIRECT_PUBSUB_FREE',
-    transportBadge: '🟢 Scheduler → Pub/Sub Trigger (3 Free Jobs/Mo)',
+    transportBadge: 'Scheduler → Pub/Sub Trigger (3 Free Jobs/Mo)',
     eventTypeDefault: 'google.cloud.pubsub.topic.v1.messagePublished',
     eventSubtypes: [
       { id: '*/5 * * * *', label: 'Every 5 Minutes (*/5 * * * *)' },
@@ -115,10 +115,10 @@ const TRIGGER_RECIPES = [
   },
   {
     id: 'HTTPS_WEBHOOK',
-    title: '🌐 Direct HTTPS Webhook / API',
+    title: 'Direct HTTPS Webhook / API',
     plainEnglish: 'Invoke directly via HTTPS URL (Stripe/GitHub webhooks or REST API)',
     transportMode: 'DIRECT_HTTPS_FREE',
-    transportBadge: '🟢 Direct HTTPS Endpoint (2M Free Invocations/Mo)',
+    transportBadge: 'Direct HTTPS Endpoint (2M Free Invocations/Mo)',
     eventTypeDefault: 'google.cloud.functions.https.v2.invoked',
     eventSubtypes: [
       {
@@ -137,10 +137,10 @@ const TRIGGER_RECIPES = [
   },
   {
     id: 'UNIVERSAL_AUDIT',
-    title: '🚀 Universal GCP Service Event (130+ Services)',
+    title: 'Universal GCP Service Event (130+ Services)',
     plainEnglish: 'When a Compute VM is created, Firewall changes, IAM key is added, or GKE/SQL mutates',
     transportMode: 'ADMIN_AUDIT_FREE',
-    transportBadge: '🟢 ADMIN_ACTIVITY Audit Log (Always ON · $0.00 Free)',
+    transportBadge: 'ADMIN_ACTIVITY Audit Log (Always ON · $0.00 Free)',
     eventTypeDefault: 'google.cloud.audit.log.v1.written',
     eventSubtypes: [],
     hiddenIamNote:
@@ -154,7 +154,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'VM_CREATED',
     group: 'COMPUTE_VM',
-    badge: '🖥️ Compute Engine',
+    badge: 'Compute Engine',
     title: 'Compute VM Instance Created',
     plainEnglish: 'Triggers the instant a new VM is provisioned in any zone (auto-tag, compliance check, or Slack alert)',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -167,7 +167,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'VM_DELETED',
     group: 'COMPUTE_VM',
-    badge: '🖥️ Compute Engine',
+    badge: 'Compute Engine',
     title: 'Compute VM Instance Deleted / Terminated',
     plainEnglish: 'Triggers when a VM is destroyed (clean up DNS records, release static IPs, or archive metadata)',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -180,7 +180,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'VM_STOPPED',
     group: 'COMPUTE_VM',
-    badge: '🖥️ Compute Engine',
+    badge: 'Compute Engine',
     title: 'Compute VM Instance Stopped / Halted',
     plainEnglish: 'Triggers when a running VM is stopped (detect unexpected production shutdowns or snapshot disks)',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -193,7 +193,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'DISK_SNAPSHOT',
     group: 'COMPUTE_VM',
-    badge: '🖥️ Compute Engine',
+    badge: 'Compute Engine',
     title: 'Persistent Disk Snapshot Created',
     plainEnglish: 'Triggers when a disk snapshot finishes (replicate cross-region or verify backup retention labels)',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -206,7 +206,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'FIREWALL_MUTATED',
     group: 'IAM_SECURITY',
-    badge: '🛡️ Network Security',
+    badge: 'Network Security',
     title: 'VPC Firewall Rule Created or Opened',
     plainEnglish: 'Auto-remediate if someone opens 0.0.0.0/0 on port 22 (SSH) or 3389 (RDP) in your VPC',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -219,7 +219,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'IAM_SA_KEY_CREATED',
     group: 'IAM_SECURITY',
-    badge: '🔑 IAM & Zero-Trust',
+    badge: 'IAM & Zero-Trust',
     title: 'Service Account JSON Key Exported',
     plainEnglish: 'High-priority SecOps trigger when a long-lived Service Account key is created (alert or auto-revoke)',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -232,7 +232,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'IAM_POLICY_CHANGED',
     group: 'IAM_SECURITY',
-    badge: '🔐 IAM & Zero-Trust',
+    badge: 'IAM & Zero-Trust',
     title: 'Project IAM Policy Modified (SetIamPolicy)',
     plainEnglish: 'Audit privilege escalations (roles/owner or roles/editor grants) in real time',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -245,7 +245,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'SECRET_VERSION_ADDED',
     group: 'IAM_SECURITY',
-    badge: '🗝️ Secret Manager',
+    badge: 'Secret Manager',
     title: 'New Secret Version Added / Rotated',
     plainEnglish: 'Hot-reload downstream services or verify secret rotation when a new Secret Manager version is added',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -258,7 +258,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'GKE_CLUSTER_CREATED',
     group: 'GKE_CONTAINERS',
-    badge: '☸️ Kubernetes (GKE)',
+    badge: 'Kubernetes (GKE)',
     title: 'GKE Cluster Provisioned (CreateCluster)',
     plainEnglish: 'Bootstrap ArgoCD, network policies, or workload identity when a new GKE cluster is created',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -271,7 +271,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'GKE_NODEPOOL_RESIZED',
     group: 'GKE_CONTAINERS',
-    badge: '☸️ Kubernetes (GKE)',
+    badge: 'Kubernetes (GKE)',
     title: 'GKE NodePool Resized (SetNodePoolSize)',
     plainEnglish: 'Track Kubernetes node scaling and GPU quota consumption across clusters',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -284,7 +284,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'CLOUD_RUN_DEPLOYED',
     group: 'GKE_CONTAINERS',
-    badge: '🚀 Cloud Run & CI/CD',
+    badge: 'Cloud Run & CI/CD',
     title: 'Cloud Run Service Deployed / Updated',
     plainEnglish: 'Run automated smoke tests or synthetic canary checks after every Cloud Run revision deploy',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -297,7 +297,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'CLOUDSQL_CREATED',
     group: 'DATABASES',
-    badge: '🐘 Cloud SQL & DBs',
+    badge: 'Cloud SQL & DBs',
     title: 'Cloud SQL Database Instance Created',
     plainEnglish: 'Verify private IP enforcement and automated backup flags on new Cloud SQL instances',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -310,7 +310,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'CLOUDSQL_FAILOVER',
     group: 'DATABASES',
-    badge: '🐘 Cloud SQL & DBs',
+    badge: 'Cloud SQL & DBs',
     title: 'Cloud SQL High-Availability Failover',
     plainEnglish: 'Alert PagerDuty and flush application caches when a regional Cloud SQL instance fails over',
     eventType: 'google.cloud.audit.log.v1.written',
@@ -323,7 +323,7 @@ const ADVANCED_EVENTARC_CATALOG = [
   {
     id: 'FIRESTORE_DOC_WRITTEN',
     group: 'DATABASES',
-    badge: '🔥 Firestore NoSQL',
+    badge: 'Firestore NoSQL',
     title: 'Firestore Document Created / Updated / Deleted',
     plainEnglish: 'Stream real-time NoSQL document changes into BigQuery or Vertex AI Vector Search',
     eventType: 'google.cloud.firestore.document.v1.written',
@@ -799,14 +799,14 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                ⚡ CLOUD FUNCTIONS (v1 & v2) + DEMYSTIFIED EVENTARC STUDIO
+                CLOUD FUNCTIONS (v1 & v2) + DEMYSTIFIED EVENTARC STUDIO
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                 2M Invocations/Mo Free Tier
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-amber-500" />
+              <Zap className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 Cloud Functions & Visual Eventarc Trigger Studio (`v1` Simplicity + `v2` Power)
               </span>
@@ -828,7 +828,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               <span>
                 {iamDoctorBusy
                   ? 'Healing Eventarc IAM...'
-                  : '🩺 1-Tap Eventarc IAM Auto-Doctor'}
+                  : '1-Tap Eventarc IAM Auto-Doctor'}
               </span>
             </button>
 
@@ -840,7 +840,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-500' : ''}`}
+                className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
               />
               <span>Sync</span>
             </button>
@@ -943,15 +943,15 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
           {[
             {
               id: 'TRIGGER_WIZARD',
-              label: '🎯 1. Plain-English Eventarc Trigger Wizard & Visual X-Ray',
+              label: '1. Plain-English Eventarc Trigger Wizard & Visual X-Ray',
             },
             {
               id: 'LIVE_FLEET',
-              label: `⚡ 2. Live Functions Fleet & 1-Click v1→v2 Upgrader (${functionsList.length})`,
+              label: `2. Live Functions Fleet & 1-Click v1→v2 Upgrader (${functionsList.length})`,
             },
             {
               id: 'FINOPS_COMPARE',
-              label: '💰 3. 1st Gen (v1) vs 2nd Gen (v2) Concurrency & Cost Calculator',
+              label: '3. 1st Gen (v1) vs 2nd Gen (v2) Concurrency & Cost Calculator',
             },
           ].map((tab) => (
             <button
@@ -1002,7 +1002,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
-                  🌱 Beginner Mode (5 Essential Recipes)
+                  Beginner Mode (5 Essential Recipes)
                 </button>
                 <button
                   type="button"
@@ -1017,7 +1017,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
-                  🚀 Advanced: Universal GCP Events (VM Creation, IAM, GKE, SQL...)
+                  Advanced: Universal GCP Events (VM Creation, IAM, GKE, SQL...)
                 </button>
               </div>
             </div>
@@ -1064,7 +1064,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 <div className="p-3 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/30 flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs text-zinc-700 dark:text-zinc-200">
                     <span className="font-bold font-mono text-indigo-400">
-                      💡 Why Eventarc Universal Triggers Are Game-Changing:
+                      Why Eventarc Universal Triggers Are Game-Changing:
                     </span>{' '}
                     In 1st Gen (`v1`), you could never trigger a function when a{' '}
                     <strong>Compute VM was created</strong> or an{' '}
@@ -1081,11 +1081,11 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {[
-                      { id: 'ALL', label: '🌐 All GCP Events (14)' },
-                      { id: 'COMPUTE_VM', label: '🖥️ Compute VM & Disks' },
-                      { id: 'IAM_SECURITY', label: '🛡️ IAM, Keys & Firewall' },
-                      { id: 'GKE_CONTAINERS', label: '☸️ GKE & Cloud Run' },
-                      { id: 'DATABASES', label: '🐘 Cloud SQL & Firestore' },
+                      { id: 'ALL', label: 'All GCP Events (14)' },
+                      { id: 'COMPUTE_VM', label: 'Compute VM & Disks' },
+                      { id: 'IAM_SECURITY', label: 'IAM, Keys & Firewall' },
+                      { id: 'GKE_CONTAINERS', label: 'GKE & Cloud Run' },
+                      { id: 'DATABASES', label: 'Cloud SQL & Firestore' },
                     ].map((grp) => (
                       <button
                         key={grp.id}
@@ -1176,7 +1176,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
           <div className="p-4 rounded-2xl bg-zinc-950 border border-indigo-500/30 space-y-3 text-zinc-100">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span className="text-xs font-extrabold font-mono uppercase tracking-wider text-amber-300">
                   Step 2 — Visual Eventarc X-Ray: How Your Trigger Actually Works Under the Hood
                 </span>
@@ -1191,7 +1191,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 <span>
                   {testingFn
                     ? 'Firing CloudEvent...'
-                    : '🧪 Fire Live Test CloudEvent Through Pipeline'}
+                    : 'Fire Live Test CloudEvent Through Pipeline'}
                 </span>
               </button>
             </div>
@@ -1306,7 +1306,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/40 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-mono text-indigo-300">
-                    ⚡ Synthetic CloudEvent Trace ({testEventResult.eventId}) — Total{' '}
+                    Synthetic CloudEvent Trace ({testEventResult.eventId}) — Total{' '}
                     {testEventResult.liveDelivery?.totalLatencyMs}ms (HTTP{' '}
                     {testEventResult.liveDelivery?.httpStatus})
                   </span>
@@ -1436,7 +1436,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 <div className="p-3 rounded-xl bg-indigo-500/[0.06] border border-indigo-500/30 space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-[11px] font-mono font-bold text-indigo-400">
-                      🎛️ Universal Eventarc Filter Composer (Edit Any GCP Service, Method, or Resource Wildcard)
+                      Universal Eventarc Filter Composer (Edit Any GCP Service, Method, or Resource Wildcard)
                     </span>
                     <button
                       type="button"
@@ -1517,7 +1517,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     >
                       {buckets.map((b) => (
                         <option key={b} value={b}>
-                          🪣 gs://{b}
+                          gs://{b}
                         </option>
                       ))}
                     </select>
@@ -1651,7 +1651,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
                   >
                     {copiedCmd ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}
@@ -1680,7 +1680,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                   <span>
                     {deploying
                       ? 'Deploying via Cloud Build...'
-                      : `🚀 Deploy ${fnGen} Function + Trigger`}
+                      : `Deploy ${fnGen} Function + Trigger`}
                   </span>
                 </button>
               </div>
@@ -1746,7 +1746,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
 
           {functionsList.length === 0 ? (
             <div className="p-8 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center space-y-2">
-              <Zap className="w-7 h-7 text-amber-500 mx-auto" />
+              <Zap className="w-7 h-7 text-zinc-500 dark:text-zinc-400 mx-auto" />
               <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
                 No Cloud Functions Deployed in {projectId} Yet
               </div>
@@ -1771,7 +1771,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
-                        ⚡ {fn.name}
+                        {fn.name}
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
@@ -1802,7 +1802,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                       onClick={() => handleTestCloudEvent(fn)}
                       className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 cursor-pointer"
                     >
-                      🧪 Test CloudEvent
+                      Test CloudEvent
                     </button>
 
                     {fn.generation === 'GEN_1' && (
@@ -1829,7 +1829,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                         }
                         className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
                       >
-                        🚀 1-Click Upgrade v1 → v2 (-78% Cost)
+                        1-Click Upgrade v1 → v2 (-78% Cost)
                       </button>
                     )}
 
@@ -1855,7 +1855,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                💰 Why 2nd Gen (`v2` + Eventarc) Is Up to 78% Cheaper Than 1st Gen (`v1`)
+                Why 2nd Gen (`v2` + Eventarc) Is Up to 78% Cheaper Than 1st Gen (`v1`)
               </h3>
               <p className="text-xs text-zinc-500">
                 In 1st Gen (`v1`), each function instance can only process 1 request at a time. In 2nd Gen (`v2`), a single instance handles up to 1,000 concurrent requests while waiting on BigQuery, Cloud SQL, or Vertex AI I/O.

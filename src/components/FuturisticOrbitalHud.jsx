@@ -25,7 +25,7 @@ import { GCP_REGION_CARBON_DATA } from './EngineerWishlistWave2';
 const STACK_BLUEPRINTS = [
   {
     id: 'AI_INFERENCE_STACK',
-    title: '🧠 Serverless AI RAG & Inference Stack',
+    title: 'Serverless AI RAG & Inference Stack',
     subtitle:
       'Provisions GCS Model/Vector Bucket + BigQuery Telemetry Dataset + Cloud Run Gen2 API pre-wired with env vars',
     estIdleCost: '$0.00/hr idle (Scale-to-Zero)',
@@ -37,7 +37,7 @@ const STACK_BLUEPRINTS = [
   },
   {
     id: 'REALTIME_LAKEHOUSE_STACK',
-    title: '📊 Real-Time Lakehouse & Streaming Stack',
+    title: 'Real-Time Lakehouse & Streaming Stack',
     subtitle:
       'Provisions Multi-Region GCS Raw Landing Zone + BigQuery Curated Mart + Cloud Run Ingestion Worker',
     estIdleCost: '$0.00/hr idle (Scale-to-Zero)',
@@ -49,7 +49,7 @@ const STACK_BLUEPRINTS = [
   },
   {
     id: 'ZERO_TRUST_EDGE_STACK',
-    title: '🛡️ Zero-Trust Edge Microservice Stack',
+    title: 'Zero-Trust Edge Microservice Stack',
     subtitle:
       'Provisions Encrypted Artifact Bucket + Audit Log BigQuery Dataset + Cloud Run Gen2 Edge API',
     estIdleCost: '$0.00/hr idle (Scale-to-Zero)',
@@ -210,7 +210,7 @@ export default function FuturisticOrbitalHud({
         {/* Left: Live Orbital Pulse & Posture Grade */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-[11px] font-mono font-bold text-cyan-300">
-            <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <Radio className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-pulse" />
             <span>2030 ORBITAL HUD</span>
           </div>
 
@@ -224,7 +224,7 @@ export default function FuturisticOrbitalHud({
           <div className="hidden sm:flex items-center gap-2 text-xs font-mono border-l border-slate-800 pl-3">
             <span className="text-slate-400">Grid Carbon CFE:</span>
             <span className="font-extrabold text-emerald-400">
-              🌱 {orbitalMetrics.avgCfe}% Clean
+              {orbitalMetrics.avgCfe}% Clean
             </span>
           </div>
 
@@ -265,7 +265,7 @@ export default function FuturisticOrbitalHud({
             }`}
           >
             <Wand2 className="w-3.5 h-3.5" />
-            <span>🪄 1-Tap Stack Synthesizer</span>
+            <span>1-Tap Stack Synthesizer</span>
             {expandedPanel === 'STACK_COMPOSER' ? (
               <ChevronUp className="w-3.5 h-3.5" />
             ) : (
@@ -288,7 +288,7 @@ export default function FuturisticOrbitalHud({
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>⏱️ Flight Recorder & Undo</span>
+            <span>⏱Flight Recorder & Undo</span>
           </button>
 
           {/* Autonomous Self-Healing SRE Guard */}
@@ -321,7 +321,7 @@ export default function FuturisticOrbitalHud({
             title="Cycle Futuristic HUD Atmosphere"
             className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-300 cursor-pointer"
           >
-            🎨 HUD
+            HUD
           </button>
 
           {onOpenDocsGuide && (
@@ -331,7 +331,7 @@ export default function FuturisticOrbitalHud({
               title="Open Interactive Engineering Manual & Feature Guide"
               className="px-2.5 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/40 text-[11px] font-mono font-bold text-blue-300 cursor-pointer"
             >
-              📖 How It Works
+              How It Works
             </button>
           )}
         </div>
@@ -420,7 +420,7 @@ export default function FuturisticOrbitalHud({
               >
                 {Object.entries(GCP_REGION_CARBON_DATA).map(([reg, info]) => (
                   <option key={reg} value={reg}>
-                    🌱 {reg} ({info.cfePercent}% CFE · {info.label})
+                    {reg} ({info.cfePercent}% CFE · {info.label})
                   </option>
                 ))}
               </select>

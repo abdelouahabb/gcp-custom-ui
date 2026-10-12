@@ -415,7 +415,7 @@ function classifyDestructiveAxiosConfig(config) {
       if (makePublic) {
         return {
           title: 'Expose Cloud Run Service to Public Internet (allUsers)?',
-          headerBadge: '🛡️ CloudPulse 2026 IAM Security & Exposure Gatekeeper',
+          headerBadge: 'CloudPulse 2026 IAM Security & Exposure Gatekeeper',
           targetLabel: 'Target Cloud Run Service to Expose Publicly',
           resourceKind: 'Cloud Run IAM Policy (roles/run.invoker)',
           targetName: `${serviceName} (PRIVATE IAM → PUBLIC allUsers)`,
@@ -423,14 +423,14 @@ function classifyDestructiveAxiosConfig(config) {
           projectId,
           method: 'GRANT allUsers',
           endpoint: rawUrl,
-          confirmLabel: '🌐 Yes, Expose Service to Public (allUsers)',
-          cancelToast: `🛡️ Access change cancelled — "${serviceName}" remains Private (IAM Authenticated).`,
+          confirmLabel: 'Yes, Expose Service to Public (allUsers)',
+          cancelToast: `Access change cancelled — "${serviceName}" remains Private (IAM Authenticated).`,
           impactWarning: `PUBLIC EXPOSURE WARNING: This grants "roles/run.invoker" to "allUsers" on Cloud Run service "${serviceName}" (${region}). Anyone on the public internet will be able to invoke its HTTPS URL without Google Cloud IAM authentication.`,
         };
       }
       return {
         title: 'Restrict Cloud Run Service to Authenticated IAM Only (Private)?',
-        headerBadge: '🛡️ CloudPulse 2026 IAM Security & Access Gatekeeper',
+        headerBadge: 'CloudPulse 2026 IAM Security & Access Gatekeeper',
         targetLabel: 'Target Cloud Run Service to Lock Down (Private)',
         resourceKind: 'Cloud Run IAM Policy (roles/run.invoker)',
         targetName: `${serviceName} (PUBLIC allUsers → PRIVATE IAM AUTH)`,
@@ -438,8 +438,8 @@ function classifyDestructiveAxiosConfig(config) {
         projectId,
         method: 'REVOKE allUsers',
         endpoint: rawUrl,
-        confirmLabel: '🔒 Yes, Switch to Private (IAM Auth Required)',
-        cancelToast: `🛡️ Access change cancelled — "${serviceName}" remains Public (allUsers).`,
+        confirmLabel: 'Yes, Switch to Private (IAM Auth Required)',
+        cancelToast: `Access change cancelled — "${serviceName}" remains Public (allUsers).`,
         impactWarning: `AUTHENTICATION LOCKDOWN WARNING: This removes "allUsers" (roles/run.invoker) from Cloud Run service "${serviceName}" (${region}). Unauthenticated browsers, webhooks, or external clients calling this URL without a valid Google IAM Bearer token will immediately receive HTTP 403 Forbidden.`,
       };
     }
@@ -472,7 +472,7 @@ function CloudPulseCockpit() {
   const setErrorBanner = useCallback((msg) => {
     if (
       typeof msg === 'string' &&
-      (msg.includes('🛡️') || msg.includes('__cancelledByUser'))
+      (msg.includes('') || msg.includes('__cancelledByUser'))
     ) {
       return;
     }
@@ -534,7 +534,7 @@ function CloudPulseCockpit() {
               onCancel: () => {
                 const cancelText =
                   descriptor.cancelToast ||
-                  '🛡️ Deletion cancelled — resource kept safe.';
+                  'Deletion cancelled — resource kept safe.';
                 const cancelErr = new Error(cancelText);
                 cancelErr.__cancelledByUser = true;
                 cancelErr.response = {
@@ -775,7 +775,7 @@ function CloudPulseCockpit() {
   const liveBurn = calculateLiveBurnRate(overview);
 
   const navTabs = [
-    // I. Flagship Command & 2026 Beyond-Console Innovation Lab (THE STAR!)
+    // I. Flagship Command & 2026 Beyond-Console Innovation Lab
     {
       id: 'OVERVIEW',
       group: 'COMMAND',
@@ -786,15 +786,15 @@ function CloudPulseCockpit() {
     {
       id: 'INNOVATION_LAB',
       group: 'COMMAND',
-      label: '✦ 2026 Innovation Lab ★',
+      label: '2026 Innovation Lab',
       isStar: true,
-      tip: 'THE STAR OF CLOUDPULSE 2026 — 14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, Storage RAM DLP, Cold-Start Surgeon & AES-256-GCM Gemini 3.8 Vault',
+      tip: '14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, Storage RAM DLP, Cold-Start Surgeon & AES-256-GCM Gemini 3.8 Vault',
       icon: Sparkles,
     },
     {
       id: 'GLOBAL_MAP',
       group: 'COMMAND',
-      label: 'Global Map 🌍',
+      label: 'Global Map',
       tip: 'Interactive 40-Region & 121-Zone Global Subsea Cable, Carbon Intensity & Chaos Failover Map with click-to-deploy',
       icon: Globe,
     },
@@ -803,21 +803,21 @@ function CloudPulseCockpit() {
     {
       id: 'CLOUD_RUN',
       group: 'COMPUTE_CICD',
-      label: 'Cloud Run ★',
+      label: 'Cloud Run',
       tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, tune min/max autoscaling, and switch Request vs Instance billing',
       icon: Rocket,
     },
     {
       id: 'FUNCTIONS_STUDIO',
       group: 'COMPUTE_CICD',
-      label: 'Functions & Eventarc ⚡',
+      label: 'Functions & Eventarc',
       tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Demystified Eventarc Trigger Studio: Beginner & 90+ Universal GCP Audit Log triggers',
       icon: Zap,
     },
     {
       id: 'GKE_STUDIO',
       group: 'COMPUTE_CICD',
-      label: 'GKE Studio ☸️',
+      label: 'GKE Studio',
       tip: 'Google Kubernetes Engine (GKE) Studio: 1-Click Autopilot & Spot GPU Cluster Provisioner, compliance locks & K8s YAML Composer',
       icon: Cpu,
     },
@@ -831,7 +831,7 @@ function CloudPulseCockpit() {
     {
       id: 'WAVE9_STUDIO',
       group: 'COMPUTE_CICD',
-      label: 'Cloud Build & SBOM 🏗️',
+      label: 'Cloud Build & SBOM',
       tip: 'Cloud Build GitHub CI/CD + Artifact Registry SLSA-3 Supply-Chain Studio: Buildpacks/Dockerfiles, Auto-Deploy & Orphan Digest Sweeper',
       icon: PackageCheck,
     },
@@ -840,35 +840,35 @@ function CloudPulseCockpit() {
     {
       id: 'CLOUD_STORAGE',
       group: 'DATA_AI',
-      label: 'Cloud Storage ★',
+      label: 'Cloud Storage',
       tip: 'Cloud Storage Studio: 5-Step Compliance Bucket Wizard, strict SEC/GDPR/HIPAA locks, Soft-Delete & WORM retention, and live object explorer',
       icon: HardDrive,
     },
     {
       id: 'BIGQUERY_STUDIO',
       group: 'DATA_AI',
-      label: 'BigQuery & BigLake 🌊',
+      label: 'BigQuery & BigLake',
       tip: 'BigQuery & BigLake 2026 Enterprise Lakehouse Studio: BigLake Apache Iceberg & Parquet over gs:// buckets, Physical Billing (-54%), SQL X-Ray & 168h Time-Machine',
       icon: Database,
     },
     {
       id: 'DATA_ENGINEER_STUDIO',
       group: 'DATA_AI',
-      label: 'Data Engineer 🧑‍🔬',
-      tip: '2026 Data Engineering Studio (GCloud SDK 588.0.0): 1-Canvas Bronze→Silver→Gold Medallion Builder, Dataform/dbt Auto-Clean SQLX, Dataplex Auto-Profiling & Data Products, Visual Schema Mapper & -$348/mo Serverless ELT DAGs',
+      label: 'Data Engineer',
+      tip: '2026 Data Engineering Studio (GCloud SDK 588.0.0 & Data Agent Kit): 1-Canvas Bronze→Silver→Gold Medallion Builder, Dataform/dbt Auto-Clean SQLX, Dataplex Auto-Profiling & Data Products, Visual Schema Mapper & -$348/mo Serverless ELT DAGs',
       icon: Layers,
     },
     {
       id: 'CLOUD_SQL_STUDIO',
       group: 'DATA_AI',
-      label: 'Cloud SQL & AlloyDB 🐘',
+      label: 'Cloud SQL & AlloyDB',
       tip: 'Cloud SQL (MySQL 8.4 & PostgreSQL 16/17) + AlloyDB Studio: Architecture Fork, AI Vector (alloydb_scann / pgvector) Surgeon & IAM Auth Proxy v2',
       icon: Database,
     },
     {
       id: 'WAVE10_FRONTIER',
       group: 'DATA_AI',
-      label: 'Spanner Graph & Spark 🚀',
+      label: 'Spanner Graph & Spark',
       tip: '2026 Frontier Studio: Cloud Spanner Graph + Vector ($65/mo 100-PU Engine), Zero-Cluster Serverless Spark on BigLake Iceberg, Workflows Choreographer & Vertex AI Model Armor',
       icon: Sparkles,
     },
@@ -884,14 +884,14 @@ function CloudPulseCockpit() {
     {
       id: 'SOVEREIGN_STUDIO',
       group: 'SECURITY_SRE',
-      label: 'IAM & Sovereign Drift 🧬',
+      label: 'IAM & Sovereign Drift',
       tip: 'Autonomous IAM Least-Privilege Surgeon (24h JIT CEL + Service Account Key & OAuth2 Token Kill-Switch), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
       icon: ShieldCheck,
     },
     {
       id: 'SRE_WAR_ROOM',
       group: 'SECURITY_SRE',
-      label: 'SRE War-Room 🚨',
+      label: 'SRE War-Room',
       tip: 'Autonomous SRE Incident War-Room, Cloud Logging Root-Cause Correlator, 14.4x SLO Burn Radar, VPC Service Controls (VPC-SC) & Pub/Sub DLQ Studio',
       icon: Flame,
     },
@@ -914,7 +914,7 @@ function CloudPulseCockpit() {
     {
       id: 'DOCS_GUIDE',
       group: 'OPS_DOCS',
-      label: 'Docs & Guide 📖',
+      label: 'Docs & Guide',
       tip: 'Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide',
       icon: BookOpen,
     },
@@ -932,12 +932,12 @@ function CloudPulseCockpit() {
         {mobilePreview && (
           <div className="bg-[#09090b] text-zinc-200 px-6 py-2 flex items-center justify-between text-[11px] font-mono border-b border-zinc-800">
             <span>23:35 · GCP 5G+</span>
-            <div className="w-20 h-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[9px] text-emerald-400">
+            <div className="w-20 h-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[9px] text-zinc-300">
               LIVE OAUTH
             </div>
             <div className="flex items-center gap-1.5">
-              <Wifi className="w-3 h-3 text-emerald-400" />
-              <BatteryCharging className="w-3.5 h-3.5 text-emerald-400" />
+              <Wifi className="w-3 h-3 text-zinc-400" />
+              <BatteryCharging className="w-3.5 h-3.5 text-zinc-400" />
             </div>
           </div>
         )}
@@ -946,16 +946,16 @@ function CloudPulseCockpit() {
         <header className="relative z-30 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#0c0c0f]/90 backdrop-blur-md px-4 sm:px-6 py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600/20 via-emerald-500/20 to-amber-500/20 border border-blue-500/30 flex items-center justify-center shadow-sm">
-                <Cloud className="w-5 h-5 text-blue-500" />
+              <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center shadow-sm">
+                <Cloud className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50">
-                    CloudPulse <span className="text-blue-500">2026</span>
+                    CloudPulse <span className="text-zinc-500 dark:text-zinc-400">2026</span>
                   </h1>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     REAL PROJECT MODE
                   </span>
                 </div>
@@ -974,9 +974,9 @@ function CloudPulseCockpit() {
                   setActiveTab('INNOVATION_LAB');
                 }}
                 title="Open Live Wallet Burn-Rate Radar & Night-Mode Sleep Switch ($0/hr overnight hibernation)"
-                className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
               >
-                <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                <DollarSign className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 <span>${liveBurn.hourly.toFixed(4)}/hr</span>
                 <span className="hidden xl:inline text-[10px] opacity-75">
                   (~${liveBurn.monthly.toFixed(2)}/mo)
@@ -988,9 +988,9 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => setCommandPaletteOpen(true)}
                 title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
-                className="inline-flex items-center gap-1.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30 rounded-[8px] px-3 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
               >
-                <Command className="w-3.5 h-3.5 text-violet-500" />
+                <Command className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 <span>⌘K Ops</span>
               </button>
 
@@ -1002,7 +1002,7 @@ function CloudPulseCockpit() {
                   title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
                   className="inline-flex items-center gap-2 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-mono font-medium transition-colors shadow-sm"
                 >
-                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="w-2 h-2 rounded-full bg-zinc-500 dark:bg-zinc-400" />
                   <span>{selectedProjectId}</span>
                   <ChevronDown className="w-3.5 h-3.5 opacity-70" />
                 </button>
@@ -1026,7 +1026,7 @@ function CloudPulseCockpit() {
                         title={`Switch active telemetry & control plane to project ${proj.projectId} (${proj.name})`}
                         className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors flex items-center justify-between ${
                           selectedProjectId === proj.projectId
-                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold'
+                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold'
                             : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                         }`}
                       >
@@ -1050,10 +1050,10 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenProvision('GCS_BUCKET')}
                 title="Provision a live GCP resource (Cloud Storage Bucket, Cloud Run Service, Compute Engine VM, VPC Network, Firewall Rule, BigQuery Dataset, or Enable API)"
-                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>+ Provision Resource</span>
+                <span>Provision Resource</span>
               </button>
 
               {/* 1-Tap Project Health, Drift & FinOps Scanner Button */}
@@ -1061,10 +1061,10 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenCopilotWithPrompt('')}
                 title="Run 1-Tap Project Health, Zombie Waste, Firewall Perimeter & Live Pricing Drift Scan"
-                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[8px] px-3 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Health & Drift Scan</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                <span>Health &amp; Drift Scan</span>
               </button>
 
               {/* Deploy to Cloud Run Modal Button */}
@@ -1074,7 +1074,7 @@ function CloudPulseCockpit() {
                 title="Deploy this CloudPulse 2026 cockpit as a serverless container on Google Cloud Run"
                 className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
               >
-                <Rocket className="w-3.5 h-3.5 text-blue-500" />
+                <Rocket className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 <span className="hidden lg:inline">Cloud Run</span>
               </button>
 
@@ -1086,9 +1086,9 @@ function CloudPulseCockpit() {
                 className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
               >
                 {mobilePreview ? (
-                  <Monitor className="w-3.5 h-3.5 text-blue-500" />
+                  <Monitor className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 ) : (
-                  <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
+                  <Smartphone className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 )}
               </button>
 
@@ -1105,8 +1105,8 @@ function CloudPulseCockpit() {
                 className="p-2 rounded-[8px] bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm disabled:opacity-50"
               >
                 <RefreshCw
-                  className={`w-4 h-4 ${
-                    loadingOverview ? 'animate-spin text-blue-500' : ''
+                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${
+                    loadingOverview ? 'animate-spin' : ''
                   }`}
                 />
               </button>
@@ -1124,9 +1124,9 @@ function CloudPulseCockpit() {
                 className="p-2 rounded-[8px] bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm"
               >
                 {isDark ? (
-                  <Sun className="w-4 h-4 text-amber-400" />
+                  <Sun className="w-4 h-4 text-zinc-400" />
                 ) : (
-                  <Moon className="w-4 h-4 text-zinc-700" />
+                  <Moon className="w-4 h-4 text-zinc-600" />
                 )}
               </button>
 
@@ -1135,15 +1135,15 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={handleDisconnect}
                 title="Disconnect active session & switch Google Cloud account"
-                className="inline-flex items-center gap-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 <span>Disconnect</span>
               </button>
             </div>
           </div>
 
-          {/* Underline Navigation Tabs (Single-Row Horizontal Scroll with Large Mouse-Friendly Handle) */}
+          {/* Underline Navigation Tabs (Single-Row Horizontal Scroll with Monochrome SVG Icons) */}
           <nav className="flex items-center gap-4 sm:gap-5 mt-4 pb-2.5 border-b border-zinc-200 dark:border-zinc-800 -mb-2 overflow-x-auto">
             {navTabs.map((tab, idx) => {
               const Icon = tab.icon;
@@ -1162,17 +1162,13 @@ function CloudPulseCockpit() {
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
                     title={tab.tip}
-                    className={`inline-flex items-center gap-1.5 text-xs whitespace-nowrap transition-all cursor-pointer shrink-0 ${
-                      tab.isStar
-                        ? isActive
-                          ? 'px-3 py-1 mb-1 rounded-full font-extrabold bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 text-white shadow-md shadow-violet-500/25 border border-amber-400/50'
-                          : 'px-3 py-1 mb-1 rounded-full font-extrabold bg-violet-500/15 hover:bg-violet-500/25 text-violet-600 dark:text-violet-300 border border-violet-500/40'
-                        : isActive
-                        ? 'pb-2 font-semibold border-b-2 border-[#3b82f6] text-[#2563eb] dark:text-[#60a5fa]'
-                        : 'pb-2 font-semibold border-b-2 text-zinc-500 hover:text-[#334155] dark:hover:text-[#e2e8f0] border-transparent hover:border-[#3b82f6]'
+                    className={`inline-flex items-center gap-1.5 text-xs whitespace-nowrap transition-all cursor-pointer shrink-0 pb-2 font-semibold border-b-2 ${
+                      isActive
+                        ? 'border-zinc-900 dark:border-zinc-100 text-zinc-950 dark:text-white'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border-transparent hover:border-zinc-400 dark:hover:border-zinc-600'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-3.5 h-3.5 text-current opacity-80" />
                     <span>{tab.label}</span>
                   </button>
                 </React.Fragment>
@@ -1186,7 +1182,7 @@ function CloudPulseCockpit() {
           {toastMessage && (
             <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-3.5 flex items-center justify-between gap-3 text-xs shadow-sm transition-all">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-zinc-600 dark:text-zinc-300 shrink-0" />
                 <span>{toastMessage}</span>
               </div>
               <button
@@ -1250,7 +1246,7 @@ function CloudPulseCockpit() {
                     fetchLatencyMs={overview?.fetchLatencyMs}
                   />
 
-                  {/* ★ THE STAR OF CLOUDPULSE 2026: 2026 Beyond-Console Innovation Lab ★ */}
+                  {/* 2026 Beyond-Console Innovation Lab */}
                   <Revolutionary2026Suite
                     projectId={selectedProjectId}
                     overview={overview}
@@ -1271,7 +1267,7 @@ function CloudPulseCockpit() {
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                       <div>
                         <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                          <Layers className="w-4 h-4 text-blue-500" />
+                          <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                           <span>
                             CloudPulse 2026 Architectural Domain Navigator
                           </span>
@@ -1280,8 +1276,8 @@ function CloudPulseCockpit() {
                           Every Google Cloud technology is organized into 5 dedicated, non-overlapping engineering domains — click any studio below to open its full control plane.
                         </p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
-                        5 DOMAINS · 15 DEDICATED STUDIOS · ZERO DUPLICATES
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+                        5 DOMAINS · 16 DEDICATED STUDIOS · ZERO DUPLICATES
                       </span>
                     </div>
 
@@ -1289,49 +1285,50 @@ function CloudPulseCockpit() {
                       {[
                         {
                           domain: 'I. Compute, Serverless & CI/CD',
-                          color: 'border-blue-500/30 bg-blue-500/5',
+                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'CLOUD_RUN', label: '🚀 Cloud Run Studio', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
-                            { id: 'FUNCTIONS_STUDIO', label: '⚡ Functions & Eventarc', meta: 'v1/v2 + 90+ GCP Events' },
-                            { id: 'GKE_STUDIO', label: '☸️ GKE Autopilot & GPUs', meta: 'K8s Fleet & YAML' },
-                            { id: 'VM_SSH', label: '🖥️ VM Fleet & Web-SSH', meta: `${overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
-                            { id: 'WAVE9_STUDIO', label: '🏗️ Cloud Build & SBOM', meta: 'GitHub CI/CD & SLSA-3' },
+                            { id: 'CLOUD_RUN', label: 'Cloud Run Studio', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
+                            { id: 'FUNCTIONS_STUDIO', label: 'Functions & Eventarc', meta: 'v1/v2 + 90+ GCP Events' },
+                            { id: 'GKE_STUDIO', label: 'GKE Autopilot & GPUs', meta: 'K8s Fleet & YAML' },
+                            { id: 'VM_SSH', label: 'VM Fleet & Web-SSH', meta: `${overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
+                            { id: 'WAVE9_STUDIO', label: 'Cloud Build & SBOM', meta: 'GitHub CI/CD & SLSA-3' },
                           ],
                         },
                         {
                           domain: 'II. Data, Lakehouse & AI',
-                          color: 'border-cyan-500/30 bg-cyan-500/5',
+                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'CLOUD_STORAGE', label: '🪣 Cloud Storage Studio', meta: `${overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
-                            { id: 'BIGQUERY_STUDIO', label: '🌊 BigQuery & BigLake', meta: 'Capacitor + Apache Iceberg' },
-                            { id: 'CLOUD_SQL_STUDIO', label: '🐘 Cloud SQL & AlloyDB', meta: 'PG 17, MySQL 8.4 & Vectors' },
-                            { id: 'WAVE10_FRONTIER', label: '🚀 Spanner Graph & Spark', meta: '100-PU Graph, Spark & Workflows' },
+                            { id: 'CLOUD_STORAGE', label: 'Cloud Storage Studio', meta: `${overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
+                            { id: 'BIGQUERY_STUDIO', label: 'BigQuery & BigLake', meta: 'Capacitor + Apache Iceberg' },
+                            { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer Studio', meta: 'Medallion, Dataform & DAK' },
+                            { id: 'CLOUD_SQL_STUDIO', label: 'Cloud SQL & AlloyDB', meta: 'PG 17, MySQL 8.4 & Vectors' },
+                            { id: 'WAVE10_FRONTIER', label: 'Spanner Graph & Spark', meta: '100-PU Graph, Spark & Workflows' },
                           ],
                         },
                         {
                           domain: 'III. Network & Global Edge',
-                          color: 'border-indigo-500/30 bg-indigo-500/5',
+                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'GLOBAL_MAP', label: '🌍 40-Region Global Map', meta: 'Subsea Cables & Carbon' },
-                            { id: 'VPC_NETWORKS', label: '🛡️ VPC & Firewalls', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
+                            { id: 'GLOBAL_MAP', label: '40-Region Global Map', meta: 'Subsea Cables & Carbon' },
+                            { id: 'VPC_NETWORKS', label: 'VPC & Firewalls', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
                           ],
                         },
                         {
                           domain: 'IV. Zero-Trust IAM & SRE',
-                          color: 'border-amber-500/30 bg-amber-500/5',
+                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'SOVEREIGN_STUDIO', label: '🧬 IAM, Keys & Drift', meta: 'SA Key Kill-Switch & JIT' },
-                            { id: 'SRE_WAR_ROOM', label: '🚨 SRE War-Room & VPC-SC', meta: 'SLO Burn & Perimeter' },
+                            { id: 'SOVEREIGN_STUDIO', label: 'IAM, Keys & Drift', meta: 'SA Key Kill-Switch & JIT' },
+                            { id: 'SRE_WAR_ROOM', label: 'SRE War-Room & VPC-SC', meta: 'SLO Burn & Perimeter' },
                           ],
                         },
                         {
                           domain: 'V. FinOps, 2026 Lab & Shell',
-                          color: 'border-emerald-500/30 bg-emerald-500/5',
+                          color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'FINOPS', label: '📊 FinOps & Telemetry', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
-                            { id: 'INNOVATION_LAB', label: '✦ 2026 Innovation Lab', meta: '14 Categorized Tools' },
-                            { id: 'LOGS_SHELL', label: '💻 Logs & Cloud Shell', meta: 'Live gcloud / bq / gsutil' },
-                            { id: 'DOCS_GUIDE', label: '📖 Docs & Guide', meta: 'Architecture & Security' },
+                            { id: 'FINOPS', label: 'FinOps & Telemetry', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
+                            { id: 'INNOVATION_LAB', label: '2026 Innovation Lab', meta: '14 Categorized Tools' },
+                            { id: 'LOGS_SHELL', label: 'Logs & Cloud Shell', meta: 'Live gcloud / bq / gsutil' },
+                            { id: 'DOCS_GUIDE', label: 'Docs & Guide', meta: 'Architecture & Security' },
                           ],
                         },
                       ].map((group) => (
@@ -1348,17 +1345,17 @@ function CloudPulseCockpit() {
                                 key={item.id}
                                 type="button"
                                 onClick={() => setActiveTab(item.id)}
-                                className="w-full text-left p-2 rounded-lg bg-white/90 dark:bg-zinc-950/90 hover:bg-blue-50 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 transition-all flex items-center justify-between gap-2 cursor-pointer group"
+                                className="w-full text-left p-2 rounded-lg bg-white/90 dark:bg-zinc-950/90 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 transition-all flex items-center justify-between gap-2 cursor-pointer group"
                               >
                                 <div className="min-w-0">
-                                  <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-500 truncate">
+                                  <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
                                     {item.label}
                                   </div>
                                   <div className="text-[10px] font-mono text-zinc-500 truncate">
                                     {item.meta}
                                   </div>
                                 </div>
-                                <span className="text-xs font-mono text-zinc-400 group-hover:text-blue-500 shrink-0">
+                                <span className="text-xs font-mono text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 shrink-0">
                                   →
                                 </span>
                               </button>
@@ -1798,15 +1795,15 @@ function MandatoryDeleteConfirmationModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Hazard Header */}
-        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 px-5 py-3.5 flex items-center justify-between gap-3 text-white">
+        <div className="bg-zinc-900 dark:bg-zinc-950 border-b border-red-500/40 px-5 py-3.5 flex items-center justify-between gap-3 text-white">
           <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-xl bg-black/25 border border-white/25 flex items-center justify-center text-base font-extrabold">
-              ⚠️
+            <span className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4 text-zinc-300" />
             </span>
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-red-100 font-bold">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 font-bold">
                 {headerBadge ||
-                  '🛡️ CloudPulse 2026 Destructive Action Gatekeeper'}
+                  'CloudPulse 2026 Destructive Action Gatekeeper'}
               </div>
               <h3 className="text-sm sm:text-base font-extrabold tracking-tight">
                 {title}
@@ -1860,7 +1857,7 @@ function MandatoryDeleteConfirmationModal({
           {/* Impact Warning */}
           <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1.5">
             <div className="font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-              <span>⚡ Permanent Google Cloud Impact Warning</span>
+              <span>Permanent Google Cloud Impact Warning</span>
             </div>
             <p>{impactWarning}</p>
             <div className="text-[10px] font-mono text-zinc-500 truncate pt-1">
@@ -1875,7 +1872,7 @@ function MandatoryDeleteConfirmationModal({
               onClick={onCancel}
               className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
             >
-              🛡️ Cancel (Keep Safe) [Esc]
+              Cancel (Keep Safe) [Esc]
             </button>
             <button
               type="button"
@@ -1883,7 +1880,7 @@ function MandatoryDeleteConfirmationModal({
               className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span>
-                {confirmLabel || '🗑️ Yes, Confirm & Permanently Delete'}
+                {confirmLabel || 'Confirm & Permanently Delete'}
               </span>
             </button>
           </div>

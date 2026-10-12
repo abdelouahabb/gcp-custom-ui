@@ -73,7 +73,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-1">
               <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Stateless Multi-Account Safety</span>
               </div>
               <p className="text-[11px] text-zinc-500 leading-relaxed">
@@ -83,7 +83,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
 
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-1">
               <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-blue-500" />
+                <Globe className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Installable Android PWA</span>
               </div>
               <p className="text-[11px] text-zinc-500 leading-relaxed">

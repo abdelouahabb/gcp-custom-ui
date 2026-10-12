@@ -121,11 +121,11 @@ export default function CommandPaletteModal({
     const baseActions = [
       {
         id: 'open-quantum-nexus',
-        category: '★ 2026 Innovation Lab (Star)',
+        category: '2026 Innovation Lab (Star)',
         title: 'Open 2026 Quantum Nexus (Causal Blast-Radius, State Rollback, FinOps, PR Mirror & Honey-Grid)',
         subtitle: 'Launch all 5 world-first 2026 breakthroughs inside the 2026 Innovation Lab',
         keywords: 'quantum nexus causal blast radius rollback snapshot finops arbitrage ephemeral pr preview shadow mirror honey token deception',
-        badge: '★ 2026 STAR',
+        badge: '2026 STAR',
         badgeColor: 'text-amber-300 bg-violet-500/25 border-amber-400/50',
         icon: Sparkles,
         run: () => {
@@ -135,7 +135,7 @@ export default function CommandPaletteModal({
       },
       {
         id: 'open-wave10-frontier',
-        category: '★ 2026 Innovation Lab (Star)',
+        category: '2026 Innovation Lab (Star)',
         title: 'Open Spanner Graph ($65/mo 100-PU), Serverless Spark 2.2, Workflows & Model Armor',
         subtitle: 'ISO GQL Graph queries, scale-to-$0 Spark over BigLake Iceberg, Saga Workflows & AI Prompt Firewall',
         keywords: 'spanner graph gql spark serverless dataproc workflows saga model armor vertex ai wave 10',
@@ -149,7 +149,7 @@ export default function CommandPaletteModal({
       },
       {
         id: 'open-biglake-iceberg',
-        category: '★ 2026 Innovation Lab (Star)',
+        category: '2026 Innovation Lab (Star)',
         title: 'Open BigLake vs. BigQuery Demystified Studio & Open Apache Iceberg Wizard',
         subtitle: 'Compare BigQuery vs BigLake side-by-side and provision governed Apache Iceberg tables in 1 click',
         keywords: 'biglake bigquery iceberg parquet lakehouse open table governance',
@@ -163,11 +163,11 @@ export default function CommandPaletteModal({
       },
       {
         id: 'open-data-engineer-studio',
-        category: '★ 2026 Innovation Lab (Star)',
+        category: '2026 Innovation Lab (Star)',
         title: 'Open 2026 Data Engineering Studio (Medallion ELT, Dataform/dbt SQLX & Dataplex 588.0.0)',
         subtitle: '1-Canvas Bronze→Silver→Gold Pipeline Builder, Auto-Clean QUALIFY Dedup, Dataplex Profiling/Products & -$348/mo Serverless DAGs',
         keywords: 'data engineer medallion bronze silver gold dataform dbt sqlx dataplex profile qualitycomposer airflow dag skew slot',
-        badge: 'DATA ENGINEER 🧑‍🔬',
+        badge: 'DATA ENGINEER',
         badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
         icon: Database,
         run: () => {
@@ -177,7 +177,7 @@ export default function CommandPaletteModal({
       },
       {
         id: 'open-sa-key-killswitch',
-        category: '★ 2026 Innovation Lab (Star)',
+        category: '2026 Innovation Lab (Star)',
         title: 'Open Service Account .json Key & OAuth Token Kill-Switch Vault (Sovereign IAM)',
         subtitle: 'Create, download, disable, or emergency-revoke stolen SA .json keys & active tokens with Owner self-protection',
         keywords: 'iam service account key json token revoke kill switch stolen credential sovereign owner',
@@ -368,7 +368,7 @@ export default function CommandPaletteModal({
       {
         id: 'create-cloud-sql',
         category: 'Provisioning & Deploy',
-        title: 'Create Cloud SQL (MySQL 8.4 / Postgres 16) or Google Cloud AlloyDB Cluster 🐘',
+        title: 'Create Cloud SQL (MySQL 8.4 / Postgres 16) or Google Cloud AlloyDB Cluster',
         subtitle: 'Choose MySQL or PostgreSQL, and for PostgreSQL fork between Classic Cloud SQL vs. AlloyDB with SEC/GDPR/HIPAA locks',
         keywords: 'create cloud sql mysql postgres postgresql alloydb database vector scann pgvector',
         badge: 'PROVISION DB',
@@ -396,7 +396,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-gke-studio',
         category: 'Compute & Containers Studios',
-        title: 'Open Dedicated GKE Studio (Autopilot, Spot GPUs & K8s Workloads) ☸️',
+        title: 'Open Dedicated GKE Studio (Autopilot, Spot GPUs & K8s Workloads)',
         subtitle: '1-Click GKE Autopilot / Spot GPU Cluster Provisioner, K8s YAML Composer & kubeconfig Fleet Manager',
         keywords: 'gke studio kubernetes cluster autopilot spot gpu k8s yaml kubeconfig',
         badge: 'GKE STUDIO',
@@ -410,7 +410,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-cloud-build-studio',
         category: 'Compute & Containers Studios',
-        title: 'Open Cloud Build & GitHub Source-to-Container Studio 🏗️',
+        title: 'Open Cloud Build & GitHub Source-to-Container Studio',
         subtitle: 'Clone any GitHub repo, build via Buildpacks or Dockerfile, push to Artifact Registry & auto-deploy to Cloud Run or GKE',
         keywords: 'cloud build github repo dockerfile buildpacks container ci cd artifact registry deploy',
         badge: 'CLOUD BUILD CI/CD',
@@ -424,7 +424,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-cloudrun-gke-migrator',
         category: 'Compute & Containers Studios',
-        title: 'Convert Cloud Run to GKE Kubernetes + Tune Direct VPC & Storage Volumes 🚀',
+        title: 'Convert Cloud Run to GKE Kubernetes + Tune Direct VPC & Storage Volumes',
         subtitle: '6-Resource K8s Transpiler (Deployment, HPA v2, PDB, NetworkPolicy, Workload Identity), Direct VPC Egress & GCS/RAM/NFS Volume Mounts',
         keywords: 'cloud run to kubernetes gke convert migrate yaml direct vpc egress storage volume gcs fuse ramdisk nfs',
         badge: 'CLOUD RUN 2026',
@@ -438,7 +438,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-functions-eventarc-studio',
         category: 'Compute & Containers Studios',
-        title: 'Open Cloud Functions (v1 & v2) & Demystified Eventarc Trigger Studio ⚡',
+        title: 'Open Cloud Functions (v1 & v2) & Demystified Eventarc Trigger Studio',
         subtitle: 'Plain-English Eventarc trigger wizard, 4-stage visual pipeline X-Ray, 1-Tap Eventarc IAM Auto-Doctor & v1→v2 concurrency upgrader (-78% cost)',
         keywords: 'cloud functions eventarc trigger v1 v2 gen2 gcs pubsub bigquery cron iam doctor serverless',
         badge: 'FUNCTIONS & EVENTARC',
@@ -452,7 +452,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-bigquery-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
-        title: 'Open BigQuery 2026 Lakehouse & Compliance Studio ★',
+        title: 'Open BigQuery 2026 Lakehouse & Compliance Studio',
         subtitle: 'Physical compressed billing (-54%), Pre-Crime SQL Dry-Run X-Ray & 168h Time-Machine',
         keywords: 'bigquery sql dataset table physical billing dry run time travel',
         badge: 'BIGQUERY',
@@ -466,7 +466,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-cloud-sql-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
-        title: 'Open Dedicated Cloud SQL (MySQL & PostgreSQL) & AlloyDB Studio 🐘',
+        title: 'Open Dedicated Cloud SQL (MySQL & PostgreSQL) & AlloyDB Studio',
         subtitle: 'Classic Cloud SQL vs. AlloyDB Architecture Fork, AI Vector (alloydb_scann / pgvector / MySQL VECTOR) Surgeon & IAM Auth Proxy v2 Vault',
         keywords: 'cloud sql mysql postgres postgresql alloydb database vector scann pgvector proxy',
         badge: 'CLOUD SQL & ALLOYDB',
@@ -480,7 +480,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-sql-sbom-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
-        title: 'Open Artifact Registry SLSA-3 Supply-Chain & OCI SBOM Studio 📦',
+        title: 'Open Artifact Registry SLSA-3 Supply-Chain & OCI SBOM Studio',
         subtitle: 'Audit container digests, sweep untagged orphan layers, and enforce immutable tag compliance locks',
         keywords: 'artifact registry sbom slsa container digest docker immutable tags',
         badge: 'ARTIFACT SBOM',
@@ -494,7 +494,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-sovereign-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
-        title: 'Open Sovereign Cloud Time-Machine, IAM Surgeon & Drift Radar 🧬',
+        title: 'Open Sovereign Cloud Time-Machine, IAM Surgeon & Drift Radar',
         subtitle: '24h JIT CEL IAM conditions, SHA-256 Merkle drift detection & Sovereign Secret Manager',
         keywords: 'sovereign iam surgeon jit condition drift merkle time machine secret manager kms',
         badge: 'WAVE 7',
@@ -508,7 +508,7 @@ export default function CommandPaletteModal({
       {
         id: 'open-sre-war-room',
         category: 'Data Lakehouse & Sovereign SRE Studios',
-        title: 'Open Autonomous SRE Incident War-Room & VPC-SC Perimeter Studio 🚨',
+        title: 'Open Autonomous SRE Incident War-Room & VPC-SC Perimeter Studio',
         subtitle: 'LogRCA root-cause clusters, 14.4x SLO Burn Radar, VPC-SC Exfiltration Shield & Pub/Sub DLQ',
         keywords: 'sre war room incident slo burn rate vpc-sc exfiltration pubsub dlq postmortem',
         badge: 'WAVE 8',
@@ -674,7 +674,7 @@ export default function CommandPaletteModal({
       >
         {/* Top Search & Voice Bar */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-800 bg-slate-950/60">
-          <Sparkles className="w-5 h-5 text-cyan-400 shrink-0" />
+          <Sparkles className="w-5 h-5 text-zinc-500 dark:text-zinc-400 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -696,7 +696,7 @@ export default function CommandPaletteModal({
                 : 'bg-slate-800/90 hover:bg-slate-700 border-slate-700 text-slate-300'
             }`}
           >
-            {isListening ? <MicOff className="w-3.5 h-3.5 text-rose-400" /> : <Mic className="w-3.5 h-3.5 text-cyan-400" />}
+            {isListening ? <MicOff className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" /> : <Mic className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />}
             <span className="hidden sm:inline">{isListening ? 'Listening...' : 'Voice Ops'}</span>
           </button>
           <button
@@ -714,12 +714,12 @@ export default function CommandPaletteModal({
             Try:
           </span>
           {[
-            { label: '🌙 Park for night', q: 'park night' },
-            { label: '🕸️ Blast Radius Map', q: 'topology' },
-            { label: '📄 Export Terraform', q: 'terraform' },
-            { label: '🛡️ Security Audit', q: 'security' },
-            { label: '🚀 Deploy GPU Cloud Run', q: 'deploy gpu' },
-            { label: '💸 Burn-Rate Radar', q: 'burn rate' }
+            { label: 'Park for night', q: 'park night' },
+            { label: 'Blast Radius Map', q: 'topology' },
+            { label: 'Export Terraform', q: 'terraform' },
+            { label: 'Security Audit', q: 'security' },
+            { label: 'Deploy GPU Cloud Run', q: 'deploy gpu' },
+            { label: 'Burn-Rate Radar', q: 'burn rate' }
           ].map((chip) => (
             <button
               key={chip.label}
@@ -795,7 +795,7 @@ export default function CommandPaletteModal({
                       <p className="text-[11px] text-slate-400 truncate mt-0.5">{action.subtitle}</p>
                     </div>
                   </div>
-                  <ArrowRight className={`w-4 h-4 shrink-0 transition-transform ${isSelected ? 'text-cyan-400 translate-x-0.5' : 'text-slate-600'}`} />
+                  <ArrowRight className={`w-4 h-4 shrink-0 transition-transform ${isSelected ? 'text-zinc-500 dark:text-zinc-400 translate-x-0.5' : 'text-slate-600'}`} />
                 </button>
               );
             })

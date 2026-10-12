@@ -254,7 +254,7 @@ export default function LogStreamerAndShell({
         <div className="flex items-center justify-between gap-2 mb-3">
           <div>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-emerald-500" />
+              <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               <span>Touch-Optimized Mobile Cloud Shell</span>
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">

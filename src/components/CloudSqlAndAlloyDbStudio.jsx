@@ -505,16 +505,16 @@ WITH (m = 16, ef_construction = 64);`;
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[11px] font-mono">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 DEDICATED CLOUD SQL (MYSQL & POSTGRESQL) + GOOGLE CLOUD ALLOYDB AI VECTOR STUDIO
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              🐘 Cloud SQL (PostgreSQL & MySQL) vs. AlloyDB Disaggregated AI Database Studio
+              Cloud SQL (PostgreSQL & MySQL) vs. AlloyDB Disaggregated AI Database Studio
             </h2>
             <p className="text-xs text-zinc-300 max-w-3xl">
-              Choose **MySQL 8.4 LTS** or **PostgreSQL 16/17**, and when deploying PostgreSQL, choose between **Classic / Enterprise Plus Cloud SQL (`sqladmin.googleapis.com`)** or **Google Cloud AlloyDB (`alloydb.googleapis.com`)** with 100x Columnar Engine, `alloydb_scann` AI vectors, and strict SEC/GDPR/HIPAA compliance locks (`🔒`).
+              Choose **MySQL 8.4 LTS** or **PostgreSQL 16/17**, and when deploying PostgreSQL, choose between **Classic / Enterprise Plus Cloud SQL (`sqladmin.googleapis.com`)** or **Google Cloud AlloyDB (`alloydb.googleapis.com`)** with 100x Columnar Engine, `alloydb_scann` AI vectors, and strict SEC/GDPR/HIPAA compliance locks (``).
             </p>
           </div>
 
@@ -539,7 +539,7 @@ WITH (m = 16, ef_construction = 64);`;
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
-                  loadingSql ? 'animate-spin text-cyan-400' : 'text-cyan-400'
+                  loadingSql ? 'animate-spin text-zinc-500 dark:text-zinc-400' : 'text-zinc-500 dark:text-zinc-400'
                 }`}
               />
               <span>Refresh DB Fleet</span>
@@ -570,7 +570,7 @@ WITH (m = 16, ef_construction = 64);`;
               {sqlEngineFamily === 'MYSQL'
                 ? `MySQL (${databaseVersion}) · Cloud SQL`
                 : sqlArchitecture === 'ALLOYDB'
-                ? `PostgreSQL (${databaseVersion}) · AlloyDB 🚀`
+                ? `PostgreSQL (${databaseVersion}) · AlloyDB`
                 : `PostgreSQL (${databaseVersion}) · Cloud SQL`}
             </div>
             <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
@@ -585,7 +585,7 @@ WITH (m = 16, ef_construction = 64);`;
               Zero-Trust Network & TLS Posture
             </div>
             <div className="text-sm font-extrabold text-indigo-300 mt-1 font-mono">
-              Private VPC (`--no-assign-ip`) 🔒
+              Private VPC (`--no-assign-ip`)
             </div>
             <div className="text-[11px] text-emerald-400 font-mono mt-0.5">
               {sqlSslMode === 'TRUSTED_CLIENT_CERTIFICATE_REQUIRED'
@@ -613,22 +613,22 @@ WITH (m = 16, ef_construction = 64);`;
         {[
           {
             id: 'FLEET_PROVISION',
-            label: '🐘 1. Cloud SQL (MySQL/PG) & AlloyDB Provisioner + Fleet',
+            label: '1. Cloud SQL (MySQL/PG) & AlloyDB Provisioner + Fleet',
             icon: Database,
           },
           {
             id: 'ARCH_COMPARATOR',
-            label: '⚡ 2. Classic Cloud SQL vs. AlloyDB Architecture Comparator',
+            label: '2. Classic Cloud SQL vs. AlloyDB Architecture Comparator',
             icon: Zap,
           },
           {
             id: 'VECTOR_INDEX_SURGEON',
-            label: '🧠 3. AI Vector (ScaNN / pgvector) & Slow-Query Surgeon',
+            label: '3. AI Vector (ScaNN / pgvector) & Slow-Query Surgeon',
             icon: Cpu,
           },
           {
             id: 'IAM_PROXY_VAULT',
-            label: '🛡️ 4. Zero-Trust IAM Auth Proxy & ORM Connection Vault',
+            label: '4. Zero-Trust IAM Auth Proxy & ORM Connection Vault',
             icon: Key,
           },
         ].map((t) => {
@@ -664,13 +664,13 @@ WITH (m = 16, ef_construction = 64);`;
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Relational & AI Database Compliance Studio</span>
               </div>
               <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono font-bold">
                 {isCustom
                   ? 'UNLOCKED CUSTOM MODE'
-                  : `🔒 ENFORCING ${sqlBlueprint.toUpperCase()}`}
+                  : `ENFORCING ${sqlBlueprint.toUpperCase()}`}
               </span>
             </div>
 
@@ -680,22 +680,22 @@ WITH (m = 16, ef_construction = 64);`;
                 {
                   id: 'pci-sec-ledger',
                   label: 'PCI / SEC Ledger',
-                  sub: 'mTLS + 35d PITR 🔒',
+                  sub: 'mTLS + 35d PITR',
                 },
                 {
                   id: 'gdpr-eu-postgres',
                   label: 'GDPR EU Sovereign',
-                  sub: 'EU Region + 14d 🔒',
+                  sub: 'EU Region + 14d',
                 },
                 {
                   id: 'hipaa-clinical-db',
                   label: 'HIPAA Clinical DB',
-                  sub: 'US BAA + Audit 🔒',
+                  sub: 'US BAA + Audit',
                 },
                 {
                   id: 'ai-scann-alloydb',
                   label: 'AI Vector AlloyDB',
-                  sub: 'PG16 + ScaNN 🚀',
+                  sub: 'PG16 + ScaNN',
                 },
                 {
                   id: 'custom',
@@ -746,7 +746,7 @@ WITH (m = 16, ef_construction = 64);`;
                   }`}
                 >
                   <div className="text-xs font-extrabold">
-                    🐘 PostgreSQL (16 / 17 / 15)
+                    PostgreSQL (16 / 17 / 15)
                   </div>
                   <div className="text-[10px] text-zinc-500 mt-0.5">
                     Supports both Classic Cloud SQL & Disaggregated Google Cloud AlloyDB
@@ -761,7 +761,7 @@ WITH (m = 16, ef_construction = 64);`;
                   }
                   title={
                     isAiAlloyBlueprint
-                      ? '🔒 Locked by AI Vector AlloyDB Blueprint (requires PostgreSQL + alloydb_scann)'
+                      ? 'Locked by AI Vector AlloyDB Blueprint (requires PostgreSQL + alloydb_scann)'
                       : 'Deploy Cloud SQL for MySQL 8.4 LTS or 8.0 with InnoDB HA'
                   }
                   className={`p-2.5 rounded-[8px] border text-left transition-all ${
@@ -773,8 +773,8 @@ WITH (m = 16, ef_construction = 64);`;
                   }`}
                 >
                   <div className="text-xs font-extrabold flex items-center justify-between">
-                    <span>🐬 MySQL (8.4 LTS / 8.0)</span>
-                    {isAiAlloyBlueprint && <span>🔒</span>}
+                    <span>MySQL (8.4 LTS / 8.0)</span>
+                    {isAiAlloyBlueprint && <span>[LOCKED]</span>}
                   </div>
                   <div className="text-[10px] text-zinc-500 mt-0.5">
                     Cloud SQL Enterprise & Enterprise Plus with InnoDB Redo-Log Acceleration
@@ -797,7 +797,7 @@ WITH (m = 16, ef_construction = 64);`;
                   }
                   title={
                     isAiAlloyBlueprint
-                      ? '🔒 Locked to AlloyDB by AI Vector ScaNN Blueprint'
+                      ? 'Locked to AlloyDB by AI Vector ScaNN Blueprint'
                       : 'Deploy traditional managed Cloud SQL (Enterprise or Enterprise Plus with NVMe Data Cache)'
                   }
                   className={`p-2.5 rounded-[8px] border text-left transition-all ${
@@ -809,8 +809,8 @@ WITH (m = 16, ef_construction = 64);`;
                   }`}
                 >
                   <div className="text-xs font-extrabold flex items-center justify-between">
-                    <span>🏛️ Classic Cloud SQL ({edition})</span>
-                    {isAiAlloyBlueprint && <span>🔒</span>}
+                    <span>Classic Cloud SQL ({edition})</span>
+                    {isAiAlloyBlueprint && <span>[LOCKED]</span>}
                   </div>
                   <div className="text-[10px] text-zinc-500 mt-0.5">
                     Battle-tested `sqladmin.googleapis.com` VM + PD-SSD architecture for PostgreSQL & MySQL
@@ -826,7 +826,7 @@ WITH (m = 16, ef_construction = 64);`;
                   }
                   title={
                     sqlEngineFamily === 'MYSQL'
-                      ? '🔒 AlloyDB is a PostgreSQL-native disaggregated engine. Switch Engine Family to PostgreSQL to unlock AlloyDB.'
+                      ? 'AlloyDB is a PostgreSQL-native disaggregated engine. Switch Engine Family to PostgreSQL to unlock AlloyDB.'
                       : 'Deploy Google Cloud AlloyDB for PostgreSQL: 4x faster OLTP, 100x faster Columnar analytics & 10x faster ScaNN vector search'
                   }
                   className={`p-2.5 rounded-[8px] border text-left transition-all ${
@@ -838,8 +838,8 @@ WITH (m = 16, ef_construction = 64);`;
                   }`}
                 >
                   <div className="text-xs font-extrabold flex items-center justify-between">
-                    <span>🚀 Google Cloud AlloyDB (PostgreSQL AI Engine)</span>
-                    {sqlEngineFamily === 'MYSQL' && <span>🔒</span>}
+                    <span>Google Cloud AlloyDB (PostgreSQL AI Engine)</span>
+                    {sqlEngineFamily === 'MYSQL' && <span>[LOCKED]</span>}
                   </div>
                   <div className="text-[10px] text-zinc-500 mt-0.5">
                     Disaggregated Colossus storage · 4x faster TPS · 100x Columnar Engine · `alloydb_scann`
@@ -899,7 +899,7 @@ WITH (m = 16, ef_construction = 64);`;
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Sovereign Region {!isCustom ? '🔒' : ''}
+                  Sovereign Region {!isCustom ? '[LOCKED]' : ''}
                 </label>
                 <select
                   value={sqlRegion}
@@ -907,16 +907,16 @@ WITH (m = 16, ef_construction = 64);`;
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 >
                   <option value="us-central1" disabled={isGdpr}>
-                    {isGdpr ? '🔒 ' : ''}us-central1 (Iowa — US SEC/HIPAA)
+                    {isGdpr ? '[LOCKED] ' : ''}us-central1 (Iowa — US SEC/HIPAA)
                   </option>
                   <option value="us-east4" disabled={isGdpr}>
-                    {isGdpr ? '🔒 ' : ''}us-east4 (N. Virginia — US FedRAMP)
+                    {isGdpr ? '[LOCKED] ' : ''}us-east4 (N. Virginia — US FedRAMP)
                   </option>
                   <option value="europe-west1" disabled={isUsOnly}>
-                    {isUsOnly ? '🔒 ' : ''}europe-west1 (Belgium — EU GDPR)
+                    {isUsOnly ? '[LOCKED] ' : ''}europe-west1 (Belgium — EU GDPR)
                   </option>
                   <option value="europe-west3" disabled={isUsOnly}>
-                    {isUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt — EU BaFin)
+                    {isUsOnly ? '[LOCKED] ' : ''}europe-west3 (Frankfurt — EU BaFin)
                   </option>
                 </select>
               </div>
@@ -946,7 +946,7 @@ WITH (m = 16, ef_construction = 64);`;
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  HA Topology {isZeroTrust ? '🔒' : ''}
+                  HA Topology {isZeroTrust ? '[LOCKED]' : ''}
                 </label>
                 <select
                   value={sqlAvailability}
@@ -958,14 +958,14 @@ WITH (m = 16, ef_construction = 64);`;
                     REGIONAL (Multi-Zone Auto-Failover)
                   </option>
                   <option value="ZONAL" disabled={isZeroTrust}>
-                    🔒 ZONAL (Single Zone — Dev Only)
+                    ZONAL (Single Zone — Dev Only)
                   </option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Network Exposure {isZeroTrust ? '🔒' : ''}
+                  Network Exposure {isZeroTrust ? '[LOCKED]' : ''}
                 </label>
                 <select
                   value={sqlNetworkMode}
@@ -980,7 +980,7 @@ WITH (m = 16, ef_construction = 64);`;
                     value="PUBLIC_IPV4"
                     disabled={isZeroTrust || sqlArchitecture === 'ALLOYDB'}
                   >
-                    🔒 Public IPv4 (Blocked by Zero-Trust)
+                    Public IPv4 (Blocked by Zero-Trust)
                   </option>
                 </select>
               </div>
@@ -997,10 +997,10 @@ WITH (m = 16, ef_construction = 64);`;
                 className="w-full py-2.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
               >
                 {creatingDb
-                  ? '🐘 Provisioning Database on GCP...'
+                  ? 'Provisioning Database on GCP...'
                   : sqlArchitecture === 'ALLOYDB'
-                  ? `🚀 Deploy Live AlloyDB (${databaseVersion}) Cluster`
-                  : `🚀 Deploy Live Cloud SQL (${databaseVersion})`}
+                  ? `Deploy Live AlloyDB (${databaseVersion}) Cluster`
+                  : `Deploy Live Cloud SQL (${databaseVersion})`}
               </button>
 
               <button
@@ -1010,7 +1010,7 @@ WITH (m = 16, ef_construction = 64);`;
               >
                 {copiedLabel === 'Database gcloud CLI'
                   ? '✓ Copied gcloud CLI'
-                  : '📋 Copy Equivalent gcloud CLI'}
+                  : 'Copy Equivalent gcloud CLI'}
               </button>
             </div>
           </form>
@@ -1043,7 +1043,7 @@ WITH (m = 16, ef_construction = 64);`;
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                          <span>🚀 {c.name}</span>
+                          <span>{c.name}</span>
                           <span className="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 text-[10px]">
                             ALLOYDB ({c.databaseVersion})
                           </span>
@@ -1079,8 +1079,8 @@ WITH (m = 16, ef_construction = 64);`;
                         <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                           <span>
                             {String(inst.databaseVersion).startsWith('MYSQL')
-                              ? '🐬'
-                              : '🐘'}{' '}
+                              ? 'MySQL'
+                              : 'PostgreSQL'}{' '}
                             {inst.name}
                           </span>
                           <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 text-[10px]">
@@ -1130,7 +1130,7 @@ WITH (m = 16, ef_construction = 64);`;
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                ⚡ Interactive Architecture & TCO Comparator: Cloud SQL Enterprise vs. Enterprise Plus vs. AlloyDB
+                Interactive Architecture & TCO Comparator: Cloud SQL Enterprise vs. Enterprise Plus vs. AlloyDB
               </h3>
               <p className="text-xs text-zinc-500">
                 Tune your target vCPU, storage, and vector dataset scale to compare performance SLAs and monthly TCO.
@@ -1188,7 +1188,7 @@ WITH (m = 16, ef_construction = 64);`;
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
             <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-2">
               <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
-                🏛️ Cloud SQL Enterprise (MySQL / PG)
+                Cloud SQL Enterprise (MySQL / PG)
               </div>
               <div className="text-lg font-black font-mono text-cyan-400">
                 ~${cloudSqlEntMonthly}/mo (Regional HA)
@@ -1203,7 +1203,7 @@ WITH (m = 16, ef_construction = 64);`;
 
             <div className="p-3.5 rounded-[10px] border border-cyan-500/40 bg-cyan-500/5 space-y-2">
               <div className="text-xs font-extrabold text-cyan-400">
-                ⚡ Cloud SQL Enterprise Plus (MySQL / PG)
+                Cloud SQL Enterprise Plus (MySQL / PG)
               </div>
               <div className="text-lg font-black font-mono text-cyan-300">
                 ~${cloudSqlPlusMonthly}/mo (Regional HA)
@@ -1218,7 +1218,7 @@ WITH (m = 16, ef_construction = 64);`;
 
             <div className="p-3.5 rounded-[10px] border border-violet-500/50 bg-violet-500/10 space-y-2">
               <div className="text-xs font-extrabold text-violet-300">
-                🚀 Google Cloud AlloyDB (PostgreSQL Only)
+                Google Cloud AlloyDB (PostgreSQL Only)
               </div>
               <div className="text-lg font-black font-mono text-emerald-400">
                 ~${alloyDbMonthly}/mo (Colossus Storage)
@@ -1241,7 +1241,7 @@ WITH (m = 16, ef_construction = 64);`;
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
             <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              🧠 AI Vector Schema & Slow-Query Index Surgeon
+              AI Vector Schema & Slow-Query Index Surgeon
             </div>
             <p className="text-xs text-zinc-500">
               Generates production DDL for **AlloyDB `alloydb_scann` + inline Vertex AI `embedding()`**, **Cloud SQL `pgvector` HNSW**, or **MySQL 8.4 native `VECTOR`**.
@@ -1295,7 +1295,7 @@ WITH (m = 16, ef_construction = 64);`;
               onClick={() => handleCopy(generatedVectorSql, 'Vector & Index SQL')}
               className="w-full py-2.5 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
             >
-              📋 Copy Production Vector & Performance SQL
+              Copy Production Vector & Performance SQL
             </button>
           </div>
 
@@ -1316,7 +1316,7 @@ WITH (m = 16, ef_construction = 64);`;
       {activeSubTab === 'IAM_PROXY_VAULT' && (
         <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5">
           <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-            🛡️ Zero-Password IAM Auth Proxy v2 & ORM Connection Vault
+            Zero-Password IAM Auth Proxy v2 & ORM Connection Vault
           </div>
           <p className="text-xs text-zinc-500">
             Connect to `{sqlName}` without static database passwords using short-lived OAuth 2.0 IAM tokens and mTLS encryption.

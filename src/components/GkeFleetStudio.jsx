@@ -456,16 +456,16 @@ spec:
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-mono">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 DEDICATED GOOGLE KUBERNETES ENGINE (GKE) AUTOPILOT & SPOT GPU STUDIO
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              ☸️ GKE Autopilot, Spot GPU Node-Pools & Zero-Trust K8s Enclave Studio
+              GKE Autopilot, Spot GPU Node-Pools & Zero-Trust K8s Enclave Studio
             </h2>
             <p className="text-xs text-zinc-300 max-w-3xl">
-              Direct live `container.googleapis.com/v1` cluster provisioning & fleet management with strict SEC / GDPR / HIPAA compliance locks (`🔒`), Workload Identity OIDC (`*.svc.id.goog`), Binary Authorization, and Spot GPU FinOps.
+              Direct live `container.googleapis.com/v1` cluster provisioning & fleet management with strict SEC / GDPR / HIPAA compliance locks (``), Workload Identity OIDC (`*.svc.id.goog`), Binary Authorization, and Spot GPU FinOps.
             </p>
           </div>
 
@@ -490,7 +490,7 @@ spec:
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
-                  loadingGke ? 'animate-spin text-cyan-400' : 'text-cyan-400'
+                  loadingGke ? 'animate-spin text-zinc-500 dark:text-zinc-400' : 'text-zinc-500 dark:text-zinc-400'
                 }`}
               />
               <span>Refresh GKE Fleet</span>
@@ -555,17 +555,17 @@ spec:
         {[
           {
             id: 'FLEET_DEPLOY',
-            label: '☸️ Live GKE Fleet & 1-Click Cluster Provisioner',
+            label: 'Live GKE Fleet & 1-Click Cluster Provisioner',
             icon: Cpu,
           },
           {
             id: 'WORKLOAD_YAML',
-            label: '🚀 K8s Workload & GPU Pod YAML Deployer',
+            label: 'K8s Workload & GPU Pod YAML Deployer',
             icon: FileCode,
           },
           {
             id: 'GPU_FINOPS',
-            label: '⚡ Spot GPU & AI Node-Pool FinOps Calculator',
+            label: 'Spot GPU & AI Node-Pool FinOps Calculator',
             icon: Zap,
           },
         ].map((t) => {
@@ -601,13 +601,13 @@ spec:
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>1-Click GKE Compliance & Cluster Deployer</span>
               </div>
               <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 text-[10px] font-mono font-bold">
                 {isCustom
                   ? 'UNLOCKED CUSTOM'
-                  : `🔒 ENFORCING ${gkeBlueprint.toUpperCase()}`}
+                  : `ENFORCING ${gkeBlueprint.toUpperCase()}`}
               </span>
             </div>
 
@@ -617,17 +617,17 @@ spec:
                 {
                   id: 'zero-trust-autopilot',
                   label: 'SEC / FedRAMP',
-                  sub: 'Autopilot · US 🔒',
+                  sub: 'Autopilot · US',
                 },
                 {
                   id: 'gdpr-eu-ai-cluster',
                   label: 'GDPR EU Sovereign',
-                  sub: 'Autopilot · EU 🔒',
+                  sub: 'Autopilot · EU',
                 },
                 {
                   id: 'hipaa-clinical-k8s',
                   label: 'HIPAA Clinical',
-                  sub: 'Autopilot · STABLE 🔒',
+                  sub: 'Autopilot · STABLE',
                 },
                 {
                   id: 'ai-spot-gpu-standard',
@@ -684,7 +684,7 @@ spec:
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Operation Mode {isZeroTrustEnclave ? '🔒' : ''}
+                  Operation Mode {isZeroTrustEnclave ? '[LOCKED]' : ''}
                 </label>
                 <select
                   value={gkeMode}
@@ -692,7 +692,7 @@ spec:
                   onChange={(e) => setGkeMode(e.target.value)}
                   title={
                     isZeroTrustEnclave
-                      ? '🔒 Locked to GKE Autopilot by Zero-Trust Enclave Blueprint'
+                      ? 'Locked to GKE Autopilot by Zero-Trust Enclave Blueprint'
                       : 'Choose GKE Autopilot ($0.00 idle nodes) or GKE Standard (Custom GPU node pools)'
                   }
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 disabled:opacity-60"
@@ -704,7 +704,7 @@ spec:
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Sovereign Region {!isCustom ? '🔒' : ''}
+                  Sovereign Region {!isCustom ? '[LOCKED]' : ''}
                 </label>
                 <select
                   value={clusterRegion}
@@ -712,22 +712,22 @@ spec:
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 >
                   <option value="us-central1" disabled={isGdpr}>
-                    {isGdpr ? '🔒 ' : ''}us-central1 (Iowa — Low Carbon)
+                    {isGdpr ? '[LOCKED] ' : ''}us-central1 (Iowa — Low Carbon)
                   </option>
                   <option value="us-east4" disabled={isGdpr}>
-                    {isGdpr ? '🔒 ' : ''}us-east4 (N. Virginia — FedRAMP/HIPAA)
+                    {isGdpr ? '[LOCKED] ' : ''}us-east4 (N. Virginia — FedRAMP/HIPAA)
                   </option>
                   <option value="us-west1" disabled={isGdpr}>
-                    {isGdpr ? '🔒 ' : ''}us-west1 (Oregon — Hydroelectric)
+                    {isGdpr ? '[LOCKED] ' : ''}us-west1 (Oregon — Hydroelectric)
                   </option>
                   <option value="europe-west1" disabled={isUsOnly}>
-                    {isUsOnly ? '🔒 ' : ''}europe-west1 (Belgium — EU GDPR)
+                    {isUsOnly ? '[LOCKED] ' : ''}europe-west1 (Belgium — EU GDPR)
                   </option>
                   <option value="europe-west4" disabled={isUsOnly}>
-                    {isUsOnly ? '🔒 ' : ''}europe-west4 (Netherlands — EU AI Hub)
+                    {isUsOnly ? '[LOCKED] ' : ''}europe-west4 (Netherlands — EU AI Hub)
                   </option>
                   <option value="europe-west3" disabled={isUsOnly}>
-                    {isUsOnly ? '🔒 ' : ''}europe-west3 (Frankfurt — EU BaFin)
+                    {isUsOnly ? '[LOCKED] ' : ''}europe-west3 (Frankfurt — EU BaFin)
                   </option>
                 </select>
               </div>
@@ -738,7 +738,7 @@ spec:
               <label
                 title={
                   isZeroTrustEnclave
-                    ? '🔒 Locked ON by Zero-Trust Compliance Blueprint'
+                    ? 'Locked ON by Zero-Trust Compliance Blueprint'
                     : 'Isolate worker nodes from public internet IPv4 addresses'
                 }
                 className={`flex items-center gap-2 p-2 rounded-[8px] border text-xs font-mono ${
@@ -754,14 +754,14 @@ spec:
                   onChange={(e) => setPrivateNodes(e.target.checked)}
                 />
                 <span className="truncate">
-                  Private Nodes {isZeroTrustEnclave ? '🔒' : ''}
+                  Private Nodes {isZeroTrustEnclave ? '[LOCKED]' : ''}
                 </span>
               </label>
 
               <label
                 title={
                   !isCustom
-                    ? '🔒 Locked ON: Workload Identity eliminates static JSON keys'
+                    ? 'Locked ON: Workload Identity eliminates static JSON keys'
                     : 'Enable OIDC Workload Identity Federation (*.svc.id.goog)'
                 }
                 className={`flex items-center gap-2 p-2 rounded-[8px] border text-xs font-mono ${
@@ -777,14 +777,14 @@ spec:
                   onChange={(e) => setWorkloadIdentity(e.target.checked)}
                 />
                 <span className="truncate">
-                  Workload ID {!isCustom ? '🔒' : ''}
+                  Workload ID {!isCustom ? '[LOCKED]' : ''}
                 </span>
               </label>
 
               <label
                 title={
                   isZeroTrustEnclave
-                    ? '🔒 Locked ON: Cryptographic Binary Authorization required'
+                    ? 'Locked ON: Cryptographic Binary Authorization required'
                     : 'Enforce Binary Authorization container image attestation'
                 }
                 className={`flex items-center gap-2 p-2 rounded-[8px] border text-xs font-mono ${
@@ -800,7 +800,7 @@ spec:
                   onChange={(e) => setBinaryAuth(e.target.checked)}
                 />
                 <span className="truncate">
-                  Binary Auth {isZeroTrustEnclave ? '🔒' : ''}
+                  Binary Auth {isZeroTrustEnclave ? '[LOCKED]' : ''}
                 </span>
               </label>
             </div>
@@ -816,8 +816,8 @@ spec:
                 className="w-full py-2.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
               >
                 {creatingGke
-                  ? '☸️ Provisioning Live GKE Cluster...'
-                  : `🚀 Create Live GKE ${gkeMode} Cluster`}
+                  ? 'Provisioning Live GKE Cluster...'
+                  : `Create Live GKE ${gkeMode} Cluster`}
               </button>
 
               <button
@@ -827,7 +827,7 @@ spec:
               >
                 {copiedLabel === 'GKE gcloud CLI'
                   ? '✓ Copied gcloud CLI'
-                  : '📋 Copy Equivalent gcloud CLI'}
+                  : 'Copy Equivalent gcloud CLI'}
               </button>
             </div>
           </form>
@@ -861,7 +861,7 @@ spec:
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div>
                           <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                            <span>☸️ {c.name}</span>
+                            <span>{c.name}</span>
                             <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 text-[10px]">
                               {c.autopilot ? 'AUTOPILOT' : 'STANDARD'}
                             </span>
@@ -946,7 +946,7 @@ spec:
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5">
             <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              <FileCode className="w-4 h-4 text-indigo-400" />
+              <FileCode className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               <span>Zero-Trust Kubernetes Deployment & GPU Pod Composer</span>
             </div>
 
@@ -1036,17 +1036,17 @@ spec:
                 {[
                   {
                     id: 'ARTIFACT_REGISTRY',
-                    label: '📦 1. Project Artifact Registry',
+                    label: '1. Project Artifact Registry',
                     sub: `Pick from ${arImages.length} live GCP image(s)`,
                   },
                   {
                     id: 'GITHUB_REPO',
-                    label: '🐙 2. Build from GitHub Repo',
+                    label: '2. Build from GitHub Repo',
                     sub: 'Cloud Build → AR → GKE Deploy',
                   },
                   {
                     id: 'PUBLIC_URI',
-                    label: '🌐 3. Public / Custom URI',
+                    label: '3. Public / Custom URI',
                     sub: 'Docker Hub / GCR / Custom URI',
                   },
                 ].map((m) => {
@@ -1092,7 +1092,7 @@ spec:
                           const fullUri = `${img.uri}:${tag}`;
                           return (
                             <option key={`${img.uri}-${i}`} value={fullUri}>
-                              📦 {fullUri} ({img.sizeMb} MB · {img.location})
+                              {fullUri} ({img.sizeMb} MB · {img.location})
                             </option>
                           );
                         })}
@@ -1108,7 +1108,7 @@ spec:
                         onClick={() => setContainerSourceMode('GITHUB_REPO')}
                         className="px-2 py-1 rounded bg-indigo-600 text-white text-[10px] font-bold cursor-pointer shrink-0"
                       >
-                        🐙 Build from GitHub →
+                        Build from GitHub →
                       </button>
                     </div>
                   )}
@@ -1192,7 +1192,7 @@ spec:
                         <option value="">Build Image Only (No Auto-Rollout)</option>
                         {clustersList.map((c) => (
                           <option key={c.name} value={c.name}>
-                            ☸️ {c.name} ({c.location})
+                            {c.name} ({c.location})
                           </option>
                         ))}
                       </select>
@@ -1206,8 +1206,8 @@ spec:
                     className="w-full py-2 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {triggeringGkeBuild
-                      ? '🏗️ Submitting Cloud Build Pipeline...'
-                      : `🚀 Trigger Cloud Build (${ghBuildMethod}) → Push to Artifact Registry${
+                      ? 'Submitting Cloud Build Pipeline...'
+                      : `Trigger Cloud Build (${ghBuildMethod}) → Push to Artifact Registry${
                           ghTargetCluster
                             ? ` → Rollout to GKE (${ghTargetCluster})`
                             : ''
@@ -1280,7 +1280,7 @@ spec:
                 onClick={() => handleCopy(k8sYamlManifest, 'K8s Manifest YAML')}
                 className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
               >
-                📋 Copy YAML Manifest
+                Copy YAML Manifest
               </button>
             </div>
             <pre className="p-3 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto max-h-80">
@@ -1297,7 +1297,7 @@ spec:
         <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-400" />
+              <Zap className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               <span>GKE Spot GPU vs. On-Demand Node-Pool FinOps Calculator</span>
             </div>
             <span className="px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold">

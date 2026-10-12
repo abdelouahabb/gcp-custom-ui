@@ -29,10 +29,10 @@ import {
 const DOC_SECTIONS = [
   {
     id: 'quantum-nexus-2026-lab-star',
-    wave: '★ FLAGSHIP STAR · 2026 QUANTUM NEXUS (5 WORLD-FIRST BREAKTHROUGHS)',
+    wave: 'FLAGSHIP STAR · 2026 QUANTUM NEXUS (5 WORLD-FIRST BREAKTHROUGHS)',
     title:
-      '✦ 2026 Quantum Nexus — Causal Blast-Radius Graph, Time-Machine State Rollback, FinOps Arbitrage Autopilot, Ephemeral PR Shadow Previews & Zero-Trust Honey-Token Deception Grid',
-    badge: '✦ 2026 INNOVATION LAB ★ (DEFAULT STAR)',
+      '2026 Quantum Nexus — Causal Blast-Radius Graph, Time-Machine State Rollback, FinOps Arbitrage Autopilot, Ephemeral PR Shadow Previews & Zero-Trust Honey-Token Deception Grid',
+    badge: '2026 INNOVATION LAB (DEFAULT STAR)',
     badgeColor: 'bg-violet-500/20 text-violet-400 border-violet-500/40',
     icon: Sparkles,
     targetTab: 'INNOVATION_LAB',
@@ -40,11 +40,11 @@ const DOC_SECTIONS = [
     problemSolved:
       'Standard cloud consoles treat IAM, VPC Firewalls, Compute, Storage/BigLake, CI/CD, and Billing as isolated silos—so you cannot see cross-domain causal failure cascades, cannot snapshot and roll back whole-project configuration drift in 1 click, cannot automate Spot/Slot arbitrage with a hard-cap circuit-breaker, cannot mirror live production traffic into auto-expiring PR preview branches, and cannot plant active deception tripwires against credential thieves.',
     howItWorks: [
-      '🕸️ Breakthrough #1 — Cross-Cloud Blast-Radius & Causal Dependency Graph: Connects Identity (IAM Service Accounts), Network (VPC Firewalls), Compute (Cloud Run & VMs), Data (BigLake Iceberg & GCS), and Billing into one interactive causal simulator. Click any node and switch between Simulate Credential Breach, Cascading Outage, or DDoS/Spend Spike to inspect 1st/2nd-hop blast propagation.',
+      'Breakthrough #1 — Cross-Cloud Blast-Radius & Causal Dependency Graph: Connects Identity (IAM Service Accounts), Network (VPC Firewalls), Compute (Cloud Run & VMs), Data (BigLake Iceberg & GCS), and Billing into one interactive causal simulator. Click any node and switch between Simulate Credential Breach, Cascading Outage, or DDoS/Spend Spike to inspect 1st/2nd-hop blast propagation.',
       '⏳ Breakthrough #2 — Time-Machine Flight Recorder & Verified 1-Click State Rollback: Captures cryptographic SHA-256 project state checkpoints (IAM bindings, open firewalls, Cloud Run revisions, VMs, and hourly burn), diffs any two snapshots side-by-side, and restores state behind a Human-in-the-Loop Approval Gate.',
-      '🤖 Breakthrough #3 — Autonomous FinOps Autopilot & Commitment Arbitrage Engine: Identifies live Standard → Spot VM (-72%), Cloud Run Always-Allocated → Request-Only CPU (-68%), and BigQuery → BigLake Partition Pruning (-71%) arbitrage, plus an Automated Hard-Cap Budget Circuit-Breaker ($/mo & $/hr spike triggers).',
-      '🪞 Breakthrough #4 — Live Ephemeral PR Preview Environments & Shadow Traffic Mirror: Clones any Cloud Run service into a PR preview stack that mirrors 5%–25% of live traffic asynchronously, compares Prod vs Shadow P95 latency & 5xx errors, and auto-self-destructs after its TTL (2h–24h) so dev stacks never become zombie bills.',
-      '🍯 Breakthrough #5 — Zero-Trust Honey-Token & Active Breach Deception Grid: Plants decoy IAM Service Account .json keys, canary BigLake Parquet files, and Secret Manager honey-secrets that trigger instant VPC /32 IP-ban + credential quarantine the millisecond an attacker touches them.',
+      'Breakthrough #3 — Autonomous FinOps Autopilot & Commitment Arbitrage Engine: Identifies live Standard → Spot VM (-72%), Cloud Run Always-Allocated → Request-Only CPU (-68%), and BigQuery → BigLake Partition Pruning (-71%) arbitrage, plus an Automated Hard-Cap Budget Circuit-Breaker ($/mo & $/hr spike triggers).',
+      'Breakthrough #4 — Live Ephemeral PR Preview Environments & Shadow Traffic Mirror: Clones any Cloud Run service into a PR preview stack that mirrors 5%–25% of live traffic asynchronously, compares Prod vs Shadow P95 latency & 5xx errors, and auto-self-destructs after its TTL (2h–24h) so dev stacks never become zombie bills.',
+      'Breakthrough #5 — Zero-Trust Honey-Token & Active Breach Deception Grid: Plants decoy IAM Service Account .json keys, canary BigLake Parquet files, and Secret Manager honey-secrets that trigger instant VPC /32 IP-ban + credential quarantine the millisecond an attacker touches them.',
     ],
     apisUsed: [
       'GET /api/project/:id/quantum-nexus/overview (aggregates compute, run, storage, firewall & IAM state)',
@@ -57,18 +57,18 @@ const DOC_SECTIONS = [
     id: 'wave10-2026-frontier-spanner-spark-workflows-armor',
     wave: 'WAVE 10 · 2026 FRONTIER STUDIO (SPANNER GRAPH, SPARK, WORKFLOWS & MODEL ARMOR)',
     title:
-      '🚀 Spanner Graph & Geo-Partitioning ($65/mo 100-PU), Serverless Apache Spark 2.2, Cloud Workflows Visual Choreographer & Vertex AI Model Armor',
-    badge: 'SPANNER GRAPH & SPARK 🚀 TAB',
+      'Spanner Graph & Geo-Partitioning ($65/mo 100-PU), Serverless Apache Spark 2.2, Cloud Workflows Visual Choreographer & Vertex AI Model Armor',
+    badge: 'SPANNER GRAPH & SPARK TAB',
     badgeColor: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30',
     icon: Rocket,
     targetTab: 'WAVE10_FRONTIER',
     problemSolved:
       'Engineers often think Cloud Spanner still costs $730+/mo for a full node or requires a separate graph database like Neo4j, struggle with idle Dataproc cluster waste when running PySpark over BigLake Iceberg, lack a visual retry/compensation choreographer for multi-service sagas, and need inline prompt-injection & PII defense for Vertex AI / Gemini workloads.',
     howItWorks: [
-      '🕸️ Tab 1 — Spanner Graph (ISO GQL) + Granular 100-PU Sizing ($65/mo) & Geo-Partitioning: Provision fractional Spanner instances starting at 100 Processing Units (0.1 node = ~$65/mo with 99.999% SLA) and run unified SQL + ISO GQL Graph queries (GRAPH FinTechFraudGraph MATCH (a:Account)-[t:TRANSFERRED]->(b:Account)) on the same tables with zero ETL.',
-      '🔥 Tab 2 — Dataproc Serverless for Apache Spark 2.2 (Scale-to-$0 Lakehouse Engine): Submit sub-5-second startup PySpark 3.5 / Spark SQL batches directly over BigLake Apache Iceberg tables with zero master/worker cluster management fees.',
-      '🎼 Tab 3 — Cloud Workflows Visual Step-by-Step Saga & Compensation Choreographer: Visually design and execute multi-API cloud sagas with exponential backoff retries and automatic rollback compensation.',
-      '🛡️ Tab 4 — Vertex AI Model Armor & Prompt-Injection / PII Firewall: Real-time adversarial prompt scanner that intercepts jailbreaks, system-prompt extraction, SSRF/metadata probes, and regulated PII before reaching Gemini / Vertex AI.',
+      'Tab 1 — Spanner Graph (ISO GQL) + Granular 100-PU Sizing ($65/mo) & Geo-Partitioning: Provision fractional Spanner instances starting at 100 Processing Units (0.1 node = ~$65/mo with 99.999% SLA) and run unified SQL + ISO GQL Graph queries (GRAPH FinTechFraudGraph MATCH (a:Account)-[t:TRANSFERRED]->(b:Account)) on the same tables with zero ETL.',
+      'Tab 2 — Dataproc Serverless for Apache Spark 2.2 (Scale-to-$0 Lakehouse Engine): Submit sub-5-second startup PySpark 3.5 / Spark SQL batches directly over BigLake Apache Iceberg tables with zero master/worker cluster management fees.',
+      'Tab 3 — Cloud Workflows Visual Step-by-Step Saga & Compensation Choreographer: Visually design and execute multi-API cloud sagas with exponential backoff retries and automatic rollback compensation.',
+      'Tab 4 — Vertex AI Model Armor & Prompt-Injection / PII Firewall: Real-time adversarial prompt scanner that intercepts jailbreaks, system-prompt extraction, SSRF/metadata probes, and regulated PII before reaching Gemini / Vertex AI.',
     ],
     apisUsed: [
       'GET /api/project/:id/wave10/overview → spanner.googleapis.com/v1 + dataproc.googleapis.com/v1 + workflows.googleapis.com/v1',
@@ -81,17 +81,17 @@ const DOC_SECTIONS = [
     id: 'biglake-vs-bigquery-open-iceberg-2026',
     wave: 'BIGLAKE & APACHE ICEBERG · OPEN LAKEHOUSE STUDIO',
     title:
-      '🌊 BigLake vs. BigQuery Demystified Studio — Open Apache Iceberg Tables, Cross-Engine Governance & 1-Click BigLake Wizard',
-    badge: 'BIGQUERY & BIGLAKE 🌊 TAB (TAB 5)',
+      'BigLake vs. BigQuery Demystified Studio — Open Apache Iceberg Tables, Cross-Engine Governance & 1-Click BigLake Wizard',
+    badge: 'BIGQUERY & BIGLAKE TAB (TAB 5)',
     badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
     icon: Layers,
     targetTab: 'BIGQUERY_STUDIO',
     problemSolved:
       'Engineers frequently confuse Google BigQuery with Google BigLake, leading to duplicate data copies in proprietary storage when they actually need open Parquet/Apache Iceberg files on Cloud Storage governed by a single row/column-level security policy across BigQuery, Spark, Trino, and Vertex AI.',
     howItWorks: [
-      '🧭 Interactive "BigQuery vs. BigLake" Side-by-Side Architecture Clarifier: Explains Storage Location, File Format (Proprietary Capacitor vs Open Apache Iceberg/Parquet/Delta), Multi-Engine Read/Write (BigQuery + Spark + Flink + Presto), Fine-Grained Row/Column Security, and Governance Connection Architecture.',
-      '🎯 "Which One Do I Need?" Decision Matrix: Instant architectural recommendation based on your workload (Pure SQL Warehouse vs Open Apache Iceberg Lakehouse vs Multi-Cloud Omni).',
-      '⚡ 1-Click BigLake Connection + Managed Apache Iceberg Table Provisioner: Creates the BigQuery Cloud Resource Connection, binds the Connection Service Account IAM role on your GCS bucket, and executes CREATE EXTERNAL TABLE ... WITH CONNECTION ... OPTIONS(format="ICEBERG" | "PARQUET", metadata_cache_mode="AUTOMATIC").',
+      'Interactive "BigQuery vs. BigLake" Side-by-Side Architecture Clarifier: Explains Storage Location, File Format (Proprietary Capacitor vs Open Apache Iceberg/Parquet/Delta), Multi-Engine Read/Write (BigQuery + Spark + Flink + Presto), Fine-Grained Row/Column Security, and Governance Connection Architecture.',
+      '"Which One Do I Need?" Decision Matrix: Instant architectural recommendation based on your workload (Pure SQL Warehouse vs Open Apache Iceberg Lakehouse vs Multi-Cloud Omni).',
+      '1-Click BigLake Connection + Managed Apache Iceberg Table Provisioner: Creates the BigQuery Cloud Resource Connection, binds the Connection Service Account IAM role on your GCS bucket, and executes CREATE EXTERNAL TABLE ... WITH CONNECTION ... OPTIONS(format="ICEBERG" | "PARQUET", metadata_cache_mode="AUTOMATIC").',
     ],
     apisUsed: [
       'GET /api/project/:id/bigquery/biglake/overview',
@@ -104,17 +104,17 @@ const DOC_SECTIONS = [
     id: 'sovereign-iam-owner-guard-and-sa-key-killswitch',
     wave: 'SOVEREIGN IAM · OWNER SELF-PROTECTION & STOLEN KEY KILL-SWITCH VAULT',
     title:
-      '🔑 Sovereign IAM Owner Self-Protection, Human Approval Gate & Service Account .json Key / OAuth2 Token Kill-Switch Vault',
-    badge: 'SOVEREIGN & IAM 🔑 TAB',
+      'Sovereign IAM Owner Self-Protection, Human Approval Gate & Service Account .json Key / OAuth2 Token Kill-Switch Vault',
+    badge: 'SOVEREIGN & IAM TAB',
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     icon: ShieldAlert,
     targetTab: 'SOVEREIGN_IAM',
     problemSolved:
       'Standard IAM recommenders naively flag the authenticated project owner (roles/owner) as "excessive privilege" and can lock you out if clicked accidentally—and if a Service Account .json key or OAuth token is stolen, engineers need one place to inspect, create, download, disable, or permanently revoke keys in seconds.',
     howItWorks: [
-      '🛡️ Active Session Owner Self-Protection (PROTECTED OWNER badge): Cross-references every IAM binding against your active authenticated account so your own roles/owner binding is protected and never auto-targeted for downgrade.',
-      '✋ Mandatory Human-in-the-Loop Approval Modal: Every IAM privilege reduction requires reviewing the exact gcloud iam command, typing or confirming impact, and clicking Approve & Execute.',
-      '🔑 Service Account .json Key & OAuth2 Token Kill-Switch Vault: Dedicated top sub-tab switcher + compact collapsible IAM roles list so you can immediately access all Service Accounts, create & download a new .json key, disable/re-enable a key to test breakage, permanently delete a leaked key, or run the 1-Click Emergency Key Purge + Active OAuth Token Revocation.',
+      'Active Session Owner Self-Protection (PROTECTED OWNER badge): Cross-references every IAM binding against your active authenticated account so your own roles/owner binding is protected and never auto-targeted for downgrade.',
+      'Mandatory Human-in-the-Loop Approval Modal: Every IAM privilege reduction requires reviewing the exact gcloud iam command, typing or confirming impact, and clicking Approve & Execute.',
+      'Service Account .json Key & OAuth2 Token Kill-Switch Vault: Dedicated top sub-tab switcher + compact collapsible IAM roles list so you can immediately access all Service Accounts, create & download a new .json key, disable/re-enable a key to test breakage, permanently delete a leaked key, or run the 1-Click Emergency Key Purge + Active OAuth Token Revocation.',
     ],
     apisUsed: [
       'GET /api/project/:id/sovereign-iam/credentials → iam.googleapis.com/v1/projects/:id/serviceAccounts/:email/keys',
@@ -127,7 +127,7 @@ const DOC_SECTIONS = [
     id: 'wave3-engineer-moonshots-x1-x6',
     wave: 'WAVE 6 · ENGINEER MOONSHOT LAB (X1–X6)',
     title:
-      '🚀 6 Out-of-the-Box Cloud Engineering Moonshots (DLP X-Ray, Cold-Start Surgeon, Egress Tollbooth, Ransomware Air-Gap, Anycast Latency & AES-256-GCM Gemini 3.8 / 3.1 Vault)',
+      '6 Out-of-the-Box Cloud Engineering Moonshots (DLP X-Ray, Cold-Start Surgeon, Egress Tollbooth, Ransomware Air-Gap, Anycast Latency & AES-256-GCM Gemini 3.8 / 3.1 Vault)',
     badge: '2026 LAB · MOONSHOTS X1–X6',
     badgeColor: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
     icon: Rocket,
@@ -136,12 +136,12 @@ const DOC_SECTIONS = [
     problemSolved:
       'Engineers constantly battle leaked credentials/PII inside Cloud Storage buckets, mysterious 1.5s–3.5s Cloud Run cold starts, hidden cross-region egress bandwidth taxes, ransomware bucket deletion risks, global client latency blindspots, and how to use live Gemini 3.8 Flash / 3.1 Pro without ever writing an API key to disk or browser localStorage.',
     howItWorks: [
-      '🕵️ X1 — Cloud Storage Live DLP, Secret Leak & PII X-Ray Scanner + 1-Tap In-Place Redactor: Streams object bytes in server memory to detect leaked GCP Service Account keys, AWS keys, GitHub PATs, Stripe keys, JWTs, Credit Cards, IBANs, and SSNs—with a 1-Tap Canary Injector and 1-Tap In-Place Cryptographic Redactor.',
-      '⚡ X2 — Serverless Cold-Start Profiler & Container Diet Surgeon: Breaks down Cloud Run startup into 5 phases (Image Pull, Sandbox Init, Runtime Boot, Weight Tax, Warm P50), patches Startup CPU Boost + Gen2 Execution Environment in 1 tap, and synthesizes a multi-stage Distroless Dockerfile.',
-      '💸 X3 — Cross-Service Egress & Hidden Data-Gravity Tollbooth: Cross-references every Compute VM and Cloud Run service region against your Cloud Storage bucket locations using the Live Pricing Catalog to flag cross-region ($0.02/GB) and inter-continental ($0.08–$0.12/GB) bandwidth taxes.',
-      '🛡️ X4 — Cryptographic Ransomware Air-Gap & Clean-Room Recovery Auditor: Scores every bucket on a 0–100 Ransomware Survival scale, computes exact RTO/RPO, and applies a 1-Tap 30-Day Soft-Delete + Object Versioning Air-Gap Shield.',
-      '🌐 X5 — 12-Metropolis Speed-of-Light User-Experience & Anycast Edge Latency Matrix: Calculates great-circle fiber distance and TLS RTT from 12 global population hubs to your active GCP regions vs Google Cloud CDN Anycast Edge.',
-      '🔐 X6 — Option 3 AES-256-GCM Encrypted Google AI Studio BYOK RAM Vault (Gemini 3.8 Flash & 3.1 Pro): Seals your AIzaSy... key in volatile Node.js RAM using crypto.createCipheriv("aes-256-gcm") with an 8,192-token output budget, live /v1beta/models auto-discovery, and 3-step onboarding when empty.',
+      'X1 — Cloud Storage Live DLP, Secret Leak & PII X-Ray Scanner + 1-Tap In-Place Redactor: Streams object bytes in server memory to detect leaked GCP Service Account keys, AWS keys, GitHub PATs, Stripe keys, JWTs, Credit Cards, IBANs, and SSNs—with a 1-Tap Canary Injector and 1-Tap In-Place Cryptographic Redactor.',
+      'X2 — Serverless Cold-Start Profiler & Container Diet Surgeon: Breaks down Cloud Run startup into 5 phases (Image Pull, Sandbox Init, Runtime Boot, Weight Tax, Warm P50), patches Startup CPU Boost + Gen2 Execution Environment in 1 tap, and synthesizes a multi-stage Distroless Dockerfile.',
+      'X3 — Cross-Service Egress & Hidden Data-Gravity Tollbooth: Cross-references every Compute VM and Cloud Run service region against your Cloud Storage bucket locations using the Live Pricing Catalog to flag cross-region ($0.02/GB) and inter-continental ($0.08–$0.12/GB) bandwidth taxes.',
+      'X4 — Cryptographic Ransomware Air-Gap & Clean-Room Recovery Auditor: Scores every bucket on a 0–100 Ransomware Survival scale, computes exact RTO/RPO, and applies a 1-Tap 30-Day Soft-Delete + Object Versioning Air-Gap Shield.',
+      'X5 — 12-Metropolis Speed-of-Light User-Experience & Anycast Edge Latency Matrix: Calculates great-circle fiber distance and TLS RTT from 12 global population hubs to your active GCP regions vs Google Cloud CDN Anycast Edge.',
+      'X6 — Option 3 AES-256-GCM Encrypted Google AI Studio BYOK RAM Vault (Gemini 3.8 Flash & 3.1 Pro): Seals your AIzaSy... key in volatile Node.js RAM using crypto.createCipheriv("aes-256-gcm") with an 8,192-token output budget, live /v1beta/models auto-discovery, and 3-step onboarding when empty.',
     ],
     apisUsed: [
       'POST /api/project/:id/storage/buckets/:bucket/dlp-scan & /dlp-redact',
@@ -155,17 +155,17 @@ const DOC_SECTIONS = [
     id: 'dedicated-cloud-sql-alloydb-studio',
     wave: 'CLOUD SQL & ALLOYDB · RELATIONAL & AI VECTOR STUDIO',
     title:
-      '🐘 Dedicated Cloud SQL (MySQL 8.4 LTS & PostgreSQL 16/17) + Google Cloud AlloyDB Studio',
-    badge: 'CLOUD SQL & ALLOYDB 🐘 TAB + PROVISION MODAL',
+      'Dedicated Cloud SQL (MySQL 8.4 LTS & PostgreSQL 16/17) + Google Cloud AlloyDB Studio',
+    badge: 'CLOUD SQL & ALLOYDB TAB + PROVISION MODAL',
     badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
     icon: Layers,
     targetTab: 'CLOUD_SQL_STUDIO',
     problemSolved:
       'Choosing between MySQL and PostgreSQL—and when using PostgreSQL, deciding whether to deploy Classic/Enterprise Plus Cloud SQL or Google Cloud AlloyDB—requires comparing storage architectures, failover SLAs, AI vector indexes, and strict regulatory compliance locks.',
     howItWorks: [
-      '🐘 Engine Family & Architecture Fork: Select MySQL (8.4 LTS / 8.0) or PostgreSQL (16 / 17 / 15). When PostgreSQL is selected, fork between Classic / Enterprise Plus Cloud SQL (sqladmin.googleapis.com/v1) and Google Cloud AlloyDB (alloydb.googleapis.com/v1). Selecting MySQL automatically locks out AlloyDB with a 🔒 badge.',
-      '⚖️ Classic Cloud SQL vs. AlloyDB TCO Comparator: Simulates vCPUs, Storage GB, Read Replicas, Vector RAG, and HTAP workloads to compare Cloud SQL Enterprise, Cloud SQL Enterprise Plus, and AlloyDB across failover SLA (<60s vs <2s vs <1s) and Cost per 1,000 TPS.',
-      '🧠 AI Vector (ScaNN / pgvector / MySQL 8.4 VECTOR) & Slow-Query Index Surgeon + Zero-Password IAM Auth Proxy v2 Vault.',
+      'Engine Family & Architecture Fork: Select MySQL (8.4 LTS / 8.0) or PostgreSQL (16 / 17 / 15). When PostgreSQL is selected, fork between Classic / Enterprise Plus Cloud SQL (sqladmin.googleapis.com/v1) and Google Cloud AlloyDB (alloydb.googleapis.com/v1). Selecting MySQL automatically locks out AlloyDB with a badge.',
+      'Classic Cloud SQL vs. AlloyDB TCO Comparator: Simulates vCPUs, Storage GB, Read Replicas, Vector RAG, and HTAP workloads to compare Cloud SQL Enterprise, Cloud SQL Enterprise Plus, and AlloyDB across failover SLA (<60s vs <2s vs <1s) and Cost per 1,000 TPS.',
+      'AI Vector (ScaNN / pgvector / MySQL 8.4 VECTOR) & Slow-Query Index Surgeon + Zero-Password IAM Auth Proxy v2 Vault.',
     ],
     apisUsed: [
       'GET /api/project/:id/wave9/cloud-sql → sqladmin.googleapis.com/v1 + alloydb.googleapis.com/v1',
@@ -178,17 +178,17 @@ const DOC_SECTIONS = [
     id: 'dedicated-gke-studio',
     wave: 'GKE STUDIO · AUTOPILOT & SPOT GPU KUBERNETES',
     title:
-      '☸️ Dedicated Google Kubernetes Engine (GKE) Autopilot, Spot GPU & Workload Studio',
-    badge: 'GKE STUDIO ☸️ TAB + PROVISION MODAL',
+      'Dedicated Google Kubernetes Engine (GKE) Autopilot, Spot GPU & Workload Studio',
+    badge: 'GKE STUDIO TAB + PROVISION MODAL',
     badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
     icon: Server,
     targetTab: 'GKE_STUDIO',
     problemSolved:
       'Provisioning hardened GKE Autopilot or Standard Spot GPU clusters with Workload Identity OIDC, Private Nodes, Shielded Nodes, and Binary Authorization normally requires dozens of complex gcloud flags and manual Kubernetes manifests.',
     howItWorks: [
-      '☸️ 1-Click GKE Autopilot & Standard Spot GPU Cluster Provisioner: Enforces strict compliance locks (🔒) across SEC/FedRAMP, GDPR EU, HIPAA BAA, and AI Spot GPU presets.',
-      '📦 K8s Workload YAML & Spot GPU Deployment Composer: Generates production Kubernetes Deployment + Service + HorizontalPodAutoscaler manifests and 1-click kubectl apply commands.',
-      '🔐 Live GKE Fleet & 1-Tap kubeconfig / Cloud Shell Connector.',
+      '1-Click GKE Autopilot & Standard Spot GPU Cluster Provisioner: Enforces strict compliance locks () across SEC/FedRAMP, GDPR EU, HIPAA BAA, and AI Spot GPU presets.',
+      'K8s Workload YAML & Spot GPU Deployment Composer: Generates production Kubernetes Deployment + Service + HorizontalPodAutoscaler manifests and 1-click kubectl apply commands.',
+      'Live GKE Fleet & 1-Tap kubeconfig / Cloud Shell Connector.',
     ],
     apisUsed: [
       'GET /api/project/:id/wave9/gke-vertex → container.googleapis.com/v1/projects/:id/locations/-/clusters',
@@ -201,18 +201,18 @@ const DOC_SECTIONS = [
     id: 'cloud-run-2026-vpc-storage-gke-migrator',
     wave: 'CLOUD RUN 2026 · CONTAINER SSH, DIRECT VPC, STORAGE VOLUMES & GKE MIGRATOR',
     title:
-      '🚀 Cloud Run 2026 Container SSH (@xterm/xterm + gcloud beta run services ssh), Direct VPC Egress, Storage Volumes & 1-Click GKE Migrator',
-    badge: 'CLOUD RUN ★ TAB + PROVISION MODAL',
+      'Cloud Run 2026 Container SSH (@xterm/xterm + gcloud beta run services ssh), Direct VPC Egress, Storage Volumes & 1-Click GKE Migrator',
+    badge: 'CLOUD RUN TAB + PROVISION MODAL',
     badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
     icon: Rocket,
     targetTab: 'CLOUD_RUN',
     problemSolved:
       'Debugging live Cloud Run containers, configuring Direct VPC Egress or Stateful Storage Volume Mounts, toggling Public vs. Private IAM access safely, or migrating a Cloud Run service to Kubernetes normally requires scattered CLI flags and manual YAML editing.',
     howItWorks: [
-      '💻 Interactive Cloud Run Container SSH (@xterm/xterm + gcloud beta run services ssh): Click "SSH / Container Shell" on any Cloud Run service card (default OFF; toggle off with "SSH Active (Turn Off)") to open a real browser PTY shell inside the running container (~ #). Automatically enables --ssh and --execution-environment=gen2 (>=512Mi) if missing, warms up the active revision, and also supports gcloud beta run services proxy.',
-      '🛡️ Accurate Public (allUsers / invokerIamDisabled) vs. Private (IAM Auth) State & Gatekeeper: Detects both IAM allUsers bindings and Cloud Run v2 invokerIamDisabled state, displays "PUBLIC (Unauthenticated) · Switch to Private" vs. "PRIVATE (IAM Auth) · Switch to Public", and requires explicit confirmation before switching access modes.',
-      '🌐 2026 Direct VPC Egress Network (template.vpcAccess) & 💾 Beta Storage Volume Mounts (GCS FUSE / RAM Disk / Filestore NFS): Attach revisions directly to any VPC/Subnet ($0 Serverless VPC Connector tax) and mount stateful or RAM-disk volumes.',
-      '☸️ 1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator: Converts any running Cloud Run service into a 6-resource production Kubernetes bundle and deploys it directly to your live GKE cluster in 1 click.',
+      'Interactive Cloud Run Container SSH (@xterm/xterm + gcloud beta run services ssh): Click "SSH / Container Shell" on any Cloud Run service card (default OFF; toggle off with "SSH Active (Turn Off)") to open a real browser PTY shell inside the running container (~ #). Automatically enables --ssh and --execution-environment=gen2 (>=512Mi) if missing, warms up the active revision, and also supports gcloud beta run services proxy.',
+      'Accurate Public (allUsers / invokerIamDisabled) vs. Private (IAM Auth) State & Gatekeeper: Detects both IAM allUsers bindings and Cloud Run v2 invokerIamDisabled state, displays "PUBLIC (Unauthenticated) · Switch to Private" vs. "PRIVATE (IAM Auth) · Switch to Public", and requires explicit confirmation before switching access modes.',
+      '2026 Direct VPC Egress Network (template.vpcAccess) & Beta Storage Volume Mounts (GCS FUSE / RAM Disk / Filestore NFS): Attach revisions directly to any VPC/Subnet ($0 Serverless VPC Connector tax) and mount stateful or RAM-disk volumes.',
+      '1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator: Converts any running Cloud Run service into a 6-resource production Kubernetes bundle and deploys it directly to your live GKE cluster in 1 click.',
     ],
     apisUsed: [
       'WS /api/ws/ssh?targetType=cloudrun → gcloud beta run services ssh / proxy PTY',
@@ -226,17 +226,17 @@ const DOC_SECTIONS = [
     id: 'xterm-web-ssh-and-mandatory-delete-gatekeeper',
     wave: 'OPEN-SOURCE @XTERM/XTERM WEB-SSH & ZERO-TRUST SAFETY GATEKEEPER',
     title:
-      '💻 Real Open-Source Browser SSH (@xterm/xterm + ssh2 + Linux PTY) & 🛡️ Global Mandatory Delete / IAM Exposure Gatekeeper',
-    badge: 'VM FLEET 🖥️ + CLOUD RUN ★ + ALL 16 STUDIOS',
+      'Real Open-Source Browser SSH (@xterm/xterm + ssh2 + Linux PTY) & Global Mandatory Delete / IAM Exposure Gatekeeper',
+    badge: 'VM FLEET + CLOUD RUN + ALL 16 STUDIOS',
     badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
     icon: Terminal,
     targetTab: 'VM_FLEET',
     problemSolved:
       'One-shot command emulators truncate multi-line streaming commands like "apt update" or interactive tools like htop/vim, while auto-connecting SSH on tab load wastes sessions and unconfirmed delete or IAM exposure buttons risk accidental production outages.',
     howItWorks: [
-      '💻 Real Full-Duplex @xterm/xterm + ssh2 + Python PTY WebSocket Terminal (/api/ws/ssh): Streams 100% of live stdout/stderr bytes in real time for "apt update", htop, vim, top, tmux, and interactive prompts across Compute Engine VMs and Cloud Run Gen2 containers.',
-      '🔌 Default-OFF Explicit Toggle ("SSH / Console" → "SSH Active (Turn Off)"): Never auto-connects when landing on the VM Fleet or Cloud Run tab; connects only when you click the SSH button on a specific VM or Cloud Run card and disconnects cleanly when toggled off.',
-      '🛡️ Global Mandatory Delete & IAM Security Gatekeeper (src/App.jsx): Intercepts 100% of HTTP DELETE requests, destructive POST teardowns (VM delete, Bucket empty-and-delete, Zombie extermination, Artifact Registry image deletion, SA key revocation), and Cloud Run Public/Private IAM toggles with a high-visibility confirmation modal.',
+      'Real Full-Duplex @xterm/xterm + ssh2 + Python PTY WebSocket Terminal (/api/ws/ssh): Streams 100% of live stdout/stderr bytes in real time for "apt update", htop, vim, top, tmux, and interactive prompts across Compute Engine VMs and Cloud Run Gen2 containers.',
+      'Default-OFF Explicit Toggle ("SSH / Console" → "SSH Active (Turn Off)"): Never auto-connects when landing on the VM Fleet or Cloud Run tab; connects only when you click the SSH button on a specific VM or Cloud Run card and disconnects cleanly when toggled off.',
+      'Global Mandatory Delete & IAM Security Gatekeeper (src/App.jsx): Intercepts 100% of HTTP DELETE requests, destructive POST teardowns (VM delete, Bucket empty-and-delete, Zombie extermination, Artifact Registry image deletion, SA key revocation), and Cloud Run Public/Private IAM toggles with a high-visibility confirmation modal.',
     ],
     apisUsed: [
       'WS /api/ws/ssh (Engines: Auto, Direct SSH2 :22, gcloud compute ssh PTY, IAP Tunnel, Cloud Run SSH PTY)',
@@ -249,17 +249,17 @@ const DOC_SECTIONS = [
     id: 'cloud-functions-eventarc-demystified-studio',
     wave: 'CLOUD FUNCTIONS (v1 & v2) · DEMYSTIFIED EVENTARC TRIGGER STUDIO',
     title:
-      '⚡ Cloud Functions (1st Gen & 2nd Gen) + Visual Eventarc Trigger Wizard & 1-Tap IAM Auto-Doctor',
-    badge: 'FUNCTIONS & EVENTARC ⚡ TAB',
+      'Cloud Functions (1st Gen & 2nd Gen) + Visual Eventarc Trigger Wizard & 1-Tap IAM Auto-Doctor',
+    badge: 'FUNCTIONS & EVENTARC TAB',
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     icon: Zap,
     targetTab: 'FUNCTIONS_STUDIO',
     problemSolved:
       'When Google Cloud moved from 1st Gen (v1) to 2nd Gen (v2 + Eventarc), newcomers stayed stuck on v1 because Eventarc hid 3 required service-agent IAM roles, demanded raw CloudEvents strings, and mixed free direct Pub/Sub triggers with paid Cloud Audit Log (DATA_WRITE) triggers.',
     howItWorks: [
-      '🎯 Plain-English Eventarc Trigger Wizard ("v1 Simplicity with v2 Power"): Pick "When a file is uploaded to Bucket X", "When a Pub/Sub message arrives", "When a BigQuery job finishes", or "On a Cron Schedule" without memorizing CloudEvents filter syntax.',
-      '🔬 4-Stage Visual Eventarc Pipeline X-Ray & Synthetic CloudEvent Tester: Shows Producer → Transport Bus ($0 Free Direct Pub/Sub vs Cloud Audit Logs) → Eventarc Filter & IAM → Function Handler, and lets you fire a synthetic CloudEvent v1.0 payload in 1 click.',
-      '🩺 1-Tap Eventarc IAM Auto-Doctor + 1-Click v1 → v2 Upgrader: Automatically binds roles/pubsub.publisher on the GCS Service Agent, roles/eventarc.eventReceiver, and roles/run.invoker, and upgrades legacy v1 functions (1 req/instance) to v2 (up to 1,000 req/instance, saving up to 78%).',
+      'Plain-English Eventarc Trigger Wizard ("v1 Simplicity with v2 Power"): Pick "When a file is uploaded to Bucket X", "When a Pub/Sub message arrives", "When a BigQuery job finishes", or "On a Cron Schedule" without memorizing CloudEvents filter syntax.',
+      '4-Stage Visual Eventarc Pipeline X-Ray & Synthetic CloudEvent Tester: Shows Producer → Transport Bus ($0 Free Direct Pub/Sub vs Cloud Audit Logs) → Eventarc Filter & IAM → Function Handler, and lets you fire a synthetic CloudEvent v1.0 payload in 1 click.',
+      '1-Tap Eventarc IAM Auto-Doctor + 1-Click v1 → v2 Upgrader: Automatically binds roles/pubsub.publisher on the GCS Service Agent, roles/eventarc.eventReceiver, and roles/run.invoker, and upgrades legacy v1 functions (1 req/instance) to v2 (up to 1,000 req/instance, saving up to 78%).',
     ],
     apisUsed: [
       'GET /api/project/:id/functions/overview → cloudfunctions.googleapis.com/v2 + v1 + eventarc.googleapis.com/v1',
@@ -272,16 +272,16 @@ const DOC_SECTIONS = [
     id: 'cloud-build-github-cicd-studio',
     wave: 'CLOUD BUILD CI/CD · GITHUB SOURCE-TO-CONTAINER STUDIO',
     title:
-      '🏗️ Dedicated Cloud Build & GitHub Source-to-Container Studio (Zero-Dockerfile Buildpacks + Dockerfile + Auto-Deploy)',
-    badge: 'CLOUD BUILD 🏗️ TAB + CLOUD RUN / GKE MODAL',
+      'Dedicated Cloud Build & GitHub Source-to-Container Studio (Zero-Dockerfile Buildpacks + Dockerfile + Auto-Deploy)',
+    badge: 'CLOUD BUILD TAB + CLOUD RUN / GKE MODAL',
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     icon: Zap,
     targetTab: 'CLOUD_BUILD_STUDIO',
     problemSolved:
       'Deploying custom applications to Cloud Run or GKE shouldn’t require local Docker builds or manual Artifact Registry repository creation.',
     howItWorks: [
-      '🐙 3-Way Container Source Selector: Available both in the dedicated Cloud Build 🏗️ tab and inline inside Cloud Run and GKE provisioning—choose Project Artifact Registry images, Public Docker/GCR URIs, or build directly from any GitHub Repository URL + branch.',
-      '🛠️ Zero-Dockerfile Cloud Buildpacks & Dockerfile Engine: Automatically creates your target Artifact Registry Docker repository if missing, builds the container image on Google Cloud Build, and optionally deploys the built image straight to Cloud Run or GKE.',
+      '3-Way Container Source Selector: Available both in the dedicated Cloud Build tab and inline inside Cloud Run and GKE provisioning—choose Project Artifact Registry images, Public Docker/GCR URIs, or build directly from any GitHub Repository URL + branch.',
+      'Zero-Dockerfile Cloud Buildpacks & Dockerfile Engine: Automatically creates your target Artifact Registry Docker repository if missing, builds the container image on Google Cloud Build, and optionally deploys the built image straight to Cloud Run or GKE.',
     ],
     apisUsed: [
       'GET /api/project/:id/cloudbuild/overview → cloudbuild.googleapis.com/v1 + artifactregistry.googleapis.com/v1',
@@ -294,16 +294,16 @@ const DOC_SECTIONS = [
     id: 'dedicated-bigquery-2026-studio',
     wave: 'BIGQUERY STUDIO · PHYSICAL COMPRESSED LAKEHOUSE',
     title:
-      '📊 BigQuery 2026 Enterprise Lakehouse, Physical Billing (-54%) & 168h Time-Machine Studio',
-    badge: 'BIGQUERY STUDIO ★ TAB + PROVISION MODAL',
+      'BigQuery 2026 Enterprise Lakehouse, Physical Billing (-54%) & 168h Time-Machine Studio',
+    badge: 'BIGQUERY STUDIO TAB + PROVISION MODAL',
     badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
     targetTab: 'BIGQUERY_STUDIO',
     problemSolved:
       'Uncompressed Logical BigQuery billing overcharges high-compression datasets by up to 2.2x, while unpartitioned SELECT * queries can accidentally scan terabytes of data.',
     howItWorks: [
-      '🏛️ Strict Compliance Blueprints (SEC/FINRA, GDPR EU, HIPAA, AI Vector BigLake): Locks jurisdiction, Physical Capacitor compressed billing (-54%), and 48h–168h Time-Travel windows.',
-      '🔬 Pre-Crime SQL Dry-Run X-Ray & Auto-SQL Partition/Cluster Optimizer: Estimates exact bytes billed and query cost before execution.',
+      'Strict Compliance Blueprints (SEC/FINRA, GDPR EU, HIPAA, AI Vector BigLake): Locks jurisdiction, Physical Capacitor compressed billing (-54%), and 48h–168h Time-Travel windows.',
+      'Pre-Crime SQL Dry-Run X-Ray & Auto-SQL Partition/Cluster Optimizer: Estimates exact bytes billed and query cost before execution.',
       '⏪ 168-Hour FOR SYSTEM_TIME AS OF Time-Machine & 1-Tap Storage Billing Model Switcher (LOGICAL ↔ PHYSICAL).',
     ],
     apisUsed: [
@@ -317,18 +317,18 @@ const DOC_SECTIONS = [
     id: 'dedicated-data-engineering-2026-studio',
     wave: 'DATA ENGINEER STUDIO · MEDALLION ELT, DATAFORM, DATAPLEX & SLOT DOCTOR (gcloud 588.0.0)',
     title:
-      '🧑‍🔬 2026 Data Engineering Studio: Source-to-Gold Medallion ELT, Dataform/dbt SQLX Auto-Clean, Dataplex Data Mesh & Slot Doctor',
-    badge: 'DATA ENGINEER 🧑‍🔬 TAB',
+      '2026 Data Engineering Studio: Source-to-Gold Medallion ELT, Dataform/dbt SQLX Auto-Clean, Dataplex Data Mesh & Slot Doctor',
+    badge: 'DATA ENGINEER TAB',
     badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
     icon: Layers,
     targetTab: 'DATA_ENGINEER_STUDIO',
     problemSolved:
       'Data engineers on Google Cloud traditionally have to juggle 8 disconnected consoles (GCS, BigQuery DTS, Dataform, Dataplex, Dataproc Serverless, Dataflow, Cloud Composer at $350/mo idle, and INFORMATION_SCHEMA.JOBS) while manually writing deduplication SQL, debugging stage skew, and worrying about breaking downstream BI views.',
     howItWorks: [
-      '🥉🥈🥇 1-Canvas "Source-to-Gold" Medallion ELT Pipeline Builder + Smart Engine & Cost Advisor: Connect any source (GCS Parquet/JSON/CSV, BigQuery DTS SaaS, Pub/Sub, Cloud SQL CDC) through Bronze (BigLake Raw), Silver (Deduplicated & Typed), and Gold (BI Mart) with a live engine cost comparison across BigQuery SQL ($0 idle), Dataproc Serverless Spark 2.2 ($0 idle), Dataflow Streaming, and Cloud Workflows ($0.05/mo vs $350/mo Cloud Composer).',
-      '📐 Dataform (.sqlx) & dbt (.sql) Visual SQLX Studio + 1-Tap Auto-Clean: Generates production Dataform .sqlx and dbt incremental models with QUALIFY ROW_NUMBER() = 1 deduplication, SAFE_CAST / TRIM / UPPER hygiene, SHA256 PII masking, and partition/cluster keys — and executes or provisions native Dataform Repositories (dataform.googleapis.com/v1beta1) in 1 click.',
-      '🛡️ Dataplex Auto-Profiling / Data Quality Scans & Data Mesh Products (gcloud 588.0.0): Launches real gcloud dataplex datascans create data-profile / data-quality jobs, provisions Dataplex Data Mesh Products (gcloud dataplex data-products), and runs gcloud dataplex dbt metadata-jobs.',
-      '📜 Schema Drift & Downstream Contract Firewall + 🩺 Live BigQuery Slot Contention Doctor & Composer-Lite Serverless DAGs: Maps source-to-target schemas with non-breaking View Adapters and diagnoses real-time INFORMATION_SCHEMA.JOBS_BY_PROJECT slot contention while deploying $0-idle Cloud Workflows ELT DAGs.',
+      '1-Canvas "Source-to-Gold" Medallion ELT Pipeline Builder + Smart Engine & Cost Advisor: Connect any source (GCS Parquet/JSON/CSV, BigQuery DTS SaaS, Pub/Sub, Cloud SQL CDC) through Bronze (BigLake Raw), Silver (Deduplicated & Typed), and Gold (BI Mart) with a live engine cost comparison across BigQuery SQL ($0 idle), Dataproc Serverless Spark 2.2 ($0 idle), Dataflow Streaming, and Cloud Workflows ($0.05/mo vs $350/mo Cloud Composer).',
+      'Dataform (.sqlx) & dbt (.sql) Visual SQLX Studio + 1-Tap Auto-Clean: Generates production Dataform .sqlx and dbt incremental models with QUALIFY ROW_NUMBER() = 1 deduplication, SAFE_CAST / TRIM / UPPER hygiene, SHA256 PII masking, and partition/cluster keys — and executes or provisions native Dataform Repositories (dataform.googleapis.com/v1beta1) in 1 click.',
+      'Dataplex Auto-Profiling / Data Quality Scans & Data Mesh Products (gcloud 588.0.0): Launches real gcloud dataplex datascans create data-profile / data-quality jobs, provisions Dataplex Data Mesh Products (gcloud dataplex data-products), and runs gcloud dataplex dbt metadata-jobs.',
+      'Schema Drift & Downstream Contract Firewall + Live BigQuery Slot Contention Doctor & Composer-Lite Serverless DAGs: Maps source-to-target schemas with non-breaking View Adapters and diagnoses real-time INFORMATION_SCHEMA.JOBS_BY_PROJECT slot contention while deploying $0-idle Cloud Workflows ELT DAGs.',
     ],
     apisUsed: [
       'GET /api/project/:id/data-engineer/overview & POST /api/project/:id/data-engineer/action',
@@ -341,16 +341,16 @@ const DOC_SECTIONS = [
     id: 'artifact-registry-sbom-studio',
     wave: 'ARTIFACT REGISTRY · SLSA-3 SUPPLY-CHAIN & ORPHAN SWEEPER',
     title:
-      '📦 Artifact Registry SLSA-3 Supply-Chain & 1-Click Orphan Digest Sweeper Studio',
-    badge: 'ARTIFACT REGISTRY & SBOM 📦 TAB',
+      'Artifact Registry SLSA-3 Supply-Chain & 1-Click Orphan Digest Sweeper Studio',
+    badge: 'ARTIFACT REGISTRY & SBOM TAB',
     badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
     icon: Layers,
     targetTab: 'WAVE9_STUDIO',
     problemSolved:
       'CI/CD pipelines leave behind dozens of untagged orphan container digests that silently bill $0.10/GB-month forever, and mutable image tags (:latest / :v1.0) allow tag-mutation supply-chain attacks.',
     howItWorks: [
-      '🔒 Immutable Tag Repository Provisioner: Enforces dockerConfig.immutableTags = true across SEC/FedRAMP, GDPR EU, and HIPAA container registries.',
-      '🧹 1-Click Live Digest Deletion & Batch Orphan Sweeper: Delete individual container digests, sweep all untagged orphan layers in one click, or delete repositories directly from the UI.',
+      'Immutable Tag Repository Provisioner: Enforces dockerConfig.immutableTags = true across SEC/FedRAMP, GDPR EU, and HIPAA container registries.',
+      '1-Click Live Digest Deletion & Batch Orphan Sweeper: Delete individual container digests, sweep all untagged orphan layers in one click, or delete repositories directly from the UI.',
     ],
     apisUsed: [
       'GET /api/project/:id/wave9/supply-chain & POST /api/project/:id/wave9/supply-chain/create-repo',
@@ -363,17 +363,17 @@ const DOC_SECTIONS = [
     id: 'cloud-storage-5step-compliance-studio',
     wave: 'CLOUD STORAGE · ENTERPRISE COMPLIANCE & 5-STEP WIZARD',
     title:
-      '🗄️ 5-Step Fine-Grained Cloud Storage Provisioning Wizard & Regulatory Compliance Studio (SEC 17a-4, HIPAA, GDPR, Sovereign Zero-Trust)',
-    badge: 'CLOUD STORAGE ★ TAB + PROVISION MODAL',
+      '5-Step Fine-Grained Cloud Storage Provisioning Wizard & Regulatory Compliance Studio (SEC 17a-4, HIPAA, GDPR, Sovereign Zero-Trust)',
+    badge: 'CLOUD STORAGE TAB + PROVISION MODAL',
     badgeColor: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
     icon: Layers,
     targetTab: 'CLOUD_STORAGE',
     problemSolved:
       'Creating a production Cloud Storage bucket requires fine-grained control over Region vs Dual-Region (custom pair + 15-minute Turbo Replication RPO) vs Multi-Region topology, Autoclass vs manual storage classes, Uniform vs Fine-grained ACLs, WORM Retention Locks, Soft-Delete windows, CMEK encryption, and Lifecycle policies.',
     howItWorks: [
-      '🏗️ 5-Step Google Cloud Console Parity Wizard: Step 1 (Location Type: Region, Dual-Region custom pairs + Turbo RPO, or Multi-Region US/EU/ASIA), Step 2 (Default Storage Class or Autoclass + Hierarchical Namespace HNS), Step 3 (Public Access Prevention + Uniform vs Fine-grained Access Control), Step 4 (Soft Delete 0–90d, Object Versioning + max versions, WORM Retention Policy + Lock, Google-managed vs Cloud KMS CMEK), Step 5 (Lifecycle rules, Requester Pays, CORS origins, and Key=Value FinOps labels).',
-      '🏛️ 1-Tap Regulatory Blueprints: Pre-fills SEC Rule 17a-4 / FINRA Immutable WORM Vault, HIPAA / HITECH ePHI Vault, EU GDPR Sovereign Boundary (europe-west3), FinOps Intelligent Tiering Lake, or Ransomware Air-Gap Backup Vault.',
-      '🛡️ Live Bucket Compliance Posture Matrix (0–100 Score): Audits every existing bucket in your project with 1-tap remediation for Public Access Prevention, Uniform Access, Soft Delete, Versioning, and Lifecycle rules.',
+      '5-Step Google Cloud Console Parity Wizard: Step 1 (Location Type: Region, Dual-Region custom pairs + Turbo RPO, or Multi-Region US/EU/ASIA), Step 2 (Default Storage Class or Autoclass + Hierarchical Namespace HNS), Step 3 (Public Access Prevention + Uniform vs Fine-grained Access Control), Step 4 (Soft Delete 0–90d, Object Versioning + max versions, WORM Retention Policy + Lock, Google-managed vs Cloud KMS CMEK), Step 5 (Lifecycle rules, Requester Pays, CORS origins, and Key=Value FinOps labels).',
+      '1-Tap Regulatory Blueprints: Pre-fills SEC Rule 17a-4 / FINRA Immutable WORM Vault, HIPAA / HITECH ePHI Vault, EU GDPR Sovereign Boundary (europe-west3), FinOps Intelligent Tiering Lake, or Ransomware Air-Gap Backup Vault.',
+      'Live Bucket Compliance Posture Matrix (0–100 Score): Audits every existing bucket in your project with 1-tap remediation for Public Access Prevention, Uniform Access, Soft Delete, Versioning, and Lifecycle rules.',
     ],
     apisUsed: [
       'POST /api/project/:id/provision (resourceType: "GCS_BUCKET") → storage.googleapis.com/storage/v1/b',
@@ -386,8 +386,8 @@ const DOC_SECTIONS = [
     id: 'live-cloud-billing-pricing-sync',
     wave: 'VARIABLE PRICING ENGINE · ZERO STALE RATES',
     title:
-      '🔄 Live Google Cloud Billing Catalog Price Sync & Custom Enterprise Discount Override Bar',
-    badge: 'GLOBAL MAP 🌍 + 2026 LAB + SRE AUDITOR',
+      'Live Google Cloud Billing Catalog Price Sync & Custom Enterprise Discount Override Bar',
+    badge: 'GLOBAL MAP + 2026 LAB + SRE AUDITOR',
     badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: DollarSign,
     targetTab: 'INNOVATION_LAB',
@@ -395,8 +395,8 @@ const DOC_SECTIONS = [
     problemSolved:
       'Cloud providers periodically change SKU rates, regional tier multipliers, and egress fees, or organizations negotiate custom Enterprise / EDP discounts. Hardcoding static prices causes inaccurate FinOps burn-rate reporting.',
     howItWorks: [
-      '🔄 Sync Live GCP Prices Button: Queries GET /api/pricing/live-sync (which probes cloudbilling.googleapis.com/v1/services/6F81-5844-456A/skus when authenticated) to refresh compute, serverless, GPU, storage, and egress rates on demand.',
-      '🎛️ Global Price Adjustment Factor (0.50x–1.50x) & Per-SKU Override Editor: Lets you apply your organization’s negotiated enterprise discount or edit any individual rate (e2-medium, Cloud Run vCPU, L4 GPU, Standard Storage, Egress) and immediately recalculates every FinOps metric across the entire app.',
+      'Sync Live GCP Prices Button: Queries GET /api/pricing/live-sync (which probes cloudbilling.googleapis.com/v1/services/6F81-5844-456A/skus when authenticated) to refresh compute, serverless, GPU, storage, and egress rates on demand.',
+      'Global Price Adjustment Factor (0.50x–1.50x) & Per-SKU Override Editor: Lets you apply your organization’s negotiated enterprise discount or edit any individual rate (e2-medium, Cloud Run vCPU, L4 GPU, Standard Storage, Egress) and immediately recalculates every FinOps metric across the entire app.',
     ],
     apisUsed: [
       'GET /api/pricing/live-sync → cloudbilling.googleapis.com/v1/services',
@@ -409,7 +409,7 @@ const DOC_SECTIONS = [
     id: 'wave5-autonomous-cloud-brain',
     wave: 'WAVE 5 · AUTONOMOUS CLOUD BRAIN',
     title:
-      '🔮 "Pre-Crime" 30-Day Billing Time-Crystal, Failure Cascade X-Ray & Dream Stack Compiler',
+      '"Pre-Crime" 30-Day Billing Time-Crystal, Failure Cascade X-Ray & Dream Stack Compiler',
     badge: '2026 LAB · TAB 1 (NEW)',
     badgeColor: 'bg-violet-500/15 text-violet-500 border-violet-500/30',
     icon: Sparkles,
@@ -418,9 +418,9 @@ const DOC_SECTIONS = [
     problemSolved:
       'Cloud consoles only show past billing invoices after the money is already spent, never warn you which day/hour a traffic spike or infinite retry loop will exhaust your budget, and force you to manually stitch together multi-service architectures without knowing which region is cheapest, greenest, and hardware-compatible.',
     howItWorks: [
-      '🔮 "Pre-Crime" 30-Day Billing Time-Crystal Simulator: Combines your live project $/hr burn rate with a configurable Monthly Hard Budget Cap ($20–$1,000) and lets you inject anomaly scenarios (35x Viral Traffic Spike, 120x Runaway Retry Loop, 4x NVIDIA L4 GPU Surge, 8 TB Egress Flood). Plots a 30-day SVG trajectory showing the exact Day & Hour of budget exhaustion and how much money is saved when the Autonomous $0-Idle Circuit-Breaker is armed.',
-      '🧬 "What-If" Resource Blast-Radius & Failure Cascade X-Ray: Click any live VPC, Firewall Rule, Cloud Run Service, Compute VM, GCS Bucket, or BigQuery Dataset to inspect its Blast Severity Score (/100), Upstream Entrypoints, Downstream Failure Cascade, and a 1-click Self-Healing CLI command.',
-      '⚡ Autonomous Cloud Architecture Compiler: Select a production archetype (Zero-Trust L4 GPU RAG Stack, EU GDPR Sovereign Lakehouse, Ultra-Frugal Spot Mesh, or 98% CFE Green Core). Automatically scans all 40 GCP regions for GPU SKU support, Tier-1 pricing, and highest Carbon-Free Energy % to output an itemized Bill of Materials ($/mo) and a full gcloud + bq deployment script.',
+      '"Pre-Crime" 30-Day Billing Time-Crystal Simulator: Combines your live project $/hr burn rate with a configurable Monthly Hard Budget Cap ($20–$1,000) and lets you inject anomaly scenarios (35x Viral Traffic Spike, 120x Runaway Retry Loop, 4x NVIDIA L4 GPU Surge, 8 TB Egress Flood). Plots a 30-day SVG trajectory showing the exact Day & Hour of budget exhaustion and how much money is saved when the Autonomous $0-Idle Circuit-Breaker is armed.',
+      '"What-If" Resource Blast-Radius & Failure Cascade X-Ray: Click any live VPC, Firewall Rule, Cloud Run Service, Compute VM, GCS Bucket, or BigQuery Dataset to inspect its Blast Severity Score (/100), Upstream Entrypoints, Downstream Failure Cascade, and a 1-click Self-Healing CLI command.',
+      'Autonomous Cloud Architecture Compiler: Select a production archetype (Zero-Trust L4 GPU RAG Stack, EU GDPR Sovereign Lakehouse, Ultra-Frugal Spot Mesh, or 98% CFE Green Core). Automatically scans all 40 GCP regions for GPU SKU support, Tier-1 pricing, and highest Carbon-Free Energy % to output an itemized Bill of Materials ($/mo) and a full gcloud + bq deployment script.',
     ],
     apisUsed: [
       'Live telemetry from GET /api/project/:id/overview & GET /api/project/:id/vms',
@@ -434,8 +434,8 @@ const DOC_SECTIONS = [
     id: 'wave5-sku-finops-migration-engine',
     wave: 'WAVE 5 · FINOPS & SKU GATEKEEPER',
     title:
-      '🛡️ Regional GPU/Service SKU Gatekeeper & Live Migration FinOps Break-Even Calculator',
-    badge: 'GLOBAL MAP 🌍 + 2026 LAB · TAB 8',
+      'Regional GPU/Service SKU Gatekeeper & Live Migration FinOps Break-Even Calculator',
+    badge: 'GLOBAL MAP + 2026 LAB · TAB 8',
     badgeColor: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
     icon: Leaf,
     targetTab: 'INNOVATION_LAB',
@@ -443,9 +443,9 @@ const DOC_SECTIONS = [
     problemSolved:
       'Migrating a workload strictly for Carbon-Free Energy (CFE%) can fail at deploy time if the destination region lacks required hardware (e.g., Cloud Run NVIDIA L4 GPUs are only in 10 of 40 regions), or cause a +38% monthly bill jump when moving from a Tier-1 region (1.00x) to a Tier-2 region (1.38x) plus cross-continental egress fees.',
     howItWorks: [
-      '🛡️ Pre-Flight Hardware & Service SKU Gatekeeper: Maps all 40 GCP regions against Cloud Run Serverless L4 GPUs, Compute Engine G2 L4 GPU VMs, and A3 H100 / TPU v5e Mega-Hubs. Blocks incompatible migrations before API dispatch and offers 1-click "Switch to Greenest GPU-Compatible Region" or "Strip GPU & Deploy as CPU-Only".',
-      '💰 3-Part Live Migration FinOps Receipt: Computes (1) Ongoing Monthly Compute Spend Delta ($source/mo → $target/mo using real regional price multipliers from 1.00x to 1.38x), (2) One-Time Container & State Egress Transfer Fee ($0.02/GB intra-continental vs $0.08–$0.12/GB inter-continental), and (3) FinOps Break-Even Payback in Days.',
-      '⚖️ Smart 3-Way Destination Recommender: Recommends the #1 Greenest SKU-Compatible Region, #1 Cheapest + Green Arbitrage Region, and #1 Same-Continent Low-Egress Peer.',
+      'Pre-Flight Hardware & Service SKU Gatekeeper: Maps all 40 GCP regions against Cloud Run Serverless L4 GPUs, Compute Engine G2 L4 GPU VMs, and A3 H100 / TPU v5e Mega-Hubs. Blocks incompatible migrations before API dispatch and offers 1-click "Switch to Greenest GPU-Compatible Region" or "Strip GPU & Deploy as CPU-Only".',
+      '3-Part Live Migration FinOps Receipt: Computes (1) Ongoing Monthly Compute Spend Delta ($source/mo → $target/mo using real regional price multipliers from 1.00x to 1.38x), (2) One-Time Container & State Egress Transfer Fee ($0.02/GB intra-continental vs $0.08–$0.12/GB inter-continental), and (3) FinOps Break-Even Payback in Days.',
+      'Smart 3-Way Destination Recommender: Recommends the #1 Greenest SKU-Compatible Region, #1 Cheapest + Green Arbitrage Region, and #1 Same-Continent Low-Egress Peer.',
     ],
     apisUsed: [
       'Shared 40-Region Engine: evaluateMigrationFeasibility() & findBestMigrationTargets()',
@@ -457,7 +457,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave3-orbital-hud',
     wave: 'WAVE 3 · 2030 ORBITAL UI',
-    title: '🛰️ 2030 Orbital Telemetry HUD, Stack Synthesizer & Flight Recorder',
+    title: '2030 Orbital Telemetry HUD, Stack Synthesizer & Flight Recorder',
     badge: 'TOP RIBBON HUD',
     badgeColor: 'bg-cyan-500/15 text-cyan-500 border-cyan-500/30',
     icon: Wand2,
@@ -466,8 +466,8 @@ const DOC_SECTIONS = [
       'In the standard Google Cloud Console, deploying a connected 3-tier application (Storage + BigQuery + Cloud Run) requires visiting 3 separate product consoles and manually copying resource URIs. Furthermore, if you make a mistake, there is no single "Undo" button.',
     howItWorks: [
       'Live Orbital Telemetry Ribbon: Continuously measures your real REST API Round-Trip Time (ms), calculates your project-wide Carbon-Free Energy score (CFE%), grades your security posture (A+ to B), and counts active workloads across Americas, Europe, APAC, and MENA.',
-      '🪄 1-Tap Stack Synthesizer: Lets you pick a complete architecture blueprint (AI RAG Inference Stack, Real-Time Lakehouse, or Zero-Trust Edge Stack) and provisions a Cloud Storage Bucket + BigQuery Dataset + Cloud Run Gen2 Service in parallel, automatically injecting GCS_BUCKET_URI and BIGQUERY_DATASET into the Cloud Run container environment variables.',
-      '⏱️ Cloud Flight Recorder & 1-Tap Undo: Records every stack deployment and cross-region service teleport in a chronological ledger with a "1-Tap Rewind / Delete" button to immediately roll back any newly created resource.',
+      '1-Tap Stack Synthesizer: Lets you pick a complete architecture blueprint (AI RAG Inference Stack, Real-Time Lakehouse, or Zero-Trust Edge Stack) and provisions a Cloud Storage Bucket + BigQuery Dataset + Cloud Run Gen2 Service in parallel, automatically injecting GCS_BUCKET_URI and BIGQUERY_DATASET into the Cloud Run container environment variables.',
+      '⏱Cloud Flight Recorder & 1-Tap Undo: Records every stack deployment and cross-region service teleport in a chronological ledger with a "1-Tap Rewind / Delete" button to immediately roll back any newly created resource.',
     ],
     apisUsed: [
       'POST /api/project/:id/stack-deploy → storage.googleapis.com/storage/v1/b + bigquery.googleapis.com/v2 + run.googleapis.com/v2',
@@ -479,7 +479,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave1-burn-radar',
     wave: 'WAVE 1 · REAL-TIME FINOPS',
-    title: '💸 Live Wallet Burn-Rate Radar ($/hr & $/mo) + Pre-Deploy Cost Calculator',
+    title: 'Live Wallet Burn-Rate Radar ($/hr & $/mo) + Pre-Deploy Cost Calculator',
     badge: 'HEADER + PROVISION MODAL',
     badgeColor: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
     icon: DollarSign,
@@ -501,7 +501,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave1-night-sleep',
     wave: 'WAVE 1 · 1-TAP FINOPS HIBERNATE',
-    title: '🌙 Night-Mode FinOps Sleep & Wake Switch ("Park Project for the Night")',
+    title: 'Night-Mode FinOps Sleep & Wake Switch ("Park Project for the Night")',
     badge: '2026 LAB · TAB 2',
     badgeColor: 'bg-indigo-500/15 text-indigo-500 border-indigo-500/30',
     icon: Moon,
@@ -525,7 +525,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave1-topology',
     wave: 'WAVE 1 · VISUAL ARCHITECTURE',
-    title: '🕸️ Interactive 4-Layer Cloud Topology & Blast-Radius Graph',
+    title: 'Interactive 4-Layer Cloud Topology & Blast-Radius Graph',
     badge: '2026 LAB · TAB 1',
     badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Share2,
@@ -548,7 +548,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave1-terraform',
     wave: 'WAVE 1 · REVERSE IaC EXPORTER',
-    title: '📄 1-Tap Reverse-Terraform (main.tf) & gcloud Clone Blueprint Exporter',
+    title: '1-Tap Reverse-Terraform (main.tf) & gcloud Clone Blueprint Exporter',
     badge: '2026 LAB · TAB 3',
     badgeColor: 'bg-violet-500/15 text-violet-500 border-violet-500/30',
     icon: FileCode2,
@@ -566,7 +566,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave1-security',
     wave: 'WAVE 1 · ZERO-TRUST SECURITY',
-    title: '🛡️ Zero-Trust Security & IAM Service Account Posture Scanner',
+    title: 'Zero-Trust Security & IAM Service Account Posture Scanner',
     badge: '2026 LAB · TAB 4',
     badgeColor: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
     icon: ShieldAlert,
@@ -587,7 +587,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave2-benchmark-xray',
     wave: 'WAVE 2 · ENGINEER SECRET WISHLIST',
-    title: '⚡ Cold-Start & P95 Latency Stress Arena + HTTP Header X-Ray',
+    title: 'Cold-Start & P95 Latency Stress Arena + HTTP Header X-Ray',
     badge: '2026 LAB · TAB 5',
     badgeColor: 'bg-cyan-500/15 text-cyan-500 border-cyan-500/30',
     icon: Zap,
@@ -606,7 +606,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave2-zombie-hunter',
     wave: 'WAVE 2 · ENGINEER SECRET WISHLIST',
-    title: '🧟 Zombie Resource Hunter with Real-Time GCP Operation Progress Bar',
+    title: 'Zombie Resource Hunter with Real-Time GCP Operation Progress Bar',
     badge: '2026 LAB · TAB 6',
     badgeColor: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
     icon: AlertTriangle,
@@ -628,7 +628,7 @@ const DOC_SECTIONS = [
   {
     id: 'wave2-teleport-diff-carbon',
     wave: 'WAVE 2 · ENGINEER SECRET WISHLIST',
-    title: '🌍 1-Tap Cross-Region Cloud Run Teleporter, Carbon CFE% & Visual Diff',
+    title: '1-Tap Cross-Region Cloud Run Teleporter, Carbon CFE% & Visual Diff',
     badge: '2026 LAB · TAB 7',
     badgeColor: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
     icon: Globe,
@@ -651,18 +651,18 @@ const DOC_SECTIONS = [
     id: 'wave4-global-world-map',
     wave: 'WAVE 4 · 40-REGION ORBITAL MAP',
     title:
-      '🗺️ Global Cloud Map · All 40 Official Regions, 121 Zones, Tactical Spotlight & Chaos Failover',
-    badge: 'GLOBAL MAP 🌍 TAB',
+      'Global Cloud Map · All 40 Official Regions, 121 Zones, Tactical Spotlight & Chaos Failover',
+    badge: 'GLOBAL MAP TAB',
     badgeColor: 'bg-cyan-500/15 text-cyan-500 border-cyan-500/30',
     icon: Globe,
     targetTab: 'GLOBAL_MAP',
     problemSolved:
       'Standard cloud consoles list regions and firewall rules as static text tables, making it impossible to see all 40 Google Cloud regions and 121 zones geographically, test regional/zonal failover, measure subsea fiber RTT latency, or inspect live packet filtering without UI lag or overlapping badges when zoomed in.',
     howItWorks: [
-      '🌍 All 40 Official GCP Regions & 121 Orbiting Availability Zones: Complete geographic catalog across North America (11), South America (2), Europe (12), Middle East (3), Africa (1), Asia (9), and Oceania (2) with interactive continent presets and full directory matrix.',
-      '🎯 Tactical Spotlight Focus & Inverse-Zoom Scaling: When zoomed in (up to 6.0x with cursor-locked wheel zoom and WASD/Arrow panning that never scrolls the outer web page), only the selected/hovered region expands its orbiting Availability Zone satellite ring (-a/-b/-c/-f) with intra-region fiber spokes, while unselected neighbors fade into 18% opacity Ghost Mode so labels never collide.',
-      '💥 Chaos Outage & Automatic Traffic Failover Simulator: Sever any region or individual Availability Zone in 1 click to watch live packets automatically reroute (⇄FAILOVER) to healthy backup zones or peer regions.',
-      '📏 Point-to-Point Subsea Fiber RTT Laser, Multi-Lens Switcher (Traffic / Carbon CFE% / Spot Price), DVR Time-Machine Scrubber (20 snapshots), Performance Cadence Guardrails (100ms–1000ms), and 🛰️ Coordinate-Locked Drop-Pod Provisioning.',
+      'All 40 Official GCP Regions & 121 Orbiting Availability Zones: Complete geographic catalog across North America (11), South America (2), Europe (12), Middle East (3), Africa (1), Asia (9), and Oceania (2) with interactive continent presets and full directory matrix.',
+      'Tactical Spotlight Focus & Inverse-Zoom Scaling: When zoomed in (up to 6.0x with cursor-locked wheel zoom and WASD/Arrow panning that never scrolls the outer web page), only the selected/hovered region expands its orbiting Availability Zone satellite ring (-a/-b/-c/-f) with intra-region fiber spokes, while unselected neighbors fade into 18% opacity Ghost Mode so labels never collide.',
+      'Chaos Outage & Automatic Traffic Failover Simulator: Sever any region or individual Availability Zone in 1 click to watch live packets automatically reroute (⇄FAILOVER) to healthy backup zones or peer regions.',
+      'Point-to-Point Subsea Fiber RTT Laser, Multi-Lens Switcher (Traffic / Carbon CFE% / Spot Price), DVR Time-Machine Scrubber (20 snapshots), Performance Cadence Guardrails (100ms–1000ms), and Coordinate-Locked Drop-Pod Provisioning.',
     ],
     apisUsed: [
       'Live evaluation over GET /api/project/:id/overview (vpcs, firewalls, resources)',
@@ -674,7 +674,7 @@ const DOC_SECTIONS = [
   {
     id: 'core-enterprise-firewall',
     wave: 'WAVE 1 · ZERO-TRUST SECURITY',
-    title: '🔥 Enterprise VPC Firewall Command Center (ALLOW/DENY, INGRESS/EGRESS & Packet Tester)',
+    title: 'Enterprise VPC Firewall Command Center (ALLOW/DENY, INGRESS/EGRESS & Packet Tester)',
     badge: 'VPC & FIREWALLS TAB',
     badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: ShieldAlert,
@@ -697,7 +697,7 @@ const DOC_SECTIONS = [
   {
     id: 'core-emergency-killswitch',
     wave: 'EMERGENCY MOBILE GOVERNANCE',
-    title: '🚨 DEFCON-1 Project Billing Kill-Switch & API Circuit Breaker',
+    title: 'DEFCON-1 Project Billing Kill-Switch & API Circuit Breaker',
     badge: 'LIVE GCP RESOURCES TAB',
     badgeColor: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
     icon: PowerOff,
@@ -789,12 +789,12 @@ export default function InteractiveDocsGuide({
           <div className="md:col-span-6 flex items-center gap-1.5 flex-wrap">
             {[
               { id: 'ALL', label: `All Innovations (${DOC_SECTIONS.length})` },
-              { id: 'WAVE 5', label: '🔮 Wave 5 Cloud Brain & SKU' },
-              { id: 'WAVE 4', label: '🌍 Wave 4 Global Map (40 Regions)' },
-              { id: 'WAVE 3', label: '🛰️ Wave 3 Orbital HUD' },
-              { id: 'WAVE 2', label: '🧪 Wave 2 Wishlist' },
-              { id: 'WAVE 1', label: '✦ Wave 1 FinOps & IaC' },
-              { id: 'EMERGENCY', label: '🚨 Kill-Switches' },
+              { id: 'WAVE 5', label: 'Wave 5 Cloud Brain & SKU' },
+              { id: 'WAVE 4', label: 'Wave 4 Global Map (40 Regions)' },
+              { id: 'WAVE 3', label: 'Wave 3 Orbital HUD' },
+              { id: 'WAVE 2', label: 'Wave 2 Wishlist' },
+              { id: 'WAVE 1', label: 'Wave 1 FinOps & IaC' },
+              { id: 'EMERGENCY', label: 'Kill-Switches' },
             ].map((f) => (
               <button
                 key={f.id}
@@ -835,7 +835,7 @@ export default function InteractiveDocsGuide({
                     </span>
                   </div>
                   <h3 className="text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                    <Icon className="w-4 h-4 text-blue-500 shrink-0" />
+                    <Icon className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
                     <span>{doc.title}</span>
                   </h3>
                 </div>
@@ -874,7 +874,7 @@ export default function InteractiveDocsGuide({
                           key={i}
                           className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0 mt-0.5" />
                           <span>{step}</span>
                         </li>
                       ))}

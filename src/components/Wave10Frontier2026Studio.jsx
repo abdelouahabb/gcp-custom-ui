@@ -23,22 +23,22 @@ import {
 const FRONTIER_TABS = [
   {
     id: 'SPANNER_GRAPH',
-    label: '🕸️ 1. Spanner Graph, Vector & $65/mo Granular PU Engine',
+    label: '1. Spanner Graph, Vector & $65/mo Granular PU Engine',
     tip: 'Demystify Cloud Spanner in 2026: Start at 100 Processing Units (~$65.70/mo) and run Relational SQL + ISO GQL Property Graph + Vector Search in a single 99.999% database',
   },
   {
     id: 'SERVERLESS_SPARK',
-    label: '🔥 2. Zero-Cluster Serverless Spark & Ray on BigLake Iceberg',
+    label: '2. Zero-Cluster Serverless Spark & Ray on BigLake Iceberg',
     tip: 'Run PySpark & Distributed AI jobs over your BigLake Apache Iceberg tables in gs:// with zero cluster management and $0 idle cost',
   },
   {
     id: 'CHOREOGRAPHER',
-    label: '🎼 3. Eventarc vs. Pub/Sub vs. Cloud Tasks vs. Workflows Matrix',
+    label: '3. Eventarc vs. Pub/Sub vs. Cloud Tasks vs. Workflows Matrix',
     tip: 'Never confuse Google Cloud messaging & orchestration services again: Interactive architecture selector + live Cloud Workflows YAML Saga composer',
   },
   {
     id: 'MODEL_ARMOR_FINOPS',
-    label: '🛡️ 4. Vertex AI Model Armor Firewall & Context Caching FinOps',
+    label: '4. Vertex AI Model Armor Firewall & Context Caching FinOps',
     tip: 'Block prompt injection, jailbreaks, and secret/PII leaks before hitting Gemini/Claude on Vertex AI, and calculate 85% token savings with Context Caching',
   },
 ];
@@ -150,7 +150,7 @@ export default function Wave10Frontier2026Studio({
   --processing-units=${spannerPu} \\
   --edition=${spannerEdition}`;
 
-    const graphSchemaDdl = `-- 🕸️ 1. Unified Relational + Property Graph + Vector Schema in Cloud Spanner (ISO GQL 2026)
+    const graphSchemaDdl = `-- 1. Unified Relational + Property Graph + Vector Schema in Cloud Spanner (ISO GQL 2026)
 CREATE TABLE Accounts (
   account_id STRING(36) NOT NULL,
   owner_email STRING(256),
@@ -180,21 +180,21 @@ CREATE OR REPLACE PROPERTY GRAPH FinCrimeGraph
 
     const gqlQuery =
       spannerUseCase === 'FRAUD_GRAPH'
-        ? `-- 🔍 ISO GQL 3-Hop Money-Laundering Ring Detection + Vector Similarity in ONE Query
+        ? `-- ISO GQL 3-Hop Money-Laundering Ring Detection + Vector Similarity in ONE Query
 GRAPH FinCrimeGraph
 MATCH (src:Accounts)-[t1:TRANSFERRED_TO]->(mid:Accounts)-[t2:TRANSFERRED_TO]->(dst:Accounts)-[t3:TRANSFERRED_TO]->(src)
 WHERE t1.amount_usd > 10000
   AND APPROX_COSINE_DISTANCE(src.profile_embedding, dst.profile_embedding) < 0.18
 RETURN src.account_id AS ring_origin, mid.account_id AS mule_hop, t1.amount_usd, dst.risk_score;`
         : spannerUseCase === 'HYBRID_RAG_GRAPH'
-        ? `-- 🧠 GraphRAG: Combine Vector Semantic Search + Knowledge Graph Traversal in Spanner
+        ? `-- GraphRAG: Combine Vector Semantic Search + Knowledge Graph Traversal in Spanner
 GRAPH FinCrimeGraph
 MATCH (doc:Accounts)-[:TRANSFERRED_TO]->(related:Accounts)
 WHERE APPROX_COSINE_DISTANCE(doc.profile_embedding, @query_vector) < 0.22
 RETURN doc.owner_email, related.account_id, related.risk_score
 ORDER BY APPROX_COSINE_DISTANCE(doc.profile_embedding, @query_vector) ASC
 LIMIT 10;`
-        : `-- 📦 Supply-Chain Blast Radius Traversal across Interleaved Nodes
+        : `-- Supply-Chain Blast Radius Traversal across Interleaved Nodes
 GRAPH FinCrimeGraph
 MATCH (supplier:Accounts)-[edge:TRANSFERRED_TO]->{1,4}(downstream:Accounts)
 WHERE supplier.risk_score > 0.85
@@ -226,7 +226,7 @@ RETURN supplier.account_id, downstream.account_id, COUNT(edge) AS dependency_hop
 
     const pysparkCode =
       sparkTemplate === 'ICEBERG_MERGE'
-        ? `# 🔥 Zero-Cluster PySpark ACID MERGE directly on BigLake Apache Iceberg files in gs://${bkt}
+        ? `# Zero-Cluster PySpark ACID MERGE directly on BigLake Apache Iceberg files in gs://${bkt}
 from pyspark.sql import SparkSession
 
 spark = SparkSession.builder \\
@@ -245,7 +245,7 @@ spark.sql("""
 # Run automatic small-file compaction for 5x faster BigQuery & Spark reads
 spark.sql("CALL biglake.system.rewrite_data_files(table => 'analytics.open_iceberg_events')")`
         : sparkTemplate === 'SPARK_ML_EMBEDDINGS'
-        ? `# 🧠 Distributed PySpark + Vertex AI Batch Embeddings over BigLake Iceberg Table
+        ? `# Distributed PySpark + Vertex AI Batch Embeddings over BigLake Iceberg Table
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, udf
 
@@ -255,7 +255,7 @@ df = spark.read.format("iceberg").load("gs://${bkt}/iceberg-lakehouse/events_202
 high_value_df = df.filter(col("revenue_usd") > 250)
 high_value_df.write.format("iceberg").mode("append") \\
     .save("gs://${bkt}/iceberg-lakehouse/vip_feature_store")`
-        : `# ⚡ In-Place Zero-Copy Migration: Raw Parquet -> BigLake Apache Iceberg Table
+        : `# In-Place Zero-Copy Migration: Raw Parquet -> BigLake Apache Iceberg Table
 from pyspark.sql import SparkSession
 
 spark = SparkSession.builder.appName("${sparkBatchId}").getOrCreate()
@@ -274,7 +274,7 @@ spark.sql("""
   const workflowArtifacts = useMemo(() => {
     const yaml =
       workflowBlueprint === 'SAGA_COMPENSATION'
-        ? `# 🎼 Durable Cloud Workflows YAML State Machine with Automatic Retry & Saga Compensation
+        ? `# Durable Cloud Workflows YAML State Machine with Automatic Retry & Saga Compensation
 main:
   params: [order]
   steps:
@@ -319,7 +319,7 @@ main:
           status: "ORDER_COMMITTED"
           txId: \${paymentRes.body.transactionId}`
         : workflowBlueprint === 'HUMAN_APPROVAL_CALLBACK'
-        ? `# ⏸️ Durable Human-in-the-Loop Approval Callback (Sleeps up to 1 Year at $0 Compute Cost!)
+        ? `# ⏸Durable Human-in-the-Loop Approval Callback (Sleeps up to 1 Year at $0 Compute Cost!)
 main:
   params: [request]
   steps:
@@ -344,7 +344,7 @@ main:
             return: "APPROVED_AND_EXECUTED"
     - rejected:
         return: "REJECTED_BY_REVIEWER"`
-        : `# ⚡ Parallel Fan-Out Across Multiple Cloud Run & BigQuery Branches
+        : `# Parallel Fan-Out Across Multiple Cloud Run & BigQuery Branches
 main:
   params: [batch]
   steps:
@@ -407,7 +407,7 @@ main:
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
-              🚀 2026 Frontier Studio: Spanner Graph, Serverless Spark, Workflows &amp; AI Model Armor
+              2026 Frontier Studio: Spanner Graph, Serverless Spark, Workflows &amp; AI Model Armor
             </h2>
             <p className="text-xs text-zinc-300 max-w-4xl">
               Demystify Google Cloud&apos;s newest 2026 breakthroughs in one place — run **ISO GQL Graph + Vectors** on **$65/mo 100-PU Cloud Spanner**, submit **Zero-Cluster Serverless PySpark** jobs directly over **BigLake Iceberg**, pick the right **Eventarc vs. Pub/Sub vs. Tasks vs. Workflows** pattern, and shield LLMs with **Vertex AI Model Armor**.
@@ -421,7 +421,7 @@ main:
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 text-xs font-mono font-bold cursor-pointer shrink-0"
           >
             <RefreshCw
-              className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-cyan-400' : ''}`}
+              className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
             />
             <span>Sync Live 2026 Fleet</span>
           </button>
@@ -460,9 +460,9 @@ main:
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <Database className="w-4 h-4 text-cyan-500" />
+                  <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                   <span>
-                    🕸️ Why Cloud Spanner in 2026 Replaces 3 Separate Databases (Starting at ~$65.70/mo!)
+                    Why Cloud Spanner in 2026 Replaces 3 Separate Databases (Starting at ~$65.70/mo!)
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 mt-0.5">
@@ -587,9 +587,9 @@ main:
                   onChange={(e) => setSpannerUseCase(e.target.value)}
                   className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 >
-                  <option value="FRAUD_GRAPH">🕸️ FinCrime 3-Hop Ring + Vector Match</option>
-                  <option value="HYBRID_RAG_GRAPH">🧠 GraphRAG (Semantic Vector + Graph Edges)</option>
-                  <option value="SUPPLY_CHAIN">📦 Multi-Hop Dependency Blast Radius</option>
+                  <option value="FRAUD_GRAPH">FinCrime 3-Hop Ring + Vector Match</option>
+                  <option value="HYBRID_RAG_GRAPH">GraphRAG (Semantic Vector + Graph Edges)</option>
+                  <option value="SUPPLY_CHAIN">Multi-Hop Dependency Blast Radius</option>
                 </select>
               </div>
               <button
@@ -608,7 +608,7 @@ main:
               >
                 {actionBusy
                   ? 'Provisioning...'
-                  : `⚡ Provision ${spannerPu}-PU Spanner`}
+                  : `Provision ${spannerPu}-PU Spanner`}
               </button>
             </div>
 
@@ -672,9 +672,9 @@ main:
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <Flame className="w-4 h-4 text-amber-500" />
+                <Flame className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  🔥 Zero-Cluster Dataproc Serverless Spark on BigLake Apache Iceberg (`$0` Idle Cost)
+                  Zero-Cluster Dataproc Serverless Spark on BigLake Apache Iceberg (`$0` Idle Cost)
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
@@ -718,9 +718,9 @@ main:
                 onChange={(e) => setSparkTemplate(e.target.value)}
                 className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
               >
-                <option value="ICEBERG_MERGE">🧊 ACID MERGE + Iceberg Compaction</option>
-                <option value="SPARK_ML_EMBEDDINGS">🧠 Distributed Feature Store Builder</option>
-                <option value="PARQUET_TO_ICEBERG">⚡ Zero-Copy Parquet → Iceberg Snapshot</option>
+                <option value="ICEBERG_MERGE">ACID MERGE + Iceberg Compaction</option>
+                <option value="SPARK_ML_EMBEDDINGS">Distributed Feature Store Builder</option>
+                <option value="PARQUET_TO_ICEBERG">Zero-Copy Parquet → Iceberg Snapshot</option>
               </select>
             </div>
             <button
@@ -736,7 +736,7 @@ main:
               }
               className="h-[36px] px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
-              {actionBusy ? 'Submitting...' : '🚀 Submit Serverless Batch'}
+              {actionBusy ? 'Submitting...' : 'Submit Serverless Batch'}
             </button>
           </div>
 
@@ -797,9 +797,9 @@ main:
         <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-              <GitBranch className="w-4 h-4 text-indigo-500" />
+              <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               <span>
-                🎼 Demystifying Google Cloud Messaging &amp; Orchestration (When to Use Which?)
+                Demystifying Google Cloud Messaging &amp; Orchestration (When to Use Which?)
               </span>
             </h3>
             <p className="text-xs text-zinc-500 mt-0.5">
@@ -812,28 +812,28 @@ main:
             {[
               {
                 id: 'EVENTARC',
-                title: '⚡ 1. Eventarc',
+                title: '1. Eventarc',
                 subtitle: '"Something happened in GCP"',
                 when: 'Trigger Cloud Run/Functions when a GCS file is uploaded, a VM is created, or a BigQuery job finishes (90+ providers via Audit Logs).',
                 badge: 'CloudEvents Router',
               },
               {
                 id: 'PUBSUB',
-                title: '📡 2. Cloud Pub/Sub',
+                title: '2. Cloud Pub/Sub',
                 subtitle: '"1-to-Many Streaming Bus"',
                 when: 'Broadcast 1 event to 10+ independent microservices or BigQuery subscriptions at up to 10M+ messages/sec.',
                 badge: 'Decoupled Fan-Out',
               },
               {
                 id: 'CLOUD_TASKS',
-                title: '🚦 3. Cloud Tasks',
+                title: '3. Cloud Tasks',
                 subtitle: '"Rate-Limited HTTP Queue"',
                 when: 'Call a Cloud Run endpoint or external LLM API at a strict max rate (e.g. 5 req/sec) with deduplication & backoff so it never 429s.',
                 badge: 'Traffic Throttler',
               },
               {
                 id: 'WORKFLOWS',
-                title: '🎼 4. Cloud Workflows',
+                title: '4. Cloud Workflows',
                 subtitle: '"Multi-Step Durable Saga"',
                 when: 'Orchestrate Step 1 → Step 2 → Wait for Human Callback → If Step 3 fails, run compensating rollback YAML state machine.',
                 badge: 'Stateful Orchestrator',
@@ -875,12 +875,12 @@ main:
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-extrabold font-mono text-indigo-300">
-                  🎼 Live Cloud Workflows Durable YAML Saga Composer
+                  Live Cloud Workflows Durable YAML Saga Composer
                 </span>
                 {[
-                  { id: 'SAGA_COMPENSATION', label: '🔄 Payment + Inventory Rollback Saga' },
-                  { id: 'HUMAN_APPROVAL_CALLBACK', label: '⏸️ Human Approval Callback ($0 Wait)' },
-                  { id: 'PARALLEL_FANOUT', label: '⚡ Parallel AI + BigLake Fan-Out' },
+                  { id: 'SAGA_COMPENSATION', label: 'Payment + Inventory Rollback Saga' },
+                  { id: 'HUMAN_APPROVAL_CALLBACK', label: '⏸Human Approval Callback ($0 Wait)' },
+                  { id: 'PARALLEL_FANOUT', label: 'Parallel AI + BigLake Fan-Out' },
                 ].map((bp) => (
                   <button
                     key={bp.id}
@@ -917,7 +917,7 @@ main:
                   }
                   className="h-[32px] px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                 >
-                  {actionBusy ? 'Deploying...' : '🚀 Deploy Workflow'}
+                  {actionBusy ? 'Deploying...' : 'Deploy Workflow'}
                 </button>
               </div>
             </div>
@@ -939,8 +939,8 @@ main:
             <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <span>🛡️ Vertex AI Model Armor (Prompt-Injection &amp; Leak Firewall)</span>
+                  <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  <span>Vertex AI Model Armor (Prompt-Injection &amp; Leak Firewall)</span>
                 </h3>
                 <p className="text-[11px] text-zinc-500">
                   Inspect user prompts for jailbreaks, `AIza...` API keys, private keys, and PII before dispatching to Gemini or Claude on Vertex AI.
@@ -966,7 +966,7 @@ main:
               }
               className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer"
             >
-              🛡️ Scan &amp; Sanitize Prompt via Model Armor
+              Scan &amp; Sanitize Prompt via Model Armor
             </button>
 
             {armorResult && (
@@ -1011,8 +1011,8 @@ main:
           <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-amber-500" />
-                <span>⚡ Vertex AI Context Caching FinOps Calculator (-80% LLM Cost)</span>
+                <DollarSign className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                <span>Vertex AI Context Caching FinOps Calculator (-80% LLM Cost)</span>
               </h3>
               <p className="text-[11px] text-zinc-500">
                 Stop paying full input token price on every chat turn when passing large system prompts, codebases, or PDFs to Gemini 2.5 / 3.8!
