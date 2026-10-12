@@ -162,6 +162,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-data-engineer-studio',
+        category: '★ 2026 Innovation Lab (Star)',
+        title: 'Open 2026 Data Engineering Studio (Medallion ELT, Dataform/dbt SQLX & Dataplex 588.0.0)',
+        subtitle: '1-Canvas Bronze→Silver→Gold Pipeline Builder, Auto-Clean QUALIFY Dedup, Dataplex Profiling/Products & -$348/mo Serverless DAGs',
+        keywords: 'data engineer medallion bronze silver gold dataform dbt sqlx dataplex profile qualitycomposer airflow dag skew slot',
+        badge: 'DATA ENGINEER 🧑‍🔬',
+        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab('DATA_ENGINEER_STUDIO');
+          onClose();
+        }
+      },
+      {
         id: 'open-sa-key-killswitch',
         category: '★ 2026 Innovation Lab (Star)',
         title: 'Open Service Account .json Key & OAuth Token Kill-Switch Vault (Sovereign IAM)',

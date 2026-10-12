@@ -64,6 +64,7 @@ import CommandPaletteModal from './components/CommandPaletteModal';
 import FuturisticOrbitalHud from './components/FuturisticOrbitalHud';
 import InteractiveDocsGuide from './components/InteractiveDocsGuide';
 import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
+import DataEngineeringStudio from './components/DataEngineeringStudio';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -246,6 +247,23 @@ function classifyDestructiveAxiosConfig(config) {
         method: 'DELETE',
         endpoint: rawUrl,
         impactWarning: `This will permanently delete Cloud Function "${fnName}" in ${region} and disconnect its HTTP trigger or Eventarc event subscription.`,
+      };
+    }
+
+    // Data Engineering Studio resource delete (/data-engineer/resource)
+    if (rawUrl.includes('/data-engineer/resource')) {
+      const kind = body.resourceKind || 'Data Engineering Resource';
+      const target = body.id || 'selected-pipeline';
+      const region = body.region || 'us-central1';
+      return {
+        title: `Permanently Delete ${kind}`,
+        resourceKind: kind,
+        targetName: target,
+        location: region,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete the ${kind} "${target}" (${region}) from project "${projectId}".`,
       };
     }
 
@@ -834,6 +852,13 @@ function CloudPulseCockpit() {
       icon: Database,
     },
     {
+      id: 'DATA_ENGINEER_STUDIO',
+      group: 'DATA_AI',
+      label: 'Data Engineer 🧑‍🔬',
+      tip: '2026 Data Engineering Studio (GCloud SDK 588.0.0): 1-Canvas Bronze→Silver→Gold Medallion Builder, Dataform/dbt Auto-Clean SQLX, Dataplex Auto-Profiling & Data Products, Visual Schema Mapper & -$348/mo Serverless ELT DAGs',
+      icon: Layers,
+    },
+    {
       id: 'CLOUD_SQL_STUDIO',
       group: 'DATA_AI',
       label: 'Cloud SQL & AlloyDB 🐘',
@@ -1417,6 +1442,15 @@ function CloudPulseCockpit() {
                   onRefreshGlobal={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'DATA_ENGINEER_STUDIO' && (
+                <DataEngineeringStudio
+                  projectId={selectedProjectId}
+                  onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />

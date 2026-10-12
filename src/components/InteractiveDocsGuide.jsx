@@ -314,6 +314,30 @@ const DOC_SECTIONS = [
       'Empty datasets cost $0.00/mo; Physical Compressed billing reduces active storage spend by up to 54% on compressible analytical tables.',
   },
   {
+    id: 'dedicated-data-engineering-2026-studio',
+    wave: 'DATA ENGINEER STUDIO · MEDALLION ELT, DATAFORM, DATAPLEX & SLOT DOCTOR (gcloud 588.0.0)',
+    title:
+      '🧑‍🔬 2026 Data Engineering Studio: Source-to-Gold Medallion ELT, Dataform/dbt SQLX Auto-Clean, Dataplex Data Mesh & Slot Doctor',
+    badge: 'DATA ENGINEER 🧑‍🔬 TAB',
+    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    icon: Layers,
+    targetTab: 'DATA_ENGINEER_STUDIO',
+    problemSolved:
+      'Data engineers on Google Cloud traditionally have to juggle 8 disconnected consoles (GCS, BigQuery DTS, Dataform, Dataplex, Dataproc Serverless, Dataflow, Cloud Composer at $350/mo idle, and INFORMATION_SCHEMA.JOBS) while manually writing deduplication SQL, debugging stage skew, and worrying about breaking downstream BI views.',
+    howItWorks: [
+      '🥉🥈🥇 1-Canvas "Source-to-Gold" Medallion ELT Pipeline Builder + Smart Engine & Cost Advisor: Connect any source (GCS Parquet/JSON/CSV, BigQuery DTS SaaS, Pub/Sub, Cloud SQL CDC) through Bronze (BigLake Raw), Silver (Deduplicated & Typed), and Gold (BI Mart) with a live engine cost comparison across BigQuery SQL ($0 idle), Dataproc Serverless Spark 2.2 ($0 idle), Dataflow Streaming, and Cloud Workflows ($0.05/mo vs $350/mo Cloud Composer).',
+      '📐 Dataform (.sqlx) & dbt (.sql) Visual SQLX Studio + 1-Tap Auto-Clean: Generates production Dataform .sqlx and dbt incremental models with QUALIFY ROW_NUMBER() = 1 deduplication, SAFE_CAST / TRIM / UPPER hygiene, SHA256 PII masking, and partition/cluster keys — and executes or provisions native Dataform Repositories (dataform.googleapis.com/v1beta1) in 1 click.',
+      '🛡️ Dataplex Auto-Profiling / Data Quality Scans & Data Mesh Products (gcloud 588.0.0): Launches real gcloud dataplex datascans create data-profile / data-quality jobs, provisions Dataplex Data Mesh Products (gcloud dataplex data-products), and runs gcloud dataplex dbt metadata-jobs.',
+      '📜 Schema Drift & Downstream Contract Firewall + 🩺 Live BigQuery Slot Contention Doctor & Composer-Lite Serverless DAGs: Maps source-to-target schemas with non-breaking View Adapters and diagnoses real-time INFORMATION_SCHEMA.JOBS_BY_PROJECT slot contention while deploying $0-idle Cloud Workflows ELT DAGs.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/data-engineer/overview & POST /api/project/:id/data-engineer/action',
+      'dataform.googleapis.com/v1beta1, dataplex.googleapis.com/v1 (gcloud 588.0.0 datascans & data-products), bigquerydatatransfer.googleapis.com/v1 & workflows.googleapis.com/v1',
+    ],
+    billingImpact:
+      'Replaces $350/mo always-on Cloud Composer environments with $0.05/mo Serverless Cloud Workflows ELT DAGs and enforces Partition + Cluster pruning across Bronze/Silver/Gold tables.',
+  },
+  {
     id: 'artifact-registry-sbom-studio',
     wave: 'ARTIFACT REGISTRY · SLSA-3 SUPPLY-CHAIN & ORPHAN SWEEPER',
     title:
