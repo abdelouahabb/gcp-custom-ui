@@ -1275,58 +1275,58 @@ function CloudPulseCockpit() {
                         </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
-                        5 DOMAINS · 16 DEDICATED STUDIOS · ZERO DUPLICATES
+                        5 DOMAINS · 18 DEDICATED STUDIOS · ZERO DUPLICATES
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
                       {[
                         {
-                          domain: 'I. Compute, Serverless & CI/CD',
+                          domain: 'I. Innovation & Global Edge',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'CLOUD_RUN', label: 'Cloud Run Studio', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
-                            { id: 'FUNCTIONS_STUDIO', label: 'Functions & Eventarc', meta: 'v1/v2 + 90+ GCP Events' },
-                            { id: 'GKE_STUDIO', label: 'GKE Autopilot & GPUs', meta: 'K8s Fleet & YAML' },
-                            { id: 'VM_SSH', label: 'VM Fleet & Web-SSH', meta: `${overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
-                            { id: 'WAVE9_STUDIO', label: 'Cloud Build & SBOM', meta: 'GitHub CI/CD & SLSA-3' },
+                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '14 Categorized Beyond-Console Tools' },
+                            { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
+                            { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
                           ],
                         },
                         {
-                          domain: 'II. Data, Lakehouse & AI',
+                          domain: 'II. Compute, Containers & CI/CD',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'CLOUD_STORAGE', label: 'Cloud Storage Studio', meta: `${overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
-                            { id: 'BIGQUERY_STUDIO', label: 'BigQuery & BigLake', meta: 'Capacitor + Apache Iceberg' },
-                            { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer Studio', meta: 'Medallion, Dataform & DAK' },
-                            { id: 'CLOUD_SQL_STUDIO', label: 'Cloud SQL & AlloyDB', meta: 'PG 17, MySQL 8.4 & Vectors' },
-                            { id: 'WAVE10_FRONTIER', label: 'Spanner Graph & Spark', meta: '100-PU Graph, Spark & Workflows' },
+                            { id: 'VM_SSH', label: 'VM', meta: `${overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
+                            { id: 'CLOUD_STORAGE', label: 'Cloud Storage', meta: `${overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
+                            { id: 'CLOUD_RUN', label: 'Cloud Run', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
+                            { id: 'GKE_STUDIO', label: 'GKE', meta: 'Autopilot, Spot GPUs & K8s YAML' },
+                            { id: 'WAVE9_STUDIO', label: 'Cloud Build', meta: 'GitHub CI/CD & SLSA-3 SBOM' },
+                            { id: 'FUNCTIONS_STUDIO', label: 'Functions', meta: 'v1/v2 + 90+ Eventarc Triggers' },
                           ],
                         },
                         {
-                          domain: 'III. Network & Global Edge',
+                          domain: 'III. Databases, Data & Lakehouse',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'GLOBAL_MAP', label: '40-Region Global Map', meta: 'Subsea Cables & Carbon' },
-                            { id: 'VPC_NETWORKS', label: 'VPC & Firewalls', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
+                            { id: 'CLOUD_SQL_STUDIO', label: 'Cloud SQL', meta: 'PG 17, MySQL 8.4 & AlloyDB Vectors' },
+                            { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer', meta: 'Medallion, Dataform & Data Agent Kit' },
+                            { id: 'BIGQUERY_STUDIO', label: 'BigQuery', meta: 'Capacitor + BigLake Apache Iceberg' },
+                            { id: 'WAVE10_FRONTIER', label: 'Spanner', meta: '100-PU Graph, Spark & Workflows' },
                           ],
                         },
                         {
-                          domain: 'IV. Zero-Trust IAM & SRE',
+                          domain: 'IV. Zero-Trust IAM & Incident SRE',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'SOVEREIGN_STUDIO', label: 'IAM, Keys & Drift', meta: 'SA Key Kill-Switch & JIT' },
-                            { id: 'SRE_WAR_ROOM', label: 'SRE War-Room & VPC-SC', meta: 'SLO Burn & Perimeter' },
+                            { id: 'SOVEREIGN_STUDIO', label: 'IAM', meta: 'SA Key Kill-Switch, JIT & Drift' },
+                            { id: 'SRE_WAR_ROOM', label: 'SRE War-room', meta: '14.4x SLO Burn & VPC-SC Perimeter' },
                           ],
                         },
                         {
-                          domain: 'V. FinOps, 2026 Lab & Shell',
+                          domain: 'V. FinOps, Logs & Architecture Docs',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'FINOPS', label: 'FinOps & Telemetry', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
-                            { id: 'INNOVATION_LAB', label: '2026 Innovation Lab', meta: '14 Categorized Tools' },
-                            { id: 'LOGS_SHELL', label: 'Logs & Cloud Shell', meta: 'Live gcloud / bq / gsutil' },
-                            { id: 'DOCS_GUIDE', label: 'Docs & Guide', meta: 'Architecture & Security' },
+                            { id: 'FINOPS', label: 'Finops', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
+                            { id: 'LOGS_SHELL', label: 'Logs', meta: 'Live Logging & Web Cloud Shell' },
+                            { id: 'DOCS_GUIDE', label: 'Docs', meta: 'Interactive Architecture & API Guide' },
                           ],
                         },
                       ].map((group) => (
@@ -1567,28 +1567,6 @@ function CloudPulseCockpit() {
                 />
               )}
 
-              {activeTab === 'RESOURCES' && (
-                <div className="space-y-6">
-                  <ResourceControlCenter
-                    resources={overview?.resources || []}
-                    projectId={selectedProjectId}
-                    onTriggerAction={handleTriggerAction}
-                    onDeleteResource={handleDeleteResource}
-                    actionLoading={actionLoading}
-                    onRunInShell={handleRunInShell}
-                    onAskCopilot={handleOpenCopilotWithPrompt}
-                  />
-
-                  <EmergencyApiKillSwitch
-                    projectId={selectedProjectId}
-                    enabledApis={overview?.enabledApis || []}
-                    onRefresh={() => fetchProjectOverview(selectedProjectId)}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                </div>
-              )}
-
               {activeTab === 'FINOPS' && (
                 <div className="space-y-6">
                   <SortableKpiRow
@@ -1684,10 +1662,10 @@ function CloudPulseCockpit() {
           else if (type === 'VPC_FIREWALL') handleOpenProvision('VPC_FIREWALL');
           else if (type === 'BUCKET' || type === 'GCS_BUCKET')
             handleOpenProvision('GCS_BUCKET');
-          else if (type === 'API') setActiveTab('RESOURCES');
+          else if (type === 'API') setActiveTab('OVERVIEW');
           else handleOpenProvision(type || 'GCS_BUCKET');
         }}
-        onOpenKillSwitch={() => setActiveTab('RESOURCES')}
+        onOpenKillSwitch={() => setActiveTab('OVERVIEW')}
         onOpenCopilot={() => handleOpenCopilotWithPrompt('')}
         onRefreshAll={() => {
           fetchProjectOverview(selectedProjectId);

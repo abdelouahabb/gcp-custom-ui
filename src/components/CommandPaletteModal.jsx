@@ -185,7 +185,7 @@ export default function CommandPaletteModal({
         badgeColor: 'text-red-300 bg-red-500/15 border-red-500/30',
         icon: Key,
         run: () => {
-          onSelectTab('SOVEREIGN_IAM');
+          onSelectTab('SOVEREIGN_STUDIO');
           onClose();
         }
       },
@@ -417,7 +417,7 @@ export default function CommandPaletteModal({
         badgeColor: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
         icon: Rocket,
         run: () => {
-          onSelectTab('CLOUD_BUILD_STUDIO');
+          onSelectTab('WAVE9_STUDIO');
           onClose();
         }
       },

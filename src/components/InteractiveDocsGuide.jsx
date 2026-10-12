@@ -108,7 +108,7 @@ const DOC_SECTIONS = [
     badge: 'SOVEREIGN & IAM TAB',
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     icon: ShieldAlert,
-    targetTab: 'SOVEREIGN_IAM',
+    targetTab: 'SOVEREIGN_STUDIO',
     problemSolved:
       'Standard IAM recommenders naively flag the authenticated project owner (roles/owner) as "excessive privilege" and can lock you out if clicked accidentally—and if a Service Account .json key or OAuth token is stolen, engineers need one place to inspect, create, download, disable, or permanently revoke keys in seconds.',
     howItWorks: [
@@ -230,7 +230,7 @@ const DOC_SECTIONS = [
     badge: 'VM FLEET + CLOUD RUN + ALL 16 STUDIOS',
     badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
     icon: Terminal,
-    targetTab: 'VM_FLEET',
+    targetTab: 'VM_SSH',
     problemSolved:
       'One-shot command emulators truncate multi-line streaming commands like "apt update" or interactive tools like htop/vim, while auto-connecting SSH on tab load wastes sessions and unconfirmed delete or IAM exposure buttons risk accidental production outages.',
     howItWorks: [
@@ -276,7 +276,7 @@ const DOC_SECTIONS = [
     badge: 'CLOUD BUILD TAB + CLOUD RUN / GKE MODAL',
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     icon: Zap,
-    targetTab: 'CLOUD_BUILD_STUDIO',
+    targetTab: 'WAVE9_STUDIO',
     problemSolved:
       'Deploying custom applications to Cloud Run or GKE shouldn’t require local Docker builds or manual Artifact Registry repository creation.',
     howItWorks: [
@@ -698,10 +698,10 @@ const DOC_SECTIONS = [
     id: 'core-emergency-killswitch',
     wave: 'EMERGENCY MOBILE GOVERNANCE',
     title: 'DEFCON-1 Project Billing Kill-Switch & API Circuit Breaker',
-    badge: 'LIVE GCP RESOURCES TAB',
+    badge: '2026 SRE TAB',
     badgeColor: 'bg-red-500/15 text-red-500 border-red-500/30',
     icon: PowerOff,
-    targetTab: 'RESOURCES',
+    targetTab: 'OVERVIEW',
     problemSolved:
       'If an API key is leaked or a runaway loop starts spawning expensive GPUs while you are away from your desk, disabling individual APIs or unlinking the billing account from a mobile browser in the standard GCP Console is slow and difficult.',
     howItWorks: [
