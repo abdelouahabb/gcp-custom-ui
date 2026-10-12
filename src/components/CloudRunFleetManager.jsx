@@ -1475,7 +1475,11 @@ spec:
                         type="button"
                         onClick={() => handleTogglePublicIam(srv)}
                         disabled={Boolean(busyState)}
-                        title="Click to toggle Public Unauthenticated (allUsers) vs Private IAM Authenticated access"
+                        title={
+                          srv.allowUnauthenticated
+                            ? `Currently PUBLIC HTTPS (allUsers). Click to lock down "${srv.name}" to Private (IAM Authenticated) — confirmation required.`
+                            : `Currently PRIVATE (IAM Authenticated). Click to expose "${srv.name}" to Public HTTPS (allUsers) — confirmation required.`
+                        }
                         className={`inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                           srv.allowUnauthenticated
                             ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/20'

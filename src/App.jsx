@@ -385,6 +385,46 @@ function classifyDestructiveAxiosConfig(config) {
         impactWarning: `This will permanently delete the ephemeral Cloud Run preview service "${target}" and release its preview URL.`,
       };
     }
+
+    // Cloud Run Public (allUsers) vs Private (IAM Authenticated) Access Toggle
+    const cloudRunIamMatch = rawUrl.match(
+      /\/cloudrun\/([^/]+)\/([^/]+)\/iam(?:\?|$)/
+    );
+    if (cloudRunIamMatch) {
+      const region = decodeURIComponent(cloudRunIamMatch[1]);
+      const serviceName = decodeURIComponent(cloudRunIamMatch[2]);
+      const makePublic = Boolean(body.allowUnauthenticated);
+      if (makePublic) {
+        return {
+          title: 'Expose Cloud Run Service to Public Internet (allUsers)?',
+          headerBadge: '🛡️ CloudPulse 2026 IAM Security & Exposure Gatekeeper',
+          targetLabel: 'Target Cloud Run Service to Expose Publicly',
+          resourceKind: 'Cloud Run IAM Policy (roles/run.invoker)',
+          targetName: `${serviceName} (PRIVATE IAM → PUBLIC allUsers)`,
+          location: region,
+          projectId,
+          method: 'GRANT allUsers',
+          endpoint: rawUrl,
+          confirmLabel: '🌐 Yes, Expose Service to Public (allUsers)',
+          cancelToast: `🛡️ Access change cancelled — "${serviceName}" remains Private (IAM Authenticated).`,
+          impactWarning: `PUBLIC EXPOSURE WARNING: This grants "roles/run.invoker" to "allUsers" on Cloud Run service "${serviceName}" (${region}). Anyone on the public internet will be able to invoke its HTTPS URL without Google Cloud IAM authentication.`,
+        };
+      }
+      return {
+        title: 'Restrict Cloud Run Service to Authenticated IAM Only (Private)?',
+        headerBadge: '🛡️ CloudPulse 2026 IAM Security & Access Gatekeeper',
+        targetLabel: 'Target Cloud Run Service to Lock Down (Private)',
+        resourceKind: 'Cloud Run IAM Policy (roles/run.invoker)',
+        targetName: `${serviceName} (PUBLIC allUsers → PRIVATE IAM AUTH)`,
+        location: region,
+        projectId,
+        method: 'REVOKE allUsers',
+        endpoint: rawUrl,
+        confirmLabel: '🔒 Yes, Switch to Private (IAM Auth Required)',
+        cancelToast: `🛡️ Access change cancelled — "${serviceName}" remains Public (allUsers).`,
+        impactWarning: `AUTHENTICATION LOCKDOWN WARNING: This removes "allUsers" (roles/run.invoker) from Cloud Run service "${serviceName}" (${region}). Unauthenticated browsers, webhooks, or external clients calling this URL without a valid Google IAM Bearer token will immediately receive HTTP 403 Forbidden.`,
+      };
+    }
   }
 
   return null;
@@ -414,8 +454,7 @@ function CloudPulseCockpit() {
   const setErrorBanner = useCallback((msg) => {
     if (
       typeof msg === 'string' &&
-      (msg.includes('🛡️ Deletion cancelled') ||
-        msg.includes('__cancelledByUser'))
+      (msg.includes('🛡️') || msg.includes('__cancelledByUser'))
     ) {
       return;
     }
@@ -475,17 +514,18 @@ function CloudPulseCockpit() {
                 resolve(config);
               },
               onCancel: () => {
-                const cancelErr = new Error(
-                  '🛡️ Deletion cancelled — resource kept safe.'
-                );
+                const cancelText =
+                  descriptor.cancelToast ||
+                  '🛡️ Deletion cancelled — resource kept safe.';
+                const cancelErr = new Error(cancelText);
                 cancelErr.__cancelledByUser = true;
                 cancelErr.response = {
                   status: 499,
                   data: {
-                    error: '🛡️ Deletion cancelled — resource kept safe.',
+                    error: cancelText,
                   },
                 };
-                showToast('🛡️ Deletion cancelled — resource kept safe.');
+                showToast(cancelText);
                 reject(cancelErr);
               },
             },
@@ -1702,12 +1742,15 @@ function MandatoryDeleteConfirmationModal({
   if (!activeItem || !activeItem.descriptor) return null;
   const {
     title,
+    headerBadge,
+    targetLabel,
     resourceKind,
     targetName,
     location,
     projectId,
     method,
     endpoint,
+    confirmLabel,
     impactWarning,
   } = activeItem.descriptor;
 
@@ -1728,7 +1771,8 @@ function MandatoryDeleteConfirmationModal({
             </span>
             <div>
               <div className="text-[10px] font-mono uppercase tracking-widest text-red-100 font-bold">
-                🛡️ CloudPulse 2026 Destructive Action Gatekeeper
+                {headerBadge ||
+                  '🛡️ CloudPulse 2026 Destructive Action Gatekeeper'}
               </div>
               <h3 className="text-sm sm:text-base font-extrabold tracking-tight">
                 {title}
@@ -1748,7 +1792,7 @@ function MandatoryDeleteConfirmationModal({
           <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                Target Resource to Destroy
+                {targetLabel || 'Target Resource to Destroy'}
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-600 text-white">
                 {method}
@@ -1797,14 +1841,16 @@ function MandatoryDeleteConfirmationModal({
               onClick={onCancel}
               className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
             >
-              🛡️ Cancel (Keep Resource Safe) [Esc]
+              🛡️ Cancel (Keep Safe) [Esc]
             </button>
             <button
               type="button"
               onClick={onConfirm}
               className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <span>🗑️ Yes, Confirm & Permanently Delete</span>
+              <span>
+                {confirmLabel || '🗑️ Yes, Confirm & Permanently Delete'}
+              </span>
             </button>
           </div>
         </div>
