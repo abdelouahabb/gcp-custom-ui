@@ -2715,12 +2715,19 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
 
       const limits = {
         cpu,
-        memory,
+        memory:
+          executionEnvironment === 'EXECUTION_ENVIRONMENT_GEN2' &&
+          (memory === '128Mi' || memory === '256Mi')
+            ? '512Mi'
+            : memory,
         ...(gpuCount > 0 ? { 'nvidia.com/gpu': String(gpuCount) } : {}),
       };
 
       const serviceBody = {
         ingress,
+        annotations: {
+          'run.googleapis.com/ssh-enabled': 'true',
+        },
         template: {
           scaling: {
             minInstanceCount: minInstances,
@@ -4485,6 +4492,13 @@ app.patch(
           ? parseEnvVarsInput(config.envVars)
           : currentContainer.env || [];
 
+      if (
+        executionEnvironment === 'EXECUTION_ENVIRONMENT_GEN2' &&
+        (memory === '128Mi' || memory === '256Mi')
+      ) {
+        memory = '512Mi';
+      }
+
       const resourceLimits = { cpu, memory };
       if (gpuCount > 0) {
         resourceLimits['nvidia.com/gpu'] = String(gpuCount);
@@ -4529,6 +4543,10 @@ app.patch(
 
       const patchBody = {
         ingress,
+        annotations: {
+          ...(existing.annotations || {}),
+          'run.googleapis.com/ssh-enabled': 'true',
+        },
         template: templateObj,
       };
 
@@ -15217,15 +15235,6 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
       message: `Connecting to Cloud Run service "${serviceName}" (${runRegion})...`,
     });
 
-    // Warm up scale-to-zero Cloud Run service so an active container instance is ready for SSH
-    if (serviceUri && serviceUri.startsWith('https://')) {
-      wsSend({
-        type: 'output',
-        data: `\x1b[38;5;45m⚡ Warming up Cloud Run container instance at ${serviceUri}...\x1b[0m\r\n`,
-      });
-      await axios.get(serviceUri, { timeout: 3500 }).catch(() => null);
-    }
-
     const revFlag =
       revision && revision !== 'LATEST'
         ? ` --revision=${revision.replace(/[^a-zA-Z0-9._-]/g, '')}`
@@ -15243,8 +15252,47 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
     } else if (requestedEngine === 'cloudrun_logs') {
       shellCmdString = `echo -e "\\033[1;36m➜ Reading Live Cloud Run Logs & Opening Container Admin PTY (${serviceName} · ${runRegion})\\033[0m"; gcloud alpha run services logs read ${serviceName} --region=${runRegion} --project=${projectId} --limit=40; echo -e "\\n\\033[1;32m✔ Interactive Cloud Run Admin PTY Ready (env: \\$SERVICE_NAME=${serviceName}, \\$REGION=${runRegion})\\033[0m"; exec bash --login`;
     } else {
-      const sshCli = `gcloud beta run services ssh ${serviceName} --region=${runRegion} --project=${projectId}${revFlag}${containerFlag}${instanceFlag}`;
-      shellCmdString = `echo -e "\\033[1;32m➜ Launching Live Cloud Run Container SSH PTY:\\033[0m \\033[1;33m${sshCli}\\033[0m"; ${sshCli} || { echo -e "\\n\\033[38;5;214mℹ️  Note: gcloud beta run services ssh exited or requires an active Gen2 instance / IAM role (roles/run.developer). Dropping into interactive Cloud Run Admin PTY where you can run '${sshCli}', 'curl -i \\$SERVICE_URI', or 'gcloud beta run services proxy \\$SERVICE_NAME --region=\\$REGION':\\033[0m\\n"; exec bash --login; }`;
+      const baseSshCli = `gcloud beta run services ssh ${serviceName} --region=${runRegion} --project=${projectId}${containerFlag}${instanceFlag}`;
+      shellCmdString = `
+REV_FLAG="${revFlag}"
+TARGET_URI="${serviceUri}"
+PREFLIGHT=$(gcloud alpha run services describe "$SERVICE_NAME" --region="$REGION" --project="$PROJECT_ID" --format=json 2>/dev/null | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    ann = d.get("metadata", {}).get("annotations", {}) or {}
+    t_ann = d.get("spec", {}).get("template", {}).get("metadata", {}).get("annotations", {}) or {}
+    ssh_ok = ann.get("run.googleapis.com/ssh-enabled") == "true"
+    gen2_ok = t_ann.get("run.googleapis.com/execution-environment") == "gen2"
+    containers = d.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [{}])
+    mem = (containers[0].get("resources", {}).get("limits", {}) or {}).get("memory", "512Mi") if containers else "512Mi"
+    need_mem = "--memory=512Mi" if mem in ("128Mi", "256Mi") else ""
+    url = d.get("status", {}).get("url", "")
+    print(f"{1 if (ssh_ok and gen2_ok) else 0}|{need_mem}|{url}")
+except Exception:
+    print("1||")
+')
+READY_FLAG=$(echo "$PREFLIGHT" | cut -d"|" -f1)
+MEM_FLAG=$(echo "$PREFLIGHT" | cut -d"|" -f2)
+DESC_URI=$(echo "$PREFLIGHT" | cut -d"|" -f3)
+if [ -z "$TARGET_URI" ] && [ -n "$DESC_URI" ]; then
+  TARGET_URI="$DESC_URI"
+fi
+if [ "$READY_FLAG" = "0" ]; then
+  echo -e "\\033[1;36m⚙️  Auto-configuring Cloud Run service '$SERVICE_NAME' for Container SSH (--ssh --execution-environment=gen2 $MEM_FLAG)...\\033[0m"
+  gcloud alpha run services update "$SERVICE_NAME" --ssh --execution-environment=gen2 $MEM_FLAG --region="$REGION" --project="$PROJECT_ID" --quiet
+  REV_FLAG=""
+fi
+if [ -n "$TARGET_URI" ]; then
+  echo -e "\\033[38;5;45m⚡ Warming up active Gen2 container instance at $TARGET_URI...\\033[0m"
+  curl -s -o /dev/null -m 4 "$TARGET_URI" || true
+fi
+echo -e "\\033[1;32m➜ Launching Live Cloud Run Container SSH PTY:\\033[0m \\033[1;33m${baseSshCli}\${REV_FLAG}\\033[0m"
+${baseSshCli}\${REV_FLAG} || {
+  echo -e "\\n\\033[38;5;214mℹ️  Container SSH session ended. Dropping into interactive Cloud Run Admin PTY (run '${baseSshCli}' to reconnect):\\033[0m\\n"
+  exec bash --login
+}
+`;
     }
 
     const ptyProc = spawn(
