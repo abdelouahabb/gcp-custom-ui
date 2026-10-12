@@ -662,7 +662,35 @@ function CloudPulseCockpit() {
               // ignore
             }
           }
-          setGdeSummary(summarizeCreditLedger(list, 0));
+          const rows = Array.isArray(
+            res.data?.liveBillingInsights?.costCreditRows
+          )
+            ? res.data.liveBillingInsights.costCreditRows
+            : [];
+          let grossUsageUsd = 0;
+          let totalCreditUsd = 0;
+          let netSubtotalUsd = 0;
+          for (const r of rows) {
+            grossUsageUsd += Number(r.usage_cost || 0);
+            totalCreditUsd += Number(r.total_credit || 0);
+            netSubtotalUsd += Number(r.subtotal || 0);
+          }
+          const absCreditsUsd = Math.abs(totalCreditUsd);
+          const coveragePct =
+            grossUsageUsd > 0
+              ? Math.min(100, (absCreditsUsd / grossUsageUsd) * 100)
+              : 0;
+
+          setGdeSummary({
+            ...summarizeCreditLedger(list, 0),
+            liveCostMetrics: {
+              hasLiveRows: rows.length > 0,
+              grossUsageUsd,
+              absCreditsUsd,
+              netSubtotalUsd,
+              coveragePct,
+            },
+          });
         })
         .catch(() => null);
     }
@@ -1033,7 +1061,8 @@ function CloudPulseCockpit() {
                   gdeSummary.nearestExpiryDays <= 14 &&
                   gdeSummary.totalRemainingUsd > 0
                     ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30'
-                    : gdeSummary.hasImportedCredits
+                    : gdeSummary.hasImportedCredits ||
+                      gdeSummary.liveCostMetrics?.hasLiveRows
                     ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
                     : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
                 }`}
@@ -1043,7 +1072,7 @@ function CloudPulseCockpit() {
                 gdeSummary.totalRemainingUsd > 0 ? (
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 ) : (
-                  <CreditCard className="w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" />
+                  <CreditCard className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 )}
                 <span>
                   {gdeSummary.hasImportedCredits
@@ -1054,23 +1083,31 @@ function CloudPulseCockpit() {
                           maximumFractionDigits: 2,
                         }
                       )}`
+                    : gdeSummary.liveCostMetrics?.hasLiveRows
+                    ? `Credits Applied: -$${gdeSummary.liveCostMetrics.absCreditsUsd.toFixed(
+                        2
+                      )}`
                     : 'Billing & Credits'}
                 </span>
                 {gdeSummary.hasImportedCredits &&
-                  gdeSummary.expiringSoonRemainingUsd > 0 &&
-                  gdeSummary.nearestExpiryDays !== null && (
-                    <span className="hidden sm:inline text-[10px] opacity-90">
-                      · $
-                      {gdeSummary.expiringSoonRemainingUsd.toLocaleString(
-                        'en-US',
-                        {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }
-                      )}{' '}
-                      expiring in {gdeSummary.nearestExpiryDays}d
-                    </span>
-                  )}
+                gdeSummary.expiringSoonRemainingUsd > 0 &&
+                gdeSummary.nearestExpiryDays !== null ? (
+                  <span className="hidden sm:inline text-[10px] opacity-90">
+                    · $
+                    {gdeSummary.expiringSoonRemainingUsd.toLocaleString(
+                      'en-US',
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )}{' '}
+                    expiring in {gdeSummary.nearestExpiryDays}d
+                  </span>
+                ) : gdeSummary.liveCostMetrics?.hasLiveRows ? (
+                  <span className="hidden sm:inline text-[10px] opacity-90">
+                    · {gdeSummary.liveCostMetrics.coveragePct.toFixed(1)}% covered
+                  </span>
+                ) : null}
               </button>
 
               {/* ⌘K Global Command & Voice Action Bar */}

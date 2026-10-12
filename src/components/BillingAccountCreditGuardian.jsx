@@ -193,6 +193,7 @@ export default function BillingAccountCreditGuardian({
     source: 'cloudbilling.googleapis.com',
   });
   const [billingAccounts, setBillingAccounts] = useState([]);
+  const [liveBillingInsights, setLiveBillingInsights] = useState(null);
   const [showAccountsDrawer, setShowAccountsDrawer] = useState(false);
   const [grants, setGrants] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -203,55 +204,63 @@ export default function BillingAccountCreditGuardian({
 
   const dailyBurnUsd = Number(liveBurn?.daily || 0);
 
-  const loadBillingGuardian = useCallback(async () => {
-    if (!projectId) return;
-    setLoading(true);
-    try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/billing-guardian`
-      );
-      if (res.data?.billingInfo) {
-        setBillingInfo(res.data.billingInfo);
-      }
-      if (Array.isArray(res.data?.billingAccounts)) {
-        setBillingAccounts(res.data.billingAccounts);
-      }
-      const localRaw = localStorage.getItem(
-        `${STORAGE_KEY_PREFIX}${projectId}`
-      );
-      if (localRaw) {
-        try {
-          const parsed = JSON.parse(localRaw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setGrants(parsed);
-            setLoading(false);
-            return;
+  const loadBillingGuardian = useCallback(
+    async (forceRefresh = false) => {
+      if (!projectId) return;
+      setLoading(true);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/billing-guardian${
+            forceRefresh ? '?refresh=true' : ''
+          }`
+        );
+        if (res.data?.billingInfo) {
+          setBillingInfo(res.data.billingInfo);
+        }
+        if (Array.isArray(res.data?.billingAccounts)) {
+          setBillingAccounts(res.data.billingAccounts);
+        }
+        if (res.data?.liveBillingInsights) {
+          setLiveBillingInsights(res.data.liveBillingInsights);
+        }
+        const localRaw = localStorage.getItem(
+          `${STORAGE_KEY_PREFIX}${projectId}`
+        );
+        if (localRaw) {
+          try {
+            const parsed = JSON.parse(localRaw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setGrants(parsed);
+              setLoading(false);
+              return;
+            }
+          } catch {
+            // ignore invalid cache
           }
-        } catch {
-          // ignore invalid cache
         }
-      }
-      if (Array.isArray(res.data?.grants)) {
-        setGrants(res.data.grants);
-      }
-    } catch {
-      const localRaw = localStorage.getItem(
-        `${STORAGE_KEY_PREFIX}${projectId}`
-      );
-      if (localRaw) {
-        try {
-          setGrants(JSON.parse(localRaw));
-        } catch {
-          // ignore
+        if (Array.isArray(res.data?.grants)) {
+          setGrants(res.data.grants);
         }
+      } catch {
+        const localRaw = localStorage.getItem(
+          `${STORAGE_KEY_PREFIX}${projectId}`
+        );
+        if (localRaw) {
+          try {
+            setGrants(JSON.parse(localRaw));
+          } catch {
+            // ignore
+          }
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
+    },
+    [projectId]
+  );
 
   useEffect(() => {
-    loadBillingGuardian();
+    loadBillingGuardian(false);
   }, [loadBillingGuardian]);
 
   const enrichedGrants = useMemo(() => {
@@ -261,10 +270,54 @@ export default function BillingAccountCreditGuardian({
     }));
   }, [grants, dailyBurnUsd]);
 
-  const summary = useMemo(
-    () => summarizeCreditLedger(enrichedGrants, dailyBurnUsd),
-    [enrichedGrants, dailyBurnUsd]
-  );
+  const liveCostMetrics = useMemo(() => {
+    const rows = Array.isArray(liveBillingInsights?.costCreditRows)
+      ? liveBillingInsights.costCreditRows
+      : [];
+    let grossUsageUsd = 0;
+    let totalCreditUsd = 0;
+    let otherSavingsUsd = 0;
+    let savingsProgramsUsd = 0;
+    let netSubtotalUsd = 0;
+
+    for (const r of rows) {
+      grossUsageUsd += Number(r.usage_cost || 0);
+      totalCreditUsd += Number(r.total_credit || 0);
+      otherSavingsUsd += Number(r.other_savings || 0);
+      savingsProgramsUsd += Number(r.savings_programs || 0);
+      netSubtotalUsd += Number(r.subtotal || 0);
+    }
+
+    const absCreditsUsd = Math.abs(totalCreditUsd);
+    const coveragePct =
+      grossUsageUsd > 0
+        ? Math.min(100, (absCreditsUsd / grossUsageUsd) * 100)
+        : 0;
+
+    return {
+      hasLiveRows: rows.length > 0,
+      rows,
+      grossUsageUsd,
+      totalCreditUsd,
+      absCreditsUsd,
+      otherSavingsUsd,
+      savingsProgramsUsd,
+      netSubtotalUsd,
+      coveragePct,
+      summary: liveBillingInsights?.summary || '',
+      fullAnalysis: liveBillingInsights?.fullAnalysis || '',
+      source: liveBillingInsights?.source || '',
+      queriedParents: liveBillingInsights?.queriedParents || [],
+    };
+  }, [liveBillingInsights]);
+
+  const summary = useMemo(() => {
+    const base = summarizeCreditLedger(enrichedGrants, dailyBurnUsd);
+    return {
+      ...base,
+      liveCostMetrics,
+    };
+  }, [enrichedGrants, dailyBurnUsd, liveCostMetrics]);
 
   useEffect(() => {
     if (onGrantsSummaryChange) {
@@ -521,13 +574,17 @@ ORDER BY
             Queries live{' '}
             <code className="font-mono text-zinc-700 dark:text-zinc-300">
               gcloud billing accounts list
-            </code>{' '}
-            &{' '}
+            </code>
+            ,{' '}
             <code className="font-mono text-zinc-700 dark:text-zinc-300">
               gcloud billing projects describe
+            </code>
+            , and{' '}
+            <code className="font-mono text-zinc-700 dark:text-zinc-300">
+              cloudbilling.googleapis.com/v1beta:generateInsights
             </code>{' '}
-            for your real Billing Accounts, and dynamically parses your Google
-            Cloud Billing Credits CSV (`server/billing-credits.csv`).
+            (<code className="font-mono">cloud_billing_data.public.costs.v2</code>)
+            with zero hardcoded values or static CSV files.
           </p>
         </div>
 
@@ -553,7 +610,7 @@ ORDER BY
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            title="Import the CSV downloaded from Google Cloud Console -> Billing -> Credits -> Download CSV"
+            title="Optionally import a CSV downloaded in your browser from Google Cloud Console -> Billing -> Credits -> Download CSV"
             className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white border border-blue-500/40 shadow-sm text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
           >
             <Upload className="w-3.5 h-3.5 shrink-0" />
@@ -573,14 +630,14 @@ ORDER BY
 
           <button
             type="button"
-            onClick={loadBillingGuardian}
+            onClick={() => loadBillingGuardian(true)}
             disabled={loading}
             className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`}
             />
-            <span>Sync Billing API</span>
+            <span>Sync Live Billing API</span>
           </button>
         </div>
       </div>
@@ -634,44 +691,189 @@ ORDER BY
         </div>
       )}
 
-      {/* When no CSV has been imported yet: honest empty state with zero hardcoded numbers */}
+      {/* LIVE CLOUD BILLING DATA MART LEDGER (cloudbilling.googleapis.com/v1beta:generateInsights -> cloud_billing_data.public.costs.v2) */}
+      {liveCostMetrics.hasLiveRows && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
+              <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                <span>LIVE GROSS USAGE COST</span>
+                <DollarSign className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
+              </div>
+              <div className="text-xl font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                ${liveCostMetrics.grossUsageUsd.toFixed(2)}
+                <span className="text-xs font-normal text-zinc-500 ml-1.5">
+                  USD
+                </span>
+              </div>
+              <div className="text-[11px] font-mono text-zinc-500">
+                Live from `cloud_billing_data.public.costs.v2`
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/30 space-y-1">
+              <div className="flex items-center justify-between text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+                <span>LIVE CREDITS APPLIED (`other_savings`)</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="text-xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                -${liveCostMetrics.absCreditsUsd.toFixed(2)}
+                <span className="text-xs font-normal text-zinc-500 ml-1.5">
+                  USD
+                </span>
+              </div>
+              <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
+                Promotional credits offsetting gross usage
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/30 space-y-1">
+              <div className="flex items-center justify-between text-[11px] font-mono text-blue-700 dark:text-blue-400 font-bold">
+                <span>PROMOTIONAL CREDIT COVERAGE</span>
+                <CreditCard className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="text-xl font-mono font-extrabold text-blue-600 dark:text-blue-400">
+                {liveCostMetrics.coveragePct.toFixed(1)}%
+              </div>
+              <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
+                Of gross spend covered by promotional credits
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
+              <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                <span>LIVE NET BILLED SUBTOTAL</span>
+                <TrendingDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="text-xl font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                ${liveCostMetrics.netSubtotalUsd.toFixed(2)}
+                <span className="text-xs font-normal text-zinc-500 ml-1.5">
+                  USD
+                </span>
+              </div>
+              <div className="text-[11px] font-mono text-zinc-500">
+                Net charge after promotional credits (`subtotal`)
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-[#131314]">
+            <div className="px-4 py-2.5 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 bg-zinc-50/70 dark:bg-[#202124]">
+              <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>
+                  Live Cloud Billing Credit Consumption by Service & Project (`cloud_billing_data.public.costs.v2`)
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-zinc-500">
+                Source: `cloudbilling.googleapis.com/v1beta:generateInsights`
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 text-[11px] font-bold text-zinc-600 dark:text-zinc-400">
+                    <th className="py-2.5 px-4">Service</th>
+                    <th className="py-2.5 px-3">Project</th>
+                    <th className="py-2.5 px-3 text-right">Gross Usage (`usage_cost`)</th>
+                    <th className="py-2.5 px-3 text-right">Promotional Credits (`other_savings`)</th>
+                    <th className="py-2.5 px-3 text-right">Savings Programs</th>
+                    <th className="py-2.5 px-3 text-right">Credit Coverage</th>
+                    <th className="py-2.5 px-4 text-right">Net Subtotal (`subtotal`)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 font-mono">
+                  {liveCostMetrics.rows.map((row) => {
+                    const usage = Number(row.usage_cost || 0);
+                    const credit = Number(row.total_credit || row.other_savings || 0);
+                    const savingsProg = Number(row.savings_programs || 0);
+                    const net = Number(row.subtotal || 0);
+                    const rowCov =
+                      usage > 0
+                        ? Math.min(100, (Math.abs(credit) / usage) * 100)
+                        : 0;
+                    return (
+                      <tr
+                        key={row.id}
+                        className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                      >
+                        <td className="py-2.5 px-4 font-sans font-semibold text-zinc-900 dark:text-zinc-100">
+                          {row.service_display_name || row.service_id}
+                        </td>
+                        <td className="py-2.5 px-3 text-zinc-700 dark:text-zinc-300">
+                          {row.project_display_name || row.project_id}{' '}
+                          {row.project_id && (
+                            <span className="text-[10px] text-zinc-500">
+                              ({row.project_id})
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-zinc-800 dark:text-zinc-200">
+                          ${usage.toFixed(4)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                          {credit < 0
+                            ? `-$${Math.abs(credit).toFixed(4)}`
+                            : `$${credit.toFixed(4)}`}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-zinc-500">
+                          ${savingsProg.toFixed(2)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-blue-600 dark:text-blue-400 font-bold">
+                          {rowCov.toFixed(1)}%
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
+                          ${net.toFixed(4)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Optional Browser-Only CSV Import Notice when no CSV has been uploaded by the user */}
       {grants.length === 0 ? (
-        <div className="p-6 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-dashed border-zinc-300 dark:border-zinc-700 text-center space-y-3">
-          <CreditCard className="w-7 h-7 text-zinc-400 mx-auto" />
-          <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-            No Google Cloud Billing Credits CSV Imported Yet
+        <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+            <div className="font-bold text-zinc-900 dark:text-zinc-100">
+              Why aren’t individual Grant Expiration Dates & Remaining Grant Balances in the API table above?
+            </div>
+            <p className="leading-relaxed">
+              Google Cloud’s live{' '}
+              <code className="font-mono text-zinc-800 dark:text-zinc-200">
+                cloud_billing_data.public.costs.v2
+              </code>{' '}
+              API reports live{' '}
+              <strong className="text-zinc-800 dark:text-zinc-200">
+                Gross Usage (${liveCostMetrics.grossUsageUsd.toFixed(2)})
+              </strong>{' '}
+              and{' '}
+              <strong className="text-emerald-700 dark:text-emerald-400">
+                Promotional Credits Applied (-${liveCostMetrics.absCreditsUsd.toFixed(2)})
+              </strong>
+              , but Google’s API schema does not expose individual grant{' '}
+              <code className="font-mono">Remaining value</code> or{' '}
+              <code className="font-mono">End date</code>. To inspect grant
+              expiration countdowns without any hardcoded files, you can
+              optionally upload your{' '}
+              <strong className="text-zinc-800 dark:text-zinc-200">
+                Google Cloud Console → Billing → Credits → Download CSV
+              </strong>{' '}
+              file right in your browser.
+            </p>
           </div>
-          <p className="text-xs text-zinc-500 max-w-2xl mx-auto leading-relaxed">
-            Google Cloud’s public{' '}
-            <code className="font-mono text-zinc-700 dark:text-zinc-300">
-              cloudbilling.googleapis.com/v1
-            </code>{' '}
-            API exposes your{' '}
-            <strong className="text-zinc-700 dark:text-zinc-300">
-              {billingAccounts.length} Billing Accounts
-            </strong>{' '}
-            above, but does not expose a REST endpoint for promotional credit
-            grant rows or expiration dates. In{' '}
-            <strong className="text-zinc-700 dark:text-zinc-300">
-              Google Cloud Console → Billing → Credits
-            </strong>
-            , click{' '}
-            <strong className="text-zinc-700 dark:text-zinc-300">
-              Download CSV
-            </strong>{' '}
-            (top-right) and upload that CSV here to calculate live expiration
-            countdowns and stranded balance warnings.
-          </p>
-          <div>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-            >
-              <Upload className="w-3.5 h-3.5 shrink-0" />
-              <span>Upload Google Cloud Billing Credits CSV</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow-sm"
+          >
+            <Upload className="w-3.5 h-3.5 shrink-0" />
+            <span>Upload Console Credits CSV</span>
+          </button>
         </div>
       ) : (
         <>

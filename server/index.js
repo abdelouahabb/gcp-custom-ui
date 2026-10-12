@@ -16148,111 +16148,119 @@ app.post('/api/project/:projectId/action', async (req, res) => {
 
 // ============================================================================
 // CLOUD BILLING ACCOUNT & GDE PROMOTIONAL CREDIT GUARDIAN
-// Queries live Cloud Billing API (`cloudbilling.googleapis.com/v1`) and
-// `gcloud billing accounts list` / `gcloud billing projects describe`.
-// Note: Google Cloud does not expose promotional credit balances or end dates
-// via any public REST endpoint (/credits returns 404). Credit rows are synced
-// exclusively from the user's real Google Cloud Console Credits CSV export
-// (`console.cloud.google.com/billing` -> Credits -> Download CSV).
+// Queries live Cloud Billing APIs:
+// 1. `gcloud billing accounts list --format=json`
+// 2. `gcloud billing projects describe <projectId> --format=json`
+// 3. `POST https://cloudbilling.googleapis.com/v1beta:generateInsights`
+//    (queries `cloud_billing_data.public.costs.v2` for live `usage_cost`,
+//    `total_credit`, `other_savings`, `savings_programs`, and `subtotal`).
+// Zero hardcoded credit rows or repo CSV files.
 // ============================================================================
 const gdeCreditGrantsByProject = new Map();
-const CREDITS_CSV_PATH = path.join(__dirname, 'billing-credits.csv');
+const liveBillingInsightsCache = new Map();
 
-function parseCreditsCsvText(csvText = '') {
-  const lines = String(csvText || '')
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length < 2) return [];
+async function fetchLiveCloudBillingInsights(projectId, billingAccounts = [], forceRefresh = false) {
+  const openAccountNames = billingAccounts
+    .filter((a) => a.open && a.name)
+    .map((a) => a.name);
+  const cacheKey = openAccountNames.join(',') || projectId;
 
-  const parseCsvLine = (line) => {
-    const out = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i += 1) {
-      const ch = line[i];
-      if (ch === '"') {
-        inQuotes = !inQuotes;
-      } else if (ch === ',' && !inQuotes) {
-        out.push(cur.trim());
-        cur = '';
-      } else {
-        cur += ch;
-      }
+  if (!forceRefresh && liveBillingInsightsCache.has(cacheKey)) {
+    const cached = liveBillingInsightsCache.get(cacheKey);
+    if (Date.now() - cached.fetchedAt < 5 * 60 * 1000) {
+      return cached.data;
     }
-    out.push(cur.trim());
-    return out;
-  };
-
-  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
-  const nameIdx = headers.findIndex((h) => h.includes('name'));
-  const remIdx = headers.findIndex((h) => h.includes('remaining value'));
-  const origIdx = headers.findIndex((h) => h.includes('original value'));
-  const startIdx = headers.findIndex((h) => h.includes('start'));
-  const endIdx = headers.findIndex((h) => h.includes('end'));
-  const appIdx = headers.findIndex((h) => h.includes('application'));
-
-  const toIsoDate = (raw) => {
-    if (!raw) return '';
-    const d = new Date(`${raw} 12:00:00 UTC`);
-    if (!Number.isNaN(d.getTime())) {
-      return d.toISOString().slice(0, 10);
-    }
-    return raw;
-  };
-
-  const parseMoney = (raw) => {
-    if (!raw) return 0;
-    return Number(String(raw).replace(/[^0-9.-]/g, '')) || 0;
-  };
-
-  const rows = [];
-  for (let i = 1; i < lines.length; i += 1) {
-    const cols = parseCsvLine(lines[i]);
-    if (cols.length < 3) continue;
-    const name = cols[nameIdx >= 0 ? nameIdx : 0] || `Credit Grant #${i}`;
-    const rem = parseMoney(cols[remIdx >= 0 ? remIdx : 3]);
-    const orig = parseMoney(cols[origIdx >= 0 ? origIdx : 4]) || rem;
-    const startDate = toIsoDate(cols[startIdx >= 0 ? startIdx : 5]);
-    const expirationDate = toIsoDate(cols[endIdx >= 0 ? endIdx : 6]);
-    const creditApplication = cols[appIdx >= 0 ? appIdx : 7] || 'Net price';
-
-    rows.push({
-      id: `csv-credit-${i}`,
-      name,
-      grantType: name.includes('MONTHLY') ? 'GDP_MONTHLY' : 'PROMOTIONAL',
-      creditCode: name.split('-').pop()?.trim() || 'GCP-CREDIT',
-      initialAmountUsd: orig,
-      remainingAmountUsd: rem,
-      startDate,
-      expirationDate,
-      creditApplication,
-      alertDaysThreshold: 30,
-    });
   }
-  return rows;
-}
 
-function getProjectCreditsFromCsvOrMemory(projectId) {
-  if (gdeCreditGrantsByProject.has(projectId)) {
-    return gdeCreditGrantsByProject.get(projectId);
-  }
   try {
-    if (fs.existsSync(CREDITS_CSV_PATH)) {
-      const csvRaw = fs.readFileSync(CREDITS_CSV_PATH, 'utf8');
-      const parsed = parseCreditsCsvText(csvRaw);
-      if (parsed.length > 0) {
-        return parsed;
+    const tokenOut = await execAsync('gcloud auth print-access-token', {
+      timeout: 5000,
+      env: ATTRIBUTION_ENV,
+    });
+    const token = String(tokenOut?.stdout || '').trim();
+    if (!token) return null;
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const parents =
+      openAccountNames.length > 0
+        ? openAccountNames.slice(0, 5).map((name) => ({ resource: name }))
+        : [{ resource: `projects/${projectId}` }];
+
+    const response = await fetch(
+      'https://cloudbilling.googleapis.com/v1beta:generateInsights',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-goog-user-project': projectId,
+        },
+        body: JSON.stringify({
+          parents,
+          prompt: `Show usage_cost, total_credit, other_savings, savings_programs, and subtotal by service_display_name and project_id from 2025-01-01 to ${todayIso}.`,
+        }),
+      }
+    );
+
+    if (!response.ok) return null;
+    const streamItems = await response.json();
+    if (!Array.isArray(streamItems)) return null;
+
+    const finalItem = streamItems.find((item) => item && item.finalResult);
+    if (!finalItem?.finalResult) return null;
+
+    const finalResult = finalItem.finalResult;
+    const dataSets = Array.isArray(finalResult.dataSets)
+      ? finalResult.dataSets
+      : [];
+
+    // Find the richest dataset that includes total_credit / usage_cost
+    let bestRows = [];
+    for (const ds of dataSets) {
+      const colInfo = ds?.billingData?.columnInfo || [];
+      const cols = colInfo.map((c) => c.column);
+      const rawRows = ds?.billingData?.rows || [];
+      if (cols.includes('total_credit') || cols.includes('usage_cost')) {
+        bestRows = rawRows.map((r, idx) => {
+          const vals = r.values || [];
+          const obj = { id: `live-cost-row-${idx}` };
+          cols.forEach((colName, cIdx) => {
+            const cell = vals[cIdx] || {};
+            obj[colName] =
+              cell.doubleValue !== undefined
+                ? Number(cell.doubleValue)
+                : cell.stringValue !== undefined
+                ? String(cell.stringValue)
+                : null;
+          });
+          return obj;
+        });
+        if (cols.includes('total_credit')) break;
       }
     }
+
+    const resultData = {
+      source: 'cloudbilling.googleapis.com/v1beta:generateInsights (cloud_billing_data.public.costs.v2)',
+      queriedParents: parents.map((p) => p.resource),
+      summary: finalResult.summary || '',
+      fullAnalysis: finalResult.fullAnalysis || '',
+      costCreditRows: bestRows,
+      fetchedAt: new Date().toISOString(),
+    };
+
+    liveBillingInsightsCache.set(cacheKey, {
+      fetchedAt: Date.now(),
+      data: resultData,
+    });
+    return resultData;
   } catch {
-    // ignore file read errors
+    return null;
   }
-  return [];
 }
 
 app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
   const { projectId } = req.params;
+  const forceRefresh = req.query.refresh === 'true';
   let billingAccounts = [];
   let billingInfo = {
     projectId,
@@ -16330,20 +16338,27 @@ app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
     // Ignore CLI errors
   }
 
+  const liveBillingInsights = await fetchLiveCloudBillingInsights(
+    projectId,
+    billingAccounts,
+    forceRefresh
+  );
+
   return res.json({
     ok: true,
     billingInfo,
     billingAccounts,
-    grants: getProjectCreditsFromCsvOrMemory(projectId),
+    liveBillingInsights,
+    grants: gdeCreditGrantsByProject.get(projectId) || [],
   });
 });
 
 app.post('/api/project/:projectId/billing-guardian/grants', (req, res) => {
   const { projectId } = req.params;
-  const { action = 'BULK_IMPORT', grants: bulkGrants, rawCsv } = req.body || {};
+  const { action = 'BULK_IMPORT', grants: bulkGrants } = req.body || {};
 
   if (action === 'CLEAR') {
-    gdeCreditGrantsByProject.set(projectId, []);
+    gdeCreditGrantsByProject.delete(projectId);
     return res.json({
       ok: true,
       grants: [],
@@ -16353,17 +16368,10 @@ app.post('/api/project/:projectId/billing-guardian/grants', (req, res) => {
 
   if (action === 'BULK_IMPORT' && Array.isArray(bulkGrants)) {
     gdeCreditGrantsByProject.set(projectId, bulkGrants);
-    if (typeof rawCsv === 'string' && rawCsv.trim()) {
-      try {
-        fs.writeFileSync(CREDITS_CSV_PATH, rawCsv, 'utf8');
-      } catch {
-        // ignore write errors
-      }
-    }
     return res.json({
       ok: true,
       grants: bulkGrants,
-      message: `Synced ${bulkGrants.length} credit rows from Google Cloud Billing CSV.`,
+      message: `Synced ${bulkGrants.length} credit rows from uploaded Google Cloud Billing CSV.`,
     });
   }
 
