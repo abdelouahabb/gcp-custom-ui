@@ -173,90 +173,10 @@ export default function BigQueryStudio({
     'telemetry_events_2026_restored'
   );
 
-  // BigLake & BigLake Metastore Catalogs (biglake.googleapis.com/v1) Studio state
-  const [gcsBuckets, setGcsBuckets] = useState([]);
-  const [bigLakeCatalogs, setBigLakeCatalogs] = useState([]);
-  const [loadingBigLakeCatalogs, setLoadingBigLakeCatalogs] = useState(false);
-  const [creatingBigLakeCatalog, setCreatingBigLakeCatalog] = useState(false);
-  const [newCatalogId, setNewCatalogId] = useState('iceberg_prod_catalog');
-  const [newCatalogLocation, setNewCatalogLocation] = useState('us');
-  const [newCatalogDbId, setNewCatalogDbId] = useState('analytics_db');
-  const [bigLakeUseCase, setBigLakeUseCase] = useState('ICEBERG_MANAGED'); // 'ICEBERG_MANAGED' | 'BIGLAKE_EXTERNAL' | 'NATIVE_BQ'
-  const [bigLakeBucket, setBigLakeBucket] = useState('');
-  const [bigLakeFolder, setBigLakeFolder] = useState('biglake-iceberg/events_2026');
-  const [bigLakeConnectionId, setBigLakeConnectionId] = useState('biglake-iceberg-conn');
-  const [bigLakeLocation, setBigLakeLocation] = useState('US');
-  const [bigLakeTableName, setBigLakeTableName] = useState('open_iceberg_events');
-  const [bigLakeFormat, setBigLakeFormat] = useState('PARQUET');
-  const [bigLakeStalenessMins, setBigLakeStalenessMins] = useState(30);
-  const [bigLakeEnableRls, setBigLakeEnableRls] = useState(true);
-  const [bigLakeRlsFilter, setBigLakeRlsFilter] = useState("region = 'EU' AND SESSION_USER() LIKE '%@%'");
-
   const copyText = (text, id) => {
     navigator.clipboard?.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1600);
-  };
-
-  const fetchBigLakeCatalogs = useCallback(async () => {
-    if (!projectId) return;
-    setLoadingBigLakeCatalogs(true);
-    try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/biglake/metastore/catalogs`
-      );
-      setBigLakeCatalogs(res.data?.catalogs || []);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingBigLakeCatalogs(false);
-    }
-  }, [projectId]);
-
-  const handleCreateBigLakeCatalog = async (e) => {
-    e?.preventDefault();
-    if (!projectId || !newCatalogId.trim()) return;
-    setCreatingBigLakeCatalog(true);
-    try {
-      const res = await axios.post(
-        `/api/project/${encodeURIComponent(projectId)}/biglake/metastore/catalogs`,
-        {
-          catalogId: newCatalogId.trim(),
-          location: newCatalogLocation,
-          databaseId: newCatalogDbId.trim() || 'analytics_db',
-          gcsBucketUri: `gs://${bigLakeBucket || `${projectId}-biglake-iceberg`}`,
-        }
-      );
-      onShowToast?.(res.data?.message || 'BigLake Metastore Catalog created!');
-      await fetchBigLakeCatalogs();
-    } catch (err) {
-      onShowError?.(
-        err.response?.data?.error ||
-          err.message ||
-          'Failed to create BigLake Metastore Catalog.'
-      );
-    } finally {
-      setCreatingBigLakeCatalog(false);
-    }
-  };
-
-  const handleDeleteBigLakeCatalog = async (location, catalogId) => {
-    if (!projectId) return;
-    try {
-      const res = await axios.delete(
-        `/api/project/${encodeURIComponent(
-          projectId
-        )}/biglake/metastore/catalogs/${encodeURIComponent(
-          location
-        )}/${encodeURIComponent(catalogId)}`
-      );
-      onShowToast?.(res.data?.message || `Deleted catalog ${catalogId}`);
-      await fetchBigLakeCatalogs();
-    } catch (err) {
-      onShowError?.(
-        err.response?.data?.error || err.message || 'Failed to delete catalog.'
-      );
-    }
   };
 
   const fetchDatasets = useCallback(async () => {
@@ -279,26 +199,6 @@ export default function BigQueryStudio({
       setLoadingDatasets(false);
     }
   }, [projectId, selectedDatasetId, onShowError]);
-
-  const fetchGcsBucketsForBigLake = useCallback(async () => {
-    if (!projectId) return;
-    try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/storage/buckets`
-      );
-      const bList = res.data?.buckets || [];
-      setGcsBuckets(bList);
-      if (bList.length > 0 && !bigLakeBucket) {
-        setBigLakeBucket(bList[0].name);
-      } else if (!bigLakeBucket) {
-        setBigLakeBucket(`${projectId}-biglake-iceberg`);
-      }
-    } catch {
-      if (!bigLakeBucket) {
-        setBigLakeBucket(`${projectId}-biglake-iceberg`);
-      }
-    }
-  }, [projectId, bigLakeBucket]);
 
   const fetchTables = useCallback(
     async (dsId) => {
@@ -330,9 +230,7 @@ export default function BigQueryStudio({
 
   useEffect(() => {
     fetchDatasets();
-    fetchGcsBucketsForBigLake();
-    fetchBigLakeCatalogs();
-  }, [fetchDatasets, fetchGcsBucketsForBigLake, fetchBigLakeCatalogs]);
+  }, [fetchDatasets]);
 
   useEffect(() => {
     if (selectedDatasetId) {
@@ -563,103 +461,6 @@ export default function BigQueryStudio({
       diffDeletedRows: `SELECT old_snap.*\nFROM \`${projectId}.${ds}.${tbl}\` FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${rewindHoursAgo} HOUR) AS old_snap\nLEFT JOIN \`${projectId}.${ds}.${tbl}\` AS live_curr\n  USING (event_id)\nWHERE live_curr.event_id IS NULL;`,
     };
   }, [projectId, selectedDatasetId, rewindTableTarget, rewindCloneName, rewindHoursAgo]);
-
-  const bigLakeArtifacts = useMemo(() => {
-    const ds = selectedDatasetId || 'analytics_lakehouse';
-    const bkt = (bigLakeBucket || `${projectId}-open-lakehouse`).replace(/^gs:\/\//, '');
-    const cleanFolder = (bigLakeFolder || 'iceberg-lakehouse/events_2026').replace(/^\/+|\/+$/g, '');
-    const connId = bigLakeConnectionId || 'biglake-lakehouse-conn';
-    const loc = (bigLakeLocation || 'US').toLowerCase();
-    const tbl = bigLakeTableName || 'open_iceberg_events';
-    const fullConn = `${projectId}.${loc}.${connId}`;
-
-    const step1ConnectionCli = `# Step 1: Create a BigLake Cloud Resource Connection (delegated Zero-Trust identity)
-bq mk --connection \\
-  --connection_type=CLOUD_RESOURCE \\
-  --project_id=${projectId} \\
-  --location=${bigLakeLocation} \\
-  ${connId}
-
-# Inspect the generated BigLake Connection Service Account email:
-bq show --format=prettyjson --connection ${projectId}.${bigLakeLocation}.${connId}`;
-
-    const step2BucketIamCli = `# Step 2: Grant ONLY the BigLake Connection Service Account access to gs://${bkt}
-# (Human SQL analysts NEVER need raw gs:// bucket permissions!)
-CONN_SA=$(bq show --format=json --connection ${projectId}.${bigLakeLocation}.${connId} | jq -r '.cloudResource.serviceAccountId')
-
-gcloud storage buckets add-iam-policy-binding gs://${bkt} \\
-  --member="serviceAccount:\${CONN_SA}" \\
-  --role="${bigLakeUseCase === 'ICEBERG_MANAGED' ? 'roles/storage.objectAdmin' : 'roles/storage.objectViewer'}"`;
-
-    const icebergManagedDdl = `-- BigLake Managed Table for Apache Iceberg (2026 Flagship Open Lakehouse)
--- Stores open Parquet + Iceberg metadata directly in gs://${bkt}/${cleanFolder}
--- Supports full ACID INSERT/UPDATE/DELETE/MERGE, Time-Travel, and Zero-Copy Spark/Vertex AI access!
-CREATE OR REPLACE TABLE \`${projectId}.${ds}.${tbl}\` (
-  event_id STRING,
-  event_timestamp TIMESTAMP,
-  user_id STRING,
-  region STRING,
-  revenue_usd NUMERIC
-)
-CLUSTER BY region, user_id
-WITH CONNECTION \`${fullConn}\`
-OPTIONS (
-  file_format = 'PARQUET',
-  table_format = 'ICEBERG',
-  storage_uri = 'gs://${bkt}/${cleanFolder}'
-);`;
-
-    const bigLakeExternalDdl = `-- BigLake External Table over existing Cloud Storage files with Object Metadata Caching
--- Zero-copy SQL over gs://${bkt}/${cleanFolder}/* without granting users raw bucket IAM!
-CREATE OR REPLACE EXTERNAL TABLE \`${projectId}.${ds}.${tbl}_ext\`
-WITH CONNECTION \`${fullConn}\`
-OPTIONS (
-  format = '${bigLakeFormat}',
-  uris = ['gs://${bkt}/${cleanFolder}/*.${bigLakeFormat.toLowerCase()}'],
-  max_staleness = INTERVAL ${bigLakeStalenessMins} MINUTE,
-  metadata_cache_mode = 'AUTOMATIC'
-);`;
-
-    const rowAccessPolicyDdl = `-- BigLake Fine-Grained Row-Level Security (Impossible on standard GCS External Tables!)
-CREATE OR REPLACE ROW ACCESS POLICY eu_sovereign_filter
-ON \`${projectId}.${ds}.${tbl}\`
-GRANT TO ('domain:example.com', 'user:analyst@${projectId}.iam.gserviceaccount.com')
-FILTER USING (${bigLakeRlsFilter});`;
-
-    const sparkReadSnippet = `# PySpark / Dataproc / Vertex AI Zero-Copy Read of the EXACT same BigLake Iceberg files in gs://${bkt}/${cleanFolder}
-df = spark.read.format("iceberg") \\
-  .load("gs://${bkt}/${cleanFolder}")
-df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
-
-    return {
-      ds,
-      bkt,
-      cleanFolder,
-      fullConn,
-      step1ConnectionCli,
-      step2BucketIamCli,
-      icebergManagedDdl,
-      bigLakeExternalDdl,
-      rowAccessPolicyDdl,
-      sparkReadSnippet,
-      primaryDdl:
-        bigLakeUseCase === 'ICEBERG_MANAGED'
-          ? icebergManagedDdl
-          : bigLakeExternalDdl,
-    };
-  }, [
-    projectId,
-    selectedDatasetId,
-    bigLakeBucket,
-    bigLakeFolder,
-    bigLakeConnectionId,
-    bigLakeLocation,
-    bigLakeTableName,
-    bigLakeFormat,
-    bigLakeStalenessMins,
-    bigLakeUseCase,
-    bigLakeRlsFilter,
-  ]);
 
   return (
     <div className="space-y-5">
