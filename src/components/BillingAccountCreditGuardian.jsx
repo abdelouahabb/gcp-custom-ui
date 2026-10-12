@@ -5,8 +5,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Plus,
-  Trash2,
   RefreshCw,
   Terminal,
   Database,
@@ -15,8 +13,6 @@ import {
   ShieldAlert,
   TrendingDown,
   DollarSign,
-  Calendar,
-  Sliders,
   Upload,
   Download,
   Filter,
@@ -25,13 +21,11 @@ import {
 
 const STORAGE_KEY_PREFIX = 'cloudpulse_gde_credits_v2_';
 
-// Reference date matching the billing snapshot (or current system clock)
 function getDaysUntil(dateStr) {
   if (!dateStr) return 0;
   const target = new Date(`${dateStr}T23:59:59`);
   if (Number.isNaN(target.getTime())) return 0;
   const now = new Date();
-  // Calculate calendar day diff matching Google Cloud Console ("Expiring in 12 days" for Oct 25 vs Oct 12/13)
   const startOfToday = new Date(
     now.getFullYear(),
     now.getMonth(),
@@ -51,7 +45,6 @@ function getDaysUntil(dateStr) {
   const diffDays = Math.round(
     (targetNoon.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24)
   );
-  // Match GCP Console's full-24h remaining day floor ("Expiring in 12 days" on Oct 12 for Oct 25 end date)
   return diffDays > 0 ? Math.max(1, diffDays - 1) : diffDays;
 }
 
@@ -319,27 +312,10 @@ export default function BillingAccountCreditGuardian({
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchFilter, setSearchFilter] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingGrantId, setEditingGrantId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const fileInputRef = useRef(null);
 
-  const [formState, setFormState] = useState({
-    name: 'Marketing - agentic AI Sprint - rmandel-520155543',
-    grantType: 'GDE_AI_SPRINT',
-    creditCode: 'rmandel-520155543',
-    initialAmountUsd: 1000.0,
-    remainingAmountUsd: 999.04,
-    startDate: '2026-06-27',
-    expirationDate: '2026-10-25',
-    creditApplication: 'Net price',
-    alertDaysThreshold: 30,
-    notes: 'Agentic AI Sprint promotional credit grant.',
-  });
-
   const dailyBurnUsd = Number(liveBurn?.daily || 0);
-  const hourlyBurnUsd = Number(liveBurn?.hourly || 0);
-  const monthlyBurnUsd = Number(liveBurn?.monthly || 0);
 
   const loadBillingGuardian = useCallback(async () => {
     if (!projectId) return;
@@ -457,76 +433,6 @@ export default function BillingAccountCreditGuardian({
     }
   };
 
-  const handleSaveGrant = async (e) => {
-    e.preventDefault();
-    const normalized = {
-      id: editingGrantId || `gde-grant-${Date.now().toString(36)}`,
-      name: String(formState.name || 'GDE Promotional Credit Grant').trim(),
-      grantType: formState.grantType || 'GDE_AI_SPRINT',
-      creditCode: String(formState.creditCode || 'GDE-CREDIT').trim(),
-      initialAmountUsd: Math.max(
-        0.01,
-        Number(formState.initialAmountUsd) || 1000
-      ),
-      remainingAmountUsd: Math.max(
-        0,
-        Number(formState.remainingAmountUsd) ?? 0
-      ),
-      startDate: formState.startDate || '2026-06-27',
-      expirationDate: formState.expirationDate || '2026-10-25',
-      creditApplication: formState.creditApplication || 'Net price',
-      alertDaysThreshold: Math.max(
-        1,
-        Number(formState.alertDaysThreshold) || 30
-      ),
-      notes: String(formState.notes || '').trim(),
-    };
-
-    const next = [...grants];
-    const idx = next.findIndex((g) => g.id === normalized.id);
-    if (idx >= 0) {
-      next[idx] = normalized;
-    } else {
-      next.unshift(normalized);
-    }
-
-    await persistGrants(next, { action: 'UPSERT', grant: normalized });
-    setShowAddForm(false);
-    setEditingGrantId(null);
-    if (onShowToast) {
-      onShowToast(
-        `Saved credit grant "${normalized.name}" ($${normalized.remainingAmountUsd.toFixed(
-          2
-        )} remaining, ends ${normalized.expirationDate}).`
-      );
-    }
-  };
-
-  const handleDeleteGrant = async (grantId, grantName) => {
-    const next = grants.filter((g) => g.id !== grantId);
-    await persistGrants(next, { action: 'DELETE', grantId });
-    if (onShowToast) {
-      onShowToast(`Removed credit grant "${grantName}".`);
-    }
-  };
-
-  const handleStartEdit = (grant) => {
-    setEditingGrantId(grant.id);
-    setFormState({
-      name: grant.name,
-      grantType: grant.grantType || 'GDE_AI_SPRINT',
-      creditCode: grant.creditCode || '',
-      initialAmountUsd: grant.initialAmountUsd,
-      remainingAmountUsd: grant.remainingAmountUsd,
-      startDate: grant.startDate || '2026-06-27',
-      expirationDate: grant.expirationDate,
-      creditApplication: grant.creditApplication || 'Net price',
-      alertDaysThreshold: grant.alertDaysThreshold || 30,
-      notes: grant.notes || '',
-    });
-    setShowAddForm(true);
-  };
-
   // Parse Google Cloud Console "Download CSV" file
   const handleCsvUpload = (e) => {
     const file = e.target.files?.[0];
@@ -615,7 +521,7 @@ export default function BillingAccountCreditGuardian({
         });
         if (onShowToast) {
           onShowToast(
-            `Imported ${imported.length} credit rows from Google Cloud Billing CSV.`
+            `Synced ${imported.length} real credit rows from Google Cloud Billing CSV.`
           );
         }
       }
@@ -699,7 +605,7 @@ ORDER BY
 
   return (
     <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-5">
-      {/* Header Row: Live Billing Account Identity + Actions */}
+      {/* Header Row: Live Billing Account Identity + Real Sync / CSV Actions */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -721,7 +627,7 @@ ORDER BY
             </span>
           </div>
           <p className="text-xs text-zinc-500">
-            Tracks your live Google Cloud Billing Credits table (
+            Tracks your real Google Cloud Billing Credits ledger (
             <span className="font-semibold text-zinc-700 dark:text-zinc-300">
               Marketing - agentic AI Sprint
             </span>
@@ -789,26 +695,14 @@ ORDER BY
 
           <button
             type="button"
-            onClick={() => {
-              setEditingGrantId(null);
-              setFormState({
-                name: 'Google Developer Program / GDE Credit Grant',
-                grantType: 'GDE_AI_SPRINT',
-                creditCode: 'GDE-2026-GRANT',
-                initialAmountUsd: 1000,
-                remainingAmountUsd: 1000,
-                startDate: new Date().toISOString().slice(0, 10),
-                expirationDate: '2026-12-31',
-                creditApplication: 'Net price',
-                alertDaysThreshold: 30,
-                notes: 'Promotional credit grant.',
-              });
-              setShowAddForm((prev) => !prev);
-            }}
+            onClick={loadBillingGuardian}
+            disabled={loading}
             className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white border border-blue-500/40 shadow-sm text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
           >
-            <Plus className="w-3.5 h-3.5 shrink-0" />
-            <span>{showAddForm ? 'Close Editor' : 'Add Credit Grant'}</span>
+            <RefreshCw
+              className={`w-3.5 h-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`}
+            />
+            <span>Sync Billing Account</span>
           </button>
         </div>
       </div>
@@ -1034,176 +928,7 @@ ORDER BY
           </div>
         )}
 
-      {/* Add / Edit Credit Grant Form Drawer */}
-      {showAddForm && (
-        <form
-          onSubmit={handleSaveGrant}
-          className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3 text-xs font-mono"
-        >
-          <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
-            <span className="font-bold text-zinc-900 dark:text-zinc-100 uppercase">
-              {editingGrantId
-                ? 'Edit Cloud Billing Credit Grant'
-                : 'Add Cloud Billing Credit / GDE Grant'}
-            </span>
-            <span className="text-[11px] text-zinc-500">
-              Linked to {billingInfo.billingAccountName}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="space-y-1 lg:col-span-2">
-              <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                Credit Name
-              </label>
-              <input
-                type="text"
-                required
-                value={formState.name}
-                onChange={(e) =>
-                  setFormState((p) => ({ ...p, name: e.target.value }))
-                }
-                placeholder="e.g. Marketing - agentic AI Sprint - rmandel-520155543"
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                Remaining Value ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={formState.remainingAmountUsd}
-                onChange={(e) =>
-                  setFormState((p) => ({
-                    ...p,
-                    remainingAmountUsd: e.target.value,
-                  }))
-                }
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-emerald-600 dark:text-emerald-400 font-bold"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                Original Value ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                required
-                value={formState.initialAmountUsd}
-                onChange={(e) =>
-                  setFormState((p) => ({
-                    ...p,
-                    initialAmountUsd: e.target.value,
-                  }))
-                }
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                Start Date
-              </label>
-              <input
-                type="date"
-                required
-                value={formState.startDate}
-                onChange={(e) =>
-                  setFormState((p) => ({ ...p, startDate: e.target.value }))
-                }
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                End Date (Expiration)
-              </label>
-              <input
-                type="date"
-                required
-                value={formState.expirationDate}
-                onChange={(e) =>
-                  setFormState((p) => ({
-                    ...p,
-                    expirationDate: e.target.value,
-                  }))
-                }
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                Credit Application
-              </label>
-              <select
-                value={formState.creditApplication}
-                onChange={(e) =>
-                  setFormState((p) => ({
-                    ...p,
-                    creditApplication: e.target.value,
-                  }))
-                }
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="Net price">Net price</option>
-                <option value="List price">List price</option>
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[10px] uppercase text-zinc-500 font-bold">
-                Expiry Warning Window
-              </label>
-              <select
-                value={formState.alertDaysThreshold}
-                onChange={(e) =>
-                  setFormState((p) => ({
-                    ...p,
-                    alertDaysThreshold: Number(e.target.value),
-                  }))
-                }
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
-              >
-                <option value={14}>Warn 14 days before End date</option>
-                <option value={30}>Warn 30 days before End date</option>
-                <option value={45}>Warn 45 days before End date</option>
-                <option value={60}>Warn 60 days before End date</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                setShowAddForm(false);
-                setEditingGrantId(null);
-              }}
-              className="h-8 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="h-8 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer"
-            >
-              {editingGrantId ? 'Update Credit Row' : 'Save Credit Row'}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Google Cloud Console Credits Table Mirror (Filter Bar + 8 Columns + Burn Forecast) */}
+      {/* Google Cloud Console Credits Table Mirror (Exact 8 Columns from billing.png) */}
       <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-[#131314]">
         {/* Table Filter Bar matching GCP Console "Filter credits" */}
         <div className="px-4 py-2.5 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 bg-zinc-50/70 dark:bg-[#202124]">
@@ -1252,7 +977,7 @@ ORDER BY
           </div>
         </div>
 
-        {/* Credits Table */}
+        {/* Credits Table (Exact 8 columns from Google Cloud Billing Console) */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
@@ -1264,8 +989,7 @@ ORDER BY
                 <th className="py-2.5 px-3 text-right">Original value</th>
                 <th className="py-2.5 px-3">Start date</th>
                 <th className="py-2.5 px-3">End date</th>
-                <th className="py-2.5 px-3">Credit application</th>
-                <th className="py-2.5 px-3 text-right">Actions</th>
+                <th className="py-2.5 px-4">Credit application</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -1392,29 +1116,8 @@ ORDER BY
                     </td>
 
                     {/* Credit application */}
-                    <td className="py-3 px-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                    <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
                       {grant.creditApplication || 'Net price'}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3 px-3 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleStartEdit(grant)}
-                          className="h-7 px-2 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Sliders className="w-3 h-3" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteGrant(grant.id, grant.name)}
-                          className="h-7 w-7 rounded bg-zinc-100 hover:bg-red-500/10 dark:bg-zinc-900 dark:hover:bg-red-500/20 border border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-red-600 inline-flex items-center justify-center cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 );
