@@ -332,6 +332,14 @@ export default function EngineerWishlistWave2({
       await fetchZombies(true);
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
+      if (err?.__cancelledByUser) {
+        setOperationTrackers((prev) => {
+          const next = { ...prev };
+          delete next[zombie.id];
+          return next;
+        });
+        return;
+      }
       setOperationTrackers((prev) => ({
         ...prev,
         [zombie.id]: {

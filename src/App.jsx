@@ -65,6 +65,331 @@ import FuturisticOrbitalHud from './components/FuturisticOrbitalHud';
 import InteractiveDocsGuide from './components/InteractiveDocsGuide';
 import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
 
+/**
+ * Classifies any outgoing Axios request to determine if it performs a permanent
+ * deletion or destructive resource teardown on Google Cloud.
+ * Every matching request is paused until the engineer explicitly confirms it in
+ * the Mandatory Delete & Destructive Action Confirmation Modal.
+ */
+function classifyDestructiveAxiosConfig(config) {
+  if (!config || !config.url) return null;
+  if (config.headers && config.headers['x-confirmed-delete'] === 'true') {
+    return null;
+  }
+
+  const method = String(config.method || 'get').toLowerCase();
+  const rawUrl = String(config.url || '');
+  let body = config.data;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      body = {};
+    }
+  }
+  body = body || {};
+  const params = config.params || {};
+
+  // Decode project from URL if present
+  const projMatch = rawUrl.match(/\/api\/project\/([^/]+)/);
+  const projectId = projMatch ? decodeURIComponent(projMatch[1]) : 'Active GCP Project';
+
+  // 1. All HTTP DELETE requests
+  if (method === 'delete') {
+    // Generic resource delete (/api/project/:id/resource)
+    if (rawUrl.endsWith('/resource')) {
+      const rType = body.resourceType || 'Google Cloud Resource';
+      const rName = body.name || 'selected-resource';
+      const rRegion = body.region || 'global';
+      return {
+        title: `Permanently Delete ${rType}`,
+        resourceKind: rType,
+        targetName: rName,
+        location: rRegion,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This action will permanently delete the ${rType} "${rName}" (${rRegion}) from Google Cloud project "${projectId}". Associated data, endpoints, or network bindings cannot be recovered once destroyed.`,
+      };
+    }
+
+    // Cloud Storage object delete (/storage/buckets/:bucket/objects)
+    const gcsObjMatch = rawUrl.match(/\/storage\/buckets\/([^/]+)\/objects/);
+    if (gcsObjMatch) {
+      const bucket = decodeURIComponent(gcsObjMatch[1]);
+      const objName =
+        params.objectName ||
+        body.objectName ||
+        new URLSearchParams(rawUrl.split('?')[1] || '').get('objectName') ||
+        'selected-object';
+      return {
+        title: 'Permanently Delete Cloud Storage Object',
+        resourceKind: 'GCS Object',
+        targetName: `gs://${bucket}/${objName}`,
+        location: bucket,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete object "${objName}" from bucket "gs://${bucket}". Unless Object Versioning or a WORM Retention Lock is active on this bucket, this file cannot be recovered.`,
+      };
+    }
+
+    // BigQuery dataset delete (/bigquery/datasets/:datasetId)
+    const bqMatch = rawUrl.match(/\/bigquery\/datasets\/([^/?]+)/);
+    if (bqMatch) {
+      const datasetId = decodeURIComponent(bqMatch[1]);
+      return {
+        title: 'Permanently Delete BigQuery Dataset & All Tables',
+        resourceKind: 'BigQuery Dataset',
+        targetName: `${projectId}:${datasetId}`,
+        location: 'Multi-Region / Regional',
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This executes a forced recursive deletion (deleteContents=true) on BigQuery dataset "${datasetId}", permanently destroying all tables, views, routines, and stored analytical data inside it.`,
+      };
+    }
+
+    // BigLake Metastore catalog delete (/biglake/metastore/catalogs/:loc/:catalogId)
+    const blMatch = rawUrl.match(/\/biglake\/metastore\/catalogs\/([^/]+)\/([^/?]+)/);
+    if (blMatch) {
+      const loc = decodeURIComponent(blMatch[1]);
+      const catalogId = decodeURIComponent(blMatch[2]);
+      return {
+        title: 'Permanently Delete BigLake Metastore Catalog',
+        resourceKind: 'BigLake Catalog',
+        targetName: catalogId,
+        location: loc,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete BigLake Metastore Catalog "${catalogId}" in ${loc} (${projectId}). Iceberg table metadata registrations inside this catalog will be removed.`,
+      };
+    }
+
+    // Cloud SQL instance delete (/cloudsql/instances/:name)
+    const sqlMatch = rawUrl.match(/\/cloudsql\/instances\/([^/?]+)/);
+    if (sqlMatch) {
+      const instanceName = decodeURIComponent(sqlMatch[1]);
+      return {
+        title: 'Permanently Delete Cloud SQL Database Instance',
+        resourceKind: 'Cloud SQL Instance',
+        targetName: instanceName,
+        location: 'Regional Relational DB',
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently destroy Cloud SQL instance "${instanceName}", including all relational databases, users, and automatic backups associated with the instance.`,
+      };
+    }
+
+    // AlloyDB cluster delete (/alloydb/clusters/:region/:clusterId)
+    const alloyMatch = rawUrl.match(/\/alloydb\/clusters\/([^/]+)\/([^/?]+)/);
+    if (alloyMatch) {
+      const region = decodeURIComponent(alloyMatch[1]);
+      const clusterId = decodeURIComponent(alloyMatch[2]);
+      return {
+        title: 'Permanently Delete AlloyDB PostgreSQL Cluster',
+        resourceKind: 'AlloyDB Cluster',
+        targetName: clusterId,
+        location: region,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will force-delete AlloyDB cluster "${clusterId}" in ${region}, tearing down its primary instance, read pool nodes, and cluster storage volume.`,
+      };
+    }
+
+    // GKE cluster delete (/gke/clusters/:location/:name or /wave9/gke/cluster)
+    const gkeMatch = rawUrl.match(/\/gke\/clusters\/([^/]+)\/([^/?]+)/);
+    if (gkeMatch) {
+      const location = decodeURIComponent(gkeMatch[1]);
+      const clusterName = decodeURIComponent(gkeMatch[2]);
+      return {
+        title: 'Permanently Delete GKE Kubernetes Cluster',
+        resourceKind: 'GKE Cluster',
+        targetName: clusterName,
+        location,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete GKE cluster "${clusterName}" (${location}), terminating all running Kubernetes deployments, pods, services, and node pools.`,
+      };
+    }
+
+    if (rawUrl.includes('/wave9/gke/cluster')) {
+      const clusterName = body.clusterName || params.clusterName || 'gke-cluster';
+      const location = body.location || params.location || 'us-central1';
+      return {
+        title: 'Permanently Delete GKE Kubernetes Cluster',
+        resourceKind: 'GKE Cluster',
+        targetName: clusterName,
+        location,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete GKE cluster "${clusterName}" (${location}), terminating all running Kubernetes workloads and control plane endpoints.`,
+      };
+    }
+
+    // Cloud Functions delete (/functions/:region/:name)
+    const fnMatch = rawUrl.match(/\/functions\/([^/]+)\/([^/?]+)/);
+    if (fnMatch) {
+      const region = decodeURIComponent(fnMatch[1]);
+      const fnName = decodeURIComponent(fnMatch[2]);
+      return {
+        title: 'Permanently Delete Cloud Function',
+        resourceKind: 'Cloud Function (Gen2 / Gen1)',
+        targetName: fnName,
+        location: region,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete Cloud Function "${fnName}" in ${region} and disconnect its HTTP trigger or Eventarc event subscription.`,
+      };
+    }
+
+    // Fallback for any other HTTP DELETE endpoint
+    return {
+      title: 'Confirm Permanent Resource Deletion',
+      resourceKind: body.resourceType || 'Cloud Resource',
+      targetName: body.name || body.id || rawUrl.split('/').pop() || rawUrl,
+      location: body.region || body.zone || body.location || 'GCP',
+      projectId,
+      method: 'DELETE',
+      endpoint: rawUrl,
+      impactWarning: `You are about to execute a permanent HTTP DELETE operation on Google Cloud project "${projectId}". Please confirm you want to proceed.`,
+    };
+  }
+
+  // 2. Destructive HTTP POST endpoints
+  if (method === 'post') {
+    // Cloud Storage Empty & Delete Bucket
+    const emptyBucketMatch = rawUrl.match(/\/storage\/buckets\/([^/]+)\/empty-and-delete/);
+    if (emptyBucketMatch) {
+      const bucket = decodeURIComponent(emptyBucketMatch[1]);
+      return {
+        title: 'Force Empty & Permanently Delete Cloud Storage Bucket',
+        resourceKind: 'Cloud Storage Bucket (Recursive Purge)',
+        targetName: `gs://${bucket}`,
+        location: 'Global / Multi-Region',
+        projectId,
+        method: 'POST',
+        endpoint: rawUrl,
+        impactWarning: `DANGER: This operation will first permanently delete EVERY object and file stored inside "gs://${bucket}" and then permanently destroy the bucket itself. This action is irreversible.`,
+      };
+    }
+
+    // Compute Engine VM Power -> DELETE
+    const vmPowerMatch = rawUrl.match(/\/vms\/([^/]+)\/power/);
+    if (vmPowerMatch && String(body.action || '').toUpperCase() === 'DELETE') {
+      const vmName = decodeURIComponent(vmPowerMatch[1]);
+      const zone = body.zone || 'gcp-zone';
+      return {
+        title: 'Permanently Delete Compute Engine VM Instance',
+        resourceKind: 'Compute Engine VM',
+        targetName: vmName,
+        location: zone,
+        projectId,
+        method: 'POST (DELETE VM)',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently terminate and delete Compute Engine VM "${vmName}" in zone "${zone}", including its auto-delete boot persistent disk.`,
+      };
+    }
+
+    // Zombie Resource Exterminator
+    if (rawUrl.includes('/zombies/exterminate')) {
+      const zName = body.zombieId || body.name || 'orphaned-resource';
+      const zType = body.type || 'Orphaned Cloud Resource';
+      const zZone = body.zone || 'global';
+      return {
+        title: `Exterminate & Delete ${zType}`,
+        resourceKind: zType,
+        targetName: zName,
+        location: zZone,
+        projectId,
+        method: 'POST (EXTERMINATE)',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete the unattached/orphaned ${zType} "${zName}" (${zZone}) from project "${projectId}" to reclaim wasted FinOps spend.`,
+      };
+    }
+
+    // Artifact Registry Supply-Chain Delete Image / Sweep Orphans
+    if (rawUrl.includes('/wave9/supply-chain/delete-image')) {
+      const img = body.image || 'container-image';
+      return {
+        title: 'Permanently Delete Artifact Registry Container Image',
+        resourceKind: 'Artifact Registry Image',
+        targetName: img,
+        location: 'Artifact Registry',
+        projectId,
+        method: 'POST (DELETE IMAGE)',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete container image "${img}" (and its digest/tags) from Google Cloud Artifact Registry.`,
+      };
+    }
+
+    if (rawUrl.includes('/wave9/supply-chain/sweep-orphans')) {
+      const count = Array.isArray(body.images) ? body.images.length : 'all untagged';
+      return {
+        title: 'Sweep & Delete Orphaned Container Images',
+        resourceKind: 'Artifact Registry Orphan Sweep',
+        targetName: `${count} Untagged / Orphaned Images`,
+        location: 'Artifact Registry',
+        projectId,
+        method: 'POST (SWEEP ORPHANS)',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently purge ${count} untagged/orphaned container image digests from Artifact Registry.`,
+      };
+    }
+
+    // Sovereign IAM Service Account Key Deletion / Emergency Revocation
+    if (rawUrl.includes('/sovereign-iam/credentials/action')) {
+      const act = String(body.actionType || '').toUpperCase();
+      if (
+        act === 'DELETE_SA_KEY' ||
+        act === 'EMERGENCY_REVOKE_ALL_SA_KEYS' ||
+        act === 'REVOKE_ACTIVE_OAUTH_TOKEN'
+      ) {
+        const target =
+          body.keyId || body.targetSa || body.principal || 'IAM Credential';
+        return {
+          title: `Confirm Destructive IAM Credential Action (${act})`,
+          resourceKind: 'IAM Service Account Key / Token',
+          targetName: target,
+          location: 'Global IAM',
+          projectId,
+          method: `POST (${act})`,
+          endpoint: rawUrl,
+          impactWarning: `This will immediately and permanently delete or revoke "${target}" in Google Cloud IAM. Any workload authenticating with this key will lose access immediately.`,
+        };
+      }
+    }
+
+    // 2026 Quantum Nexus Ephemeral PR Shadow Environment Teardown
+    if (
+      rawUrl.includes('/quantum-nexus/action') &&
+      String(body.action || '').toUpperCase() === 'DELETE_EPHEMERAL_PR_ENV'
+    ) {
+      const target =
+        body.serviceName ||
+        (body.prNumber ? `PR #${body.prNumber} Shadow Env` : 'Ephemeral PR Env');
+      return {
+        title: 'Tear Down & Delete Ephemeral PR Shadow Environment',
+        resourceKind: 'Cloud Run Ephemeral PR Environment',
+        targetName: target,
+        location: body.region || 'us-central1',
+        projectId,
+        method: 'POST (DELETE PR ENV)',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete the ephemeral Cloud Run preview service "${target}" and release its preview URL.`,
+      };
+    }
+  }
+
+  return null;
+}
+
 function CloudPulseCockpit() {
   const { isDark, toggleTheme, mobilePreview, setMobilePreview } = useTheme();
 
@@ -82,8 +407,20 @@ function CloudPulseCockpit() {
   const [overview, setOverview] = useState(null);
   const [loadingOverview, setLoadingOverview] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [errorBanner, setErrorBanner] = useState(null);
+  const [errorBanner, setRawErrorBanner] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [pendingDeleteQueue, setPendingDeleteQueue] = useState([]);
+
+  const setErrorBanner = useCallback((msg) => {
+    if (
+      typeof msg === 'string' &&
+      (msg.includes('🛡️ Deletion cancelled') ||
+        msg.includes('__cancelledByUser'))
+    ) {
+      return;
+    }
+    setRawErrorBanner(msg);
+  }, []);
 
   const [activeTab, setActiveTab] = useState('OVERVIEW');
   const [innovationSubTab, setInnovationSubTab] = useState('TOPOLOGY');
@@ -111,10 +448,57 @@ function CloudPulseCockpit() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
-  const showToast = (msg) => {
+  const showToast = useCallback((msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 5000);
-  };
+  }, []);
+
+  // Global Mandatory Delete & Destructive Action Confirmation Gatekeeper
+  useEffect(() => {
+    const interceptorId = axios.interceptors.request.use(
+      (config) => {
+        const descriptor = classifyDestructiveAxiosConfig(config);
+        if (!descriptor) {
+          return config;
+        }
+        return new Promise((resolve, reject) => {
+          setPendingDeleteQueue((prev) => [
+            ...prev,
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              descriptor,
+              onConfirm: () => {
+                config.headers = {
+                  ...(config.headers || {}),
+                  'x-confirmed-delete': 'true',
+                };
+                resolve(config);
+              },
+              onCancel: () => {
+                const cancelErr = new Error(
+                  '🛡️ Deletion cancelled — resource kept safe.'
+                );
+                cancelErr.__cancelledByUser = true;
+                cancelErr.response = {
+                  status: 499,
+                  data: {
+                    error: '🛡️ Deletion cancelled — resource kept safe.',
+                  },
+                };
+                showToast('🛡️ Deletion cancelled — resource kept safe.');
+                reject(cancelErr);
+              },
+            },
+          ]);
+        });
+      },
+      (error) => Promise.reject(error)
+    );
+
+    return () => {
+      axios.interceptors.request.eject(interceptorId);
+    };
+  }, [showToast]);
 
   // Restore browser token from sessionStorage or URL hash (OAuth 2.0 redirect)
   useEffect(() => {
@@ -1271,7 +1655,160 @@ function CloudPulseCockpit() {
         onShowToast={showToast}
       />
 
+      <MandatoryDeleteConfirmationModal
+        activeItem={pendingDeleteQueue[0] || null}
+        queueLength={pendingDeleteQueue.length}
+        onConfirm={() => {
+          const current = pendingDeleteQueue[0];
+          setPendingDeleteQueue((prev) => prev.slice(1));
+          if (current?.onConfirm) current.onConfirm();
+        }}
+        onCancel={() => {
+          const current = pendingDeleteQueue[0];
+          setPendingDeleteQueue((prev) => prev.slice(1));
+          if (current?.onCancel) current.onCancel();
+        }}
+      />
+
       <GlobalInstantTooltipHud />
+    </div>
+  );
+}
+
+/**
+ * MandatoryDeleteConfirmationModal:
+ * High-visibility Zero-Trust Safety Gatekeeper that intercepts every destructive
+ * DELETE or teardown action across all 16 CloudPulse 2026 studios and requires
+ * explicit human confirmation before any request reaches Google Cloud.
+ */
+function MandatoryDeleteConfirmationModal({
+  activeItem,
+  queueLength = 0,
+  onConfirm,
+  onCancel,
+}) {
+  useEffect(() => {
+    if (!activeItem) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeItem, onCancel]);
+
+  if (!activeItem || !activeItem.descriptor) return null;
+  const {
+    title,
+    resourceKind,
+    targetName,
+    location,
+    projectId,
+    method,
+    endpoint,
+    impactWarning,
+  } = activeItem.descriptor;
+
+  return (
+    <div
+      className="fixed inset-0 z-[99990] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-150"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#0c0c0f] border-2 border-red-500/80 shadow-2xl shadow-red-950/50 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Top Hazard Header */}
+        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 px-5 py-3.5 flex items-center justify-between gap-3 text-white">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-xl bg-black/25 border border-white/25 flex items-center justify-center text-base font-extrabold">
+              ⚠️
+            </span>
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-red-100 font-bold">
+                🛡️ CloudPulse 2026 Destructive Action Gatekeeper
+              </div>
+              <h3 className="text-sm sm:text-base font-extrabold tracking-tight">
+                {title}
+              </h3>
+            </div>
+          </div>
+          {queueLength > 1 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-black/30 border border-white/20">
+              1 of {queueLength} queued
+            </span>
+          )}
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-4">
+          {/* Resource Target Summary Card */}
+          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                Target Resource to Destroy
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-600 text-white">
+                {method}
+              </span>
+            </div>
+            <div className="text-sm sm:text-base font-mono font-extrabold text-zinc-950 dark:text-white break-all">
+              {targetName}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+              <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[9px] uppercase text-zinc-400">
+                  Resource Kind
+                </div>
+                <div className="font-bold truncate">{resourceKind}</div>
+              </div>
+              <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[9px] uppercase text-zinc-400">
+                  Location / Scope
+                </div>
+                <div className="font-bold truncate">{location}</div>
+              </div>
+              <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[9px] uppercase text-zinc-400">
+                  GCP Project
+                </div>
+                <div className="font-bold truncate">{projectId}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Impact Warning */}
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1.5">
+            <div className="font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+              <span>⚡ Permanent Google Cloud Impact Warning</span>
+            </div>
+            <p>{impactWarning}</p>
+            <div className="text-[10px] font-mono text-zinc-500 truncate pt-1">
+              API Endpoint: {endpoint}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+            >
+              🛡️ Cancel (Keep Resource Safe) [Esc]
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>🗑️ Yes, Confirm & Permanently Delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

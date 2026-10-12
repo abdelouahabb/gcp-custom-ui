@@ -313,7 +313,9 @@ export default function VmFleetAndSsh({
         delete next[vm.name];
         return next;
       });
-      setPowerError(err.response?.data?.error || err.message);
+      if (!err?.__cancelledByUser) {
+        setPowerError(err.response?.data?.error || err.message);
+      }
     } finally {
       setPowerBusyVm(null);
     }
