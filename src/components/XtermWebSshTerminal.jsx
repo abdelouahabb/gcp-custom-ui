@@ -6,6 +6,7 @@ import '@xterm/xterm/css/xterm.css';
 import {
   Terminal,
   Wifi,
+  WifiOff,
   RefreshCw,
   Maximize2,
   Minimize2,
@@ -13,9 +14,8 @@ import {
   Copy,
   Check,
   Shield,
-  Sliders,
-  Trash2,
   FileText,
+  PowerOff,
 } from 'lucide-react';
 
 const LIVE_PTY_MACROS = [
@@ -35,6 +35,7 @@ export default function XtermWebSshTerminal({
   defaultUsername = 'ubuntu',
   isExpanded = false,
   onToggleExpand,
+  onDisconnect,
   onFetchSerialConsole,
   serialConsoleOutput = '',
   serialLoading = false,
@@ -47,9 +48,9 @@ export default function XtermWebSshTerminal({
   const [viewMode, setViewMode] = useState('LIVE_SSH_PTY'); // 'LIVE_SSH_PTY' | 'SERIAL_PORT_1'
   const [sshEngine, setSshEngine] = useState('auto'); // 'auto' | 'ssh2' | 'gcloud_pty' | 'iap' | 'cloud_shell'
   const [connStatus, setConnStatus] = useState({
-    status: 'IDLE',
-    engine: 'AUTO',
-    message: 'Ready to connect',
+    status: 'OFF',
+    engine: 'STANDBY',
+    message: 'SSH is off until enabled on a VM card',
   });
   const [copiedCli, setCopiedCli] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -58,6 +59,8 @@ export default function XtermWebSshTerminal({
   const [customPassword, setCustomPassword] = useState('');
   const [customPrivateKey, setCustomPrivateKey] = useState('');
   const [reconnectNonce, setReconnectNonce] = useState(0);
+
+  const isSessionEnabled = Boolean(activeVm) || sshEngine === 'cloud_shell';
 
   useEffect(() => {
     if (defaultUsername && !customUsername) {
@@ -72,8 +75,16 @@ export default function XtermWebSshTerminal({
     xtermRef.current?.focus();
   }, []);
 
-  // Initialize XTerm.js instance & WebSocket connection whenever VM or engine changes
+  // Only initialize XTerm.js & WebSocket when `isSessionEnabled` is true (user clicked "SSH / Console" on a VM!)
   useEffect(() => {
+    if (!isSessionEnabled) {
+      setConnStatus({
+        status: 'OFF',
+        engine: 'STANDBY',
+        message: 'SSH is off — click "SSH / Console" on a VM card to connect',
+      });
+      return undefined;
+    }
     if (viewMode !== 'LIVE_SSH_PTY') return undefined;
     if (!containerRef.current) return undefined;
 
@@ -124,6 +135,7 @@ export default function XtermWebSshTerminal({
     setTimeout(() => {
       try {
         fitAddon.fit();
+        term.focus();
       } catch {
         // ignore
       }
@@ -273,6 +285,7 @@ export default function XtermWebSshTerminal({
       }
     };
   }, [
+    isSessionEnabled,
     projectId,
     activeVm?.name,
     activeVm?.zone,
@@ -304,51 +317,80 @@ export default function XtermWebSshTerminal({
                     ? activeVm.externalIp
                     : activeVm.internalIp
                 })`
-              : 'Select a VM'}
+              : 'SSH Standby (Off)'}
           </span>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
           <span
             className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border ${
-              connStatus.status === 'CONNECTED'
+              !isSessionEnabled
+                ? 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
+                : connStatus.status === 'CONNECTED'
                 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                 : connStatus.status === 'CONNECTING'
                 ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
                 : 'bg-zinc-800 text-zinc-400 border-zinc-700'
             }`}
           >
-            <Wifi className="w-3 h-3" />
+            {isSessionEnabled ? (
+              <Wifi className="w-3 h-3" />
+            ) : (
+              <WifiOff className="w-3 h-3" />
+            )}
             <span>
-              {connStatus.status === 'CONNECTED'
+              {!isSessionEnabled
+                ? 'SSH OFF'
+                : connStatus.status === 'CONNECTED'
                 ? `LIVE · ${connStatus.engine}`
                 : connStatus.status}
             </span>
           </span>
 
-          <button
-            type="button"
-            onClick={() => setShowAuthModal((v) => !v)}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
-              showAuthModal
-                ? 'bg-blue-600 text-white border-blue-500'
-                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
-            }`}
-            title="Configure SSH Username, Port, Password, or Private Key PEM"
-          >
-            <KeyRound className="w-3 h-3" />
-            <span>SSH Auth / Key</span>
-          </button>
+          {isSessionEnabled && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowAuthModal((v) => !v)}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
+                  showAuthModal
+                    ? 'bg-blue-600 text-white border-blue-500'
+                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
+                }`}
+                title="Configure SSH Username, Port, Password, or Private Key PEM"
+              >
+                <KeyRound className="w-3 h-3" />
+                <span>SSH Auth / Key</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setReconnectNonce((n) => n + 1)}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors cursor-pointer"
-            title="Reconnect interactive Web-SSH PTY session"
-          >
-            <RefreshCw className="w-3 h-3" />
-            <span>Reconnect</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setReconnectNonce((n) => n + 1)}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors cursor-pointer"
+                title="Reconnect interactive Web-SSH PTY session"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Reconnect</span>
+              </button>
+
+              {onDisconnect && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (sshEngine === 'cloud_shell') {
+                      setSshEngine('auto');
+                    }
+                    onDisconnect();
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition-colors cursor-pointer"
+                  title="Disconnect and turn off the active SSH session"
+                >
+                  <PowerOff className="w-3 h-3" />
+                  <span>Turn Off SSH</span>
+                </button>
+              )}
+            </>
+          )}
 
           {onToggleExpand && (
             <button
@@ -396,7 +438,7 @@ export default function XtermWebSshTerminal({
             type="button"
             onClick={() => {
               setViewMode('SERIAL_PORT_1');
-              if (onFetchSerialConsole) onFetchSerialConsole();
+              if (activeVm && onFetchSerialConsole) onFetchSerialConsole();
             }}
             className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
               viewMode === 'SERIAL_PORT_1'
@@ -440,7 +482,7 @@ export default function XtermWebSshTerminal({
       </div>
 
       {/* Optional Custom SSH Credentials Drawer */}
-      {showAuthModal && (
+      {showAuthModal && isSessionEnabled && (
         <div className="bg-zinc-900/95 border-b border-zinc-800 p-3.5 space-y-2.5 text-xs font-mono">
           <div className="flex items-center justify-between">
             <span className="font-bold text-emerald-400 flex items-center gap-1.5">
@@ -523,7 +565,26 @@ export default function XtermWebSshTerminal({
       )}
 
       {/* Main Content Area */}
-      {viewMode === 'LIVE_SSH_PTY' ? (
+      {!isSessionEnabled ? (
+        <div className="p-8 flex-1 flex flex-col items-center justify-center text-center min-h-[380px] bg-[#070709]">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-3 text-zinc-500">
+            <WifiOff className="w-6 h-6" />
+          </div>
+          <h4 className="text-sm font-mono font-extrabold text-zinc-200 mb-1.5">
+            Web-SSH Client is Standby (Off by Default)
+          </h4>
+          <p className="text-xs font-mono text-zinc-400 max-w-md leading-relaxed mb-4">
+            No automatic SSH connection is opened when you visit this tab. Click the green{' '}
+            <span className="px-1.5 py-0.5 rounded bg-[#059669] text-black font-bold">
+              SSH / Console
+            </span>{' '}
+            button on any Compute Engine VM card on the left to enable **`SSH Active`** and launch the live **`@xterm/xterm` + `ssh2`** interactive terminal.
+          </p>
+          <div className="text-[11px] font-mono text-zinc-500">
+            Click <span className="text-blue-400 font-bold">SSH Active (Turn Off)</span> at any time to close the SSH connection.
+          </div>
+        </div>
+      ) : viewMode === 'LIVE_SSH_PTY' ? (
         <div className="p-3 space-y-2.5 flex-1 flex flex-col">
           {/* CLI Copy & Quick PTY Macro Injection Bar */}
           {activeVm && (

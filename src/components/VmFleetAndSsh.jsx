@@ -173,13 +173,10 @@ export default function VmFleetAndSsh({
           return changed ? next : prev;
         });
 
-        const firstRunning =
-          list.find((v) => v.status === 'RUNNING') || list[0] || null;
+        // Keep SSH OFF by default when landing on the tab; only refresh activeSshVm metadata if the user already activated SSH on a VM
         setActiveSshVm((prev) => {
-          if (prev && list.some((v) => v.name === prev.name)) {
-            return list.find((v) => v.name === prev.name);
-          }
-          return firstRunning;
+          if (!prev) return null;
+          return list.find((v) => v.name === prev.name) || null;
         });
       } catch (err) {
         setComputeApiMessage(err.response?.data?.error || err.message);
@@ -749,10 +746,19 @@ export default function VmFleetAndSsh({
                       <button
                         type="button"
                         disabled={isDeleting}
-                        onClick={() => setActiveSshVm(vm)}
-                        className={`inline-flex items-center gap-1.5 rounded-[8px] px-3.5 py-1.5 text-xs font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed ${
+                        onClick={() =>
+                          setActiveSshVm((prev) =>
+                            prev?.name === vm.name ? null : vm
+                          )
+                        }
+                        title={
                           isSshActive
-                            ? 'bg-blue-600 text-white'
+                            ? `SSH is active on ${vm.name} — click to disconnect & turn SSH off`
+                            : `Click to enable & connect live interactive SSH to ${vm.name}`
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-[8px] px-3.5 py-1.5 text-xs font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                          isSshActive
+                            ? 'bg-blue-600 hover:bg-rose-600 text-white'
                             : 'bg-[#059669] hover:bg-[#047857] text-[#000000]'
                         }`}
                       >
@@ -761,7 +767,7 @@ export default function VmFleetAndSsh({
                           {isDeleting
                             ? 'Deprovisioning...'
                             : isSshActive
-                            ? 'SSH Active'
+                            ? 'SSH Active (Turn Off)'
                             : 'SSH / Console'}
                         </span>
                       </button>
@@ -1002,6 +1008,7 @@ export default function VmFleetAndSsh({
               defaultUsername={userShort || 'ubuntu'}
               isExpanded={sshTerminalExpanded}
               onToggleExpand={() => setSshTerminalExpanded((prev) => !prev)}
+              onDisconnect={() => setActiveSshVm(null)}
               onFetchSerialConsole={handleFetchSerialConsole}
               serialConsoleOutput={serialConsoleOutput}
               serialLoading={serialLoading}
