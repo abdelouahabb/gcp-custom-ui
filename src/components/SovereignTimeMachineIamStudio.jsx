@@ -47,6 +47,8 @@ export default function SovereignTimeMachineIamStudio({
   const [newSaAccountId, setNewSaAccountId] = useState('');
   const [showCreateSaForm, setShowCreateSaForm] = useState(false);
   const [saActionBusy, setSaActionBusy] = useState(false);
+  const [iamSectionView, setIamSectionView] = useState('SPLIT'); // 'SPLIT' | 'SA_VAULT' | 'ROLES'
+  const [expandAllIamRoles, setExpandAllIamRoles] = useState(false);
 
   // --- Tab 2: Cryptographic State Time-Machine & Drift Radar State ---
   const [tmData, setTmData] = useState(null);
@@ -498,11 +500,22 @@ export default function SovereignTimeMachineIamStudio({
           {[
             {
               id: 'IAM_SURGEON',
+              section: 'SPLIT',
               label: '🔐 1. Autonomous IAM Least-Privilege Surgeon',
               badge: iamData
                 ? `${iamData.summary?.criticalCount || 0} Critical`
                 : 'Live IAM v3',
-              tip: 'Scan project IAM bindings for primitive Owner/Editor god-roles, attach 24h auto-expiring JIT IAM Conditions, and purge static Service Account JSON keys',
+              tip: 'Scan project IAM bindings for primitive Owner/Editor god-roles, attach 24h auto-expiring JIT IAM Conditions, and manage Service Account keys',
+            },
+            {
+              id: 'IAM_SURGEON_SA_VAULT',
+              targetTab: 'IAM_SURGEON',
+              section: 'SA_VAULT',
+              label: '🔑 Service Account Keys, Tokens & Kill-Switch',
+              badge: iamData
+                ? `${iamData.userManagedKeys?.length || 0} Keys · ${iamData.serviceAccounts?.length || 0} SAs`
+                : 'JSON & OAuth2',
+              tip: 'Direct access to create, download, rotate, or revoke Service Account .json keys, mint 1h OAuth2 tokens, or freeze a compromised Service Account',
             },
             {
               id: 'TIME_MACHINE',
@@ -516,23 +529,38 @@ export default function SovereignTimeMachineIamStudio({
             },
             {
               id: 'SECRETS_KMS_WAF',
-              label: '🔑 3. Sovereign Secret Manager, KMS & Cloud Armor WAF',
+              label: '🛡️ 3. Sovereign Secret Manager, KMS & Cloud Armor WAF',
               badge: vaultData
                 ? `${vaultData.secrets?.length || 0} Secrets`
                 : 'Zero-Trust Vault',
               tip: 'Provision regionally-pinned GDPR/SEC/HIPAA secrets in Secret Manager, audit Cloud KMS rotation, and synthesize Cloud Armor OWASP Top-10 WAF policies',
             },
           ].map((tab) => {
-            const active = activeSubTab === tab.id;
+            const active =
+              tab.id === 'IAM_SURGEON_SA_VAULT'
+                ? activeSubTab === 'IAM_SURGEON' && iamSectionView === 'SA_VAULT'
+                : tab.id === 'IAM_SURGEON'
+                ? activeSubTab === 'IAM_SURGEON' && iamSectionView !== 'SA_VAULT'
+                : activeSubTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
                 title={tab.tip}
-                onClick={() => setActiveSubTab(tab.id)}
+                onClick={() => {
+                  if (tab.targetTab) {
+                    setActiveSubTab(tab.targetTab);
+                    setIamSectionView(tab.section);
+                  } else {
+                    setActiveSubTab(tab.id);
+                    if (tab.section) setIamSectionView(tab.section);
+                  }
+                }}
                 className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold transition-all cursor-pointer border ${
                   active
-                    ? 'bg-indigo-600 text-white border-indigo-400 shadow-md'
+                    ? tab.id === 'IAM_SURGEON_SA_VAULT'
+                      ? 'bg-amber-500 text-zinc-950 border-amber-300 shadow-md'
+                      : 'bg-indigo-600 text-white border-indigo-400 shadow-md'
                     : 'bg-zinc-900/80 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
                 }`}
               >
@@ -540,7 +568,9 @@ export default function SovereignTimeMachineIamStudio({
                 <span
                   className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
                     active
-                      ? 'bg-black/30 text-indigo-100'
+                      ? tab.id === 'IAM_SURGEON_SA_VAULT'
+                        ? 'bg-black/20 text-zinc-950 font-extrabold'
+                        : 'bg-black/30 text-indigo-100'
                       : 'bg-zinc-800 text-zinc-400'
                   }`}
                 >
@@ -579,7 +609,14 @@ export default function SovereignTimeMachineIamStudio({
               </div>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-rose-500/30 bg-rose-500/5">
+            <div
+              onClick={() => {
+                setIamSectionView('ROLES');
+                setIamFilter('CRITICAL');
+              }}
+              title="Click to inspect Critical God-Role bindings"
+              className="p-3.5 rounded-[10px] border border-rose-500/30 bg-rose-500/5 cursor-pointer hover:bg-rose-500/10 transition-colors"
+            >
               <div className="text-[11px] font-mono text-rose-500">
                 Critical God-Role Bindings
               </div>
@@ -591,7 +628,14 @@ export default function SovereignTimeMachineIamStudio({
               </div>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-amber-500/30 bg-amber-500/5">
+            <div
+              onClick={() => {
+                setIamSectionView('ROLES');
+                setIamFilter('HIGH');
+              }}
+              title="Click to inspect Escalation & Wildcard Roles"
+              className="p-3.5 rounded-[10px] border border-amber-500/30 bg-amber-500/5 cursor-pointer hover:bg-amber-500/10 transition-colors"
+            >
               <div className="text-[11px] font-mono text-amber-500">
                 Escalation & Wildcard Roles
               </div>
@@ -604,7 +648,14 @@ export default function SovereignTimeMachineIamStudio({
               </div>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-indigo-500/30 bg-indigo-500/5">
+            <div
+              onClick={() => {
+                setIamSectionView('ROLES');
+                setIamFilter('JIT_ONLY');
+              }}
+              title="Click to inspect 24h JIT Condition Protected bindings"
+              className="p-3.5 rounded-[10px] border border-indigo-500/30 bg-indigo-500/5 cursor-pointer hover:bg-indigo-500/10 transition-colors"
+            >
               <div className="text-[11px] font-mono text-indigo-400">
                 24h JIT Condition Protected
               </div>
@@ -616,9 +667,22 @@ export default function SovereignTimeMachineIamStudio({
               </div>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
-              <div className="text-[11px] font-mono text-zinc-500">
-                Static User-Managed SA Keys
+            <div
+              onClick={() => setIamSectionView('SA_VAULT')}
+              title="Click to open the Service Account .json Key, OAuth2 Token & Kill-Switch Vault"
+              className={`p-3.5 rounded-[10px] border cursor-pointer transition-all ${
+                iamSectionView === 'SA_VAULT'
+                  ? 'border-amber-400 bg-amber-500/15 ring-1 ring-amber-400/50'
+                  : 'border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[11px] font-mono text-amber-400 font-bold">
+                  🔑 SA Keys & Tokens Vault
+                </span>
+                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                  Open →
+                </span>
               </div>
               <div
                 className={`text-2xl font-black mt-1 ${
@@ -627,237 +691,353 @@ export default function SovereignTimeMachineIamStudio({
                     : 'text-emerald-500'
                 }`}
               >
-                {iamData?.summary?.userManagedKeysCount ?? 0}
+                {iamData?.summary?.userManagedKeysCount ?? 0} Keys
               </div>
               <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                Across {iamData?.summary?.serviceAccountsCount ?? 0} Service Accounts
+                {iamData?.summary?.serviceAccountsCount ?? 0} SAs ·{' '}
+                {iamData?.mintedTokens?.length ?? 0} Tokens
               </div>
             </div>
           </div>
 
-          {/* Filter & JIT Lease Duration Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
+          {/* Quick Section View Switcher Bar so IAM Roles never bury the Service Account Menu */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-900/90">
             <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-mono text-zinc-400 px-1.5">
+                Workspace View:
+              </span>
               {[
-                { id: 'ALL', label: `All Bindings (${iamData?.findings?.length || 0})` },
                 {
-                  id: 'CRITICAL',
-                  label: `🚨 Critical God-Roles (${iamData?.summary?.criticalCount || 0})`,
+                  id: 'SPLIT',
+                  label: '⚡ Split View (Compact Roles + SA Key Vault)',
                 },
                 {
-                  id: 'HIGH',
-                  label: `⚠️ Escalation Vectors (${iamData?.summary?.highCount || 0})`,
+                  id: 'SA_VAULT',
+                  label: `🔑 Service Account Key, Token & Kill-Switch Vault (${
+                    iamData?.serviceAccounts?.length || 0
+                  } SAs · ${iamData?.userManagedKeys?.length || 0} Keys)`,
                 },
                 {
-                  id: 'JIT_ONLY',
-                  label: `⏱️ Active JIT Leases (${iamData?.summary?.jitProtectedCount || 0})`,
+                  id: 'ROLES',
+                  label: `🔐 Full IAM Role Bindings (${filteredFindings.length})`,
                 },
-              ].map((f) => (
+              ].map((mode) => (
                 <button
-                  key={f.id}
+                  key={mode.id}
                   type="button"
-                  onClick={() => setIamFilter(f.id)}
-                  className={`px-2.5 py-1.5 rounded-[8px] text-xs font-mono border cursor-pointer transition-colors ${
-                    iamFilter === f.id
-                      ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
-                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                  onClick={() => setIamSectionView(mode.id)}
+                  className={`px-3 py-1.5 rounded-[8px] text-xs font-mono font-bold transition-all cursor-pointer border ${
+                    iamSectionView === mode.id
+                      ? mode.id === 'SA_VAULT'
+                        ? 'bg-amber-500 text-zinc-950 border-amber-400 shadow-sm'
+                        : 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                      : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 border-zinc-300 dark:border-zinc-800 hover:border-zinc-600'
                   }`}
                 >
-                  {f.label}
+                  {mode.label}
                 </button>
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-500">
-                <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                <span>JIT Lease Duration:</span>
-                {[4, 12, 24, 72].map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    onClick={() => setSelectedJitHours(h)}
-                    title={`Configure 1-Tap Just-In-Time (JIT) IAM Condition to auto-expire after ${h} hours`}
-                    className={`px-2 py-0.5 rounded text-[11px] border cursor-pointer ${
-                      selectedJitHours === h
-                        ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400 font-bold'
-                        : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
-                    }`}
-                  >
-                    {h}h
-                  </button>
-                ))}
+            {iamSectionView === 'SPLIT' && filteredFindings.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setExpandAllIamRoles((v) => !v)}
+                className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[11px] font-mono cursor-pointer"
+              >
+                {expandAllIamRoles
+                  ? '▴ Collapse IAM Roles to Top 3'
+                  : `▾ Show All ${filteredFindings.length} IAM Roles (Scrollable)`}
+              </button>
+            )}
+          </div>
+
+          {/* IAM Role Bindings Section (Hidden when focused purely on SA_VAULT) */}
+          {iamSectionView !== 'SA_VAULT' && (
+            <div className="space-y-3">
+              {/* Filter & JIT Lease Duration Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    {
+                      id: 'ALL',
+                      label: `All Bindings (${iamData?.findings?.length || 0})`,
+                    },
+                    {
+                      id: 'CRITICAL',
+                      label: `🚨 Critical God-Roles (${iamData?.summary?.criticalCount || 0})`,
+                    },
+                    {
+                      id: 'HIGH',
+                      label: `⚠️ Escalation Vectors (${iamData?.summary?.highCount || 0})`,
+                    },
+                    {
+                      id: 'JIT_ONLY',
+                      label: `⏱️ Active JIT Leases (${iamData?.summary?.jitProtectedCount || 0})`,
+                    },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setIamFilter(f.id)}
+                      className={`px-2.5 py-1.5 rounded-[8px] text-xs font-mono border cursor-pointer transition-colors ${
+                        iamFilter === f.id
+                          ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
+                          : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-500">
+                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>JIT Lease Duration:</span>
+                    {[4, 12, 24, 72].map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setSelectedJitHours(h)}
+                        title={`Configure 1-Tap Just-In-Time (JIT) IAM Condition to auto-expire after ${h} hours`}
+                        className={`px-2 py-0.5 rounded text-[11px] border cursor-pointer ${
+                          selectedJitHours === h
+                            ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400 font-bold'
+                            : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
+                        }`}
+                      >
+                        {h}h
+                      </button>
+                    ))}
+                  </div>
+
+                  <input
+                    type="text"
+                    value={iamSearch}
+                    onChange={(e) => setIamSearch(e.target.value)}
+                    placeholder="Filter principal or role..."
+                    className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
               </div>
 
-              <input
-                type="text"
-                value={iamSearch}
-                onChange={(e) => setIamSearch(e.target.value)}
-                placeholder="Filter principal or role..."
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-          </div>
+              {/* IAM Findings List (Compact & Scroll-Bounded in SPLIT mode so SA Vault stays visible) */}
+              <div
+                className={`space-y-2 ${
+                  iamSectionView === 'SPLIT'
+                    ? 'max-h-[340px] overflow-y-auto pr-1'
+                    : ''
+                }`}
+              >
+                {(iamSectionView === 'SPLIT' && !expandAllIamRoles
+                  ? filteredFindings.slice(0, 3)
+                  : filteredFindings
+                ).map((item) => {
+                  const isBusy = remediatingId === item.findingId;
+                  const isProtectedOwner =
+                    Boolean(item.isProtectedRootOwner) ||
+                    item.severity === 'PROTECTED_OWNER';
+                  const canJit =
+                    !isProtectedOwner &&
+                    item.canApplyJitCondition !== false &&
+                    item.role !== 'roles/owner';
+                  const badgeColor = isProtectedOwner
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                    : item.severity === 'CRITICAL'
+                    ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
+                    : item.severity === 'HIGH'
+                    ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                    : item.severity === 'MEDIUM'
+                    ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                    : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30';
 
-          {/* IAM Findings List */}
-          <div className="space-y-2.5">
-            {filteredFindings.map((item) => {
-              const isBusy = remediatingId === item.findingId;
-              const isProtectedOwner =
-                Boolean(item.isProtectedRootOwner) ||
-                item.severity === 'PROTECTED_OWNER';
-              const canJit =
-                !isProtectedOwner &&
-                item.canApplyJitCondition !== false &&
-                item.role !== 'roles/owner';
-              const badgeColor = isProtectedOwner
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
-                : item.severity === 'CRITICAL'
-                ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
-                : item.severity === 'HIGH'
-                ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-                : item.severity === 'MEDIUM'
-                ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
-                : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30';
-
-              return (
-                <div
-                  key={item.findingId}
-                  className={`p-3.5 rounded-[10px] border space-y-2.5 ${
-                    isProtectedOwner
-                      ? 'border-emerald-500/35 bg-emerald-950/10 dark:bg-emerald-950/15'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeColor}`}
-                        >
-                          {isProtectedOwner
-                            ? '👑 SOVEREIGN ROOT OWNER · Protected Identity'
-                            : `${item.severity} · Blast ${item.blastRadiusScore}/100`}
-                        </span>
-                        <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
-                          {item.role}
-                        </span>
-                        <span className="text-xs font-mono text-indigo-500 dark:text-indigo-400">
-                          → {item.member}
-                        </span>
-                        {item.condition && (
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
-                            ⏱️ JIT Condition Active: {item.condition.title}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                        {item.riskLabel}
-                      </div>
-                      <p className="text-[11px] text-zinc-500">
-                        {item.remediationReason}
-                      </p>
-                    </div>
-
-                    {/* 1-Tap Surgical Actions */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {isProtectedOwner ? (
-                        <span
-                          title="Self-Lockout Guardrail: Your root Project Owner identity is protected from accidental privilege reduction or JIT expiration."
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-bold"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>🛡️ Protected Root Owner (Lockout Guardrail Active)</span>
-                        </span>
-                      ) : (
-                        <>
-                          {!item.condition && canJit && (
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() =>
-                                requestIamApproval(
-                                  {
-                                    action: 'APPLY_JIT_CONDITION',
-                                    role: item.role,
-                                    member: item.member,
-                                    jitHours: selectedJitHours,
-                                  },
-                                  item.findingId,
-                                  {
-                                    riskLabel: item.riskLabel,
-                                    remediationReason: item.remediationReason,
-                                    recommendedAltRoles: item.recommendedAltRoles || [],
-                                    blastRadiusScore: item.blastRadiusScore,
-                                  }
-                                )
-                              }
-                              title={`Review & approve attaching a ${selectedJitHours}-hour auto-expiring CEL condition to ${item.role}`}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                  return (
+                    <div
+                      key={item.findingId}
+                      className={`p-3 rounded-[10px] border space-y-1.5 ${
+                        isProtectedOwner
+                          ? 'border-emerald-500/35 bg-emerald-950/10 dark:bg-emerald-950/15'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeColor}`}
                             >
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>Review {selectedJitHours}h JIT Lease...</span>
-                            </button>
-                          )}
+                              {isProtectedOwner
+                                ? '👑 SOVEREIGN ROOT OWNER · Protected Identity'
+                                : `${item.severity} · Blast ${item.blastRadiusScore}/100`}
+                            </span>
+                            <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                              {item.role}
+                            </span>
+                            <span className="text-xs font-mono text-indigo-500 dark:text-indigo-400">
+                              → {item.member}
+                            </span>
+                            {item.condition && (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
+                                ⏱️ JIT Condition Active: {item.condition.title}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                            {item.riskLabel}
+                          </div>
+                          <p className="text-[11px] text-zinc-500">
+                            {item.remediationReason}
+                          </p>
+                        </div>
 
-                          {item.recommendedRole &&
-                            item.recommendedRole !== item.role && (
+                        {/* 1-Tap Surgical Actions */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {isProtectedOwner ? (
+                            <span
+                              title="Self-Lockout Guardrail: Your root Project Owner identity is protected from accidental privilege reduction or JIT expiration."
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono font-bold"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>
+                                🛡️ Protected Root Owner (Lockout Guardrail Active)
+                              </span>
+                            </span>
+                          ) : (
+                            <>
+                              {!item.condition && canJit && (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() =>
+                                    requestIamApproval(
+                                      {
+                                        action: 'APPLY_JIT_CONDITION',
+                                        role: item.role,
+                                        member: item.member,
+                                        jitHours: selectedJitHours,
+                                      },
+                                      item.findingId,
+                                      {
+                                        riskLabel: item.riskLabel,
+                                        remediationReason: item.remediationReason,
+                                        recommendedAltRoles:
+                                          item.recommendedAltRoles || [],
+                                        blastRadiusScore: item.blastRadiusScore,
+                                      }
+                                    )
+                                  }
+                                  title={`Review & approve attaching a ${selectedJitHours}-hour auto-expiring CEL condition to ${item.role}`}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                >
+                                  <Clock className="w-3.5 h-3.5" />
+                                  <span>
+                                    Review {selectedJitHours}h JIT Lease...
+                                  </span>
+                                </button>
+                              )}
+
+                              {item.recommendedRole &&
+                                item.recommendedRole !== item.role && (
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() =>
+                                      requestIamApproval(
+                                        {
+                                          action: 'DOWNGRADE_ROLE',
+                                          role: item.role,
+                                          member: item.member,
+                                          newRole: item.recommendedRole,
+                                        },
+                                        item.findingId,
+                                        {
+                                          riskLabel: item.riskLabel,
+                                          remediationReason:
+                                            item.remediationReason,
+                                          recommendedAltRoles:
+                                            item.recommendedAltRoles || [],
+                                          blastRadiusScore: item.blastRadiusScore,
+                                        }
+                                      )
+                                    }
+                                    title={`Review & approve scoping ${item.member} from ${item.role} to least-privilege ${item.recommendedRole}`}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                  >
+                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                    <span>
+                                      Review Scope → {item.recommendedRole}...
+                                    </span>
+                                  </button>
+                                )}
+
                               <button
                                 type="button"
-                                disabled={isBusy}
                                 onClick={() =>
-                                  requestIamApproval(
-                                    {
-                                      action: 'DOWNGRADE_ROLE',
-                                      role: item.role,
-                                      member: item.member,
-                                      newRole: item.recommendedRole,
-                                    },
-                                    item.findingId,
-                                    {
-                                      riskLabel: item.riskLabel,
-                                      remediationReason: item.remediationReason,
-                                      recommendedAltRoles:
-                                        item.recommendedAltRoles || [],
-                                      blastRadiusScore: item.blastRadiusScore,
-                                    }
+                                  handleCopy(
+                                    item.gcloudDowngradeCli,
+                                    'IAM surgery CLI'
                                   )
                                 }
-                                title={`Review & approve scoping ${item.member} from ${item.role} to least-privilege ${item.recommendedRole}`}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                title="Copy reproducible gcloud IAM least-privilege remediation command"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-[11px] font-mono cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800"
                               >
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                <span>Review Scope → {item.recommendedRole}...</span>
+                                {copiedText === item.gcloudDowngradeCli ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                                <span>CLI</span>
                               </button>
-                            )}
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopy(item.gcloudDowngradeCli, 'IAM surgery CLI')
-                            }
-                            title="Copy reproducible gcloud IAM least-privilege remediation command"
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-[11px] font-mono cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          >
-                            {copiedText === item.gcloudDowngradeCli ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-500" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                            <span>CLI</span>
-                          </button>
-                        </>
-                      )}
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+
+              {iamSectionView === 'SPLIT' && filteredFindings.length > 3 && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs font-mono text-zinc-400">
+                  <span>
+                    Showing{' '}
+                    <strong className="text-zinc-200">
+                      {expandAllIamRoles ? filteredFindings.length : 3}
+                    </strong>{' '}
+                    of{' '}
+                    <strong className="text-zinc-200">
+                      {filteredFindings.length}
+                    </strong>{' '}
+                    IAM role bindings so the Service Account Vault below stays accessible.
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setExpandAllIamRoles((v) => !v)}
+                      className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-indigo-300 font-bold cursor-pointer"
+                    >
+                      {expandAllIamRoles
+                        ? 'Collapse to Top 3 ▴'
+                        : `Show All ${filteredFindings.length} Roles ▾`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIamSectionView('ROLES')}
+                      className="px-2.5 py-1 rounded bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-bold cursor-pointer"
+                    >
+                      Full Roles View →
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* =================================================================
               SERVICE ACCOUNT KEY, OAUTH2 TOKEN & STOLEN-CREDENTIAL KILL-SWITCH
              ================================================================= */}
+          {iamSectionView !== 'ROLES' && (
           <div className="p-4 rounded-[12px] border border-amber-500/35 bg-gradient-to-br from-amber-950/20 via-zinc-900/90 to-rose-950/20 space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
@@ -1222,6 +1402,7 @@ export default function SovereignTimeMachineIamStudio({
               </div>
             )}
           </div>
+          )}
 
           {/* TWO-STEP IAM SURGERY APPROVAL & BEFORE/AFTER POLICY DIFF MODAL */}
           {pendingIamApproval && (
