@@ -43,6 +43,10 @@ export default function SovereignTimeMachineIamStudio({
   const [pendingIamApproval, setPendingIamApproval] = useState(null);
   const [approvalChecked, setApprovalChecked] = useState(false);
   const [approvalCustomRole, setApprovalCustomRole] = useState('');
+  const [selectedSaEmail, setSelectedSaEmail] = useState('');
+  const [newSaAccountId, setNewSaAccountId] = useState('');
+  const [showCreateSaForm, setShowCreateSaForm] = useState(false);
+  const [saActionBusy, setSaActionBusy] = useState(false);
 
   // --- Tab 2: Cryptographic State Time-Machine & Drift Radar State ---
   const [tmData, setTmData] = useState(null);
@@ -70,6 +74,22 @@ export default function SovereignTimeMachineIamStudio({
     setTimeout(() => setCopiedText(''), 2000);
   };
 
+  const triggerJsonFileDownload = (fileName, jsonString) => {
+    try {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'service-account-key.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore download error
+    }
+  };
+
   const fetchIamSurgeon = useCallback(async () => {
     if (!projectId) return;
     setLoadingIam(true);
@@ -78,6 +98,8 @@ export default function SovereignTimeMachineIamStudio({
         `/api/project/${encodeURIComponent(projectId)}/sovereign/iam-surgeon`
       );
       setIamData(res.data);
+      const firstSa = res.data?.serviceAccounts?.[0]?.email || '';
+      setSelectedSaEmail((prev) => prev || firstSa);
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
@@ -176,6 +198,9 @@ export default function SovereignTimeMachineIamStudio({
         )}/sovereign/iam-surgeon/remediate`,
         finalPayload
       );
+      if (res.data?.privateKeyJson) {
+        triggerJsonFileDownload(res.data.fileName, res.data.privateKeyJson);
+      }
       if (onTriggerToast) {
         onTriggerToast(res.data?.message || 'IAM policy updated after approval');
       }
@@ -191,6 +216,137 @@ export default function SovereignTimeMachineIamStudio({
       }
     } finally {
       setRemediatingId(null);
+    }
+  };
+
+  const handleCreateServiceAccount = async (e) => {
+    e.preventDefault();
+    if (!newSaAccountId.trim()) return;
+    setSaActionBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
+        {
+          action: 'CREATE_SERVICE_ACCOUNT',
+          accountId: newSaAccountId.trim(),
+        }
+      );
+      const createdEmail = res.data?.serviceAccount?.email || '';
+      if (createdEmail) setSelectedSaEmail(createdEmail);
+      setNewSaAccountId('');
+      setShowCreateSaForm(false);
+      if (onTriggerToast) {
+        onTriggerToast(res.data?.message || 'Created Service Account');
+      }
+      await fetchIamSurgeon();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || 'Failed to create Service Account'
+        );
+      }
+    } finally {
+      setSaActionBusy(false);
+    }
+  };
+
+  const handleCreateAndDownloadSaKey = async (saEmailOverride) => {
+    const targetEmail = saEmailOverride || selectedSaEmail;
+    if (!targetEmail) return;
+    setSaActionBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
+        {
+          action: 'CREATE_SA_KEY',
+          serviceAccountEmail: targetEmail,
+        }
+      );
+      if (res.data?.privateKeyJson) {
+        triggerJsonFileDownload(res.data.fileName, res.data.privateKeyJson);
+      }
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message || `Created & downloaded JSON key for ${targetEmail}`
+        );
+      }
+      await fetchIamSurgeon();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || 'Failed to create Service Account JSON key'
+        );
+      }
+    } finally {
+      setSaActionBusy(false);
+    }
+  };
+
+  const handleDownloadExistingSaKey = async (keyName, serviceAccountEmail) => {
+    setSaActionBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
+        {
+          action: 'DOWNLOAD_SA_KEY',
+          keyName,
+          serviceAccountEmail,
+        }
+      );
+      if (res.data?.downloadJson) {
+        triggerJsonFileDownload(res.data.fileName, res.data.downloadJson);
+      }
+      if (onTriggerToast) {
+        onTriggerToast(res.data?.message || 'Downloaded key file');
+      }
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || 'Failed to download key metadata'
+        );
+      }
+    } finally {
+      setSaActionBusy(false);
+    }
+  };
+
+  const handleMintSaToken = async (saEmailOverride) => {
+    const targetEmail = saEmailOverride || selectedSaEmail;
+    if (!targetEmail) return;
+    setSaActionBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
+        {
+          action: 'MINT_SA_TOKEN',
+          serviceAccountEmail: targetEmail,
+        }
+      );
+      if (res.data?.downloadJson) {
+        triggerJsonFileDownload(res.data.fileName, res.data.downloadJson);
+      }
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message || `Minted 1h OAuth2 token for ${targetEmail}`
+        );
+      }
+      await fetchIamSurgeon();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || 'Failed to mint Service Account token'
+        );
+      }
+    } finally {
+      setSaActionBusy(false);
     }
   };
 
@@ -699,58 +855,373 @@ export default function SovereignTimeMachineIamStudio({
             })}
           </div>
 
-          {/* User-Managed Service Account Key Hunter */}
-          {iamData?.userManagedKeys?.length > 0 && (
-            <div className="p-4 rounded-[10px] border border-rose-500/40 bg-rose-950/20 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-extrabold text-rose-400 flex items-center gap-2">
-                  <KeyRound className="w-4 h-4" />
-                  <span>
-                    Static User-Managed Service Account JSON Keys Detected ({iamData.userManagedKeys.length})
+          {/* =================================================================
+              SERVICE ACCOUNT KEY, OAUTH2 TOKEN & STOLEN-CREDENTIAL KILL-SWITCH
+             ================================================================= */}
+          <div className="p-4 rounded-[12px] border border-amber-500/35 bg-gradient-to-br from-amber-950/20 via-zinc-900/90 to-rose-950/20 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <KeyRound className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-extrabold text-white">
+                    🔑 Service Account `.json` Key, OAuth2 Token & Stolen-Credential Kill-Switch Vault
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    {iamData?.userManagedKeys?.length || 0} Active JSON Keys ·{' '}
+                    {iamData?.mintedTokens?.length || 0} Minted Tokens
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-rose-300">
-                  CIS GCP Benchmark 1.4 — Static JSON keys never expire unless rotated or deleted
-                </span>
+                <p className="text-xs text-zinc-400 max-w-4xl">
+                  Create and download Service Account <code className="text-amber-300 font-mono">.json</code> key files or 1-hour OAuth2 tokens, re-download existing keys, or immediately **Revoke / Rotate / Freeze** a compromised Service Account if a credential file is ever leaked or stolen.
+                </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                {iamData.userManagedKeys.map((k) => (
-                  <div
-                    key={k.name}
-                    className="p-2.5 rounded-[8px] border border-rose-500/30 bg-zinc-900/90 flex items-center justify-between gap-2"
-                  >
-                    <div className="text-xs font-mono">
-                      <div className="font-bold text-zinc-100">
-                        {k.serviceAccountEmail}
-                      </div>
-                      <div className="text-[10px] text-zinc-400">
-                        Key ID: {k.keyId?.slice(0, 12)}... · Age: {k.ageDays} days ({k.keyAlgorithm})
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        requestIamApproval(
-                          { action: 'DELETE_SA_KEY', keyName: k.name },
-                          k.name,
-                          {
-                            serviceAccountEmail: k.serviceAccountEmail,
-                            keyId: k.keyId,
-                            ageDays: k.ageDays,
-                          }
-                        )
-                      }
-                      title="Review & approve revoking this static Service Account JSON key"
-                      className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Review Revoke...</span>
-                    </button>
-                  </div>
-                ))}
+
+              <button
+                type="button"
+                onClick={() => setShowCreateSaForm((v) => !v)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+              >
+                <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+                <span>{showCreateSaForm ? 'Close New SA Form' : '+ New Service Account'}</span>
+              </button>
+            </div>
+
+            {/* Optional Create New Service Account Mini-Form */}
+            {showCreateSaForm && (
+              <form
+                onSubmit={handleCreateServiceAccount}
+                className="p-3 rounded-xl bg-zinc-950/90 border border-zinc-800 flex flex-wrap items-end gap-2.5"
+              >
+                <div className="flex-1 min-w-[220px]">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                    New Service Account ID (`6-28 chars`)
+                  </label>
+                  <input
+                    type="text"
+                    value={newSaAccountId}
+                    onChange={(e) => setNewSaAccountId(e.target.value)}
+                    placeholder="e.g. ci-cd-deployer-bot"
+                    className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={saActionBusy || !newSaAccountId.trim()}
+                  className="h-[34px] px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  {saActionBusy ? 'Creating...' : 'Create Service Account'}
+                </button>
+              </form>
+            )}
+
+            {/* Quick Mint & Download Bar: Pick Service Account -> Download .json Key or 1h OAuth2 Token */}
+            <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-end">
+              <div className="lg:col-span-6 min-w-0">
+                <label className="block text-[11px] font-mono text-amber-300 mb-1 truncate">
+                  Target Service Account (`iam.googleapis.com`)
+                </label>
+                <select
+                  value={selectedSaEmail}
+                  onChange={(e) => setSelectedSaEmail(e.target.value)}
+                  className="w-full h-[36px] bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 text-xs font-mono text-white"
+                >
+                  {(iamData?.serviceAccounts || []).length === 0 ? (
+                    <option value="">No Service Accounts found — Create one above</option>
+                  ) : (
+                    (iamData?.serviceAccounts || []).map((sa) => (
+                      <option key={sa.email} value={sa.email}>
+                        {sa.disabled ? '🛑 [FROZEN] ' : '🤖 '}
+                        {sa.email} ({sa.userManagedKeys?.length || 0} keys)
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="lg:col-span-3">
+                <button
+                  type="button"
+                  disabled={saActionBusy || !selectedSaEmail}
+                  onClick={() => handleCreateAndDownloadSaKey(selectedSaEmail)}
+                  title="Mint a new RSA-2048 Service Account JSON key file on Google Cloud IAM and immediately download the .json credentials file"
+                  className="w-full h-[36px] px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1.5"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>🔑 Create & Download `.json` Key</span>
+                </button>
+              </div>
+
+              <div className="lg:col-span-3">
+                <button
+                  type="button"
+                  disabled={saActionBusy || !selectedSaEmail}
+                  onClick={() => handleMintSaToken(selectedSaEmail)}
+                  title="Mint a short-lived 1-hour OAuth2 Bearer access token for this Service Account and download it"
+                  className="w-full h-[36px] px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1.5"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>⏱️ Mint & Download 1h Token</span>
+                </button>
               </div>
             </div>
-          )}
+
+            {/* 1. Created Service Account JSON Keys List (Download, Rotate, or Revoke Stolen File) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold font-mono text-zinc-200">
+                  1. Created Service Account `.json` Key Files ({iamData?.userManagedKeys?.length || 0})
+                </span>
+                <span className="text-[10.5px] font-mono text-zinc-400">
+                  Stolen `.json` file? Click **Rotate** or **Revoke** to kill the credential in Google Cloud IAM immediately
+                </span>
+              </div>
+
+              {(iamData?.userManagedKeys || []).length === 0 ? (
+                <div className="p-3 rounded-lg bg-zinc-950/60 border border-zinc-800 text-xs font-mono text-zinc-400">
+                  ✓ Zero static Service Account `.json` keys currently active. Click **"🔑 Create & Download `.json` Key"** above if you need a downloadable key file, or test revoking a stolen key!
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  {iamData.userManagedKeys.map((k) => (
+                    <div
+                      key={k.name}
+                      className="p-3 rounded-xl border border-rose-500/35 bg-zinc-950/90 flex flex-wrap items-center justify-between gap-3"
+                    >
+                      <div className="space-y-0.5 text-xs font-mono min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-white truncate">
+                            {k.serviceAccountEmail}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Key ID: {k.keyId?.slice(0, 12)}...
+                          </span>
+                          {k.hasVaultPrivateKey && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              ✓ Full Private `.json` in Session Vault
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10.5px] text-zinc-400">
+                          Created: {k.validAfterTime ? new Date(k.validAfterTime).toLocaleString() : 'Live'} · Age: {k.ageDays}d · Alg: {k.keyAlgorithm}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={saActionBusy}
+                          onClick={() =>
+                            handleDownloadExistingSaKey(
+                              k.name,
+                              k.serviceAccountEmail
+                            )
+                          }
+                          title="Download this Service Account key (.json private credentials if created in this session, or X.509 PEM public certificate metadata)"
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                        >
+                          ⬇️ Download `.json`
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={saActionBusy}
+                          onClick={() =>
+                            requestIamApproval(
+                              {
+                                action: 'ROTATE_SA_KEY',
+                                keyName: k.name,
+                                serviceAccountEmail: k.serviceAccountEmail,
+                              },
+                              k.name,
+                              {
+                                serviceAccountEmail: k.serviceAccountEmail,
+                                keyId: k.keyId,
+                                ageDays: k.ageDays,
+                              }
+                            )
+                          }
+                          title="Mint & download a brand-new .json key and atomically revoke this compromised key"
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-mono font-bold cursor-pointer"
+                        >
+                          🔄 Rotate & Download New `.json`...
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            requestIamApproval(
+                              { action: 'DELETE_SA_KEY', keyName: k.name },
+                              k.name,
+                              {
+                                serviceAccountEmail: k.serviceAccountEmail,
+                                keyId: k.keyId,
+                                ageDays: k.ageDays,
+                              }
+                            )
+                          }
+                          title="Review & approve permanently revoking this stolen Service Account JSON key"
+                          className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Revoke Stolen Key...</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Created Short-Lived OAuth2 Tokens List (Copy, Download, or Revoke) */}
+            {(iamData?.mintedTokens || []).length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-indigo-300">
+                    2. Created Short-Lived OAuth2 Access Tokens ({iamData.mintedTokens.length})
+                  </span>
+                  <span className="text-[10.5px] font-mono text-zinc-400">
+                    Copy Bearer token, download `.json`, or revoke immediately
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {iamData.mintedTokens.map((t) => (
+                    <div
+                      key={t.tokenId}
+                      className="p-3 rounded-xl border border-indigo-500/35 bg-zinc-950/90 flex flex-wrap items-center justify-between gap-3"
+                    >
+                      <div className="space-y-0.5 text-xs font-mono min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-white">
+                            {t.serviceAccountEmail}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            {t.tokenId}
+                          </span>
+                        </div>
+                        <div className="text-[10.5px] text-zinc-400">
+                          Token: <code className="text-emerald-300">{t.accessTokenPreview}</code> · Expires: {new Date(t.expireTime).toLocaleTimeString()}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(t.accessToken, `OAuth2 token ${t.tokenId}`)
+                          }
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                        >
+                          📋 Copy Bearer Token
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            triggerJsonFileDownload(
+                              `${projectId}-${t.tokenId}.json`,
+                              JSON.stringify(t, null, 2)
+                            )
+                          }
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                        >
+                          ⬇️ Download `.json`
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            requestIamApproval(
+                              {
+                                action: 'REVOKE_SA_TOKEN',
+                                tokenId: t.tokenId,
+                                serviceAccountEmail: t.serviceAccountEmail,
+                              },
+                              t.tokenId,
+                              {
+                                serviceAccountEmail: t.serviceAccountEmail,
+                                tokenId: t.tokenId,
+                              }
+                            )
+                          }
+                          className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Revoke Token...</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Service Account Emergency Kill-Switch Directory (Freeze/Unfreeze Entire Bot) */}
+            {(iamData?.serviceAccounts || []).length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-zinc-300">
+                    3. Service Account Emergency Freeze Switch ({iamData.serviceAccounts.length} Accounts)
+                  </span>
+                  <span className="text-[10.5px] font-mono text-zinc-400">
+                    Freezing a Service Account (`:disable`) blocks ALL its keys & tokens simultaneously without deleting the account
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {iamData.serviceAccounts.map((sa) => (
+                    <div
+                      key={sa.email}
+                      className="p-2.5 rounded-xl bg-zinc-950/80 border border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-bold text-zinc-100 truncate">
+                          {sa.email}
+                        </div>
+                        <div className="text-[10px] text-zinc-400">
+                          {sa.disabled ? (
+                            <span className="text-rose-400 font-bold">
+                              🛑 FROZEN (DISABLED)
+                            </span>
+                          ) : (
+                            <span className="text-emerald-400 font-bold">
+                              ● ACTIVE
+                            </span>
+                          )}{' '}
+                          · {sa.userManagedKeys?.length || 0} user-managed key(s)
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          requestIamApproval(
+                            {
+                              action: 'TOGGLE_SA_DISABLED',
+                              serviceAccountEmail: sa.email,
+                              disable: !sa.disabled,
+                            },
+                            sa.email,
+                            {
+                              serviceAccountEmail: sa.email,
+                              disable: !sa.disabled,
+                            }
+                          )
+                        }
+                        className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold cursor-pointer shrink-0 border ${
+                          sa.disabled
+                            ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/30'
+                            : 'bg-rose-600/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30'
+                        }`}
+                      >
+                        {sa.disabled ? '✓ Re-Enable SA...' : '🛑 Freeze SA...'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* TWO-STEP IAM SURGERY APPROVAL & BEFORE/AFTER POLICY DIFF MODAL */}
           {pendingIamApproval && (
@@ -768,10 +1239,19 @@ export default function SovereignTimeMachineIamStudio({
                         : pendingIamApproval.payload.action ===
                           'APPLY_JIT_CONDITION'
                         ? `Approve ${pendingIamApproval.payload.jitHours}-Hour Auto-Expiring JIT IAM Lease`
+                        : pendingIamApproval.payload.action === 'ROTATE_SA_KEY'
+                        ? 'Approve Service Account Key Rotation (Mint Fresh .json + Revoke Old)'
+                        : pendingIamApproval.payload.action === 'REVOKE_SA_TOKEN'
+                        ? 'Approve Immediate OAuth2 Access Token Revocation'
+                        : pendingIamApproval.payload.action ===
+                          'TOGGLE_SA_DISABLED'
+                        ? pendingIamApproval.payload.disable
+                          ? 'Approve Emergency Service Account Freeze (:disable)'
+                          : 'Approve Re-Enabling Service Account (:enable)'
                         : 'Approve Permanent Service Account JSON Key Revocation'}
                     </h3>
                     <p className="text-xs text-zinc-400">
-                      No IAM policy change is ever executed without your explicit review and confirmation. Inspect the exact Before/After diff and rollback command below.
+                      No IAM policy or credential mutation is ever executed without your explicit review and confirmation. Inspect the exact impact below.
                     </p>
                   </div>
                   <button
@@ -793,13 +1273,15 @@ export default function SovereignTimeMachineIamStudio({
                     <span className="text-zinc-400">Target Principal:</span>
                     <span className="font-bold text-indigo-300 break-all">
                       {pendingIamApproval.payload.member ||
+                        pendingIamApproval.payload.serviceAccountEmail ||
                         pendingIamApproval.meta?.serviceAccountEmail}
                     </span>
                   </div>
                 </div>
 
                 {/* Before vs After IAM Binding Diff */}
-                {pendingIamApproval.payload.action !== 'DELETE_SA_KEY' ? (
+                {pendingIamApproval.payload.action === 'DOWNGRADE_ROLE' ||
+                pendingIamApproval.payload.action === 'APPLY_JIT_CONDITION' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
                     <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 space-y-1">
                       <div className="text-[10px] font-bold text-rose-400 uppercase">
@@ -844,10 +1326,19 @@ export default function SovereignTimeMachineIamStudio({
                 ) : (
                   <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/40 text-xs font-mono space-y-1">
                     <div className="text-rose-300 font-bold">
-                      ⚠️ Irreversible Key Deletion:
+                      ⚠️ Security Credential Action Impact:
                     </div>
                     <div className="text-zinc-300">
-                      Key <code className="text-rose-300">{pendingIamApproval.payload.keyName}</code> will be permanently deleted from IAM. Any external workload using this static JSON file will immediately lose access.
+                      {pendingIamApproval.payload.action === 'ROTATE_SA_KEY'
+                        ? `A fresh RSA-2048 .json key will be minted and downloaded to your browser, and old key ${pendingIamApproval.payload.keyName} will be permanently deleted from IAM.`
+                        : pendingIamApproval.payload.action === 'REVOKE_SA_TOKEN'
+                        ? `Short-lived OAuth2 token ${pendingIamApproval.payload.tokenId} will be immediately revoked via Google OAuth2 revocation.`
+                        : pendingIamApproval.payload.action ===
+                          'TOGGLE_SA_DISABLED'
+                        ? pendingIamApproval.payload.disable
+                          ? `Service Account ${pendingIamApproval.payload.serviceAccountEmail} will be FROZEN (:disable). All stolen keys and tokens for this Service Account will stop working immediately.`
+                          : `Service Account ${pendingIamApproval.payload.serviceAccountEmail} will be re-enabled (:enable).`
+                        : `Key ${pendingIamApproval.payload.keyName} will be permanently deleted from IAM. Any external attacker or workload using this stolen JSON file will immediately lose access.`}
                     </div>
                   </div>
                 )}
@@ -910,7 +1401,7 @@ export default function SovereignTimeMachineIamStudio({
                     className="mt-0.5 accent-amber-500 w-4 h-4 cursor-pointer"
                   />
                   <span className="text-xs text-amber-200 leading-snug">
-                    I have reviewed the Before/After IAM policy impact above and explicitly approve applying this change to project{' '}
+                    I have reviewed the IAM security impact above and explicitly approve applying this change to project{' '}
                     <strong className="font-mono">{projectId}</strong>.
                   </span>
                 </label>

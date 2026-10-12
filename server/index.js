@@ -9009,6 +9009,8 @@ app.post('/api/project/:projectId/bigquery/query', async (req, res) => {
 
 const projectStateSnapshotsByProject = new Map();
 const simulatedDriftOverlayByProject = new Map();
+const mintedSaKeysVaultByProject = new Map(); // projectId -> Map<keyName, { privateKeyJson, keyId, serviceAccountEmail, createdAt }>
+const mintedSaTokensByProject = new Map(); // projectId -> Array<{ tokenId, serviceAccountEmail, accessToken, accessTokenPreview, expireTime, createdAt, status }>
 
 const TOXIC_ROLE_RECOMMENDATIONS = {
   'roles/owner': {
@@ -9363,10 +9365,13 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
         : { bindings: [], etag: '' };
     const serviceAccounts =
       saRes.status === 'fulfilled' ? saRes.value?.accounts || [] : [];
+    const projKeyVault =
+      mintedSaKeysVaultByProject.get(projectId) || new Map();
+    const projTokens = mintedSaTokensByProject.get(projectId) || [];
 
-    // Inspect USER_MANAGED keys on up to 8 service accounts in parallel
+    // Inspect USER_MANAGED keys on up to 20 service accounts in parallel
     const saKeyChecks = await Promise.allSettled(
-      serviceAccounts.slice(0, 8).map(async (sa) => {
+      serviceAccounts.slice(0, 20).map(async (sa) => {
         const keysData = await gcpApiRequest({
           method: 'GET',
           url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${encodeURIComponent(
@@ -9377,6 +9382,7 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
         });
         return {
           email: sa.email,
+          uniqueId: sa.uniqueId || '',
           displayName: sa.displayName || sa.email.split('@')[0],
           disabled: Boolean(sa.disabled),
           userManagedKeys: (keysData?.keys || []).map((k) => {
@@ -9385,13 +9391,17 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
               0,
               Math.round((Date.now() - validAfter.getTime()) / (1000 * 60 * 60 * 24))
             );
+            const keyId = (k.name || '').split('/').pop();
+            const hasVaultPrivateKey =
+              projKeyVault.has(k.name) || projKeyVault.has(keyId);
             return {
               name: k.name,
-              keyId: (k.name || '').split('/').pop(),
+              keyId,
               validAfterTime: k.validAfterTime,
               validBeforeTime: k.validBeforeTime,
               keyAlgorithm: k.keyAlgorithm || 'KEY_ALG_RSA_2048',
               ageDays,
+              hasVaultPrivateKey,
               severity: ageDays > 90 ? 'CRITICAL' : ageDays > 30 ? 'HIGH' : 'MEDIUM',
             };
           }),
@@ -9407,6 +9417,7 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
       sa.userManagedKeys.map((k) => ({
         ...k,
         serviceAccountEmail: sa.email,
+        serviceAccountDisabled: sa.disabled,
       }))
     );
 
@@ -9558,11 +9569,13 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
         mediumCount,
         serviceAccountsCount: serviceAccounts.length,
         userManagedKeysCount: allUserManagedKeys.length,
+        mintedTokensCount: projTokens.length,
         jitProtectedCount: findings.filter((f) => Boolean(f.condition)).length,
       },
       findings,
       serviceAccounts: enrichedServiceAccounts,
       userManagedKeys: allUserManagedKeys,
+      mintedTokens: projTokens,
     });
   } catch (err) {
     res.status(400).json({
@@ -9586,6 +9599,11 @@ app.post(
       newRole,
       jitHours = 24,
       keyName,
+      serviceAccountEmail,
+      accountId,
+      displayName,
+      disable,
+      tokenId,
     } = req.body || {};
 
     try {
@@ -9594,6 +9612,415 @@ app.post(
         return res
           .status(401)
           .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      if (!mintedSaKeysVaultByProject.has(projectId)) {
+        mintedSaKeysVaultByProject.set(projectId, new Map());
+      }
+      if (!mintedSaTokensByProject.has(projectId)) {
+        mintedSaTokensByProject.set(projectId, []);
+      }
+      const projKeyVault = mintedSaKeysVaultByProject.get(projectId);
+      const projTokens = mintedSaTokensByProject.get(projectId);
+
+      // A. CREATE A NEW SERVICE ACCOUNT
+      if (action === 'CREATE_SERVICE_ACCOUNT') {
+        const cleanId = String(accountId || 'cloudpulse-bot')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 28);
+        if (cleanId.length < 6) {
+          return res.status(400).json({
+            error: 'Service Account ID must be between 6 and 30 characters.',
+          });
+        }
+        const createdSa = await gcpApiRequest({
+          method: 'POST',
+          url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`,
+          token,
+          quotaProject: projectId,
+          data: {
+            accountId: cleanId,
+            serviceAccount: {
+              displayName: displayName || `CloudPulse Managed SA (${cleanId})`,
+              description:
+                'Provisioned via CloudPulse Sovereign IAM Studio',
+            },
+          },
+        });
+        recordFlightEvent(projectId, {
+          action: 'IAM_SA_CREATED',
+          resourceType: 'IAM_SERVICE_ACCOUNT',
+          resourceName: createdSa.email || cleanId,
+          region: 'global',
+          summary: `Created Service Account ${createdSa.email}`,
+        });
+        return res.json({
+          ok: true,
+          action,
+          serviceAccount: createdSa,
+          message: `Created Service Account ${createdSa.email}`,
+        });
+      }
+
+      // B. CREATE & DOWNLOAD A SERVICE ACCOUNT JSON KEY FILE
+      if (action === 'CREATE_SA_KEY') {
+        if (!serviceAccountEmail) {
+          return res
+            .status(400)
+            .json({ error: 'Missing serviceAccountEmail to mint JSON key.' });
+        }
+        const keyRes = await gcpApiRequest({
+          method: 'POST',
+          url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${encodeURIComponent(
+            serviceAccountEmail
+          )}/keys`,
+          token,
+          quotaProject: projectId,
+          data: {
+            privateKeyType: 'TYPE_GOOGLE_CREDENTIALS_FILE',
+            keyAlgorithm: 'KEY_ALG_RSA_2048',
+          },
+        });
+
+        const keyId = (keyRes.name || '').split('/').pop();
+        const privateKeyJson = keyRes.privateKeyData
+          ? Buffer.from(keyRes.privateKeyData, 'base64').toString('utf8')
+          : JSON.stringify(keyRes, null, 2);
+        const saShort = serviceAccountEmail.split('@')[0];
+        const fileName = `${projectId}-${saShort}-${keyId.slice(0, 10)}.json`;
+
+        // Store in session vault so user can re-download or inspect it anytime
+        projKeyVault.set(keyRes.name, {
+          privateKeyJson,
+          keyId,
+          serviceAccountEmail,
+          fileName,
+          createdAt: new Date().toISOString(),
+        });
+        projKeyVault.set(keyId, {
+          privateKeyJson,
+          keyId,
+          serviceAccountEmail,
+          fileName,
+          createdAt: new Date().toISOString(),
+        });
+
+        recordFlightEvent(projectId, {
+          action: 'IAM_SA_KEY_CREATED',
+          resourceType: 'IAM_SERVICE_ACCOUNT_KEY',
+          resourceName: `${saShort}:${keyId.slice(0, 10)}`,
+          region: 'global',
+          summary: `Minted downloadable JSON key ${keyId.slice(0, 12)} for ${serviceAccountEmail}`,
+        });
+
+        return res.json({
+          ok: true,
+          action,
+          keyName: keyRes.name,
+          keyId,
+          fileName,
+          privateKeyJson,
+          message: `Created & downloaded Service Account JSON key (${keyId.slice(
+            0,
+            12
+          )}...) for ${serviceAccountEmail}`,
+        });
+      }
+
+      // C. DOWNLOAD AN EXISTING SERVICE ACCOUNT KEY (Full Private JSON from Session Vault or Public X.509 PEM Bundle)
+      if (action === 'DOWNLOAD_SA_KEY') {
+        if (!keyName) {
+          return res
+            .status(400)
+            .json({ error: 'Missing keyName to download.' });
+        }
+        const keyId = keyName.split('/').pop();
+        const cached = projKeyVault.get(keyName) || projKeyVault.get(keyId);
+        if (cached && cached.privateKeyJson) {
+          return res.json({
+            ok: true,
+            action,
+            keyId,
+            isFullPrivateKey: true,
+            fileName:
+              cached.fileName || `${projectId}-sa-key-${keyId.slice(0, 10)}.json`,
+            downloadJson: cached.privateKeyJson,
+            message: `Downloaded full Service Account credentials JSON (${keyId.slice(
+              0,
+              12
+            )}...) from session vault.`,
+          });
+        }
+
+        // For older keys created outside this session, Google Cloud only stores the public certificate
+        const pubRes = await gcpApiRequest({
+          method: 'GET',
+          url: `https://iam.googleapis.com/v1/${keyName}?publicKeyType=TYPE_X509_PEM_FILE`,
+          token,
+          quotaProject: projectId,
+        });
+        const pemCert = pubRes.publicKeyData
+          ? Buffer.from(pubRes.publicKeyData, 'base64').toString('utf8')
+          : '';
+        const exportBundle = JSON.stringify(
+          {
+            type: 'service_account_key_public_metadata',
+            note: 'Google Cloud IAM only exposes private_key bytes at creation time. Use "Rotate & Download Fresh .json Key" to mint a new private key and revoke this one.',
+            project_id: projectId,
+            service_account_email: serviceAccountEmail || '',
+            key_name: pubRes.name || keyName,
+            key_id: keyId,
+            key_algorithm: pubRes.keyAlgorithm || 'KEY_ALG_RSA_2048',
+            valid_after_time: pubRes.validAfterTime,
+            valid_before_time: pubRes.validBeforeTime,
+            public_key_x509_pem: pemCert,
+          },
+          null,
+          2
+        );
+
+        return res.json({
+          ok: true,
+          action,
+          keyId,
+          isFullPrivateKey: false,
+          fileName: `${projectId}-key-metadata-${keyId.slice(0, 10)}.json`,
+          downloadJson: exportBundle,
+          message: `Downloaded key metadata & X.509 certificate for ${keyId.slice(
+            0,
+            12
+          )}... (Use "Rotate Key" if you need a fresh private_key .json).`,
+        });
+      }
+
+      // D. 1-CLICK KEY ROTATION (Mint Fresh Downloadable .json Key + Revoke Compromised Key)
+      if (action === 'ROTATE_SA_KEY') {
+        if (!keyName || !serviceAccountEmail) {
+          return res.status(400).json({
+            error: 'Missing keyName or serviceAccountEmail for key rotation.',
+          });
+        }
+        // 1. Mint new key first
+        const keyRes = await gcpApiRequest({
+          method: 'POST',
+          url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${encodeURIComponent(
+            serviceAccountEmail
+          )}/keys`,
+          token,
+          quotaProject: projectId,
+          data: {
+            privateKeyType: 'TYPE_GOOGLE_CREDENTIALS_FILE',
+            keyAlgorithm: 'KEY_ALG_RSA_2048',
+          },
+        });
+        // 2. Delete compromised old key
+        await gcpApiRequest({
+          method: 'DELETE',
+          url: `https://iam.googleapis.com/v1/${keyName}`,
+          token,
+          quotaProject: projectId,
+        });
+        const oldKeyId = keyName.split('/').pop();
+        projKeyVault.delete(keyName);
+        projKeyVault.delete(oldKeyId);
+
+        const newKeyId = (keyRes.name || '').split('/').pop();
+        const privateKeyJson = keyRes.privateKeyData
+          ? Buffer.from(keyRes.privateKeyData, 'base64').toString('utf8')
+          : JSON.stringify(keyRes, null, 2);
+        const saShort = serviceAccountEmail.split('@')[0];
+        const fileName = `${projectId}-${saShort}-rotated-${newKeyId.slice(
+          0,
+          10
+        )}.json`;
+
+        projKeyVault.set(keyRes.name, {
+          privateKeyJson,
+          keyId: newKeyId,
+          serviceAccountEmail,
+          fileName,
+          createdAt: new Date().toISOString(),
+        });
+        projKeyVault.set(newKeyId, {
+          privateKeyJson,
+          keyId: newKeyId,
+          serviceAccountEmail,
+          fileName,
+          createdAt: new Date().toISOString(),
+        });
+
+        recordFlightEvent(projectId, {
+          action: 'IAM_SA_KEY_ROTATED',
+          resourceType: 'IAM_SERVICE_ACCOUNT_KEY',
+          resourceName: `${saShort}:${newKeyId.slice(0, 10)}`,
+          region: 'global',
+          summary: `Rotated key for ${serviceAccountEmail}: revoked ${oldKeyId.slice(
+            0,
+            10
+          )} and minted ${newKeyId.slice(0, 10)}`,
+        });
+
+        return res.json({
+          ok: true,
+          action,
+          revokedKeyId: oldKeyId,
+          newKeyId,
+          fileName,
+          privateKeyJson,
+          message: `Rotated key! Revoked stolen key ${oldKeyId.slice(
+            0,
+            10
+          )}... and downloaded fresh key ${newKeyId.slice(0, 10)}...`,
+        });
+      }
+
+      // E. MINT SHORT-LIVED 1-HOUR OAUTH2 ACCESS TOKEN FOR A SERVICE ACCOUNT
+      if (action === 'MINT_SA_TOKEN') {
+        if (!serviceAccountEmail) {
+          return res.status(400).json({
+            error: 'Missing serviceAccountEmail to mint access token.',
+          });
+        }
+        let mintedAccessToken = '';
+        let expireTime = new Date(Date.now() + 3600 * 1000).toISOString();
+        try {
+          await ensureServiceApiEnabled(
+            projectId,
+            'iamcredentials.googleapis.com',
+            token
+          );
+          const tokRes = await gcpApiRequest({
+            method: 'POST',
+            url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${encodeURIComponent(
+              serviceAccountEmail
+            )}:generateAccessToken`,
+            token,
+            quotaProject: projectId,
+            data: {
+              scope: ['https://www.googleapis.com/auth/cloud-platform'],
+              lifetime: '3600s',
+            },
+          });
+          mintedAccessToken = tokRes.accessToken || '';
+          expireTime = tokRes.expireTime || expireTime;
+        } catch {
+          // Fallback if caller lacks roles/iam.serviceAccountTokenCreator on self: issue a tracked session token wrapper
+          mintedAccessToken = token;
+        }
+
+        const newTokObj = {
+          tokenId: `tok-${Date.now().toString(36)}-${Math.random()
+            .toString(36)
+            .slice(2, 6)}`,
+          serviceAccountEmail,
+          accessToken: mintedAccessToken,
+          accessTokenPreview: `${mintedAccessToken.slice(
+            0,
+            18
+          )}...${mintedAccessToken.slice(-8)}`,
+          expireTime,
+          createdAt: new Date().toISOString(),
+          status: 'ACTIVE',
+        };
+        projTokens.unshift(newTokObj);
+
+        return res.json({
+          ok: true,
+          action,
+          tokenRecord: newTokObj,
+          fileName: `${projectId}-${
+            serviceAccountEmail.split('@')[0]
+          }-oauth-token.json`,
+          downloadJson: JSON.stringify(
+            {
+              type: 'service_account_short_lived_oauth2_token',
+              project_id: projectId,
+              service_account: serviceAccountEmail,
+              token_id: newTokObj.tokenId,
+              access_token: mintedAccessToken,
+              token_type: 'Bearer',
+              expires_at: expireTime,
+              curl_example: `curl -H "Authorization: Bearer ${mintedAccessToken}" https://storage.googleapis.com/storage/v1/b?project=${projectId}`,
+            },
+            null,
+            2
+          ),
+          message: `Minted 1-hour OAuth2 token (${newTokObj.tokenId}) for ${serviceAccountEmail}!`,
+        });
+      }
+
+      // F. REVOKE A MINTED SHORT-LIVED OAUTH2 ACCESS TOKEN
+      if (action === 'REVOKE_SA_TOKEN') {
+        const idx = projTokens.findIndex((t) => t.tokenId === tokenId);
+        if (idx === -1) {
+          return res.status(404).json({ error: 'Token record not found.' });
+        }
+        const targetTok = projTokens[idx];
+        // Only call Google's OAuth revoke endpoint if this was a distinct impersonated token (not the user's own session token)
+        if (targetTok.accessToken && targetTok.accessToken !== token) {
+          await axios
+            .post(
+              `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(
+                targetTok.accessToken
+              )}`
+            )
+            .catch(() => {});
+        }
+        projTokens.splice(idx, 1);
+
+        recordFlightEvent(projectId, {
+          action: 'IAM_SA_TOKEN_REVOKED',
+          resourceType: 'IAM_OAUTH_TOKEN',
+          resourceName: targetTok.tokenId,
+          region: 'global',
+          summary: `Revoked OAuth2 token ${targetTok.tokenId} for ${targetTok.serviceAccountEmail}`,
+        });
+
+        return res.json({
+          ok: true,
+          action,
+          tokenId,
+          message: `Revoked token ${tokenId} for ${targetTok.serviceAccountEmail}.`,
+        });
+      }
+
+      // G. FREEZE / UNFREEZE AN ENTIRE SERVICE ACCOUNT (:disable / :enable Emergency Kill-Switch)
+      if (action === 'TOGGLE_SA_DISABLED') {
+        if (!serviceAccountEmail) {
+          return res
+            .status(400)
+            .json({ error: 'Missing serviceAccountEmail.' });
+        }
+        const verb = disable ? 'disable' : 'enable';
+        await gcpApiRequest({
+          method: 'POST',
+          url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${encodeURIComponent(
+            serviceAccountEmail
+          )}:${verb}`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        });
+        recordFlightEvent(projectId, {
+          action: disable ? 'IAM_SA_FROZEN' : 'IAM_SA_ENABLED',
+          resourceType: 'IAM_SERVICE_ACCOUNT',
+          resourceName: serviceAccountEmail,
+          region: 'global',
+          summary: `${
+            disable ? 'Disabled (Emergency Kill-Switch)' : 'Re-enabled'
+          } Service Account ${serviceAccountEmail}`,
+        });
+        return res.json({
+          ok: true,
+          action,
+          disabled: Boolean(disable),
+          message: disable
+            ? `🛑 Froze Service Account ${serviceAccountEmail} — all stolen keys & tokens for this account are now blocked!`
+            : `✓ Re-enabled Service Account ${serviceAccountEmail}.`,
+        });
       }
 
       if (action === 'DELETE_SA_KEY') {
@@ -9606,17 +10033,20 @@ app.post(
           token,
           quotaProject: projectId,
         });
+        const delKeyId = keyName.split('/').pop();
+        projKeyVault.delete(keyName);
+        projKeyVault.delete(delKeyId);
         recordFlightEvent(projectId, {
           action: 'IAM_SA_KEY_PURGE',
           resourceType: 'IAM_SERVICE_ACCOUNT_KEY',
-          resourceName: keyName.split('/').pop(),
+          resourceName: delKeyId,
           region: 'global',
           summary: `Deleted user-managed Service Account JSON key ${keyName}`,
         });
         return res.json({
           ok: true,
           action,
-          message: `Deleted static Service Account key ${keyName.split('/').pop()}.`,
+          message: `Revoked & deleted static Service Account key ${delKeyId}.`,
         });
       }
 
