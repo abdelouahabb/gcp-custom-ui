@@ -385,6 +385,29 @@ const DOC_SECTIONS = [
       'Enforces lifecycle auto-tiering and archival deletion rules to continuously compress monthly storage spend.',
   },
   {
+    id: 'gde-promotional-credit-guardian',
+    wave: 'CLOUD BILLING ACCOUNT · GDE PROMOTIONAL CREDIT GUARDIAN',
+    title:
+      'Cloud Billing Account & Google Developer Expert (GDE) Promotional Credit Expiration & Stranded Balance Guardian',
+    badge: 'FINOPS TAB + TOP HEADER ALERT PILL',
+    badgeColor: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+    icon: DollarSign,
+    targetTab: 'FINOPS',
+    problemSolved:
+      'Google Cloud Console Billing Budgets track gross/net spend, but fail to warn Google Developer Experts (GDEs) and credit holders when their promotional bonus grant is approaching its expiration cliff date OR when they still have hundreds of dollars inside a GDE bonus that will expire unspent at their current project burn rate.',
+    howItWorks: [
+      'Live Cloud Billing Account Discovery: Queries cloudbilling.googleapis.com/v1/projects/:id/billingInfo to surface the linked billingAccounts/XXXXXX-XXXXXX-XXXXXX account and active status.',
+      'Dual-Risk GDE Bonus Alert Engine: Continuously compares each grant’s remaining balance ($) and expiration date against your live project daily burn ($/day) — warning both when free GDE bonus money will be stranded unspent at expiration and when a grant will exhaust early onto your personal credit card.',
+      'BigQuery Billing Export Credit Audit & Budget CLI: Generates 1-click UNNEST(credits) SQL for gcp_billing_export_v1_* and gcloud billing budgets create --credit-types-treatment=include-all-credits commands.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/billing-guardian → cloudbilling.googleapis.com/v1/projects/:id/billingInfo',
+      'POST /api/project/:id/billing-guardian/grants',
+    ],
+    billingImpact:
+      'Prevents losing unused GDE promotional credit balances on expiration cliff dates and prevents surprise credit-card spillover.',
+  },
+  {
     id: 'live-cloud-billing-pricing-sync',
     wave: 'VARIABLE PRICING ENGINE · ZERO STALE RATES',
     title:

@@ -34,6 +34,8 @@ import {
   PackageCheck,
   Cpu,
   Zap,
+  CreditCard,
+  AlertTriangle,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import SortableKpiRow from './components/SortableKpiRow';
@@ -66,6 +68,9 @@ import FuturisticOrbitalHud from './components/FuturisticOrbitalHud';
 import InteractiveDocsGuide from './components/InteractiveDocsGuide';
 import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
 import DataEngineeringStudio from './components/DataEngineeringStudio';
+import BillingAccountCreditGuardian, {
+  computeGdeGrantMetrics,
+} from './components/BillingAccountCreditGuardian';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -629,10 +634,55 @@ function CloudPulseCockpit() {
     }
   }, []);
 
+  const [gdeSummary, setGdeSummary] = useState({
+    totalRemainingUsd: 815.5,
+    nearestExpiryDays: 19,
+    urgentWarningsCount: 1,
+  });
+
   useEffect(() => {
     if (isAuthenticated && selectedProjectId) {
       sessionStorage.setItem('cloudpulse_project', selectedProjectId);
       fetchProjectOverview(selectedProjectId);
+      axios
+        .get(
+          `/api/project/${encodeURIComponent(
+            selectedProjectId
+          )}/billing-guardian`
+        )
+        .then((res) => {
+          const localRaw = localStorage.getItem(
+            `cloudpulse_gde_grants_v1_${selectedProjectId}`
+          );
+          let list = res.data?.grants || [];
+          if (localRaw) {
+            try {
+              const parsed = JSON.parse(localRaw);
+              if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
+            } catch {
+              // ignore
+            }
+          }
+          let totalRem = 0;
+          let nearest = Infinity;
+          let urgent = 0;
+          for (const g of list) {
+            const m = computeGdeGrantMetrics(g, 0);
+            totalRem += m.remaining;
+            if (m.remaining > 0 && m.daysLeft > 0 && m.daysLeft < nearest) {
+              nearest = m.daysLeft;
+            }
+            if (m.daysLeft <= m.alertThreshold && m.remaining > 0) {
+              urgent += 1;
+            }
+          }
+          setGdeSummary({
+            totalRemainingUsd: totalRem,
+            nearestExpiryDays: Number.isFinite(nearest) ? nearest : null,
+            urgentWarningsCount: urgent,
+          });
+        })
+        .catch(() => null);
     }
   }, [isAuthenticated, selectedProjectId, fetchProjectOverview]);
 
@@ -981,13 +1031,43 @@ function CloudPulseCockpit() {
                   setActiveTab('INNOVATION_LAB');
                 }}
                 title="Open Live Wallet Burn-Rate Radar & Night-Mode FinOps Sleep Switch (Zeroes active vCPU/GPU compute via REST API or Google Cloud Scheduler; attached Persistent Disks & unused Static External IPs still bill)"
-                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <DollarSign className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 <span>${liveBurn.hourly.toFixed(4)}/hr</span>
                 <span className="hidden xl:inline text-[10px] opacity-75">
                   (~${liveBurn.monthly.toFixed(2)}/mo)
                 </span>
+              </button>
+
+              {/* GDE Promotional Credit & Bonus Expiration Alert Pill */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('FINOPS')}
+                title="Open Cloud Billing Account & GDE Promotional Credit Guardian: Track remaining money inside your GDE bonus grants, expiration cliff countdowns, and stranded unspent balance warnings"
+                className={`inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm border cursor-pointer whitespace-nowrap ${
+                  gdeSummary.nearestExpiryDays !== null &&
+                  gdeSummary.nearestExpiryDays <= 14 &&
+                  gdeSummary.totalRemainingUsd > 0
+                    ? 'bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
+                    : gdeSummary.urgentWarningsCount > 0 &&
+                      gdeSummary.totalRemainingUsd > 0
+                    ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                }`}
+              >
+                {gdeSummary.urgentWarningsCount > 0 &&
+                gdeSummary.totalRemainingUsd > 0 ? (
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                ) : (
+                  <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                )}
+                <span>GDE Bonus: ${gdeSummary.totalRemainingUsd.toFixed(2)}</span>
+                {gdeSummary.nearestExpiryDays !== null && (
+                  <span className="hidden sm:inline text-[10px] opacity-85">
+                    · {gdeSummary.nearestExpiryDays}d left
+                  </span>
+                )}
               </button>
 
               {/* ⌘K Global Command & Voice Action Bar */}
@@ -1596,6 +1676,17 @@ function CloudPulseCockpit() {
 
               {activeTab === 'FINOPS' && (
                 <div className="space-y-6">
+                  <BillingAccountCreditGuardian
+                    projectId={selectedProjectId}
+                    liveBurn={liveBurn}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onGrantsSummaryChange={setGdeSummary}
+                  />
                   <SortableKpiRow
                     summary={overview?.summary}
                     fetchLatencyMs={overview?.fetchLatencyMs}
