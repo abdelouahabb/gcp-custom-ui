@@ -775,18 +775,18 @@ function CloudPulseCockpit() {
   const liveBurn = calculateLiveBurnRate(overview);
 
   const navTabs = [
-    // I. Flagship Command & 2026 Beyond-Console Innovation Lab
+    // I. Command & Global Topology
     {
       id: 'OVERVIEW',
       group: 'COMMAND',
-      label: '2026 SRE Cockpit',
+      label: '2026 SRE',
       tip: 'Executive 2026 SRE Cockpit: Live Project KPIs, Featured 2026 Innovation Lab, 5-Domain Architecture Hub, Live Resource Inventory & API Kill-Switch',
       icon: LayoutDashboard,
     },
     {
       id: 'INNOVATION_LAB',
       group: 'COMMAND',
-      label: '2026 Innovation Lab',
+      label: '2026 Innovation',
       isStar: true,
       tip: '14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, Storage RAM DLP, Cold-Start Surgeon & AES-256-GCM Gemini 3.8 Vault',
       icon: Sparkles,
@@ -799,56 +799,63 @@ function CloudPulseCockpit() {
       icon: Globe,
     },
 
-    // II. Compute, Serverless & CI/CD Studios
+    // II. Core Infrastructure, Compute & Serverless
     {
-      id: 'CLOUD_RUN',
-      group: 'COMPUTE_CICD',
-      label: 'Cloud Run',
-      tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, tune min/max autoscaling, and switch Request vs Instance billing',
-      icon: Rocket,
-    },
-    {
-      id: 'FUNCTIONS_STUDIO',
-      group: 'COMPUTE_CICD',
-      label: 'Functions & Eventarc',
-      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Demystified Eventarc Trigger Studio: Beginner & 90+ Universal GCP Audit Log triggers',
-      icon: Zap,
-    },
-    {
-      id: 'GKE_STUDIO',
-      group: 'COMPUTE_CICD',
-      label: 'GKE Studio',
-      tip: 'Google Kubernetes Engine (GKE) Studio: 1-Click Autopilot & Spot GPU Cluster Provisioner, compliance locks & K8s YAML Composer',
-      icon: Cpu,
+      id: 'VPC_NETWORKS',
+      group: 'INFRA_COMPUTE',
+      label: 'VPC',
+      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
+      icon: Network,
     },
     {
       id: 'VM_SSH',
-      group: 'COMPUTE_CICD',
-      label: 'VM Fleet & SSH',
+      group: 'INFRA_COMPUTE',
+      label: 'VM',
       tip: 'Compute Engine VM Fleet & Browser Web-SSH Terminal: Start, stop, resize, or SSH directly into your Linux VMs',
       icon: Server,
     },
     {
-      id: 'WAVE9_STUDIO',
-      group: 'COMPUTE_CICD',
-      label: 'Cloud Build & SBOM',
-      tip: 'Cloud Build GitHub CI/CD + Artifact Registry SLSA-3 Supply-Chain Studio: Buildpacks/Dockerfiles, Auto-Deploy & Orphan Digest Sweeper',
-      icon: PackageCheck,
-    },
-
-    // III. Data Lakehouse, Databases & AI Frontier
-    {
       id: 'CLOUD_STORAGE',
-      group: 'DATA_AI',
+      group: 'INFRA_COMPUTE',
       label: 'Cloud Storage',
       tip: 'Cloud Storage Studio: 5-Step Compliance Bucket Wizard, strict SEC/GDPR/HIPAA locks, Soft-Delete & WORM retention, and live object explorer',
       icon: HardDrive,
     },
     {
-      id: 'BIGQUERY_STUDIO',
+      id: 'CLOUD_RUN',
+      group: 'INFRA_COMPUTE',
+      label: 'Cloud Run',
+      tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, tune min/max autoscaling, and switch Request vs Instance billing',
+      icon: Rocket,
+    },
+    {
+      id: 'GKE_STUDIO',
+      group: 'INFRA_COMPUTE',
+      label: 'GKE',
+      tip: 'Google Kubernetes Engine (GKE) Studio: 1-Click Autopilot & Spot GPU Cluster Provisioner, compliance locks & K8s YAML Composer',
+      icon: Cpu,
+    },
+    {
+      id: 'WAVE9_STUDIO',
+      group: 'INFRA_COMPUTE',
+      label: 'Cloud Build',
+      tip: 'Cloud Build GitHub CI/CD + Artifact Registry SLSA-3 Supply-Chain Studio: Buildpacks/Dockerfiles, Auto-Deploy & Orphan Digest Sweeper',
+      icon: PackageCheck,
+    },
+    {
+      id: 'FUNCTIONS_STUDIO',
+      group: 'INFRA_COMPUTE',
+      label: 'Functions',
+      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Demystified Eventarc Trigger Studio: Beginner & 90+ Universal GCP Audit Log triggers',
+      icon: Zap,
+    },
+
+    // III. Databases, Data Engineering & Lakehouse
+    {
+      id: 'CLOUD_SQL_STUDIO',
       group: 'DATA_AI',
-      label: 'BigQuery & BigLake',
-      tip: 'BigQuery & BigLake 2026 Enterprise Lakehouse Studio: BigLake Apache Iceberg & Parquet over gs:// buckets, Physical Billing (-54%), SQL X-Ray & 168h Time-Machine',
+      label: 'Cloud SQL',
+      tip: 'Cloud SQL (MySQL 8.4 & PostgreSQL 16/17) + AlloyDB Studio: Architecture Fork, AI Vector (alloydb_scann / pgvector) Surgeon & IAM Auth Proxy v2',
       icon: Database,
     },
     {
@@ -859,62 +866,53 @@ function CloudPulseCockpit() {
       icon: Layers,
     },
     {
-      id: 'CLOUD_SQL_STUDIO',
+      id: 'BIGQUERY_STUDIO',
       group: 'DATA_AI',
-      label: 'Cloud SQL & AlloyDB',
-      tip: 'Cloud SQL (MySQL 8.4 & PostgreSQL 16/17) + AlloyDB Studio: Architecture Fork, AI Vector (alloydb_scann / pgvector) Surgeon & IAM Auth Proxy v2',
+      label: 'BigQuery',
+      tip: 'BigQuery & BigLake 2026 Enterprise Lakehouse Studio: BigLake Apache Iceberg & Parquet over gs:// buckets, Physical Billing (-54%), SQL X-Ray & 168h Time-Machine',
       icon: Database,
     },
     {
       id: 'WAVE10_FRONTIER',
       group: 'DATA_AI',
-      label: 'Spanner Graph & Spark',
+      label: 'Spanner',
       tip: '2026 Frontier Studio: Cloud Spanner Graph + Vector ($65/mo 100-PU Engine), Zero-Cluster Serverless Spark on BigLake Iceberg, Workflows Choreographer & Vertex AI Model Armor',
       icon: Sparkles,
     },
 
-    // IV. Network, Zero-Trust IAM & Incident SRE
-    {
-      id: 'VPC_NETWORKS',
-      group: 'SECURITY_SRE',
-      label: 'VPC & Firewalls',
-      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
-      icon: Network,
-    },
+    // IV. Security, Incident SRE, FinOps, Logs & Docs
     {
       id: 'SOVEREIGN_STUDIO',
       group: 'SECURITY_SRE',
-      label: 'IAM & Sovereign Drift',
+      label: 'IAM',
       tip: 'Autonomous IAM Least-Privilege Surgeon (24h JIT CEL + Service Account Key & OAuth2 Token Kill-Switch), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
       icon: ShieldCheck,
     },
     {
       id: 'SRE_WAR_ROOM',
       group: 'SECURITY_SRE',
-      label: 'SRE War-Room',
+      label: 'SRE War-room',
       tip: 'Autonomous SRE Incident War-Room, Cloud Logging Root-Cause Correlator, 14.4x SLO Burn Radar, VPC Service Controls (VPC-SC) & Pub/Sub DLQ Studio',
       icon: Flame,
     },
-
-    // V. FinOps, Cloud Shell & Docs
     {
       id: 'FINOPS',
       group: 'OPS_DOCS',
-      label: 'FinOps & Telemetry',
+      label: 'Finops',
       tip: 'Real-Time Cloud Monitoring Metrics, CPU/Memory/Network Telemetry Charts & FinOps Footprint',
       icon: BarChart3,
     },
     {
       id: 'LOGS_SHELL',
       group: 'OPS_DOCS',
-      label: 'Logs & Cloud Shell',
+      label: 'Logs',
       tip: 'Live Cloud Logging Streamer & Interactive gcloud / bq / gsutil Web Cloud Shell',
       icon: Terminal,
     },
     {
       id: 'DOCS_GUIDE',
       group: 'OPS_DOCS',
-      label: 'Docs & Guide',
+      label: 'Docs',
       tip: 'Interactive Architecture Documentation, Security Model & Feature Walkthrough Guide',
       icon: BookOpen,
     },
