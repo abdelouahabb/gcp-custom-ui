@@ -55,6 +55,13 @@ const STUDIO_TABS = [
     icon: History,
     tip: 'Rewind any BigQuery table up to 168 hours (7 days) to recover accidentally deleted/corrupted rows via Zero-Copy Clone or FOR SYSTEM_TIME AS OF snapshot SQL',
   },
+  {
+    id: 'BIGLAKE_ICEBERG',
+    label: '🌊 5. BigLake vs. BigQuery Open Lakehouse & Iceberg Studio',
+    shortLabel: '🌊 BigLake & Iceberg',
+    icon: Layers,
+    tip: 'Demystify BigLake vs. BigQuery: Build open Apache Iceberg & Parquet tables in your own gs:// buckets with delegated Zero-Trust Connections, row/column security, and Spark + Vertex AI + BigQuery zero-copy sharing',
+  },
 ];
 
 const SAMPLE_UNOPTIMIZED_QUERIES = [
@@ -164,6 +171,19 @@ export default function BigQueryStudio({
     'telemetry_events_2026_restored'
   );
 
+  // BigLake vs. BigQuery Open Lakehouse & Apache Iceberg Studio state
+  const [gcsBuckets, setGcsBuckets] = useState([]);
+  const [bigLakeUseCase, setBigLakeUseCase] = useState('ICEBERG_MANAGED'); // 'ICEBERG_MANAGED' | 'BIGLAKE_EXTERNAL' | 'NATIVE_BQ'
+  const [bigLakeBucket, setBigLakeBucket] = useState('');
+  const [bigLakeFolder, setBigLakeFolder] = useState('iceberg-lakehouse/events_2026');
+  const [bigLakeConnectionId, setBigLakeConnectionId] = useState('biglake-lakehouse-conn');
+  const [bigLakeLocation, setBigLakeLocation] = useState('US');
+  const [bigLakeTableName, setBigLakeTableName] = useState('open_iceberg_events');
+  const [bigLakeFormat, setBigLakeFormat] = useState('PARQUET');
+  const [bigLakeStalenessMins, setBigLakeStalenessMins] = useState(30);
+  const [bigLakeEnableRls, setBigLakeEnableRls] = useState(true);
+  const [bigLakeRlsFilter, setBigLakeRlsFilter] = useState("region = 'EU' AND SESSION_USER() LIKE '%@%'");
+
   const copyText = (text, id) => {
     navigator.clipboard?.writeText(text);
     setCopiedId(id);
@@ -190,6 +210,26 @@ export default function BigQueryStudio({
       setLoadingDatasets(false);
     }
   }, [projectId, selectedDatasetId, onShowError]);
+
+  const fetchGcsBucketsForBigLake = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/storage/buckets`
+      );
+      const bList = res.data?.buckets || [];
+      setGcsBuckets(bList);
+      if (bList.length > 0 && !bigLakeBucket) {
+        setBigLakeBucket(bList[0].name);
+      } else if (!bigLakeBucket) {
+        setBigLakeBucket(`${projectId}-open-lakehouse`);
+      }
+    } catch {
+      if (!bigLakeBucket) {
+        setBigLakeBucket(`${projectId}-open-lakehouse`);
+      }
+    }
+  }, [projectId, bigLakeBucket]);
 
   const fetchTables = useCallback(
     async (dsId) => {
@@ -221,7 +261,8 @@ export default function BigQueryStudio({
 
   useEffect(() => {
     fetchDatasets();
-  }, [fetchDatasets]);
+    fetchGcsBucketsForBigLake();
+  }, [fetchDatasets, fetchGcsBucketsForBigLake]);
 
   useEffect(() => {
     if (selectedDatasetId) {
@@ -453,6 +494,103 @@ export default function BigQueryStudio({
     };
   }, [projectId, selectedDatasetId, rewindTableTarget, rewindCloneName, rewindHoursAgo]);
 
+  const bigLakeArtifacts = useMemo(() => {
+    const ds = selectedDatasetId || 'analytics_lakehouse';
+    const bkt = (bigLakeBucket || `${projectId}-open-lakehouse`).replace(/^gs:\/\//, '');
+    const cleanFolder = (bigLakeFolder || 'iceberg-lakehouse/events_2026').replace(/^\/+|\/+$/g, '');
+    const connId = bigLakeConnectionId || 'biglake-lakehouse-conn';
+    const loc = (bigLakeLocation || 'US').toLowerCase();
+    const tbl = bigLakeTableName || 'open_iceberg_events';
+    const fullConn = `${projectId}.${loc}.${connId}`;
+
+    const step1ConnectionCli = `# Step 1: Create a BigLake Cloud Resource Connection (delegated Zero-Trust identity)
+bq mk --connection \\
+  --connection_type=CLOUD_RESOURCE \\
+  --project_id=${projectId} \\
+  --location=${bigLakeLocation} \\
+  ${connId}
+
+# Inspect the generated BigLake Connection Service Account email:
+bq show --format=prettyjson --connection ${projectId}.${bigLakeLocation}.${connId}`;
+
+    const step2BucketIamCli = `# Step 2: Grant ONLY the BigLake Connection Service Account access to gs://${bkt}
+# (Human SQL analysts NEVER need raw gs:// bucket permissions!)
+CONN_SA=$(bq show --format=json --connection ${projectId}.${bigLakeLocation}.${connId} | jq -r '.cloudResource.serviceAccountId')
+
+gcloud storage buckets add-iam-policy-binding gs://${bkt} \\
+  --member="serviceAccount:\${CONN_SA}" \\
+  --role="${bigLakeUseCase === 'ICEBERG_MANAGED' ? 'roles/storage.objectAdmin' : 'roles/storage.objectViewer'}"`;
+
+    const icebergManagedDdl = `-- 🧊 BigLake Managed Table for Apache Iceberg (2026 Flagship Open Lakehouse)
+-- Stores open Parquet + Iceberg metadata directly in gs://${bkt}/${cleanFolder}
+-- Supports full ACID INSERT/UPDATE/DELETE/MERGE, Time-Travel, and Zero-Copy Spark/Vertex AI access!
+CREATE OR REPLACE TABLE \`${projectId}.${ds}.${tbl}\` (
+  event_id STRING,
+  event_timestamp TIMESTAMP,
+  user_id STRING,
+  region STRING,
+  revenue_usd NUMERIC
+)
+CLUSTER BY region, user_id
+WITH CONNECTION \`${fullConn}\`
+OPTIONS (
+  file_format = 'PARQUET',
+  table_format = 'ICEBERG',
+  storage_uri = 'gs://${bkt}/${cleanFolder}'
+);`;
+
+    const bigLakeExternalDdl = `-- ⚡ BigLake External Table over existing Cloud Storage files with Object Metadata Caching
+-- Zero-copy SQL over gs://${bkt}/${cleanFolder}/* without granting users raw bucket IAM!
+CREATE OR REPLACE EXTERNAL TABLE \`${projectId}.${ds}.${tbl}_ext\`
+WITH CONNECTION \`${fullConn}\`
+OPTIONS (
+  format = '${bigLakeFormat}',
+  uris = ['gs://${bkt}/${cleanFolder}/*.${bigLakeFormat.toLowerCase()}'],
+  max_staleness = INTERVAL ${bigLakeStalenessMins} MINUTE,
+  metadata_cache_mode = 'AUTOMATIC'
+);`;
+
+    const rowAccessPolicyDdl = `-- 🔐 BigLake Fine-Grained Row-Level Security (Impossible on standard GCS External Tables!)
+CREATE OR REPLACE ROW ACCESS POLICY eu_sovereign_filter
+ON \`${projectId}.${ds}.${tbl}\`
+GRANT TO ('domain:example.com', 'user:analyst@${projectId}.iam.gserviceaccount.com')
+FILTER USING (${bigLakeRlsFilter});`;
+
+    const sparkReadSnippet = `# PySpark / Dataproc / Vertex AI Zero-Copy Read of the EXACT same BigLake Iceberg files in gs://${bkt}/${cleanFolder}
+df = spark.read.format("iceberg") \\
+  .load("gs://${bkt}/${cleanFolder}")
+df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
+
+    return {
+      ds,
+      bkt,
+      cleanFolder,
+      fullConn,
+      step1ConnectionCli,
+      step2BucketIamCli,
+      icebergManagedDdl,
+      bigLakeExternalDdl,
+      rowAccessPolicyDdl,
+      sparkReadSnippet,
+      primaryDdl:
+        bigLakeUseCase === 'ICEBERG_MANAGED'
+          ? icebergManagedDdl
+          : bigLakeExternalDdl,
+    };
+  }, [
+    projectId,
+    selectedDatasetId,
+    bigLakeBucket,
+    bigLakeFolder,
+    bigLakeConnectionId,
+    bigLakeLocation,
+    bigLakeTableName,
+    bigLakeFormat,
+    bigLakeStalenessMins,
+    bigLakeUseCase,
+    bigLakeRlsFilter,
+  ]);
+
   return (
     <div className="space-y-5">
       {/* Top Studio Hero Banner */}
@@ -465,19 +603,29 @@ export default function BigQueryStudio({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
-                  BigQuery 2026 Enterprise Lakehouse & Compliance Studio
+                  BigQuery &amp; BigLake 2026 Enterprise Lakehouse Studio
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
-                  CAPACITOR PHYSICAL BILLING · SQL PRE-CRIME X-RAY · 168H TIME-MACHINE
+                  CAPACITOR · BIGLAKE APACHE ICEBERG · SQL PRE-CRIME X-RAY
                 </span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Live BigQuery v2 Control Plane for <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">{projectId}</span> — Enforce Physical Compressed Billing (-54% storage cost), automatic SQL Column Pruning & Predicate Pushdown, Banker&apos;s Rounding (`ROUND_HALF_EVEN`), and Zero-Copy `FOR SYSTEM_TIME AS OF` recovery.
+                Live BigQuery &amp; BigLake Control Plane for <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">{projectId}</span> — Unify native BigQuery Capacitor tables with open **BigLake Apache Iceberg** tables in `gs://`, Physical Compressed Billing (-54% cost), and 168h Time-Machine recovery.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('BIGLAKE_ICEBERG')}
+              title="Understand BigLake vs. BigQuery and build Apache Iceberg / Parquet Lakehouse tables over gs:// buckets"
+              className="inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>🌊 BigLake vs. BigQuery Studio</span>
+            </button>
+
             <button
               type="button"
               onClick={() => onOpenProvision?.('BIGQUERY_DATASET')}
@@ -1506,6 +1654,497 @@ export default function BigQueryStudio({
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* TAB 5: BIGLAKE VS. BIGQUERY OPEN LAKEHOUSE & APACHE ICEBERG STUDIO  */}
+      {/* =================================================================== */}
+      {activeSubTab === 'BIGLAKE_ICEBERG' && (
+        <div className="space-y-4">
+          {/* 1. Visual Demystifier: Why People Confuse BigQuery vs. BigLake */}
+          <div className="bg-white dark:bg-[#0c0c0f] border border-cyan-500/35 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Layers className="w-4 h-4 text-cyan-500" />
+                  <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
+                    🌊 Demystifying BigLake vs. BigQuery in 60 Seconds
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
+                    OPEN APACHE ICEBERG · ZERO DATA DUPLICATION · ZERO-TRUST BUCKET DELEGATION
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  **The Golden Rule**: **BigQuery** is the *SQL Compute Engine + Google-owned Capacitor Storage*, while **BigLake** lets you keep your data as **open Apache Iceberg / Parquet files inside your own `gs://` Cloud Storage bucket** (so Spark, Vertex AI, and BigQuery share the exact same files with zero copies) **without** losing Row/Column Security or ACID transactions!
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                {[
+                  {
+                    id: 'ICEBERG_MANAGED',
+                    label: '🧊 BigLake Apache Iceberg (ACID + Open)',
+                  },
+                  {
+                    id: 'BIGLAKE_EXTERNAL',
+                    label: '⚡ BigLake Cached External (Read-Only)',
+                  },
+                  {
+                    id: 'NATIVE_BQ',
+                    label: '🏢 Native BigQuery (Capacitor)',
+                  },
+                ].map((arch) => (
+                  <button
+                    key={arch.id}
+                    type="button"
+                    onClick={() => setBigLakeUseCase(arch.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
+                      bigLakeUseCase === arch.id
+                        ? 'bg-cyan-600 text-white border-cyan-400 shadow-sm'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    {arch.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3-Column Comparison Matrix */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              {/* Column 1: Legacy External Table (What NOT to use) */}
+              <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold font-mono text-rose-500">
+                    ❌ 1. Legacy External Table (Old Way)
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-400 font-bold">
+                    AVOID IN PROD
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  Points BigQuery directly at raw `gs://` files without a BigLake Connection.
+                </p>
+                <ul className="space-y-1 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                  <li>• 🚨 **Security Hole**: Every SQL user must be granted raw `roles/storage.objectViewer` on the entire `gs://` bucket!</li>
+                  <li>• ❌ **No Row or Column Masking**: Cannot hide PII columns or filter rows by tenant.</li>
+                  <li>• 🐢 **Slow**: Re-lists `gs://` bucket objects on every query (no metadata cache).</li>
+                  <li>• ❌ **Read-Only**: No `INSERT`, `UPDATE`, `DELETE`, or `MERGE`.</li>
+                </ul>
+              </div>
+
+              {/* Column 2: BigLake Open Lakehouse (Apache Iceberg / Parquet in gs://) */}
+              <div
+                onClick={() => setBigLakeUseCase('ICEBERG_MANAGED')}
+                className={`p-4 rounded-xl border space-y-2.5 cursor-pointer transition-all ${
+                  bigLakeUseCase !== 'NATIVE_BQ'
+                    ? 'border-cyan-400 bg-cyan-500/10 ring-1 ring-cyan-400/40'
+                    : 'border-cyan-500/30 bg-cyan-500/5'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold font-mono text-cyan-400">
+                    🌊 2. BigLake + Apache Iceberg (2026 Lakehouse)
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 font-bold">
+                    MULTI-ENGINE WINNER
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-200">
+                  Files stay as open **Apache Iceberg / Parquet** in **your `gs://` bucket** via a delegated `CLOUD_RESOURCE` Connection.
+                </p>
+                <ul className="space-y-1 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                  <li>• 🔐 **Zero-Trust Bucket**: Only BigLake&apos;s Service Account touches `gs://`; analysts only get SQL table access!</li>
+                  <li>• 🛡️ **Row & Column Security**: Full Policy Tags + Row Access Policies on `gs://` files.</li>
+                  <li>• 🧊 **Full ACID (`table_format=&apos;ICEBERG&apos;`)**: `INSERT`, `UPDATE`, `DELETE`, `MERGE` & Time-Travel in `gs://`!</li>
+                  <li>• 🤝 **Zero Copies**: Spark, Dataproc, Vertex AI & BigQuery read the *exact same* `gs://` Parquet files.</li>
+                </ul>
+              </div>
+
+              {/* Column 3: Native BigQuery Storage (Capacitor) */}
+              <div
+                onClick={() => setBigLakeUseCase('NATIVE_BQ')}
+                className={`p-4 rounded-xl border space-y-2.5 cursor-pointer transition-all ${
+                  bigLakeUseCase === 'NATIVE_BQ'
+                    ? 'border-indigo-400 bg-indigo-500/10 ring-1 ring-indigo-400/40'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#09090b]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold font-mono text-indigo-400">
+                    🏢 3. Native BigQuery Table (`Capacitor`)
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 font-bold">
+                    PURE SQL WAREHOUSE
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  Data is ingested into Google-managed proprietary Capacitor storage inside BigQuery.
+                </p>
+                <ul className="space-y-1 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                  <li>• ⚡ **Zero Setup**: No `gs://` bucket or `CLOUD_RESOURCE` connection required.</li>
+                  <li>• 🗜️ **5:1 Capacitor Compression**: Best with `PHYSICAL` billing model ($0.04/GB compressed).</li>
+                  <li>• 🔒 **Closed Storage**: Non-BigQuery engines (Spark/Ray) must call the paid BigQuery Storage Read API instead of reading open `gs://` files directly.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Interactive 3-Step BigLake & Apache Iceberg Builder */}
+          <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-500" />
+                  <span>
+                    3-Step Guided BigLake &amp; Apache Iceberg Provisioner (No More Missing Connection Errors!)
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Configure your `gs://` bucket, BigLake `CLOUD_RESOURCE` Connection, and Apache Iceberg / Parquet options below — we generate all 3 steps ready to run.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-cyan-500/15 text-cyan-500 border border-cyan-500/30">
+                Target: `gs://{bigLakeArtifacts.bkt}/{bigLakeArtifacts.cleanFolder}`
+              </span>
+            </div>
+
+            {/* Configuration Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+              <div className="lg:col-span-2">
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  1. Cloud Storage Bucket (`gs://`)
+                </label>
+                <div className="flex gap-1.5">
+                  {gcsBuckets.length > 0 ? (
+                    <select
+                      value={bigLakeBucket}
+                      onChange={(e) => setBigLakeBucket(e.target.value)}
+                      className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                    >
+                      {gcsBuckets.map((b) => (
+                        <option key={b.name} value={b.name}>
+                          gs://{b.name} ({b.location || 'US'})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={bigLakeBucket}
+                      onChange={(e) => setBigLakeBucket(e.target.value)}
+                      placeholder={`${projectId}-open-lakehouse`}
+                      className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="lg:col-span-2">
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  2. Lakehouse Folder Path in Bucket
+                </label>
+                <input
+                  type="text"
+                  value={bigLakeFolder}
+                  onChange={(e) => setBigLakeFolder(e.target.value)}
+                  placeholder="iceberg-lakehouse/events_2026"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  3. BigLake Connection ID
+                </label>
+                <input
+                  type="text"
+                  value={bigLakeConnectionId}
+                  onChange={(e) => setBigLakeConnectionId(e.target.value)}
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  4. BigLake Table Name
+                </label>
+                <input
+                  type="text"
+                  value={bigLakeTableName}
+                  onChange={(e) => setBigLakeTableName(e.target.value)}
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Extra Controls for External Format & Metadata Cache Staleness + RLS */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Connection Region (`location`)
+                </label>
+                <select
+                  value={bigLakeLocation}
+                  onChange={(e) => setBigLakeLocation(e.target.value)}
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                >
+                  <option value="US">US (Multi-Region)</option>
+                  <option value="EU">EU (Multi-Region Sovereign)</option>
+                  <option value="us-central1">us-central1 (Iowa)</option>
+                  <option value="europe-west1">europe-west1 (Belgium)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Open File Format (`gs://`)
+                </label>
+                <select
+                  value={bigLakeFormat}
+                  onChange={(e) => setBigLakeFormat(e.target.value)}
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                >
+                  <option value="PARQUET">PARQUET (Recommended + Iceberg)</option>
+                  <option value="DELTA_LAKE">DELTA_LAKE (Databricks / Spark)</option>
+                  <option value="ORC">ORC (Hive / Hadoop)</option>
+                  <option value="AVRO">AVRO (Streaming Events)</option>
+                  <option value="JSON">JSON (Newline-Delimited)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Metadata Cache (`max_staleness`)
+                </label>
+                <select
+                  value={bigLakeStalenessMins}
+                  onChange={(e) => setBigLakeStalenessMins(Number(e.target.value))}
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                >
+                  <option value={15}>15 Minutes (Near-Real-Time)</option>
+                  <option value={30}>30 Minutes (Balanced Speed)</option>
+                  <option value={60}>60 Minutes (Fastest Object Cache)</option>
+                  <option value={240}>4 Hours (Batch Lakehouse)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                  Row-Level Security Filter (`FILTER USING`)
+                </label>
+                <input
+                  type="text"
+                  value={bigLakeRlsFilter}
+                  onChange={(e) => setBigLakeRlsFilter(e.target.value)}
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            {/* 3-Step Execution Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 pt-2">
+              {/* Step 1: Cloud Resource Connection */}
+              <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 flex flex-col justify-between space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold font-mono text-amber-400">
+                      STEP 1 · Create BigLake Connection
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(bigLakeArtifacts.step1ConnectionCli, 'bl-step1')
+                      }
+                      className="text-[11px] font-mono text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedId === 'bl-step1' ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy CLI</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    Creates the `CLOUD_RESOURCE` bridge so BigQuery can read/write `gs://{bigLakeArtifacts.bkt}` using a dedicated Google-managed Service Account.
+                  </p>
+                  <pre className="text-[10.5px] font-mono text-zinc-200 bg-black/50 p-2.5 rounded-lg border border-zinc-800/80 whitespace-pre-wrap break-all">
+                    {bigLakeArtifacts.step1ConnectionCli}
+                  </pre>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    onRunInShell?.(
+                      `bq mk --connection --connection_type=CLOUD_RESOURCE --project_id=${projectId} --location=${bigLakeLocation} ${bigLakeConnectionId}`
+                    )
+                  }
+                  className="w-full py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-mono font-bold cursor-pointer"
+                >
+                  Run Step 1 in Cloud Shell →
+                </button>
+              </div>
+
+              {/* Step 2: Zero-Trust Bucket IAM Binding */}
+              <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 flex flex-col justify-between space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold font-mono text-emerald-400">
+                      STEP 2 · Delegate Zero-Trust Bucket IAM
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(bigLakeArtifacts.step2BucketIamCli, 'bl-step2')
+                      }
+                      className="text-[11px] font-mono text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedId === 'bl-step2' ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy CLI</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    Grants **only** the BigLake Connection Service Account access to `gs://{bigLakeArtifacts.bkt}` — your analysts never touch raw GCS objects!
+                  </p>
+                  <pre className="text-[10.5px] font-mono text-zinc-200 bg-black/50 p-2.5 rounded-lg border border-zinc-800/80 whitespace-pre-wrap break-all">
+                    {bigLakeArtifacts.step2BucketIamCli}
+                  </pre>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onRunInShell?.(bigLakeArtifacts.step2BucketIamCli)}
+                  className="w-full py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-mono font-bold cursor-pointer"
+                >
+                  Run Step 2 in Cloud Shell →
+                </button>
+              </div>
+
+              {/* Step 3: Create BigLake Apache Iceberg or Cached External Table */}
+              <div className="p-4 rounded-xl bg-zinc-950 border border-cyan-500/40 flex flex-col justify-between space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold font-mono text-cyan-300">
+                      STEP 3 ·{' '}
+                      {bigLakeUseCase === 'ICEBERG_MANAGED'
+                        ? 'BigLake Apache Iceberg DDL'
+                        : 'BigLake Cached External DDL'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(bigLakeArtifacts.primaryDdl, 'bl-step3')
+                      }
+                      className="text-[11px] font-mono text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedId === 'bl-step3' ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy SQL</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    {bigLakeUseCase === 'ICEBERG_MANAGED'
+                      ? 'Creates an ACID-compliant Apache Iceberg table stored as open Parquet in your gs:// bucket.'
+                      : 'Creates a metadata-cached BigLake External Table over existing gs:// files.'}
+                  </p>
+                  <pre className="text-[10.5px] font-mono text-cyan-100 bg-black/50 p-2.5 rounded-lg border border-cyan-500/30 whitespace-pre-wrap break-all">
+                    {bigLakeArtifacts.primaryDdl}
+                  </pre>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSqlInput(bigLakeArtifacts.primaryDdl);
+                    setActiveSubTab('TABLES_SQL');
+                  }}
+                  className="w-full py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-[11px] font-mono font-extrabold cursor-pointer"
+                >
+                  Load Step 3 into SQL Executor →
+                </button>
+              </div>
+            </div>
+
+            {/* Bonus Row: Row-Level Security on gs:// Files + Spark Zero-Copy Interoperability */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-2">
+              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-violet-300">
+                    🔐 Bonus A: Row-Level Security on `gs://` Parquet Files (BigLake Exclusive)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(bigLakeArtifacts.rowAccessPolicyDdl, 'bl-rls')
+                      }
+                      className="text-[11px] font-mono text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedId === 'bl-rls' ? 'Copied' : 'Copy SQL'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSqlInput(bigLakeArtifacts.rowAccessPolicyDdl);
+                        setActiveSubTab('TABLES_SQL');
+                      }}
+                      className="px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 text-[10.5px] font-mono font-bold cursor-pointer"
+                    >
+                      Open in SQL X-Ray →
+                    </button>
+                  </div>
+                </div>
+                <pre className="text-[10.5px] font-mono text-zinc-300 bg-black/40 p-2.5 rounded-lg whitespace-pre-wrap break-all">
+                  {bigLakeArtifacts.rowAccessPolicyDdl}
+                </pre>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-emerald-300">
+                    🤝 Bonus B: Apache Spark / Vertex AI Zero-Copy Read of Same `gs://` Iceberg Table
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      copyText(bigLakeArtifacts.sparkReadSnippet, 'bl-spark')
+                    }
+                    className="text-[11px] font-mono text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedId === 'bl-spark' ? 'Copied' : 'Copy PySpark'}
+                  </button>
+                </div>
+                <pre className="text-[10.5px] font-mono text-zinc-300 bg-black/40 p-2.5 rounded-lg whitespace-pre-wrap break-all">
+                  {bigLakeArtifacts.sparkReadSnippet}
+                </pre>
+              </div>
+            </div>
           </div>
         </div>
       )}

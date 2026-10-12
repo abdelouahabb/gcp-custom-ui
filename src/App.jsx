@@ -396,8 +396,8 @@ function CloudPulseCockpit() {
     {
       id: 'BIGQUERY_STUDIO',
       group: 'DATA_LAKEHOUSE',
-      label: 'BigQuery Studio ★',
-      tip: 'BigQuery 2026 Enterprise Lakehouse & Compliance Studio: Physical vs Logical Compressed Billing (-54%), Pre-Crime SQL Dry-Run X-Ray, Auto-SQL Optimizer, and 168h FOR SYSTEM_TIME AS OF Time-Machine',
+      label: 'BigQuery & BigLake 🌊',
+      tip: 'BigQuery & BigLake 2026 Enterprise Lakehouse Studio: BigLake Apache Iceberg & Parquet over gs:// buckets, Physical vs Logical Compressed Billing (-54%), Pre-Crime SQL Dry-Run X-Ray, and 168h Time-Machine',
       icon: Database,
     },
     {
