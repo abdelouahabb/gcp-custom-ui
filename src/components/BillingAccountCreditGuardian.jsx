@@ -196,6 +196,29 @@ export default function BillingAccountCreditGuardian({
   const [liveBillingInsights, setLiveBillingInsights] = useState(null);
   const [showAccountsDrawer, setShowAccountsDrawer] = useState(false);
   const [grants, setGrants] = useState([]);
+  const [gdeEnvelope, setGdeEnvelope] = useState(() => {
+    const saved = localStorage.getItem('cloudpulse_gde_bonus_envelope_v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // ignore
+      }
+    }
+    const defaultExpiry = new Date(Date.now() + 13 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const defaultStart = new Date(Date.now() - 77 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    return {
+      name: 'GDE / AI Sprint Promotional Credit Grant',
+      initialGrantUsd: 1000,
+      startDate: defaultStart,
+      expirationDate: defaultExpiry,
+      alertDaysThreshold: 30,
+    };
+  });
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchFilter, setSearchFilter] = useState('');
   const [loading, setLoading] = useState(false);
@@ -203,6 +226,17 @@ export default function BillingAccountCreditGuardian({
   const fileInputRef = useRef(null);
 
   const dailyBurnUsd = Number(liveBurn?.daily || 0);
+
+  const updateGdeEnvelope = (patch) => {
+    setGdeEnvelope((prev) => {
+      const next = { ...prev, ...patch };
+      localStorage.setItem(
+        'cloudpulse_gde_bonus_envelope_v1',
+        JSON.stringify(next)
+      );
+      return next;
+    });
+  };
 
   const loadBillingGuardian = useCallback(
     async (forceRefresh = false) => {
@@ -263,13 +297,6 @@ export default function BillingAccountCreditGuardian({
     loadBillingGuardian(false);
   }, [loadBillingGuardian]);
 
-  const enrichedGrants = useMemo(() => {
-    return grants.map((g) => ({
-      ...g,
-      metrics: computeGdeGrantMetrics(g, dailyBurnUsd),
-    }));
-  }, [grants, dailyBurnUsd]);
-
   const liveCostMetrics = useMemo(() => {
     const rows = Array.isArray(liveBillingInsights?.costCreditRows)
       ? liveBillingInsights.costCreditRows
@@ -311,13 +338,49 @@ export default function BillingAccountCreditGuardian({
     };
   }, [liveBillingInsights]);
 
+  // When no CSV is imported, compute the active GDE grant by subtracting live API
+  // `total_credit` consumed (`liveCostMetrics.absCreditsUsd`) from `gdeEnvelope.initialGrantUsd`.
+  const effectiveGrants = useMemo(() => {
+    if (grants.length > 0) return grants;
+    const initAmt = Math.max(1, Number(gdeEnvelope.initialGrantUsd) || 1000);
+    const liveDeductedRemaining = Math.max(
+      0,
+      Number((initAmt - liveCostMetrics.absCreditsUsd).toFixed(2))
+    );
+    return [
+      {
+        id: 'live-api-deducted-gde-grant',
+        name: gdeEnvelope.name || 'GDE Promotional Credit Grant',
+        grantType: 'GDE_BONUS',
+        creditCode: 'LIVE-API-DEDUCTION',
+        initialAmountUsd: initAmt,
+        remainingAmountUsd: liveDeductedRemaining,
+        startDate: gdeEnvelope.startDate,
+        expirationDate: gdeEnvelope.expirationDate,
+        creditApplication: `Live API Deduction (-$${liveCostMetrics.absCreditsUsd.toFixed(
+          2
+        )} used)`,
+        alertDaysThreshold: Number(gdeEnvelope.alertDaysThreshold) || 30,
+      },
+    ];
+  }, [grants, gdeEnvelope, liveCostMetrics.absCreditsUsd]);
+
+  const enrichedGrants = useMemo(() => {
+    return effectiveGrants.map((g) => ({
+      ...g,
+      metrics: computeGdeGrantMetrics(g, dailyBurnUsd),
+    }));
+  }, [effectiveGrants, dailyBurnUsd]);
+
   const summary = useMemo(() => {
     const base = summarizeCreditLedger(enrichedGrants, dailyBurnUsd);
     return {
       ...base,
+      hasImportedCredits: true,
+      isCsvImported: grants.length > 0,
       liveCostMetrics,
     };
-  }, [enrichedGrants, dailyBurnUsd, liveCostMetrics]);
+  }, [enrichedGrants, dailyBurnUsd, grants.length, liveCostMetrics]);
 
   useEffect(() => {
     if (onGrantsSummaryChange) {
@@ -835,51 +898,108 @@ ORDER BY
         </div>
       )}
 
-      {/* Optional Browser-Only CSV Import Notice when no CSV has been uploaded by the user */}
-      {grants.length === 0 ? (
-        <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-            <div className="font-bold text-zinc-900 dark:text-zinc-100">
-              Why aren’t individual Grant Expiration Dates & Remaining Grant Balances in the API table above?
+      {/* GDE Bonus Grant Baseline Bar (combines your GDE Coupon Amount & Expiry Date with Live API `total_credit` deduction) */}
+      {grants.length === 0 && (
+        <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+              GDE Bonus Grant Baseline + Live Cloud Billing API Deduction (`Remaining = Grant - Live API Credits Used`)
             </div>
-            <p className="leading-relaxed">
-              Google Cloud’s live{' '}
-              <code className="font-mono text-zinc-800 dark:text-zinc-200">
-                cloud_billing_data.public.costs.v2
-              </code>{' '}
-              API reports live{' '}
-              <strong className="text-zinc-800 dark:text-zinc-200">
-                Gross Usage (${liveCostMetrics.grossUsageUsd.toFixed(2)})
-              </strong>{' '}
-              and{' '}
-              <strong className="text-emerald-700 dark:text-emerald-400">
-                Promotional Credits Applied (-${liveCostMetrics.absCreditsUsd.toFixed(2)})
-              </strong>
-              , but Google’s API schema does not expose individual grant{' '}
-              <code className="font-mono">Remaining value</code> or{' '}
-              <code className="font-mono">End date</code>. To inspect grant
-              expiration countdowns without any hardcoded files, you can
-              optionally upload your{' '}
-              <strong className="text-zinc-800 dark:text-zinc-200">
-                Google Cloud Console → Billing → Credits → Download CSV
-              </strong>{' '}
-              file right in your browser.
-            </p>
+            <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+              Live API Credits Deducted: -${liveCostMetrics.absCreditsUsd.toFixed(2)} USD
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow-sm"
-          >
-            <Upload className="w-3.5 h-3.5 shrink-0" />
-            <span>Upload Console Credits CSV</span>
-          </button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <div>
+              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                Grant / Bonus Name
+              </label>
+              <input
+                type="text"
+                value={gdeEnvelope.name}
+                onChange={(e) => updateGdeEnvelope({ name: e.target.value })}
+                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                Initial GDE Grant Amount ($ USD)
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="1"
+                  step="50"
+                  value={gdeEnvelope.initialGrantUsd}
+                  onChange={(e) =>
+                    updateGdeEnvelope({
+                      initialGrantUsd: Math.max(1, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
+                />
+                {[500, 1000, 2500].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() =>
+                      updateGdeEnvelope({ initialGrantUsd: preset })
+                    }
+                    className={`h-9 px-2 rounded-lg text-[10px] font-mono font-bold border cursor-pointer shrink-0 ${
+                      Number(gdeEnvelope.initialGrantUsd) === preset
+                        ? 'bg-blue-600 text-white border-blue-500'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700'
+                    }`}
+                  >
+                    ${preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                Bonus Expiration Date
+              </label>
+              <input
+                type="date"
+                value={gdeEnvelope.expirationDate}
+                onChange={(e) =>
+                  updateGdeEnvelope({ expirationDate: e.target.value })
+                }
+                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                Warn Me Before Expiry (Days)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="180"
+                value={gdeEnvelope.alertDaysThreshold}
+                onChange={(e) =>
+                  updateGdeEnvelope({
+                    alertDaysThreshold: Math.max(
+                      1,
+                      Number(e.target.value) || 30
+                    ),
+                  })
+                }
+                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* 4 Dynamically Calculated KPI Cards from Imported CSV */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
-            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
+      )}
+
+      {/* 4 Dynamically Calculated KPI Cards: Money Remaining, Nearest Expiry Countdown, Stranded/Expired, Required Burn */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+        <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
               <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
                 <span>ACTIVE AVAILABLE CREDITS</span>
                 <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -1240,8 +1360,6 @@ ORDER BY
               </table>
             </div>
           </div>
-        </>
-      )}
 
       {/* Bottom Automation Strip: BigQuery Billing Export SQL + Cloud Billing Budget CLI */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
