@@ -1231,20 +1231,22 @@ function CloudPulseCockpit() {
             </div>
           ) : (
             <>
-              <FuturisticOrbitalHud
-                projectId={selectedProjectId}
-                overview={overview}
-                liveBurn={liveBurn}
-                onRefreshOverview={() => {
-                  fetchProjectOverview(selectedProjectId);
-                  setVmRefreshTrigger((c) => c + 1);
-                }}
-                onDeleteResource={handleDeleteResource}
-                onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-                onOpenDocsGuide={() => setActiveTab('DOCS_GUIDE')}
-                onShowToast={showToast}
-                onShowError={setErrorBanner}
-              />
+              {(activeTab === 'OVERVIEW' || activeTab === 'INNOVATION_LAB') && (
+                <FuturisticOrbitalHud
+                  projectId={selectedProjectId}
+                  overview={overview}
+                  liveBurn={liveBurn}
+                  onRefreshOverview={() => {
+                    fetchProjectOverview(selectedProjectId);
+                    setVmRefreshTrigger((c) => c + 1);
+                  }}
+                  onDeleteResource={handleDeleteResource}
+                  onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+                  onOpenDocsGuide={() => setActiveTab('DOCS_GUIDE')}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
 
               {activeTab === 'OVERVIEW' && (
                 <div className="space-y-6">
