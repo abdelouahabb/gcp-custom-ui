@@ -9413,6 +9413,18 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
     // Flatten and analyze every (role, member) binding
     const findings = [];
     const rawBindings = policy.bindings || [];
+    const { activeAccount } = discoverLocalGcloudAccounts();
+    const activeOwnerEmail = String(
+      localSelectedAccount || activeAccount || ''
+    )
+      .trim()
+      .toLowerCase();
+    const ownerBindingObj = rawBindings.find(
+      (b) => b.role === 'roles/owner' && !b.condition
+    );
+    const humanOwners = (ownerBindingObj?.members || []).filter((m) =>
+      m.startsWith('user:')
+    );
 
     for (const b of rawBindings) {
       const role = b.role || '';
@@ -9426,6 +9438,12 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
           '-compute@developer.gserviceaccount.com'
         );
         const isAppspotSa = member.includes('@appspot.gserviceaccount.com');
+        const isAuthenticatedOwner =
+          role === 'roles/owner' &&
+          member.startsWith('user:') &&
+          ((activeOwnerEmail &&
+            member.toLowerCase() === `user:${activeOwnerEmail}`) ||
+            humanOwners.length <= 1);
 
         let severity = toxicRule?.severity || 'LOW';
         let riskLabel =
@@ -9438,7 +9456,16 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
           toxicRule?.remediationReason ||
           'Principle of least privilege satisfied.';
 
-        if (isPublic) {
+        if (isAuthenticatedOwner) {
+          severity = 'PROTECTED_OWNER';
+          riskLabel =
+            '👑 Verified Sovereign Project Root Owner (Self-Lockout Guardrail Active)';
+          recommendedRole = 'roles/owner';
+          recommendedAltRoles = [];
+          blastRadiusScore = 0;
+          remediationReason =
+            'You are the authenticated Sovereign Project Owner (and/or sole human owner of this project). Reducing or expiring your own roles/owner privilege would lock you out of Google Cloud and is protected by CloudPulse.';
+        } else if (isPublic) {
           severity = 'CRITICAL';
           riskLabel = 'Public Unauthenticated Principal Exposure (allUsers)';
           blastRadiusScore = 100;
@@ -9459,7 +9486,7 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
         }
 
         // If a time-bounded JIT IAM Condition is already attached, reduce severity
-        if (condition && condition.expression) {
+        if (condition && condition.expression && !isAuthenticatedOwner) {
           if (severity === 'CRITICAL') severity = 'MEDIUM';
           else if (severity === 'HIGH') severity = 'LOW';
           blastRadiusScore = Math.max(15, Math.round(blastRadiusScore * 0.4));
@@ -9480,6 +9507,8 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
             : member.startsWith('group:')
             ? 'GOOGLE_GROUP'
             : 'PUBLIC_OR_FEDERATED',
+          isProtectedRootOwner: isAuthenticatedOwner,
+          canApplyJitCondition: !isAuthenticatedOwner && role !== 'roles/owner',
           severity,
           riskLabel,
           blastRadiusScore,
@@ -9493,15 +9522,16 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
               'Auto-expiring 24-hour Just-In-Time (JIT) privilege lease enforced by CloudPulse IAM Surgeon',
             expression: `request.time < timestamp("${jitExpiryIso}")`,
           },
-          gcloudDowngradeCli:
-            recommendedRole !== role
-              ? `gcloud projects add-iam-policy-binding ${projectId} --member="${member}" --role="${recommendedRole}" && gcloud projects remove-iam-policy-binding ${projectId} --member="${member}" --role="${role}"`
-              : `gcloud projects add-iam-policy-binding ${projectId} --member="${member}" --role="${role}" --condition='expression=request.time < timestamp("${jitExpiryIso}"),title=CloudPulse_24h_JIT_Lease'`,
+          gcloudDowngradeCli: isAuthenticatedOwner
+            ? `# Protected Sovereign Project Root Owner (${member}) — Self-downgrade blocked to prevent project lockout`
+            : recommendedRole !== role
+            ? `gcloud projects add-iam-policy-binding ${projectId} --member="${member}" --role="${recommendedRole}" && gcloud projects remove-iam-policy-binding ${projectId} --member="${member}" --role="${role}"`
+            : `gcloud projects add-iam-policy-binding ${projectId} --member="${member}" --role="${role}" --condition='expression=request.time < timestamp("${jitExpiryIso}"),title=CloudPulse_24h_JIT_Lease'`,
         });
       }
     }
 
-    // Sort findings by blastRadiusScore descending
+    // Sort findings: actionable high blast-radius findings first, protected root owner after actionable items
     findings.sort((a, b) => b.blastRadiusScore - a.blastRadiusScore);
 
     const criticalCount = findings.filter((f) => f.severity === 'CRITICAL').length;
@@ -9520,6 +9550,7 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
       projectId,
       etag: policy.etag || '',
       iamScore,
+      activeOwnerEmail,
       summary: {
         totalBindings: findings.length,
         criticalCount,
@@ -9601,6 +9632,31 @@ app.post(
       const bindings = Array.isArray(currentPolicy.bindings)
         ? JSON.parse(JSON.stringify(currentPolicy.bindings))
         : [];
+
+      // Self-Lockout Protection Guardrail: Never allow downgrading or expiring the active owner or last human owner
+      const { activeAccount } = discoverLocalGcloudAccounts();
+      const activeOwnerEmail = String(
+        localSelectedAccount || activeAccount || ''
+      )
+        .trim()
+        .toLowerCase();
+      const currentOwners =
+        (
+          bindings.find((b) => b.role === 'roles/owner' && !b.condition)
+            ?.members || []
+        ).filter((m) => m.startsWith('user:')) || [];
+      if (
+        role === 'roles/owner' &&
+        member &&
+        member.startsWith('user:') &&
+        ((activeOwnerEmail &&
+          member.toLowerCase() === `user:${activeOwnerEmail}`) ||
+          currentOwners.length <= 1)
+      ) {
+        return res.status(400).json({
+          error: `Self-Lockout Guardrail: Refusing to downgrade or expire roles/owner for ${member} because you are the Sovereign Project Owner (or sole human owner of ${projectId}).`,
+        });
+      }
 
       if (action === 'APPLY_JIT_CONDITION') {
         const expiryIso = new Date(
