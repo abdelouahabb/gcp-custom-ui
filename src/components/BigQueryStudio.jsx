@@ -57,10 +57,10 @@ const STUDIO_TABS = [
   },
   {
     id: 'BIGLAKE_ICEBERG',
-    label: '🌊 5. BigLake vs. BigQuery Open Lakehouse & Iceberg Studio',
-    shortLabel: '🌊 BigLake & Iceberg',
+    label: '🌊 5. BigLake Metastore Catalogs & Apache Iceberg Studio',
+    shortLabel: '🌊 BigLake Metastore & Iceberg',
     icon: Layers,
-    tip: 'Demystify BigLake vs. BigQuery: Build open Apache Iceberg & Parquet tables in your own gs:// buckets with delegated Zero-Trust Connections, row/column security, and Spark + Vertex AI + BigQuery zero-copy sharing',
+    tip: 'Official Google Cloud BigLake Metastore Catalogs (/biglake/metastore/catalogs · biglake.googleapis.com/v1) + BigLake vs. BigQuery Apache Iceberg & Parquet tables in gs://',
   },
 ];
 
@@ -171,12 +171,18 @@ export default function BigQueryStudio({
     'telemetry_events_2026_restored'
   );
 
-  // BigLake vs. BigQuery Open Lakehouse & Apache Iceberg Studio state
+  // BigLake & BigLake Metastore Catalogs (biglake.googleapis.com/v1) Studio state
   const [gcsBuckets, setGcsBuckets] = useState([]);
+  const [bigLakeCatalogs, setBigLakeCatalogs] = useState([]);
+  const [loadingBigLakeCatalogs, setLoadingBigLakeCatalogs] = useState(false);
+  const [creatingBigLakeCatalog, setCreatingBigLakeCatalog] = useState(false);
+  const [newCatalogId, setNewCatalogId] = useState('iceberg_prod_catalog');
+  const [newCatalogLocation, setNewCatalogLocation] = useState('us');
+  const [newCatalogDbId, setNewCatalogDbId] = useState('analytics_db');
   const [bigLakeUseCase, setBigLakeUseCase] = useState('ICEBERG_MANAGED'); // 'ICEBERG_MANAGED' | 'BIGLAKE_EXTERNAL' | 'NATIVE_BQ'
   const [bigLakeBucket, setBigLakeBucket] = useState('');
-  const [bigLakeFolder, setBigLakeFolder] = useState('iceberg-lakehouse/events_2026');
-  const [bigLakeConnectionId, setBigLakeConnectionId] = useState('biglake-lakehouse-conn');
+  const [bigLakeFolder, setBigLakeFolder] = useState('biglake-iceberg/events_2026');
+  const [bigLakeConnectionId, setBigLakeConnectionId] = useState('biglake-iceberg-conn');
   const [bigLakeLocation, setBigLakeLocation] = useState('US');
   const [bigLakeTableName, setBigLakeTableName] = useState('open_iceberg_events');
   const [bigLakeFormat, setBigLakeFormat] = useState('PARQUET');
@@ -188,6 +194,67 @@ export default function BigQueryStudio({
     navigator.clipboard?.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1600);
+  };
+
+  const fetchBigLakeCatalogs = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingBigLakeCatalogs(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/biglake/metastore/catalogs`
+      );
+      setBigLakeCatalogs(res.data?.catalogs || []);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingBigLakeCatalogs(false);
+    }
+  }, [projectId]);
+
+  const handleCreateBigLakeCatalog = async (e) => {
+    e?.preventDefault();
+    if (!projectId || !newCatalogId.trim()) return;
+    setCreatingBigLakeCatalog(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/biglake/metastore/catalogs`,
+        {
+          catalogId: newCatalogId.trim(),
+          location: newCatalogLocation,
+          databaseId: newCatalogDbId.trim() || 'analytics_db',
+          gcsBucketUri: `gs://${bigLakeBucket || `${projectId}-biglake-iceberg`}`,
+        }
+      );
+      onShowToast?.(res.data?.message || 'BigLake Metastore Catalog created!');
+      await fetchBigLakeCatalogs();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to create BigLake Metastore Catalog.'
+      );
+    } finally {
+      setCreatingBigLakeCatalog(false);
+    }
+  };
+
+  const handleDeleteBigLakeCatalog = async (location, catalogId) => {
+    if (!projectId) return;
+    try {
+      const res = await axios.delete(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/biglake/metastore/catalogs/${encodeURIComponent(
+          location
+        )}/${encodeURIComponent(catalogId)}`
+      );
+      onShowToast?.(res.data?.message || `Deleted catalog ${catalogId}`);
+      await fetchBigLakeCatalogs();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error || err.message || 'Failed to delete catalog.'
+      );
+    }
   };
 
   const fetchDatasets = useCallback(async () => {
@@ -222,11 +289,11 @@ export default function BigQueryStudio({
       if (bList.length > 0 && !bigLakeBucket) {
         setBigLakeBucket(bList[0].name);
       } else if (!bigLakeBucket) {
-        setBigLakeBucket(`${projectId}-open-lakehouse`);
+        setBigLakeBucket(`${projectId}-biglake-iceberg`);
       }
     } catch {
       if (!bigLakeBucket) {
-        setBigLakeBucket(`${projectId}-open-lakehouse`);
+        setBigLakeBucket(`${projectId}-biglake-iceberg`);
       }
     }
   }, [projectId, bigLakeBucket]);
@@ -262,7 +329,8 @@ export default function BigQueryStudio({
   useEffect(() => {
     fetchDatasets();
     fetchGcsBucketsForBigLake();
-  }, [fetchDatasets, fetchGcsBucketsForBigLake]);
+    fetchBigLakeCatalogs();
+  }, [fetchDatasets, fetchGcsBucketsForBigLake, fetchBigLakeCatalogs]);
 
   useEffect(() => {
     if (selectedDatasetId) {
@@ -603,14 +671,14 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
-                  BigQuery &amp; BigLake 2026 Enterprise Lakehouse Studio
+                  BigQuery &amp; BigLake Metastore 2026 Studio
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
-                  CAPACITOR · BIGLAKE APACHE ICEBERG · SQL PRE-CRIME X-RAY
+                  CAPACITOR · BIGLAKE METASTORE CATALOGS · APACHE ICEBERG
                 </span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Live BigQuery &amp; BigLake Control Plane for <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">{projectId}</span> — Unify native BigQuery Capacitor tables with open **BigLake Apache Iceberg** tables in `gs://`, Physical Compressed Billing (-54% cost), and 168h Time-Machine recovery.
+                Live BigQuery &amp; BigLake Metastore Control Plane for <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">{projectId}</span> — Manage **BigLake Metastore Catalogs** (`/biglake/metastore/catalogs` · `biglake.googleapis.com/v1`), open **Apache Iceberg** tables in `gs://`, and native BigQuery Capacitor tables.
               </p>
             </div>
           </div>
@@ -619,11 +687,11 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             <button
               type="button"
               onClick={() => setActiveSubTab('BIGLAKE_ICEBERG')}
-              title="Understand BigLake vs. BigQuery and build Apache Iceberg / Parquet Lakehouse tables over gs:// buckets"
+              title="Manage official BigLake Metastore Catalogs (/biglake/metastore/catalogs) and Apache Iceberg tables"
               className="inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>🌊 BigLake vs. BigQuery Studio</span>
+              <span>🌊 BigLake Metastore &amp; Iceberg</span>
             </button>
 
             <button
@@ -1659,10 +1727,156 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
       )}
 
       {/* =================================================================== */}
-      {/* TAB 5: BIGLAKE VS. BIGQUERY OPEN LAKEHOUSE & APACHE ICEBERG STUDIO  */}
+      {/* =================================================================== */}
+      {/* TAB 5: BIGLAKE METASTORE CATALOGS & APACHE ICEBERG STUDIO           */}
       {/* =================================================================== */}
       {activeSubTab === 'BIGLAKE_ICEBERG' && (
         <div className="space-y-4">
+          {/* 0. Official Google Cloud BigLake Metastore Catalogs (/biglake/metastore/catalogs) */}
+          <div className="bg-white dark:bg-[#0c0c0f] border-2 border-cyan-500/40 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Database className="w-4 h-4 text-cyan-500" />
+                  <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
+                    🏛️ Official Google Cloud BigLake Metastore Catalogs (`biglake.googleapis.com/v1`)
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
+                    CONSOLE PARITY: /biglake/metastore/catalogs
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  In Google Cloud Console, standalone open table metadata now lives under **BigLake → Metastore → Catalogs** (`/biglake/metastore/catalogs`). Create and manage `projects/{projectId}/locations/{'{loc}'}/catalogs` directly here.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={`https://console.cloud.google.com/biglake/metastore/catalogs?project=${encodeURIComponent(
+                    projectId
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 text-xs font-mono font-bold"
+                >
+                  <span>Open /biglake/metastore/catalogs ↗</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={fetchBigLakeCatalogs}
+                  disabled={loadingBigLakeCatalogs}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-xs font-mono font-semibold border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      loadingBigLakeCatalogs ? 'animate-spin text-cyan-500' : ''
+                    }`}
+                  />
+                  <span>Sync Catalogs</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Create BigLake Metastore Catalog Form */}
+            <form
+              onSubmit={handleCreateBigLakeCatalog}
+              className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800"
+            >
+              <div>
+                <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                  BigLake Catalog ID
+                </label>
+                <input
+                  type="text"
+                  value={newCatalogId}
+                  onChange={(e) => setNewCatalogId(e.target.value)}
+                  placeholder="iceberg_prod_catalog"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                  Location (`us`, `eu`, `us-central1`)
+                </label>
+                <select
+                  value={newCatalogLocation}
+                  onChange={(e) => setNewCatalogLocation(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                >
+                  <option value="us">us (Multi-Region US)</option>
+                  <option value="eu">eu (Multi-Region EU)</option>
+                  <option value="us-central1">us-central1 (Iowa)</option>
+                  <option value="europe-west1">europe-west1 (Belgium)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                  Initial Database Namespace
+                </label>
+                <input
+                  type="text"
+                  value={newCatalogDbId}
+                  onChange={(e) => setNewCatalogDbId(e.target.value)}
+                  placeholder="analytics_db"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creatingBigLakeCatalog}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>
+                  {creatingBigLakeCatalog
+                    ? 'Creating Catalog...'
+                    : '+ Create BigLake Catalog'}
+                </span>
+              </button>
+            </form>
+
+            {/* Live BigLake Metastore Catalogs List */}
+            {bigLakeCatalogs.length === 0 ? (
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 flex items-center justify-between">
+                <span>
+                  No BigLake Metastore Catalogs found in `{projectId}` yet — click **+ Create BigLake Catalog** above to provision one via `biglake.googleapis.com/v1`.
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {bigLakeCatalogs.map((cat) => (
+                  <div
+                    key={`${cat.location}-${cat.id}`}
+                    className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-cyan-500/30 flex items-center justify-between gap-3"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-100">
+                          {cat.id}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 font-mono text-[10px] font-bold">
+                          {cat.location}
+                        </span>
+                      </div>
+                      <div className="text-[11px] font-mono text-zinc-500 break-all">
+                        {cat.fullName}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDeleteBigLakeCatalog(cat.location, cat.id)
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 text-[11px] font-mono font-bold cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* 1. Visual Demystifier: Why People Confuse BigQuery vs. BigLake */}
           <div className="bg-white dark:bg-[#0c0c0f] border border-cyan-500/35 rounded-2xl p-5 shadow-sm space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
@@ -1677,7 +1891,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  **The Golden Rule**: **BigQuery** is the *SQL Compute Engine + Google-owned Capacitor Storage*, while **BigLake** lets you keep your data as **open Apache Iceberg / Parquet files inside your own `gs://` Cloud Storage bucket** (so Spark, Vertex AI, and BigQuery share the exact same files with zero copies) **without** losing Row/Column Security or ACID transactions!
+                  **The Golden Rule**: **BigQuery** is the *SQL Compute Engine + Google-owned Capacitor Storage*, while **BigLake** (`biglake.googleapis.com/v1`) lets you keep your data as **open Apache Iceberg / Parquet files inside your own `gs://` Cloud Storage bucket** (so Spark, Vertex AI, and BigQuery share the exact same files with zero copies) **without** losing Row/Column Security or ACID transactions!
                 </p>
               </div>
 
