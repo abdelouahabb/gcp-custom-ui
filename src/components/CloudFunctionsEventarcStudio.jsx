@@ -98,7 +98,7 @@ const TRIGGER_RECIPES = [
   },
   {
     id: 'CRON_SCHEDULE',
-    title: '⏰ Cloud Scheduler Cron Timer',
+    title: 'Cloud Scheduler Cron Timer',
     plainEnglish: 'Run automatically on a recurring schedule (every N mins / nightly)',
     transportMode: 'DIRECT_PUBSUB_FREE',
     transportBadge: 'Scheduler → Pub/Sub Trigger (3 Free Jobs/Mo)',
@@ -393,13 +393,33 @@ export default function CloudFunctionsEventarcStudio({
   const [simDurationMs, setSimDurationMs] = useState(250);
   const [simConcurrency, setSimConcurrency] = useState(80);
 
+  // Cloud Workflows & Messaging Matrix State
+  const [workflowsList, setWorkflowsList] = useState([]);
+  const [workflowName, setWorkflowName] = useState('payment-fulfillment-saga-2026');
+  const [workflowRegion, setWorkflowRegion] = useState('us-central1');
+  const [workflowIncludeCallback, setWorkflowIncludeCallback] = useState(true);
+  const [workflowIncludeRetry, setWorkflowIncludeRetry] = useState(true);
+  const [workflowBusy, setWorkflowBusy] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  const copyText = (text, key) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1800);
+  };
+
   const fetchFunctionsOverview = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/functions/overview`
-      );
+      const [res, w10Res] = await Promise.all([
+        axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/functions/overview`
+        ),
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/wave10/frontier`)
+          .catch(() => ({ data: { workflows: [] } })),
+      ]);
       const data = res.data || {};
       setFunctionsList(data.functions || []);
       const bList = data.buckets || [`${projectId}-ingest-bucket`];
@@ -407,6 +427,9 @@ export default function CloudFunctionsEventarcStudio({
       setTriggerBucket((prev) => prev || bList[0] || `${projectId}-ingest-bucket`);
       const tList = data.topics || ['orders-events-topic', 'dead-letter-events'];
       setTopics(tList);
+      if (w10Res.data?.workflows) {
+        setWorkflowsList(w10Res.data.workflows);
+      }
     } catch {
       // ignore fallback errors
     } finally {
@@ -791,6 +814,106 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
   const gen2Count = functionsList.filter((f) => f.generation === 'GEN_2').length;
   const gen1Count = functionsList.filter((f) => f.generation === 'GEN_1').length;
 
+  const workflowArtifacts = useMemo(() => {
+    const yaml = `# CloudPulse 2026 — Durable Serverless Cloud Workflow Saga (${workflowName}.yaml)
+# Free Tier: First 5,000 internal steps + 2,000 external HTTP calls FREE/month ($0.00 idle wait during callbacks!)
+main:
+  params: [args]
+  steps:
+    - init_context:
+        assign:
+          - project_id: \${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - order_id: \${default(map.get(args, "orderId"), "ORD-2026-9941")}
+    - reserve_inventory:
+        try:
+          call: http.post
+          args:
+            url: https://${workflowRegion}-${projectId}.cloudfunctions.net/inventory-reserve
+            auth:
+              type: OIDC
+            body:
+              orderId: \${order_id}
+          result: inventory_res${
+            workflowIncludeRetry
+              ? `
+        retry:
+          predicate: \${http.default_retry_predicate}
+          max_retries: 5
+          backoff:
+            initial_delay: 1
+            max_delay: 30
+            multiplier: 2`
+              : ''
+          }${
+      workflowIncludeCallback
+        ? `
+    - create_human_approval_callback:
+        call: events.create_callback_endpoint
+        args:
+          http_callback_method: "POST"
+        result: callback_details
+    - await_approval_zero_cost_sleep:
+        # Waits up to 7 days at $0.00 compute cost!
+        call: events.await_callback
+        args:
+          callback: \${callback_details}
+          timeout: 604800
+        result: approval_payload`
+        : ''
+    }
+    - commit_spanner_ledger:
+        call: googleapis.spanner.v1.projects.instances.databases.sessions.commit
+        args:
+          database: \${"projects/" + project_id + "/instances/finops-graph-100pu/databases/cloudpulse_graph_db"}
+          body:
+            singleUseTransaction:
+              readWrite: {}
+        result: spanner_tx
+    - return_saga_summary:
+        return:
+          status: "SAGA_COMMITTED_EXACTLY_ONCE"
+          orderId: \${order_id}`;
+
+    const cliCmd = `gcloud workflows deploy ${workflowName} \\
+  --project=${projectId} \\
+  --location=${workflowRegion} \\
+  --source=${workflowName}.yaml \\
+  --description="CloudPulse 2026 Durable Serverless Saga Orchestrator"`;
+
+    return { yaml, cliCmd };
+  }, [
+    projectId,
+    workflowName,
+    workflowRegion,
+    workflowIncludeCallback,
+    workflowIncludeRetry,
+  ]);
+
+  const handleDeployWorkflow = async () => {
+    setWorkflowBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave10/action`,
+        {
+          action: 'DEPLOY_CLOUD_WORKFLOW',
+          workflowName,
+          region: workflowRegion,
+          yamlContent: workflowArtifacts.yaml,
+        }
+      );
+      if (onShowToast && res.data?.message) onShowToast(res.data.message);
+      await fetchFunctionsOverview();
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error || 'Failed to deploy Cloud Workflow.'
+        );
+      }
+    } finally {
+      setWorkflowBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Top Studio Header & 1-Tap Eventarc IAM Auto-Doctor */}
@@ -953,6 +1076,10 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               id: 'FINOPS_COMPARE',
               label: '3. 1st Gen (v1) vs 2nd Gen (v2) Concurrency & Cost Calculator',
             },
+            {
+              id: 'CHOREOGRAPHER',
+              label: `4. Messaging & Workflows Matrix (Eventarc vs Pub/Sub vs Tasks vs Workflows · ${workflowsList.length})`,
+            },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -960,8 +1087,8 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               onClick={() => setActiveSubTab(tab.id)}
               className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
                 activeSubTab === tab.id
-                  ? 'bg-amber-500 text-zinc-950 shadow-sm'
-                  : 'bg-white/70 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/40'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-white/70 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
               }`}
             >
               {tab.label}
@@ -1943,6 +2070,212 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 Requires only <strong>{finopsComparison.v2ActiveInstances} shared instance(s)</strong>{' '}
                 at {simConcurrency}x concurrency · Max timeout 60 mins · Direct VPC Egress & GCS FUSE support.
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 4: EVENTARC VS PUB/SUB VS CLOUD TASKS VS CLOUD WORKFLOWS CHOREOGRAPHER */}
+      {activeSubTab === 'CHOREOGRAPHER' && (
+        <div className="space-y-4">
+          {/* 5-Card Interactive Messaging & Orchestration Architecture Matrix */}
+          <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                  The 2026 Google Cloud Messaging &amp; Orchestration Decision Matrix
+                </h3>
+                <p className="text-[11px] text-zinc-500">
+                  Stop guessing between Eventarc, Pub/Sub, Cloud Tasks, Cloud Workflows, and Cloud Scheduler. Pick the exact right primitive for every pattern:
+                </p>
+              </div>
+              <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                CHOREOGRAPHY VS ORCHESTRATION
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              {[
+                {
+                  title: '1. Eventarc',
+                  pattern: 'Event Router (130+ GCP Services)',
+                  useWhen: 'Reacting to GCS uploads, VM creation, IAM changes, or Firestore writes.',
+                  freeTier: '$0.00 Direct & Admin Audit',
+                  badgeColor: 'text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10',
+                },
+                {
+                  title: '2. Cloud Pub/Sub',
+                  pattern: '1-to-Many Event Streaming Bus',
+                  useWhen: 'Decoupling high-throughput producers from multiple subscribers (1M+ msg/sec).',
+                  freeTier: 'First 10 GiB/mo FREE',
+                  badgeColor: 'text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/10',
+                },
+                {
+                  title: '3. Cloud Tasks',
+                  pattern: '1-to-1 Rate-Limited Queue',
+                  useWhen: 'Dispatching work to an API/LLM with strict RPS rate-limiting, retries & deduplication.',
+                  freeTier: 'First 1,000,000 ops/mo FREE',
+                  badgeColor: 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+                },
+                {
+                  title: '4. Cloud Workflows',
+                  pattern: 'Durable Multi-Step Saga State Machine',
+                  useWhen: 'Orchestrating multi-step sagas with retries, compensation, and $0 human callbacks.',
+                  freeTier: '5,000 internal steps/mo FREE',
+                  badgeColor: 'text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/10',
+                },
+                {
+                  title: '5. Cloud Scheduler',
+                  pattern: 'Managed Distributed Cron Timer',
+                  useWhen: 'Triggering recurring nightly/hourly batch pipelines, heartbeats, or Hibernate.',
+                  freeTier: '3 Jobs/mo 100% FREE',
+                  badgeColor: 'text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10',
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between space-y-2"
+                >
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                      {item.title}
+                    </div>
+                    <div className={`px-2 py-0.5 rounded border text-[9.5px] font-mono font-bold inline-block ${item.badgeColor}`}>
+                      {item.pattern}
+                    </div>
+                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                      {item.useWhen}
+                    </p>
+                  </div>
+                  <div className="pt-1.5 border-t border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {item.freeTier}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Live Cloud Workflows Durable YAML Saga Composer */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-5 p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3.5">
+              <div className="text-xs font-extrabold font-mono uppercase text-blue-600 dark:text-blue-400">
+                Durable Cloud Workflows Saga Composer
+              </div>
+              <div className="space-y-2.5">
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
+                    Workflow Name
+                  </label>
+                  <input
+                    type="text"
+                    value={workflowName}
+                    onChange={(e) => setWorkflowName(e.target.value)}
+                    className="mt-1 w-full px-3 py-1.5 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
+                    Region
+                  </label>
+                  <select
+                    value={workflowRegion}
+                    onChange={(e) => setWorkflowRegion(e.target.value)}
+                    className="mt-1 w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="us-central1">us-central1</option>
+                    <option value="us-east1">us-east1</option>
+                    <option value="europe-west1">europe-west1</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setWorkflowIncludeCallback((v) => !v)}
+                    className={`p-2 rounded-lg border text-[10.5px] font-mono font-bold cursor-pointer ${
+                      workflowIncludeCallback
+                        ? 'border-blue-500 bg-blue-500/15 text-blue-600 dark:text-blue-300'
+                        : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
+                    }`}
+                  >
+                    Human Approval Callback ($0 Wait)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWorkflowIncludeRetry((v) => !v)}
+                    className={`p-2 rounded-lg border text-[10.5px] font-mono font-bold cursor-pointer ${
+                      workflowIncludeRetry
+                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
+                        : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
+                    }`}
+                  >
+                    Exponential Backoff Retries
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={workflowBusy}
+                onClick={handleDeployWorkflow}
+                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Rocket className="w-4 h-4" />
+                <span>
+                  {workflowBusy
+                    ? 'Deploying Cloud Workflow...'
+                    : `Deploy Live Cloud Workflow (${workflowName})`}
+                </span>
+              </button>
+
+              {workflowsList.length > 0 && (
+                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                  <div className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
+                    Live Cloud Workflows ({workflowsList.length})
+                  </div>
+                  {workflowsList.map((w, i) => (
+                    <div
+                      key={i}
+                      className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-mono"
+                    >
+                      <span className="font-bold text-blue-600 dark:text-blue-400">
+                        {w.name?.split('/').pop() || w.workflowName}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                        {w.state || 'ACTIVE'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="lg:col-span-7 p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold font-mono text-blue-400">
+                  Generated Cloud Workflows YAML ({workflowName}.yaml)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {onRunInShell && (
+                    <button
+                      type="button"
+                      onClick={() => onRunInShell(workflowArtifacts.cliCmd)}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                    >
+                      Deploy in Cloud Shell
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => copyText(workflowArtifacts.yaml, 'WF_YAML')}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                  >
+                    {copiedKey === 'WF_YAML' ? 'Copied' : 'Copy YAML'}
+                  </button>
+                </div>
+              </div>
+              <pre className="p-3 rounded-xl bg-black/80 border border-zinc-800 text-[11px] font-mono text-blue-300 overflow-x-auto leading-relaxed max-h-80">
+                {workflowArtifacts.yaml}
+              </pre>
             </div>
           </div>
         </div>

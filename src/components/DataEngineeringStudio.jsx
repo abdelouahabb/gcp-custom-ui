@@ -151,20 +151,36 @@ with DAG("customer_360_medallion_elt", schedule_interval="@hourly") as dag:
     ingest_gcs >> clean_silver >> quality_gate >> build_gold`
   );
 
+  const [sparkBatches, setSparkBatches] = useState([]);
+  const [sparkBatchId, setSparkBatchId] = useState('iceberg-medallion-etl-2026');
+  const [sparkRegion, setSparkRegion] = useState('us-central1');
+  const [sparkBucket, setSparkBucket] = useState(`${projectId || 'gcp-project'}-iceberg-lake`);
+  const [sparkTemplate, setSparkTemplate] = useState('ICEBERG_MEDALLION');
+
   const fetchOverview = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/data-engineer/overview`
-      );
+      const [res, w10Res] = await Promise.all([
+        axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/data-engineer/overview`
+        ),
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/wave10/frontier`)
+          .catch(() => ({ data: { sparkBatches: [] } })),
+      ]);
       if (res.data) {
         setData(res.data);
         if (!sourceUri && res.data.buckets?.[0]?.name) {
           setSourceUri(`gs://${res.data.buckets[0].name}/events/*.parquet`);
+          setSparkBucket(res.data.buckets[0].name);
         } else if (!sourceUri) {
           setSourceUri(`gs://${projectId}-raw-landing/events/*.parquet`);
+          setSparkBucket(`${projectId}-iceberg-lake`);
         }
+      }
+      if (w10Res.data?.sparkBatches) {
+        setSparkBatches(w10Res.data.sparkBatches);
       }
     } catch (err) {
       if (onShowError) {
@@ -733,6 +749,81 @@ actions:
     }
   };
 
+  const sparkArtifacts = useMemo(() => {
+    const cleanBkt = (sparkBucket || `${projectId}-iceberg-lake`).replace(/^gs:\/\//, '');
+    const pysparkCode = `# CloudPulse 2026 — Zero-Cluster Serverless Spark 3.5 on BigLake Apache Iceberg
+# FinOps Breakthrough: $0.00/hr idle cluster cost · Sub-30s autoscaling · Open Parquet + Iceberg on GCS
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, current_timestamp, to_date, sum as _sum, count
+
+spark = (
+    SparkSession.builder
+    .appName("${sparkBatchId}")
+    .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+    .config("spark.sql.catalog.biglake", "org.apache.iceberg.spark.SparkCatalog")
+    .config("spark.sql.catalog.biglake.catalog-impl", "org.apache.iceberg.gcp.biglake.BigLakeCatalog")
+    .config("spark.sql.catalog.biglake.gcp_project", "${projectId}")
+    .config("spark.sql.catalog.biglake.gcp_location", "${sparkRegion}")
+    .config("spark.sql.catalog.biglake.blms_catalog", "cloudpulse_lakehouse")
+    .config("spark.sql.catalog.biglake.warehouse", "gs://${cleanBkt}/iceberg-warehouse")
+    .getOrCreate()
+)
+
+# 1. Read Raw Bronze Parquet/JSON events from Cloud Storage
+df_bronze = spark.read.parquet("gs://${cleanBkt}/bronze/events/*.parquet")
+
+# 2. Cleanse, deduplicate & aggregate into Silver/Gold Medallion Iceberg table (ACID + Time Travel)
+df_gold = (
+    df_bronze
+    .filter(col("status") == "SUCCEEDED")
+    .withColumn("event_date", to_date(col("event_ts")))
+    .groupBy("event_date", "service_name", "region")
+    .agg(
+        count("*").alias("total_requests"),
+        _sum("cost_usd").alias("total_spend_usd")
+    )
+    .withColumn("processed_at", current_timestamp())
+)
+
+# 3. ACID Merge / Append into BigLake Iceberg Table (Readable by BigQuery, Spark, Trino & DuckDB!)
+df_gold.writeTo("biglake.finops_2026.daily_service_rollups").using("iceberg").tableProperty("format-version", "2").createOrReplace()
+print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
+
+    const cliCmd = `gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${sparkBatchId}.py \\
+  --project=${projectId} \\
+  --region=${sparkRegion} \\
+  --batch=${sparkBatchId} \\
+  --version=2.2 \\
+  --deps-bucket=gs://${cleanBkt} \\
+  --properties="spark.dynamicAllocation.enabled=true,spark.dynamicAllocation.minExecutors=2,spark.dynamicAllocation.maxExecutors=16"`;
+
+    return { pysparkCode, cliCmd, cleanBkt };
+  }, [projectId, sparkBatchId, sparkRegion, sparkBucket]);
+
+  const handleSubmitServerlessSpark = async () => {
+    setBusyAction('SUBMIT_SPARK');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave10/action`,
+        {
+          action: 'SUBMIT_SERVERLESS_SPARK',
+          batchId: sparkBatchId,
+          region: sparkRegion,
+          bucket: sparkArtifacts.cleanBkt,
+          template: sparkTemplate,
+        }
+      );
+      if (onShowToast && res.data?.message) onShowToast(res.data.message);
+      await fetchOverview();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(err.response?.data?.error || err.message);
+      }
+    } finally {
+      setBusyAction('');
+    }
+  };
+
   const handleRunSparkRcaDoctor = async () => {
     setBusyAction('SPARK_RCA');
     try {
@@ -839,7 +930,7 @@ actions:
         </div>
       </div>
 
-      {/* 5 Friendly Sub-Studio Navigation Pills */}
+      {/* 7 Friendly Sub-Studio Navigation Pills */}
       <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-[#202124] p-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
         {[
           {
@@ -871,6 +962,11 @@ actions:
             id: 'DATA_AGENT_KIT',
             label: '6. Data Agent Kit (deployment.yaml & MCP URIs)',
             badge: 'datacloud:antigravity',
+          },
+          {
+            id: 'SERVERLESS_SPARK',
+            label: '7. Serverless Spark & BigLake Iceberg',
+            badge: '$0 Idle Cluster',
           },
         ].map((t) => (
           <button
@@ -1033,7 +1129,7 @@ actions:
                   onChange={(e) => setLatencySla(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
                 >
-                  <option value="BATCH_15M">⏱Near-Real-Time Micro-Batch (15 min)</option>
+                  <option value="BATCH_15M">Near-Real-Time Micro-Batch (15 min)</option>
                   <option value="HOURLY">Hourly Medallion ELT</option>
                   <option value="STREAMING_SUB_5S">Sub-5-Second Streaming</option>
                 </select>
@@ -2162,6 +2258,221 @@ actions:
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: ZERO-CLUSTER SERVERLESS SPARK & BIGLAKE APACHE ICEBERG */}
+      {activeSubTab === 'SERVERLESS_SPARK' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Left 5 Cols: Serverless Spark Batch Launcher & Cost Comparison */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
+              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <div>
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                    <span>Zero-Cluster Dataproc Serverless Spark 3.5</span>
+                  </h3>
+                  <p className="text-[11px] text-zinc-500">
+                    Never pay for idle master/worker VMs again. Submit PySpark/Ray directly to Serverless Batches with sub-30s startup.
+                  </p>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                  $0.00/HR IDLE
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
+                    Batch Job ID
+                  </label>
+                  <input
+                    type="text"
+                    value={sparkBatchId}
+                    onChange={(e) => setSparkBatchId(e.target.value)}
+                    className="mt-1 w-full px-3 py-1.5 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
+                    Region
+                  </label>
+                  <select
+                    value={sparkRegion}
+                    onChange={(e) => setSparkRegion(e.target.value)}
+                    className="mt-1 w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="us-central1">us-central1 (Iowa)</option>
+                    <option value="us-east1">us-east1 (S. Carolina)</option>
+                    <option value="europe-west1">europe-west1 (Belgium)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
+                    Iceberg Warehouse Bucket
+                  </label>
+                  <input
+                    type="text"
+                    value={sparkBucket}
+                    onChange={(e) => setSparkBucket(e.target.value)}
+                    className="mt-1 w-full px-3 py-1.5 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-zinc-500 font-bold">
+                    Lakehouse Pattern
+                  </label>
+                  <select
+                    value={sparkTemplate}
+                    onChange={(e) => setSparkTemplate(e.target.value)}
+                    className="mt-1 w-full px-2.5 py-1.5 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="ICEBERG_MEDALLION">
+                      Bronze → Silver → Gold BigLake Iceberg
+                    </option>
+                    <option value="RAY_DISTRIBUTED_EMBED">
+                      Distributed Ray Embeddings → BigQuery Vector
+                    </option>
+                    <option value="SPANNER_TO_ICEBERG">
+                      Spanner Graph Export → Iceberg Parquet
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Cost Comparison Card */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                  <div className="text-[10px] font-mono text-red-500 font-bold uppercase">
+                    24/7 Dataproc VM Cluster
+                  </div>
+                  <div className="text-base font-extrabold font-mono text-red-500 mt-0.5">
+                    ~$418.00 / mo
+                  </div>
+                  <div className="text-[10px] text-zinc-500 mt-0.5">
+                    1 Master + 2 Workers burning 24/7 even when 92% idle
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                  <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase">
+                    Dataproc Serverless Batch
+                  </div>
+                  <div className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    ~$4.80 / mo
+                  </div>
+                  <div className="text-[10px] text-zinc-500 mt-0.5">
+                    15-min daily batch · $0.00/hr when job finishes (-98%)
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={busyAction === 'SUBMIT_SPARK'}
+                onClick={handleSubmitServerlessSpark}
+                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4" />
+                <span>
+                  {busyAction === 'SUBMIT_SPARK'
+                    ? 'Submitting Serverless Spark 3.5 Batch...'
+                    : 'Submit Live Serverless Spark Iceberg Batch ($0 Idle)'}
+                </span>
+              </button>
+            </div>
+
+            {/* Active Serverless Spark Batches */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2.5 shadow-sm">
+              <div className="text-xs font-extrabold font-mono uppercase text-zinc-600 dark:text-zinc-300">
+                Serverless Spark Batches ({sparkBatches.length})
+              </div>
+              {sparkBatches.length === 0 ? (
+                <div className="text-xs text-zinc-500 font-mono py-3 text-center">
+                  No Serverless Spark batches submitted yet. Click above to submit or preview the PySpark + Iceberg blueprint.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {sparkBatches.map((b, i) => (
+                    <div
+                      key={i}
+                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
+                    >
+                      <div>
+                        <div className="font-bold text-blue-600 dark:text-blue-400">
+                          {b.name?.split('/').pop() || b.batchId || 'spark-batch'}
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          Runtime {b.runtimeVersion || '2.2 (Spark 3.5 + Iceberg)'} · {b.state || 'SUCCEEDED'}
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                        $0.00 Idle
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right 7 Cols: PySpark + BigLake Iceberg Code & CLI */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-extrabold font-mono text-blue-400 flex items-center gap-1.5">
+                  <FileCode className="w-4 h-4 text-zinc-400" />
+                  <span>
+                    PySpark 3.5 + BigLake Apache Iceberg Medallion Script ({sparkBatchId}.py)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyText(sparkArtifacts.pysparkCode, 'PYSPARK_CODE')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                >
+                  {copiedKey === 'PYSPARK_CODE' ? (
+                    <Check className="w-3 h-3 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                  <span>{copiedKey === 'PYSPARK_CODE' ? 'Copied' : 'Copy PySpark'}</span>
+                </button>
+              </div>
+              <pre className="p-3 rounded-xl bg-black/80 border border-zinc-800/90 text-[11px] font-mono text-blue-300 overflow-x-auto leading-relaxed max-h-80">
+                {sparkArtifacts.pysparkCode}
+              </pre>
+
+              <div className="pt-2 border-t border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-mono font-bold text-zinc-400">
+                    Reproducible `gcloud dataproc batches submit pyspark` Command:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {onRunInTerminal && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInTerminal(sparkArtifacts.cliCmd)}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                      >
+                        Run in Cloud Shell
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => copyText(sparkArtifacts.cliCmd, 'SPARK_CLI')}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                    >
+                      {copiedKey === 'SPARK_CLI' ? 'Copied' : 'Copy CLI'}
+                    </button>
+                  </div>
+                </div>
+                <pre className="p-2.5 rounded-xl bg-black/70 border border-zinc-800 text-[10.5px] font-mono text-emerald-300 overflow-x-auto">
+                  {sparkArtifacts.cliCmd}
+                </pre>
+              </div>
             </div>
           </div>
         </div>

@@ -846,7 +846,7 @@ function CloudPulseCockpit() {
       id: 'FUNCTIONS_STUDIO',
       group: 'INFRA_COMPUTE',
       label: 'Functions',
-      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Demystified Eventarc Trigger Studio: Beginner & 90+ Universal GCP Audit Log triggers',
+      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Eventarc Trigger Studio & Cloud Workflows / Messaging Decision Matrix (Eventarc vs Pub/Sub vs Tasks vs Workflows)',
       icon: Zap,
     },
 
@@ -862,7 +862,7 @@ function CloudPulseCockpit() {
       id: 'DATA_ENGINEER_STUDIO',
       group: 'DATA_AI',
       label: 'Data Engineer',
-      tip: '2026 Data Engineering Studio (GCloud SDK 588.0.0 & Data Agent Kit): 1-Canvas Bronze→Silver→Gold Medallion Builder, Dataform/dbt Auto-Clean SQLX, Dataplex Auto-Profiling & Data Products, Visual Schema Mapper & -$348/mo Serverless ELT DAGs',
+      tip: '2026 Data Engineering Studio (GCloud SDK 588.0.0 & Data Agent Kit): Medallion Builder, Dataform/dbt SQLX, Dataplex Profiling, Schema Mapper, Serverless DAGs & Zero-Cluster Serverless Spark on BigLake Iceberg',
       icon: Layers,
     },
     {
@@ -876,8 +876,8 @@ function CloudPulseCockpit() {
       id: 'WAVE10_FRONTIER',
       group: 'DATA_AI',
       label: 'Spanner',
-      tip: '2026 Frontier Studio: Cloud Spanner Graph + Vector ($65/mo 100-PU Engine), Zero-Cluster Serverless Spark on BigLake Iceberg, Workflows Choreographer & Vertex AI Model Armor',
-      icon: Sparkles,
+      tip: 'Cloud Spanner Unified Database Studio: Granular 100-PU Sizer ($65.70/mo), Spanner Graph (ISO GQL) & Interleaved Schema Architect, ScaNN Vector Search & Hybrid GraphRAG, and 99.999% TrueTime Change Streams CDC',
+      icon: Database,
     },
 
     // IV. Security, Incident SRE, FinOps, Logs & Docs

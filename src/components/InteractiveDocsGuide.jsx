@@ -55,27 +55,27 @@ const DOC_SECTIONS = [
   },
   {
     id: 'wave10-2026-frontier-spanner-spark-workflows-armor',
-    wave: 'WAVE 10 · 2026 FRONTIER STUDIO (SPANNER GRAPH, SPARK, WORKFLOWS & MODEL ARMOR)',
+    wave: 'CLOUD SPANNER STUDIO · GRANULAR 100-PU SIZER, ISO GQL GRAPH, VECTOR RAG & TRUETIME CDC',
     title:
-      'Spanner Graph & Geo-Partitioning ($65/mo 100-PU), Serverless Apache Spark 2.2, Cloud Workflows Visual Choreographer & Vertex AI Model Armor',
-    badge: 'SPANNER GRAPH & SPARK TAB',
+      'Cloud Spanner Unified Database Studio — $65.70/mo 100-PU Sizer, ISO GQL Property Graph, ScaNN Vector Search & 99.999% TrueTime Change Streams',
+    badge: 'SPANNER STUDIO TAB',
     badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-    icon: Rocket,
+    icon: Database,
     targetTab: 'WAVE10_FRONTIER',
     problemSolved:
-      'Engineers often think Cloud Spanner still costs $730+/mo for a full node or requires a separate graph database like Neo4j, struggle with idle Dataproc cluster waste when running PySpark over BigLake Iceberg, lack a visual retry/compensation choreographer for multi-service sagas, and need inline prompt-injection & PII defense for Vertex AI / Gemini workloads.',
+      'Engineers often think Cloud Spanner still costs $730+/mo for a full node and only stores relational rows, forcing teams to run 3 separate databases (Cloud SQL + Neo4j Graph + Pinecone Vector DB = ~$980/mo) connected by fragile CDC pipelines.',
     howItWorks: [
-      'Tab 1 — Spanner Graph (ISO GQL) + Granular 100-PU Sizing ($65/mo) & Geo-Partitioning: Provision fractional Spanner instances starting at 100 Processing Units (0.1 node = ~$65/mo with 99.999% SLA) and run unified SQL + ISO GQL Graph queries (GRAPH FinTechFraudGraph MATCH (a:Account)-[t:TRANSFERRED]->(b:Account)) on the same tables with zero ETL.',
-      'Tab 2 — Dataproc Serverless for Apache Spark 2.2 (Scale-to-$0 Lakehouse Engine): Submit sub-5-second startup PySpark 3.5 / Spark SQL batches directly over BigLake Apache Iceberg tables with zero master/worker cluster management fees.',
-      'Tab 3 — Cloud Workflows Visual Step-by-Step Saga & Compensation Choreographer: Visually design and execute multi-API cloud sagas with exponential backoff retries and automatic rollback compensation.',
-      'Tab 4 — Vertex AI Model Armor & Prompt-Injection / PII Firewall: Real-time adversarial prompt scanner that intercepts jailbreaks, system-prompt extraction, SSRF/metadata probes, and regulated PII before reaching Gemini / Vertex AI.',
+      'Tab 1 — Live Spanner Fleet & Granular 100-PU ($65.70/mo) Sizer: Provision fractional Spanner instances starting at 100 Processing Units (1/10th Node = $65.70/mo Standard / $98.55/mo Enterprise) with Managed Autoscaler and Edition comparison.',
+      'Tab 2 — Spanner Graph (ISO GQL) & Physical Interleaved Schema Architect: Design 0-network-hop INTERLEAVE IN PARENT hierarchies co-located in the same Paxos split and query live relational tables as an ISO GQL Property Graph.',
+      'Tab 3 — Spanner AI Vector Search (ScaNN) & Hybrid GraphRAG: Bind Vertex AI text-embedding-005 models, create ScaNN VECTOR INDEX on ARRAY<FLOAT32>(vector_length=>768), and combine GRAPH_TABLE multi-hop traversal with APPROX_COSINE_DISTANCE in one ACID query.',
+      'Tab 4 — Multi-Region 99.999% TrueTime, Change Streams CDC & PGAdapter: Inspect GPS + Atomic Clock TrueTime external consistency, switch between GoogleSQL and PostgreSQL (PGAdapter) dialects, and generate Zero-Downtime Change Streams CDC to BigQuery or Pub/Sub.',
     ],
     apisUsed: [
-      'GET /api/project/:id/wave10/overview → spanner.googleapis.com/v1 + dataproc.googleapis.com/v1 + workflows.googleapis.com/v1',
-      'POST /api/project/:id/wave10/action (CREATE_SPANNER_INSTANCE, RUN_SPANNER_GQL, SUBMIT_SERVERLESS_SPARK, DEPLOY_WORKFLOW_SAGA, SCAN_MODEL_ARMOR)',
+      'GET /api/project/:id/wave10/frontier → spanner.googleapis.com/v1/projects/:id/instances',
+      'POST /api/project/:id/wave10/action (CREATE_SPANNER_INSTANCE)',
     ],
     billingImpact:
-      'Unlocks fractional 100-PU Spanner (~$65/mo instead of $730/mo) and scale-to-$0 Serverless Spark batches ($0 idle cluster waste).',
+      'Unlocks fractional 100-PU Spanner ($65.70/mo instead of $730/mo) and consolidates Relational + Graph + Vector workloads into a single ACID engine.',
   },
   {
     id: 'biglake-vs-bigquery-open-iceberg-2026',
