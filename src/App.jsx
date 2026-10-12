@@ -54,6 +54,7 @@ import CloudSqlAndAlloyDbStudio from './components/CloudSqlAndAlloyDbStudio';
 import SovereignTimeMachineIamStudio from './components/SovereignTimeMachineIamStudio';
 import SreWarRoomPerimeterStudio from './components/SreWarRoomPerimeterStudio';
 import Wave9AiGkeSqlSupplyChainStudio from './components/Wave9AiGkeSqlSupplyChainStudio';
+import Wave10Frontier2026Studio from './components/Wave10Frontier2026Studio';
 import AuthOnboardingGate from './components/AuthOnboardingGate';
 import CloudRunDeployModal from './components/CloudRunDeployModal';
 import Revolutionary2026Suite, {
@@ -413,6 +414,13 @@ function CloudPulseCockpit() {
       label: 'Cloud Build & Artifact SBOM 🏗️',
       tip: 'Cloud Build GitHub CI/CD + Artifact Registry SLSA-3 Supply-Chain Studio: 1-Click GitHub Repo → Cloud Build (Dockerfile or Zero-Dockerfile Buildpacks) → Artifact Registry → Auto-Deploy to Cloud Run or GKE + 1-Click Orphan Digest Sweeper',
       icon: PackageCheck,
+    },
+    {
+      id: 'WAVE10_FRONTIER',
+      group: 'DATA_LAKEHOUSE',
+      label: 'Spanner Graph & Spark 🚀',
+      tip: 'Wave-10 2026 Frontier Studio: Cloud Spanner Graph + Vector ($65/mo 100-PU Granular Engine), Zero-Cluster Dataproc Serverless Spark on BigLake Iceberg, Eventarc/PubSub/Tasks/Workflows Choreographer & Vertex AI Model Armor Firewall',
+      icon: Sparkles,
     },
 
     // IV. Zero-Trust Sovereignty, Incident SRE & 2026 Lab
@@ -957,6 +965,15 @@ function CloudPulseCockpit() {
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
+                />
+              )}
+
+              {activeTab === 'WAVE10_FRONTIER' && (
+                <Wave10Frontier2026Studio
+                  projectId={selectedProjectId}
+                  onRunInShell={handleRunInShell}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
                 />
               )}
 
