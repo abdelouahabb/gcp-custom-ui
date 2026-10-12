@@ -180,6 +180,7 @@ export default function Revolutionary2026Suite({
   const [subTab, setSubTab] = useState(
     initialSubTab === 'TOPOLOGY' ? 'DREAM_BRAIN' : initialSubTab || 'DREAM_BRAIN'
   );
+  const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState([]);
   const [auditData, setAuditData] = useState(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
@@ -583,115 +584,187 @@ export default function Revolutionary2026Suite({
         </div>
       </div>
 
-      {/* Sub-Navigation Pills */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-4 gap-2">
-        {[
-          {
-            id: 'DREAM_BRAIN',
-            label: '🔮 1. Pre-Crime Bill & Dream Stack Compiler (NEW)',
-            tip: 'Simulate 30-day billing trajectories, detect Pre-Crime runaway spend anomalies, and compile natural-language architectures into live GCP resources',
-            icon: Sparkles,
-          },
-          {
-            id: 'TOPOLOGY',
-            label: '2. Live Cloud Topology & Blast Radius',
-            tip: 'Visualize your live 4-Layer GCP Architecture (Public Internet Edge, VPC Backbone, Compute/Serverless, Storage/Lakehouse) and inspect blast radius',
-            icon: Share2,
-          },
-          {
-            id: 'FINOPS_SLEEP',
-            label: '3. Burn-Rate Radar & Night-Mode Sleep',
-            tip: 'Inspect real-time hourly & 30-day cost breakdown per resource and park all non-production VMs & Cloud Run services to $0/hr overnight',
-            icon: DollarSign,
-          },
-          {
-            id: 'TERRAFORM',
-            label: '4. Reverse-Terraform (main.tf) Exporter',
-            tip: 'Reverse-engineer your live GCP VPCs, Firewall Rules, VMs, Cloud Run services, and Storage Buckets into Terraform HCL (main.tf) or a reproducible gcloud script',
-            icon: FileCode2,
-          },
-          {
-            id: 'SECURITY',
-            label: `5. Zero-Trust Security Scanner (${
-              (auditData?.findings?.length || 0) + publicRun.length
-            })`,
-            tip: 'Audit open 0.0.0.0/0 firewall rules, public Cloud Run endpoints, and active IAM Service Accounts with 1-Tap remediation',
-            icon: ShieldAlert,
-          },
-          {
-            id: 'BENCHMARK',
-            label: '6. ⚡ Latency & HTTP X-Ray Arena',
-            tip: 'Benchmark live HTTP/TLS latency and throughput against your Cloud Run endpoints and GCP regions',
-            icon: Zap,
-          },
-          {
-            id: 'ZOMBIES',
-            label: '7. 🧟 Zombie Resource & Waste Hunter',
-            tip: 'Hunt idle VMs, unattached disks, and over-provisioned resources to reclaim wasted cloud spend in 1 click',
-            icon: AlertTriangle,
-          },
-          {
-            id: 'TELEPORT_DIFF',
-            label: '8. 🌍 Cross-Region Teleport, FinOps & GPU SKU',
-            tip: 'Compare regional carbon intensity, FinOps pricing, and NVIDIA GPU (L4 / H100 / A100) availability across 42 global GCP regions',
-            icon: Leaf,
-          },
-          {
-            id: 'X1',
-            label: '9. 🧬 Storage DLP, Secret Leak & PII X-Ray (NEW)',
-            tip: 'Moonshot X1: Stream live Cloud Storage objects into ephemeral RAM, scan against 11 credential & GDPR/PCI PII detectors, and redact leaks in-place',
-            icon: ShieldAlert,
-          },
-          {
-            id: 'X2',
-            label: '10. ⚡ Serverless Cold-Start & Diet Surgeon (NEW)',
-            tip: 'Moonshot X2: Dissect Cloud Run P99 cold-start phases, generate multi-stage Distroless Dockerfiles, and patch Startup CPU Boost + Gen2 in 1 click',
-            icon: Zap,
-          },
-          {
-            id: 'X3',
-            label: '11. 🕸️ Hidden Egress & Data-Gravity Tollbooth (NEW)',
-            tip: 'Moonshot X3: Expose hidden $/GB cross-region and inter-continental bandwidth taxes between Compute VMs, Cloud Run, GCS Buckets, and BigQuery',
-            icon: DollarSign,
-          },
-          {
-            id: 'X4',
-            label: '12. 🔐 Ransomware Air-Gap & Clean-Room Auditor (NEW)',
-            tip: 'Moonshot X4: Audit every Cloud Storage bucket against NIST & SEC 17a-4 ransomware survival criteria and apply 30-day Soft-Delete + Uniform IAM in 1 click',
-            icon: Lock,
-          },
-          {
-            id: 'X5',
-            label: '13. ⏱️ 12-Metropolis Speed-of-Light UX Matrix (NEW)',
-            tip: 'Moonshot X5: Calculate optical-fiber RTT and TLS 1.3 latency from 12 global cities to your active GCP origin and preview Google Anycast Edge CDN speedup',
-            icon: Globe,
-          },
-          {
-            id: 'X6',
-            label: '14. 🤖 AES-256-GCM AI Studio Vault (Option 3 · NEW)',
-            tip: 'Moonshot X6: Zero-Sniffing Browser WebCrypto (Direct HTTPS TLS 1.3) & RSA-OAEP-256 RAM Vault for live Gemini 3.8 Flash / 3.1 Pro SRE Co-Architect',
-            icon: Sparkles,
-          },
-        ].map((t) => {
-          const Icon = t.icon;
-          const active = subTab === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setSubTab(t.id)}
-              title={t.tip}
-              className={`p-3 rounded-xl border text-left transition-all flex items-center gap-2.5 cursor-pointer ${
-                active
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-zinc-50 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'
-              }`}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span className="text-xs font-bold leading-snug">{t.label}</span>
-            </button>
-          );
-        })}
+      {/* Category Filter Bar for 14 Lab Tools */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-mono text-zinc-400 px-1.5">
+              Lab Domain:
+            </span>
+            {[
+              { id: 'ALL', label: '✦ All 14 Lab Tools' },
+              { id: 'FINOPS', label: '💰 FinOps, Sleep & Egress (4)' },
+              { id: 'PERF_TOPOLOGY', label: '⚡ Topology, Cold-Start & Latency (4)' },
+              { id: 'SECURITY_DLP', label: '🛡️ DLP, Ransomware & Zero-Trust (3)' },
+              { id: 'AI_IAC', label: '🤖 AI Vault, Dream Stack & Terraform (3)' },
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setLabCategory(cat.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
+                  labCategory === cat.id
+                    ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
+                    : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-violet-500/40'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Categorized Sub-Navigation Pills */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+          {[
+            {
+              id: 'DREAM_BRAIN',
+              category: 'AI_IAC',
+              badge: 'AI & FinOps',
+              label: '🔮 Pre-Crime Bill & Dream Stack Compiler',
+              tip: 'Simulate 30-day billing trajectories, detect Pre-Crime runaway spend anomalies, and compile natural-language architectures into live GCP resources',
+              icon: Sparkles,
+            },
+            {
+              id: 'TERRAFORM',
+              category: 'AI_IAC',
+              badge: 'IaC Export',
+              label: '📄 Reverse-Terraform (main.tf) Exporter',
+              tip: 'Reverse-engineer your live GCP VPCs, Firewall Rules, VMs, Cloud Run services, and Storage Buckets into Terraform HCL (main.tf) or a reproducible gcloud script',
+              icon: FileCode2,
+            },
+            {
+              id: 'X6',
+              category: 'AI_IAC',
+              badge: 'WebCrypto AI',
+              label: '🤖 AES-256-GCM Gemini 3.8 Vault',
+              tip: 'Zero-Sniffing Browser WebCrypto (Direct HTTPS TLS 1.3) & RSA-OAEP-256 RAM Vault for live Gemini 3.8 Flash / 3.1 Pro SRE Co-Architect',
+              icon: Sparkles,
+            },
+            {
+              id: 'FINOPS_SLEEP',
+              category: 'FINOPS',
+              badge: 'FinOps',
+              label: '🌙 Burn-Rate Radar & Night-Mode Sleep',
+              tip: 'Inspect real-time hourly & 30-day cost breakdown per resource and park all non-production VMs & Cloud Run services to $0/hr overnight',
+              icon: DollarSign,
+            },
+            {
+              id: 'ZOMBIES',
+              category: 'FINOPS',
+              badge: 'Waste Hunter',
+              label: '🧟 Zombie Resource & Waste Sweeper',
+              tip: 'Hunt idle VMs, unattached disks, and over-provisioned resources to reclaim wasted cloud spend in 1 click',
+              icon: AlertTriangle,
+            },
+            {
+              id: 'TELEPORT_DIFF',
+              category: 'FINOPS',
+              badge: '42 Regions',
+              label: '🌍 Cross-Region Carbon, FinOps & GPU Arbitrage',
+              tip: 'Compare regional carbon intensity, FinOps pricing, and NVIDIA GPU (L4 / H100 / A100) availability across 42 global GCP regions',
+              icon: Leaf,
+            },
+            {
+              id: 'X3',
+              category: 'FINOPS',
+              badge: 'Egress Audit',
+              label: '🕸️ Hidden Egress & Data-Gravity Tollbooth',
+              tip: 'Expose hidden $/GB cross-region and inter-continental bandwidth taxes between Compute VMs, Cloud Run, GCS Buckets, and BigQuery',
+              icon: DollarSign,
+            },
+            {
+              id: 'TOPOLOGY',
+              category: 'PERF_TOPOLOGY',
+              badge: '4-Layer Graph',
+              label: '🗺️ Live Cloud Topology & Blast Radius',
+              tip: 'Visualize your live 4-Layer GCP Architecture (Public Internet Edge, VPC Backbone, Compute/Serverless, Storage/Lakehouse) and inspect blast radius',
+              icon: Share2,
+            },
+            {
+              id: 'BENCHMARK',
+              category: 'PERF_TOPOLOGY',
+              badge: 'HTTP Arena',
+              label: '⚡ Live HTTP/TLS Latency Benchmark Arena',
+              tip: 'Benchmark live HTTP/TLS latency and throughput against your Cloud Run endpoints and GCP regions',
+              icon: Zap,
+            },
+            {
+              id: 'X2',
+              category: 'PERF_TOPOLOGY',
+              badge: 'Cold-Start',
+              label: '🚀 Serverless Cold-Start & Distroless Surgeon',
+              tip: 'Dissect Cloud Run P99 cold-start phases, generate multi-stage Distroless Dockerfiles, and patch Startup CPU Boost + Gen2 in 1 click',
+              icon: Zap,
+            },
+            {
+              id: 'X5',
+              category: 'PERF_TOPOLOGY',
+              badge: 'Global RTT',
+              label: '⏱️ 12-Metropolis Speed-of-Light UX Matrix',
+              tip: 'Calculate optical-fiber RTT and TLS 1.3 latency from 12 global cities to your active GCP origin and preview Google Anycast Edge CDN speedup',
+              icon: Globe,
+            },
+            {
+              id: 'SECURITY',
+              category: 'SECURITY_DLP',
+              badge: `${(auditData?.findings?.length || 0) + publicRun.length} Alerts`,
+              label: '🛡️ Zero-Trust Exposure & Firewall Scanner',
+              tip: 'Audit open 0.0.0.0/0 firewall rules, public Cloud Run endpoints, and active IAM Service Accounts with 1-Tap remediation',
+              icon: ShieldAlert,
+            },
+            {
+              id: 'X1',
+              category: 'SECURITY_DLP',
+              badge: 'RAM DLP',
+              label: '🧬 Storage DLP, Secret Leak & PII X-Ray',
+              tip: 'Stream live Cloud Storage objects into ephemeral RAM, scan against 11 credential & GDPR/PCI PII detectors, and redact leaks in-place',
+              icon: ShieldAlert,
+            },
+            {
+              id: 'X4',
+              category: 'SECURITY_DLP',
+              badge: 'SEC 17a-4',
+              label: '🔐 Ransomware Air-Gap & Clean-Room Auditor',
+              tip: 'Audit every Cloud Storage bucket against NIST & SEC 17a-4 ransomware survival criteria and apply 30-day Soft-Delete + Uniform IAM in 1 click',
+              icon: Lock,
+            },
+          ]
+            .filter((t) => labCategory === 'ALL' || t.category === labCategory)
+            .map((t) => {
+              const Icon = t.icon;
+              const active = subTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSubTab(t.id)}
+                  title={t.tip}
+                  className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                    active
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-zinc-50 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="text-xs font-bold leading-snug truncate">
+                      {t.label}
+                    </span>
+                  </div>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono shrink-0 ${
+                      active
+                        ? 'bg-black/25 text-blue-100'
+                        : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                    }`}
+                  >
+                    {t.badge}
+                  </span>
+                </button>
+              );
+            })}
+        </div>
       </div>
 
       {/* TAB 1: INTERACTIVE LIVE CLOUD TOPOLOGY & BLAST-RADIUS GRAPH */}

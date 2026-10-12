@@ -338,7 +338,7 @@ function CloudPulseCockpit() {
       id: 'OVERVIEW',
       group: 'COMMAND',
       label: '2026 SRE Cockpit',
-      tip: 'Unified 2026 SRE Cockpit: KPIs, Beyond-Console Innovation Lab, Cloud Run, VM Fleet, VPCs, Resources, API Kill-Switch, Telemetry & Cloud Shell',
+      tip: 'Executive 2026 SRE Cockpit: Live Project KPIs, 5-Domain Architecture Hub, Unified Live Resource Inventory & Emergency API Kill-Switch',
       icon: LayoutDashboard,
     },
     {
@@ -349,117 +349,110 @@ function CloudPulseCockpit() {
       icon: Globe,
     },
 
-    // II. Compute, Serverless & Network Studios
+    // II. Compute, Serverless & CI/CD Studios
     {
       id: 'CLOUD_RUN',
-      group: 'COMPUTE_NET',
-      label: 'Cloud Run Studio ★',
+      group: 'COMPUTE_CICD',
+      label: 'Cloud Run ★',
       tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, tune min/max autoscaling, and switch Request vs Instance billing',
       icon: Rocket,
     },
     {
       id: 'FUNCTIONS_STUDIO',
-      group: 'COMPUTE_NET',
+      group: 'COMPUTE_CICD',
       label: 'Functions & Eventarc ⚡',
-      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Demystified Eventarc Trigger Studio: Plain-English trigger picker, 4-stage visual Eventarc X-Ray, 1-Tap Eventarc IAM Auto-Doctor & v1→v2 concurrency upgrader',
+      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Demystified Eventarc Trigger Studio: Beginner & 90+ Universal GCP Audit Log triggers',
       icon: Zap,
     },
     {
       id: 'GKE_STUDIO',
-      group: 'COMPUTE_NET',
+      group: 'COMPUTE_CICD',
       label: 'GKE Studio ☸️',
-      tip: 'Dedicated Google Kubernetes Engine (GKE) Studio: 1-Click Autopilot & Spot GPU Cluster Provisioner, strict SEC/GDPR/HIPAA compliance locks, K8s Workload YAML Composer & kubeconfig Fleet Manager',
+      tip: 'Google Kubernetes Engine (GKE) Studio: 1-Click Autopilot & Spot GPU Cluster Provisioner, compliance locks & K8s YAML Composer',
       icon: Cpu,
     },
     {
       id: 'VM_SSH',
-      group: 'COMPUTE_NET',
-      label: 'VM Fleet & Web SSH',
+      group: 'COMPUTE_CICD',
+      label: 'VM Fleet & SSH',
       tip: 'Compute Engine VM Fleet & Browser Web-SSH Terminal: Start, stop, resize, or SSH directly into your Linux VMs',
       icon: Server,
     },
     {
-      id: 'VPC_NETWORKS',
-      group: 'COMPUTE_NET',
-      label: 'VPC & Firewalls',
-      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
-      icon: Network,
+      id: 'WAVE9_STUDIO',
+      group: 'COMPUTE_CICD',
+      label: 'Cloud Build & SBOM 🏗️',
+      tip: 'Cloud Build GitHub CI/CD + Artifact Registry SLSA-3 Supply-Chain Studio: Buildpacks/Dockerfiles, Auto-Deploy & Orphan Digest Sweeper',
+      icon: PackageCheck,
     },
 
-    // III. Data Lakehouse & Storage Studios
+    // III. Data Lakehouse, Databases & AI Frontier
     {
       id: 'CLOUD_STORAGE',
-      group: 'DATA_LAKEHOUSE',
+      group: 'DATA_AI',
       label: 'Cloud Storage ★',
       tip: 'Cloud Storage Studio: 5-Step Compliance Bucket Wizard, strict SEC/GDPR/HIPAA locks, Soft-Delete & WORM retention, and live object explorer',
       icon: HardDrive,
     },
     {
       id: 'BIGQUERY_STUDIO',
-      group: 'DATA_LAKEHOUSE',
+      group: 'DATA_AI',
       label: 'BigQuery & BigLake 🌊',
-      tip: 'BigQuery & BigLake 2026 Enterprise Lakehouse Studio: BigLake Apache Iceberg & Parquet over gs:// buckets, Physical vs Logical Compressed Billing (-54%), Pre-Crime SQL Dry-Run X-Ray, and 168h Time-Machine',
+      tip: 'BigQuery & BigLake 2026 Enterprise Lakehouse Studio: BigLake Apache Iceberg & Parquet over gs:// buckets, Physical Billing (-54%), SQL X-Ray & 168h Time-Machine',
       icon: Database,
     },
     {
       id: 'CLOUD_SQL_STUDIO',
-      group: 'DATA_LAKEHOUSE',
+      group: 'DATA_AI',
       label: 'Cloud SQL & AlloyDB 🐘',
-      tip: 'Dedicated Cloud SQL (MySQL 8.4 LTS & PostgreSQL 16/17) + Google Cloud AlloyDB Studio: Classic Cloud SQL vs. AlloyDB Architecture Fork, strict SEC/GDPR/HIPAA compliance locks, AI Vector (alloydb_scann / pgvector / MySQL 8.4 VECTOR) Surgeon & Zero-Password IAM Auth Proxy v2 Vault',
+      tip: 'Cloud SQL (MySQL 8.4 & PostgreSQL 16/17) + AlloyDB Studio: Architecture Fork, AI Vector (alloydb_scann / pgvector) Surgeon & IAM Auth Proxy v2',
       icon: Database,
     },
     {
-      id: 'WAVE9_STUDIO',
-      group: 'DATA_LAKEHOUSE',
-      label: 'Cloud Build & Artifact SBOM 🏗️',
-      tip: 'Cloud Build GitHub CI/CD + Artifact Registry SLSA-3 Supply-Chain Studio: 1-Click GitHub Repo → Cloud Build (Dockerfile or Zero-Dockerfile Buildpacks) → Artifact Registry → Auto-Deploy to Cloud Run or GKE + 1-Click Orphan Digest Sweeper',
-      icon: PackageCheck,
-    },
-    {
       id: 'WAVE10_FRONTIER',
-      group: 'DATA_LAKEHOUSE',
+      group: 'DATA_AI',
       label: 'Spanner Graph & Spark 🚀',
-      tip: 'Wave-10 2026 Frontier Studio: Cloud Spanner Graph + Vector ($65/mo 100-PU Granular Engine), Zero-Cluster Dataproc Serverless Spark on BigLake Iceberg, Eventarc/PubSub/Tasks/Workflows Choreographer & Vertex AI Model Armor Firewall',
+      tip: '2026 Frontier Studio: Cloud Spanner Graph + Vector ($65/mo 100-PU Engine), Zero-Cluster Serverless Spark on BigLake Iceberg, Workflows Choreographer & Vertex AI Model Armor',
       icon: Sparkles,
     },
 
-    // IV. Zero-Trust Sovereignty, Incident SRE & 2026 Lab
+    // IV. Network, Zero-Trust IAM & Incident SRE
+    {
+      id: 'VPC_NETWORKS',
+      group: 'SECURITY_SRE',
+      label: 'VPC & Firewalls',
+      tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
+      icon: Network,
+    },
     {
       id: 'SOVEREIGN_STUDIO',
       group: 'SECURITY_SRE',
-      label: 'Sovereign & Drift 🧬',
-      tip: 'Wave-7 Sovereign Cloud Time-Machine, Autonomous IAM Least-Privilege Surgeon (24h JIT CEL Conditions), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
+      label: 'IAM & Sovereign Drift 🧬',
+      tip: 'Autonomous IAM Least-Privilege Surgeon (24h JIT CEL + Service Account Key & OAuth2 Token Kill-Switch), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
       icon: ShieldCheck,
     },
     {
       id: 'SRE_WAR_ROOM',
       group: 'SECURITY_SRE',
       label: 'SRE War-Room 🚨',
-      tip: 'Wave-8 Autonomous SRE Incident War-Room, Cloud Logging Root-Cause Correlator, 14.4x SLO Burn Radar, VPC Service Controls (VPC-SC) Exfiltration Shield & Pub/Sub DLQ Studio',
+      tip: 'Autonomous SRE Incident War-Room, Cloud Logging Root-Cause Correlator, 14.4x SLO Burn Radar, VPC Service Controls (VPC-SC) & Pub/Sub DLQ Studio',
       icon: Flame,
     },
-    {
-      id: 'INNOVATION_LAB',
-      group: 'SECURITY_SRE',
-      label: '2026 Lab ✦',
-      tip: '14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, DLP X-Ray, Cold-Start Surgeon & Zero-Sniffing Gemini 3.8 Vault',
-      icon: Sparkles,
-    },
 
-    // V. Inventory, FinOps, Cloud Shell & Docs
-    {
-      id: 'RESOURCES',
-      group: 'OPS_DOCS',
-      label: 'Live Resources',
-      tip: 'Unified Live GCP Resource Inventory & Emergency Service Usage API Kill-Switch',
-      icon: Layers,
-    },
+    // V. FinOps, 2026 Lab, Cloud Shell & Docs
     {
       id: 'FINOPS',
       group: 'OPS_DOCS',
       label: 'FinOps & Telemetry',
       tip: 'Real-Time Cloud Monitoring Metrics, CPU/Memory/Network Telemetry Charts & FinOps Footprint',
       icon: BarChart3,
+    },
+    {
+      id: 'INNOVATION_LAB',
+      group: 'OPS_DOCS',
+      label: '2026 Lab ✦',
+      tip: '14 Exclusive Beyond-Console Engineering Tools grouped by FinOps, Latency/Topology, Zero-Trust DLP & AI/Terraform Automation',
+      icon: Sparkles,
     },
     {
       id: 'LOGS_SHELL',
@@ -803,54 +796,108 @@ function CloudPulseCockpit() {
                     fetchLatencyMs={overview?.fetchLatencyMs}
                   />
 
-                  <Revolutionary2026Suite
-                    projectId={selectedProjectId}
-                    overview={overview}
-                    initialSubTab={innovationSubTab}
-                    onRefreshOverview={() => {
-                      fetchProjectOverview(selectedProjectId);
-                      setVmRefreshTrigger((c) => c + 1);
-                    }}
-                    onOpenProvision={handleOpenProvision}
-                    onDeleteResource={handleDeleteResource}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
+                  {/* 5-Domain Organized Studio Hub (Zero Duplication Across Tabs) */}
+                  <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                      <div>
+                        <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-blue-500" />
+                          <span>
+                            CloudPulse 2026 Architectural Domain Navigator
+                          </span>
+                        </h3>
+                        <p className="text-xs text-zinc-500">
+                          Every Google Cloud technology is organized into 5 dedicated, non-overlapping engineering domains — click any studio below to open its full control plane.
+                        </p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
+                        5 DOMAINS · 15 DEDICATED STUDIOS · ZERO DUPLICATES
+                      </span>
+                    </div>
 
-                  <CloudRunFleetManager
-                    projectId={selectedProjectId}
-                    initialServices={overview?.cloudRunServices || []}
-                    onOpenProvisionCloudRun={() =>
-                      handleOpenProvision('CLOUD_RUN')
-                    }
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-
-                  <VmFleetAndSsh
-                    projectId={selectedProjectId}
-                    account={contextData.account}
-                    onOpenProvisionVm={() => handleOpenProvision('COMPUTE_VM')}
-                    refreshTrigger={vmRefreshTrigger}
-                    onVmDeleted={() => fetchProjectOverview(selectedProjectId)}
-                  />
-
-                  <VpcNetworksAndFirewalls
-                    projectId={selectedProjectId}
-                    vpcs={overview?.vpcs || []}
-                    firewalls={overview?.firewalls || []}
-                    onOpenProvisionVpc={() => handleOpenProvision('VPC_NETWORK')}
-                    onOpenProvisionFirewall={() =>
-                      handleOpenProvision('VPC_FIREWALL')
-                    }
-                    onDeleteResource={handleDeleteResource}
-                    onRefresh={() => fetchProjectOverview(selectedProjectId)}
-                    loading={loadingOverview}
-                  />
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                      {[
+                        {
+                          domain: 'I. Compute, Serverless & CI/CD',
+                          color: 'border-blue-500/30 bg-blue-500/5',
+                          items: [
+                            { id: 'CLOUD_RUN', label: '🚀 Cloud Run Studio', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
+                            { id: 'FUNCTIONS_STUDIO', label: '⚡ Functions & Eventarc', meta: 'v1/v2 + 90+ GCP Events' },
+                            { id: 'GKE_STUDIO', label: '☸️ GKE Autopilot & GPUs', meta: 'K8s Fleet & YAML' },
+                            { id: 'VM_SSH', label: '🖥️ VM Fleet & Web-SSH', meta: `${overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
+                            { id: 'WAVE9_STUDIO', label: '🏗️ Cloud Build & SBOM', meta: 'GitHub CI/CD & SLSA-3' },
+                          ],
+                        },
+                        {
+                          domain: 'II. Data, Lakehouse & AI',
+                          color: 'border-cyan-500/30 bg-cyan-500/5',
+                          items: [
+                            { id: 'CLOUD_STORAGE', label: '🪣 Cloud Storage Studio', meta: `${overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
+                            { id: 'BIGQUERY_STUDIO', label: '🌊 BigQuery & BigLake', meta: 'Capacitor + Apache Iceberg' },
+                            { id: 'CLOUD_SQL_STUDIO', label: '🐘 Cloud SQL & AlloyDB', meta: 'PG 17, MySQL 8.4 & Vectors' },
+                            { id: 'WAVE10_FRONTIER', label: '🚀 Spanner Graph & Spark', meta: '100-PU Graph, Spark & Workflows' },
+                          ],
+                        },
+                        {
+                          domain: 'III. Network & Global Edge',
+                          color: 'border-indigo-500/30 bg-indigo-500/5',
+                          items: [
+                            { id: 'GLOBAL_MAP', label: '🌍 40-Region Global Map', meta: 'Subsea Cables & Carbon' },
+                            { id: 'VPC_NETWORKS', label: '🛡️ VPC & Firewalls', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
+                          ],
+                        },
+                        {
+                          domain: 'IV. Zero-Trust IAM & SRE',
+                          color: 'border-amber-500/30 bg-amber-500/5',
+                          items: [
+                            { id: 'SOVEREIGN_STUDIO', label: '🧬 IAM, Keys & Drift', meta: 'SA Key Kill-Switch & JIT' },
+                            { id: 'SRE_WAR_ROOM', label: '🚨 SRE War-Room & VPC-SC', meta: 'SLO Burn & Perimeter' },
+                          ],
+                        },
+                        {
+                          domain: 'V. FinOps, 2026 Lab & Shell',
+                          color: 'border-emerald-500/30 bg-emerald-500/5',
+                          items: [
+                            { id: 'FINOPS', label: '📊 FinOps & Telemetry', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
+                            { id: 'INNOVATION_LAB', label: '✦ 2026 Innovation Lab', meta: '14 Categorized Tools' },
+                            { id: 'LOGS_SHELL', label: '💻 Logs & Cloud Shell', meta: 'Live gcloud / bq / gsutil' },
+                            { id: 'DOCS_GUIDE', label: '📖 Docs & Guide', meta: 'Architecture & Security' },
+                          ],
+                        },
+                      ].map((group) => (
+                        <div
+                          key={group.domain}
+                          className={`p-3.5 rounded-xl border ${group.color} space-y-2`}
+                        >
+                          <div className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+                            {group.domain}
+                          </div>
+                          <div className="space-y-1.5">
+                            {group.items.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setActiveTab(item.id)}
+                                className="w-full text-left p-2 rounded-lg bg-white/90 dark:bg-zinc-950/90 hover:bg-blue-50 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 transition-all flex items-center justify-between gap-2 cursor-pointer group"
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-500 truncate">
+                                    {item.label}
+                                  </div>
+                                  <div className="text-[10px] font-mono text-zinc-500 truncate">
+                                    {item.meta}
+                                  </div>
+                                </div>
+                                <span className="text-xs font-mono text-zinc-400 group-hover:text-blue-500 shrink-0">
+                                  →
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                   <ResourceControlCenter
                     resources={overview?.resources || []}
@@ -868,21 +915,6 @@ function CloudPulseCockpit() {
                     onRefresh={() => fetchProjectOverview(selectedProjectId)}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
-                  />
-
-                  <TelemetryCharts
-                    telemetry={overview?.telemetry}
-                    projectId={selectedProjectId}
-                    onOpenCopilot={handleOpenCopilotWithPrompt}
-                  />
-
-                  <LogStreamerAndShell
-                    logs={overview?.logs || []}
-                    projectId={selectedProjectId}
-                    account={contextData.account}
-                    initialCommand={shellSeedCommand}
-                    onRefreshLogs={() => fetchProjectOverview(selectedProjectId)}
-                    onAskCopilot={handleOpenCopilotWithPrompt}
                   />
                 </div>
               )}
