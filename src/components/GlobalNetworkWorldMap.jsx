@@ -1149,7 +1149,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
       ? '#10b981'
       : meta.source?.includes('CUSTOM')
       ? '#f59e0b'
-      : '#38bdf8';
+      : '#669df6';
 
   return (
     <div
@@ -1187,8 +1187,8 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
             PRICING ENGINE: {meta.source}
           </span>
           <span style={{ fontSize: 11, color: '#cbd5e1', fontFamily: 'var(--font-mono)' }}>
-            vCPU: <strong style={{ color: '#38bdf8' }}>${unitPricing.vcpuPerHourUsd}/hr</strong> · L4 GPU:{' '}
-            <strong style={{ color: '#a855f7' }}>${unitPricing.cloudRunL4GpuPerHourUsd}/hr</strong> · Egress:{' '}
+            vCPU: <strong style={{ color: '#669df6' }}>${unitPricing.vcpuPerHourUsd}/hr</strong> · L4 GPU:{' '}
+            <strong style={{ color: '#4285f4' }}>${unitPricing.cloudRunL4GpuPerHourUsd}/hr</strong> · Egress:{' '}
             <strong style={{ color: '#f59e0b' }}>${unitPricing.crossContinentEgressPerGbUsd}/GB</strong>
             {unitPricing.cudDiscountPercent > 0 && (
               <span style={{ color: '#10b981', marginLeft: 6, fontWeight: 800 }}>
@@ -1229,7 +1229,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
               fontSize: 11,
               fontWeight: 800,
               cursor: isSyncing ? 'wait' : 'pointer',
-              background: 'linear-gradient(135deg, #059669, #0284c7)',
+              background: '#1a73e8',
               color: '#ffffff',
               border: '1px solid rgba(16, 185, 129, 0.5)',
               display: 'inline-flex',
@@ -1452,7 +1452,7 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
                 onChange={(e) => setInspectRegion(e.target.value)}
                 style={{
                   background: '#020617',
-                  color: '#38bdf8',
+                  color: '#669df6',
                   border: '1px solid rgba(56, 189, 248, 0.4)',
                   borderRadius: 6,
                   padding: '4px 8px',
@@ -2712,10 +2712,10 @@ export default function GlobalNetworkWorldMap({
   return (
     <div className="space-y-5">
       {/* 1. Top Orbital Command Header & Scenario Switcher */}
-      <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 via-blue-500/20 to-emerald-500/20 border border-cyan-500/35 flex items-center justify-center text-cyan-400">
+            <div className="w-10 h-10 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/35 flex items-center justify-center text-blue-400">
               <Globe className="w-5 h-5 animate-pulse" />
             </div>
             <div>
@@ -2723,7 +2723,7 @@ export default function GlobalNetworkWorldMap({
                 <h2 className="text-base font-extrabold text-zinc-950 dark:text-zinc-50">
                   Global Cloud Map · Regions, Zones & Real-Time Packet Simulation
                 </h2>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                   40 GCP REGIONS · 121 ZONES · ANTI-LAG THROTTLED ENGINE
                 </span>
               </div>
@@ -2792,7 +2792,7 @@ export default function GlobalNetworkWorldMap({
               onClick={() => setShowSubseaBackbone(!showSubseaBackbone)}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-mono border cursor-pointer ${
                 showSubseaBackbone
-                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-600 dark:text-cyan-300'
+                  ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                   : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
               }`}
             >
@@ -2804,7 +2804,7 @@ export default function GlobalNetworkWorldMap({
               onClick={() => setShowZoneRings(!showZoneRings)}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-mono border cursor-pointer ${
                 showZoneRings
-                  ? 'bg-violet-500/15 border-violet-500/40 text-violet-600 dark:text-violet-300'
+                  ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                   : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
               }`}
             >
@@ -2815,7 +2815,7 @@ export default function GlobalNetworkWorldMap({
               <button
                 type="button"
                 onClick={() => onSelectTab('INNOVATION_LAB')}
-                className="px-3 py-1.5 rounded-lg text-xs font-mono font-extrabold bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-sm cursor-pointer flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-lg text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-700 text-white shadow-sm cursor-pointer flex items-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Pre-Crime Bill & Dream Stack</span>
@@ -2884,7 +2884,7 @@ export default function GlobalNetworkWorldMap({
 
           <div className="text-[10px] text-zinc-500">
             In-Flight DOM Nodes:{' '}
-            <strong className="text-cyan-600 dark:text-cyan-400">
+            <strong className="text-blue-600 dark:text-blue-400">
               {inFlightPackets.length}/{maxConcurrentPackets}
             </strong>{' '}
             · Auto-pauses when tab is inactive
@@ -2927,7 +2927,7 @@ export default function GlobalNetworkWorldMap({
                 onClick={() => setSimMode(mode.id)}
                 className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                   active
-                    ? 'bg-zinc-900 text-white dark:bg-zinc-900 border-cyan-500 shadow-sm'
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-900 border-blue-500 shadow-sm'
                     : 'bg-zinc-50/80 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
                 }`}
               >
@@ -2954,7 +2954,7 @@ export default function GlobalNetworkWorldMap({
       {/* 2. Interactive Orbital World Map Canvas + Right Region/Zone Inspector */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {/* Left/Center 8 Columns: Full Interactive SVG World Map */}
-        <div className="xl:col-span-8 bg-[#05070e] border border-cyan-500/30 rounded-2xl overflow-hidden shadow-2xl relative">
+        <div className="xl:col-span-8 bg-[#05070e] border border-blue-500/30 rounded-2xl overflow-hidden shadow-2xl relative">
           {/* Top Map HUD Overlay */}
           <div className="px-4 py-2.5 bg-zinc-950/90 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono">
             <div className="flex items-center gap-4 flex-wrap">
@@ -2962,12 +2962,12 @@ export default function GlobalNetworkWorldMap({
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
                 <span>ALLOWED: {counters.allowedPackets}</span>
               </span>
-              <span className="flex items-center gap-1.5 text-rose-400 font-bold">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+              <span className="flex items-center gap-1.5 text-red-400 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
                 <span>BLOCKED BY FIREWALL: {counters.deniedPackets}</span>
               </span>
-              <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
+              <span className="flex items-center gap-1.5 text-blue-400 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
                 <span>VPC BACKBONE: {counters.backbonePackets}</span>
               </span>
             </div>
@@ -2978,7 +2978,7 @@ export default function GlobalNetworkWorldMap({
                   type="button"
                   disabled={deployingShield}
                   onClick={handleDeployMapShield}
-                  className="inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-md text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-md text-[10px] font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   <Shield className="w-3 h-3" />
                   <span>
@@ -3016,7 +3016,7 @@ export default function GlobalNetworkWorldMap({
                   key={c.id}
                   type="button"
                   onClick={() => focusOnContinent(c.id)}
-                  className="px-2 py-1 rounded-md bg-zinc-900 hover:bg-cyan-500/20 text-zinc-300 hover:text-cyan-300 border border-zinc-800 hover:border-cyan-500/40 transition-colors cursor-pointer"
+                  className="px-2 py-1 rounded-md bg-zinc-900 hover:bg-blue-500/20 text-zinc-300 hover:text-blue-300 border border-zinc-800 hover:border-blue-500/40 transition-colors cursor-pointer"
                 >
                   {c.label}
                 </button>
@@ -3028,7 +3028,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={selectedRegionId}
                 onChange={(e) => focusOnRegion(e.target.value, 3.4)}
-                className="bg-zinc-900 border border-cyan-500/40 text-cyan-300 rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer"
+                className="bg-zinc-900 border border-blue-500/40 text-blue-300 rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer"
                 title="Select any of the 40 GCP Regions to zoom directly to it"
               >
                 {[
@@ -3078,7 +3078,7 @@ export default function GlobalNetworkWorldMap({
                 >
                   <ZoomOut className="w-3.5 h-3.5" />
                 </button>
-                <span className="px-2 text-[10px] font-extrabold text-cyan-400">
+                <span className="px-2 text-[10px] font-extrabold text-blue-400">
                   {zoom.toFixed(1)}x
                 </span>
                 <button
@@ -3131,7 +3131,7 @@ export default function GlobalNetworkWorldMap({
                 onClick={() => setShowHybridTunnel(!showHybridTunnel)}
                 className={`px-2 py-1 rounded-md border transition-colors cursor-pointer ${
                   showHybridTunnel
-                    ? 'bg-violet-500/20 border-violet-500/50 text-violet-300 font-bold'
+                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300 font-bold'
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400'
                 }`}
               >
@@ -3210,7 +3210,7 @@ export default function GlobalNetworkWorldMap({
             <div
               className={`absolute top-2.5 left-3 z-10 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono transition-colors ${
                 isPointerInsideMap
-                  ? 'bg-cyan-950/85 border-cyan-500/60 text-cyan-200 shadow-lg shadow-cyan-950/50'
+                  ? 'bg-blue-950/85 border-blue-500/60 text-blue-200 shadow-lg shadow-blue-950/50'
                   : 'bg-zinc-950/80 border-zinc-800 text-zinc-300'
               }`}
             >
@@ -3224,7 +3224,7 @@ export default function GlobalNetworkWorldMap({
 
             {/* Chaos Outage Active Alert Pill */}
             {(severedRegions.length > 0 || severedZones.length > 0) && (
-              <div className="absolute top-10 left-3 z-10 flex items-center gap-2 px-3 py-1 rounded-lg bg-rose-950/90 border border-rose-500 text-rose-200 text-[10px] font-mono font-bold shadow-lg">
+              <div className="absolute top-10 left-3 z-10 flex items-center gap-2 px-3 py-1 rounded-lg bg-red-950/90 border border-red-500 text-red-200 text-[10px] font-mono font-bold shadow-lg">
                 <AlertTriangle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-bounce" />
                 <span>
                   CHAOS MODE: {severedRegions.length} Region(s), {severedZones.length}{' '}
@@ -3237,7 +3237,7 @@ export default function GlobalNetworkWorldMap({
                     setSeveredRegions([]);
                     setSeveredZones([]);
                   }}
-                  className="ml-1 px-1.5 py-0.5 rounded bg-rose-600 text-white hover:bg-rose-500 cursor-pointer"
+                  className="ml-1 px-1.5 py-0.5 rounded bg-red-600 text-white hover:bg-red-500 cursor-pointer"
                 >
                   Restore All
                 </button>
@@ -3248,7 +3248,7 @@ export default function GlobalNetworkWorldMap({
               <button
                 type="button"
                 onClick={handleResetMapCamera}
-                className="absolute top-2.5 right-3 z-10 px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                className="absolute top-2.5 right-3 z-10 px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
               >
                 Reset to Global View (1.0x)
               </button>
@@ -3260,8 +3260,8 @@ export default function GlobalNetworkWorldMap({
             >
               <defs>
                 <radialGradient id="activeRegionHalo" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.45" />
-                  <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#1a73e8" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#1a73e8" stopOpacity="0" />
                 </radialGradient>
                 <radialGradient id="selectedRegionHalo" cx="50%" cy="50%" r="50%">
                   <stop offset="0%" stopColor="#10b981" stopOpacity="0.65" />
@@ -3351,9 +3351,9 @@ export default function GlobalNetworkWorldMap({
                       fill="none"
                       stroke={
                         touchesSelected
-                          ? '#22d3ee'
+                          ? '#669df6'
                           : link.isActiveLink
-                          ? '#06b6d4'
+                          ? '#1a73e8'
                           : '#334155'
                       }
                       strokeOpacity={linkOpacity}
@@ -3384,14 +3384,14 @@ export default function GlobalNetworkWorldMap({
                       ).d
                     }
                     fill="none"
-                    stroke="#a855f7"
+                    stroke="#4285f4"
                     strokeWidth={2 * invScale}
                     strokeDasharray="5 3"
                     strokeOpacity="0.75"
                   />
                   <g transform={`translate(480, 255) scale(${invScale})`}>
-                    <circle r={6} fill="#a855f7" stroke="#020617" strokeWidth="1.5" />
-                    <circle r={12} fill="none" stroke="#a855f7" strokeDasharray="2 2" />
+                    <circle r={6} fill="#4285f4" stroke="#020617" strokeWidth="1.5" />
+                    <circle r={12} fill="none" stroke="#4285f4" strokeDasharray="2 2" />
                     <rect
                       x={-58}
                       y={9}
@@ -3400,13 +3400,13 @@ export default function GlobalNetworkWorldMap({
                       rx={3}
                       fill="#020617"
                       fillOpacity="0.9"
-                      stroke="#a855f7"
+                      stroke="#4285f4"
                       strokeWidth="0.7"
                     />
                     <text
                       y={17.5}
                       textAnchor="middle"
-                      fill="#e9d5ff"
+                      fill="#d2e3fc"
                       fontSize="6.8"
                       fontWeight="bold"
                       fontFamily="monospace"
@@ -3471,7 +3471,7 @@ export default function GlobalNetworkWorldMap({
                         ? '#f43f5e'
                         : orig.kind === 'IAP_ZERO_TRUST'
                         ? '#10b981'
-                        : '#a855f7'
+                        : '#4285f4'
                     }
                   />
                   <text
@@ -3504,7 +3504,7 @@ export default function GlobalNetworkWorldMap({
                   pkt.reroutedFrom
                     ? '#f59e0b'
                     : pkt.kind === 'BACKBONE'
-                    ? '#22d3ee'
+                    ? '#669df6'
                     : pkt.verdict === 'ALLOW'
                     ? '#10b981'
                     : '#f43f5e';
@@ -3633,19 +3633,19 @@ export default function GlobalNetworkWorldMap({
                 } else if (mapLens === 'SPOT_ARBITRAGE') {
                   lensColor =
                     reg.cfePercent >= 75
-                      ? '#22d3ee'
+                      ? '#669df6'
                       : reg.cfePercent >= 50
-                      ? '#a855f7'
+                      ? '#4285f4'
                       : '#f97316';
                 } else {
                   lensColor = isSelected
                     ? '#10b981'
                     : isHovered
-                    ? '#38bdf8'
+                    ? '#669df6'
                     : hasWorkloads
-                    ? '#06b6d4'
+                    ? '#1a73e8'
                     : isPeer
-                    ? '#38bdf8'
+                    ? '#669df6'
                     : '#64748b';
                 }
 
@@ -3690,7 +3690,7 @@ export default function GlobalNetworkWorldMap({
                             ? '#f43f5e'
                             : isSelected
                             ? '#10b981'
-                            : '#38bdf8'
+                            : '#669df6'
                         }
                         strokeOpacity="0.45"
                         strokeWidth={isSelected || isSevered ? '1.3' : '1'}
@@ -3703,7 +3703,7 @@ export default function GlobalNetworkWorldMap({
                       <circle
                         r={14}
                         fill="none"
-                        stroke="#06b6d4"
+                        stroke="#1a73e8"
                         strokeWidth="1"
                         strokeDasharray="3 3"
                         opacity="0.75"
@@ -3736,7 +3736,7 @@ export default function GlobalNetworkWorldMap({
                                   ? '#f43f5e'
                                   : isZoneSelected
                                   ? '#10b981'
-                                  : '#38bdf8'
+                                  : '#669df6'
                               }
                               strokeOpacity="0.45"
                               strokeWidth="1"
@@ -3763,7 +3763,7 @@ export default function GlobalNetworkWorldMap({
                                     ? '#f43f5e'
                                     : isZoneSelected
                                     ? '#10b981'
-                                    : '#38bdf8'
+                                    : '#669df6'
                                 }
                                 stroke="#020617"
                                 strokeWidth="1.2"
@@ -3834,9 +3834,9 @@ export default function GlobalNetworkWorldMap({
                               : isSelected
                               ? '#10b981'
                               : isHovered
-                              ? '#38bdf8'
+                              ? '#669df6'
                               : hasWorkloads
-                              ? '#06b6d4'
+                              ? '#1a73e8'
                               : '#1e293b'
                           }
                           strokeWidth={
@@ -3852,7 +3852,7 @@ export default function GlobalNetworkWorldMap({
                               : isSelected
                               ? '#34d399'
                               : isHovered
-                              ? '#38bdf8'
+                              ? '#669df6'
                               : hasWorkloads
                               ? '#f8fafc'
                               : '#cbd5e1'
@@ -3932,11 +3932,11 @@ export default function GlobalNetworkWorldMap({
             <div className="absolute bottom-2.5 left-3 right-3 px-3 py-1.5 rounded-xl bg-zinc-950/85 backdrop-blur-md border border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />
                   <span>Live Region</span>
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />
+                  <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
                   <span>Zones (-a/-b/-c)</span>
                 </span>
                 <span className="flex items-center gap-1">
@@ -3944,11 +3944,11 @@ export default function GlobalNetworkWorldMap({
                   <span>ALLOWED</span>
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
                   <span>BLOCKED / OUTAGE</span>
                 </span>
               </div>
-              <span className="text-cyan-400 font-bold">
+              <span className="text-blue-400 font-bold">
                 Selected: {selectedRegion.name} ({selectedRegion.city} ·{' '}
                 {selectedZoneName}) · All 40 GCP Regions Mapped
               </span>
@@ -3984,14 +3984,14 @@ export default function GlobalNetworkWorldMap({
                 value={dvrScrubIndex}
                 disabled={dvrSnapshots.length === 0}
                 onChange={(e) => setDvrScrubIndex(Number(e.target.value))}
-                className="flex-1 accent-cyan-400 cursor-pointer disabled:opacity-40"
+                className="flex-1 accent-blue-400 cursor-pointer disabled:opacity-40"
               />
               <span className="text-[10px] text-zinc-500">PAST</span>
               {dvrScrubIndex > 0 && (
                 <button
                   type="button"
                   onClick={() => setDvrScrubIndex(0)}
-                  className="px-2 py-0.5 rounded bg-cyan-500 text-zinc-950 font-extrabold text-[10px] cursor-pointer"
+                  className="px-2 py-0.5 rounded bg-blue-500 text-zinc-950 font-extrabold text-[10px] cursor-pointer"
                 >
                   Resume Live
                 </button>
@@ -4004,7 +4004,7 @@ export default function GlobalNetworkWorldMap({
             onSubmit={handleFireCustomPacket}
             className="p-3 bg-zinc-950 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
           >
-            <div className="flex items-center gap-1.5 text-cyan-400 font-bold">
+            <div className="flex items-center gap-1.5 text-blue-400 font-bold">
               <Crosshair className="w-3.5 h-3.5" />
               <span>Launch Custom Test Packet:</span>
             </div>
@@ -4057,7 +4057,7 @@ export default function GlobalNetworkWorldMap({
 
               <button
                 type="submit"
-                className="inline-flex items-center gap-1 bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-extrabold px-3 py-1 rounded-lg text-[11px] cursor-pointer"
+                className="inline-flex items-center gap-1 bg-blue-500 hover:bg-blue-400 text-zinc-950 font-extrabold px-3 py-1 rounded-lg text-[11px] cursor-pointer"
               >
                 <Send className="w-3 h-3" />
                 <span>Fire Packet</span>
@@ -4069,14 +4069,14 @@ export default function GlobalNetworkWorldMap({
         {/* Right 4 Columns: Selected Region & Availability Zones Deep-Dive + Chaos & FinOps + Live Packet Ticker */}
         <div className="xl:col-span-4 space-y-4">
           {/* Selected Region & Zones Card */}
-          <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3.5">
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3.5">
             <div className="flex items-start justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
                     className={`w-2.5 h-2.5 rounded-full ${
                       severedRegions.includes(selectedRegion.id)
-                        ? 'bg-rose-500 animate-ping'
+                        ? 'bg-red-500 animate-ping'
                         : 'bg-emerald-500 animate-pulse'
                     }`}
                   />
@@ -4093,14 +4093,14 @@ export default function GlobalNetworkWorldMap({
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <span className="text-xs font-mono font-extrabold px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/25">
+                <span className="text-xs font-mono font-extrabold px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
                   {selectedWorkloads.totalCount} Resource
                   {selectedWorkloads.totalCount === 1 ? '' : 's'}
                 </span>
                 <button
                   type="button"
                   onClick={() => focusOnRegion(selectedRegion.id, 3.6)}
-                  className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
                   <ZoomIn className="w-3 h-3" />
                   <span>Zoom to Region (3.6x)</span>
@@ -4135,27 +4135,27 @@ export default function GlobalNetworkWorldMap({
                       }}
                       className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs font-mono transition-colors cursor-pointer ${
                         isZoneDown
-                          ? 'bg-rose-500/10 border-rose-500/50 text-rose-600 dark:text-rose-300'
+                          ? 'bg-red-500/10 border-red-500/50 text-red-600 dark:text-red-300'
                           : isZoneActive
                           ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
-                          : 'bg-zinc-50 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-cyan-500/40'
+                          : 'bg-zinc-50 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <span
                           className={`w-2 h-2 rounded-full ${
                             isZoneDown
-                              ? 'bg-rose-500 animate-ping'
+                              ? 'bg-red-500 animate-ping'
                               : isZoneActive
                               ? 'bg-emerald-400 animate-ping'
-                              : 'bg-sky-400'
+                              : 'bg-blue-400'
                           }`}
                         />
                         <span className="font-bold text-zinc-900 dark:text-zinc-100">
                           {zoneName}
                         </span>
                         {isZoneDown ? (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-500 font-extrabold">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-500 font-extrabold">
                             OUTAGE
                           </span>
                         ) : (
@@ -4187,7 +4187,7 @@ export default function GlobalNetworkWorldMap({
                           className={`px-1.5 py-0.5 rounded text-[9px] font-bold border cursor-pointer ${
                             severedZones.includes(zoneName)
                               ? 'bg-emerald-600 text-white border-emerald-500'
-                              : 'bg-rose-500/10 text-rose-500 border-rose-500/30 hover:bg-rose-500/20'
+                              : 'bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20'
                           }`}
                         >
                           {severedZones.includes(zoneName) ? 'Restore' : 'Sever Zone'}
@@ -4210,7 +4210,7 @@ export default function GlobalNetworkWorldMap({
                     selectedRegionProfile.priceMultiplier <= 1.06
                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                       : selectedRegionProfile.priceMultiplier <= 1.16
-                      ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30'
+                      ? 'bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30'
                       : 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30'
                   }`}
                 >
@@ -4223,7 +4223,7 @@ export default function GlobalNetworkWorldMap({
                   className={`px-2 py-0.5 rounded border font-bold ${
                     selectedRegionProfile.capabilities.cloudRunGpuL4
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
-                      : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
+                      : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-300'
                   }`}
                 >
                   {selectedRegionProfile.capabilities.cloudRunGpuL4
@@ -4234,7 +4234,7 @@ export default function GlobalNetworkWorldMap({
                   className={`px-2 py-0.5 rounded border font-bold ${
                     selectedRegionProfile.capabilities.computeGpuG2L4
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
-                      : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
+                      : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-300'
                   }`}
                 >
                   {selectedRegionProfile.capabilities.computeGpuG2L4
@@ -4244,7 +4244,7 @@ export default function GlobalNetworkWorldMap({
                 <span
                   className={`px-2 py-0.5 rounded border font-bold ${
                     selectedRegionProfile.capabilities.computeAiMegaHub
-                      ? 'bg-violet-500/15 border-violet-500/30 text-violet-600 dark:text-violet-300'
+                      ? 'bg-blue-500/15 border-blue-500/30 text-blue-600 dark:text-blue-300'
                       : 'bg-zinc-200/60 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-500'
                   }`}
                 >
@@ -4256,7 +4256,7 @@ export default function GlobalNetworkWorldMap({
             </div>
 
             {/* Wave 4+: Live Migration FinOps Cost, Carbon & GPU SKU Feasibility Advisor */}
-            <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/[0.06] via-cyan-500/[0.04] to-blue-500/[0.06] border border-emerald-500/30 space-y-2.5 text-[11px] font-mono">
+            <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-2.5 text-[11px] font-mono">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
                   <Leaf className="w-3.5 h-3.5" />
@@ -4268,7 +4268,7 @@ export default function GlobalNetworkWorldMap({
                   className={`px-2 py-0.5 rounded text-[10px] font-extrabold cursor-pointer ${
                     severedRegions.includes(selectedRegion.id)
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-rose-600 hover:bg-rose-700 text-white'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
                   }`}
                 >
                   {severedRegions.includes(selectedRegion.id)
@@ -4285,7 +4285,7 @@ export default function GlobalNetworkWorldMap({
                   onClick={() => setSimRequiresCloudRunGpu((p) => !p)}
                   className={`px-2 py-0.5 rounded border font-bold cursor-pointer ${
                     simRequiresCloudRunGpu
-                      ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-700 dark:text-cyan-300'
+                      ? 'bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300'
                       : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-500'
                   }`}
                 >
@@ -4296,7 +4296,7 @@ export default function GlobalNetworkWorldMap({
                   onClick={() => setSimRequiresVmGpu((p) => !p)}
                   className={`px-2 py-0.5 rounded border font-bold cursor-pointer ${
                     simRequiresVmGpu
-                      ? 'bg-violet-500/20 border-violet-500/50 text-violet-700 dark:text-violet-300'
+                      ? 'bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300'
                       : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-500'
                   }`}
                 >
@@ -4377,9 +4377,9 @@ export default function GlobalNetworkWorldMap({
                           .cheapestGreenCompatible.dst.id
                       )
                     }
-                    className="p-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-left cursor-pointer"
+                    className="p-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-left cursor-pointer"
                   >
-                    <div className="font-extrabold text-cyan-600 dark:text-cyan-300 truncate">
+                    <div className="font-extrabold text-blue-600 dark:text-blue-300 truncate">
                       Cheapest + Green
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-200 font-bold truncate">
@@ -4414,9 +4414,9 @@ export default function GlobalNetworkWorldMap({
                           .sameContinentCompatible.dst.id
                       )
                     }
-                    className="p-1.5 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 text-left cursor-pointer"
+                    className="p-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-left cursor-pointer"
                   >
-                    <div className="font-extrabold text-violet-600 dark:text-violet-300 truncate">
+                    <div className="font-extrabold text-blue-600 dark:text-blue-300 truncate">
                       Local Continent
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-200 font-bold truncate">
@@ -4439,8 +4439,8 @@ export default function GlobalNetworkWorldMap({
 
               {/* Hardware & Service SKU Compatibility Gatekeeper Banner */}
               {!liveMigrationAnalysis.evaluation.isCompatible ? (
-                <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/50 space-y-1.5 text-[10px]">
-                  <div className="font-extrabold text-rose-600 dark:text-rose-300 flex items-center gap-1">
+                <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/50 space-y-1.5 text-[10px]">
+                  <div className="font-extrabold text-red-600 dark:text-red-300 flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>
                       Hardware SKU Blocked in{' '}
@@ -4450,7 +4450,7 @@ export default function GlobalNetworkWorldMap({
                   {liveMigrationAnalysis.evaluation.blockers.map((b) => (
                     <div
                       key={b}
-                      className="text-rose-700 dark:text-rose-200 leading-snug"
+                      className="text-red-700 dark:text-red-200 leading-snug"
                     >
                       • {b}
                     </div>
@@ -4527,7 +4527,7 @@ export default function GlobalNetworkWorldMap({
                   <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
                     ${liveMigrationAnalysis.evaluation.oneTimeTransferUsd.toFixed(2)}
                   </div>
-                  <div className="text-cyan-600 dark:text-cyan-400 font-bold">
+                  <div className="text-blue-600 dark:text-blue-400 font-bold">
                     {liveMigrationAnalysis.evaluation.breakEvenDays !== null
                       ? `ROI: ${liveMigrationAnalysis.evaluation.breakEvenDays}d payback`
                       : `${liveMigrationAnalysis.spec.stateSizeGb}GB state sync`}
@@ -4540,7 +4540,7 @@ export default function GlobalNetworkWorldMap({
                     className={`font-extrabold ${
                       liveMigrationAnalysis.evaluation.gco2Delta <= 0
                         ? 'text-emerald-500'
-                        : 'text-rose-500'
+                        : 'text-red-500'
                     }`}
                   >
                     {liveMigrationAnalysis.evaluation.cfeDelta >= 0 ? '+' : ''}
@@ -4605,7 +4605,7 @@ export default function GlobalNetworkWorldMap({
                       <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
                         {res.name}
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shrink-0">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
                         {res.type}
                       </span>
                     </div>
@@ -4638,7 +4638,7 @@ export default function GlobalNetworkWorldMap({
                     zone: selectedZoneName,
                   })
                 }
-                className="py-2 px-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] font-mono font-bold cursor-pointer"
+                className="py-2 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
               >
                 Deploy Cloud Run in {selectedRegion.id}
               </button>
@@ -4646,7 +4646,7 @@ export default function GlobalNetworkWorldMap({
           </div>
 
           {/* Live Packet Interception & Routing Feed */}
-          <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-2.5">
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="text-xs font-mono font-bold uppercase text-zinc-700 dark:text-zinc-200 flex items-center gap-1.5">
                 <Radio className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-pulse" />
@@ -4673,10 +4673,10 @@ export default function GlobalNetworkWorldMap({
                         <span
                           className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
                             pkt.kind === 'BACKBONE'
-                              ? 'bg-cyan-500/20 text-cyan-500'
+                              ? 'bg-blue-500/20 text-blue-500'
                               : pkt.verdict === 'ALLOW'
                               ? 'bg-emerald-500/20 text-emerald-500'
-                              : 'bg-rose-500/20 text-rose-500'
+                              : 'bg-red-500/20 text-red-500'
                           }`}
                         >
                           {pkt.kind === 'BACKBONE'
@@ -4689,7 +4689,7 @@ export default function GlobalNetworkWorldMap({
                           {pkt.protocol.toUpperCase()}:{pkt.port || 'ICMP'}
                         </span>
                         <span className="text-zinc-400">→</span>
-                        <span className="text-cyan-600 dark:text-cyan-400 font-bold">
+                        <span className="text-blue-600 dark:text-blue-400 font-bold">
                           {pkt.targetZone}
                         </span>
                       </div>
@@ -4713,7 +4713,7 @@ export default function GlobalNetworkWorldMap({
       </div>
 
       {/* 3. Complete Interactive Directory of All 40 Google Cloud Regions & 121 Zones */}
-      <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-3">
           <div>
             <h3 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -4728,7 +4728,7 @@ export default function GlobalNetworkWorldMap({
               its coordinates and inspect its zones.
             </p>
           </div>
-          <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">
+          <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400 font-bold">
             Currently Selected: {selectedRegion.name} ({selectedRegion.city})
           </span>
         </div>
@@ -4769,7 +4769,7 @@ export default function GlobalNetworkWorldMap({
                           isSel
                             ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-sm'
                             : cnt > 0
-                            ? 'bg-cyan-500/5 border-cyan-500/40 hover:border-cyan-500'
+                            ? 'bg-blue-500/5 border-blue-500/40 hover:border-blue-500'
                             : 'bg-zinc-50/70 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
                         }`}
                       >
@@ -4778,7 +4778,7 @@ export default function GlobalNetworkWorldMap({
                             {reg.name}
                           </span>
                           {cnt > 0 ? (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-bold">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
                               {cnt} live
                             </span>
                           ) : (

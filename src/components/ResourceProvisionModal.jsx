@@ -1627,8 +1627,8 @@ export default function ResourceProvisionModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-[#ffffff] dark:bg-[#0c0c0f] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-[1220px] max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto">
-        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-4 pb-3.5 bg-[#ffffff] dark:bg-[#0c0c0f]">
+      <div className="bg-white dark:bg-[#202124] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-[1220px] max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto">
+        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-4 pb-3.5 bg-white dark:bg-[#202124]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
               <PlusCircle className="w-5 h-5" />
@@ -1671,7 +1671,7 @@ export default function ResourceProvisionModal({
                   className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer min-w-0 ${
                     active
                       ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'bg-zinc-50/70 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
+                      : 'bg-zinc-50/70 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
                   }`}
                 >
                   <Icon className="w-4 h-4 mb-1" />
@@ -1695,7 +1695,7 @@ export default function ResourceProvisionModal({
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
+                className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
               />
             </div>
 
@@ -1708,7 +1708,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={vmRegion}
                     onChange={(e) => handleSelectVmRegion(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   >
                     {!GCP_REGION_ZONES[vmRegion] && (
                       <option value={vmRegion}>
@@ -1729,7 +1729,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={zone}
                     onChange={(e) => setZone(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   >
                     {(
                       GCP_REGION_ZONES[vmRegion]?.zones || [
@@ -1755,7 +1755,7 @@ export default function ResourceProvisionModal({
                 <select
                   value={routingMode}
                   onChange={(e) => setRoutingMode(e.target.value)}
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                 >
                   <option value="REGIONAL">REGIONAL (Standard VPC Routing)</option>
                   <option value="GLOBAL">GLOBAL (Multi-Region Cloud Router)</option>
@@ -1773,7 +1773,7 @@ export default function ResourceProvisionModal({
                   value={firewallNetwork}
                   onChange={(e) => setFirewallNetwork(e.target.value)}
                   placeholder="default"
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                 />
               </div>
             )}
@@ -1786,7 +1786,7 @@ export default function ResourceProvisionModal({
                 <select
                   value={region}
                   onChange={(e) => setRegion(e.target.value)}
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                 >
                   {!GCP_REGION_ZONES[region] && (
                     <option value={region}>
@@ -1807,8 +1807,8 @@ export default function ResourceProvisionModal({
                 <label className="block text-xs font-medium text-zinc-500 mb-1.5">
                   Active GKE Control Plane Posture
                 </label>
-                <div className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono text-zinc-800 dark:text-zinc-200 flex items-center justify-between gap-2">
-                  <span className="truncate font-bold text-indigo-600 dark:text-indigo-400">
+                <div className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono text-zinc-800 dark:text-zinc-200 flex items-center justify-between gap-2">
+                  <span className="truncate font-bold text-blue-600 dark:text-blue-400">
                     {gkeMode} · {gkeLocation} ({gkeReleaseChannel})
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
@@ -1843,7 +1843,7 @@ export default function ResourceProvisionModal({
                       ? 'Locked to DUAL_REGION (EUR4) by GDPR EU Data Sovereignty'
                       : 'Select Cloud Storage location topology'
                   }
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option
                     value="REGIONAL"
@@ -1884,7 +1884,7 @@ export default function ResourceProvisionModal({
                     --location={bqLocation} · {bqStorageBillingModel}
                   </span>
                 </label>
-                <div className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono text-zinc-800 dark:text-zinc-200 flex items-center justify-between">
+                <div className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono text-zinc-800 dark:text-zinc-200 flex items-center justify-between">
                   <span>
                     {bqComplianceRegime === 'standard'
                       ? 'Custom / GCP Console Standard (All Options Unlocked)'
@@ -1944,7 +1944,7 @@ export default function ResourceProvisionModal({
                 <select
                   value={mtu}
                   onChange={(e) => setMtu(Number(e.target.value))}
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                 >
                   <option value={1460}>1460 bytes (Standard GCP Default)</option>
                   <option value={1500}>1500 bytes (Standard Ethernet)</option>
@@ -1979,7 +1979,7 @@ export default function ResourceProvisionModal({
                       onClick={() => setFirewallAction('DENY')}
                       className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
                         firewallAction === 'DENY'
-                          ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400'
+                          ? 'bg-red-500/15 border-red-500 text-red-600 dark:text-red-400'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
@@ -2009,7 +2009,7 @@ export default function ResourceProvisionModal({
                       onClick={() => setFirewallDirection('EGRESS')}
                       className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold transition-colors cursor-pointer ${
                         firewallDirection === 'EGRESS'
-                          ? 'bg-violet-500/15 border-violet-500 text-violet-600 dark:text-violet-400'
+                          ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400'
                           : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
@@ -2028,7 +2028,7 @@ export default function ResourceProvisionModal({
                     max={65535}
                     value={firewallPriority}
                     onChange={(e) => setFirewallPriority(Number(e.target.value))}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
               </div>
@@ -2042,7 +2042,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={firewallProtocol}
                     onChange={(e) => setFirewallProtocol(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   >
                     <option value="tcp">tcp</option>
                     <option value="udp">udp</option>
@@ -2061,7 +2061,7 @@ export default function ResourceProvisionModal({
                     value={firewallPorts}
                     onChange={(e) => setFirewallPorts(e.target.value)}
                     placeholder="22,80,443 or 8000-9000"
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100 disabled:opacity-40"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100 disabled:opacity-40"
                   />
                 </div>
 
@@ -2076,7 +2076,7 @@ export default function ResourceProvisionModal({
                     value={firewallSourceRanges}
                     onChange={(e) => setFirewallSourceRanges(e.target.value)}
                     placeholder="0.0.0.0/0"
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
               </div>
@@ -2114,7 +2114,7 @@ export default function ResourceProvisionModal({
                     value={firewallTargetTags}
                     onChange={(e) => setFirewallTargetTags(e.target.value)}
                     placeholder="web-server, https-server"
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
                 <div>
@@ -2127,7 +2127,7 @@ export default function ResourceProvisionModal({
                       value={firewallDescription}
                       onChange={(e) => setFirewallDescription(e.target.value)}
                       placeholder="Zero-trust firewall rule..."
-                      className="flex-1 bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                      className="flex-1 bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                     />
                     <label className="inline-flex items-center gap-1.5 text-[11px] font-mono text-zinc-600 dark:text-zinc-300 shrink-0 cursor-pointer">
                       <input
@@ -2172,7 +2172,7 @@ export default function ResourceProvisionModal({
                         className={`p-2 rounded-lg border text-left transition-all ${
                           active
                             ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
-                            : 'bg-zinc-50 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
+                            : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400'
                         }`}
                       >
                         <div className="text-xs font-bold font-mono">{f.label}</div>
@@ -2192,7 +2192,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={machineType}
                     onChange={(e) => setMachineType(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                   >
                     {(VM_MACHINE_FAMILIES[machineFamily]?.types || []).map((mt) => (
                       <option key={mt.id} value={mt.id}>
@@ -2209,7 +2209,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={osImage}
                     onChange={(e) => setOsImage(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs shadow-sm text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs shadow-sm text-zinc-950 dark:text-zinc-100"
                   >
                     <option value="Debian 12 Bookworm">Debian 12 Bookworm (Default)</option>
                     <option value="Ubuntu 24.04 LTS">Ubuntu 24.04 LTS Noble</option>
@@ -2256,7 +2256,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={diskType}
                     onChange={(e) => setDiskType(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
                     <option value="pd-balanced">pd-balanced (SSD Balanced)</option>
                     <option value="pd-ssd">pd-ssd (Extreme Low-Latency SSD)</option>
@@ -2277,7 +2277,7 @@ export default function ResourceProvisionModal({
                     max={2000}
                     value={diskSizeGb}
                     onChange={(e) => setDiskSizeGb(Number(e.target.value))}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
 
@@ -2288,7 +2288,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={vmGpuType}
                     onChange={(e) => setVmGpuType(e.target.value)}
-                    className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
                     <option value="NONE">
                       {machineType.startsWith('g2-')
@@ -2355,7 +2355,7 @@ export default function ResourceProvisionModal({
                   onClick={() => setShieldedSecureBoot((v) => !v)}
                   className={`p-2 rounded-lg border text-[11px] font-mono text-left transition-colors ${
                     shieldedSecureBoot
-                      ? 'bg-violet-500/10 border-violet-500/40 text-violet-600 dark:text-violet-400 font-bold'
+                      ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400 font-bold'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                   }`}
                 >
@@ -2404,7 +2404,7 @@ export default function ResourceProvisionModal({
                   value={startupScript}
                   onChange={(e) => setStartupScript(e.target.value)}
                   placeholder="#!/bin/bash&#10;apt-get update && apt-get install -y nginx"
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                 />
               </div>
             </div>
@@ -2475,7 +2475,7 @@ export default function ResourceProvisionModal({
                           className={`text-left p-2 rounded-[8px] border transition-all cursor-pointer ${
                             active
                               ? 'bg-emerald-500/15 border-emerald-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
-                              : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
                           }`}
                         >
                           <div className="text-[11px] font-bold flex items-center justify-between">
@@ -2582,7 +2582,7 @@ export default function ResourceProvisionModal({
                               ? 'opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                               : selected
                               ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50 shadow-sm cursor-pointer'
-                              : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 cursor-pointer'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 cursor-pointer'
                           }`}
                         >
                           <span
@@ -2622,7 +2622,7 @@ export default function ResourceProvisionModal({
                       <select
                         value={region}
                         onChange={(e) => setRegion(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         {Object.entries(GCP_REGION_ZONES).map(
                           ([regKey, info]) => {
@@ -2658,7 +2658,7 @@ export default function ResourceProvisionModal({
                           <select
                             value={gcsDualPreset}
                             onChange={(e) => setGcsDualPreset(e.target.value)}
-                            className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                            className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                           >
                             <option value="CUSTOM">
                               Custom Dual-Region Pair (Pick Any 2 Regions in Continent)
@@ -2700,7 +2700,7 @@ export default function ResourceProvisionModal({
                                   setGcsDualRegionB('us-east1');
                                 }
                               }}
-                              className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50"
+                              className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50"
                             >
                               <option value="us" disabled={isGcsGdpr}>
                                 Americas (United States / North America)
@@ -2728,7 +2728,7 @@ export default function ResourceProvisionModal({
                             <select
                               value={gcsDualRegionA}
                               onChange={(e) => setGcsDualRegionA(e.target.value)}
-                              className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                              className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                             >
                               {Object.entries(GCP_REGION_ZONES)
                                 .filter(([regKey]) =>
@@ -2755,7 +2755,7 @@ export default function ResourceProvisionModal({
                             <select
                               value={gcsDualRegionB}
                               onChange={(e) => setGcsDualRegionB(e.target.value)}
-                              className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                              className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                             >
                               {Object.entries(GCP_REGION_ZONES)
                                 .filter(([regKey]) =>
@@ -2779,7 +2779,7 @@ export default function ResourceProvisionModal({
                       )}
 
                       {/* Turbo Replication RPO */}
-                      <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] flex flex-wrap items-center justify-between gap-2">
+                      <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] flex flex-wrap items-center justify-between gap-2">
                         <label
                           className={`flex items-start gap-2 text-xs ${
                             isGcsGdpr ? 'cursor-not-allowed' : 'cursor-pointer'
@@ -2853,7 +2853,7 @@ export default function ResourceProvisionModal({
                                   ? 'opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                                   : gcsMultiRegion === mr.id
                                   ? 'bg-blue-500/15 border-blue-500 text-zinc-950 dark:text-zinc-100 cursor-pointer'
-                                  : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
+                                  : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
                               }`}
                             >
                               <div className="text-xs font-mono font-bold">
@@ -2890,7 +2890,7 @@ export default function ResourceProvisionModal({
                           ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                           : gcsAutoclass
                           ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50 cursor-pointer'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
                       }`}
                     >
                       <span
@@ -2916,7 +2916,7 @@ export default function ResourceProvisionModal({
                       className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
                         !gcsAutoclass
                           ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                       }`}
                     >
                       <span
@@ -2981,7 +2981,7 @@ export default function ResourceProvisionModal({
                               ? 'opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                               : storageClass === sc.id
                               ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm cursor-pointer'
-                              : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 cursor-pointer'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 cursor-pointer'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -3012,7 +3012,7 @@ export default function ResourceProvisionModal({
                         <select
                           value={gcsAutoclassTerminal}
                           onChange={(e) => setGcsAutoclassTerminal(e.target.value)}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           <option value="NEARLINE">Nearline ($0.010/GB — default GCP floor)</option>
                           <option value="ARCHIVE">Archive ($0.0012/GB — maximum cold savings)</option>
@@ -3026,7 +3026,7 @@ export default function ResourceProvisionModal({
                     className={`flex items-start gap-2.5 p-2.5 rounded-[8px] border text-xs ${
                       gcsRetentionEnabled || isGcsAiHns
                         ? 'opacity-65 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
-                        : 'cursor-pointer border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b]'
+                        : 'cursor-pointer border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]'
                     }`}
                   >
                     <input
@@ -3069,7 +3069,7 @@ export default function ResourceProvisionModal({
                   </div>
 
                   {/* Prevent Public Access Checkbox */}
-                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] flex flex-wrap items-center justify-between gap-2">
+                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] flex flex-wrap items-center justify-between gap-2">
                     <label
                       className={`flex items-start gap-2.5 text-xs ${
                         lockGcsPapAndUniform ? 'cursor-not-allowed' : 'cursor-pointer'
@@ -3113,7 +3113,7 @@ export default function ResourceProvisionModal({
                         className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
                           gcsUniformAccess || gcsHierarchicalNamespace
                             ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
-                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                            : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                         }`}
                       >
                         <span
@@ -3155,7 +3155,7 @@ export default function ResourceProvisionModal({
                             ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                             : !gcsUniformAccess
                             ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50 cursor-pointer'
-                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
+                            : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
                         }`}
                       >
                         <span
@@ -3189,7 +3189,7 @@ export default function ResourceProvisionModal({
                   </div>
 
                   {/* 4A. Soft Delete Policy */}
-                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] space-y-2">
+                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <label
                         className={`flex items-center gap-2 text-xs font-bold text-zinc-900 dark:text-zinc-100 ${
@@ -3270,7 +3270,7 @@ export default function ResourceProvisionModal({
                   </div>
 
                   {/* 4B. Object Versioning */}
-                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] space-y-2">
+                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <label
                         className={`flex items-center gap-2 text-xs font-bold ${
@@ -3342,7 +3342,7 @@ export default function ResourceProvisionModal({
                   </div>
 
                   {/* 4C. Retention Policy / Bucket Lock */}
-                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] space-y-2">
+                  <div className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <label
                         className={`flex items-center gap-2 text-xs font-bold text-zinc-900 dark:text-zinc-100 ${
@@ -3429,7 +3429,7 @@ export default function ResourceProvisionModal({
                       className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
                         gcsEncryptionType === 'GOOGLE_MANAGED'
                           ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                       }`}
                     >
                       <span
@@ -3459,7 +3459,7 @@ export default function ResourceProvisionModal({
                       className={`text-left p-2.5 rounded-[8px] border transition-all cursor-pointer flex items-start gap-2.5 ${
                         gcsEncryptionType === 'CMEK'
                           ? 'bg-blue-500/12 border-blue-500 text-zinc-950 dark:text-zinc-50'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                       }`}
                     >
                       <span
@@ -3494,7 +3494,7 @@ export default function ResourceProvisionModal({
                         value={gcsCmekKeyName}
                         onChange={(e) => setGcsCmekKeyName(e.target.value)}
                         placeholder={`projects/${projectId}/locations/${region}/keyRings/my-ring/cryptoKeys/my-key`}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                   )}
@@ -3529,7 +3529,7 @@ export default function ResourceProvisionModal({
                 </div>
 
                 {gcsEnableSmartLifecycle && !gcsAutoclass && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b]">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]">
                     <div>
                       <label className="block text-[10px] font-mono text-zinc-500 mb-1">
                         → Nearline after (Days)
@@ -3611,7 +3611,7 @@ export default function ResourceProvisionModal({
                       value={gcsCustomLabels}
                       onChange={(e) => setGcsCustomLabels(e.target.value)}
                       placeholder="env=production,team=data-eng,cost-center=ai"
-                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                     />
                   </div>
 
@@ -3629,13 +3629,13 @@ export default function ResourceProvisionModal({
                           Math.max(0, Number(e.target.value || 0))
                         )
                       }
-                      className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                  <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer p-2 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b]">
+                  <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer p-2 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]">
                     <input
                       type="checkbox"
                       checked={gcsRequesterPays}
@@ -3651,7 +3651,7 @@ export default function ResourceProvisionModal({
                   </label>
 
                   <label
-                    className={`flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 p-2 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#09090b] ${
+                    className={`flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 p-2 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] ${
                       isGcsSec || isGcsGdpr || isGcsHipaa
                         ? 'opacity-50 cursor-not-allowed'
                         : 'cursor-pointer'
@@ -3722,7 +3722,7 @@ export default function ResourceProvisionModal({
                         className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
                           active
                             ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                            : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
                         }`}
                       >
                         <div className="text-[11px] font-bold">{m.label}</div>
@@ -3748,7 +3748,7 @@ export default function ResourceProvisionModal({
                         <select
                           value={containerImage}
                           onChange={(e) => setContainerImage(e.target.value)}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           {arImages.map((img, i) => {
                             const tag = img.tags?.[0] || 'latest';
@@ -3793,7 +3793,7 @@ export default function ResourceProvisionModal({
                           value={runGhRepoUrl}
                           onChange={(e) => setRunGhRepoUrl(e.target.value)}
                           placeholder="https://github.com/owner/repo.git"
-                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       </div>
                       <div className="min-w-0">
@@ -3809,14 +3809,14 @@ export default function ResourceProvisionModal({
                             value={runGhBranch}
                             onChange={(e) => setRunGhBranch(e.target.value)}
                             placeholder="main"
-                            className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                            className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                           />
                           <input
                             type="text"
                             value={runGhContextDir}
                             onChange={(e) => setRunGhContextDir(e.target.value)}
                             placeholder="."
-                            className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                            className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                           />
                         </div>
                       </div>
@@ -3833,7 +3833,7 @@ export default function ResourceProvisionModal({
                         <select
                           value={runGhBuildMethod}
                           onChange={(e) => setRunGhBuildMethod(e.target.value)}
-                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           <option value="BUILDPACKS">
                             Zero-Dockerfile Google Cloud Buildpacks
@@ -3854,7 +3854,7 @@ export default function ResourceProvisionModal({
                           type="text"
                           value={runGhArRepo}
                           onChange={(e) => setRunGhArRepo(e.target.value)}
-                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       </div>
                     </div>
@@ -3925,7 +3925,7 @@ export default function ResourceProvisionModal({
                       }
                       readOnly={runSourceMode === 'GITHUB_REPO'}
                       onChange={(e) => setContainerImage(e.target.value)}
-                      className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                      className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                     />
                   </div>
                   <div className="min-w-0">
@@ -3941,7 +3941,7 @@ export default function ResourceProvisionModal({
                       max={65535}
                       value={runPort}
                       onChange={(e) => setRunPort(Number(e.target.value))}
-                      className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                      className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                     />
                   </div>
                 </div>
@@ -3974,7 +3974,7 @@ export default function ResourceProvisionModal({
                       runBillingMode === 'REQUEST_BASED' &&
                       runGpuAccelerator === 'NONE'
                         ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 disabled:opacity-45 disabled:cursor-not-allowed'
+                        : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 disabled:opacity-45 disabled:cursor-not-allowed'
                     }`}
                   >
                     <div className="text-xs font-bold font-mono flex items-center justify-between">
@@ -3996,7 +3996,7 @@ export default function ResourceProvisionModal({
                       runBillingMode === 'INSTANCE_BASED' ||
                       runGpuAccelerator !== 'NONE'
                         ? 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-300'
-                        : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
                     <div className="text-xs font-bold font-mono flex items-center justify-between">
@@ -4014,14 +4014,14 @@ export default function ResourceProvisionModal({
               </div>
 
               {/* 2026 Serverless GPU Accelerator (NVIDIA L4 / RTX PRO 6000 Blackwell) */}
-              <div className="p-3 rounded-xl bg-violet-500/[0.04] dark:bg-violet-950/20 border border-violet-500/25 space-y-2.5">
+              <div className="p-3 rounded-xl bg-blue-500/[0.04] dark:bg-blue-950/20 border border-blue-500/25 space-y-2.5">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <label className="text-[11px] font-bold font-mono uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1.5">
+                  <label className="text-[11px] font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>2026 Serverless GPU Accelerator (Gen2 AI Inference)</span>
                   </label>
                   {runGpuAccelerator !== 'NONE' && (
-                    <span className="text-[10px] font-mono bg-violet-500/15 text-violet-600 dark:text-violet-300 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full">
                       Auto-enforced: ≥4 vCPU · ≥16Gi RAM · Instance Billing
                     </span>
                   )}
@@ -4053,8 +4053,8 @@ export default function ResourceProvisionModal({
                         onClick={() => handleSelectGpuAccelerator(g.id)}
                         className={`p-2 rounded-lg border text-left transition-all ${
                           active
-                            ? 'bg-violet-500/15 border-violet-500 text-violet-700 dark:text-violet-300 shadow-sm'
-                            : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-violet-500/40'
+                            ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 shadow-sm'
+                            : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
                         }`}
                       >
                         <div className="text-xs font-bold font-mono">
@@ -4069,7 +4069,7 @@ export default function ResourceProvisionModal({
                 </div>
 
                 {runGpuAccelerator !== 'NONE' && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-violet-500/20">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-blue-500/20">
                     <span className="text-[11px] text-zinc-500">
                       GPU Zonal Redundancy (Reserve GPU capacity across multiple
                       zones):
@@ -4079,7 +4079,7 @@ export default function ResourceProvisionModal({
                       onClick={() => setRunGpuZonalRedundancy((v) => !v)}
                       className={`px-3 py-1 rounded-lg text-[11px] font-mono font-semibold border transition-colors ${
                         runGpuZonalRedundancy
-                          ? 'bg-violet-500/15 border-violet-500/40 text-violet-600 dark:text-violet-300'
+                          ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300'
                           : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                       }`}
                     >
@@ -4103,7 +4103,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={runCpu}
                     onChange={(e) => setRunCpu(e.target.value)}
-                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
                     <option
                       value="1"
@@ -4132,7 +4132,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={runMemory}
                     onChange={(e) => setRunMemory(e.target.value)}
-                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
                     <option
                       value="256Mi"
@@ -4176,7 +4176,7 @@ export default function ResourceProvisionModal({
                     max={50}
                     value={runMinInstances}
                     onChange={(e) => setRunMinInstances(Number(e.target.value))}
-                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
 
@@ -4193,7 +4193,7 @@ export default function ResourceProvisionModal({
                     max={200}
                     value={runMaxInstances}
                     onChange={(e) => setRunMaxInstances(Number(e.target.value))}
-                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
 
@@ -4210,7 +4210,7 @@ export default function ResourceProvisionModal({
                     max={1000}
                     value={runConcurrency}
                     onChange={(e) => setRunConcurrency(Number(e.target.value))}
-                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   />
                 </div>
               </div>
@@ -4227,7 +4227,7 @@ export default function ResourceProvisionModal({
                   <select
                     value={runIngress}
                     onChange={(e) => setRunIngress(e.target.value)}
-                    className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
                     <option value="INGRESS_TRAFFIC_ALL">
                       All Traffic (Public Internet)
@@ -4287,14 +4287,14 @@ export default function ResourceProvisionModal({
               </div>
 
               {/* 2026 Direct VPC Egress Network (`template.vpcAccess`) */}
-              <div className="p-3 rounded-xl bg-cyan-500/[0.05] border border-cyan-500/30 space-y-2.5">
+              <div className="p-3 rounded-xl bg-blue-500/[0.05] border border-blue-500/30 space-y-2.5">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Network className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                    <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                    <span className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-blue-700 dark:text-blue-300">
                       2026 Direct VPC Egress Network (`template.vpcAccess`)
                     </span>
-                    <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-cyan-500/20 text-cyan-600 dark:text-cyan-300">
+                    <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
                       $0.00 Connector Tax
                     </span>
                   </div>
@@ -4304,8 +4304,8 @@ export default function ResourceProvisionModal({
                     onClick={() => setRunEnableDirectVpc((v) => !v)}
                     className={`px-3 py-1 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer ${
                       runEnableDirectVpc
-                        ? 'bg-cyan-600 text-white border-cyan-500 shadow-sm'
-                        : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                        : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
                     {runEnableDirectVpc
@@ -4319,7 +4319,7 @@ export default function ResourceProvisionModal({
                 </p>
 
                 {runEnableDirectVpc && (
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end pt-1 border-t border-cyan-500/20">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end pt-1 border-t border-blue-500/20">
                     <div className="min-w-0">
                       <label
                         title="VPC Network (--network)"
@@ -4330,7 +4330,7 @@ export default function ResourceProvisionModal({
                       <select
                         value={runVpcNetwork}
                         onChange={(e) => setRunVpcNetwork(e.target.value)}
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         {projectVpcs.map((v) => (
                           <option key={v} value={v}>
@@ -4352,7 +4352,7 @@ export default function ResourceProvisionModal({
                         value={runVpcSubnetwork}
                         onChange={(e) => setRunVpcSubnetwork(e.target.value)}
                         placeholder="default"
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
@@ -4366,7 +4366,7 @@ export default function ResourceProvisionModal({
                       <select
                         value={runVpcEgress}
                         onChange={(e) => setRunVpcEgress(e.target.value)}
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         <option value="PRIVATE_RANGES_ONLY">
                           private-ranges-only (Private IPs)
@@ -4389,7 +4389,7 @@ export default function ResourceProvisionModal({
                         value={runVpcTags}
                         onChange={(e) => setRunVpcTags(e.target.value)}
                         placeholder="cloud-run-egress,internal-api"
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                   </div>
@@ -4447,7 +4447,7 @@ export default function ResourceProvisionModal({
                         className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer flex flex-col justify-between min-w-0 ${
                           active
                             ? 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-300 shadow-sm'
-                            : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                            : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
                         }`}
                       >
                         <div className="text-[11px] font-bold font-mono truncate">
@@ -4476,7 +4476,7 @@ export default function ResourceProvisionModal({
                           onChange={(e) =>
                             setRunStorageGcsBucket(e.target.value)
                           }
-                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           {projectBuckets.map((b) => (
                             <option key={b} value={b}>
@@ -4492,7 +4492,7 @@ export default function ResourceProvisionModal({
                             setRunStorageGcsBucket(e.target.value)
                           }
                           placeholder={`${projectId}-models-bucket`}
-                          className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       )}
                     </div>
@@ -4509,7 +4509,7 @@ export default function ResourceProvisionModal({
                         value={runStorageMountPath}
                         onChange={(e) => setRunStorageMountPath(e.target.value)}
                         placeholder="/mnt/gcs"
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
@@ -4552,7 +4552,7 @@ export default function ResourceProvisionModal({
                         onChange={(e) =>
                           setRunStorageVolumeName(e.target.value)
                         }
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
@@ -4568,7 +4568,7 @@ export default function ResourceProvisionModal({
                         onChange={(e) =>
                           setRunStorageMemorySizeLimit(e.target.value)
                         }
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         <option value="256Mi">256Mi RAM Disk</option>
                         <option value="512Mi">512Mi RAM Disk</option>
@@ -4591,7 +4591,7 @@ export default function ResourceProvisionModal({
                         value={runStorageMountPath}
                         onChange={(e) => setRunStorageMountPath(e.target.value)}
                         placeholder="/mnt/ramdisk"
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                   </div>
@@ -4611,7 +4611,7 @@ export default function ResourceProvisionModal({
                         value={runStorageNfsServer}
                         onChange={(e) => setRunStorageNfsServer(e.target.value)}
                         placeholder="10.0.0.2"
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
@@ -4627,7 +4627,7 @@ export default function ResourceProvisionModal({
                         value={runStorageNfsPath}
                         onChange={(e) => setRunStorageNfsPath(e.target.value)}
                         placeholder="/vol1"
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
@@ -4643,7 +4643,7 @@ export default function ResourceProvisionModal({
                         value={runStorageMountPath}
                         onChange={(e) => setRunStorageMountPath(e.target.value)}
                         placeholder="/mnt/nfs"
-                        className="w-full h-[34px] bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full h-[34px] bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
@@ -4681,7 +4681,7 @@ export default function ResourceProvisionModal({
                   value={runEnvVars}
                   onChange={(e) => setRunEnvVars(e.target.value)}
                   placeholder="NODE_ENV=production, LOG_LEVEL=info"
-                  className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
+                  className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-[12px] py-[8px] text-xs font-mono shadow-sm text-zinc-950 dark:text-zinc-100"
                 />
               </div>
             </div>
@@ -4711,7 +4711,7 @@ export default function ResourceProvisionModal({
             return (
               <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-800 pt-3">
                 {/* 1-Tap Regulatory, Financial & AI Lakehouse Blueprints */}
-                <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-500/[0.06] via-blue-500/[0.06] to-emerald-500/[0.06] border border-blue-500/25 space-y-2.5">
+                <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/25 space-y-2.5">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                       <ShieldCheck className="w-3.5 h-3.5" />
@@ -4764,7 +4764,7 @@ export default function ResourceProvisionModal({
                           className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
                             active
                               ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 shadow-sm'
-                              : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
                           }`}
                         >
                           <div className="text-[11px] font-bold font-mono flex items-center justify-between">
@@ -4859,7 +4859,7 @@ export default function ResourceProvisionModal({
                               ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-zinc-800 text-zinc-400'
                               : bqLocationType === 'MULTI_REGION'
                               ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 font-bold cursor-pointer'
-                              : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
                           }`}
                         >
                           {isAiVector ? '[LOCKED] ' : ''}MULTI_REGION (US / EU)
@@ -4884,7 +4884,7 @@ export default function ResourceProvisionModal({
                           className={`p-2 rounded-lg border text-left text-xs font-mono transition-all cursor-pointer ${
                             bqLocationType === 'REGIONAL'
                               ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 font-bold'
-                              : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                           }`}
                         >
                           SINGLE REGION (Sovereign)
@@ -4900,7 +4900,7 @@ export default function ResourceProvisionModal({
                         <select
                           value={bqLocation}
                           onChange={(e) => setBqLocation(e.target.value)}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           <option
                             value="US"
@@ -4921,7 +4921,7 @@ export default function ResourceProvisionModal({
                         <select
                           value={bqLocation}
                           onChange={(e) => setBqLocation(e.target.value)}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           {Object.entries(GCP_REGION_ZONES).map(
                             ([regKey, info]) => {
@@ -4981,7 +4981,7 @@ export default function ResourceProvisionModal({
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         bqStorageBillingModel === 'PHYSICAL'
                           ? 'bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm'
-                          : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -5017,7 +5017,7 @@ export default function ResourceProvisionModal({
                           ? 'opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                           : bqStorageBillingModel === 'LOGICAL'
                           ? 'bg-blue-500/15 border-blue-500 text-blue-800 dark:text-blue-300 shadow-sm cursor-pointer'
-                          : 'bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -5041,7 +5041,7 @@ export default function ResourceProvisionModal({
                 <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-400 font-mono text-[10px]">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-[10px]">
                         STEP 3
                       </span>
                       <span>
@@ -5073,7 +5073,7 @@ export default function ResourceProvisionModal({
                             ? `Locked to 168 hours (7 days) by ${bqComplianceRegime.toUpperCase()} audit recovery mandate`
                             : 'Select BigQuery Time-Travel retention window (48h to 168h)'
                         }
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value={48} disabled={lockTimeTravel168}>
                           {lockTimeTravel168 ? '[LOCKED] ' : ''}48 Hours (2 Days · Min Physical Storage Overhead)
@@ -5122,7 +5122,7 @@ export default function ResourceProvisionModal({
                             ? `Enforced by ${bqComplianceRegime.toUpperCase()}: Partition TTL must be between ${minPartitionTtlDays} and ${maxPartitionTtlDays} days`
                             : 'Default partition expiration in days (0 = never expire)'
                         }
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
 
@@ -5153,7 +5153,7 @@ export default function ResourceProvisionModal({
                             ? 'Locked to 0 (Keep Tables) under SEC 17a-4 / FINRA so ledger tables cannot auto-drop'
                             : 'Default table expiration in days'
                         }
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -5193,7 +5193,7 @@ export default function ResourceProvisionModal({
                             ? 'Locked to ROUND_HALF_EVEN (IEEE 754 Banker Rounding) by SEC 17a-4 / FINRA Financial Ledger compliance'
                             : 'Select default rounding mode for NUMERIC and BIGNUMERIC columns'
                         }
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option
                           value="ROUND_HALF_AWAY_FROM_ZERO"
@@ -5222,7 +5222,7 @@ export default function ResourceProvisionModal({
                             ? 'Locked to Unicode Case-Insensitive (und:ci) for natural-language AI search'
                             : 'Choose default string collation'
                         }
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="" disabled={isAiVector}>
                           {isAiVector ? '[LOCKED] ' : ''}Binary Case-Sensitive (`&apos;&apos;` · Exact ID Match)
@@ -5243,7 +5243,7 @@ export default function ResourceProvisionModal({
                       <select
                         value={bqEncryptionType}
                         onChange={(e) => setBqEncryptionType(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         <option value="GOOGLE_MANAGED">
                           Google-Managed AES-256 Envelope Key
@@ -5265,7 +5265,7 @@ export default function ResourceProvisionModal({
                         value={bqCmekKeyName}
                         onChange={(e) => setBqCmekKeyName(e.target.value)}
                         placeholder={`projects/${projectId}/locations/${bqLocation.toLowerCase()}/keyRings/bq-vault/cryptoKeys/lakehouse-key`}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                   )}
@@ -5280,7 +5280,7 @@ export default function ResourceProvisionModal({
                         value={bqCustomLabels}
                         onChange={(e) => setBqCustomLabels(e.target.value)}
                         placeholder="env=production,domain=analytics,cost_center=finops"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                     <div>
@@ -5291,7 +5291,7 @@ export default function ResourceProvisionModal({
                         type="text"
                         value={bqDescription}
                         onChange={(e) => setBqDescription(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                   </div>
@@ -5325,7 +5325,7 @@ export default function ResourceProvisionModal({
             return (
               <div className="space-y-4">
                 {/* STEP 0: 1-Click GKE Sovereign & AI Cluster Compliance Blueprints */}
-                <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-emerald-500/10 border border-indigo-500/30 space-y-2.5">
+                <div className="p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -5333,7 +5333,7 @@ export default function ResourceProvisionModal({
                         Step 0 · 2026 GKE Sovereign & AI Cluster Compliance Blueprints
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 font-bold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold">
                       {gkeComplianceRegime === 'custom'
                         ? 'UNLOCKED CUSTOM ARCHITECTURE'
                         : `ENFORCING ${gkeComplianceRegime.toUpperCase()}`}
@@ -5377,8 +5377,8 @@ export default function ResourceProvisionModal({
                           title={`Activate ${preset.title}: ${preset.sub}`}
                           className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                             active
-                              ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
-                              : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-indigo-500/50'
+                              ? 'bg-blue-600 text-white border-blue-500 shadow-md'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
                           }`}
                         >
                           <div className="text-[11px] font-extrabold flex items-center justify-between gap-1">
@@ -5388,7 +5388,7 @@ export default function ResourceProvisionModal({
                           <div
                             className={`text-[10px] mt-0.5 line-clamp-2 ${
                               active
-                                ? 'text-indigo-100'
+                                ? 'text-blue-100'
                                 : 'text-zinc-500 dark:text-zinc-400'
                             }`}
                           >
@@ -5426,7 +5426,7 @@ export default function ResourceProvisionModal({
                           ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                           : gkeMode === 'AUTOPILOT'
                           ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 cursor-pointer shadow-sm'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer hover:border-emerald-500/40'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 cursor-pointer hover:border-emerald-500/40'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -5453,8 +5453,8 @@ export default function ResourceProvisionModal({
                         lockModeAutopilot
                           ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                           : gkeMode === 'STANDARD'
-                          ? 'bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-300 cursor-pointer shadow-sm'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer hover:border-indigo-500/40'
+                          ? 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-300 cursor-pointer shadow-sm'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 cursor-pointer hover:border-blue-500/40'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -5484,7 +5484,7 @@ export default function ResourceProvisionModal({
                       <select
                         value={gkeLocation}
                         onChange={(e) => setGkeLocation(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         {allowedGkeRegions.map(([regKey, info]) => (
                           <option key={regKey} value={regKey}>
@@ -5507,7 +5507,7 @@ export default function ResourceProvisionModal({
                             ? 'Locked to STABLE channel by SEC/HIPAA compliance regime'
                             : 'Select Kubernetes control plane upgrade cadence'
                         }
-                        className={`w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 ${
+                        className={`w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 ${
                           lockStableChannel ? 'opacity-60 cursor-not-allowed' : ''
                         }`}
                       >
@@ -5526,7 +5526,7 @@ export default function ResourceProvisionModal({
                         value={gkeNetwork}
                         onChange={(e) => setGkeNetwork(e.target.value)}
                         placeholder="default"
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       />
                     </div>
                   </div>
@@ -5534,9 +5534,9 @@ export default function ResourceProvisionModal({
 
                 {/* STEP 3: Standard Mode Node Pool & GPU Accelerators (Shown when STANDARD is active) */}
                 {gkeMode === 'STANDARD' && (
-                  <div className="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/25 space-y-3">
+                  <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/25 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-300">
                         Step 3 · Standard Node Pool Sizing, Spot VMs & NVIDIA GPUs
                       </span>
                       <span className="text-[10px] font-mono text-emerald-500 font-bold">
@@ -5552,7 +5552,7 @@ export default function ResourceProvisionModal({
                         <select
                           value={gkeNodeMachineType}
                           onChange={(e) => setGkeNodeMachineType(e.target.value)}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           <option value="e2-medium">e2-medium (2 vCPU · 4GB)</option>
                           <option value="e2-standard-2">e2-standard-2 (2 vCPU · 8GB)</option>
@@ -5579,7 +5579,7 @@ export default function ResourceProvisionModal({
                               Math.max(1, Math.min(12, Number(e.target.value) || 1))
                             )
                           }
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         />
                       </div>
 
@@ -5590,7 +5590,7 @@ export default function ResourceProvisionModal({
                         <select
                           value={gkeGpuAcceleratorType}
                           onChange={(e) => setGkeGpuAcceleratorType(e.target.value)}
-                          className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                         >
                           <option value="NONE">None (CPU-Only Nodes)</option>
                           <option value="nvidia-l4">NVIDIA L4 (24GB Ada Lovelace)</option>
@@ -5632,7 +5632,7 @@ export default function ResourceProvisionModal({
                       className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
                         lockWorkloadIdentityOn
                           ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 cursor-pointer'
                       }`}
                     >
                       <input
@@ -5665,7 +5665,7 @@ export default function ResourceProvisionModal({
                       className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
                         lockPrivateNodesOn
                           ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 cursor-pointer'
                       }`}
                     >
                       <input
@@ -5698,7 +5698,7 @@ export default function ResourceProvisionModal({
                       className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
                         lockBinaryAuthOn
                           ? 'bg-emerald-500/5 border-emerald-500/30 cursor-not-allowed'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 cursor-pointer'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 cursor-pointer'
                       }`}
                     >
                       <input
@@ -5768,9 +5768,9 @@ export default function ResourceProvisionModal({
             return (
               <div className="space-y-4">
                 {/* STEP 0: Compliance Blueprint Presets */}
-                <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-500/[0.08] via-purple-500/[0.06] to-emerald-500/[0.08] border border-indigo-500/30 space-y-2.5">
+                <div className="p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                       Step 0 · Database Compliance Blueprint (MySQL 8.4 · PostgreSQL 16 · AlloyDB)
                     </span>
@@ -5820,15 +5820,15 @@ export default function ResourceProvisionModal({
                           onClick={() => applySqlCompliancePreset(preset.id)}
                           className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer ${
                             active
-                              ? 'bg-indigo-600/15 border-indigo-500 shadow-sm'
-                              : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                              ? 'bg-blue-600/15 border-blue-500 shadow-sm'
+                              : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-1 mb-1">
                             <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100">
                               {preset.title}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-500/20 text-indigo-600 dark:text-indigo-300">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
                               {preset.badge}
                             </span>
                           </div>
@@ -5853,13 +5853,13 @@ export default function ResourceProvisionModal({
                       onClick={() => handleSelectModalSqlEngine('POSTGRES')}
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         sqlEngineFamily === 'POSTGRES'
-                          ? 'bg-indigo-600/15 border-indigo-500 text-zinc-900 dark:text-zinc-100'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
                         <span>PostgreSQL (16 / 17 / 15)</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
                           Unlocks Cloud SQL + AlloyDB
                         </span>
                       </div>
@@ -5881,13 +5881,13 @@ export default function ResourceProvisionModal({
                         lockAlloyDbOnly
                           ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
                           : sqlEngineFamily === 'MYSQL'
-                          ? 'bg-cyan-600/15 border-cyan-500 text-zinc-900 dark:text-zinc-100 cursor-pointer'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
+                          ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100 cursor-pointer'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
                       }`}
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
                         <span>MySQL (8.4 LTS / 8.0) {lockAlloyDbOnly ? '[LOCKED]' : ''}</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
                           Cloud SQL Dedicated
                         </span>
                       </div>
@@ -5908,7 +5908,7 @@ export default function ResourceProvisionModal({
                           ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
                           : sqlArchitecture === 'CLOUD_SQL'
                           ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100 cursor-pointer'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
                       }`}
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
@@ -5933,15 +5933,15 @@ export default function ResourceProvisionModal({
                         sqlEngineFamily === 'MYSQL'
                           ? 'opacity-45 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900/40 border-zinc-300 dark:border-zinc-800'
                           : sqlArchitecture === 'ALLOYDB'
-                          ? 'bg-purple-600/15 border-purple-500 text-zinc-900 dark:text-zinc-100 cursor-pointer'
-                          : 'bg-[#ffffff] dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
+                          ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100 cursor-pointer'
+                          : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-500 cursor-pointer'
                       }`}
                     >
                       <div className="text-xs font-extrabold flex items-center justify-between">
                         <span>
                           Google Cloud AlloyDB (PostgreSQL) {sqlEngineFamily === 'MYSQL' ? '[LOCKED]' : ''}
                         </span>
-                        <span className="text-[10px] font-mono text-purple-400">alloydb.googleapis.com</span>
+                        <span className="text-[10px] font-mono text-blue-400">alloydb.googleapis.com</span>
                       </div>
                       <p className="text-[10px] text-zinc-500 mt-1">
                         {sqlEngineFamily === 'MYSQL'
@@ -5966,7 +5966,7 @@ export default function ResourceProvisionModal({
                       <select
                         value={sqlDatabaseVersion}
                         onChange={(e) => setSqlDatabaseVersion(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         {sqlEngineFamily === 'POSTGRES' ? (
                           <>
@@ -5990,7 +5990,7 @@ export default function ResourceProvisionModal({
                       <select
                         value={sqlRegion}
                         onChange={(e) => setSqlRegion(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         <option value="us-central1" disabled={isSqlGdpr}>
                           {isSqlGdpr ? '[LOCKED] ' : ''}us-central1 (Iowa — US SEC/HIPAA)
@@ -6014,7 +6014,7 @@ export default function ResourceProvisionModal({
                       <select
                         value={sqlTier}
                         onChange={(e) => setSqlTier(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                       >
                         {sqlArchitecture === 'ALLOYDB' ? (
                           <>
@@ -6043,7 +6043,7 @@ export default function ResourceProvisionModal({
                         value={sqlAvailabilityType}
                         disabled={lockRegionalHa}
                         onChange={(e) => setSqlAvailabilityType(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
                       >
                         <option value="REGIONAL">REGIONAL (Multi-Zone Automatic Failover)</option>
                         <option value="ZONAL" disabled={lockRegionalHa}>
@@ -6060,7 +6060,7 @@ export default function ResourceProvisionModal({
                         value={sqlNetworkMode}
                         disabled={lockPrivateNet}
                         onChange={(e) => setSqlNetworkMode(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
                       >
                         <option value="PRIVATE_VPC_ONLY">Private VPC Peering Only (--no-assign-ip)</option>
                         <option value="PUBLIC_IPV4" disabled={lockPrivateNet}>
@@ -6077,7 +6077,7 @@ export default function ResourceProvisionModal({
                         value={sqlSslMode}
                         disabled={lockMtls}
                         onChange={(e) => setSqlSslMode(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
+                        className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 disabled:opacity-60"
                       >
                         <option value="TRUSTED_CLIENT_CERTIFICATE_REQUIRED">
                           TRUSTED_CLIENT_CERTIFICATE_REQUIRED (Strict mTLS)
@@ -6094,7 +6094,7 @@ export default function ResourceProvisionModal({
           })()}
 
           {/* 2026 Live Pre-Deploy FinOps Price Calculator */}
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/[0.08] via-cyan-500/[0.06] to-violet-500/[0.08] border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
@@ -6165,12 +6165,12 @@ export default function ResourceProvisionModal({
           </div>
 
           {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-500 leading-relaxed">
+            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-500 leading-relaxed">
               <strong>Google Cloud API Response:</strong> {errorMsg}
             </div>
           )}
 
-            <div className="sticky bottom-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 pb-1 border-t border-zinc-200 dark:border-zinc-800 bg-[#ffffff]/95 dark:bg-[#0c0c0f]/95 backdrop-blur-md">
+            <div className="sticky bottom-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 pb-1 border-t border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-md">
               <div className="flex items-center gap-2 text-xs text-zinc-500">
                 <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Direct Live GCP API Execution ({projectId})</span>
@@ -6180,14 +6180,14 @@ export default function ResourceProvisionModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-[16px] py-[8px] text-xs font-[500] transition-colors cursor-pointer"
+                  className="bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-[16px] py-[8px] text-xs font-[500] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !name.trim()}
-                  className="bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-[18px] py-[8px] text-xs font-[700] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-[18px] py-[8px] text-xs font-[700] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {submitting
                     ? 'Creating on Google Cloud...'

@@ -757,24 +757,24 @@ actions:
   return (
     <div className="space-y-6">
       {/* Top Hero Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-cyan-950 via-slate-900 to-indigo-950 border border-cyan-500/40 p-5 text-white shadow-xl">
+      <div className="rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 p-5 text-zinc-900 dark:text-zinc-100 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                 2026 DATA ENGINEERING STUDIO
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
                 GCloud SDK {data.gcloudSdkVersion}
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-violet-500/20 text-violet-300 border border-violet-400/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                 Bronze → Silver → Gold Medallion ELT
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight">
+            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
               Zero-Friction Google Cloud Data Mesh, Dataform/dbt SQLX &amp; Dataplex Cockpit
             </h2>
-            <p className="text-xs text-zinc-300 max-w-3xl leading-relaxed">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-3xl leading-relaxed">
               Replaces 7 disconnected Google Cloud Console pages (GCS, BigLake, BigQuery, Dataform, Dataplex, Serverless Spark, and Cloud Composer) with a single visual pipeline builder, automatic deduplication &amp; PII hashing (`QUALIFY ROW_NUMBER()`), Dataplex Auto-Profiling, and `$0.00/mo` Serverless ELT DAGs.
             </p>
           </div>
@@ -784,7 +784,7 @@ actions:
               type="button"
               onClick={fetchOverview}
               disabled={loading}
-              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Sync Data Mesh</span>
@@ -793,46 +793,46 @@ actions:
         </div>
 
         {/* KPI Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-4 pt-4 border-t border-white/10">
-          <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-            <div className="text-[10px] font-mono text-cyan-300 uppercase">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[10px] font-mono text-blue-600 dark:text-blue-400 uppercase">
               Medallion Pipelines
             </div>
-            <div className="text-base font-mono font-extrabold">
+            <div className="text-base font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
               {data.medallionPipelines?.length || 0} Active
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-            <div className="text-[10px] font-mono text-emerald-300 uppercase">
+          <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase">
               BigQuery Datasets
             </div>
-            <div className="text-base font-mono font-extrabold">
+            <div className="text-base font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
               {data.datasets?.length || 0} Live
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-            <div className="text-[10px] font-mono text-violet-300 uppercase">
+          <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[10px] font-mono text-zinc-600 dark:text-zinc-400 uppercase">
               Dataform &amp; dbt Repos
             </div>
-            <div className="text-base font-mono font-extrabold">
+            <div className="text-base font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
               {data.dataformRepos?.length || 0} Workspaces
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-            <div className="text-[10px] font-mono text-amber-300 uppercase">
+          <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400 uppercase">
               Dataplex Scans &amp; Products
             </div>
-            <div className="text-base font-mono font-extrabold">
+            <div className="text-base font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
               {(data.dataplexScans?.length || 0) +
                 (data.dataProducts?.length || 0)}{' '}
               Governed
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
-            <div className="text-[10px] font-mono text-teal-300 uppercase">
+          <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase">
               Composer-Lite Savings
             </div>
-            <div className="text-base font-mono font-extrabold text-emerald-400">
+            <div className="text-base font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
               -$348/mo vs Airflow
             </div>
           </div>
@@ -840,7 +840,7 @@ actions:
       </div>
 
       {/* 5 Friendly Sub-Studio Navigation Pills */}
-      <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-[#0c0c0f] p-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-[#202124] p-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
         {[
           {
             id: 'MEDALLION_ELT',
@@ -879,7 +879,7 @@ actions:
             onClick={() => setActiveSubTab(t.id)}
             className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeSubTab === t.id
-                ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-md'
+                ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'
             }`}
           >
@@ -887,7 +887,7 @@ actions:
             <span
               className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
                 activeSubTab === t.id
-                  ? 'bg-black/30 text-cyan-200'
+                  ? 'bg-white/20 text-white'
                   : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
               }`}
             >
@@ -901,7 +901,7 @@ actions:
       {activeSubTab === 'MEDALLION_ELT' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Left 7 Cols: 3-Step Visual Wizard */}
-          <div className="lg:col-span-7 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+          <div className="lg:col-span-7 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -912,7 +912,7 @@ actions:
                   Provisions Bronze (Raw), Silver (Deduplicated &amp; PII-Hashed), and Gold (Executive Mart) datasets &amp; tables in 1 click.
                 </p>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-500 border border-cyan-500/30">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
                 PHYSICAL BILLING (-54%)
               </span>
             </div>
@@ -1020,7 +1020,7 @@ actions:
                   max="1000"
                   value={dataVolumeGbDay}
                   onChange={(e) => setDataVolumeGbDay(Number(e.target.value))}
-                  className="w-full accent-cyan-500"
+                  className="w-full accent-blue-500"
                 />
               </div>
 
@@ -1041,9 +1041,9 @@ actions:
             </div>
 
             {/* Smart Engine Advisor Card */}
-            <div className="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-1.5">
+            <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-mono font-extrabold text-cyan-600 dark:text-cyan-300">
+                <span className="text-xs font-mono font-extrabold text-blue-600 dark:text-blue-300">
                   Smart Engine Advisor: {engineRecommendation.engine}
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
@@ -1096,7 +1096,7 @@ actions:
               type="button"
               onClick={handleDeployMedallion}
               disabled={busyAction === 'DEPLOY_MEDALLION'}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-mono font-extrabold shadow-lg shadow-cyan-600/20 cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-lg shadow-blue-600/20 cursor-pointer disabled:opacity-50"
             >
               {busyAction === 'DEPLOY_MEDALLION'
                 ? '⏳ Provisioning Bronze → Silver → Gold Datasets & Running Initial Dedup MERGE...'
@@ -1105,7 +1105,7 @@ actions:
           </div>
 
           {/* Right 5 Cols: Active Medallion Pipelines */}
-          <div className="lg:col-span-5 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+          <div className="lg:col-span-5 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
             <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
                 Active Medallion Lakehouse Pipelines ({data.medallionPipelines?.length || 0})
@@ -1151,7 +1151,7 @@ actions:
                       {p.bronzeDataset}
                     </span>
                     <ArrowRight className="w-3 h-3 text-zinc-500" />
-                    <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/25">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/25">
                       {p.silverDataset}
                     </span>
                     <ArrowRight className="w-3 h-3 text-zinc-500" />
@@ -1171,7 +1171,7 @@ actions:
                         setCleanTargetDs(p.silverDataset);
                         setActiveSubTab('DATAFORM_SQLX');
                       }}
-                      className="text-cyan-500 hover:underline font-bold cursor-pointer"
+                      className="text-blue-500 hover:underline font-bold cursor-pointer"
                     >
                       Open in SQLX Studio →
                     </button>
@@ -1186,7 +1186,7 @@ actions:
       {/* TAB 2: DATAFORM & DBT AUTO-CLEAN SQLX STUDIO */}
       {activeSubTab === 'DATAFORM_SQLX' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-7 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+          <div className="lg:col-span-7 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -1203,7 +1203,7 @@ actions:
                   onClick={() => setDialect('DATAFORM_SQLX')}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer ${
                     dialect === 'DATAFORM_SQLX'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
                   }`}
                 >
@@ -1214,7 +1214,7 @@ actions:
                   onClick={() => setDialect('DBT_SQL')}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer ${
                     dialect === 'DBT_SQL'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
                   }`}
                 >
@@ -1348,7 +1348,7 @@ actions:
           </div>
 
           {/* Right 5 Cols: Native Dataform Repositories (`dataform.googleapis.com/v1beta1`) */}
-          <div className="lg:col-span-5 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+          <div className="lg:col-span-5 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -1380,7 +1380,7 @@ actions:
                 type="button"
                 onClick={handleCreateDataformRepo}
                 disabled={busyAction === 'CREATE_DATAFORM'}
-                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
                 {busyAction === 'CREATE_DATAFORM' ? 'Creating...' : '+ Create Repo'}
               </button>
@@ -1427,7 +1427,7 @@ actions:
       {activeSubTab === 'DATAPLEX_MESH' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Left 6 Cols: Dataplex Auto Data Profiling & Quality Scans */}
-          <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+          <div className="lg:col-span-6 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -1519,7 +1519,7 @@ actions:
           </div>
 
           {/* Right 6 Cols: Dataplex Data Mesh Products & dbt Metadata Sync (SDK 588.0.0) */}
-          <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+          <div className="lg:col-span-6 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -1570,7 +1570,7 @@ actions:
               type="button"
               onClick={handleCreateDataProduct}
               disabled={busyAction === 'CREATE_PRODUCT'}
-              className="w-full py-2.5 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               {busyAction === 'CREATE_PRODUCT'
                 ? '⏳ Publishing Data Product & Syncing dbt Manifest...'
@@ -1586,7 +1586,7 @@ actions:
                   <div className="space-y-1">
                     <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                       <span>{dp.displayName}</span>
-                      <span className="px-2 py-0.5 rounded text-[9px] bg-cyan-500/15 text-cyan-400">
+                      <span className="px-2 py-0.5 rounded text-[9px] bg-blue-500/15 text-blue-400">
                         Quality {dp.qualityScore}%
                       </span>
                     </div>
@@ -1612,7 +1612,7 @@ actions:
 
       {/* TAB 4: VISUAL SCHEMA MAPPER & CONTRACT FIREWALL */}
       {activeSubTab === 'SCHEMA_CONTRACTS' && (
-        <div className="bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+        <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white">
@@ -1650,11 +1650,11 @@ actions:
                       {m.sourceField}
                     </td>
                     <td className="py-2.5 pr-3 text-zinc-500">{m.sourceType}</td>
-                    <td className="py-2.5 pr-3 font-bold text-cyan-500">
+                    <td className="py-2.5 pr-3 font-bold text-blue-500">
                       {m.targetField}
                     </td>
                     <td className="py-2.5 pr-3">
-                      <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/25 text-[10px]">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/25 text-[10px]">
                         {m.targetType}
                       </span>
                     </td>
@@ -1681,7 +1681,7 @@ actions:
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
                           m.isPii
-                            ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            ? 'bg-red-500/15 text-red-400 border border-red-500/30'
                             : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
                         }`}
                       >
@@ -1703,7 +1703,7 @@ actions:
       {activeSubTab === 'SLOT_DOCTOR_DAGS' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Left 6 Cols: Live BigQuery Job & Slot/Skew Doctor */}
-          <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+          <div className="lg:col-span-6 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -1751,7 +1751,7 @@ actions:
           </div>
 
           {/* Right 6 Cols: Composer-Lite Serverless DAG Builder (-$348/mo FinOps Saver) */}
-          <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+          <div className="lg:col-span-6 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -1826,7 +1826,7 @@ actions:
           {/* Top Row: 2-File Declarative GitOps Composer (`deployment.yaml` + `orchestration-pipeline.yaml`) & Supported Resource Types */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Left 7 Cols: 2-File Data Agent Kit YAML Composer */}
-            <div className="lg:col-span-7 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+            <div className="lg:col-span-7 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <div>
                   <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -1847,7 +1847,7 @@ actions:
                       onClick={() => setDakEnvName(env)}
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase cursor-pointer ${
                         dakEnvName === env
-                          ? 'bg-cyan-600 text-white'
+                          ? 'bg-blue-600 text-white'
                           : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
                       }`}
                     >
@@ -1864,7 +1864,7 @@ actions:
                     onClick={() => setDakFileTab('DEPLOYMENT_YAML')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
                       dakFileTab === 'DEPLOYMENT_YAML'
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
                     }`}
                   >
@@ -1875,7 +1875,7 @@ actions:
                     onClick={() => setDakFileTab('ORCHESTRATION_YAML')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
                       dakFileTab === 'ORCHESTRATION_YAML'
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
                     }`}
                   >
@@ -1907,7 +1907,7 @@ actions:
                     type="button"
                     onClick={handleDeployDakBundle}
                     disabled={busyAction === 'DAK_DEPLOY'}
-                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                    className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                   >
                     {busyAction === 'DAK_DEPLOY'
                       ? 'Applying Bundle...'
@@ -1916,7 +1916,7 @@ actions:
                 </div>
               </div>
 
-              <pre className="p-3.5 rounded-xl bg-zinc-950 text-cyan-300 border border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-[360px] leading-relaxed">
+              <pre className="p-3.5 rounded-xl bg-zinc-950 text-blue-300 border border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-[360px] leading-relaxed">
                 {dakFileTab === 'DEPLOYMENT_YAML'
                   ? dakDeploymentYaml
                   : dakOrchestrationPipelineYaml}
@@ -1933,7 +1933,7 @@ actions:
             </div>
 
             {/* Right 5 Cols: Canonical Data Agent Kit MCP URIs & Supported Resource Types */}
-            <div className="lg:col-span-5 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+            <div className="lg:col-span-5 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
               <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white">
                   Canonical Data Agent Kit MCP Resource URIs (`read_resource`)
@@ -1951,21 +1951,21 @@ actions:
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
                           {u.kind}
                         </span>
                         <span className="text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 truncate">
                           {u.label}
                         </span>
                       </div>
-                      <div className="text-[10px] font-mono text-indigo-400 truncate mt-0.5">
+                      <div className="text-[10px] font-mono text-blue-400 truncate mt-0.5">
                         {u.uri}
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => copyText(u.uri, u.uri)}
-                      className="px-2 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 hover:bg-cyan-500/20 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
+                      className="px-2 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 hover:bg-blue-500/20 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
                     >
                       {copiedKey === u.uri ? '✓ Copied' : 'Copy URI'}
                     </button>
@@ -1983,7 +1983,7 @@ actions:
                       key={rt.type}
                       className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
                     >
-                      <div className="text-[10px] font-mono font-bold text-cyan-500 truncate">
+                      <div className="text-[10px] font-mono font-bold text-blue-500 truncate">
                         {rt.type}
                       </div>
                       <div className="text-[9px] text-zinc-500 line-clamp-2">
@@ -1999,7 +1999,7 @@ actions:
           {/* Bottom Row: Dataplex Semantic Asset Search (`--semantic-search`) & Streaming Spark Event Log RCA Doctor */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Left 6 Cols: Dataplex Universal Semantic & Keyword Catalog Discovery */}
-            <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+            <div className="lg:col-span-6 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
               <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Database className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -2032,14 +2032,14 @@ actions:
                   type="button"
                   onClick={handleRunDakSearch}
                   disabled={busyAction === 'DAK_SEARCH'}
-                  className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
                 >
                   {busyAction === 'DAK_SEARCH' ? 'Searching...' : 'Search Catalog'}
                 </button>
               </div>
 
               {dakSearchCli && (
-                <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[10px] font-mono text-violet-300 overflow-x-auto">
+                <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[10px] font-mono text-blue-300 overflow-x-auto">
                   $ {dakSearchCli}
                 </div>
               )}
@@ -2052,14 +2052,14 @@ actions:
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-violet-500/15 text-violet-400 border border-violet-500/30">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
                           {r.system}
                         </span>
                         <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate">
                           {r.displayName}
                         </span>
                       </div>
-                      <div className="text-[10px] font-mono text-cyan-500 truncate mt-0.5">
+                      <div className="text-[10px] font-mono text-blue-500 truncate mt-0.5">
                         {r.dakUri}
                       </div>
                       <div className="text-[10px] text-zinc-500 truncate">
@@ -2079,7 +2079,7 @@ actions:
             </div>
 
             {/* Right 6 Cols: Streaming Spark Event Log & Driver Output RCA Doctor (`gcp-spark-troubleshooting`) */}
-            <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+            <div className="lg:col-span-6 bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
               <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -2121,7 +2121,7 @@ actions:
                       {sparkRcaReport.fileSizeChecked}
                     </span>
                   </div>
-                  <div className="text-[11px] text-rose-400">
+                  <div className="text-[11px] text-red-400">
                     {sparkRcaReport.exceptionSignature}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
@@ -2133,7 +2133,7 @@ actions:
                     </div>
                     <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
                       <div className="text-[9px] text-zinc-500">P99 Skew Task</div>
-                      <div className="text-rose-400 font-bold">
+                      <div className="text-red-400 font-bold">
                         {sparkRcaReport.skewMetrics.p99TaskDurationMs} ms
                       </div>
                     </div>
@@ -2145,13 +2145,13 @@ actions:
                     </div>
                     <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
                       <div className="text-[9px] text-zinc-500">Max Skew Partition</div>
-                      <div className="text-rose-400 font-bold">
+                      <div className="text-red-400 font-bold">
                         {sparkRcaReport.skewMetrics.maxTaskShuffleReadMb} MB
                       </div>
                     </div>
                   </div>
                   <div className="space-y-1 pt-1">
-                    <div className="text-[10px] text-cyan-400 font-bold">
+                    <div className="text-[10px] text-blue-400 font-bold">
                       Prescribed Spark 2.2 Fixes:
                     </div>
                     {sparkRcaReport.recommendedFixes.map((fix) => (

@@ -47,7 +47,7 @@ function SortableKpiCard({ item }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm transition-all duration-300 hover:border-blue-500/40 ${
+      className={`bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm transition-all duration-300 hover:border-blue-500/40 ${
         isDragging ? 'opacity-80 scale-[1.02] shadow-xl ring-2 ring-blue-500' : ''
       }`}
     >
@@ -211,7 +211,7 @@ export default function SortableKpiRow({ summary, fetchLatencyMs }) {
       </div>
 
       {showPalette && (
-        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 transition-all duration-300">
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 transition-all duration-300">
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
             Drag color swatches to reorder Apache ECharts telemetry series palette:
           </span>

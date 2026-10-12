@@ -653,11 +653,11 @@ export default function AutonomousCloudBrain({
       {/* ==================================================================== */}
       {/* MODULE 1: PRE-CRIME 30-DAY BILLING & QUOTA TIME-CRYSTAL SIMULATOR    */}
       {/* ==================================================================== */}
-      <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/[0.08] via-fuchsia-500/[0.05] to-cyan-500/[0.08] border border-violet-500/30 space-y-4">
+      <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/40">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
                 WAVE 5 DREAM FEATURE #1
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-1.5">
@@ -697,7 +697,7 @@ export default function AutonomousCloudBrain({
               <button
                 type="button"
                 onClick={onHibernateSleep}
-                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5"
               >
                 <Moon className="w-3.5 h-3.5" />
                 <span>Trigger Emergency $0 Park Now</span>
@@ -733,7 +733,7 @@ export default function AutonomousCloudBrain({
               <span className="text-[10px] uppercase text-zinc-400 font-bold">
                 Monthly Hard Budget Cap:
               </span>
-              <span className="text-sm font-extrabold text-rose-500">
+              <span className="text-sm font-extrabold text-red-500">
                 ${monthlyBudgetCap} USD / month
               </span>
             </div>
@@ -744,7 +744,7 @@ export default function AutonomousCloudBrain({
               step={10}
               value={monthlyBudgetCap}
               onChange={(e) => setMonthlyBudgetCap(Number(e.target.value))}
-              className="w-full accent-rose-500 cursor-pointer"
+              className="w-full accent-red-500 cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-zinc-400">
               <span>$20 (Hobby)</span>
@@ -773,10 +773,10 @@ export default function AutonomousCloudBrain({
             <div className="text-[10px] text-zinc-400 uppercase">
               Unguarded Anomaly Bill
             </div>
-            <div className="text-base font-extrabold text-rose-500 mt-0.5">
+            <div className="text-base font-extrabold text-red-500 mt-0.5">
               ${timeCrystalForecast.unguardedMonthEnd.toFixed(2)}
             </div>
-            <div className="text-[10px] text-rose-400">
+            <div className="text-[10px] text-red-400">
               ${timeCrystalForecast.surgeDaily}/day during surge
             </div>
           </div>
@@ -827,17 +827,17 @@ export default function AutonomousCloudBrain({
               30-Day Cumulative Spend Trajectory (Day 1 → Day 30)
             </span>
             <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5 text-cyan-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block" />
+              <span className="flex items-center gap-1.5 text-blue-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />
                 Baseline (${timeCrystalForecast.baselineMonthEnd})
               </span>
-              <span className="flex items-center gap-1.5 text-violet-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-violet-400 inline-block" />
+              <span className="flex items-center gap-1.5 text-blue-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />
                 Projected w/ {autoBreakerArmed ? 'Circuit-Breaker' : 'Surge'} ($
                 {timeCrystalForecast.projectedMonthEnd})
               </span>
-              <span className="flex items-center gap-1.5 text-rose-400">
-                <span className="w-3 h-0.5 bg-rose-500 inline-block" />
+              <span className="flex items-center gap-1.5 text-red-400">
+                <span className="w-3 h-0.5 bg-red-500 inline-block" />
                 Budget Cap (${monthlyBudgetCap})
               </span>
             </div>
@@ -896,12 +896,12 @@ export default function AutonomousCloudBrain({
                         ? '#f43f5e'
                         : pt.projected >= monthlyBudgetCap
                         ? '#10b981'
-                        : '#8b5cf6'
+                        : '#4285f4'
                     }
                     strokeOpacity="0.28"
                     strokeWidth="6"
                   />
-                  <circle cx={x} cy={baseY} r={2.2} fill="#22d3ee" />
+                  <circle cx={x} cy={baseY} r={2.2} fill="#669df6" />
                   <circle
                     cx={x}
                     cy={projY}
@@ -911,7 +911,7 @@ export default function AutonomousCloudBrain({
                         ? '#f43f5e'
                         : pt.projected >= monthlyBudgetCap && autoBreakerArmed
                         ? '#10b981'
-                        : '#c084fc'
+                        : '#8ab4f8'
                     }
                   >
                     <title>{`Day ${pt.day}: Projected $${pt.projected} vs Baseline $${pt.baseline}`}</title>
@@ -951,7 +951,7 @@ export default function AutonomousCloudBrain({
           {/* Auto-Mitigation Command Bar */}
           <div className="pt-2 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
             <div className="text-zinc-300 truncate max-w-2xl">
-              <span className="text-violet-400 font-bold">
+              <span className="text-blue-400 font-bold">
                 Auto-Mitigation CLI:{' '}
               </span>
               <code className="text-emerald-300">
@@ -1044,7 +1044,7 @@ export default function AutonomousCloudBrain({
                     {activeBlastNode.name} ({activeBlastNode.region})
                   </h5>
                 </div>
-                <span className="px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-500 font-extrabold text-xs">
+                <span className="px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-500 font-extrabold text-xs">
                   Blast Severity: {blastCascade.impactScore}/100
                 </span>
               </div>
@@ -1055,7 +1055,7 @@ export default function AutonomousCloudBrain({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
-                  <div className="text-[10px] font-bold uppercase text-cyan-500">
+                  <div className="text-[10px] font-bold uppercase text-blue-500">
                     ⬆Upstream Traffic & Auth Entrypoints
                   </div>
                   {blastCascade.upstream.map((u) => (
@@ -1068,14 +1068,14 @@ export default function AutonomousCloudBrain({
                   ))}
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-rose-500/[0.06] border border-rose-500/25 space-y-1">
-                  <div className="text-[10px] font-bold uppercase text-rose-500">
+                <div className="p-2.5 rounded-lg bg-red-500/[0.06] border border-red-500/25 space-y-1">
+                  <div className="text-[10px] font-bold uppercase text-red-500">
                     ⬇Downstream Failure Cascade
                   </div>
                   {blastCascade.downstream.map((d) => (
                     <div
                       key={d}
-                      className="text-[11px] text-rose-700 dark:text-rose-200"
+                      className="text-[11px] text-red-700 dark:text-red-200"
                     >
                       • {d}
                     </div>
@@ -1115,7 +1115,7 @@ export default function AutonomousCloudBrain({
       {/* ==================================================================== */}
       {/* MODULE 3: NATURAL-LANGUAGE DREAM STACK ARCHITECTURE COMPILER         */}
       {/* ==================================================================== */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/[0.07] via-cyan-500/[0.05] to-blue-500/[0.07] border border-emerald-500/30 space-y-4">
+      <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
@@ -1194,7 +1194,7 @@ export default function AutonomousCloudBrain({
                 <div>
                   <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
                     {c.name}{' '}
-                    <span className="text-[10px] text-cyan-500">
+                    <span className="text-[10px] text-blue-500">
                       [{c.type}]
                     </span>
                   </div>

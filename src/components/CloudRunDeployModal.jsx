@@ -18,7 +18,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#ffffff] dark:bg-[#0c0c0f] rounded-[12px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-xl p-6 space-y-4">
+      <div className="bg-white dark:bg-[#202124] rounded-[12px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-xl p-6 space-y-4">
         <div className="flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500">
@@ -44,7 +44,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
         </div>
 
         <div className="space-y-3 text-xs">
-          <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-2">
+          <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2">
             <div className="flex items-center justify-between font-semibold text-zinc-900 dark:text-zinc-100">
               <span>1-Command Cloud Run Source Deployment:</span>
               <button
@@ -71,7 +71,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-1">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
               <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Stateless Multi-Account Safety</span>
@@ -81,7 +81,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-1">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
               <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                 <Globe className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Installable Android PWA</span>
@@ -97,7 +97,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
           <button
             type="button"
             onClick={onClose}
-            className="bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-5 py-2 text-xs font-bold transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-5 py-2 text-xs font-bold transition-colors"
           >
             Done
           </button>

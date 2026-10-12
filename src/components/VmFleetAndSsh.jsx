@@ -408,7 +408,7 @@ export default function VmFleetAndSsh({
   return (
     <div className="space-y-4">
       {/* Top Fleet Action Bar */}
-      <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-3.5 shadow-sm">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-3.5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-500">
@@ -438,7 +438,7 @@ export default function VmFleetAndSsh({
               type="button"
               disabled={loadingVms}
               onClick={() => fetchVms(false)}
-              className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-medium transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-medium transition-colors shadow-sm disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -453,7 +453,7 @@ export default function VmFleetAndSsh({
             <button
               type="button"
               onClick={onOpenProvisionVm}
-              className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-4 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-4 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>+ Open Compute VM Studio</span>
@@ -525,13 +525,13 @@ export default function VmFleetAndSsh({
       </div>
 
       {powerError && (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-500">
+        <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-500">
           {powerError}
         </div>
       )}
 
       {filteredVms.length === 0 ? (
-        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 text-center space-y-3 shadow-sm">
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 text-center space-y-3 shadow-sm">
           <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center mx-auto text-zinc-400">
             <Server className="w-6 h-6" />
           </div>
@@ -591,9 +591,9 @@ export default function VmFleetAndSsh({
               return (
                 <div
                   key={vm.id}
-                  className={`relative overflow-hidden bg-white dark:bg-[#0c0c0f] border rounded-xl p-5 shadow-sm transition-all duration-300 ${
+                  className={`relative overflow-hidden bg-white dark:bg-[#202124] border rounded-xl p-5 shadow-sm transition-all duration-300 ${
                     isDeleting
-                      ? 'border-rose-500/40 bg-zinc-100/70 dark:bg-zinc-900/60 opacity-65 grayscale-[60%] select-none'
+                      ? 'border-red-500/40 bg-zinc-100/70 dark:bg-zinc-900/60 opacity-65 grayscale-[60%] select-none'
                       : isTransitional
                       ? 'border-amber-500/40 opacity-85'
                       : isSshActive
@@ -606,7 +606,7 @@ export default function VmFleetAndSsh({
                     <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
                       <div
                         className={`h-full w-1/2 animate-pulse ${
-                          isDeleting ? 'bg-rose-500' : 'bg-amber-500'
+                          isDeleting ? 'bg-red-500' : 'bg-amber-500'
                         }`}
                       />
                     </div>
@@ -617,7 +617,7 @@ export default function VmFleetAndSsh({
                     <div
                       className={`mb-3.5 px-3 py-2 rounded-lg border flex items-center justify-between gap-2 text-xs font-mono ${
                         isDeleting
-                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                          ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
                           : 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
                       }`}
                     >
@@ -641,7 +641,7 @@ export default function VmFleetAndSsh({
                         <span
                           className={`w-2.5 h-2.5 rounded-full ${
                             isDeleting
-                              ? 'bg-rose-500 animate-ping'
+                              ? 'bg-red-500 animate-ping'
                               : isTransitional
                               ? 'bg-amber-500 animate-ping'
                               : isRunning
@@ -661,7 +661,7 @@ export default function VmFleetAndSsh({
                         <span
                           className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                             isDeleting
-                              ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                              ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
                               : isTransitional
                               ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                               : isRunning
@@ -683,14 +683,14 @@ export default function VmFleetAndSsh({
                         )}
 
                         {vm.shieldedVm && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/25 px-1.5 py-0.5 rounded">
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded">
                             <ShieldCheck className="w-3 h-3" />
                             <span>SHIELDED</span>
                           </span>
                         )}
 
                         {vm.guestAccelerators?.length > 0 && (
-                          <span className="text-[10px] font-mono font-bold bg-violet-500/20 text-violet-500 border border-violet-500/30 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-mono font-bold bg-blue-500/20 text-blue-500 border border-blue-500/30 px-1.5 py-0.5 rounded">
                             {vm.guestAccelerators[0].count}x{' '}
                             {vm.guestAccelerators[0].type}
                           </span>
@@ -758,8 +758,8 @@ export default function VmFleetAndSsh({
                         }
                         className={`inline-flex items-center gap-1.5 rounded-[8px] px-3.5 py-1.5 text-xs font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                           isSshActive
-                            ? 'bg-blue-600 hover:bg-rose-600 text-white'
-                            : 'bg-[#059669] hover:bg-[#047857] text-[#000000]'
+                            ? 'bg-blue-600 hover:bg-red-600 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
                         }`}
                       >
                         <Terminal className="w-3.5 h-3.5" />
@@ -775,7 +775,7 @@ export default function VmFleetAndSsh({
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
-                    <div className="bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
+                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
                       <div className="text-[10px] uppercase text-zinc-500">
                         Internal VPC IP ({vm.network || 'default'})
                       </div>
@@ -783,7 +783,7 @@ export default function VmFleetAndSsh({
                         {vm.internalIp}
                       </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
+                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
                       <div className="text-[10px] uppercase text-zinc-500">
                         External NAT IP
                       </div>
@@ -791,7 +791,7 @@ export default function VmFleetAndSsh({
                         {vm.externalIp}
                       </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
+                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
                       <div className="text-[10px] uppercase text-zinc-500">
                         Boot Disk ({vm.diskType || 'pd-balanced'})
                       </div>
@@ -799,7 +799,7 @@ export default function VmFleetAndSsh({
                         {vm.diskSizeGb} GB · {vm.osImage}
                       </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
+                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
                       <div className="text-[10px] uppercase text-zinc-500">
                         CPU Platform & Tags
                       </div>
@@ -873,7 +873,7 @@ export default function VmFleetAndSsh({
 
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {isDeleting ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-rose-500 bg-rose-500/10 border border-rose-500/25 px-3 py-1 rounded-md">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-red-500 bg-red-500/10 border border-red-500/25 px-3 py-1 rounded-md">
                           <RefreshCw className="w-3 h-3 animate-spin" />
                           <span>Terminating & Releasing Disk/IP...</span>
                         </span>
@@ -935,7 +935,7 @@ export default function VmFleetAndSsh({
                                   type="button"
                                   disabled={isBusy}
                                   onClick={() => handlePowerAction(vm, 'SUSPEND')}
-                                  className="inline-flex items-center gap-1 bg-violet-500/10 hover:bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                                  className="inline-flex items-center gap-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
                                 >
                                   <PauseCircle className="w-3 h-3" />
                                   <span>Suspend</span>
@@ -954,8 +954,8 @@ export default function VmFleetAndSsh({
                           )}
 
                           {confirmDeleteVm === vm.name ? (
-                            <div className="inline-flex items-center gap-1 bg-rose-500/10 border border-rose-500/40 rounded-md px-2 py-0.5">
-                              <span className="text-[11px] font-bold text-rose-500">
+                            <div className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/40 rounded-md px-2 py-0.5">
+                              <span className="text-[11px] font-bold text-red-500">
                                 Confirm Delete?
                               </span>
                               <button

@@ -404,19 +404,19 @@ options:
   return (
     <div className="space-y-5">
       {/* Top Hero Banner */}
-      <div className="rounded-[12px] border border-cyan-500/30 bg-gradient-to-r from-cyan-950/60 via-zinc-900 to-indigo-950/50 p-4 sm:p-5 shadow-lg">
+      <div className="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[11px] font-mono">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 GITHUB → GOOGLE CLOUD BUILD (`cloudbuild.googleapis.com`) → ARTIFACT REGISTRY → CLOUD RUN / GKE
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+            <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
               Cloud Build CI/CD, GitHub Repo Builder & Artifact Registry SBOM Studio
             </h2>
-            <p className="text-xs text-zinc-300 max-w-3xl">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-3xl">
               Clone any GitHub repository into Google Cloud Build (`Dockerfile` or Zero-Dockerfile `Google Buildpacks`), push SLSA-3 attested images into `artifactregistry.googleapis.com/v1`, auto-deploy straight to Cloud Run or GKE, and sweep untagged orphan digests in 1 click.
             </p>
           </div>
@@ -428,7 +428,7 @@ options:
               fetchSupplyChain();
             }}
             title="Refresh live Cloud Build jobs and Artifact Registry container digests"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-xs font-bold cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-bold cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
@@ -440,7 +440,7 @@ options:
         </div>
 
         {/* Sub-Tabs */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-zinc-800/80">
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800">
           {[
             {
               id: 'CLOUD_BUILD_GITHUB',
@@ -468,7 +468,7 @@ options:
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold transition-all cursor-pointer border ${
                   active
-                    ? 'bg-cyan-600 text-white border-cyan-400 shadow-md'
+                    ? 'bg-blue-600 text-white border-blue-400 shadow-md'
                     : 'bg-zinc-900/80 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
                 }`}
               >
@@ -476,7 +476,7 @@ options:
                 <span
                   className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
                     active
-                      ? 'bg-black/30 text-cyan-100'
+                      ? 'bg-black/30 text-blue-100'
                       : 'bg-zinc-800 text-zinc-400'
                   }`}
                 >
@@ -495,11 +495,11 @@ options:
         <div className="space-y-4">
           {/* KPI Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
+            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]">
               <div className="text-[11px] font-mono text-zinc-500">
                 Recent Cloud Builds
               </div>
-              <div className="text-2xl font-black text-cyan-500 mt-1">
+              <div className="text-2xl font-black text-blue-500 mt-1">
                 {cbData?.summary?.totalBuilds ?? 0}
               </div>
               <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
@@ -519,11 +519,11 @@ options:
               </div>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-indigo-500/30 bg-indigo-500/5">
-              <div className="text-[11px] font-mono text-indigo-400">
+            <div className="p-3.5 rounded-[10px] border border-blue-500/30 bg-blue-500/5">
+              <div className="text-[11px] font-mono text-blue-400">
                 Artifact Registry Images Ready
               </div>
-              <div className="text-2xl font-black text-indigo-400 mt-1">
+              <div className="text-2xl font-black text-blue-400 mt-1">
                 {arData?.summary?.totalImagesCount ?? 0}
               </div>
               <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
@@ -531,11 +531,11 @@ options:
               </div>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-purple-500/30 bg-purple-500/5">
-              <div className="text-[11px] font-mono text-purple-400">
+            <div className="p-3.5 rounded-[10px] border border-blue-500/30 bg-blue-500/5">
+              <div className="text-[11px] font-mono text-blue-400">
                 Cloud Build Free Tier
               </div>
-              <div className="text-2xl font-black text-purple-400 mt-1">
+              <div className="text-2xl font-black text-blue-400 mt-1">
                 120 min/day
               </div>
               <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
@@ -548,7 +548,7 @@ options:
             {/* Left 7 Cols: GitHub -> Cloud Build -> Artifact Registry -> Cloud Run/GKE Form */}
             <form
               onSubmit={handleTriggerGitHubBuild}
-              className="lg:col-span-7 p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+              className="lg:col-span-7 p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5"
             >
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -557,7 +557,7 @@ options:
                     1-Click GitHub Repo → Cloud Build → Artifact Registry Pipeline
                   </span>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono">
+                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono">
                   SLSA L3 Provenance Lock
                 </span>
               </div>
@@ -592,7 +592,7 @@ options:
                     onClick={() => applyCbBlueprint(bp.id)}
                     className={`p-2 rounded-[8px] border text-left cursor-pointer ${
                       cbBlueprint === bp.id
-                        ? 'bg-cyan-600/15 border-cyan-500 text-zinc-900 dark:text-zinc-100'
+                        ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
                         : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                     }`}
                   >
@@ -783,7 +783,7 @@ options:
                       onClick={() => setDeployTarget(t.id)}
                       className={`p-2.5 rounded-[8px] border text-left cursor-pointer ${
                         deployTarget === t.id
-                          ? 'bg-indigo-600/15 border-indigo-500 text-zinc-900 dark:text-zinc-100'
+                          ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
                           : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
@@ -861,7 +861,7 @@ options:
                 )}
               </div>
 
-              <div className="p-2.5 rounded-[8px] bg-zinc-950 border border-zinc-800 text-[10.5px] font-mono text-cyan-300 flex items-center justify-between gap-2">
+              <div className="p-2.5 rounded-[8px] bg-zinc-950 border border-zinc-800 text-[10.5px] font-mono text-blue-300 flex items-center justify-between gap-2">
                 <span className="truncate">
                   Output Image URI: {targetImageUriPreview}
                 </span>
@@ -879,7 +879,7 @@ options:
               <button
                 type="submit"
                 disabled={triggeringBuild || !gitUrl.trim()}
-                className="w-full py-2.5 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
+                className="w-full py-2.5 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -898,12 +898,12 @@ options:
 
             {/* Right 5 Cols: Live Cloud Build Execution History + cloudbuild.yaml Compiler */}
             <div className="lg:col-span-5 space-y-4">
-              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                     Live Cloud Build Jobs ({cbData?.builds?.length || 0})
                   </div>
-                  <span className="text-[10px] font-mono text-cyan-400">
+                  <span className="text-[10px] font-mono text-blue-400">
                     cloudbuild.googleapis.com/v1
                   </span>
                 </div>
@@ -924,8 +924,8 @@ options:
                               b.status === 'SUCCESS'
                                 ? 'bg-emerald-500/15 text-emerald-400'
                                 : b.status === 'WORKING' || b.status === 'QUEUED'
-                                ? 'bg-cyan-500/20 text-cyan-300 animate-pulse'
-                                : 'bg-rose-500/15 text-rose-400'
+                                ? 'bg-blue-500/20 text-blue-300 animate-pulse'
+                                : 'bg-red-500/15 text-red-400'
                             }`}
                           >
                             {b.status} · {b.durationSeconds}s
@@ -947,7 +947,7 @@ options:
                                 onClick={() =>
                                   handleCopy(b.images[0], 'Built Image URI')
                                 }
-                                className="px-2 py-0.5 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 text-[10px] cursor-pointer"
+                                className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 text-[10px] cursor-pointer"
                               >
                                 Copy Image URI
                               </button>
@@ -976,7 +976,7 @@ options:
               </div>
 
               {/* Generated cloudbuild.yaml */}
-              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-2">
+              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                     <FileCode className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
@@ -987,7 +987,7 @@ options:
                     onClick={() =>
                       handleCopy(cloudBuildYamlPreview, 'cloudbuild.yaml')
                     }
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-cyan-300 text-[10px] font-mono cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-blue-300 text-[10px] font-mono cursor-pointer"
                   >
                     {copiedText === cloudBuildYamlPreview ? (
                       <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
@@ -1016,7 +1016,7 @@ options:
             <div className="space-y-4">
               <form
                 onSubmit={handleCreateArRepo}
-                className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+                className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -1025,7 +1025,7 @@ options:
                       Provision Artifact Registry (`artifactregistry.googleapis.com`)
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30">
                     Tag-Mutation Lock
                   </span>
                 </div>
@@ -1059,7 +1059,7 @@ options:
                       onClick={() => applyArBlueprint(bp.id)}
                       className={`p-2.5 rounded-[8px] border text-left cursor-pointer ${
                         arBlueprint === bp.id
-                          ? 'bg-cyan-600/15 border-cyan-500 text-zinc-900 dark:text-zinc-100'
+                          ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
                           : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                       }`}
                     >
@@ -1135,7 +1135,7 @@ options:
                 <button
                   type="submit"
                   disabled={creatingRepo || !repoId.trim()}
-                  className="w-full py-2 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                  className="w-full py-2 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                 >
                   {creatingRepo
                     ? 'Provisioning Artifact Registry...'
@@ -1144,7 +1144,7 @@ options:
               </form>
 
               {/* Live Repositories List with 1-Click Delete */}
-              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-2.5">
+              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
                     Live Artifact Registry Repositories (
@@ -1165,7 +1165,7 @@ options:
                         <div className="min-w-0">
                           <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap">
                             <span>{repo.shortName}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400">
                               {repo.location}
                             </span>
                             <span
@@ -1194,7 +1194,7 @@ options:
                                 type="button"
                                 disabled={deletingRepoName === repo.name}
                                 onClick={() => handleDeleteRepository(repo)}
-                                className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold cursor-pointer"
+                                className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
                               >
                                 {deletingRepoName === repo.name
                                   ? 'Deleting...'
@@ -1214,7 +1214,7 @@ options:
                               disabled={deletingRepoName === repo.name}
                               onClick={() => setConfirmRepoName(repo.name)}
                               title={`Delete repository ${repo.shortName} (${repo.location})`}
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-[10px] font-bold cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
                             >
                               <Trash2 className="w-3 h-3" />
                               <span>Delete Repo</span>
@@ -1233,7 +1233,7 @@ options:
             </div>
 
             {/* Right: Live Container Digests & 1-Click Orphan Sweeper */}
-            <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+            <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1255,7 +1255,7 @@ options:
                           type="button"
                           disabled={sweepingOrphans}
                           onClick={handleSweepAllOrphans}
-                          className="px-2.5 py-1.5 rounded-[8px] bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-[8px] bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold cursor-pointer"
                         >
                           {sweepingOrphans
                             ? 'Sweeping Orphans...'
@@ -1325,7 +1325,7 @@ options:
                             handleCopy(taggedUri, 'Artifact Registry Image URI')
                           }
                           title="Copy full Artifact Registry Image URI for Cloud Run or GKE"
-                          className="px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold cursor-pointer"
+                          className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
                         >
                           Copy URI
                         </button>
@@ -1336,7 +1336,7 @@ options:
                               type="button"
                               disabled={isDeletingThis}
                               onClick={() => handleDeleteDigest(img)}
-                              className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold cursor-pointer"
+                              className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
                             >
                               {isDeletingThis ? 'Deleting...' : 'Confirm Delete'}
                             </button>
@@ -1362,7 +1362,7 @@ options:
                               className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
                                 img.isOrphan
                                   ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
-                                  : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30'
+                                  : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
                               }`}
                             >
                               <Trash2 className="w-3 h-3" />

@@ -6,6 +6,13 @@
   body {
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    background-color: #f8f9fa;
+    color: #202124;
+  }
+
+  .dark body {
+    background-color: #131314;
+    color: #e8eaed;
   }
 
   code, pre, .font-mono {
@@ -13,27 +20,34 @@
   }
 }
 
-/* Mouse-friendly 14px scrollbars with large easy-to-grab handle */
+/* Google Cloud Console Light & Dark Mode Scrollbars */
 ::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(39, 39, 42, 0.45);
-  border-radius: 9999px;
+  background: #f1f3f4;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #202124;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.65);
+  background: #bdc1c6;
   border-radius: 9999px;
-  border: 2px solid rgba(24, 24, 27, 0.35);
-  min-width: 64px;
+  border: 2px solid #f1f3f4;
+  min-width: 48px;
   min-height: 48px;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: #5f6368;
+  border: 2px solid #202124;
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.9);
+  background: #1a73e8;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #8ab4f8;
 }
 ::-webkit-scrollbar-thumb:active {
-  background: rgba(37, 99, 235, 1);
+  background: #185abc;
 }
-
-

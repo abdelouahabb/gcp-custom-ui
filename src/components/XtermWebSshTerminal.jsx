@@ -151,16 +151,16 @@ export default function XtermWebSshTerminal({
         green: '#10b981',
         yellow: '#f59e0b',
         blue: '#3b82f6',
-        magenta: '#a855f7',
-        cyan: '#06b6d4',
+        magenta: '#4285f4',
+        cyan: '#1a73e8',
         white: '#f4f4f5',
         brightBlack: '#52525b',
         brightRed: '#fb7185',
         brightGreen: '#34d399',
         brightYellow: '#fbbf24',
         brightBlue: '#60a5fa',
-        brightMagenta: '#c084fc',
-        brightCyan: '#22d3ee',
+        brightMagenta: '#8ab4f8',
+        brightCyan: '#669df6',
         brightWhite: '#ffffff',
       },
     });
@@ -374,12 +374,12 @@ export default function XtermWebSshTerminal({
   const macrosToRender = isCloudRun ? CLOUD_RUN_PTY_MACROS : VM_PTY_MACROS;
 
   return (
-    <div className="bg-[#09090b] border border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-full">
+    <div className="bg-[#131314] border border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-full">
       {/* Top Terminal Window Bar */}
       <div className="bg-zinc-900/95 border-b border-zinc-800 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex items-center gap-1.5 mr-1 shrink-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
           </div>
@@ -462,7 +462,7 @@ export default function XtermWebSshTerminal({
                     }
                     onDisconnect();
                   }}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 transition-colors cursor-pointer"
                   title="Disconnect and turn off the active SSH session"
                 >
                   <PowerOff className="w-3 h-3" />
@@ -714,7 +714,7 @@ export default function XtermWebSshTerminal({
           </h4>
           <p className="text-xs font-mono text-zinc-400 max-w-md leading-relaxed mb-4">
             No automatic SSH connection is opened when you visit this tab. Click the green{' '}
-            <span className="px-1.5 py-0.5 rounded bg-[#059669] text-black font-bold">
+            <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold">
               SSH / Console
             </span>{' '}
             button on any VM card on the left to enable **`SSH Active`** and launch the live **`@xterm/xterm` + `ssh2`** interactive terminal.

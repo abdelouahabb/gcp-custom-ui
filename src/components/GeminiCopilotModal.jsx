@@ -160,9 +160,9 @@ export default function GeminiCopilotModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="w-full max-w-4xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+      <div className="w-full max-w-4xl bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-violet-500/10">
+        <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-500/[0.06]">
           <div className="flex items-center gap-3">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center border font-mono font-extrabold text-sm ${
@@ -170,7 +170,7 @@ export default function GeminiCopilotModal({
                   ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-500'
                   : healthScore >= 65
                   ? 'bg-amber-500/20 border-amber-500/40 text-amber-500'
-                  : 'bg-rose-500/20 border-rose-500/40 text-rose-500'
+                  : 'bg-red-500/20 border-red-500/40 text-red-500'
               }`}
             >
               {healthScore}
@@ -180,7 +180,7 @@ export default function GeminiCopilotModal({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 font-mono">
                   1-Tap Project Health, Drift & FinOps Scanner
                 </h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                   {projectId}
                 </span>
                 <span
@@ -261,7 +261,7 @@ export default function GeminiCopilotModal({
               <div
                 className={`text-base font-extrabold mt-0.5 ${
                   totalAnnualWasteUsd > 0
-                    ? 'text-rose-600 dark:text-rose-400'
+                    ? 'text-red-600 dark:text-red-400'
                     : 'text-emerald-600 dark:text-emerald-400'
                 }`}
               >
@@ -298,7 +298,7 @@ export default function GeminiCopilotModal({
                 className={`text-base font-extrabold mt-0.5 ${
                   priceDriftCount > 0
                     ? 'text-amber-500'
-                    : 'text-cyan-600 dark:text-cyan-400'
+                    : 'text-blue-600 dark:text-blue-400'
                 }`}
               >
                 {priceDriftCount} Drift{priceDriftCount === 1 ? '' : 's'}
@@ -311,7 +311,7 @@ export default function GeminiCopilotModal({
 
           {/* Section 1: Live GCP Billing Catalog & Variable Rate Sync */}
           <div className="space-y-1.5">
-            <div className="text-xs font-mono font-extrabold uppercase text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+            <div className="text-xs font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
               <DollarSign className="w-3.5 h-3.5" />
               <span>
                 1. Live GCP Billing Catalog, GPU SKU Availability & Variable Rate
@@ -341,7 +341,7 @@ export default function GeminiCopilotModal({
                     onSelectTab('VPC_NETWORKS');
                     onClose();
                   }}
-                  className="text-[11px] font-mono font-bold text-cyan-500 hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-mono font-bold text-blue-500 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <span>Open Firewall Studio</span>
                   <ArrowRight className="w-3 h-3" />
@@ -405,7 +405,7 @@ export default function GeminiCopilotModal({
           {/* Section 3: Zombie Resources & Silent Waste Exterminator */}
           <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-mono font-extrabold uppercase text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+              <div className="text-xs font-mono font-extrabold uppercase text-red-600 dark:text-red-400 flex items-center gap-1.5">
                 <Trash2 className="w-4 h-4" />
                 <span>
                   3. Zombie Resource & Idle Burn Scanner ({zombies.length} Found)
@@ -418,7 +418,7 @@ export default function GeminiCopilotModal({
                     onSelectTab('INNOVATION_LAB');
                     onClose();
                   }}
-                  className="text-[11px] font-mono font-bold text-violet-500 hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-mono font-bold text-blue-500 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <span>Open Pre-Crime & 2026 Lab</span>
                   <ArrowRight className="w-3 h-3" />
@@ -439,12 +439,12 @@ export default function GeminiCopilotModal({
                 {zombies.map((z) => (
                   <div
                     key={z.id}
-                    className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-rose-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+                    className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-red-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
                   >
                     <div>
                       <div className="font-bold text-zinc-900 dark:text-zinc-100">
                         {z.name}{' '}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-500">
                           {z.kind} · {z.location}
                         </span>
                       </div>
@@ -452,14 +452,14 @@ export default function GeminiCopilotModal({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold text-rose-500">
+                      <span className="text-xs font-extrabold text-red-500">
                         -${Number(z.annualCostUsd || 0).toFixed(2)}/yr
                       </span>
                       <button
                         type="button"
                         disabled={busyActionId === `z-${z.id}`}
                         onClick={() => handleExterminateZombie(z)}
-                        className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[11px] flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-extrabold text-[11px] flex items-center gap-1 cursor-pointer disabled:opacity-50"
                       >
                         <Zap className="w-3 h-3" />
                         <span>

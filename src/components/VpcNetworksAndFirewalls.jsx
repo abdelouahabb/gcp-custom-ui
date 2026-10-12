@@ -950,10 +950,10 @@ export default function VpcNetworksAndFirewalls({
   return (
     <div className="space-y-5">
       {/* 1. Top Enterprise VPC & Firewall Security Command Center Header */}
-      <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-4 shadow-sm">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-rose-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-500">
+            <div className="w-10 h-10 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 flex items-center justify-center text-blue-500">
               <Shield className="w-5 h-5" />
             </div>
             <div>
@@ -979,7 +979,7 @@ export default function VpcNetworksAndFirewalls({
               type="button"
               disabled={loading}
               onClick={onRefresh}
-              className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#18181b] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
@@ -996,8 +996,8 @@ export default function VpcNetworksAndFirewalls({
               }
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-mono font-bold border transition-colors cursor-pointer ${
                 activeSubPanel === 'SIMULATOR'
-                  ? 'bg-violet-600 text-white border-violet-500'
-                  : 'bg-violet-500/10 hover:bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/30'
+                  ? 'bg-blue-600 text-white border-blue-500'
+                  : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/30'
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
@@ -1035,11 +1035,11 @@ export default function VpcNetworksAndFirewalls({
             </div>
           </div>
 
-          <div className="p-2.5 rounded-lg bg-rose-500/[0.07] border border-rose-500/25">
-            <div className="text-[10px] font-mono uppercase text-rose-600 dark:text-rose-400">
+          <div className="p-2.5 rounded-lg bg-red-500/[0.07] border border-red-500/25">
+            <div className="text-[10px] font-mono uppercase text-red-600 dark:text-red-400">
               ✕ DENY Rules
             </div>
-            <div className="text-lg font-extrabold font-mono text-rose-600 dark:text-rose-400">
+            <div className="text-lg font-extrabold font-mono text-red-600 dark:text-red-400">
               {stats.denyCount}
             </div>
           </div>
@@ -1053,11 +1053,11 @@ export default function VpcNetworksAndFirewalls({
             </div>
           </div>
 
-          <div className="p-2.5 rounded-lg bg-violet-500/[0.07] border border-violet-500/25">
-            <div className="text-[10px] font-mono uppercase text-violet-600 dark:text-violet-400">
+          <div className="p-2.5 rounded-lg bg-blue-500/[0.07] border border-blue-500/25">
+            <div className="text-[10px] font-mono uppercase text-blue-600 dark:text-blue-400">
               ↗ EGRESS (Outbound)
             </div>
-            <div className="text-lg font-extrabold font-mono text-violet-600 dark:text-violet-400">
+            <div className="text-lg font-extrabold font-mono text-blue-600 dark:text-blue-400">
               {stats.egressCount}
             </div>
           </div>
@@ -1148,7 +1148,7 @@ export default function VpcNetworksAndFirewalls({
                   <span
                     className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
                       tpl.config.action === 'DENY'
-                        ? 'bg-rose-500/20 text-rose-500'
+                        ? 'bg-red-500/20 text-red-500'
                         : 'bg-emerald-500/20 text-emerald-500'
                     }`}
                   >
@@ -1166,7 +1166,7 @@ export default function VpcNetworksAndFirewalls({
 
       {/* 2. Interactive Firewall Rule Studio Drawer (Create OR Edit Live Rule) */}
       {activeSubPanel === 'STUDIO' && (
-        <div className="bg-white dark:bg-[#0c0c0f] border-2 border-blue-500/50 rounded-2xl p-5 shadow-xl space-y-4">
+        <div className="bg-white dark:bg-[#202124] border-2 border-blue-500/50 rounded-2xl p-5 shadow-xl space-y-4">
           <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <div className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -1280,7 +1280,7 @@ export default function VpcNetworksAndFirewalls({
                     onClick={() => setRuleEnableLogging(!ruleEnableLogging)}
                     className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold cursor-pointer ${
                       ruleEnableLogging
-                        ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-600 dark:text-cyan-400'
+                        ? 'bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-400'
                         : 'border-zinc-300 dark:border-zinc-700 text-zinc-500'
                     }`}
                   >
@@ -1314,7 +1314,7 @@ export default function VpcNetworksAndFirewalls({
                     onClick={() => setRuleAction('DENY')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       ruleAction === 'DENY'
-                        ? 'bg-rose-500/15 border-2 border-rose-500 text-rose-600 dark:text-rose-300 shadow-sm'
+                        ? 'bg-red-500/15 border-2 border-red-500 text-red-600 dark:text-red-300 shadow-sm'
                         : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
                     }`}
                   >
@@ -1348,7 +1348,7 @@ export default function VpcNetworksAndFirewalls({
                     onClick={() => setRuleDirection('EGRESS')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 ${
                       ruleDirection === 'EGRESS'
-                        ? 'bg-violet-500/15 border-2 border-violet-500 text-violet-600 dark:text-violet-300 shadow-sm'
+                        ? 'bg-blue-500/15 border-2 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
                         : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
                     }`}
                   >
@@ -1442,7 +1442,7 @@ export default function VpcNetworksAndFirewalls({
                               prev.filter((_, i) => i !== idx)
                             )
                           }
-                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                          className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1545,7 +1545,7 @@ export default function VpcNetworksAndFirewalls({
                 disabled={submittingStudio}
                 className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-mono font-extrabold text-white shadow-sm cursor-pointer disabled:opacity-50 ${
                   ruleAction === 'DENY'
-                    ? 'bg-rose-600 hover:bg-rose-700'
+                    ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
@@ -1569,10 +1569,10 @@ export default function VpcNetworksAndFirewalls({
 
       {/* 3. Interactive Packet Flow & Firewall Rule Match Simulator ("Packet Tester") */}
       {activeSubPanel === 'SIMULATOR' && (
-        <div className="bg-white dark:bg-[#0c0c0f] border-2 border-violet-500/40 rounded-2xl p-5 shadow-lg space-y-4">
+        <div className="bg-white dark:bg-[#202124] border-2 border-blue-500/40 rounded-2xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-sm font-extrabold font-mono text-violet-600 dark:text-violet-400 flex items-center gap-2">
+              <div className="text-sm font-extrabold font-mono text-blue-600 dark:text-blue-400 flex items-center gap-2">
                 <Activity className="w-4 h-4" />
                 <span>
                   Interactive Packet Flow & Firewall Priority Match Simulator
@@ -1688,7 +1688,7 @@ export default function VpcNetworksAndFirewalls({
             className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
               simulationResult.verdict === 'ALLOW'
                 ? 'bg-emerald-500/10 border-emerald-500/40'
-                : 'bg-rose-500/10 border-rose-500/40'
+                : 'bg-red-500/10 border-red-500/40'
             }`}
           >
             <div className="flex items-center gap-3">
@@ -1696,7 +1696,7 @@ export default function VpcNetworksAndFirewalls({
                 className={`px-3 py-1 rounded-lg text-xs font-mono font-extrabold ${
                   simulationResult.verdict === 'ALLOW'
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-rose-600 text-white'
+                    : 'bg-red-600 text-white'
                 }`}
               >
                 {simulationResult.verdict === 'ALLOW'
@@ -1751,7 +1751,7 @@ export default function VpcNetworksAndFirewalls({
           </div>
 
           {vpcs.length === 0 ? (
-            <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 text-center space-y-2">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 text-center space-y-2">
               <Network className="w-6 h-6 text-zinc-400 mx-auto" />
               <div className="text-sm font-bold">
                 No VPC Networks Found in{' '}
@@ -1773,7 +1773,7 @@ export default function VpcNetworksAndFirewalls({
               return (
                 <div
                   key={vpc.id}
-                  className={`bg-white dark:bg-[#0c0c0f] border rounded-xl p-4 shadow-sm transition-all space-y-3 ${
+                  className={`bg-white dark:bg-[#202124] border rounded-xl p-4 shadow-sm transition-all space-y-3 ${
                     isSelectedFilter
                       ? 'border-blue-500 ring-1 ring-blue-500/30'
                       : 'border-zinc-200 dark:border-zinc-800'
@@ -1786,7 +1786,7 @@ export default function VpcNetworksAndFirewalls({
                         <span className="text-sm font-bold font-mono text-zinc-950 dark:text-zinc-50">
                           {vpc.name}
                         </span>
-                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                           {vpc.autoCreateSubnetworks
                             ? 'AUTO SUBNETS'
                             : 'CUSTOM SUBNETS'}
@@ -1814,13 +1814,13 @@ export default function VpcNetworksAndFirewalls({
 
                     <div>
                       {confirmDeleteKey === delKey ? (
-                        <div className="inline-flex items-center gap-1 bg-rose-500/10 border border-rose-500/30 rounded-md px-2 py-1">
+                        <div className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-md px-2 py-1">
                           <button
                             type="button"
                             onClick={() =>
                               handleConfirmDelete('VPC Network', vpc.name)
                             }
-                            className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer"
+                            className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer"
                           >
                             Confirm
                           </button>
@@ -1836,7 +1836,7 @@ export default function VpcNetworksAndFirewalls({
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteKey(delKey)}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 px-2 py-1 rounded-md transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2 py-1 rounded-md transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Delete</span>
@@ -1847,14 +1847,14 @@ export default function VpcNetworksAndFirewalls({
 
                   {tracker && (
                     <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1">
-                      <div className="flex justify-between text-[10px] font-mono text-cyan-400">
+                      <div className="flex justify-between text-[10px] font-mono text-blue-400">
                         <span>{tracker.stepLabel}</span>
                         <span>{tracker.progress}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
                         <div
                           style={{ width: `${tracker.progress}%` }}
-                          className="h-full bg-cyan-500 transition-all duration-300"
+                          className="h-full bg-blue-500 transition-all duration-300"
                         />
                       </div>
                     </div>
@@ -1894,7 +1894,7 @@ export default function VpcNetworksAndFirewalls({
         {/* Right Column: Full-Fledged Firewall Policy Matrix (ALLOW & DENY, INGRESS & EGRESS) */}
         <div className="xl:col-span-8 space-y-3">
           {/* Firewall Filter & Search Toolbar */}
-          <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: 'ALL', label: `All (${enrichedFirewalls.length})` },
@@ -1937,7 +1937,7 @@ export default function VpcNetworksAndFirewalls({
 
           {/* Firewall Rules List */}
           {filteredFirewalls.length === 0 ? (
-            <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 text-center space-y-2">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-8 text-center space-y-2">
               <Shield className="w-7 h-7 text-zinc-400 mx-auto" />
               <div className="text-sm font-bold">
                 No Matching Firewall Rules Found
@@ -1970,11 +1970,11 @@ export default function VpcNetworksAndFirewalls({
                 return (
                   <div
                     key={fw.id || fw.name}
-                    className={`bg-white dark:bg-[#0c0c0f] border rounded-xl p-4 shadow-sm transition-all space-y-3 ${
+                    className={`bg-white dark:bg-[#202124] border rounded-xl p-4 shadow-sm transition-all space-y-3 ${
                       fw.disabled
                         ? 'border-zinc-200 dark:border-zinc-800 opacity-65'
                         : isDeny
-                        ? 'border-rose-500/35 hover:border-rose-500/60'
+                        ? 'border-red-500/35 hover:border-red-500/60'
                         : fw.risk.level === 'CRITICAL' ||
                           fw.risk.level === 'HIGH'
                         ? 'border-amber-500/45 hover:border-amber-500/70'
@@ -1989,7 +1989,7 @@ export default function VpcNetworksAndFirewalls({
                           <span
                             className={`inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
                               isDeny
-                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                                ? 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30'
                                 : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                             }`}
                           >
@@ -2005,7 +2005,7 @@ export default function VpcNetworksAndFirewalls({
                           <span
                             className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                               isEgress
-                                ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400'
+                                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
                                 : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
                             }`}
                           >
@@ -2034,7 +2034,7 @@ export default function VpcNetworksAndFirewalls({
                           </span>
 
                           {/* VPC Network Pill */}
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                             vpc:{fw.network}
                           </span>
 
@@ -2068,7 +2068,7 @@ export default function VpcNetworksAndFirewalls({
                                 key={idx}
                                 className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${
                                   isDeny
-                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-300'
+                                    ? 'bg-red-500/10 text-red-600 dark:text-red-300'
                                     : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                                 }`}
                               >
@@ -2148,13 +2148,13 @@ export default function VpcNetworksAndFirewalls({
                         </button>
 
                         {confirmDeleteKey === delKey ? (
-                          <div className="inline-flex items-center gap-1 bg-rose-500/10 border border-rose-500/30 rounded-md px-2 py-0.5">
+                          <div className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-md px-2 py-0.5">
                             <button
                               type="button"
                               onClick={() =>
                                 handleConfirmDelete('VPC Firewall Rule', fw.name)
                               }
-                              className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer"
+                              className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer"
                             >
                               Confirm Delete
                             </button>
@@ -2171,7 +2171,7 @@ export default function VpcNetworksAndFirewalls({
                             type="button"
                             disabled={Boolean(tracker)}
                             onClick={() => setConfirmDeleteKey(delKey)}
-                            className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 px-2.5 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2.5 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>Delete</span>
@@ -2188,7 +2188,7 @@ export default function VpcNetworksAndFirewalls({
                             className={`font-bold ${
                               tracker.status === 'DONE'
                                 ? 'text-emerald-400'
-                                : 'text-cyan-400'
+                                : 'text-blue-400'
                             }`}
                           >
                             {tracker.status === 'DONE'
@@ -2205,7 +2205,7 @@ export default function VpcNetworksAndFirewalls({
                             className={`h-full transition-all duration-300 rounded-full ${
                               tracker.status === 'DONE'
                                 ? 'bg-emerald-500'
-                                : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 animate-pulse'
+                                : 'bg-blue-600 animate-pulse'
                             }`}
                           />
                         </div>
@@ -2230,7 +2230,7 @@ export default function VpcNetworksAndFirewalls({
                   <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                     ✓ default-allow-egress (EGRESS · 0.0.0.0/0 · all · 65535)
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                  <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400">
                     ✕ default-deny-ingress (INGRESS · 0.0.0.0/0 · all · 65535)
                   </span>
                 </div>

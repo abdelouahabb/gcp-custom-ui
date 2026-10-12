@@ -189,22 +189,22 @@ export default function Lab2026QuantumNexus({
   return (
     <div className="space-y-5">
       {/* Top 5 Quantum Breakthroughs Selector Bar */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-950/90 via-indigo-950/90 to-zinc-950 border border-violet-500/40 text-white shadow-md space-y-3">
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 via-fuchsia-500 to-violet-600 flex items-center justify-center text-zinc-950 font-black shadow-sm">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black shadow-sm">
+              <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="text-sm sm:text-base font-extrabold tracking-tight text-white">
+                <h4 className="text-sm sm:text-base font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
                   2026 Quantum Nexus — Beyond-Console Autonomous Engine
                 </h4>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                   5 WORLD-FIRST CAPABILITIES LIVE
                 </span>
               </div>
-              <p className="text-xs text-zinc-300">
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
                 Unified Causal Blast-Radius Simulator, Immutable Project State Time-Machine, Autonomous FinOps Arbitrage, Shadow-Traffic PR Previews &amp; Active Honey-Token Deception.
               </p>
             </div>
@@ -214,7 +214,7 @@ export default function Lab2026QuantumNexus({
             type="button"
             onClick={fetchNexusData}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-bold border border-white/15 cursor-pointer transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 text-xs font-mono font-bold border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Sync Live State</span>
@@ -232,12 +232,12 @@ export default function Lab2026QuantumNexus({
                 onClick={() => setActiveMode(m.id)}
                 className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                   active
-                    ? 'bg-gradient-to-br from-violet-600/40 to-amber-500/20 border-amber-400/70 text-white shadow-sm'
-                    : 'bg-zinc-900/70 border-zinc-800 text-zinc-300 hover:border-violet-500/50 hover:text-white'
+                    ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-900 dark:text-blue-100 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-400 dark:hover:border-blue-500/50'
                 }`}
               >
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-500/25 text-violet-200 font-bold">
+                  <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">
                     {m.badge}
                   </span>
                   <Icon className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
@@ -279,7 +279,7 @@ export default function Lab2026QuantumNexus({
                   onClick={() => setSimulationType(sim.id)}
                   className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer transition-all ${
                     simulationType === sim.id
-                      ? 'bg-rose-600 text-white border-rose-500'
+                      ? 'bg-red-600 text-white border-red-500'
                       : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
                   }`}
                 >
@@ -301,7 +301,7 @@ export default function Lab2026QuantumNexus({
                   onClick={() => setSelectedNodeId(node.id)}
                   className={`text-left p-4 rounded-xl border-2 transition-all cursor-pointer space-y-2 ${
                     isSelected
-                      ? 'border-rose-500 bg-rose-500/10 shadow-md'
+                      ? 'border-red-500 bg-red-500/10 shadow-md'
                       : isAffected
                       ? 'border-amber-500/60 bg-amber-500/5'
                       : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 opacity-75 hover:opacity-100'
@@ -314,7 +314,7 @@ export default function Lab2026QuantumNexus({
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                         isSelected
-                          ? 'bg-rose-600 text-white'
+                          ? 'bg-red-600 text-white'
                           : isAffected
                           ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
                           : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
@@ -336,7 +336,7 @@ export default function Lab2026QuantumNexus({
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-zinc-200/70 dark:border-zinc-800 text-[11px] font-mono">
-                    <span className="text-rose-500 font-bold">
+                    <span className="text-red-500 font-bold">
                       Blast Risk: {node.riskScore}/100
                     </span>
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">
@@ -353,7 +353,7 @@ export default function Lab2026QuantumNexus({
             <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-rose-500 font-bold">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-red-500 font-bold">
                     Live Causal Propagation Analysis ({simulationType})
                   </span>
                   <h5 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-100">
@@ -361,7 +361,7 @@ export default function Lab2026QuantumNexus({
                     {causalImpact.affectedIds.size} of {nodes.length} Project Domains
                   </h5>
                 </div>
-                <span className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-mono font-bold">
+                <span className="px-2.5 py-1 rounded-lg bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold">
                   {simulationType === 'COMPROMISE_CREDENTIAL'
                     ? 'Exfiltration Blast Score: CRITICAL'
                     : simulationType === 'OUTAGE_PROPAGATION'
@@ -377,8 +377,8 @@ export default function Lab2026QuantumNexus({
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                <div className="p-3 rounded-lg bg-rose-500/5 border border-rose-500/20 space-y-1.5">
-                  <div className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20 space-y-1.5">
+                  <div className="text-xs font-bold text-red-600 dark:text-red-400">
                     Downstream Causal Edges ({causalImpact.directDownstream.length})
                   </div>
                   {causalImpact.directDownstream.length === 0 ? (
@@ -401,7 +401,7 @@ export default function Lab2026QuantumNexus({
                               {edge.relation}
                             </div>
                           </div>
-                          <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 font-mono text-[10px] font-bold shrink-0">
+                          <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-500 font-mono text-[10px] font-bold shrink-0">
                             {edge.impactType}
                           </span>
                         </div>
@@ -641,7 +641,7 @@ export default function Lab2026QuantumNexus({
               >
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-300 font-mono text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-bold">
                       {idx === 0 ? 'LATEST HEAD' : `CHECKPOINT #${snapshots.length - idx}`}
                     </span>
                     <span className="text-xs font-extrabold text-zinc-950 dark:text-zinc-100">
@@ -907,7 +907,7 @@ export default function Lab2026QuantumNexus({
                   ttlHours,
                 })
               }
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Spawn PR Shadow Stack</span>
@@ -923,7 +923,7 @@ export default function Lab2026QuantumNexus({
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 font-mono text-[10px] font-extrabold">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-extrabold">
                       {env.prNumber} · {env.branch}
                     </span>
                     <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-bold">
@@ -952,7 +952,7 @@ export default function Lab2026QuantumNexus({
                       envId: env.id,
                     })
                   }
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-mono font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Destroy Now ($0)</span>
@@ -985,7 +985,7 @@ export default function Lab2026QuantumNexus({
               type="button"
               disabled={busyAction === 'TRIGGER_HONEY_TRIPWIRE_TEST'}
               onClick={() => executeNexusAction('TRIGGER_HONEY_TRIPWIRE_TEST')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer"
             >
               <Zap className="w-3.5 h-3.5" />
               <span>Run Live Tripwire Breach Drill</span>
@@ -1036,7 +1036,7 @@ export default function Lab2026QuantumNexus({
                 });
                 setNewHoneyName('');
               }}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Plant Armed Honey-Token</span>
@@ -1052,7 +1052,7 @@ export default function Lab2026QuantumNexus({
                   key={t.id}
                   className={`p-4 rounded-xl border-2 space-y-2 ${
                     tripped
-                      ? 'border-rose-500 bg-rose-500/10'
+                      ? 'border-red-500 bg-red-500/10'
                       : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
                   }`}
                 >
@@ -1063,7 +1063,7 @@ export default function Lab2026QuantumNexus({
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                         tripped
-                          ? 'bg-rose-600 text-white'
+                          ? 'bg-red-600 text-white'
                           : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                       }`}
                     >
@@ -1075,7 +1075,7 @@ export default function Lab2026QuantumNexus({
                   </div>
                   <div className="text-[11px] text-zinc-500">{t.location}</div>
                   {t.lastHitIp && (
-                    <div className="p-2 rounded bg-rose-500/15 border border-rose-500/30 text-[11px] font-mono text-rose-600 dark:text-rose-300">
+                    <div className="p-2 rounded bg-red-500/15 border border-red-500/30 text-[11px] font-mono text-red-600 dark:text-red-300">
                       Blocked Attacker IP: <b>{t.lastHitIp}</b> ({t.hitsCount} hit)
                     </div>
                   )}
@@ -1086,16 +1086,16 @@ export default function Lab2026QuantumNexus({
 
           {/* Deception Tripwire Incident Log */}
           {(data?.honeyGrid?.events || []).length > 0 && (
-            <div className="p-4 rounded-xl bg-rose-950/30 border border-rose-500/40 space-y-2">
-              <div className="text-xs font-extrabold text-rose-400">
+            <div className="p-4 rounded-xl bg-red-950/30 border border-red-500/40 space-y-2">
+              <div className="text-xs font-extrabold text-red-400">
                 Automated Breach Deception &amp; Quarantine Execution Log
               </div>
               {data.honeyGrid.events.map((ev) => (
                 <div
                   key={ev.id}
-                  className="p-3 rounded-lg bg-zinc-950 border border-rose-500/30 text-xs font-mono text-zinc-200 space-y-1"
+                  className="p-3 rounded-lg bg-zinc-950 border border-red-500/30 text-xs font-mono text-zinc-200 space-y-1"
                 >
-                  <div className="flex items-center justify-between text-rose-400 font-bold">
+                  <div className="flex items-center justify-between text-red-400 font-bold">
                     <span>
                       Tripwire Hit: {ev.tokenName} (Attacker IP: {ev.attackerIp})
                     </span>

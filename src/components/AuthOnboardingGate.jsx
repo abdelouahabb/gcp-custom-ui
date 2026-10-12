@@ -284,12 +284,12 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-950 dark:text-zinc-50 flex flex-col justify-center items-center p-4 sm:p-6">
-      <div className="w-full max-w-2xl bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#131314] text-zinc-950 dark:text-zinc-50 flex flex-col justify-center items-center p-4 sm:p-6">
+      <div className="w-full max-w-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
         {/* Brand Header */}
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600/20 via-emerald-500/20 to-amber-500/20 border border-blue-500/30 flex items-center justify-center shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 flex items-center justify-center shadow-sm">
               <Cloud className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
             </div>
             <div>
@@ -312,7 +312,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
         {!connectedSession ? (
           <>
             {/* Auth Method Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-100 dark:bg-[#09090b] p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-100 dark:bg-[#131314] p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
               <button
                 type="button"
                 onClick={() => {
@@ -381,7 +381,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
             {/* Tab 1: Connect with Gmail / Google Sign-In (Mobile & Desktop Ready!) */}
             {authTab === 'GMAIL_OAUTH' && (
               <div className="space-y-4">
-                <div className="p-5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-4">
+                <div className="p-5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -443,12 +443,12 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                         value={authCodeInput}
                         onChange={(e) => setAuthCodeInput(e.target.value)}
                         placeholder="Paste Google Auth Code (e.g. 4/0AeanS0...)"
-                        className="flex-1 bg-[#ffffff] dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2.5 text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-zinc-950 dark:text-zinc-100"
+                        className="flex-1 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2.5 text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-zinc-950 dark:text-zinc-100"
                       />
                       <button
                         type="submit"
                         disabled={loading || !authCodeInput.trim()}
-                        className="bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-5 py-2.5 text-xs font-bold transition-colors shadow-sm disabled:opacity-50 whitespace-nowrap"
+                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-5 py-2.5 text-xs font-bold transition-colors shadow-sm disabled:opacity-50 whitespace-nowrap"
                       >
                         {loading ? 'Connecting Gmail...' : 'Verify & Sign In'}
                       </button>
@@ -473,7 +473,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                     </button>
 
                     {showCustomClientId && (
-                      <div className="mt-2.5 space-y-2 p-3 rounded-lg bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800">
+                      <div className="mt-2.5 space-y-2 p-3 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
                         <div className="text-[11px] text-zinc-500">
                           If you add <code className="font-mono">{window.location.origin}</code> to your Google Cloud OAuth 2.0 Web Client ID Authorized Origins, you get instant redirect sign-in without copying a code:
                         </div>
@@ -483,7 +483,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                             value={customOAuthClientId}
                             onChange={(e) => setCustomOAuthClientId(e.target.value)}
                             placeholder="123456789-abcdef.apps.googleusercontent.com"
-                            className="flex-1 bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                            className="flex-1 bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100"
                           />
                           <button
                             type="button"
@@ -503,7 +503,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
             {/* Tab 2: Detected Local / Cloud Run Account */}
             {authTab === 'DETECTED' && (
               <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     <span>
@@ -516,7 +516,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                       {discoverData.detectedAccounts.map((acc) => (
                         <div
                           key={acc.email}
-                          className="p-3.5 rounded-xl bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3"
+                          className="p-3.5 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3"
                         >
                           <div>
                             <div className="text-sm font-bold font-mono text-zinc-950 dark:text-zinc-50">
@@ -534,7 +534,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                             type="button"
                             disabled={loading}
                             onClick={() => handleConnectLocalAccount(acc.email)}
-                            className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-4 py-2 text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-4 py-2 text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
                           >
                             <span>
                               {loading ? 'Connecting...' : 'Connect Account'}
@@ -557,7 +557,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
             {/* Tab 3: Connect Any Account via OAuth 2.0 Bearer Token */}
             {authTab === 'TOKEN' && (
               <form onSubmit={handleConnectToken} className="space-y-4">
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                       1. Generate an Access Token on any Google Cloud account:
@@ -600,14 +600,14 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                       value={accessTokenInput}
                       onChange={(e) => setAccessTokenInput(e.target.value)}
                       placeholder="ya29.a0AeDClZ..."
-                      className="w-full bg-[#ffffff] dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2.5 text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-zinc-950 dark:text-zinc-100"
+                      className="w-full bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2.5 text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-zinc-950 dark:text-zinc-100"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={loading || !accessTokenInput.trim()}
-                    className="w-full bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] py-2.5 text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] py-2.5 text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
                   >
                     {loading
                       ? 'Verifying Token & Fetching Live GCP Projects...'
@@ -620,7 +620,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
             {/* Tab 4: Paste ADC JSON (`application_default_credentials.json`) */}
             {authTab === 'ADC_JSON' && (
               <form onSubmit={handleConnectAdcJson} className="space-y-4">
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
                   <div className="text-xs text-zinc-500">
                     Paste the contents of{' '}
                     <code className="font-mono text-zinc-800 dark:text-zinc-200">
@@ -634,12 +634,12 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                     value={adcJsonInput}
                     onChange={(e) => setAdcJsonInput(e.target.value)}
                     placeholder='{"client_id": "...", "client_secret": "...", "refresh_token": "...", "type": "authorized_user"}'
-                    className="w-full bg-[#ffffff] dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-[8px] p-3 text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-zinc-950 dark:text-zinc-100"
+                    className="w-full bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-[8px] p-3 text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-zinc-950 dark:text-zinc-100"
                   />
                   <button
                     type="submit"
                     disabled={loading || !adcJsonInput.trim()}
-                    className="w-full bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] py-2.5 text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] py-2.5 text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
                   >
                     {loading
                       ? 'Exchanging Refresh Token...'
@@ -689,7 +689,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                       className={`p-3.5 rounded-xl border text-left transition-all flex items-start justify-between gap-2 ${
                         isSel
                           ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/40'
-                          : 'bg-zinc-50 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
+                          : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
                       }`}
                     >
                       <div className="min-w-0">
@@ -713,7 +713,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
               type="button"
               disabled={!selectedProject}
               onClick={handleFinishOnboarding}
-              className="w-full bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-xl py-3 text-sm font-extrabold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 text-sm font-extrabold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <FolderGit2 className="w-4 h-4" />
               <span>Launch Live Cockpit for {selectedProject}</span>
@@ -723,7 +723,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
         )}
 
         {errorMsg && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-500">
+          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-500">
             {errorMsg}
           </div>
         )}

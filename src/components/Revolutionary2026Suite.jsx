@@ -521,18 +521,18 @@ export default function Revolutionary2026Suite({
   const publicRun = runServices.filter((s) => s.allowUnauthenticated);
 
   return (
-    <div className="bg-white dark:bg-[#0c0c0f] border-2 border-violet-500/40 dark:border-violet-500/40 rounded-2xl p-5 shadow-lg shadow-violet-500/5 space-y-5 relative overflow-hidden">
+    <div className="bg-white dark:bg-[#202124] border-2 border-blue-500/40 dark:border-blue-500/40 rounded-2xl p-5 shadow-lg shadow-blue-500/5 space-y-5 relative overflow-hidden">
       {/* Header & Live Wallet Burn-Rate Ticker */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 via-fuchsia-600 to-amber-500 text-white flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm">
               <Sparkles className="w-4 h-4" />
             </div>
             <h3 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
               2026 Beyond-Console Innovation Lab
             </h3>
-            <span className="text-[10px] font-mono font-extrabold bg-gradient-to-r from-violet-600 to-amber-500 text-white px-2.5 py-0.5 rounded-full shadow-sm">
+            <span className="text-[10px] font-mono font-extrabold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-0.5 rounded-full shadow-sm">
               FLAGSHIP STAR OF CLOUDPULSE 2026
             </span>
           </div>
@@ -542,7 +542,7 @@ export default function Revolutionary2026Suite({
         </div>
 
         {/* Live Burn Rate Radar Pill */}
-        <div className="flex flex-wrap items-center gap-2.5 bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2">
+        <div className="flex flex-wrap items-center gap-2.5 bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
               <DollarSign className="w-4 h-4" />
@@ -565,7 +565,7 @@ export default function Revolutionary2026Suite({
             disabled={hibernateBusy}
             onClick={() => handleHibernateToggle('SLEEP')}
             title="Stop all running VMs and scale warm Cloud Run instances to 0 ($0 idle)"
-            className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
           >
             <Moon className="w-3.5 h-3.5" />
             <span>{hibernateBusy ? 'Parking...' : 'Park Night-Mode ($0)'}</span>
@@ -586,9 +586,9 @@ export default function Revolutionary2026Suite({
 
       {/* 2026 Deep-Dive Innovation Studios Launchpad */}
       {onSelectStudioTab && (
-        <div className="p-3 rounded-xl bg-gradient-to-r from-violet-500/10 via-fuchsia-500/5 to-amber-500/10 border border-violet-500/30 flex flex-wrap items-center justify-between gap-2">
+        <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-md bg-violet-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
               2026 Deep-Dive Studios
             </span>
             <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
@@ -600,12 +600,12 @@ export default function Revolutionary2026Suite({
               {
                 tabId: 'WAVE10_FRONTIER',
                 label: 'Spanner Graph ($65/mo) & Serverless Spark',
-                style: 'border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-500/25',
+                style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
               },
               {
                 tabId: 'BIGQUERY_STUDIO',
                 label: 'BigLake & Apache Iceberg vs BigQuery',
-                style: 'border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/25',
+                style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
               },
               {
                 tabId: 'SOVEREIGN_IAM',
@@ -620,7 +620,7 @@ export default function Revolutionary2026Suite({
               {
                 tabId: 'WAVE8_STUDIO',
                 label: 'SRE War-Room & VPC-SC Perimeter',
-                style: 'border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25',
+                style: 'border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-300 hover:bg-red-500/25',
               },
             ].map((item) => (
               <button
@@ -660,8 +660,8 @@ export default function Revolutionary2026Suite({
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
                   labCategory === cat.id
-                    ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
-                    : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-violet-500/40'
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                    : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                 }`}
               >
                 {cat.label}
@@ -807,7 +807,7 @@ export default function Revolutionary2026Suite({
                   className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-zinc-50 dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'
+                      : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
@@ -952,9 +952,9 @@ export default function Revolutionary2026Suite({
               </div>
 
               {/* Layer 3: Compute VMs & Cloud Run Serverless */}
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-violet-500/30 flex flex-col justify-between space-y-3">
+              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-blue-500/30 flex flex-col justify-between space-y-3">
                 <div className="space-y-2">
-                  <div className="text-[10px] font-mono uppercase text-violet-400 font-bold flex items-center gap-1.5">
+                  <div className="text-[10px] font-mono uppercase text-blue-400 font-bold flex items-center gap-1.5">
                     <Rocket className="w-3.5 h-3.5" />
                     <span>
                       Layer 3 · Compute & Serverless (
@@ -1010,7 +1010,7 @@ export default function Revolutionary2026Suite({
                     type="button"
                     onClick={() => onOpenProvision && onOpenProvision('CLOUD_RUN')}
                     title="Open the Live Resource Provisioner to deploy a new serverless Cloud Run container service"
-                    className="py-1.5 rounded-lg border border-violet-500/30 hover:bg-violet-500/15 text-[10px] font-mono text-violet-300 cursor-pointer"
+                    className="py-1.5 rounded-lg border border-blue-500/30 hover:bg-blue-500/15 text-[10px] font-mono text-blue-300 cursor-pointer"
                   >
                     + Deploy Run
                   </button>
@@ -1069,7 +1069,7 @@ export default function Revolutionary2026Suite({
       {subTab === 'FINOPS_SLEEP' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Hourly Burn Rate
               </div>
@@ -1082,7 +1082,7 @@ export default function Revolutionary2026Suite({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Projected 30-Day Run Rate
               </div>
@@ -1095,9 +1095,9 @@ export default function Revolutionary2026Suite({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex flex-col justify-between">
+            <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 flex flex-col justify-between">
               <div>
-                <div className="text-[10px] font-mono uppercase text-indigo-500 font-bold">
+                <div className="text-[10px] font-mono uppercase text-blue-500 font-bold">
                   Night-Mode FinOps Sleep Switch
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-300 mt-1">
@@ -1112,7 +1112,7 @@ export default function Revolutionary2026Suite({
                   disabled={hibernateBusy}
                   onClick={() => handleHibernateToggle('SLEEP')}
                   title="Stop all running Compute VMs and scale warm Cloud Run instances to minInstances=0 so overnight compute cost drops to $0.00/hr"
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded-lg inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded-lg inline-flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Moon className="w-3.5 h-3.5" />
                   <span>Park Project for Night</span>
@@ -1179,7 +1179,7 @@ export default function Revolutionary2026Suite({
                 title="Switch view to HashiCorp Terraform HCL (main.tf) synthesized from your live GCP resources"
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
                   iacFormat === 'TERRAFORM'
-                    ? 'bg-violet-600 text-white border-violet-600'
+                    ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
                 }`}
               >
@@ -1267,7 +1267,7 @@ export default function Revolutionary2026Suite({
                 key={f.id}
                 className={`p-3.5 rounded-xl border space-y-2 ${
                   f.severity === 'HIGH'
-                    ? 'bg-rose-500/5 border-rose-500/30'
+                    ? 'bg-red-500/5 border-red-500/30'
                     : 'bg-amber-500/5 border-amber-500/30'
                 }`}
               >
@@ -1275,7 +1275,7 @@ export default function Revolutionary2026Suite({
                   <span
                     className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                       f.severity === 'HIGH'
-                        ? 'bg-rose-500/20 text-rose-500'
+                        ? 'bg-red-500/20 text-red-500'
                         : 'bg-amber-500/20 text-amber-500'
                     }`}
                   >
@@ -1300,7 +1300,7 @@ export default function Revolutionary2026Suite({
                       })
                     }
                     title={`Immediately delete open firewall rule "${f.resourceName}" from project ${projectId}`}
-                    className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-rose-500 hover:underline"
+                    className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-red-500 hover:underline"
                   >
                     <Trash2 className="w-3 h-3" />
                     <span>1-Tap Delete Open Firewall Rule</span>

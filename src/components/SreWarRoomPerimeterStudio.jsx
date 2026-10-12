@@ -263,19 +263,19 @@ export default function SreWarRoomPerimeterStudio({
   return (
     <div className="space-y-5">
       {/* Top Hero Header */}
-      <div className="rounded-[12px] border border-rose-500/30 bg-gradient-to-r from-rose-950/60 via-zinc-900 to-indigo-950/50 p-4 sm:p-5 shadow-lg">
+      <div className="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/30 text-rose-300 text-[11px] font-mono">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-300 text-[11px] font-mono">
               <Flame className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 WAVE-8 PRINCIPAL SRE WAR-ROOM, VPC-SC EXFILTRATION SHIELD & PUB/SUB DLQ STUDIO
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+            <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
               Autonomous Incident War-Room, Multi-Window SLO Burn Radar & VPC-SC Perimeter Architect
             </h2>
-            <p className="text-xs text-zinc-300 max-w-3xl">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-3xl">
               Correlates live `logging.googleapis.com/v2` stack traces & IAM-403s into root-cause clusters, calculates Google SRE Book `14.4x` 1-Hour / `6.0x` 6-Hour Error-Budget Burn Rates, hardens subnets with Private Google Access (`199.36.153.4/30`), and provisions Exactly-Once Pub/Sub Dead-Letter Queues.
             </p>
           </div>
@@ -288,7 +288,7 @@ export default function SreWarRoomPerimeterStudio({
               if (activeSubTab === 'PUBSUB_DLQ') fetchPubsubDlq();
             }}
             title="Sync live Cloud Logging, Subnet Private Google Access, and Pub/Sub Dead-Letter telemetry"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-xs font-bold cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-bold cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
@@ -302,7 +302,7 @@ export default function SreWarRoomPerimeterStudio({
         </div>
 
         {/* Sub-Tabs */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-zinc-800/80">
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800">
           {[
             {
               id: 'SRE_WAR_ROOM',
@@ -339,7 +339,7 @@ export default function SreWarRoomPerimeterStudio({
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold transition-all cursor-pointer border ${
                   active
-                    ? 'bg-rose-600 text-white border-rose-400 shadow-md'
+                    ? 'bg-red-600 text-white border-red-400 shadow-md'
                     : 'bg-zinc-900/80 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
                 }`}
               >
@@ -347,7 +347,7 @@ export default function SreWarRoomPerimeterStudio({
                 <span
                   className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
                     active
-                      ? 'bg-black/30 text-rose-100'
+                      ? 'bg-black/30 text-red-100'
                       : 'bg-zinc-800 text-zinc-400'
                   }`}
                 >
@@ -366,7 +366,7 @@ export default function SreWarRoomPerimeterStudio({
         <div className="space-y-4">
           {/* Multi-Window SLO Error-Budget Burn Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
+            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]">
               <div className="text-[11px] font-mono text-zinc-500">
                 30-Day SLO Error Budget (`99.9%`)
               </div>
@@ -387,8 +387,8 @@ export default function SreWarRoomPerimeterStudio({
             <div
               className={`p-3.5 rounded-[10px] border ${
                 (slo?.fastBurn1h ?? 0) >= 14.4
-                  ? 'border-rose-500 bg-rose-500/10'
-                  : 'border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]'
+                  ? 'border-red-500 bg-red-500/10'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]'
               }`}
             >
               <div className="text-[11px] font-mono text-zinc-500">
@@ -397,7 +397,7 @@ export default function SreWarRoomPerimeterStudio({
               <div
                 className={`text-2xl font-black mt-1 ${
                   (slo?.fastBurn1h ?? 0) >= 14.4
-                    ? 'text-rose-500'
+                    ? 'text-red-500'
                     : 'text-emerald-500'
                 }`}
               >
@@ -410,7 +410,7 @@ export default function SreWarRoomPerimeterStudio({
               </div>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]">
+            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]">
               <div className="text-[11px] font-mono text-zinc-500">
                 6-Hour Slow-Burn Rate (`6.0x` Ticket Cap)
               </div>
@@ -418,7 +418,7 @@ export default function SreWarRoomPerimeterStudio({
                 className={`text-2xl font-black mt-1 ${
                   (slo?.slowBurn6h ?? 0) >= 6.0
                     ? 'text-amber-500'
-                    : 'text-indigo-400'
+                    : 'text-blue-400'
                 }`}
               >
                 {slo ? `${slo.slowBurn6h}x` : '0.0x'}
@@ -429,7 +429,7 @@ export default function SreWarRoomPerimeterStudio({
             </div>
 
             {/* Incident Drill & Postmortem Trigger */}
-            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] flex flex-col justify-between gap-2">
+            <div className="p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] flex flex-col justify-between gap-2">
               <div className="text-[11px] font-mono text-zinc-500">
                 Chaos Cascade Drill & Postmortem
               </div>
@@ -442,7 +442,7 @@ export default function SreWarRoomPerimeterStudio({
                       handleToggleIncidentDrill('INJECT_CASCADE_DRILL')
                     }
                     title="Simulate a correlated P1 Multi-Service Cascade Incident (Cloud Run Exit 137 OOM + BigQuery 403 + 16.8x Fast Error-Budget Burn)"
-                    className="flex-1 px-2.5 py-1.5 rounded-[8px] bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
+                    className="flex-1 px-2.5 py-1.5 rounded-[8px] bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold cursor-pointer"
                   >
                     Inject P1 Cascade Drill
                   </button>
@@ -474,9 +474,9 @@ export default function SreWarRoomPerimeterStudio({
 
           {/* Blameless Postmortem Markdown Drawer */}
           {showPostmortemPreview && warRoomData?.postmortemMarkdown && (
-            <div className="p-4 rounded-[10px] border border-indigo-500/40 bg-zinc-950 space-y-2.5">
+            <div className="p-4 rounded-[10px] border border-blue-500/40 bg-zinc-950 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-indigo-400 flex items-center gap-2">
+                <span className="text-xs font-extrabold text-blue-400 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   <span>Auto-Synthesized Google SRE Blameless Postmortem (`postmortem.md`)</span>
                 </span>
@@ -488,7 +488,7 @@ export default function SreWarRoomPerimeterStudio({
                       'Blameless Postmortem Markdown'
                     )
                   }
-                  className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-bold cursor-pointer"
+                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
                 >
                   Copy Postmortem.md
                 </button>
@@ -512,8 +512,8 @@ export default function SreWarRoomPerimeterStudio({
                   key={c.clusterKey}
                   className={`p-3.5 rounded-[10px] border space-y-2 ${
                     isCrit
-                      ? 'border-rose-500/40 bg-rose-950/10'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417]'
+                      ? 'border-red-500/40 bg-red-950/10'
+                      : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]'
                   }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -521,8 +521,8 @@ export default function SreWarRoomPerimeterStudio({
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
                           isCrit
-                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                            : 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+                            ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                            : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                         }`}
                       >
                         {c.severity} · {c.count} Events
@@ -566,7 +566,7 @@ export default function SreWarRoomPerimeterStudio({
       {activeSubTab === 'VPCSC_PERIMETER' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left: VPC-SC Perimeter Synthesizer with Strict Compliance Locks */}
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -713,7 +713,7 @@ export default function SreWarRoomPerimeterStudio({
           </div>
 
           {/* Right: Live Subnet Private Google Access Auditor & 1-Tap Enabler */}
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -723,7 +723,7 @@ export default function SreWarRoomPerimeterStudio({
                   Coverage: {vpcScData?.pgaCoveragePct ?? 0}% ({vpcScData?.summary?.pgaEnabledSubnets ?? 0}/{vpcScData?.summary?.totalSubnets ?? 0} subnets hardened)
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 text-xs font-mono font-bold">
+              <span className="px-2.5 py-1 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 text-xs font-mono font-bold">
                 Score: {vpcScData?.exfiltrationScore ?? 100}/100
               </span>
             </div>
@@ -756,7 +756,7 @@ export default function SreWarRoomPerimeterStudio({
                         disabled={busy}
                         onClick={() => handleEnableSubnetPga(sn.region, sn.name)}
                         title={`Enable Private Google Access on subnet ${sn.name} in ${sn.region} via POST /subnetworks/${sn.name}/setPrivateIpGoogleAccess`}
-                        className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
                       >
                         {busy ? 'Enabling...' : '1-Tap Enable PGA'}
                       </button>
@@ -777,14 +777,14 @@ export default function SreWarRoomPerimeterStudio({
           {/* Left: Resilient Topic + DLQ Pair Provisioner with Strict Compliance Locks */}
           <form
             onSubmit={handleProvisionPubsubPair}
-            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5"
           >
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <Radio className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Provision Resilient Pub/Sub Topic + Dead-Letter Queue (`-dlq`)</span>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/30">
                 Zero-Message-Loss Lock
               </span>
             </div>
@@ -813,7 +813,7 @@ export default function SreWarRoomPerimeterStudio({
                   onClick={() => applyDlqBlueprint(bp.id)}
                   className={`p-2 rounded-[8px] border text-left cursor-pointer ${
                     dlqBlueprint === bp.id
-                      ? 'bg-rose-600/15 border-rose-500 text-zinc-900 dark:text-zinc-100'
+                      ? 'bg-red-600/15 border-red-500 text-zinc-900 dark:text-zinc-100'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                   }`}
                 >
@@ -898,7 +898,7 @@ export default function SreWarRoomPerimeterStudio({
             <button
               type="submit"
               disabled={provisioningPubsub || !topicName.trim()}
-              className="w-full py-2 rounded-[8px] bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+              className="w-full py-2 rounded-[8px] bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
             >
               {provisioningPubsub
                 ? 'Provisioning Topic + DLQ + Subscription...'
@@ -907,7 +907,7 @@ export default function SreWarRoomPerimeterStudio({
           </form>
 
           {/* Right: Live Pub/Sub Topics & Subscriptions DLQ Posture */}
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                 Live Pub/Sub Topics ({pubsubData?.summary?.topicsCount || 0}) & Subscriptions ({pubsubData?.summary?.subscriptionsCount || 0})

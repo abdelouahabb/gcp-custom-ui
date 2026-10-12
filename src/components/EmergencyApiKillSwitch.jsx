@@ -311,24 +311,24 @@ export default function EmergencyApiKillSwitch({
   const isBillingEnabled = billingStatus?.billingEnabled !== false;
 
   return (
-    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
+    <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
       {/* ===================================================================== */}
       {/* LEVEL 1: ULTIMATE PROJECT KILL-SWITCH (CLOUD BILLING CIRCUIT BREAKER) */}
       {/* ===================================================================== */}
       <div
         className={`relative overflow-hidden rounded-xl border p-4 transition-all ${
           togglingBilling
-            ? 'border-rose-500/50 bg-rose-500/10 opacity-70 grayscale-[40%]'
+            ? 'border-red-500/50 bg-red-500/10 opacity-70 grayscale-[40%]'
             : !billingStatus
-            ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#09090b]'
+            ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#131314]'
             : isBillingEnabled
-            ? 'border-rose-500/35 bg-gradient-to-r from-rose-500/[0.06] via-amber-500/[0.04] to-transparent dark:from-rose-950/25 dark:via-[#09090b] dark:to-[#09090b]'
+            ? 'border-red-500/35 bg-red-50/50 dark:bg-red-950/20'
             : 'border-emerald-500/40 bg-emerald-500/[0.07] dark:bg-emerald-950/20'
         }`}
       >
         {togglingBilling && (
-          <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500/20 overflow-hidden">
-            <div className="h-full w-1/2 bg-rose-500 animate-pulse" />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-red-500/20 overflow-hidden">
+            <div className="h-full w-1/2 bg-red-500 animate-pulse" />
           </div>
         )}
 
@@ -367,7 +367,7 @@ export default function EmergencyApiKillSwitch({
                     {projectId}
                   </span>{' '}
                   via <code className="font-mono">cloudbilling.googleapis.com</code> to{' '}
-                  <strong className="text-rose-600 dark:text-rose-400">
+                  <strong className="text-red-600 dark:text-red-400">
                     immediately stop all money spending ($0.00)
                   </strong>{' '}
                   across the entire project.
@@ -397,7 +397,7 @@ export default function EmergencyApiKillSwitch({
                       {billingStatus.currencyCode}
                     </span>
                   ) : (
-                    <span className="font-bold text-rose-500">
+                    <span className="font-bold text-red-500">
                       NONE (Unlinked / Disabled)
                     </span>
                   )}
@@ -409,7 +409,7 @@ export default function EmergencyApiKillSwitch({
           {/* Right Action Area: Kill Billing or Restore Billing */}
           <div className="shrink-0">
             {togglingBilling ? (
-              <div className="inline-flex items-center gap-2 bg-rose-500/15 text-rose-500 border border-rose-500/30 px-4 py-2.5 rounded-xl text-xs font-mono font-bold">
+              <div className="inline-flex items-center gap-2 bg-red-500/15 text-red-500 border border-red-500/30 px-4 py-2.5 rounded-xl text-xs font-mono font-bold">
                 <RefreshCw className="w-4 h-4 animate-spin" />
                 <span>
                   {isBillingEnabled
@@ -422,7 +422,7 @@ export default function EmergencyApiKillSwitch({
                 <button
                   type="button"
                   onClick={() => setConfirmKillBilling(true)}
-                  className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
+                  className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
                 >
                   <Power className="w-4 h-4" />
                   <span>KILL PROJECT BILLING (STOP SPENDING)</span>
@@ -450,7 +450,7 @@ export default function EmergencyApiKillSwitch({
                 <button
                   type="button"
                   onClick={() => handleBillingKillSwitch('ENABLE')}
-                  className="inline-flex items-center justify-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
                 >
                   <Unlock className="w-3.5 h-3.5" />
                   <span>Restore & Re-Link Billing</span>
@@ -462,9 +462,9 @@ export default function EmergencyApiKillSwitch({
 
         {/* 2-Step Confirmation Drawer for Project Billing Kill-Switch */}
         {confirmKillBilling && isBillingEnabled && (
-          <div className="mt-4 pt-3.5 border-t border-rose-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-rose-500/10 p-3.5 rounded-lg">
+          <div className="mt-4 pt-3.5 border-t border-red-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-red-500/10 p-3.5 rounded-lg">
             <div className="space-y-1.5">
-              <div className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+              <div className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>
                   Confirm Emergency Billing Detachment for &ldquo;{projectId}
@@ -490,7 +490,7 @@ export default function EmergencyApiKillSwitch({
                   type="checkbox"
                   checked={stopAllVmsOnKill}
                   onChange={(e) => setStopAllVmsOnKill(e.target.checked)}
-                  className="rounded border-zinc-400 text-rose-600 focus:ring-rose-500"
+                  className="rounded border-zinc-400 text-red-600 focus:ring-red-500"
                 />
                 <span>
                   Also stop all running Compute Engine VMs in {projectId}
@@ -502,7 +502,7 @@ export default function EmergencyApiKillSwitch({
               <button
                 type="button"
                 onClick={() => handleBillingKillSwitch('DISABLE')}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
               >
                 Yes, Unlink Billing & Freeze Spend
               </button>
@@ -552,7 +552,7 @@ export default function EmergencyApiKillSwitch({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search enabled APIs (e.g. compute, ai)..."
               aria-label="Filter enabled APIs"
-              className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-9 pr-3 py-2 text-xs text-zinc-950 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-9 pr-3 py-2 text-xs text-zinc-950 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
           </div>
           <button
@@ -602,15 +602,15 @@ export default function EmergencyApiKillSwitch({
                   key={api.name}
                   className={`relative overflow-hidden p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-2.5 ${
                     isDisabling
-                      ? 'border-rose-500/40 bg-rose-500/5 opacity-55 grayscale select-none pointer-events-none'
+                      ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
                       : isHighImpact
-                      ? 'border-emerald-500/30 dark:border-emerald-500/25 bg-emerald-500/[0.03] dark:bg-[#09090b]'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#09090b]'
+                      ? 'border-emerald-500/30 dark:border-emerald-500/25 bg-emerald-500/[0.03] dark:bg-[#131314]'
+                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#131314]'
                   }`}
                 >
                   {isDisabling && (
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500/20 overflow-hidden">
-                      <div className="h-full w-1/2 bg-rose-500 animate-pulse" />
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-red-500/20 overflow-hidden">
+                      <div className="h-full w-1/2 bg-red-500 animate-pulse" />
                     </div>
                   )}
 
@@ -640,7 +640,7 @@ export default function EmergencyApiKillSwitch({
                     <span
                       className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                         isDisabling
-                          ? 'bg-rose-500/20 text-rose-500'
+                          ? 'bg-red-500/20 text-red-500'
                           : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
                       }`}
                     >
@@ -651,13 +651,13 @@ export default function EmergencyApiKillSwitch({
                   {/* Action Footer */}
                   <div className="pt-2 border-t border-zinc-200/70 dark:border-zinc-800/80 flex items-center justify-between gap-2">
                     {isDisabling ? (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-rose-500">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-red-500">
                         <RefreshCw className="w-3 h-3 animate-spin" />
                         <span>Disabling API on GCP...</span>
                       </span>
                     ) : isConfirming ? (
-                      <div className="w-full flex items-center justify-between gap-1.5 bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-1">
-                        <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1">
+                      <div className="w-full flex items-center justify-between gap-1.5 bg-red-500/10 border border-red-500/30 rounded-lg px-2.5 py-1">
+                        <span className="text-[10px] font-bold text-red-500 flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3 shrink-0" />
                           <span>Kill API?</span>
                         </span>
@@ -665,7 +665,7 @@ export default function EmergencyApiKillSwitch({
                           <button
                             type="button"
                             onClick={() => handleToggleApi(api.name, 'DISABLE')}
-                            className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded text-[10px] font-bold"
+                            className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded text-[10px] font-bold"
                           >
                             Yes, Disable
                           </button>
@@ -686,7 +686,7 @@ export default function EmergencyApiKillSwitch({
                         <button
                           type="button"
                           onClick={() => setConfirmDisableApi(api.name)}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 px-2.5 py-1 rounded-md transition-colors"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2.5 py-1 rounded-md transition-colors"
                         >
                           <Power className="w-3 h-3" />
                           <span>Emergency Disable</span>
@@ -727,7 +727,7 @@ export default function EmergencyApiKillSwitch({
       )}
 
       {/* RESTORE DISABLED CORE APIS OR ENABLE NEW API */}
-      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           {disabledCorePresets.length > 0 ? (
             <>
@@ -766,12 +766,12 @@ export default function EmergencyApiKillSwitch({
             value={enableServiceInput}
             onChange={(e) => setEnableServiceInput(e.target.value)}
             placeholder="Enable other API (e.g. secretmanager.googleapis.com)"
-            className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100 w-full md:w-72"
+            className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100 w-full md:w-72"
           />
           <button
             type="submit"
             disabled={enabling || !enableServiceInput.trim()}
-            className="inline-flex items-center gap-1 bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-3 py-1.5 text-xs font-bold transition-colors whitespace-nowrap disabled:opacity-50"
+            className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3 py-1.5 text-xs font-bold transition-colors whitespace-nowrap disabled:opacity-50"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>Enable New API</span>

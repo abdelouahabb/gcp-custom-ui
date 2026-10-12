@@ -507,10 +507,10 @@ export default function EngineerWishlistWave2({
 
     return (
       <div className="space-y-4">
-        <div className="p-4 rounded-xl bg-gradient-to-r from-cyan-500/[0.08] via-blue-500/[0.06] to-violet-500/[0.08] border border-cyan-500/30 space-y-3">
+        <div className="p-4 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-xs font-mono font-bold uppercase text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+              <div className="text-xs font-mono font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                 <Zap className="w-4 h-4" />
                 <span>
                   Live Cloud Run & VM Cold-Start / P95 Stress Arena + HTTP Header
@@ -537,7 +537,7 @@ export default function EngineerWishlistWave2({
                     onClick={() => setTargetUrl(srv.uri)}
                     className={`px-2 py-1 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
                       targetUrl === srv.uri
-                        ? 'bg-cyan-500/20 border-cyan-500 text-cyan-600 dark:text-cyan-300 font-bold'
+                        ? 'bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-300 font-bold'
                         : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
@@ -562,7 +562,7 @@ export default function EngineerWishlistWave2({
                 value={targetUrl}
                 onChange={(e) => setTargetUrl(e.target.value)}
                 placeholder="https://your-service-xyz.a.run.app"
-                className="w-full bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               />
             </div>
 
@@ -573,7 +573,7 @@ export default function EngineerWishlistWave2({
               <select
                 value={requestsCount}
                 onChange={(e) => setRequestsCount(Number(e.target.value))}
-                className="w-full bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               >
                 <option value={1}>1 (Single X-Ray Probe)</option>
                 <option value={8}>8 Requests</option>
@@ -590,7 +590,7 @@ export default function EngineerWishlistWave2({
               <select
                 value={concurrency}
                 onChange={(e) => setConcurrency(Number(e.target.value))}
-                className="w-full bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               >
                 <option value={1}>1 Worker (Serial)</option>
                 <option value={4}>4 Concurrent</option>
@@ -603,7 +603,7 @@ export default function EngineerWishlistWave2({
               <button
                 type="submit"
                 disabled={benchmarking}
-                className="w-full inline-flex items-center justify-center gap-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>{benchmarking ? 'Firing Burst...' : 'Run Benchmark'}</span>
@@ -652,11 +652,11 @@ export default function EngineerWishlistWave2({
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/30">
-                <div className="text-[10px] font-mono uppercase text-violet-600 dark:text-violet-400">
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                <div className="text-[10px] font-mono uppercase text-blue-600 dark:text-blue-400">
                   P99 Extreme Tail
                 </div>
-                <div className="text-lg font-extrabold font-mono text-violet-600 dark:text-violet-400">
+                <div className="text-lg font-extrabold font-mono text-blue-600 dark:text-blue-400">
                   {benchResult.p99Ms} ms
                 </div>
                 <div className="text-[10px] font-mono text-zinc-500">
@@ -688,7 +688,7 @@ export default function EngineerWishlistWave2({
                         className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
                           code.startsWith('2')
                             ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-rose-500/20 text-rose-500'
+                            : 'bg-red-500/20 text-red-500'
                         }`}
                       >
                         HTTP {code}: {count}
@@ -706,7 +706,7 @@ export default function EngineerWishlistWave2({
                   Per-Request Latency Waterfall (#1 Cold-Start vs Subsequent Warm
                   Requests)
                 </span>
-                <span className="text-cyan-400">{benchResult.targetUrl}</span>
+                <span className="text-blue-400">{benchResult.targetUrl}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
                 {(benchResult.samples || []).map((s) => {
@@ -728,8 +728,8 @@ export default function EngineerWishlistWave2({
                             isFirst
                               ? 'bg-amber-500'
                               : s.ok
-                              ? 'bg-cyan-500'
-                              : 'bg-rose-500'
+                              ? 'bg-blue-500'
+                              : 'bg-red-500'
                           }`}
                         />
                       </div>
@@ -758,7 +758,7 @@ export default function EngineerWishlistWave2({
                       key={k}
                       className="py-1 flex items-start justify-between gap-3"
                     >
-                      <span className="text-cyan-400 shrink-0">{k}:</span>
+                      <span className="text-blue-400 shrink-0">{k}:</span>
                       <span className="text-zinc-300 break-all text-right">
                         {String(v)}
                       </span>
@@ -768,7 +768,7 @@ export default function EngineerWishlistWave2({
               </div>
 
               <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
-                <div className="text-xs font-mono font-bold text-violet-400 uppercase">
+                <div className="text-xs font-mono font-bold text-blue-400 uppercase">
                   Live Response Payload Preview (First 800 Bytes)
                 </div>
                 <pre className="text-[11px] font-mono text-zinc-300 max-h-56 overflow-y-auto whitespace-pre-wrap break-all">
@@ -791,7 +791,7 @@ export default function EngineerWishlistWave2({
     const totalSavedAnnualUsd = zombieData?.totalSavedAnnualUsd || 0;
     return (
       <div className="space-y-4">
-        <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/[0.08] via-rose-500/[0.06] to-violet-500/[0.08] border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-500/[0.06] border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="text-xs font-mono font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4" />
@@ -822,7 +822,7 @@ export default function EngineerWishlistWave2({
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Detected Annual Waste
               </div>
-              <div className="text-lg font-extrabold font-mono text-rose-600 dark:text-rose-400">
+              <div className="text-lg font-extrabold font-mono text-red-600 dark:text-red-400">
                 ${(zombieData?.totalAnnualWasteUsd || 0).toFixed(2)}/yr
               </div>
             </div>
@@ -866,7 +866,7 @@ export default function EngineerWishlistWave2({
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
                         {z.kind} · {z.location}
                       </span>
-                      <span className="text-xs font-mono font-extrabold text-rose-500">
+                      <span className="text-xs font-mono font-extrabold text-red-500">
                         -${z.monthlyWasteUsd.toFixed(2)}/mo (${z.annualWasteUsd.toFixed(2)}/yr)
                       </span>
                     </div>
@@ -888,8 +888,8 @@ export default function EngineerWishlistWave2({
                             tracker.status === 'DONE'
                               ? 'text-emerald-400'
                               : tracker.status === 'ERROR'
-                              ? 'text-rose-400'
-                              : 'text-cyan-400'
+                              ? 'text-red-400'
+                              : 'text-blue-400'
                           }`}
                         >
                           {tracker.status === 'DONE'
@@ -909,8 +909,8 @@ export default function EngineerWishlistWave2({
                             tracker.status === 'DONE'
                               ? 'bg-emerald-500'
                               : tracker.status === 'ERROR'
-                              ? 'bg-rose-500'
-                              : 'bg-gradient-to-r from-amber-500 via-rose-500 to-cyan-400 animate-pulse'
+                              ? 'bg-red-500'
+                              : 'bg-amber-500 animate-pulse'
                           }`}
                         />
                       </div>
@@ -924,7 +924,7 @@ export default function EngineerWishlistWave2({
                     type="button"
                     disabled={isBusy}
                     onClick={() => handleExterminateZombie(z)}
-                    className="inline-flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-mono font-bold py-1.5 px-3 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-bold py-1.5 px-3 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {isBusy ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1005,7 +1005,7 @@ export default function EngineerWishlistWave2({
       />
 
       {/* Part A: 1-Tap Cross-Region, FinOps & GPU SKU-Verified Cloud Run Teleporter */}
-      <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/[0.08] via-cyan-500/[0.06] to-blue-500/[0.08] border border-emerald-500/30 space-y-4">
+      <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="text-xs font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
@@ -1028,7 +1028,7 @@ export default function EngineerWishlistWave2({
               onClick={() => setSimulateGpuWorkload((p) => !p)}
               className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
                 teleportFeasibility.requiresCloudRunGpu
-                  ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/50'
+                  ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/50'
                   : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border-zinc-300 dark:border-zinc-800'
               }`}
             >
@@ -1083,11 +1083,11 @@ export default function EngineerWishlistWave2({
               }
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 targetRegion === recs.cheapestGreenCompatible.dst.id
-                  ? 'bg-cyan-500/20 border-cyan-500 text-cyan-950 dark:text-cyan-100 shadow-sm'
-                  : 'bg-white/80 dark:bg-zinc-950/70 border-cyan-500/30 hover:border-cyan-500/60'
+                  ? 'bg-blue-500/20 border-blue-500 text-blue-950 dark:text-blue-100 shadow-sm'
+                  : 'bg-white/80 dark:bg-zinc-950/70 border-blue-500/30 hover:border-blue-500/60'
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] font-extrabold text-cyan-600 dark:text-cyan-400">
+              <div className="flex items-center justify-between text-[10px] font-extrabold text-blue-600 dark:text-blue-400">
                 <span>BEST FINOPS + GREEN</span>
                 <span>
                   {recs.cheapestGreenCompatible.dst.priceMultiplier.toFixed(2)}x
@@ -1114,11 +1114,11 @@ export default function EngineerWishlistWave2({
               }
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 targetRegion === recs.sameContinentCompatible.dst.id
-                  ? 'bg-violet-500/20 border-violet-500 text-violet-950 dark:text-violet-100 shadow-sm'
-                  : 'bg-white/80 dark:bg-zinc-950/70 border-violet-500/30 hover:border-violet-500/60'
+                  ? 'bg-blue-500/20 border-blue-500 text-blue-950 dark:text-blue-100 shadow-sm'
+                  : 'bg-white/80 dark:bg-zinc-950/70 border-blue-500/30 hover:border-blue-500/60'
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] font-extrabold text-violet-600 dark:text-violet-400">
+              <div className="flex items-center justify-between text-[10px] font-extrabold text-blue-600 dark:text-blue-400">
                 <span>SAME-CONTINENT LOW-EGRESS</span>
                 <span>$0.02/GB</span>
               </div>
@@ -1137,16 +1137,16 @@ export default function EngineerWishlistWave2({
 
         {/* Hardware SKU Compatibility Gatekeeper Alert */}
         {!evalResult.isCompatible ? (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/50 space-y-2 text-xs font-mono">
+          <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/50 space-y-2 text-xs font-mono">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="font-extrabold text-rose-600 dark:text-rose-300 flex items-center gap-1.5">
+              <div className="font-extrabold text-red-600 dark:text-red-300 flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>
                   Hardware SKU Unavailable in {evalResult.dst.name} (
                   {evalResult.dst.city})
                 </span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-500 font-bold">
+              <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-500 font-bold">
                 DEPLOYMENT BLOCKED BY PRE-FLIGHT GATEKEEPER
               </span>
             </div>
@@ -1154,7 +1154,7 @@ export default function EngineerWishlistWave2({
             {evalResult.blockers.map((b) => (
               <div
                 key={b}
-                className="text-[11px] text-rose-700 dark:text-rose-200"
+                className="text-[11px] text-red-700 dark:text-red-200"
               >
                 • {b}
               </div>
@@ -1244,7 +1244,7 @@ export default function EngineerWishlistWave2({
             <div className="text-[10px] text-zinc-400 uppercase">
               FinOps ROI Payback
             </div>
-            <div className="text-sm font-extrabold text-cyan-600 dark:text-cyan-400 mt-0.5">
+            <div className="text-sm font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
               {evalResult.breakEvenDays !== null
                 ? `${evalResult.breakEvenDays} Days`
                 : evalResult.monthlyDeltaUsd === 0
@@ -1264,7 +1264,7 @@ export default function EngineerWishlistWave2({
             </div>
             <div
               className={`text-sm font-extrabold mt-0.5 ${
-                evalResult.gco2Delta <= 0 ? 'text-emerald-500' : 'text-rose-500'
+                evalResult.gco2Delta <= 0 ? 'text-emerald-500' : 'text-red-500'
               }`}
             >
               {evalResult.cfeDelta >= 0 ? '+' : ''}
@@ -1300,7 +1300,7 @@ export default function EngineerWishlistWave2({
                   const [, nm] = e.target.value.split(':::');
                   setNewCloneName(`${nm}-${targetRegion.split('-')[0]}`);
                 }}
-                className="w-full bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               >
                 {runServices.map((s) => {
                   const prof = getRegionProfile(s.region);
@@ -1330,7 +1330,7 @@ export default function EngineerWishlistWave2({
                   );
                   setNewCloneName(`${nm}-${e.target.value.split('-')[0]}`);
                 }}
-                className="w-full bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               >
                 {teleportFeasibility.sortedRegions.map((r) => {
                   const prof = getRegionProfile(r.id);
@@ -1355,7 +1355,7 @@ export default function EngineerWishlistWave2({
                 type="text"
                 value={newCloneName}
                 onChange={(e) => setNewCloneName(e.target.value)}
-                className="w-full bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               />
             </div>
 
@@ -1370,7 +1370,7 @@ export default function EngineerWishlistWave2({
                 }
                 className={`w-full inline-flex items-center justify-center gap-1.5 font-bold text-xs py-2 px-3 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
                   !evalResult.isCompatible
-                    ? 'bg-rose-600 text-white cursor-not-allowed'
+                    ? 'bg-red-600 text-white cursor-not-allowed'
                     : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                 }`}
               >
@@ -1391,7 +1391,7 @@ export default function EngineerWishlistWave2({
       {/* Part B: Side-by-Side Visual Service & Revision Diff Time-Machine */}
       <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-xs font-mono font-bold uppercase text-violet-600 dark:text-violet-400 flex items-center gap-1.5">
+          <div className="text-xs font-mono font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
             <GitCompare className="w-4 h-4" />
             <span>
               Visual Cloud Run Configuration & Carbon Diff Time-Machine
@@ -1403,7 +1403,7 @@ export default function EngineerWishlistWave2({
               <select
                 value={diffLeftService}
                 onChange={(e) => setDiffLeftService(e.target.value)}
-                className="bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono"
+                className="bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono"
               >
                 {runServices.map((s) => (
                   <option
@@ -1418,7 +1418,7 @@ export default function EngineerWishlistWave2({
               <select
                 value={diffRightService}
                 onChange={(e) => setDiffRightService(e.target.value)}
-                className="bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono"
+                className="bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono"
               >
                 {runServices.map((s) => (
                   <option

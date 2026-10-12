@@ -794,7 +794,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
   return (
     <div className="space-y-5">
       {/* Top Studio Header & 1-Tap Eventarc IAM Auto-Doctor */}
-      <div className="p-4 sm:p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] via-zinc-900/40 to-indigo-500/[0.07] space-y-4">
+      <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -877,7 +877,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
             <div className="text-[10px] font-mono uppercase text-zinc-500">
               Selected Trigger Transport
             </div>
-            <div className="text-xs font-extrabold font-mono text-cyan-500 mt-1 truncate">
+            <div className="text-xs font-extrabold font-mono text-blue-500 mt-1 truncate">
               {activeRecipe.transportBadge}
             </div>
             <div className="text-[10px] text-zinc-500 truncate">
@@ -974,7 +974,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
       {activeSubTab === 'TRIGGER_WIZARD' && (
         <div className="space-y-4">
           {/* Step 1: Pick Event Trigger (Dual-Mode: Beginner Everyday Recipes vs Advanced Universal 130+ GCP Services Catalog) */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 space-y-3.5">
+          <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3.5">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <div className="text-xs font-extrabold uppercase tracking-wider font-mono text-amber-500">
@@ -982,7 +982,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 </div>
                 <p className="text-[11px] text-zinc-500 mt-0.5">
                   Start with 1-click recipes for Storage/PubSub/Cron, or switch to{' '}
-                  <strong className="text-indigo-400">Advanced Universal Eventarc</strong> to trigger from VM creation, Firewall rules, IAM keys, GKE clusters, or Cloud SQL!
+                  <strong className="text-blue-400">Advanced Universal Eventarc</strong> to trigger from VM creation, Firewall rules, IAM keys, GKE clusters, or Cloud SQL!
                 </p>
               </div>
 
@@ -1013,7 +1013,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                     wizardMode === 'ADVANCED'
-                      ? 'bg-indigo-600 text-white shadow-sm'
+                      ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
@@ -1061,9 +1061,9 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               /* ADVANCED UNIVERSAL EVENTARC CATALOG (130+ GCP SERVICES) */
               <div className="space-y-3 pt-1">
                 {/* Architectural FinOps Insight Banner for Advanced Mode */}
-                <div className="p-3 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/30 flex flex-wrap items-center justify-between gap-2">
+                <div className="p-3 rounded-xl bg-blue-500/[0.08] border border-blue-500/30 flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs text-zinc-700 dark:text-zinc-200">
-                    <span className="font-bold font-mono text-indigo-400">
+                    <span className="font-bold font-mono text-blue-400">
                       Why Eventarc Universal Triggers Are Game-Changing:
                     </span>{' '}
                     In 1st Gen (`v1`), you could never trigger a function when a{' '}
@@ -1093,8 +1093,8 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                         onClick={() => setAdvGroupFilter(grp.id)}
                         className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer transition-all ${
                           advGroupFilter === grp.id
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                         }`}
                       >
                         {grp.label}
@@ -1132,13 +1132,13 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                         }}
                         className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                           isSelected
-                            ? 'bg-indigo-500/15 border-indigo-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
-                            : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-indigo-500/40'
+                            ? 'bg-blue-500/15 border-blue-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
+                            : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-blue-500/40'
                         }`}
                       >
                         <div className="space-y-1">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] font-mono font-bold text-indigo-400">
+                            <span className="text-[10px] font-mono font-bold text-blue-400">
                               {preset.badge}
                             </span>
                             <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
@@ -1154,7 +1154,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                         </div>
 
                         <div className="mt-2 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-800 space-y-0.5">
-                          <div className="text-[9.5px] font-mono text-cyan-500 truncate">
+                          <div className="text-[9.5px] font-mono text-blue-500 truncate">
                             svc: {preset.serviceName}
                           </div>
                           <div
@@ -1173,7 +1173,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
           </div>
 
           {/* Step 2: Interactive 4-Stage "How Eventarc Actually Works" Visual Pipeline X-Ray */}
-          <div className="p-4 rounded-2xl bg-zinc-950 border border-indigo-500/30 space-y-3 text-zinc-100">
+          <div className="p-4 rounded-2xl bg-zinc-950 border border-blue-500/30 space-y-3 text-zinc-100">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -1185,7 +1185,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 type="button"
                 disabled={Boolean(testingFn)}
                 onClick={() => handleTestCloudEvent(null)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5" />
                 <span>
@@ -1263,8 +1263,8 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               </div>
 
               {/* Stage 3: Eventarc Router & Hidden IAM Roles */}
-              <div className="p-3 rounded-xl bg-zinc-900/90 border border-cyan-500/30 space-y-1.5">
-                <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400 font-bold">
+              <div className="p-3 rounded-xl bg-zinc-900/90 border border-blue-500/30 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-mono text-blue-400 font-bold">
                   <span>3. EVENTARC & IAM ROLES</span>
                   <span>{enableRetry ? 'Retry ON' : 'No Retry'}</span>
                 </div>
@@ -1281,8 +1281,8 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               </div>
 
               {/* Stage 4: Function Consumer */}
-              <div className="p-3 rounded-xl bg-zinc-900/90 border border-indigo-500/30 space-y-1.5">
-                <div className="flex items-center justify-between text-[10px] font-mono text-indigo-400 font-bold">
+              <div className="p-3 rounded-xl bg-zinc-900/90 border border-blue-500/30 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-mono text-blue-400 font-bold">
                   <span>4. FUNCTION RUNTIME</span>
                   <span>
                     {fnGen === 'GEN_2'
@@ -1294,18 +1294,18 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                   {fnName} ({fnRuntime} · {fnMemory})
                 </div>
                 <p className="text-[10.5px] text-zinc-400 leading-snug">
-                  Receives HTTP POST with <code className="text-indigo-300">ce-id</code>,{' '}
-                  <code className="text-indigo-300">ce-type</code>, and{' '}
-                  <code className="text-indigo-300">ce-source</code> headers.
+                  Receives HTTP POST with <code className="text-blue-300">ce-id</code>,{' '}
+                  <code className="text-blue-300">ce-type</code>, and{' '}
+                  <code className="text-blue-300">ce-source</code> headers.
                 </p>
               </div>
             </div>
 
             {/* Live Synthetic CloudEvent Test Output */}
             {testEventResult && (
-              <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/40 space-y-2">
+              <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/40 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono text-indigo-300">
+                  <span className="text-xs font-bold font-mono text-blue-300">
                     Synthetic CloudEvent Trace ({testEventResult.eventId}) — Total{' '}
                     {testEventResult.liveDelivery?.totalLatencyMs}ms (HTTP{' '}
                     {testEventResult.liveDelivery?.httpStatus})
@@ -1340,7 +1340,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
 
           {/* Step 3: Function & Trigger Configuration Form + Starter Code */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-7 p-4 rounded-2xl bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 space-y-3.5">
+            <div className="lg:col-span-7 p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold uppercase tracking-wider font-mono text-zinc-800 dark:text-zinc-200">
                   Step 3 — Configure Function & Eventarc Filter
@@ -1433,9 +1433,9 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
 
               {/* Dynamic Trigger-Specific Fields */}
               {triggerCategory === 'UNIVERSAL_AUDIT' && (
-                <div className="p-3 rounded-xl bg-indigo-500/[0.06] border border-indigo-500/30 space-y-2.5">
+                <div className="p-3 rounded-xl bg-blue-500/[0.06] border border-blue-500/30 space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[11px] font-mono font-bold text-indigo-400">
+                    <span className="text-[11px] font-mono font-bold text-blue-400">
                       Universal Eventarc Filter Composer (Edit Any GCP Service, Method, or Resource Wildcard)
                     </span>
                     <button
@@ -1446,7 +1446,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                             '/projects/*/zones/*/instances/prod-*'
                         )
                       }
-                      className="text-[10px] font-mono text-indigo-400 hover:underline cursor-pointer"
+                      className="text-[10px] font-mono text-blue-400 hover:underline cursor-pointer"
                     >
                       + Fill Sample Path Wildcard ({activeAdvPreset?.samplePathPattern || '/projects/*/zones/*/instances/*'})
                     </button>
@@ -1456,7 +1456,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     <div className="min-w-0">
                       <label
                         title="Google Cloud API serviceName (e.g. compute.googleapis.com, iam.googleapis.com, container.googleapis.com)"
-                        className="block text-[11px] font-mono text-indigo-600 dark:text-indigo-300 mb-1 truncate whitespace-nowrap"
+                        className="block text-[11px] font-mono text-blue-600 dark:text-blue-300 mb-1 truncate whitespace-nowrap"
                       >
                         GCP Service (`serviceName`)
                       </label>
@@ -1472,7 +1472,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     <div className="min-w-0">
                       <label
                         title="Audit Log methodName (e.g. v1.compute.instances.insert for VM creation)"
-                        className="block text-[11px] font-mono text-indigo-600 dark:text-indigo-300 mb-1 truncate whitespace-nowrap"
+                        className="block text-[11px] font-mono text-blue-600 dark:text-blue-300 mb-1 truncate whitespace-nowrap"
                       >
                         API Method (`methodName`)
                       </label>
@@ -1488,7 +1488,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     <div className="min-w-0">
                       <label
                         title="Optional Eventarc path pattern filter (--trigger-event-filters-path-pattern) using * wildcards"
-                        className="block text-[11px] font-mono text-indigo-600 dark:text-indigo-300 mb-1 truncate whitespace-nowrap"
+                        className="block text-[11px] font-mono text-blue-600 dark:text-blue-300 mb-1 truncate whitespace-nowrap"
                       >
                         Resource Path Wildcard (Optional)
                       </label>
@@ -1543,9 +1543,9 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               )}
 
               {triggerCategory === 'PUBSUB_TOPIC' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 rounded-xl bg-cyan-500/[0.06] border border-cyan-500/30 items-end">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 rounded-xl bg-blue-500/[0.06] border border-blue-500/30 items-end">
                   <div className="min-w-0">
-                    <label className="block text-[11px] font-mono text-cyan-600 dark:text-cyan-300 mb-1 truncate whitespace-nowrap">
+                    <label className="block text-[11px] font-mono text-blue-600 dark:text-blue-300 mb-1 truncate whitespace-nowrap">
                       Pub/Sub Topic (Auto-Created if Missing)
                     </label>
                     <input
@@ -1557,13 +1557,13 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     />
                   </div>
                   <div className="min-w-0">
-                    <label className="block text-[11px] font-mono text-cyan-600 dark:text-cyan-300 mb-1 truncate whitespace-nowrap">
+                    <label className="block text-[11px] font-mono text-blue-600 dark:text-blue-300 mb-1 truncate whitespace-nowrap">
                       Retry on Crash / Timeout
                     </label>
                     <button
                       type="button"
                       onClick={() => setEnableRetry((v) => !v)}
-                      className="w-full h-[34px] rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 text-xs font-mono text-cyan-600 dark:text-cyan-300 text-left truncate"
+                      className="w-full h-[34px] rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 text-xs font-mono text-blue-600 dark:text-blue-300 text-left truncate"
                     >
                       {enableRetry
                         ? '✓ Exponential Backoff Retry ON (--retry)'
@@ -1662,7 +1662,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     <button
                       type="button"
                       onClick={() => onRunInShell(gcloudDeployCommand)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-indigo-500/40 bg-indigo-500/10 text-indigo-500 dark:text-indigo-300 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono border border-blue-500/40 bg-blue-500/10 text-blue-500 dark:text-blue-300 cursor-pointer"
                     >
                       <Terminal className="w-3.5 h-3.5" />
                       <span>Send to Cloud Shell</span>
@@ -1721,7 +1721,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 <div className="text-[10.5px] font-mono text-zinc-400">
                   Synthesized Eventarc / Cloud Functions CLI Command:
                 </div>
-                <pre className="p-2.5 rounded-xl bg-black/70 border border-zinc-800 text-[10.5px] font-mono text-cyan-300 overflow-x-auto">
+                <pre className="p-2.5 rounded-xl bg-black/70 border border-zinc-800 text-[10.5px] font-mono text-blue-300 overflow-x-auto">
                   {gcloudDeployCommand}
                 </pre>
               </div>
@@ -1732,7 +1732,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
 
       {/* SUB-TAB 2: LIVE FUNCTIONS FLEET & 1-CLICK v1 -> v2 UPGRADER */}
       {activeSubTab === 'LIVE_FLEET' && (
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 space-y-3">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1790,7 +1790,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                       </span>
                     </div>
                     <div className="text-[11px] font-mono text-zinc-500 truncate">
-                      Trigger: <span className="text-cyan-500">{fn.eventType}</span>
+                      Trigger: <span className="text-blue-500">{fn.eventType}</span>
                       {fn.triggerBucket ? ` (gs://${fn.triggerBucket})` : ''}
                       {fn.triggerTopic ? ` (topic: ${fn.triggerTopic})` : ''}
                     </div>
@@ -1800,7 +1800,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     <button
                       type="button"
                       onClick={() => handleTestCloudEvent(fn)}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 cursor-pointer"
                     >
                       Test CloudEvent
                     </button>
@@ -1836,7 +1836,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                     <button
                       type="button"
                       onClick={() => handleDeleteFunction(fn)}
-                      className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/15 cursor-pointer"
+                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/15 cursor-pointer"
                       title={`Delete ${fn.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1851,7 +1851,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
 
       {/* SUB-TAB 3: 1ST GEN (v1) vs 2ND GEN (v2 + EVENTARC) AFFORDABILITY & CONCURRENCY CALCULATOR */}
       {activeSubTab === 'FINOPS_COMPARE' && (
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 space-y-4">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1882,7 +1882,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-2">
               <div className="flex justify-between text-xs font-mono">
                 <span className="text-zinc-500">Avg I/O Execution Time:</span>
-                <span className="font-bold text-cyan-500">{simDurationMs} ms</span>
+                <span className="font-bold text-blue-500">{simDurationMs} ms</span>
               </div>
               <input
                 type="range"
@@ -1891,7 +1891,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 step={50}
                 value={simDurationMs}
                 onChange={(e) => setSimDurationMs(Number(e.target.value))}
-                className="w-full accent-cyan-500"
+                className="w-full accent-blue-500"
               />
             </div>
 
@@ -1915,12 +1915,12 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/[0.04] space-y-2">
+            <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/[0.04] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold font-mono text-rose-400">
+                <span className="text-xs font-bold font-mono text-red-400">
                   1st Gen (`v1` Classic · Concurrency Locked to 1)
                 </span>
-                <span className="text-sm font-extrabold font-mono text-rose-400">
+                <span className="text-sm font-extrabold font-mono text-red-400">
                   ${finopsComparison.v1Monthly}/mo
                 </span>
               </div>

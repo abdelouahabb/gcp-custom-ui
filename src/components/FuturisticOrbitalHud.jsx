@@ -196,53 +196,53 @@ export default function FuturisticOrbitalHud({
 
   const accentBorder =
     hudAccent === 'NEON_VIOLET'
-      ? 'border-violet-500/40 from-violet-950/90 via-slate-950/95 to-indigo-950/90'
+      ? 'border-blue-500/40 bg-white dark:bg-[#202124]'
       : hudAccent === 'EMERALD_MATRIX'
-      ? 'border-emerald-500/40 from-emerald-950/90 via-slate-950/95 to-teal-950/90'
-      : 'border-cyan-500/40 from-slate-950/95 via-cyan-950/40 to-slate-950/95';
+      ? 'border-emerald-500/40 bg-white dark:bg-[#202124]'
+      : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124]';
 
   return (
     <div
-      className={`rounded-2xl bg-gradient-to-r ${accentBorder} border text-white shadow-xl overflow-hidden transition-all`}
+      className={`rounded-2xl ${accentBorder} border text-zinc-900 dark:text-zinc-100 shadow-sm overflow-hidden transition-all`}
     >
       {/* Top Futuristic Orbital Telemetry Ribbon */}
       <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3">
         {/* Left: Live Orbital Pulse & Posture Grade */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-[11px] font-mono font-bold text-cyan-300">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-[11px] font-mono font-bold text-blue-700 dark:text-blue-300">
             <Radio className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-pulse" />
             <span>2030 ORBITAL HUD</span>
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-slate-400">API RTT:</span>
-            <span className="font-extrabold text-emerald-400">
+            <span className="text-zinc-500 dark:text-zinc-400">API RTT:</span>
+            <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
               {overview?.fetchLatencyMs || 142}ms
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-xs font-mono border-l border-slate-800 pl-3">
-            <span className="text-slate-400">Grid Carbon CFE:</span>
-            <span className="font-extrabold text-emerald-400">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-mono border-l border-zinc-200 dark:border-zinc-800 pl-3">
+            <span className="text-zinc-500 dark:text-zinc-400">Grid Carbon CFE:</span>
+            <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
               {orbitalMetrics.avgCfe}% Clean
             </span>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 text-xs font-mono border-l border-slate-800 pl-3">
-            <span className="text-slate-400">Cloud Posture:</span>
-            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black">
+          <div className="hidden md:flex items-center gap-2 text-xs font-mono border-l border-zinc-200 dark:border-zinc-800 pl-3">
+            <span className="text-zinc-500 dark:text-zinc-400">Cloud Posture:</span>
+            <span className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black">
               Grade {orbitalMetrics.postureGrade}
             </span>
           </div>
 
           {/* Continental Distribution Micro-Badges */}
-          <div className="hidden xl:flex items-center gap-1.5 border-l border-slate-800 pl-3 text-[10px] font-mono">
+          <div className="hidden xl:flex items-center gap-1.5 border-l border-zinc-200 dark:border-zinc-800 pl-3 text-[10px] font-mono">
             {Object.entries(orbitalMetrics.continents).map(([cont, count]) => (
               <span
                 key={cont}
-                className="px-2 py-0.5 rounded bg-slate-900/90 border border-slate-800 text-slate-300"
+                className="px-2 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
               >
-                {cont}: <strong className="text-cyan-300">{count}</strong>
+                {cont}: <strong className="text-blue-600 dark:text-blue-400">{count}</strong>
               </span>
             ))}
           </div>
@@ -260,8 +260,8 @@ export default function FuturisticOrbitalHud({
             }
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer ${
               expandedPanel === 'STACK_COMPOSER'
-                ? 'bg-cyan-500 text-slate-950 border-cyan-400'
-                : 'bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border-cyan-500/30'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30'
             }`}
           >
             <Wand2 className="w-3.5 h-3.5" />
@@ -283,12 +283,12 @@ export default function FuturisticOrbitalHud({
             }
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer ${
               expandedPanel === 'FLIGHT_RECORDER'
-                ? 'bg-violet-500 text-white border-violet-400'
-                : 'bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border-violet-500/30'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>⏱Flight Recorder & Undo</span>
+            <span>Flight Recorder &amp; Undo</span>
           </button>
 
           {/* Autonomous Self-Healing SRE Guard */}
@@ -298,8 +298,8 @@ export default function FuturisticOrbitalHud({
             title="Autonomous Self-Healing Guard monitors scale-to-zero efficiency & firewall drift"
             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer ${
               autoPilotActive
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                : 'bg-slate-900 border-slate-800 text-slate-400'
+                ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
             }`}
           >
             <Cpu className="w-3.5 h-3.5" />
@@ -319,7 +319,7 @@ export default function FuturisticOrbitalHud({
               )
             }
             title="Cycle Futuristic HUD Atmosphere"
-            className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-300 cursor-pointer"
+            className="px-2 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
           >
             HUD
           </button>
@@ -329,7 +329,7 @@ export default function FuturisticOrbitalHud({
               type="button"
               onClick={onOpenDocsGuide}
               title="Open Interactive Engineering Manual & Feature Guide"
-              className="px-2.5 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/40 text-[11px] font-mono font-bold text-blue-300 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 border border-blue-200 dark:border-blue-400/40 text-[11px] font-mono font-bold text-blue-700 dark:text-blue-300 cursor-pointer"
             >
               How It Works
             </button>
@@ -339,22 +339,22 @@ export default function FuturisticOrbitalHud({
 
       {/* EXPANDABLE DRAWER 1: 1-TAP MULTI-SERVICE ARCHITECTURE STACK SYNTHESIZER */}
       {expandedPanel === 'STACK_COMPOSER' && (
-        <div className="p-4 bg-slate-950/90 border-t border-slate-800 space-y-4">
+        <div className="p-4 bg-zinc-50 dark:bg-zinc-900/90 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-xs font-mono font-bold uppercase text-cyan-400 flex items-center gap-1.5">
+              <div className="text-xs font-mono font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                 <Wand2 className="w-4 h-4" />
                 <span>
                   2030 Describe-to-Deploy Multi-Service Architecture Synthesizer
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5">
                 Instead of configuring Storage, BigQuery, and Cloud Run in 3
                 separate consoles, synthesize and interconnect an entire cloud
                 stack in 1 click.
               </p>
             </div>
-            <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
               All 3 Resources Auto-Linked via Environment Variables
             </span>
           </div>
@@ -369,19 +369,19 @@ export default function FuturisticOrbitalHud({
                   onClick={() => setSelectedBlueprint(bp.id)}
                   className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer space-y-2 ${
                     active
-                      ? 'bg-cyan-500/15 border-cyan-400 shadow-lg shadow-cyan-950/50'
-                      : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 shadow-sm'
+                      : 'bg-white dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
                   }`}
                 >
-                  <div className="text-xs font-bold font-mono text-white">
+                  <div className="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
                     {bp.title}
                   </div>
-                  <p className="text-[11px] text-slate-400">{bp.subtitle}</p>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400">{bp.subtitle}</p>
                   <div className="flex flex-wrap gap-1 pt-1">
                     {bp.resources.map((r) => (
                       <span
                         key={r}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-slate-800"
+                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-950 text-blue-700 dark:text-blue-300 border border-zinc-200 dark:border-zinc-800"
                       >
                         + {r}
                       </span>
@@ -397,7 +397,7 @@ export default function FuturisticOrbitalHud({
             className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1"
           >
             <div className="sm:col-span-4">
-              <label className="block text-[10px] font-mono uppercase text-slate-400 mb-1">
+              <label className="block text-[10px] font-mono uppercase text-zinc-500 dark:text-zinc-400 mb-1">
                 Stack Naming Prefix
               </label>
               <input
@@ -405,18 +405,18 @@ export default function FuturisticOrbitalHud({
                 required
                 value={stackPrefix}
                 onChange={(e) => setStackPrefix(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-white"
+                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               />
             </div>
 
             <div className="sm:col-span-5">
-              <label className="block text-[10px] font-mono uppercase text-slate-400 mb-1">
+              <label className="block text-[10px] font-mono uppercase text-zinc-500 dark:text-zinc-400 mb-1">
                 Target Green GCP Region (CFE% Carbon-Free Energy)
               </label>
               <select
                 value={stackRegion}
                 onChange={(e) => setStackRegion(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-white"
+                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               >
                 {Object.entries(GCP_REGION_CARBON_DATA).map(([reg, info]) => (
                   <option key={reg} value={reg}>
@@ -430,7 +430,7 @@ export default function FuturisticOrbitalHud({
               <button
                 type="submit"
                 disabled={deployingStack}
-                className="w-full inline-flex items-center justify-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs py-2.5 px-4 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-2.5 px-4 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Rocket className="w-4 h-4" />
                 <span>
@@ -443,25 +443,25 @@ export default function FuturisticOrbitalHud({
           </form>
 
           {lastStackResult && (
-            <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 space-y-2">
-              <div className="text-xs font-mono font-bold text-emerald-300">
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/40 space-y-2">
+              <div className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300">
                 ✓ {lastStackResult.message}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {(lastStackResult.steps || []).map((st, idx) => (
                   <div
                     key={idx}
-                    className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-mono"
+                    className="p-2 rounded-lg bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono"
                   >
-                    <div className="text-slate-400">{st.step}</div>
-                    <div className="font-bold text-white truncate">
+                    <div className="text-zinc-500 dark:text-zinc-400">{st.step}</div>
+                    <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
                       {st.name}
                     </div>
                     <div
                       className={
                         st.status === 'CREATED'
-                          ? 'text-emerald-400'
-                          : 'text-amber-400'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-amber-600 dark:text-amber-400'
                       }
                     >
                       {st.status} ({st.region})
@@ -476,16 +476,16 @@ export default function FuturisticOrbitalHud({
 
       {/* EXPANDABLE DRAWER 2: CLOUD FLIGHT RECORDER & TIME-MACHINE (1-TAP UNDO) */}
       {expandedPanel === 'FLIGHT_RECORDER' && (
-        <div className="p-4 bg-slate-950/90 border-t border-slate-800 space-y-3">
+        <div className="p-4 bg-zinc-50 dark:bg-zinc-900/90 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-xs font-mono font-bold uppercase text-violet-400 flex items-center gap-1.5">
+              <div className="text-xs font-mono font-bold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                 <History className="w-4 h-4" />
                 <span>
                   Cloud Flight Recorder & Mutation Time-Machine ({projectId})
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5">
                 Every stack synthesis, cross-region teleport, and resource
                 action is recorded here with 1-tap rollback.
               </p>
@@ -493,14 +493,14 @@ export default function FuturisticOrbitalHud({
             <button
               type="button"
               onClick={fetchFlightRecorder}
-              className="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300 cursor-pointer"
+              className="px-2.5 py-1 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
             >
               {loadingFlight ? 'Refreshing...' : 'Refresh Ledger'}
             </button>
           </div>
 
           {flightEvents.length === 0 ? (
-            <div className="text-xs font-mono text-slate-400 py-3">
+            <div className="text-xs font-mono text-zinc-500 dark:text-zinc-400 py-3">
               No mutations recorded in this session yet. Try deploying a 3-Tier
               Stack or Teleporting a Cloud Run service!
             </div>
@@ -509,11 +509,11 @@ export default function FuturisticOrbitalHud({
               {flightEvents.map((ev) => (
                 <div
                   key={ev.id}
-                  className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-3 text-xs font-mono"
+                  className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs font-mono"
                 >
                   <div>
-                    <div className="font-bold text-white">{ev.title}</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="font-bold text-zinc-900 dark:text-zinc-100">{ev.title}</div>
+                    <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
                       {ev.actionType} · {ev.region} · {ev.timestamp}
                     </div>
                   </div>
@@ -527,7 +527,7 @@ export default function FuturisticOrbitalHud({
                           region: ev.undoPayload.region,
                         })
                       }
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-[11px] font-bold shrink-0 cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-500/20 dark:hover:bg-red-500/30 border border-red-200 dark:border-red-500/40 text-red-700 dark:text-red-300 text-[11px] font-bold shrink-0 cursor-pointer"
                     >
                       <RotateCcw className="w-3 h-3" />
                       <span>1-Tap Rewind / Delete</span>

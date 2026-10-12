@@ -758,7 +758,7 @@ function CloudPulseCockpit() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-zinc-50 dark:bg-[#131314] flex items-center justify-center p-6">
         <div className="text-xs font-mono text-zinc-500 animate-pulse">
           Initializing CloudPulse 2026 Multi-Account Bridge...
         </div>
@@ -921,16 +921,16 @@ function CloudPulseCockpit() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-950 dark:text-zinc-50 transition-colors duration-300">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#131314] text-zinc-950 dark:text-zinc-50 transition-colors duration-300">
       <div
         className={
           mobilePreview
-            ? 'max-w-[430px] mx-auto my-4 border-[6px] border-zinc-800 dark:border-zinc-700 rounded-[40px] shadow-2xl overflow-hidden bg-zinc-50 dark:bg-[#09090b] min-h-[860px] flex flex-col relative'
+            ? 'max-w-[430px] mx-auto my-4 border-[6px] border-zinc-800 dark:border-zinc-700 rounded-[40px] shadow-2xl overflow-hidden bg-zinc-50 dark:bg-[#131314] min-h-[860px] flex flex-col relative'
             : 'max-w-[1600px] mx-auto pb-20 md:pb-10'
         }
       >
         {mobilePreview && (
-          <div className="bg-[#09090b] text-zinc-200 px-6 py-2 flex items-center justify-between text-[11px] font-mono border-b border-zinc-800">
+          <div className="bg-[#131314] text-zinc-200 px-6 py-2 flex items-center justify-between text-[11px] font-mono border-b border-zinc-800">
             <span>23:35 · GCP 5G+</span>
             <div className="w-20 h-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[9px] text-zinc-300">
               LIVE OAUTH
@@ -943,7 +943,7 @@ function CloudPulseCockpit() {
         )}
 
         {/* Header Row */}
-        <header className="relative z-30 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#0c0c0f]/90 backdrop-blur-md px-4 sm:px-6 py-4">
+        <header className="relative z-30 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#202124]/90 backdrop-blur-md px-4 sm:px-6 py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center shadow-sm">
@@ -1000,7 +1000,7 @@ function CloudPulseCockpit() {
                   type="button"
                   onClick={() => setProjectMenuOpen((o) => !o)}
                   title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
-                  className="inline-flex items-center gap-2 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-mono font-medium transition-colors shadow-sm"
+                  className="inline-flex items-center gap-2 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-mono font-medium transition-colors shadow-sm"
                 >
                   <span className="w-2 h-2 rounded-full bg-zinc-500 dark:bg-zinc-400" />
                   <span>{selectedProjectId}</span>
@@ -1008,7 +1008,7 @@ function CloudPulseCockpit() {
                 </button>
 
                 {projectMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-[#ffffff] dark:bg-[#0c0c0f] shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-50 max-h-80 overflow-y-auto">
+                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-50 max-h-80 overflow-y-auto">
                     <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800">
                       Real GCP Projects ({contextData.projects?.length || 1})
                     </div>
@@ -1061,7 +1061,7 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenCopilotWithPrompt('')}
                 title="Run 1-Tap Project Health, Zombie Waste, Firewall Perimeter & Live Pricing Drift Scan"
-                className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 <span>Health &amp; Drift Scan</span>
@@ -1072,7 +1072,7 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => setCloudRunModalOpen(true)}
                 title="Deploy this CloudPulse 2026 cockpit as a serverless container on Google Cloud Run"
-                className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
               >
                 <Rocket className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 <span className="hidden lg:inline">Cloud Run</span>
@@ -1083,7 +1083,7 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => setMobilePreview((m) => !m)}
                 title="Toggle Android 2026 Mobile Phone Frame vs Full Widescreen Cockpit"
-                className="inline-flex items-center gap-1.5 bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
               >
                 {mobilePreview ? (
                   <Monitor className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
@@ -1102,7 +1102,7 @@ function CloudPulseCockpit() {
                 }}
                 title={`Refresh live GCP telemetry, VMs, Cloud Run services, Storage buckets, and VPCs for ${selectedProjectId}`}
                 aria-label="Refresh GCP telemetry"
-                className="p-2 rounded-[8px] bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm disabled:opacity-50"
+                className="p-2 rounded-[8px] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${
@@ -1121,7 +1121,7 @@ function CloudPulseCockpit() {
                     : 'Switch to 2026 OLED Dark Cockpit Mode'
                 }
                 aria-label="Toggle Dark or Light Mode"
-                className="p-2 rounded-[8px] bg-[#ffffff] dark:bg-[#262626] hover:bg-[#f8fafc] dark:hover:bg-zinc-800 text-[#334155] dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm"
+                className="p-2 rounded-[8px] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm"
               >
                 {isDark ? (
                   <Sun className="w-4 h-4 text-zinc-400" />
@@ -1197,7 +1197,7 @@ function CloudPulseCockpit() {
           )}
 
           {errorBanner && (
-            <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/30 text-rose-800 dark:text-rose-300 rounded-lg p-4 flex items-center justify-between gap-3 text-xs">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-800 dark:text-red-300 rounded-lg p-4 flex items-center justify-between gap-3 text-xs">
               <span>{errorBanner}</span>
               <button
                 type="button"
@@ -1263,7 +1263,7 @@ function CloudPulseCockpit() {
                   />
 
                   {/* 5-Domain Organized Studio Hub (Zero Duplication Across Standard GCP Services) */}
-                  <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                       <div>
                         <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -1634,7 +1634,7 @@ function CloudPulseCockpit() {
             mobilePreview
               ? 'sticky bottom-0'
               : 'fixed bottom-0 left-0 right-0 md:hidden'
-          } z-40 bg-white/95 dark:bg-[#0c0c0f]/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 px-3 py-2 flex items-center justify-around`}
+          } z-40 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 px-3 py-2 flex items-center justify-around`}
         >
           {navTabs.map((tab) => {
             const Icon = tab.icon;
@@ -1791,7 +1791,7 @@ function MandatoryDeleteConfirmationModal({
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#0c0c0f] border-2 border-red-500/80 shadow-2xl shadow-red-950/50 overflow-hidden"
+        className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#202124] border-2 border-red-500/80 shadow-2xl shadow-red-950/50 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Hazard Header */}

@@ -885,7 +885,7 @@ spec:
   const selfDeployCmd = `gcloud run deploy cloudpulse-2026 --source . --project=${projectId} --region=us-east1 --allow-unauthenticated`;
 
   return (
-    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
+    <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div>
@@ -918,8 +918,8 @@ spec:
             title="Convert any Cloud Run Service into a 6-Resource Production GKE Kubernetes Bundle (Deployment + HPA + PDB + NetworkPolicy + Spot GPU + /dev/shm) & deploy to GKE in 1 click"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
               showGlobalGkeTranspiler
-                ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/30'
+                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/30'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -943,7 +943,7 @@ spec:
           <button
             type="button"
             onClick={onOpenProvisionCloudRun}
-            className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>+ Deploy Cloud Run Service</span>
@@ -987,10 +987,10 @@ spec:
         const isGraduating = busyMap[sampleSrv.id] === 'GRADUATING_GKE';
 
         return (
-          <div className="p-4 rounded-xl border-2 border-indigo-500/40 bg-gradient-to-br from-indigo-950/30 via-zinc-900/90 to-cyan-950/30 text-zinc-100 space-y-4 shadow-lg">
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-lg">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[10px] font-mono font-bold">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] font-mono font-bold">
                   <span>BEYOND GCP CONSOLE YAML EXPORT · LIVE KNATIVE → KUBERNETES AST TRANSPILER</span>
                 </div>
                 <h4 className="text-sm sm:text-base font-extrabold text-white mt-1">
@@ -1027,7 +1027,7 @@ spec:
                 <div className="text-[10px] font-mono text-zinc-400">
                   2. Shared RAM `/dev/shm` & Stateful CSI
                 </div>
-                <div className="text-sm font-extrabold text-cyan-400 mt-0.5">
+                <div className="text-sm font-extrabold text-blue-400 mt-0.5">
                   8Gi In-Memory `/dev/shm` Mounted
                 </div>
                 <div className="text-[10px] font-mono text-zinc-400">
@@ -1039,7 +1039,7 @@ spec:
                 <div className="text-[10px] font-mono text-zinc-400">
                   3. Native HPA v2 + PodDisruptionBudget
                 </div>
-                <div className="text-sm font-extrabold text-indigo-300 mt-0.5">
+                <div className="text-sm font-extrabold text-blue-300 mt-0.5">
                   Scale {bundle.minReplicas} → {bundle.maxReplicas} Pods (Zero-Downtime)
                 </div>
                 <div className="text-[10px] font-mono text-zinc-400">
@@ -1102,7 +1102,7 @@ spec:
                     }
                     className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
                       active
-                        ? 'bg-indigo-600/30 border-indigo-400 text-white'
+                        ? 'bg-blue-600/30 border-blue-400 text-white'
                         : 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
                     }`}
                   >
@@ -1121,7 +1121,7 @@ spec:
             {/* Target GKE Cluster & 1-Click Live Rollout Controls */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800 space-y-2.5">
-                <div className="text-xs font-extrabold text-indigo-300 font-mono">
+                <div className="text-xs font-extrabold text-blue-300 font-mono">
                   Target GKE Cluster & Namespace Rollout
                 </div>
 
@@ -1231,7 +1231,7 @@ spec:
                         `global-gke-yaml-${sampleSrv.id}`
                       )
                     }
-                    className="py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+                    className="py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
                   >
                     {copiedId === `global-gke-yaml-${sampleSrv.id}`
                       ? '✓ Copied K8s YAML'
@@ -1275,7 +1275,7 @@ spec:
                       }
                       className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
                         cfg.manifestViewMode === 'KNATIVE_CONSOLE'
-                          ? 'bg-rose-600 text-white'
+                          ? 'bg-red-600 text-white'
                           : 'bg-zinc-900 text-zinc-400'
                       }`}
                     >
@@ -1295,7 +1295,7 @@ spec:
       })()}
 
       {/* Quick 1-Tap Cloud Run Templates & Self-Deploy Banner */}
-      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 flex items-center gap-1">
             <Zap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
@@ -1379,7 +1379,7 @@ spec:
             <button
               type="button"
               onClick={onOpenProvisionCloudRun}
-              className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Open Cloud Run Deployment Studio</span>
@@ -1396,7 +1396,7 @@ spec:
             <button
               type="button"
               onClick={() => setShowGlobalGkeTranspiler(true)}
-              className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
               <span>Open Cloud Run → GKE Transpiler</span>
@@ -1422,17 +1422,17 @@ spec:
                 key={srv.id}
                 className={`relative overflow-hidden rounded-xl border p-4 transition-all space-y-3.5 ${
                   isDeleting
-                    ? 'border-rose-500/40 bg-rose-500/5 opacity-55 grayscale select-none pointer-events-none'
+                    ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
                     : isUpdating
-                    ? 'border-blue-500/40 bg-blue-500/[0.03] dark:bg-[#09090b]'
-                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/40 dark:bg-[#09090b]'
+                    ? 'border-blue-500/40 bg-blue-500/[0.03] dark:bg-[#131314]'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/40 dark:bg-[#131314]'
                 }`}
               >
                 {(isDeleting || isUpdating) && (
                   <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500/20 overflow-hidden">
                     <div
                       className={`h-full w-1/2 animate-pulse ${
-                        isDeleting ? 'bg-rose-500' : 'bg-blue-500'
+                        isDeleting ? 'bg-red-500' : 'bg-blue-500'
                       }`}
                     />
                   </div>
@@ -1457,7 +1457,7 @@ spec:
                       <span
                         className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                           isDeleting
-                            ? 'bg-rose-500/20 text-rose-500'
+                            ? 'bg-red-500/20 text-red-500'
                             : isUpdating
                             ? 'bg-amber-500/20 text-amber-500'
                             : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
@@ -1513,7 +1513,7 @@ spec:
                       {srv.enableDirectVpc && (
                         <span
                           title={`Direct VPC Egress Network: ${srv.vpcNetwork} / Subnet: ${srv.vpcSubnetwork} (${srv.vpcEgress})`}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30"
                         >
                           <Network className="w-3 h-3" />
                           <span>
@@ -1584,8 +1584,8 @@ spec:
                       title="Convert this Cloud Run service into a 6-Resource Production GKE Kubernetes Bundle (Deployment + HPA + PDB + NetworkPolicy + Spot GPU) & deploy to GKE in 1 click"
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
                         activeDrawer === 'CONVERT_GKE'
-                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                          : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20'
+                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20'
                       }`}
                     >
                       <Layers className="w-3.5 h-3.5" />
@@ -1630,8 +1630,8 @@ spec:
                       }
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm cursor-pointer ${
                         activeDrawer === 'SSH_TERMINAL'
-                          ? 'bg-blue-600 hover:bg-rose-600 text-white'
-                          : 'bg-[#059669] hover:bg-[#047857] text-[#000000]'
+                          ? 'bg-blue-600 hover:bg-red-600 text-white'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
                       }`}
                     >
                       <Terminal className="w-3.5 h-3.5" />
@@ -1659,14 +1659,14 @@ spec:
                     )}
 
                     {isConfirmingDelete ? (
-                      <div className="inline-flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-1">
-                        <span className="text-[11px] font-bold text-rose-500">
+                      <div className="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 rounded-lg px-2.5 py-1">
+                        <span className="text-[11px] font-bold text-red-500">
                           Delete {srv.name}?
                         </span>
                         <button
                           type="button"
                           onClick={() => handleDeleteService(srv)}
-                          className="bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold px-2 py-0.5 rounded"
+                          className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-2 py-0.5 rounded"
                         >
                           Yes, Delete
                         </button>
@@ -1682,7 +1682,7 @@ spec:
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteId(srv.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Delete</span>
@@ -1702,7 +1702,7 @@ spec:
                         {srv.cpu} vCPU · {srv.memory}
                       </span>
                       {Number(srv.gpuCount || 0) > 0 && (
-                        <span className="text-[10px] bg-violet-500/20 text-violet-500 border border-violet-500/30 px-1.5 py-0.2 rounded">
+                        <span className="text-[10px] bg-blue-500/20 text-blue-500 border border-blue-500/30 px-1.5 py-0.2 rounded">
                           {srv.gpuCount}x {srv.gpuType || 'nvidia-l4'}
                         </span>
                       )}
@@ -1870,7 +1870,7 @@ spec:
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold font-mono uppercase text-violet-600 dark:text-violet-400 mb-1.5">
+                        <label className="block text-[11px] font-bold font-mono uppercase text-blue-600 dark:text-blue-400 mb-1.5">
                           2026 Serverless GPU Accelerator
                         </label>
                         <div className="grid grid-cols-3 gap-1.5">
@@ -1916,7 +1916,7 @@ spec:
                                 }}
                                 className={`p-2 rounded-lg border text-xs font-mono transition-colors ${
                                   active
-                                    ? 'bg-violet-500/15 border-violet-500 text-violet-700 dark:text-violet-300 font-bold'
+                                    ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 font-bold'
                                     : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                                 }`}
                               >
@@ -2257,9 +2257,9 @@ spec:
                     {/* 2026 Direct VPC Egress & Attached Storage Volumes inside Scale & Tune */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                       {/* Direct VPC Egress */}
-                      <div className="p-3 rounded-xl bg-cyan-500/[0.05] border border-cyan-500/30 space-y-2.5">
+                      <div className="p-3 rounded-xl bg-blue-500/[0.05] border border-blue-500/30 space-y-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-cyan-600 dark:text-cyan-300 flex items-center gap-1.5 truncate">
+                          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-300 flex items-center gap-1.5 truncate">
                             <Network className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">2026 Direct VPC Egress (`template.vpcAccess`)</span>
                           </span>
@@ -2276,7 +2276,7 @@ spec:
                             }
                             className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer shrink-0 ${
                               form.enableDirectVpc
-                                ? 'bg-cyan-600 text-white border-cyan-500'
+                                ? 'bg-blue-600 text-white border-blue-500'
                                 : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-500'
                             }`}
                           >
@@ -2697,7 +2697,7 @@ spec:
                         type="button"
                         onClick={() => handleSaveTuneConfig(srv)}
                         disabled={Boolean(busyState)}
-                        className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] font-bold text-xs px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <Rocket className="w-3.5 h-3.5" />
                         <span>Deploy Updated Revision</span>
@@ -2849,7 +2849,7 @@ spec:
                         <button
                           type="button"
                           onClick={() => handleApplyTraffic(srv)}
-                          className="bg-[#059669] hover:bg-[#047857] text-[#000000] font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
                         >
                           Apply Canary Split
                         </button>
@@ -2878,10 +2878,10 @@ spec:
                   const isGraduating = busyState === 'GRADUATING_GKE';
 
                   return (
-                    <div className="mt-3 pt-4 border-t border-indigo-500/30 space-y-4 bg-gradient-to-br from-indigo-950/30 via-zinc-950 to-cyan-950/20 p-4 rounded-xl text-zinc-100">
+                    <div className="mt-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4 bg-zinc-50 dark:bg-zinc-900/90 p-4 rounded-xl text-zinc-900 dark:text-zinc-100">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider font-mono text-indigo-300 flex items-center gap-1.5">
+                          <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider font-mono text-blue-300 flex items-center gap-1.5">
                             <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                             <span>
                               Graduate `{srv.name}` ({srv.region}) → Production GKE Kubernetes Cluster
@@ -2908,7 +2908,7 @@ spec:
                           <div className="text-[10px] font-mono text-zinc-400">
                             Cloud Run Warm Burn ({bundle.minReplicas}x {srv.cpu}vCPU/{srv.memory})
                           </div>
-                          <div className="text-sm font-extrabold text-rose-400 mt-0.5 font-mono">
+                          <div className="text-sm font-extrabold text-red-400 mt-0.5 font-mono">
                             ${bundle.cloudRunMonthly}/mo
                           </div>
                         </div>
@@ -2917,7 +2917,7 @@ spec:
                           <div className="text-[10px] font-mono text-zinc-400">
                             GKE Autopilot Pod Billing (-42%)
                           </div>
-                          <div className="text-sm font-extrabold text-cyan-400 mt-0.5 font-mono">
+                          <div className="text-sm font-extrabold text-blue-400 mt-0.5 font-mono">
                             ${bundle.gkeAutopilotMonthly}/mo
                           </div>
                         </div>
@@ -2974,7 +2974,7 @@ spec:
                               }
                               className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
                                 active
-                                  ? 'bg-indigo-600/30 border-indigo-400 text-white'
+                                  ? 'bg-blue-600/30 border-blue-400 text-white'
                                   : 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
                               }`}
                             >
@@ -3109,7 +3109,7 @@ spec:
                                   `gke-yaml-${srv.id}`
                                 )
                               }
-                              className="py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+                              className="py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
                             >
                               {copiedId === `gke-yaml-${srv.id}`
                                 ? '✓ Copied YAML'
@@ -3152,7 +3152,7 @@ spec:
                               }
                               className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
                                 cfg.manifestViewMode === 'KNATIVE_CONSOLE'
-                                  ? 'bg-rose-600 text-white'
+                                  ? 'bg-red-600 text-white'
                                   : 'bg-zinc-900 text-zinc-400'
                               }`}
                             >

@@ -56,7 +56,7 @@ export default function TelemetryCharts({ telemetry, projectId, onOpenCopilot })
 
   return (
     <div className="grid grid-cols-1 gap-6">
-      <div className="bg-white dark:bg-[#0c0c0f] rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-6 transition-all duration-300">
+      <div className="bg-white dark:bg-[#202124] rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-6 transition-all duration-300">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
             <div className="flex items-center gap-2">

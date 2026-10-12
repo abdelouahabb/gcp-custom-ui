@@ -395,21 +395,21 @@ main:
   return (
     <div className="space-y-5">
       {/* Top Hero Banner */}
-      <div className="bg-gradient-to-r from-slate-950 via-indigo-950/90 to-cyan-950/85 border border-cyan-500/35 rounded-2xl p-5 text-white shadow-xl">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 text-zinc-900 dark:text-zinc-100 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                 WAVE-10 · 2026 CLOUD ENGINEER DREAM FRONTIER
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
                 SPANNER GRAPH ($65/MO) · SERVERLESS SPARK · WORKFLOW CHOREOGRAPHER · MODEL ARMOR
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
+            <h2 className="text-lg sm:text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
               2026 Frontier Studio: Spanner Graph, Serverless Spark, Workflows &amp; AI Model Armor
             </h2>
-            <p className="text-xs text-zinc-300 max-w-4xl">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
               Demystify Google Cloud&apos;s newest 2026 breakthroughs in one place — run **ISO GQL Graph + Vectors** on **$65/mo 100-PU Cloud Spanner**, submit **Zero-Cluster Serverless PySpark** jobs directly over **BigLake Iceberg**, pick the right **Eventarc vs. Pub/Sub vs. Tasks vs. Workflows** pattern, and shield LLMs with **Vertex AI Model Armor**.
             </p>
           </div>
@@ -418,7 +418,7 @@ main:
             type="button"
             onClick={fetchFrontier}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 text-xs font-mono font-bold cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer shrink-0"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
@@ -428,7 +428,7 @@ main:
         </div>
 
         {/* Sub-Navigation Pills */}
-        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-zinc-800/80 overflow-x-auto pb-2.5">
+        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 overflow-x-auto pb-2.5">
           {FRONTIER_TABS.map((t) => {
             const active = activeSubTab === t.id;
             return (
@@ -439,8 +439,8 @@ main:
                 onClick={() => setActiveSubTab(t.id)}
                 className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold whitespace-nowrap transition-all cursor-pointer border shrink-0 ${
                   active
-                    ? 'bg-cyan-500 text-zinc-950 border-cyan-300 shadow-md'
-                    : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                 }`}
               >
                 <span>{t.label}</span>
@@ -456,7 +456,7 @@ main:
       {activeSubTab === 'SPANNER_GRAPH' && (
         <div className="space-y-4">
           {/* Why Spanner Changed in 2026 */}
-          <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -478,10 +478,10 @@ main:
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center p-4 rounded-xl bg-zinc-950 border border-zinc-800">
               <div className="lg:col-span-5 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-mono font-bold text-cyan-300">
+                  <label className="text-xs font-mono font-bold text-blue-300">
                     Granular Capacity: {spannerPu} Processing Units ({spannerArtifacts.nodes} Node)
                   </label>
-                  <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-xs font-mono font-extrabold">
+                  <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-mono font-extrabold">
                     ~${spannerArtifacts.estMonthlyUsd}/mo
                   </span>
                 </div>
@@ -502,7 +502,7 @@ main:
                       onClick={() => setSpannerPu(puVal)}
                       className={`px-2 py-1 rounded text-[11px] font-mono border cursor-pointer ${
                         spannerPu === puVal
-                          ? 'bg-cyan-500 text-zinc-950 border-cyan-400 font-bold'
+                          ? 'bg-blue-500 text-zinc-950 border-blue-400 font-bold'
                           : 'bg-zinc-900 text-zinc-400 border-zinc-800'
                       }`}
                     >
@@ -529,7 +529,7 @@ main:
                   <div className="text-[10px] font-mono text-zinc-400">
                     vs. 3 Separate Silos
                   </div>
-                  <div className="text-lg font-black font-mono text-rose-400 line-through mt-0.5">
+                  <div className="text-lg font-black font-mono text-red-400 line-through mt-0.5">
                     ${spannerArtifacts.legacy3DbMonthlyUsd}/mo
                   </div>
                   <div className="text-[10px] font-mono text-zinc-500">
@@ -541,7 +541,7 @@ main:
                   <div className="text-[10px] font-mono text-zinc-400">
                     Throughput &amp; Storage Limit
                   </div>
-                  <div className="text-lg font-black font-mono text-cyan-300 mt-0.5">
+                  <div className="text-lg font-black font-mono text-blue-300 mt-0.5">
                     ~{spannerArtifacts.approxQpsReads} QPS
                   </div>
                   <div className="text-[10px] font-mono text-zinc-500">
@@ -561,7 +561,7 @@ main:
                   type="text"
                   value={spannerInstanceId}
                   onChange={(e) => setSpannerInstanceId(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 />
               </div>
               <div>
@@ -571,7 +571,7 @@ main:
                 <select
                   value={spannerRegion}
                   onChange={(e) => setSpannerRegion(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 >
                   <option value="us-central1">regional-us-central1 (Iowa)</option>
                   <option value="europe-west1">regional-europe-west1 (Belgium)</option>
@@ -585,7 +585,7 @@ main:
                 <select
                   value={spannerUseCase}
                   onChange={(e) => setSpannerUseCase(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 >
                   <option value="FRAUD_GRAPH">FinCrime 3-Hop Ring + Vector Match</option>
                   <option value="HYBRID_RAG_GRAPH">GraphRAG (Semantic Vector + Graph Edges)</option>
@@ -604,7 +604,7 @@ main:
                     edition: spannerEdition,
                   })
                 }
-                className="h-[36px] px-4 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                className="h-[36px] px-4 rounded-lg bg-blue-500 hover:bg-blue-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
                 {actionBusy
                   ? 'Provisioning...'
@@ -616,7 +616,7 @@ main:
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono text-cyan-300">
+                  <span className="text-xs font-bold font-mono text-blue-300">
                     1. `CREATE PROPERTY GRAPH` + Vector Schema (Zero Data Copy)
                   </span>
                   <button
@@ -654,7 +654,7 @@ main:
                 <button
                   type="button"
                   onClick={() => onRunInShell?.(spannerArtifacts.createCli)}
-                  className="w-full py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-[11px] font-mono font-bold cursor-pointer"
+                  className="w-full py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-[11px] font-mono font-bold cursor-pointer"
                 >
                   Run `gcloud spanner instances create` in Cloud Shell →
                 </button>
@@ -668,7 +668,7 @@ main:
       {/* TAB 2: ZERO-CLUSTER SERVERLESS SPARK & RAY ON BIGLAKE ICEBERG       */}
       {/* =================================================================== */}
       {activeSubTab === 'SERVERLESS_SPARK' && (
-        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -695,7 +695,7 @@ main:
                 type="text"
                 value={sparkBatchId}
                 onChange={(e) => setSparkBatchId(e.target.value)}
-                className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
               />
             </div>
             <div>
@@ -706,7 +706,7 @@ main:
                 type="text"
                 value={sparkBucket}
                 onChange={(e) => setSparkBucket(e.target.value)}
-                className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
               />
             </div>
             <div>
@@ -716,7 +716,7 @@ main:
               <select
                 value={sparkTemplate}
                 onChange={(e) => setSparkTemplate(e.target.value)}
-                className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
               >
                 <option value="ICEBERG_MERGE">ACID MERGE + Iceberg Compaction</option>
                 <option value="SPARK_ML_EMBEDDINGS">Distributed Feature Store Builder</option>
@@ -762,7 +762,7 @@ main:
             <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2 flex flex-col justify-between">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono text-cyan-300">
+                  <span className="text-xs font-bold font-mono text-blue-300">
                     2. Zero-Cluster `gcloud dataproc batches submit pyspark` CLI
                   </span>
                   <button
@@ -773,7 +773,7 @@ main:
                     {copiedId === 'sp-cli' ? 'Copied ✓' : 'Copy CLI'}
                   </button>
                 </div>
-                <pre className="text-[10.5px] font-mono text-cyan-200 bg-black/50 p-2.5 rounded-lg whitespace-pre-wrap break-all">
+                <pre className="text-[10.5px] font-mono text-blue-200 bg-black/50 p-2.5 rounded-lg whitespace-pre-wrap break-all">
                   {sparkArtifacts.submitCli}
                 </pre>
               </div>
@@ -794,7 +794,7 @@ main:
       {/* TAB 3: EVENTARC VS PUB/SUB VS CLOUD TASKS VS WORKFLOWS MATRIX       */}
       {/* =================================================================== */}
       {activeSubTab === 'CHOREOGRAPHER' && (
-        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
               <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -851,7 +851,7 @@ main:
                 onClick={() => setSelectedPattern(item.id)}
                 className={`p-3 rounded-xl border cursor-pointer transition-all space-y-1.5 ${
                   selectedPattern === item.id
-                    ? 'border-indigo-400 bg-indigo-500/10 ring-1 ring-indigo-400/40'
+                    ? 'border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/40'
                     : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/70'
                 }`}
               >
@@ -860,7 +860,7 @@ main:
                     {item.title}
                   </span>
                 </div>
-                <div className="text-[11px] font-mono font-bold text-indigo-400">
+                <div className="text-[11px] font-mono font-bold text-blue-400">
                   {item.subtitle}
                 </div>
                 <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
@@ -874,7 +874,7 @@ main:
           <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-extrabold font-mono text-indigo-300">
+                <span className="text-xs font-extrabold font-mono text-blue-300">
                   Live Cloud Workflows Durable YAML Saga Composer
                 </span>
                 {[
@@ -888,7 +888,7 @@ main:
                     onClick={() => setWorkflowBlueprint(bp.id)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${
                       workflowBlueprint === bp.id
-                        ? 'bg-indigo-600 text-white border-indigo-400 font-bold'
+                        ? 'bg-blue-600 text-white border-blue-400 font-bold'
                         : 'bg-zinc-900 text-zinc-400 border-zinc-800'
                     }`}
                   >
@@ -915,14 +915,14 @@ main:
                       workflowYaml: workflowArtifacts.yaml,
                     })
                   }
-                  className="h-[32px] px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                  className="h-[32px] px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                 >
                   {actionBusy ? 'Deploying...' : 'Deploy Workflow'}
                 </button>
               </div>
             </div>
 
-            <pre className="text-[10.5px] font-mono text-indigo-100 bg-black/60 p-3 rounded-xl border border-zinc-800 whitespace-pre-wrap break-all max-h-72 overflow-y-auto">
+            <pre className="text-[10.5px] font-mono text-blue-100 bg-black/60 p-3 rounded-xl border border-zinc-800 whitespace-pre-wrap break-all max-h-72 overflow-y-auto">
               {workflowArtifacts.yaml}
             </pre>
           </div>
@@ -935,7 +935,7 @@ main:
       {activeSubTab === 'MODEL_ARMOR_FINOPS' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left: Vertex AI Model Armor Prompt-Injection & Secret/PII Shield */}
-          <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3.5">
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3.5">
             <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -976,7 +976,7 @@ main:
                     className={`px-2.5 py-0.5 rounded text-xs font-mono font-bold ${
                       armorResult.verdict === 'SAFE_TO_DISPATCH'
                         ? 'bg-emerald-500/20 text-emerald-300'
-                        : 'bg-rose-500/20 text-rose-300'
+                        : 'bg-red-500/20 text-red-300'
                     }`}
                   >
                     {armorResult.verdict} · Risk {armorResult.riskScore}/100
@@ -989,7 +989,7 @@ main:
                 {(armorResult.findings || []).map((f, idx) => (
                   <div
                     key={idx}
-                    className="p-2 rounded-lg bg-rose-950/30 border border-rose-500/30 text-[11px] font-mono text-rose-200"
+                    className="p-2 rounded-lg bg-red-950/30 border border-red-500/30 text-[11px] font-mono text-red-200"
                   >
                     <strong>[{f.severity}] {f.type}:</strong> {f.detail}
                   </div>
@@ -1008,7 +1008,7 @@ main:
           </div>
 
           {/* Right: Vertex AI Context Caching FinOps Simulator (-80% Token Bill) */}
-          <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
             <div className="border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -1039,7 +1039,7 @@ main:
               <div>
                 <div className="flex justify-between text-xs font-mono mb-1">
                   <span className="text-zinc-400">Daily Requests Reusing Context:</span>
-                  <span className="font-bold text-cyan-400">{dailyRequests.toLocaleString()} req/day</span>
+                  <span className="font-bold text-blue-400">{dailyRequests.toLocaleString()} req/day</span>
                 </div>
                 <input
                   type="range"
@@ -1056,7 +1056,7 @@ main:
             <div className="grid grid-cols-3 gap-2.5">
               <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">Standard Uncached</div>
-                <div className="text-base font-black font-mono text-rose-400 line-through mt-0.5">
+                <div className="text-base font-black font-mono text-red-400 line-through mt-0.5">
                   ${contextCacheFinOps.uncachedMonthlyUsd}/mo
                 </div>
               </div>

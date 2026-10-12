@@ -33,7 +33,7 @@ const DOC_SECTIONS = [
     title:
       '2026 Quantum Nexus — Causal Blast-Radius Graph, Time-Machine State Rollback, FinOps Arbitrage Autopilot, Ephemeral PR Shadow Previews & Zero-Trust Honey-Token Deception Grid',
     badge: '2026 INNOVATION LAB (DEFAULT STAR)',
-    badgeColor: 'bg-violet-500/20 text-violet-400 border-violet-500/40',
+    badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
     icon: Sparkles,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'QUANTUM_NEXUS',
@@ -59,7 +59,7 @@ const DOC_SECTIONS = [
     title:
       'Spanner Graph & Geo-Partitioning ($65/mo 100-PU), Serverless Apache Spark 2.2, Cloud Workflows Visual Choreographer & Vertex AI Model Armor',
     badge: 'SPANNER GRAPH & SPARK TAB',
-    badgeColor: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Rocket,
     targetTab: 'WAVE10_FRONTIER',
     problemSolved:
@@ -83,7 +83,7 @@ const DOC_SECTIONS = [
     title:
       'BigLake vs. BigQuery Demystified Studio — Open Apache Iceberg Tables, Cross-Engine Governance & 1-Click BigLake Wizard',
     badge: 'BIGQUERY & BIGLAKE TAB (TAB 5)',
-    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
     targetTab: 'BIGQUERY_STUDIO',
     problemSolved:
@@ -129,7 +129,7 @@ const DOC_SECTIONS = [
     title:
       '6 Out-of-the-Box Cloud Engineering Moonshots (DLP X-Ray, Cold-Start Surgeon, Egress Tollbooth, Ransomware Air-Gap, Anycast Latency & AES-256-GCM Gemini 3.8 / 3.1 Vault)',
     badge: '2026 LAB · MOONSHOTS X1–X6',
-    badgeColor: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
+    badgeColor: 'bg-red-500/15 text-red-500 border-red-500/30',
     icon: Rocket,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'MOONSHOT_X1_DLP',
@@ -157,7 +157,7 @@ const DOC_SECTIONS = [
     title:
       'Dedicated Cloud SQL (MySQL 8.4 LTS & PostgreSQL 16/17) + Google Cloud AlloyDB Studio',
     badge: 'CLOUD SQL & ALLOYDB TAB + PROVISION MODAL',
-    badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
     targetTab: 'CLOUD_SQL_STUDIO',
     problemSolved:
@@ -180,7 +180,7 @@ const DOC_SECTIONS = [
     title:
       'Dedicated Google Kubernetes Engine (GKE) Autopilot, Spot GPU & Workload Studio',
     badge: 'GKE STUDIO TAB + PROVISION MODAL',
-    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Server,
     targetTab: 'GKE_STUDIO',
     problemSolved:
@@ -203,7 +203,7 @@ const DOC_SECTIONS = [
     title:
       'Cloud Run 2026 Container SSH (@xterm/xterm + gcloud beta run services ssh), Direct VPC Egress, Storage Volumes & 1-Click GKE Migrator',
     badge: 'CLOUD RUN TAB + PROVISION MODAL',
-    badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Rocket,
     targetTab: 'CLOUD_RUN',
     problemSolved:
@@ -319,7 +319,7 @@ const DOC_SECTIONS = [
     title:
       '2026 Data Engineering Studio: Source-to-Gold Medallion ELT, Dataform/dbt SQLX Auto-Clean, Dataplex Data Mesh & Slot Doctor',
     badge: 'DATA ENGINEER TAB',
-    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
     targetTab: 'DATA_ENGINEER_STUDIO',
     problemSolved:
@@ -343,7 +343,7 @@ const DOC_SECTIONS = [
     title:
       'Artifact Registry SLSA-3 Supply-Chain & 1-Click Orphan Digest Sweeper Studio',
     badge: 'ARTIFACT REGISTRY & SBOM TAB',
-    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
     targetTab: 'WAVE9_STUDIO',
     problemSolved:
@@ -411,7 +411,7 @@ const DOC_SECTIONS = [
     title:
       '"Pre-Crime" 30-Day Billing Time-Crystal, Failure Cascade X-Ray & Dream Stack Compiler',
     badge: '2026 LAB · TAB 1 (NEW)',
-    badgeColor: 'bg-violet-500/15 text-violet-500 border-violet-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Sparkles,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'DREAM_BRAIN',
@@ -459,7 +459,7 @@ const DOC_SECTIONS = [
     wave: 'WAVE 3 · 2030 ORBITAL UI',
     title: '2030 Orbital Telemetry HUD, Stack Synthesizer & Flight Recorder',
     badge: 'TOP RIBBON HUD',
-    badgeColor: 'bg-cyan-500/15 text-cyan-500 border-cyan-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Wand2,
     targetTab: 'OVERVIEW',
     problemSolved:
@@ -503,7 +503,7 @@ const DOC_SECTIONS = [
     wave: 'WAVE 1 · 1-TAP FINOPS HIBERNATE',
     title: 'Night-Mode FinOps Sleep & Wake Switch ("Park Project for the Night")',
     badge: '2026 LAB · TAB 2',
-    badgeColor: 'bg-indigo-500/15 text-indigo-500 border-indigo-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Moon,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'FINOPS_SLEEP',
@@ -550,7 +550,7 @@ const DOC_SECTIONS = [
     wave: 'WAVE 1 · REVERSE IaC EXPORTER',
     title: '1-Tap Reverse-Terraform (main.tf) & gcloud Clone Blueprint Exporter',
     badge: '2026 LAB · TAB 3',
-    badgeColor: 'bg-violet-500/15 text-violet-500 border-violet-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: FileCode2,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'TERRAFORM',
@@ -568,7 +568,7 @@ const DOC_SECTIONS = [
     wave: 'WAVE 1 · ZERO-TRUST SECURITY',
     title: 'Zero-Trust Security & IAM Service Account Posture Scanner',
     badge: '2026 LAB · TAB 4',
-    badgeColor: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
+    badgeColor: 'bg-red-500/15 text-red-500 border-red-500/30',
     icon: ShieldAlert,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'SECURITY',
@@ -589,7 +589,7 @@ const DOC_SECTIONS = [
     wave: 'WAVE 2 · ENGINEER SECRET WISHLIST',
     title: 'Cold-Start & P95 Latency Stress Arena + HTTP Header X-Ray',
     badge: '2026 LAB · TAB 5',
-    badgeColor: 'bg-cyan-500/15 text-cyan-500 border-cyan-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Zap,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'BENCHMARK',
@@ -653,7 +653,7 @@ const DOC_SECTIONS = [
     title:
       'Global Cloud Map · All 40 Official Regions, 121 Zones, Tactical Spotlight & Chaos Failover',
     badge: 'GLOBAL MAP TAB',
-    badgeColor: 'bg-cyan-500/15 text-cyan-500 border-cyan-500/30',
+    badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Globe,
     targetTab: 'GLOBAL_MAP',
     problemSolved:
@@ -699,7 +699,7 @@ const DOC_SECTIONS = [
     wave: 'EMERGENCY MOBILE GOVERNANCE',
     title: 'DEFCON-1 Project Billing Kill-Switch & API Circuit Breaker',
     badge: 'LIVE GCP RESOURCES TAB',
-    badgeColor: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
+    badgeColor: 'bg-red-500/15 text-red-500 border-red-500/30',
     icon: PowerOff,
     targetTab: 'RESOURCES',
     problemSolved:
@@ -743,22 +743,22 @@ export default function InteractiveDocsGuide({
   return (
     <div className="space-y-6">
       {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-slate-950 via-blue-950/90 to-violet-950/90 border border-blue-500/30 rounded-2xl p-6 text-white shadow-xl space-y-4">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 text-zinc-900 dark:text-zinc-100 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-xs font-mono font-bold text-blue-300">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
               <BookOpen className="w-3.5 h-3.5" />
               <span>INTERACTIVE ENGINEERING MANUAL & ARCHITECTURE GUIDE</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
               How CloudPulse 2026 Works Under the Hood
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-3xl leading-relaxed">
               Every revolutionary feature in CloudPulse 2026 talks directly to
               official Google Cloud REST APIs using your authenticated session.
               Read below to understand what each tool does, which GCP APIs it
               calls, its billing impact, and click{' '}
-              <strong className="text-cyan-300">"Launch Feature →"</strong> to
+              <strong className="text-blue-600 dark:text-blue-400">&quot;Launch Feature →&quot;</strong> to
               jump straight to it.
             </p>
           </div>
@@ -766,7 +766,7 @@ export default function InteractiveDocsGuide({
           <button
             type="button"
             onClick={onOpenCommandPalette}
-            className="inline-flex items-center gap-2 bg-violet-500 hover:bg-violet-400 text-white font-mono font-bold text-xs px-4 py-3 rounded-xl shadow-lg transition-colors shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-xs px-4 py-3 rounded-xl shadow-sm transition-colors shrink-0 cursor-pointer"
           >
             <Command className="w-4 h-4" />
             <span>Press ⌘K for Voice & Natural Language Ops</span>
@@ -776,13 +776,13 @@ export default function InteractiveDocsGuide({
         {/* Search & Wave Filter Bar */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2">
           <div className="md:col-span-6 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+            <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search documentation (e.g. 'hibernate', 'terraform', 'zombie', 'teleport', 'billing', 'gpu')..."
-              className="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs font-mono text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
+              className="w-full bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-10 pr-4 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-blue-500"
             />
           </div>
 
@@ -802,8 +802,8 @@ export default function InteractiveDocsGuide({
                 onClick={() => setSelectedWave(f.id)}
                 className={`px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-colors cursor-pointer ${
                   selectedWave === f.id
-                    ? 'bg-cyan-500 text-slate-950 border-cyan-400'
-                    : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-slate-700'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
                 }`}
               >
                 {f.label}
@@ -820,7 +820,7 @@ export default function InteractiveDocsGuide({
           return (
             <div
               key={doc.id}
-              className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+              className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
                 <div className="space-y-1">
@@ -885,7 +885,7 @@ export default function InteractiveDocsGuide({
                 {/* Right Column: Under-the-Hood REST APIs & Billing/Safety Impact */}
                 <div className="lg:col-span-5 space-y-3">
                   <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
-                    <div className="text-[10px] font-mono font-bold uppercase text-cyan-400 flex items-center gap-1.5">
+                    <div className="text-[10px] font-mono font-bold uppercase text-blue-400 flex items-center gap-1.5">
                       <Terminal className="w-3.5 h-3.5" />
                       <span>Under-the-Hood GCP REST APIs Called</span>
                     </div>

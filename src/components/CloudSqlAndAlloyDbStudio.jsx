@@ -501,19 +501,19 @@ WITH (m = 16, ef_construction = 64);`;
   return (
     <div className="space-y-5">
       {/* Top Hero Banner */}
-      <div className="rounded-[12px] border border-cyan-500/30 bg-gradient-to-r from-cyan-950/70 via-zinc-900 to-indigo-950/60 p-4 sm:p-5 shadow-lg">
+      <div className="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[11px] font-mono">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 DEDICATED CLOUD SQL (MYSQL & POSTGRESQL) + GOOGLE CLOUD ALLOYDB AI VECTOR STUDIO
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+            <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
               Cloud SQL (PostgreSQL & MySQL) vs. AlloyDB Disaggregated AI Database Studio
             </h2>
-            <p className="text-xs text-zinc-300 max-w-3xl">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-3xl">
               Choose **MySQL 8.4 LTS** or **PostgreSQL 16/17**, and when deploying PostgreSQL, choose between **Classic / Enterprise Plus Cloud SQL (`sqladmin.googleapis.com`)** or **Google Cloud AlloyDB (`alloydb.googleapis.com`)** with 100x Columnar Engine, `alloydb_scann` AI vectors, and strict SEC/GDPR/HIPAA compliance locks (``).
             </p>
           </div>
@@ -524,7 +524,7 @@ WITH (m = 16, ef_construction = 64);`;
                 type="button"
                 onClick={onOpenProvisionSql}
                 title="Open the full 5-Step Cloud SQL & AlloyDB Compliance Wizard in the Provisioning Modal"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>+ Create Database (5-Step Wizard)</span>
@@ -535,7 +535,7 @@ WITH (m = 16, ef_construction = 64);`;
               type="button"
               onClick={fetchCloudSqlFleet}
               title="Refresh live Cloud SQL instances and AlloyDB clusters"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -549,59 +549,59 @@ WITH (m = 16, ef_construction = 64);`;
 
         {/* 4 KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
-            <div className="text-[11px] font-mono text-zinc-400">
+          <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               Live Database Fleet
             </div>
-            <div className="text-lg font-extrabold text-white mt-0.5">
+            <div className="text-lg font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               {instancesList.length} Cloud SQL · {alloyClustersList.length}{' '}
               AlloyDB
             </div>
-            <div className="text-[11px] text-cyan-400 font-mono">
+            <div className="text-[11px] text-blue-600 dark:text-blue-400 font-mono">
               sqladmin + alloydb.googleapis.com/v1
             </div>
           </div>
 
-          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
-            <div className="text-[11px] font-mono text-zinc-400">
+          <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               Active Engine & Architecture
             </div>
-            <div className="text-sm font-extrabold text-emerald-400 mt-1 font-mono">
+            <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
               {sqlEngineFamily === 'MYSQL'
                 ? `MySQL (${databaseVersion}) · Cloud SQL`
                 : sqlArchitecture === 'ALLOYDB'
                 ? `PostgreSQL (${databaseVersion}) · AlloyDB`
                 : `PostgreSQL (${databaseVersion}) · Cloud SQL`}
             </div>
-            <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">
               {sqlArchitecture === 'ALLOYDB'
                 ? '4x OLTP · 100x Columnar · 10x ScaNN'
                 : `${edition} · ${sqlAvailability} HA`}
             </div>
           </div>
 
-          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
-            <div className="text-[11px] font-mono text-zinc-400">
+          <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               Zero-Trust Network & TLS Posture
             </div>
-            <div className="text-sm font-extrabold text-indigo-300 mt-1 font-mono">
+            <div className="text-sm font-extrabold text-blue-600 dark:text-blue-400 mt-1 font-mono">
               Private VPC (`--no-assign-ip`)
             </div>
-            <div className="text-[11px] text-emerald-400 font-mono mt-0.5">
+            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
               {sqlSslMode === 'TRUSTED_CLIENT_CERTIFICATE_REQUIRED'
                 ? 'mTLS Client Cert Enforced'
                 : 'TLS 1.3 Encrypted Only'}
             </div>
           </div>
 
-          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
-            <div className="text-[11px] font-mono text-zinc-400">
+          <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               Continuous PITR Recovery Window
             </div>
-            <div className="text-lg font-extrabold text-amber-400 mt-0.5">
+            <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
               {sqlPitrDays} Days WAL / Binlog
             </div>
-            <div className="text-[11px] text-zinc-400 font-mono">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
               Sub-second point-in-time clone ready
             </div>
           </div>
@@ -641,8 +641,8 @@ WITH (m = 16, ef_construction = 64);`;
               onClick={() => setActiveSubTab(t.id)}
               className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold border transition-all cursor-pointer ${
                 active
-                  ? 'bg-cyan-600 text-white border-cyan-500 shadow-sm'
-                  : 'bg-[#ffffff] dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-cyan-500/40'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                  : 'bg-white dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -660,14 +660,14 @@ WITH (m = 16, ef_construction = 64);`;
           {/* Left: Interactive Engine, Architecture Fork & Compliance Provisioner */}
           <form
             onSubmit={handleProvisionDatabase}
-            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Relational & AI Database Compliance Studio</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
                 {isCustom
                   ? 'UNLOCKED CUSTOM MODE'
                   : `ENFORCING ${sqlBlueprint.toUpperCase()}`}
@@ -711,8 +711,8 @@ WITH (m = 16, ef_construction = 64);`;
                     onClick={() => applySqlBlueprint(bp.id)}
                     className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
                       active
-                        ? 'bg-cyan-600 text-white border-cyan-500 shadow-sm'
-                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-cyan-500/40'
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
                     }`}
                   >
                     <div className="text-[11px] font-bold truncate">
@@ -720,7 +720,7 @@ WITH (m = 16, ef_construction = 64);`;
                     </div>
                     <div
                       className={`text-[9.5px] truncate ${
-                        active ? 'text-cyan-100' : 'text-zinc-500'
+                        active ? 'text-blue-100' : 'text-zinc-500'
                       }`}
                     >
                       {bp.sub}
@@ -741,7 +741,7 @@ WITH (m = 16, ef_construction = 64);`;
                   onClick={() => handleSelectEngineFamily('POSTGRES')}
                   className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
                     sqlEngineFamily === 'POSTGRES'
-                      ? 'bg-indigo-500/15 border-indigo-500 text-indigo-700 dark:text-indigo-300'
+                      ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
                       : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
                   }`}
                 >
@@ -804,7 +804,7 @@ WITH (m = 16, ef_construction = 64);`;
                     isAiAlloyBlueprint
                       ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                       : sqlArchitecture === 'CLOUD_SQL'
-                      ? 'bg-cyan-500/15 border-cyan-500 text-cyan-700 dark:text-cyan-300 cursor-pointer'
+                      ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 cursor-pointer'
                       : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer'
                   }`}
                 >
@@ -833,7 +833,7 @@ WITH (m = 16, ef_construction = 64);`;
                     sqlEngineFamily === 'MYSQL'
                       ? 'opacity-45 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                       : sqlArchitecture === 'ALLOYDB'
-                      ? 'bg-violet-500/15 border-violet-500 text-violet-700 dark:text-violet-300 cursor-pointer'
+                      ? 'bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300 cursor-pointer'
                       : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer'
                   }`}
                 >
@@ -1006,7 +1006,7 @@ WITH (m = 16, ef_construction = 64);`;
               <button
                 type="button"
                 onClick={() => handleCopy(gcloudCli, 'Database gcloud CLI')}
-                className="w-full py-2.5 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold cursor-pointer"
+                className="w-full py-2.5 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
               >
                 {copiedLabel === 'Database gcloud CLI'
                   ? '✓ Copied gcloud CLI'
@@ -1016,7 +1016,7 @@ WITH (m = 16, ef_construction = 64);`;
           </form>
 
           {/* Right: Live Cloud SQL & AlloyDB Fleet Inspector */}
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                 Live Cloud SQL ({instancesList.length}) & AlloyDB Clusters (
@@ -1026,7 +1026,7 @@ WITH (m = 16, ef_construction = 64);`;
                 <button
                   type="button"
                   onClick={onOpenProvisionSql}
-                  className="text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 cursor-pointer"
+                  className="text-xs font-mono font-bold text-blue-400 hover:text-blue-300 cursor-pointer"
                 >
                   + Full 5-Step Wizard →
                 </button>
@@ -1038,13 +1038,13 @@ WITH (m = 16, ef_construction = 64);`;
                 {alloyClustersList.map((c) => (
                   <div
                     key={`alloy-${c.name}`}
-                    className="p-3 rounded-[8px] border border-violet-500/30 bg-violet-500/5 space-y-1.5"
+                    className="p-3 rounded-[8px] border border-blue-500/30 bg-blue-500/5 space-y-1.5"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                           <span>{c.name}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px]">
                             ALLOYDB ({c.databaseVersion})
                           </span>
                           <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
@@ -1061,7 +1061,7 @@ WITH (m = 16, ef_construction = 64);`;
                         type="button"
                         disabled={deletingDbName === c.name}
                         onClick={() => handleDeleteAlloyDb(c.location, c.name)}
-                        className="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-[10px] font-mono font-bold cursor-pointer"
+                        className="px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[10px] font-mono font-bold cursor-pointer"
                       >
                         {deletingDbName === c.name ? '...' : 'Delete'}
                       </button>
@@ -1083,7 +1083,7 @@ WITH (m = 16, ef_construction = 64);`;
                               : 'PostgreSQL'}{' '}
                             {inst.name}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px]">
                             {inst.databaseVersion} · {inst.edition}
                           </span>
                           <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
@@ -1100,7 +1100,7 @@ WITH (m = 16, ef_construction = 64);`;
                         type="button"
                         disabled={deletingDbName === inst.name}
                         onClick={() => handleDeleteCloudSql(inst.name)}
-                        className="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-[10px] font-mono font-bold cursor-pointer"
+                        className="px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[10px] font-mono font-bold cursor-pointer"
                       >
                         {deletingDbName === inst.name ? '...' : 'Delete'}
                       </button>
@@ -1126,7 +1126,7 @@ WITH (m = 16, ef_construction = 64);`;
           SUB-TAB 2: CLASSIC CLOUD SQL VS. ALLOYDB ARCHITECTURE COMPARATOR
          =================================================================== */}
       {activeSubTab === 'ARCH_COMPARATOR' && (
-        <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-4">
+        <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1190,7 +1190,7 @@ WITH (m = 16, ef_construction = 64);`;
               <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
                 Cloud SQL Enterprise (MySQL / PG)
               </div>
-              <div className="text-lg font-black font-mono text-cyan-400">
+              <div className="text-lg font-black font-mono text-blue-400">
                 ~${cloudSqlEntMonthly}/mo (Regional HA)
               </div>
               <ul className="text-[11px] font-mono text-zinc-500 space-y-1">
@@ -1201,11 +1201,11 @@ WITH (m = 16, ef_construction = 64);`;
               </ul>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-cyan-500/40 bg-cyan-500/5 space-y-2">
-              <div className="text-xs font-extrabold text-cyan-400">
+            <div className="p-3.5 rounded-[10px] border border-blue-500/40 bg-blue-500/5 space-y-2">
+              <div className="text-xs font-extrabold text-blue-400">
                 Cloud SQL Enterprise Plus (MySQL / PG)
               </div>
-              <div className="text-lg font-black font-mono text-cyan-300">
+              <div className="text-lg font-black font-mono text-blue-300">
                 ~${cloudSqlPlusMonthly}/mo (Regional HA)
               </div>
               <ul className="text-[11px] font-mono text-zinc-400 space-y-1">
@@ -1216,8 +1216,8 @@ WITH (m = 16, ef_construction = 64);`;
               </ul>
             </div>
 
-            <div className="p-3.5 rounded-[10px] border border-violet-500/50 bg-violet-500/10 space-y-2">
-              <div className="text-xs font-extrabold text-violet-300">
+            <div className="p-3.5 rounded-[10px] border border-blue-500/50 bg-blue-500/10 space-y-2">
+              <div className="text-xs font-extrabold text-blue-300">
                 Google Cloud AlloyDB (PostgreSQL Only)
               </div>
               <div className="text-lg font-black font-mono text-emerald-400">
@@ -1239,7 +1239,7 @@ WITH (m = 16, ef_construction = 64);`;
          =================================================================== */}
       {activeSubTab === 'VECTOR_INDEX_SURGEON' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
             <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
               AI Vector Schema & Slow-Query Index Surgeon
             </div>
@@ -1293,13 +1293,13 @@ WITH (m = 16, ef_construction = 64);`;
             <button
               type="button"
               onClick={() => handleCopy(generatedVectorSql, 'Vector & Index SQL')}
-              className="w-full py-2.5 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+              className="w-full py-2.5 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
             >
               Copy Production Vector & Performance SQL
             </button>
           </div>
 
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-2">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2">
             <div className="text-xs font-mono font-bold text-emerald-400 uppercase">
               Generated SQL ({sqlEngineFamily} · {sqlArchitecture})
             </div>
@@ -1314,7 +1314,7 @@ WITH (m = 16, ef_construction = 64);`;
           SUB-TAB 4: ZERO-TRUST IAM AUTH PROXY & ORM CONNECTION VAULT
          =================================================================== */}
       {activeSubTab === 'IAM_PROXY_VAULT' && (
-        <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5">
+        <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5">
           <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
             Zero-Password IAM Auth Proxy v2 & ORM Connection Vault
           </div>
@@ -1323,7 +1323,7 @@ WITH (m = 16, ef_construction = 64);`;
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 rounded-[8px] bg-zinc-950 text-cyan-300 font-mono text-[11px] space-y-1.5">
+            <div className="p-3 rounded-[8px] bg-zinc-950 text-blue-300 font-mono text-[11px] space-y-1.5">
               <div className="text-zinc-400 font-bold">
                 1. Start Zero-Password Auth Proxy (Local / Sidecar):
               </div>
@@ -1336,7 +1336,7 @@ WITH (m = 16, ef_construction = 64);`;
               </pre>
             </div>
 
-            <div className="p-3 rounded-[8px] bg-zinc-950 text-cyan-300 font-mono text-[11px] space-y-1.5">
+            <div className="p-3 rounded-[8px] bg-zinc-950 text-blue-300 font-mono text-[11px] space-y-1.5">
               <div className="text-zinc-400 font-bold">
                 2. Prisma / Drizzle / SQLAlchemy DSN (via Local Auth Proxy):
               </div>

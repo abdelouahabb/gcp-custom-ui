@@ -1206,11 +1206,11 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
   if (activeTab === 'X1') {
     return (
       <div className="space-y-4">
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-500/[0.08] via-amber-500/[0.06] to-emerald-500/[0.08] border border-rose-500/30 space-y-4">
+        <div className="p-5 rounded-2xl bg-red-50/50 dark:bg-red-500/[0.06] border border-red-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/40">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40">
                   MOONSHOT X1 · LIVE IN-MEMORY DLP & SECRET LEAK X-RAY
                 </span>
               </div>
@@ -1251,7 +1251,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 disabled={!selectedDlpBucket || scanningDlp}
                 onClick={() => handleRunDlpScan(selectedDlpBucket)}
                 title="Stream live objects from the selected GCS bucket into server RAM and scan against 11 credential, API key, and GDPR/PCI PII detectors without writing to disk"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${scanningDlp ? 'animate-spin' : ''}`}
@@ -1290,7 +1290,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 <div
                   className={`text-base font-extrabold mt-0.5 ${
                     dlpScanResult.affectedObjectsCount > 0
-                      ? 'text-rose-500'
+                      ? 'text-red-500'
                       : 'text-emerald-500'
                   }`}
                 >
@@ -1318,7 +1318,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 <div
                   className={`text-base font-extrabold mt-0.5 ${
                     dlpScanResult.totalExposureUsd > 0
-                      ? 'text-rose-500'
+                      ? 'text-red-500'
                       : 'text-emerald-500'
                   }`}
                 >
@@ -1333,11 +1333,11 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
               {dlpScanResult.objectFindings.map((obj) => (
                 <div
                   key={obj.objectName}
-                  className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-rose-500/40 space-y-2"
+                  className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-red-500/40 space-y-2"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-500 border border-rose-500/30">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-500 border border-red-500/30">
                         {obj.highestSeverity} LEAK
                       </span>
                       <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1368,7 +1368,7 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                         className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs font-mono"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-rose-600 dark:text-rose-400">
+                          <span className="font-bold text-red-600 dark:text-red-400">
                             {f.label}
                           </span>
                           <span className="text-[10px] text-zinc-500">
@@ -1426,10 +1426,10 @@ CMD ["server/index.js"]`;
 
     return (
       <div className="space-y-4">
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-violet-500/[0.08] via-blue-500/[0.06] to-emerald-500/[0.08] border border-violet-500/30 space-y-4">
+        <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
                 MOONSHOT X2 · SUB-100MS SERVERLESS COLD-START SURGEON
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1488,7 +1488,7 @@ CMD ["server/index.js"]`;
                 disabled={busyKey === `coldstart-${activeRunObj.name}`}
                 onClick={handleApplyColdStartSurgery}
                 title={`Patch Cloud Run service "${activeRunObj.name}" via GCP Cloud Run v2 API to enable startupCpuBoost=true and EXECUTION_ENVIRONMENT_GEN2`}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer"
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>
@@ -1535,7 +1535,7 @@ CMD ["server/index.js"]`;
                 key={phase.label}
                 className={`p-3 rounded-xl border ${
                   phase.highlight
-                    ? 'bg-violet-500/15 border-violet-500/40 text-violet-700 dark:text-violet-300'
+                    ? 'bg-blue-500/15 border-blue-500/40 text-blue-700 dark:text-blue-300'
                     : 'bg-white/80 dark:bg-zinc-950/80 border-zinc-200 dark:border-zinc-800'
                 }`}
               >
@@ -1590,7 +1590,7 @@ CMD ["server/index.js"]`;
     return (
       <div className="space-y-4">
         <LivePricingCatalogControlBar compact />
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500/[0.08] via-orange-500/[0.06] to-emerald-500/[0.08] border border-amber-500/30 space-y-4">
+        <div className="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-500/[0.06] border border-amber-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
@@ -1643,7 +1643,7 @@ CMD ["server/index.js"]`;
               <div className="text-[10px] uppercase text-zinc-400">
                 Hidden Monthly Egress Tax
               </div>
-              <div className="text-base font-extrabold text-rose-500 mt-0.5">
+              <div className="text-base font-extrabold text-red-500 mt-0.5">
                 ${dataGravityMatrix.totalMonthlyEgressTaxUsd.toLocaleString()}/mo
               </div>
             </div>
@@ -1669,7 +1669,7 @@ CMD ["server/index.js"]`;
                     {link.compute.type}: {link.compute.name} ({link.compute.region})
                   </span>
                   <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
-                  <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 font-bold">
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
                     {link.data.type}: {link.data.name} ({link.data.region})
                   </span>
                 </div>
@@ -1680,7 +1680,7 @@ CMD ["server/index.js"]`;
                       link.ratePerGb === 0
                         ? 'bg-emerald-500/15 text-emerald-500'
                         : link.tier === 'CROSS_CONTINENT_TRANSOCEANIC'
-                        ? 'bg-rose-500/15 text-rose-500'
+                        ? 'bg-red-500/15 text-red-500'
                         : 'bg-amber-500/15 text-amber-500'
                     }`}
                   >
@@ -1703,7 +1703,7 @@ CMD ["server/index.js"]`;
   if (activeTab === 'X4') {
     return (
       <div className="space-y-4">
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/[0.08] via-teal-500/[0.06] to-cyan-500/[0.08] border border-emerald-500/30 space-y-4">
+        <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
@@ -1758,7 +1758,7 @@ CMD ["server/index.js"]`;
                         className={`px-2 py-0.5 rounded ${
                           b.pap
                             ? 'bg-emerald-500/15 text-emerald-500'
-                            : 'bg-rose-500/15 text-rose-500'
+                            : 'bg-red-500/15 text-red-500'
                         }`}
                       >
                         PAP: {b.pap ? 'Enforced' : 'Inherited'}
@@ -1822,10 +1822,10 @@ CMD ["server/index.js"]`;
   if (activeTab === 'X5') {
     return (
       <div className="space-y-4">
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-500/[0.08] via-blue-500/[0.06] to-indigo-500/[0.08] border border-cyan-500/30 space-y-4">
+        <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
                 MOONSHOT X5 · 12-METROPOLIS SPEED-OF-LIGHT UX MATRIX
               </span>
               <h3 className="text-base font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
@@ -1917,7 +1917,7 @@ CMD ["server/index.js"]`;
   // ==========================================================================
   return (
     <div className="space-y-4">
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/[0.08] via-cyan-500/[0.06] to-violet-500/[0.08] border border-emerald-500/30 space-y-4">
+      <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -1935,7 +1935,7 @@ CMD ["server/index.js"]`;
                   ? customModelId.trim()
                   : selectedGeminiModel}
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/15 text-violet-500 border border-violet-500/30">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-500 border border-blue-500/30">
                 {transportMode === 'BROWSER_DIRECT_TLS13'
                   ? 'ZERO LOCAL HTTP HOP: Direct Browser -> Google HTTPS TLS 1.3'
                   : `RSA-OAEP-256 WIRE ENVELOPE (${
@@ -2012,8 +2012,8 @@ CMD ["server/index.js"]`;
               title="Mode 2 (Asymmetric Wire Envelope): Browser encrypts your API key with the Node.js server's ephemeral 2048-bit RSA-OAEP-SHA256 public key BEFORE sending over HTTP, then the server re-seals it in an AES-256-GCM RAM Vault. Packet sniffers on localhost only see 256 bytes of RSA ciphertext!"
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
                 transportMode === 'RSA_OAEP_SERVER_VAULT'
-                  ? 'bg-violet-600 text-white border-violet-400 shadow-sm'
-                  : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-violet-500/50'
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
+                  : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-blue-500/50'
               }`}
             >
               Mode 2: Browser RSA-OAEP-256 Ciphertext → Server AES-256-GCM
@@ -2179,7 +2179,7 @@ CMD ["server/index.js"]`;
                 <button
                   type="button"
                   onClick={handleClearVault}
-                  className="px-2.5 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 text-xs font-mono font-bold cursor-pointer"
+                  className="px-2.5 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-500 text-xs font-mono font-bold cursor-pointer"
                   title="Zero-fill and wipe the encrypted API key from Browser WebCrypto memory and Server RAM Vault"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -2396,7 +2396,7 @@ CMD ["server/index.js"]`;
                           className="rounded-lg bg-zinc-900 border border-zinc-700/80 overflow-hidden"
                         >
                           <div className="px-3 py-1 bg-zinc-800/90 border-b border-zinc-700/80 flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                            <span className="uppercase font-bold text-cyan-400">
+                            <span className="uppercase font-bold text-blue-400">
                               {lang}
                             </span>
                             <button

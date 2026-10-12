@@ -107,7 +107,7 @@ export default function LogStreamerAndShell({
   const getSeverityBadge = (sev) => {
     if (sev === 'ERROR') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-500/20">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-500/20">
           <AlertCircle className="w-3 h-3" />
           ERROR
         </span>
@@ -132,7 +132,7 @@ export default function LogStreamerAndShell({
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       {/* Left Column: Live Cloud Logging Streamer */}
-      <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -146,7 +146,7 @@ export default function LogStreamerAndShell({
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="bg-zinc-100 dark:bg-[#09090b] p-1 rounded-[8px] border border-zinc-200 dark:border-zinc-800 flex items-center text-xs font-medium">
+            <div className="bg-zinc-100 dark:bg-[#131314] p-1 rounded-[8px] border border-zinc-200 dark:border-zinc-800 flex items-center text-xs font-medium">
               {['ALL', 'ERROR', 'WARNING', 'INFO'].map((sev) => (
                 <button
                   key={sev}
@@ -166,7 +166,7 @@ export default function LogStreamerAndShell({
               type="button"
               onClick={onRefreshLogs}
               title="Refresh live logs"
-              className="p-2 rounded-[8px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#262626] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 transition-colors"
+              className="p-2 rounded-[8px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#202124] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
@@ -179,7 +179,7 @@ export default function LogStreamerAndShell({
             return (
               <div
                 key={log.id}
-                className="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50/60 dark:bg-[#09090b] overflow-hidden transition-colors hover:border-blue-500/40"
+                className="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50/60 dark:bg-[#131314] overflow-hidden transition-colors hover:border-blue-500/40"
               >
                 <div
                   onClick={() =>
@@ -250,7 +250,7 @@ export default function LogStreamerAndShell({
       </div>
 
       {/* Right Column: Touch-Optimized Mobile Cloud Shell */}
-      <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -300,13 +300,13 @@ export default function LogStreamerAndShell({
               onChange={(e) => setShellInput(e.target.value)}
               placeholder="gcloud storage buckets list..."
               aria-label="Cloud Shell command input"
-              className="w-full bg-[#ffffff] dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-7 pr-3 py-[8px] text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
+              className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-7 pr-3 py-[8px] text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
             />
           </div>
           <button
             type="submit"
             disabled={shellRunning || !shellInput.trim()}
-            className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-[16px] py-[8px] text-xs font-[600] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-[16px] py-[8px] text-xs font-[600] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>{shellRunning ? 'Running...' : 'Run'}</span>
@@ -314,7 +314,7 @@ export default function LogStreamerAndShell({
         </form>
 
         {/* Terminal Output Stream */}
-        <div className="flex-1 bg-[#09090b] border border-zinc-800 rounded-lg p-3.5 font-mono text-xs text-zinc-200 space-y-3 max-h-[320px] overflow-y-auto">
+        <div className="flex-1 bg-[#131314] border border-zinc-800 rounded-lg p-3.5 font-mono text-xs text-zinc-200 space-y-3 max-h-[320px] overflow-y-auto">
           {shellHistory.map((item) => (
             <div
               key={item.id}

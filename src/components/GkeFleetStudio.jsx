@@ -452,19 +452,19 @@ spec:
   return (
     <div className="space-y-5">
       {/* Top Hero Banner */}
-      <div className="rounded-[12px] border border-indigo-500/30 bg-gradient-to-r from-indigo-950/70 via-zinc-900 to-cyan-950/60 p-4 sm:p-5 shadow-lg">
+      <div className="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-mono">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono">
               <Sparkles className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
               <span>
                 DEDICATED GOOGLE KUBERNETES ENGINE (GKE) AUTOPILOT & SPOT GPU STUDIO
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+            <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
               GKE Autopilot, Spot GPU Node-Pools & Zero-Trust K8s Enclave Studio
             </h2>
-            <p className="text-xs text-zinc-300 max-w-3xl">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-3xl">
               Direct live `container.googleapis.com/v1` cluster provisioning & fleet management with strict SEC / GDPR / HIPAA compliance locks (``), Workload Identity OIDC (`*.svc.id.goog`), Binary Authorization, and Spot GPU FinOps.
             </p>
           </div>
@@ -475,7 +475,7 @@ spec:
                 type="button"
                 onClick={onOpenProvisionGke}
                 title="Open the full 5-Step GKE Compliance & Architecture Wizard in the Provisioning Modal"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>+ Create GKE Cluster (5-Step Wizard)</span>
@@ -486,7 +486,7 @@ spec:
               type="button"
               onClick={fetchGkeFleet}
               title="Refresh live GKE clusters and Vertex AI endpoints from container.googleapis.com"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -500,50 +500,50 @@ spec:
 
         {/* 4 KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
-            <div className="text-[11px] font-mono text-zinc-400">
+          <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               Live GKE Clusters
             </div>
-            <div className="text-lg font-extrabold text-white mt-0.5">
+            <div className="text-lg font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               {clustersList.length} Cluster(s) ({autopilotCount} Autopilot)
             </div>
-            <div className="text-[11px] text-cyan-400 font-mono">
+            <div className="text-[11px] text-blue-600 dark:text-blue-400 font-mono">
               container.googleapis.com/v1
             </div>
           </div>
 
-          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
-            <div className="text-[11px] font-mono text-zinc-400">
+          <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               GKE Free Tier Management Credit
             </div>
-            <div className="text-lg font-extrabold text-emerald-400 mt-0.5">
+            <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
               $74.40/mo Covered
             </div>
-            <div className="text-[11px] text-zinc-400 font-mono">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
               $0.00/hr idle fee on 1st Zonal/Autopilot cluster
             </div>
           </div>
 
-          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
-            <div className="text-[11px] font-mono text-zinc-400">
+          <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               Workload Identity OIDC Pool
             </div>
-            <div className="text-sm font-extrabold text-indigo-300 mt-1 truncate font-mono">
+            <div className="text-sm font-extrabold text-blue-600 dark:text-blue-400 mt-1 truncate font-mono">
               {projectId}.svc.id.goog
             </div>
-            <div className="text-[11px] text-emerald-400 font-mono mt-0.5">
+            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
               Zero static JSON SA keys required
             </div>
           </div>
 
-          <div className="p-3 rounded-[10px] bg-zinc-900/90 border border-zinc-800">
-            <div className="text-[11px] font-mono text-zinc-400">
+          <div className="p-3 rounded-[10px] bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+            <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               Spot GPU Node-Pool FinOps
             </div>
-            <div className="text-lg font-extrabold text-amber-400 mt-0.5">
+            <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
               -${monthlyGpuSavingsUsd.toLocaleString()}/mo (-68%)
             </div>
-            <div className="text-[11px] text-zinc-400 font-mono">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
               {gpuCount}x {selectedGpuObj.flag} Spot vs On-Demand
             </div>
           </div>
@@ -578,8 +578,8 @@ spec:
               onClick={() => setActiveSubTab(t.id)}
               className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold border transition-all cursor-pointer ${
                 active
-                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                  : 'bg-[#ffffff] dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                  : 'bg-white dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -597,14 +597,14 @@ spec:
           {/* Left: 1-Click Live GKE Cluster Provisioner with Strict Compliance Locks */}
           <form
             onSubmit={handleCreateGkeCluster}
-            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5"
+            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>1-Click GKE Compliance & Cluster Deployer</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
                 {isCustom
                   ? 'UNLOCKED CUSTOM'
                   : `ENFORCING ${gkeBlueprint.toUpperCase()}`}
@@ -649,8 +649,8 @@ spec:
                     title={`Select ${bp.label} GKE Blueprint (${bp.sub})`}
                     className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
                       active
-                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/40'
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/40'
                     }`}
                   >
                     <div className="text-[11px] font-bold truncate">
@@ -658,7 +658,7 @@ spec:
                     </div>
                     <div
                       className={`text-[9.5px] truncate ${
-                        active ? 'text-indigo-100' : 'text-zinc-500'
+                        active ? 'text-blue-100' : 'text-zinc-500'
                       }`}
                     >
                       {bp.sub}
@@ -823,7 +823,7 @@ spec:
               <button
                 type="button"
                 onClick={() => handleCopy(gkeCli, 'GKE gcloud CLI')}
-                className="w-full py-2.5 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+                className="w-full py-2.5 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
               >
                 {copiedLabel === 'GKE gcloud CLI'
                   ? '✓ Copied gcloud CLI'
@@ -833,7 +833,7 @@ spec:
           </form>
 
           {/* Right: Live GKE Clusters Fleet Inspector */}
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                 Live GKE Clusters in `{projectId}` ({clustersList.length})
@@ -842,7 +842,7 @@ spec:
                 <button
                   type="button"
                   onClick={onOpenProvisionGke}
-                  className="text-xs font-mono font-bold text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                  className="text-xs font-mono font-bold text-blue-400 hover:text-blue-300 cursor-pointer"
                 >
                   + Full 5-Step Wizard →
                 </button>
@@ -862,7 +862,7 @@ spec:
                         <div>
                           <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                             <span>{c.name}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px]">
                               {c.autopilot ? 'AUTOPILOT' : 'STANDARD'}
                             </span>
                             <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
@@ -884,7 +884,7 @@ spec:
                               handleCopy(kubeCmd, `kubeconfig (${c.name})`)
                             }
                             title={`Copy: ${kubeCmd}`}
-                            className="px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 text-[10px] font-mono font-bold cursor-pointer"
+                            className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 text-[10px] font-mono font-bold cursor-pointer"
                           >
                             kubeconfig
                           </button>
@@ -893,7 +893,7 @@ spec:
                               type="button"
                               onClick={() => onRunInShell(kubeCmd)}
                               title="Connect kubectl in Web Cloud Shell"
-                              className="px-2 py-1 rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-400 text-[10px] font-mono font-bold cursor-pointer"
+                              className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 text-[10px] font-mono font-bold cursor-pointer"
                             >
                               Shell
                             </button>
@@ -905,7 +905,7 @@ spec:
                               handleDeleteGkeCluster(c.location, c.name)
                             }
                             title={`Delete GKE Cluster ${c.name}`}
-                            className="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                            className="px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[10px] font-mono font-bold cursor-pointer disabled:opacity-50"
                           >
                             {deletingGkeName === c.name ? '...' : 'Delete'}
                           </button>
@@ -927,7 +927,7 @@ spec:
                   <button
                     type="button"
                     onClick={onOpenProvisionGke}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
                     <span>Launch 5-Step GKE Compliance Wizard</span>
@@ -944,7 +944,7 @@ spec:
          =================================================================== */}
       {activeSubTab === 'WORKLOAD_YAML' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3.5">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5">
             <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
               <FileCode className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               <span>Zero-Trust Kubernetes Deployment & GPU Pod Composer</span>
@@ -960,7 +960,7 @@ spec:
                     onClick={() => applyWorkloadTemplate(k)}
                     className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
                       active
-                        ? 'bg-indigo-600 text-white border-indigo-500'
+                        ? 'bg-blue-600 text-white border-blue-500'
                         : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200'
                     }`}
                   >
@@ -969,7 +969,7 @@ spec:
                     </div>
                     <div
                       className={`text-[10px] mt-0.5 line-clamp-2 ${
-                        active ? 'text-indigo-100' : 'text-zinc-500'
+                        active ? 'text-blue-100' : 'text-zinc-500'
                       }`}
                     >
                       {tpl.desc}
@@ -1022,9 +1022,9 @@ spec:
             </div>
 
             {/* 3-Way Container Image Source Selector */}
-            <div className="p-3 rounded-[10px] border border-indigo-500/30 bg-indigo-500/5 space-y-2.5">
+            <div className="p-3 rounded-[10px] border border-blue-500/30 bg-blue-500/5 space-y-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-indigo-400">
+                <label className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-blue-400">
                   Container Source (Artifact Registry · GitHub Repo · Custom URI)
                 </label>
                 <span className="text-[10px] font-mono text-zinc-500">
@@ -1058,14 +1058,14 @@ spec:
                       onClick={() => setContainerSourceMode(m.id)}
                       className={`p-2 rounded-[8px] border text-left transition-all cursor-pointer ${
                         active
-                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                          : 'bg-[#ffffff] dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                          : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
                       }`}
                     >
                       <div className="text-[11px] font-bold">{m.label}</div>
                       <div
                         className={`text-[9.5px] mt-0.5 ${
-                          active ? 'text-indigo-100' : 'text-zinc-500'
+                          active ? 'text-blue-100' : 'text-zinc-500'
                         }`}
                       >
                         {m.sub}
@@ -1085,7 +1085,7 @@ spec:
                       <select
                         value={appImage}
                         onChange={(e) => setAppImage(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                       >
                         {arImages.map((img, i) => {
                           const tag = img.tags?.[0] || 'latest';
@@ -1106,7 +1106,7 @@ spec:
                       <button
                         type="button"
                         onClick={() => setContainerSourceMode('GITHUB_REPO')}
-                        className="px-2 py-1 rounded bg-indigo-600 text-white text-[10px] font-bold cursor-pointer shrink-0"
+                        className="px-2 py-1 rounded bg-blue-600 text-white text-[10px] font-bold cursor-pointer shrink-0"
                       >
                         Build from GitHub →
                       </button>
@@ -1116,7 +1116,7 @@ spec:
               )}
 
               {containerSourceMode === 'GITHUB_REPO' && (
-                <div className="space-y-2.5 pt-1 border-t border-indigo-500/20">
+                <div className="space-y-2.5 pt-1 border-t border-blue-500/20">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div className="sm:col-span-2">
                       <label className="block text-[10px] font-mono text-zinc-500 mb-1">
@@ -1127,7 +1127,7 @@ spec:
                         value={ghRepoUrl}
                         onChange={(e) => setGhRepoUrl(e.target.value)}
                         placeholder="https://github.com/owner/repo.git"
-                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                       />
                     </div>
                     <div>
@@ -1140,14 +1140,14 @@ spec:
                           value={ghBranch}
                           onChange={(e) => setGhBranch(e.target.value)}
                           placeholder="main"
-                          className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                         <input
                           type="text"
                           value={ghContextDir}
                           onChange={(e) => setGhContextDir(e.target.value)}
                           placeholder="."
-                          className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
                     </div>
@@ -1161,7 +1161,7 @@ spec:
                       <select
                         value={ghBuildMethod}
                         onChange={(e) => setGhBuildMethod(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                       >
                         <option value="BUILDPACKS">
                           Zero-Dockerfile Buildpacks
@@ -1177,7 +1177,7 @@ spec:
                         type="text"
                         value={ghArRepo}
                         onChange={(e) => setGhArRepo(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                       />
                     </div>
                     <div>
@@ -1187,7 +1187,7 @@ spec:
                       <select
                         value={ghTargetCluster}
                         onChange={(e) => setGhTargetCluster(e.target.value)}
-                        className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                       >
                         <option value="">Build Image Only (No Auto-Rollout)</option>
                         {clustersList.map((c) => (
@@ -1224,7 +1224,7 @@ spec:
                   type="text"
                   value={appImage}
                   onChange={(e) => setAppImage(e.target.value)}
-                  className="w-full bg-[#ffffff] dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 />
               </div>
             </div>
@@ -1270,7 +1270,7 @@ spec:
             </div>
           </div>
 
-          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-3">
+          <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-500 font-mono">
                 Generated Seccomp-Hardened K8s Manifest (`deployment.yaml`)
@@ -1278,7 +1278,7 @@ spec:
               <button
                 type="button"
                 onClick={() => handleCopy(k8sYamlManifest, 'K8s Manifest YAML')}
-                className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer"
+                className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
               >
                 Copy YAML Manifest
               </button>
@@ -1294,7 +1294,7 @@ spec:
           SUB-TAB 3: SPOT GPU & AI NODE-POOL FINOPS CALCULATOR
          =================================================================== */}
       {activeSubTab === 'GPU_FINOPS' && (
-        <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-[#ffffff] dark:bg-[#141417] space-y-4">
+        <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
               <Zap className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -1345,7 +1345,7 @@ spec:
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 font-mono">
             <div>
               <div className="text-xs text-zinc-500">On-Demand 24/7 Burn</div>
-              <div className="text-lg font-extrabold text-rose-400 mt-0.5">
+              <div className="text-lg font-extrabold text-red-400 mt-0.5">
                 ${monthlyOnDemandUsd.toLocaleString()}/mo
               </div>
               <div className="text-[11px] text-zinc-500">
@@ -1365,7 +1365,7 @@ spec:
 
             <div>
               <div className="text-xs text-zinc-500">Net Monthly FinOps Savings</div>
-              <div className="text-lg font-extrabold text-cyan-400 mt-0.5">
+              <div className="text-lg font-extrabold text-blue-400 mt-0.5">
                 -${monthlyGpuSavingsUsd.toLocaleString()}/mo
               </div>
               <div className="text-[11px] text-emerald-400">

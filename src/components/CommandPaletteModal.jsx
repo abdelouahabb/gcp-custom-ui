@@ -126,7 +126,7 @@ export default function CommandPaletteModal({
         subtitle: 'Launch all 5 world-first 2026 breakthroughs inside the 2026 Innovation Lab',
         keywords: 'quantum nexus causal blast radius rollback snapshot finops arbitrage ephemeral pr preview shadow mirror honey token deception',
         badge: '2026 STAR',
-        badgeColor: 'text-amber-300 bg-violet-500/25 border-amber-400/50',
+        badgeColor: 'text-amber-300 bg-blue-500/25 border-amber-400/50',
         icon: Sparkles,
         run: () => {
           onSelectTab('INNOVATION_LAB', 'QUANTUM_NEXUS');
@@ -140,7 +140,7 @@ export default function CommandPaletteModal({
         subtitle: 'ISO GQL Graph queries, scale-to-$0 Spark over BigLake Iceberg, Saga Workflows & AI Prompt Firewall',
         keywords: 'spanner graph gql spark serverless dataproc workflows saga model armor vertex ai wave 10',
         badge: '2026 FRONTIER',
-        badgeColor: 'text-fuchsia-300 bg-fuchsia-500/15 border-fuchsia-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Rocket,
         run: () => {
           onSelectTab('WAVE10_FRONTIER');
@@ -154,7 +154,7 @@ export default function CommandPaletteModal({
         subtitle: 'Compare BigQuery vs BigLake side-by-side and provision governed Apache Iceberg tables in 1 click',
         keywords: 'biglake bigquery iceberg parquet lakehouse open table governance',
         badge: 'BIGLAKE 2026',
-        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,
         run: () => {
           onSelectTab('BIGQUERY_STUDIO');
@@ -168,7 +168,7 @@ export default function CommandPaletteModal({
         subtitle: '1-Canvas Bronze→Silver→Gold Pipeline Builder, Auto-Clean QUALIFY Dedup, Dataplex Profiling/Products & -$348/mo Serverless DAGs',
         keywords: 'data engineer medallion bronze silver gold dataform dbt sqlx dataplex profile qualitycomposer airflow dag skew slot',
         badge: 'DATA ENGINEER',
-        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,
         run: () => {
           onSelectTab('DATA_ENGINEER_STUDIO');
@@ -182,7 +182,7 @@ export default function CommandPaletteModal({
         subtitle: 'Create, download, disable, or emergency-revoke stolen SA .json keys & active tokens with Owner self-protection',
         keywords: 'iam service account key json token revoke kill switch stolen credential sovereign owner',
         badge: 'IAM KILL-SWITCH',
-        badgeColor: 'text-rose-300 bg-rose-500/15 border-rose-500/30',
+        badgeColor: 'text-red-300 bg-red-500/15 border-red-500/30',
         icon: Key,
         run: () => {
           onSelectTab('SOVEREIGN_IAM');
@@ -196,7 +196,7 @@ export default function CommandPaletteModal({
         subtitle: `Stops ${runningVms.length} running VM(s) & scales warm Cloud Run instances to 0 min-instances`,
         keywords: 'sleep hibernate park night stop all vms save money finops pause',
         badge: '1-TAP FINOPS',
-        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Moon,
         run: () => runDirectHibernate('SLEEP')
       },
@@ -218,7 +218,7 @@ export default function CommandPaletteModal({
         subtitle: 'Visualize Public Internet 0.0.0.0/0 exposure → VPC → Compute/Cloud Run → Storage',
         keywords: 'topology graph map network architecture blast radius visual diagram',
         badge: '2026 LAB',
-        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Network,
         run: () => {
           onSelectTab('INNOVATION_LAB', 'TOPOLOGY');
@@ -232,7 +232,7 @@ export default function CommandPaletteModal({
         subtitle: 'Reverse-engineer your live VMs, Cloud Run, VPCs, and Buckets into IaC code',
         keywords: 'terraform iac export main.tf clone script blueprint code',
         badge: 'REVERSE IaC',
-        badgeColor: 'text-violet-300 bg-violet-500/15 border-violet-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: FileCode,
         run: () => {
           onSelectTab('INNOVATION_LAB', 'TERRAFORM');
@@ -274,7 +274,7 @@ export default function CommandPaletteModal({
         subtitle: 'Fire concurrent HTTP bursts against Cloud Run or VM URLs and inspect headers/trace',
         keywords: 'benchmark latency load test stress cold start p95 p99 xray headers curl',
         badge: 'STRESS & X-RAY',
-        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Zap,
         run: () => {
           onSelectTab('INNOVATION_LAB', 'BENCHMARK');
@@ -316,7 +316,7 @@ export default function CommandPaletteModal({
         subtitle: 'Launch container with Request-based ($0 idle) or Instance-based billing & GPU',
         keywords: 'deploy cloud run container serverless gpu l4 rtx 6000 create service',
         badge: 'PROVISION',
-        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Rocket,
         run: () => {
           onClose();
@@ -330,7 +330,7 @@ export default function CommandPaletteModal({
         subtitle: 'Provision GKE cluster with SEC/GDPR/HIPAA compliance locks, Workload Identity & Binary Auth',
         keywords: 'create gke kubernetes cluster autopilot standard gpu l4 a100 spot k8s',
         badge: 'PROVISION K8S',
-        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Cpu,
         run: () => {
           onClose();
@@ -358,7 +358,7 @@ export default function CommandPaletteModal({
         subtitle: 'Provision custom/auto-mode VPC network or TCP/UDP/ICMP firewall rule',
         keywords: 'create vpc network firewall rule subnet bgp mtu',
         badge: 'NETWORK',
-        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Network,
         run: () => {
           onClose();
@@ -372,7 +372,7 @@ export default function CommandPaletteModal({
         subtitle: 'Choose MySQL or PostgreSQL, and for PostgreSQL fork between Classic Cloud SQL vs. AlloyDB with SEC/GDPR/HIPAA locks',
         keywords: 'create cloud sql mysql postgres postgresql alloydb database vector scann pgvector',
         badge: 'PROVISION DB',
-        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,
         run: () => {
           onClose();
@@ -400,7 +400,7 @@ export default function CommandPaletteModal({
         subtitle: '1-Click GKE Autopilot / Spot GPU Cluster Provisioner, K8s YAML Composer & kubeconfig Fleet Manager',
         keywords: 'gke studio kubernetes cluster autopilot spot gpu k8s yaml kubeconfig',
         badge: 'GKE STUDIO',
-        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Cpu,
         run: () => {
           onSelectTab('GKE_STUDIO');
@@ -428,7 +428,7 @@ export default function CommandPaletteModal({
         subtitle: '6-Resource K8s Transpiler (Deployment, HPA v2, PDB, NetworkPolicy, Workload Identity), Direct VPC Egress & GCS/RAM/NFS Volume Mounts',
         keywords: 'cloud run to kubernetes gke convert migrate yaml direct vpc egress storage volume gcs fuse ramdisk nfs',
         badge: 'CLOUD RUN 2026',
-        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Globe,
         run: () => {
           onSelectTab('CLOUD_RUN');
@@ -470,7 +470,7 @@ export default function CommandPaletteModal({
         subtitle: 'Classic Cloud SQL vs. AlloyDB Architecture Fork, AI Vector (alloydb_scann / pgvector / MySQL VECTOR) Surgeon & IAM Auth Proxy v2 Vault',
         keywords: 'cloud sql mysql postgres postgresql alloydb database vector scann pgvector proxy',
         badge: 'CLOUD SQL & ALLOYDB',
-        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,
         run: () => {
           onSelectTab('CLOUD_SQL_STUDIO');
@@ -484,7 +484,7 @@ export default function CommandPaletteModal({
         subtitle: 'Audit container digests, sweep untagged orphan layers, and enforce immutable tag compliance locks',
         keywords: 'artifact registry sbom slsa container digest docker immutable tags',
         badge: 'ARTIFACT SBOM',
-        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,
         run: () => {
           onSelectTab('WAVE9_STUDIO');
@@ -498,7 +498,7 @@ export default function CommandPaletteModal({
         subtitle: '24h JIT CEL IAM conditions, SHA-256 Merkle drift detection & Sovereign Secret Manager',
         keywords: 'sovereign iam surgeon jit condition drift merkle time machine secret manager kms',
         badge: 'WAVE 7',
-        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Key,
         run: () => {
           onSelectTab('SOVEREIGN_STUDIO');
@@ -512,7 +512,7 @@ export default function CommandPaletteModal({
         subtitle: 'LogRCA root-cause clusters, 14.4x SLO Burn Radar, VPC-SC Exfiltration Shield & Pub/Sub DLQ',
         keywords: 'sre war room incident slo burn rate vpc-sc exfiltration pubsub dlq postmortem',
         badge: 'WAVE 8',
-        badgeColor: 'text-rose-300 bg-rose-500/15 border-rose-500/30',
+        badgeColor: 'text-red-300 bg-red-500/15 border-red-500/30',
         icon: ShieldAlert,
         run: () => {
           onSelectTab('SRE_WAR_ROOM');
@@ -568,7 +568,7 @@ export default function CommandPaletteModal({
         subtitle: 'Nuclear option to immediately freeze all project spending if keys are leaked',
         keywords: 'emergency billing kill switch unlink stop spending hacked leak',
         badge: 'NUCLEAR',
-        badgeColor: 'text-rose-300 bg-rose-500/15 border-rose-500/30',
+        badgeColor: 'text-red-300 bg-red-500/15 border-red-500/30',
         icon: PowerOff,
         run: () => {
           onClose();
@@ -623,7 +623,7 @@ export default function CommandPaletteModal({
         subtitle: `Scale ${minInst}-${maxInst} • ${svc.cpu || '1'} vCPU • ${svc.memory || '512Mi'}${gpuTag}`,
         keywords: `cloud run service ${svc.name} ${svc.region} scale gpu`,
         badge: svc.gpuType ? 'GPU RUN' : 'CLOUD RUN',
-        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Globe,
         run: () => {
           onSelectTab('CLOUD_RUN');
@@ -669,7 +669,7 @@ export default function CommandPaletteModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-slate-900/95 border border-cyan-500/30 shadow-2xl shadow-cyan-950/50 overflow-hidden"
+        className="w-full max-w-2xl rounded-2xl bg-slate-900/95 border border-blue-500/30 shadow-2xl shadow-blue-950/50 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Search & Voice Bar */}
@@ -692,7 +692,7 @@ export default function CommandPaletteModal({
             title="Voice-to-Cloud Natural Language Input"
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all shrink-0 ${
               isListening
-                ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse'
+                ? 'bg-red-500/20 border-red-500/50 text-red-300 animate-pulse'
                 : 'bg-slate-800/90 hover:bg-slate-700 border-slate-700 text-slate-300'
             }`}
           >
@@ -740,7 +740,7 @@ export default function CommandPaletteModal({
           <div
             className={`mx-4 mt-3 p-3 rounded-xl border text-xs flex items-center justify-between ${
               toastMsg.type === 'error'
-                ? 'bg-rose-950/50 border-rose-500/40 text-rose-200'
+                ? 'bg-red-950/50 border-red-500/40 text-red-200'
                 : toastMsg.type === 'warning'
                 ? 'bg-amber-950/50 border-amber-500/40 text-amber-200'
                 : 'bg-emerald-950/50 border-emerald-500/40 text-emerald-200'
@@ -777,7 +777,7 @@ export default function CommandPaletteModal({
                   onClick={() => action.run()}
                   className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center justify-between gap-3 transition-all ${
                     isSelected
-                      ? 'bg-cyan-500/15 border border-cyan-500/30'
+                      ? 'bg-blue-500/15 border border-blue-500/30'
                       : 'hover:bg-slate-800/60 border border-transparent'
                   }`}
                 >
@@ -809,7 +809,7 @@ export default function CommandPaletteModal({
             <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px]">↵</kbd> Execute</span>
             <span><kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px]">ESC</kbd> Close</span>
           </div>
-          <span className="font-mono text-[10px] text-cyan-400">
+          <span className="font-mono text-[10px] text-blue-400">
             Active Project: {projectId || 'None'}
           </span>
         </div>

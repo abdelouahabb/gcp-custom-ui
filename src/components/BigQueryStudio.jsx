@@ -662,10 +662,10 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
   return (
     <div className="space-y-5">
       {/* Top Studio Hero Banner */}
-      <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm">
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500/20 via-indigo-500/20 to-emerald-500/20 border border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0">
               <Database className="w-5 h-5" />
             </div>
             <div>
@@ -688,7 +688,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               type="button"
               onClick={() => setActiveSubTab('BIGLAKE_ICEBERG')}
               title="Manage official BigLake Metastore Catalogs (/biglake/metastore/catalogs) and Apache Iceberg tables"
-              className="inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5" />
               <span>BigLake Metastore &amp; Iceberg</span>
@@ -723,7 +723,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
 
         {/* 4 KPI Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] font-mono uppercase text-zinc-500">
               Live Datasets ({projectId})
             </div>
@@ -735,7 +735,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] font-mono uppercase text-zinc-500">
               Physical Compressed Billing
             </div>
@@ -747,7 +747,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] font-mono uppercase text-zinc-500">
               Zero-Trust & FinOps Posture
             </div>
@@ -759,11 +759,11 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] font-mono uppercase text-zinc-500">
               Point-in-Time Recovery
             </div>
-            <div className="text-lg font-black font-mono text-violet-600 dark:text-violet-400 mt-0.5">
+            <div className="text-lg font-black font-mono text-blue-600 dark:text-blue-400 mt-0.5">
               48h–168h{' '}
               <span className="text-xs font-normal text-zinc-500">
                 + 7d Fail-Safe Air-Gap
@@ -786,7 +786,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold whitespace-nowrap border transition-all cursor-pointer ${
                   active
                     ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                    : 'bg-zinc-50 dark:bg-[#09090b] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                    : 'bg-zinc-50 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -803,7 +803,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
       {activeSubTab === 'DATASETS' && (
         <div className="space-y-4">
           {datasets.length === 0 ? (
-            <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 text-center space-y-3">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 text-center space-y-3">
               <Database className="w-8 h-8 text-zinc-500 dark:text-zinc-400 mx-auto opacity-80" />
               <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 No BigQuery Datasets Provisioned Yet in `{projectId}`
@@ -831,7 +831,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 return (
                   <div
                     key={ds.datasetId}
-                    className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+                    className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                       <div className="space-y-1">
@@ -853,7 +853,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                               ? 'PHYSICAL COMPRESSED BILLING'
                               : 'LOGICAL UNCOMPRESSED BILLING'}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                             ⏳ {ds.maxTimeTravelHours}h Time-Travel
                           </span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
@@ -915,7 +915,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                               ? 'Expand Time-Travel window to maximum 168 hours (7 days)'
                               : 'Trim Time-Travel window to 48 hours (2 days) to minimize physical time-travel storage overhead'
                           }
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
                         >
                           <Clock className="w-3.5 h-3.5" />
                           <span>
@@ -983,7 +983,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                             handleDeleteDataset(ds.datasetId, ds.location)
                           }
                           title={`Delete BigQuery dataset ${projectId}.${ds.datasetId} (including tables)`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Delete</span>
@@ -993,7 +993,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
 
                     {/* Metadata Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-xs font-mono">
-                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
                         <div className="text-[10px] text-zinc-500">
                           Partition TTL
                         </div>
@@ -1004,7 +1004,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                         </div>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
                         <div className="text-[10px] text-zinc-500">
                           Table TTL
                         </div>
@@ -1015,7 +1015,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                         </div>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
                         <div className="text-[10px] text-zinc-500">
                           Rounding Mode
                         </div>
@@ -1024,7 +1024,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                         </div>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
                         <div className="text-[10px] text-zinc-500">
                           Encryption
                         </div>
@@ -1033,7 +1033,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                         </div>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+                      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
                         <div className="text-[10px] text-zinc-500">
                           Attribution Labels
                         </div>
@@ -1059,7 +1059,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           {/* Left Column (5 cols): Partitioned + Clustered Table Explorer & Creator */}
           <div className="xl:col-span-5 space-y-4">
-            <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-sm">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -1068,7 +1068,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 <select
                   value={selectedDatasetId}
                   onChange={(e) => setSelectedDatasetId(e.target.value)}
-                  className="bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 >
                   {datasets.length === 0 && (
                     <option value="">No dataset yet</option>
@@ -1091,7 +1091,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                       type="text"
                       value={newTableName}
                       onChange={(e) => setNewTableName(e.target.value)}
-                      className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
+                      className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
                     />
                   </div>
                   <div>
@@ -1101,7 +1101,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     <select
                       value={newTablePartitionType}
                       onChange={(e) => setNewTablePartitionType(e.target.value)}
-                      className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
+                      className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
                     >
                       <option value="DAY">DAY (`event_timestamp`)</option>
                       <option value="HOUR">HOUR (`event_timestamp`)</option>
@@ -1121,7 +1121,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                       value={newTableClusterCols}
                       onChange={(e) => setNewTableClusterCols(e.target.value)}
                       placeholder="region,user_id"
-                      className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
+                      className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono"
                     />
                   </div>
                   <div className="flex items-end">
@@ -1172,7 +1172,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     {tables.map((t) => (
                       <div
                         key={t.tableId}
-                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-1"
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-1"
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -1203,10 +1203,10 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
 
           {/* Right Column (7 cols): Pre-Crime SQL Dry-Run X-Ray & Automatic SQL Optimizer */}
           <div className="xl:col-span-7 space-y-4">
-            <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-sm">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4" />
                     <span>
                       Pre-Crime SQL Dry-Run Cost X-Ray & Automatic Optimizer
@@ -1224,7 +1224,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   <select
                     value={maxBytesGuardGb}
                     onChange={(e) => setMaxBytesGuardGb(Number(e.target.value))}
-                    className="bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs font-mono"
+                    className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs font-mono"
                   >
                     <option value={0.1}>100 MB Max Cap</option>
                     <option value={1}>1 GB Max Cap ($0.006)</option>
@@ -1263,7 +1263,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     disabled={runningQuery}
                     onClick={() => handleExecuteQuery(true)}
                     title="Run a $0.00 BigQuery Dry-Run X-Ray + Automatic SQL Optimization Pass"
-                    className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>
@@ -1304,8 +1304,8 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               {queryResult && (
                 <div className="space-y-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <div className="p-3 rounded-xl bg-rose-500/[0.06] border border-rose-500/25">
-                      <div className="text-[10px] font-mono uppercase text-rose-500">
+                    <div className="p-3 rounded-xl bg-red-500/[0.06] border border-red-500/25">
+                      <div className="text-[10px] font-mono uppercase text-red-500">
                         Unoptimized Scan & Cost
                       </div>
                       <div className="text-sm font-black font-mono text-zinc-900 dark:text-white mt-0.5">
@@ -1340,7 +1340,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
 
                   {/* Summary of Optimizations (Required by bigquery-sql skill) */}
                   {queryResult.optimizationReport && (
-                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
                           Summary of Optimizations (`bigquery-sql` Engine)
@@ -1393,7 +1393,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                         ))}
                       </div>
 
-                      <pre className="p-3 rounded-lg bg-zinc-950 text-cyan-300 text-[11px] font-mono overflow-x-auto">
+                      <pre className="p-3 rounded-lg bg-zinc-950 text-blue-300 text-[11px] font-mono overflow-x-auto">
                         {queryResult.optimizationReport.optimizedSql}
                       </pre>
                     </div>
@@ -1439,7 +1439,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
       {/* TAB 3: LOGICAL VS PHYSICAL STORAGE & SLOT EDITION FINOPS CRYSTAL    */}
       {/* =================================================================== */}
       {activeSubTab === 'FINOPS_CRYSTAL' && (
-        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-5">
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -1460,7 +1460,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <label className="block text-[10px] font-mono text-zinc-500">
                 Logical Warehouse Size: {simLogicalTb} TB
               </label>
@@ -1474,7 +1474,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               />
             </div>
 
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <label className="block text-[10px] font-mono text-zinc-500">
                 Capacitor Compression: {simCompressionRatio}:1
               </label>
@@ -1489,7 +1489,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               />
             </div>
 
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <label className="block text-[10px] font-mono text-zinc-500">
                 90d Long-Term Ratio: {simLongTermPct}%
               </label>
@@ -1503,7 +1503,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               />
             </div>
 
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <label className="block text-[10px] font-mono text-zinc-500">
                 Daily Mutation Churn: {simDailyChurnPct}%
               </label>
@@ -1518,7 +1518,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               />
             </div>
 
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <label className="block text-[10px] font-mono text-zinc-500">
                 Time-Travel Window: {simTimeTravelHours}h
               </label>
@@ -1533,7 +1533,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               </select>
             </div>
 
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <label className="block text-[10px] font-mono text-zinc-500">
                 Daily SQL Scanned: {simDailyScannedTb} TB/d
               </label>
@@ -1549,7 +1549,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 space-y-2">
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2">
               <div className="text-xs font-bold font-mono text-zinc-500 uppercase">
                 Logical Uncompressed Billing
               </div>
@@ -1600,7 +1600,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
       {/* TAB 4: 168-HOUR `FOR SYSTEM_TIME AS OF` TIME-MACHINE & CLONE        */}
       {/* =================================================================== */}
       {activeSubTab === 'TIME_MACHINE' && (
-        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -1613,7 +1613,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 Rewind any table to the exact millisecond before a bad `DELETE`, `UPDATE`, or `DROP TABLE` without restoring backups or paying extra storage bytes.
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30">
+            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
               Rewind Offset: -{rewindHoursAgo} Hours ({Math.round((rewindHoursAgo / 24) * 10) / 10} Days Ago)
             </span>
           </div>
@@ -1627,7 +1627,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 type="text"
                 value={rewindTableTarget}
                 onChange={(e) => setRewindTableTarget(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono"
+                className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono"
               />
             </div>
 
@@ -1639,7 +1639,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 type="text"
                 value={rewindCloneName}
                 onChange={(e) => setRewindCloneName(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono"
+                className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono"
               />
             </div>
 
@@ -1682,7 +1682,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold font-mono text-violet-300">
+                    <span className="text-xs font-bold font-mono text-blue-300">
                       {card.title}
                     </span>
                     <button
@@ -1716,7 +1716,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     setActiveSubTab('TABLES_SQL');
                   }}
                   title={`Load "${card.title}" into the SQL Pre-Crime X-Ray & Live Executor`}
-                  className="w-full mt-2 py-1.5 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                  className="w-full mt-2 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
                 >
                   Load into SQL X-Ray & Execute →
                 </button>
@@ -1733,7 +1733,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
       {activeSubTab === 'BIGLAKE_ICEBERG' && (
         <div className="space-y-4">
           {/* 0. Official Google Cloud BigLake Metastore Catalogs (/biglake/metastore/catalogs) */}
-          <div className="bg-white dark:bg-[#0c0c0f] border-2 border-cyan-500/40 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-[#202124] border-2 border-blue-500/40 rounded-2xl p-5 shadow-sm space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1741,7 +1741,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
                     Official Google Cloud BigLake Metastore Catalogs (`biglake.googleapis.com/v1`)
                   </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                     CONSOLE PARITY: /biglake/metastore/catalogs
                   </span>
                 </div>
@@ -1757,7 +1757,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 text-xs font-mono font-bold"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-bold"
                 >
                   <span>Open /biglake/metastore/catalogs ↗</span>
                 </a>
@@ -1824,7 +1824,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               <button
                 type="submit"
                 disabled={creatingBigLakeCatalog}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>
@@ -1847,14 +1847,14 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 {bigLakeCatalogs.map((cat) => (
                   <div
                     key={`${cat.location}-${cat.id}`}
-                    className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-cyan-500/30 flex items-center justify-between gap-3"
+                    className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-blue-500/30 flex items-center justify-between gap-3"
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-extrabold text-zinc-950 dark:text-zinc-100">
                           {cat.id}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 font-mono text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px] font-bold">
                           {cat.location}
                         </span>
                       </div>
@@ -1867,7 +1867,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                       onClick={() =>
                         handleDeleteBigLakeCatalog(cat.location, cat.id)
                       }
-                      className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 text-[11px] font-mono font-bold cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-500 text-[11px] font-mono font-bold cursor-pointer"
                     >
                       Delete
                     </button>
@@ -1878,7 +1878,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
           </div>
 
           {/* 1. Visual Demystifier: Why People Confuse BigQuery vs. BigLake */}
-          <div className="bg-white dark:bg-[#0c0c0f] border border-cyan-500/35 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-[#202124] border border-blue-500/35 rounded-2xl p-5 shadow-sm space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1886,7 +1886,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
                     Demystifying BigLake vs. BigQuery in 60 Seconds
                   </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                     OPEN APACHE ICEBERG · ZERO DATA DUPLICATION · ZERO-TRUST BUCKET DELEGATION
                   </span>
                 </div>
@@ -1916,7 +1916,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     onClick={() => setBigLakeUseCase(arch.id)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
                       bigLakeUseCase === arch.id
-                        ? 'bg-cyan-600 text-white border-cyan-400 shadow-sm'
+                        ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
                         : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
                     }`}
                   >
@@ -1929,12 +1929,12 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             {/* 3-Column Comparison Matrix */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               {/* Column 1: Legacy External Table (What NOT to use) */}
-              <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2.5">
+              <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/5 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold font-mono text-rose-500">
+                  <span className="text-xs font-extrabold font-mono text-red-500">
                     1. Legacy External Table (Old Way)
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-400 font-bold">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/20 text-red-400 font-bold">
                     AVOID IN PROD
                   </span>
                 </div>
@@ -1954,15 +1954,15 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 onClick={() => setBigLakeUseCase('ICEBERG_MANAGED')}
                 className={`p-4 rounded-xl border space-y-2.5 cursor-pointer transition-all ${
                   bigLakeUseCase !== 'NATIVE_BQ'
-                    ? 'border-cyan-400 bg-cyan-500/10 ring-1 ring-cyan-400/40'
-                    : 'border-cyan-500/30 bg-cyan-500/5'
+                    ? 'border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/40'
+                    : 'border-blue-500/30 bg-blue-500/5'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold font-mono text-cyan-400">
+                  <span className="text-xs font-extrabold font-mono text-blue-400">
                     2. BigLake + Apache Iceberg (2026 Lakehouse)
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 font-bold">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-300 font-bold">
                     MULTI-ENGINE WINNER
                   </span>
                 </div>
@@ -1982,15 +1982,15 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 onClick={() => setBigLakeUseCase('NATIVE_BQ')}
                 className={`p-4 rounded-xl border space-y-2.5 cursor-pointer transition-all ${
                   bigLakeUseCase === 'NATIVE_BQ'
-                    ? 'border-indigo-400 bg-indigo-500/10 ring-1 ring-indigo-400/40'
-                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#09090b]'
+                    ? 'border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/40'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#131314]'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold font-mono text-indigo-400">
+                  <span className="text-xs font-extrabold font-mono text-blue-400">
                     3. Native BigQuery Table (`Capacitor`)
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 font-bold">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-300 font-bold">
                     PURE SQL WAREHOUSE
                   </span>
                 </div>
@@ -2007,7 +2007,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
           </div>
 
           {/* 2. Interactive 3-Step BigLake & Apache Iceberg Builder */}
-          <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
@@ -2020,7 +2020,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   Configure your `gs://` bucket, BigLake `CLOUD_RESOURCE` Connection, and Apache Iceberg / Parquet options below — we generate all 3 steps ready to run.
                 </p>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-cyan-500/15 text-cyan-500 border border-cyan-500/30">
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
                 Target: `gs://{bigLakeArtifacts.bkt}/{bigLakeArtifacts.cleanFolder}`
               </span>
             </div>
@@ -2036,7 +2036,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     <select
                       value={bigLakeBucket}
                       onChange={(e) => setBigLakeBucket(e.target.value)}
-                      className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                      className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                     >
                       {gcsBuckets.map((b) => (
                         <option key={b.name} value={b.name}>
@@ -2050,7 +2050,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                       value={bigLakeBucket}
                       onChange={(e) => setBigLakeBucket(e.target.value)}
                       placeholder={`${projectId}-open-lakehouse`}
-                      className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                      className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                     />
                   )}
                 </div>
@@ -2065,7 +2065,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   value={bigLakeFolder}
                   onChange={(e) => setBigLakeFolder(e.target.value)}
                   placeholder="iceberg-lakehouse/events_2026"
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 />
               </div>
 
@@ -2077,7 +2077,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   type="text"
                   value={bigLakeConnectionId}
                   onChange={(e) => setBigLakeConnectionId(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 />
               </div>
 
@@ -2089,7 +2089,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   type="text"
                   value={bigLakeTableName}
                   onChange={(e) => setBigLakeTableName(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 />
               </div>
             </div>
@@ -2103,7 +2103,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 <select
                   value={bigLakeLocation}
                   onChange={(e) => setBigLakeLocation(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 >
                   <option value="US">US (Multi-Region)</option>
                   <option value="EU">EU (Multi-Region Sovereign)</option>
@@ -2119,7 +2119,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 <select
                   value={bigLakeFormat}
                   onChange={(e) => setBigLakeFormat(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 >
                   <option value="PARQUET">PARQUET (Recommended + Iceberg)</option>
                   <option value="DELTA_LAKE">DELTA_LAKE (Databricks / Spark)</option>
@@ -2136,7 +2136,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                 <select
                   value={bigLakeStalenessMins}
                   onChange={(e) => setBigLakeStalenessMins(Number(e.target.value))}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 >
                   <option value={15}>15 Minutes (Near-Real-Time)</option>
                   <option value={30}>30 Minutes (Balanced Speed)</option>
@@ -2153,7 +2153,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                   type="text"
                   value={bigLakeRlsFilter}
                   onChange={(e) => setBigLakeRlsFilter(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono"
                 />
               </div>
             </div>
@@ -2253,10 +2253,10 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
               </div>
 
               {/* Step 3: Create BigLake Apache Iceberg or Cached External Table */}
-              <div className="p-4 rounded-xl bg-zinc-950 border border-cyan-500/40 flex flex-col justify-between space-y-3">
+              <div className="p-4 rounded-xl bg-zinc-950 border border-blue-500/40 flex flex-col justify-between space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold font-mono text-cyan-300">
+                    <span className="text-xs font-extrabold font-mono text-blue-300">
                       STEP 3 ·{' '}
                       {bigLakeUseCase === 'ICEBERG_MANAGED'
                         ? 'BigLake Apache Iceberg DDL'
@@ -2287,7 +2287,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                       ? 'Creates an ACID-compliant Apache Iceberg table stored as open Parquet in your gs:// bucket.'
                       : 'Creates a metadata-cached BigLake External Table over existing gs:// files.'}
                   </p>
-                  <pre className="text-[10.5px] font-mono text-cyan-100 bg-black/50 p-2.5 rounded-lg border border-cyan-500/30 whitespace-pre-wrap break-all">
+                  <pre className="text-[10.5px] font-mono text-blue-100 bg-black/50 p-2.5 rounded-lg border border-blue-500/30 whitespace-pre-wrap break-all">
                     {bigLakeArtifacts.primaryDdl}
                   </pre>
                 </div>
@@ -2298,7 +2298,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                     setSqlInput(bigLakeArtifacts.primaryDdl);
                     setActiveSubTab('TABLES_SQL');
                   }}
-                  className="w-full py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-[11px] font-mono font-extrabold cursor-pointer"
+                  className="w-full py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-zinc-950 text-[11px] font-mono font-extrabold cursor-pointer"
                 >
                   Load Step 3 into SQL Executor →
                 </button>
@@ -2309,7 +2309,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-2">
               <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono text-violet-300">
+                  <span className="text-xs font-bold font-mono text-blue-300">
                     Bonus A: Row-Level Security on `gs://` Parquet Files (BigLake Exclusive)
                   </span>
                   <div className="flex items-center gap-2">
@@ -2328,7 +2328,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
                         setSqlInput(bigLakeArtifacts.rowAccessPolicyDdl);
                         setActiveSubTab('TABLES_SQL');
                       }}
-                      className="px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 text-[10.5px] font-mono font-bold cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10.5px] font-mono font-bold cursor-pointer"
                     >
                       Open in SQL X-Ray →
                     </button>
