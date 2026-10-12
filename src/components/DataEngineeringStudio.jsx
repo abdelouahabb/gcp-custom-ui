@@ -508,6 +508,252 @@ LIMIT 25;`;
     }
   };
 
+  // 6. Google Cloud Data Agent Kit (DAK) State & Generators
+  const [dakEnvName, setDakEnvName] = useState('dev');
+  const [dakFileTab, setDakFileTab] = useState('DEPLOYMENT_YAML');
+  const [dakSearchQuery, setDakSearchQuery] = useState(
+    'customer revenue events silver'
+  );
+  const [dakSearchMode, setDakSearchMode] = useState('SEMANTIC');
+  const [dakSearchResults, setDakSearchResults] = useState([]);
+  const [dakSearchCli, setDakSearchCli] = useState('');
+  const [sparkLogUri, setSparkLogUri] = useState(
+    `gs://${projectId || 'gcp-project'}-spark-events/eventlog_v2_spark-medallion-compaction.zst`
+  );
+  const [sparkRcaReport, setSparkRcaReport] = useState(null);
+
+  const dakDeploymentYaml = useMemo(
+    () => `# File: deployment.yaml (Google Cloud Data Agent Kit Declarative Resource Provisioning)
+# CLI: CLOUDSDK_METRICS_ENVIRONMENT="datacloud.antigravity" gcloud beta orchestration-pipelines deploy --environment=${dakEnvName}
+environments:
+  ${dakEnvName}:
+    project: ${projectId}
+    region: us-central1
+    variables:
+      REPO_NAME: ${repoIdInput}
+      SERVICE_ACCOUNT_EMAIL: "dataform-sa@${projectId}.iam.gserviceaccount.com"
+    pipelines:
+      - source: orchestration-pipeline.yaml
+    resources:
+      # --- 1. BigQuery Destination Dataset (Mandatory for DTS Ingestion) ---
+      - type: bigquery.dataset
+        name: ${cleanTargetDs}
+        definition:
+          location: ${medallionLocation}
+          labels:
+            env: ${dakEnvName}
+            datacloud: "antigravity"
+
+      # --- 2. BigQuery Silver Cleaned Table ---
+      - type: bigquery.table
+        name: ${cleanTargetTable}
+        parent: ${cleanTargetDs}
+        definition:
+          schema:
+            fields:
+              - name: ${dedupKey}
+                type: STRING
+              - name: user_email_sha256
+                type: STRING
+              - name: event_type
+                type: STRING
+              - name: revenue_usd
+                type: FLOAT64
+              - name: ${orderByCol}
+                type: TIMESTAMP
+          labels:
+            env: ${dakEnvName}
+            datacloud: "antigravity"
+
+      # --- 3. BigQuery Data Transfer Service (DTS) Ingestion ---
+      - type: bigquerydatatransfer.transferConfig
+        name: ${pipelineName}_gcs_dts_ingest
+        metadata:
+          serviceAccountName: "dataform-sa@${projectId}.iam.gserviceaccount.com"
+        definition:
+          displayName: "${pipelineName} GCS Parquet Ingestion"
+          dataSourceId: google_cloud_storage
+          schedule: "every 24 hours"
+          destinationDatasetId: ${cleanTargetDs}
+          params:
+            data_path_template: "${sourceUri}"
+            destination_table_name_template: "${cleanSourceTable}"
+            file_format: "PARQUET"
+
+      # --- 4. Dataform Repository, ReleaseConfig & WorkflowConfig ---
+      - type: dataform.repository
+        name: ${repoIdInput}
+        definition:
+          labels:
+            env: ${dakEnvName}
+            datacloud: "antigravity"
+      - type: dataform.repository.releaseConfig
+        name: ${dakEnvName}-release
+        parent: ${repoIdInput}
+        definition:
+          gitCommitish: main
+          releaseCompilationResult: auto
+          codeCompilationConfig:
+            defaultDatabase: "${projectId}"
+      - type: dataform.repository.workflowConfig
+        name: ${dakEnvName}-daily-elt
+        parent: ${repoIdInput}
+        definition:
+          releaseConfig: "${dakEnvName}-release"
+          invocationConfig:
+            includedTags: ["silver", "gold"]
+            transitiveDependenciesIncluded: true
+          cronSchedule: "0 * * * *"
+          timeZone: "UTC"`,
+    [
+      dakEnvName,
+      projectId,
+      repoIdInput,
+      cleanTargetDs,
+      medallionLocation,
+      cleanTargetTable,
+      dedupKey,
+      orderByCol,
+      pipelineName,
+      sourceUri,
+      cleanSourceTable,
+    ]
+  );
+
+  const dakOrchestrationPipelineYaml = useMemo(
+    () => `# File: orchestration-pipeline.yaml (Google Cloud Data Agent Kit Pipeline Schema v1.0)
+# Proto Source: orchestration_pipelines_models/pipeline_v1_model/protos/orchestration_pipeline.proto
+modelVersion: "1.0"
+pipelineId: "${pipelineName}_medallion_orchestration"
+description: "Declarative Data Agent Kit Medallion ELT + Serverless Spark Compaction Pipeline"
+runner: airflow
+owner: "data-engineering-team"
+tags:
+  - "job:datacloud:antigravity"
+defaults:
+  projectId: "${projectId}"
+  location: "us-central1"
+  executionConfig:
+    retries: 2
+triggers:
+  - schedule:
+      interval: "0 * * * *"
+      startTime: "2026-01-01T00:00:00Z"
+      catchup: false
+      timezone: "UTC"
+actions:
+  - sql:
+      name: "silver_dedup_and_pii_hash"
+      query: |
+        SELECT
+          TRIM(${dedupKey}) AS ${dedupKey},
+          TO_HEX(SHA256(LOWER(TRIM(user_email)))) AS user_email_sha256,
+          UPPER(TRIM(event_type)) AS event_type,
+          COALESCE(SAFE_CAST(revenue_usd AS FLOAT64), 0.0) AS revenue_usd,
+          ${orderByCol}
+        FROM \`${projectId}.${cleanSourceDs}.${cleanSourceTable}\`
+        WHERE ${dedupKey} IS NOT NULL
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY ${dedupKey} ORDER BY ${orderByCol} DESC) = 1
+      engine:
+        bigquery:
+          location: "${medallionLocation}"
+          destinationTable: "${projectId}.${cleanTargetDs}.${cleanTargetTable}"
+  - pyspark:
+      name: "gold_iceberg_serverless_spark_compaction"
+      dependsOn:
+        - "silver_dedup_and_pii_hash"
+      mainFilePath: "gs://${projectId}-raw-landing/jobs/compact_gold_iceberg.py"
+      engine:
+        dataprocServerless:
+          location: "us-central1"
+          resourceProfile:
+            inline:
+              runtime_config:
+                version: "2.2"
+                properties:
+                  spark.sql.adaptive.enabled: "true"
+                  spark.sql.adaptive.skewJoin.enabled: "true"`,
+    [
+      pipelineName,
+      projectId,
+      dedupKey,
+      orderByCol,
+      cleanSourceDs,
+      cleanSourceTable,
+      medallionLocation,
+      cleanTargetDs,
+      cleanTargetTable,
+    ]
+  );
+
+  const handleRunDakSearch = async () => {
+    setBusyAction('DAK_SEARCH');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/data-engineer/action`,
+        {
+          action: 'SEARCH_DATAPLEX_SEMANTIC_CATALOG',
+          query: dakSearchQuery,
+          mode: dakSearchMode,
+        }
+      );
+      setDakSearchResults(res.data?.results || []);
+      setDakSearchCli(res.data?.cliCommand || '');
+      if (onShowToast && res.data?.message) onShowToast(res.data.message);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(err.response?.data?.error || err.message);
+      }
+    } finally {
+      setBusyAction('');
+    }
+  };
+
+  const handleDeployDakBundle = async () => {
+    setBusyAction('DAK_DEPLOY');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/data-engineer/action`,
+        {
+          action: 'DEPLOY_DAK_ORCHESTRATION_BUNDLE',
+          envName: dakEnvName,
+          region: 'us-central1',
+          datasetId: cleanTargetDs,
+          repoId: repoIdInput,
+        }
+      );
+      if (onShowToast && res.data?.message) onShowToast(res.data.message);
+      await fetchOverview();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(err.response?.data?.error || err.message);
+      }
+    } finally {
+      setBusyAction('');
+    }
+  };
+
+  const handleRunSparkRcaDoctor = async () => {
+    setBusyAction('SPARK_RCA');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/data-engineer/action`,
+        {
+          action: 'RUN_SPARK_LOG_RCA_DOCTOR',
+          targetUri: sparkLogUri,
+        }
+      );
+      setSparkRcaReport(res.data?.diagnosticReport || null);
+      if (onShowToast && res.data?.message) onShowToast(res.data.message);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(err.response?.data?.error || err.message);
+      }
+    } finally {
+      setBusyAction('');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Hero Banner */}
@@ -620,6 +866,11 @@ LIMIT 25;`;
             id: 'SLOT_DOCTOR_DAGS',
             label: '5. 🔬 Slot/Skew Doctor & Serverless DAGs',
             badge: '-$348/mo',
+          },
+          {
+            id: 'DATA_AGENT_KIT',
+            label: '6. 🤖 Data Agent Kit (deployment.yaml & MCP URIs)',
+            badge: 'datacloud:antigravity',
           },
         ].map((t) => (
           <button
@@ -1564,6 +1815,353 @@ LIMIT 25;`;
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: GOOGLE CLOUD DATA AGENT KIT (deployment.yaml, Semantic Search & Streaming Spark RCA) */}
+      {activeSubTab === 'DATA_AGENT_KIT' && (
+        <div className="space-y-5">
+          {/* Top Row: 2-File Declarative GitOps Composer (`deployment.yaml` + `orchestration-pipeline.yaml`) & Supported Resource Types */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left 7 Cols: 2-File Data Agent Kit YAML Composer */}
+            <div className="lg:col-span-7 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-cyan-500" />
+                    <span>
+                      Data Agent Kit 2-File Declarative Bundle (`deployment.yaml` + `orchestration-pipeline.yaml`)
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    Follows the official Google Cloud Data Agent Kit spec (`gcloud beta orchestration-pipelines`) with mandatory `datacloud: &quot;antigravity&quot;` attribution labels and `job:datacloud:antigravity` pipeline tags.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {['dev', 'stage', 'prod'].map((env) => (
+                    <button
+                      key={env}
+                      type="button"
+                      onClick={() => setDakEnvName(env)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase cursor-pointer ${
+                        dakEnvName === env
+                          ? 'bg-cyan-600 text-white'
+                          : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
+                      }`}
+                    >
+                      {env}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setDakFileTab('DEPLOYMENT_YAML')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                      dakFileTab === 'DEPLOYMENT_YAML'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
+                    }`}
+                  >
+                    1. deployment.yaml (Resources &amp; Env)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDakFileTab('ORCHESTRATION_YAML')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                      dakFileTab === 'ORCHESTRATION_YAML'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500'
+                    }`}
+                  >
+                    2. orchestration-pipeline.yaml (DAG Actions)
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      copyText(
+                        dakFileTab === 'DEPLOYMENT_YAML'
+                          ? dakDeploymentYaml
+                          : dakOrchestrationPipelineYaml,
+                        'DAK_YAML'
+                      )
+                    }
+                    className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer text-zinc-700 dark:text-zinc-300"
+                  >
+                    {copiedKey === 'DAK_YAML' ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedKey === 'DAK_YAML' ? 'Copied' : 'Copy YAML'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeployDakBundle}
+                    disabled={busyAction === 'DAK_DEPLOY'}
+                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {busyAction === 'DAK_DEPLOY'
+                      ? 'Applying Bundle...'
+                      : `🚀 Validate & Apply (${dakEnvName})`}
+                  </button>
+                </div>
+              </div>
+
+              <pre className="p-3.5 rounded-xl bg-zinc-950 text-cyan-300 border border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-[360px] leading-relaxed">
+                {dakFileTab === 'DEPLOYMENT_YAML'
+                  ? dakDeploymentYaml
+                  : dakOrchestrationPipelineYaml}
+              </pre>
+
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono text-emerald-400 flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  🏷️ Enforced Resource Attribution (`enforcing-resource-attribution` v6): `datacloud: &quot;antigravity&quot;` + `--label datacloud:antigravity`
+                </span>
+                <span className="font-bold">
+                  CLOUDSDK_METRICS_ENVIRONMENT=&quot;datacloud.antigravity&quot;
+                </span>
+              </div>
+            </div>
+
+            {/* Right 5 Cols: Canonical Data Agent Kit MCP URIs & Supported Resource Types */}
+            <div className="lg:col-span-5 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+              <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white">
+                  🔗 Canonical Data Agent Kit MCP Resource URIs (`read_resource`)
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Copy-ready MCP URIs (`bq://`, `lakehouse://`, `spark://`, `gcs://`) compatible with Antigravity, VS Code, Gemini CLI, and Claude Code.
+                </p>
+              </div>
+
+              <div className="space-y-2 max-h-[195px] overflow-y-auto">
+                {(data.dakResourceUris || []).map((u) => (
+                  <div
+                    key={u.uri}
+                    className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                          {u.kind}
+                        </span>
+                        <span className="text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 truncate">
+                          {u.label}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-mono text-indigo-400 truncate mt-0.5">
+                        {u.uri}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyText(u.uri, u.uri)}
+                      className="px-2 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 hover:bg-cyan-500/20 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
+                    >
+                      {copiedKey === u.uri ? '✓ Copied' : 'Copy URI'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
+                  📦 Supported `gcloud beta orchestration-pipelines` Resource Types
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[165px] overflow-y-auto">
+                  {(data.dakSupportedResourceTypes || []).map((rt) => (
+                    <div
+                      key={rt.type}
+                      className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                    >
+                      <div className="text-[10px] font-mono font-bold text-cyan-500 truncate">
+                        {rt.type}
+                      </div>
+                      <div className="text-[9px] text-zinc-500 line-clamp-2">
+                        {rt.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Row: Dataplex Semantic Asset Search (`--semantic-search`) & Streaming Spark Event Log RCA Doctor */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left 6 Cols: Dataplex Universal Semantic & Keyword Catalog Discovery */}
+            <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+              <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Database className="w-4 h-4 text-violet-500" />
+                  <span>
+                    Dataplex Universal Semantic &amp; Keyword Asset Search (`discovering-gcp-data-assets`)
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Superior to `bq ls`: searches BigQuery, BigLake Iceberg, Cloud Storage, Spanner &amp; Cloud SQL using `gcloud dataplex entries search --semantic-search`.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="text"
+                  value={dakSearchQuery}
+                  onChange={(e) => setDakSearchQuery(e.target.value)}
+                  placeholder="e.g. customer revenue events silver OR system=bigquery type=bigquery-table"
+                  className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
+                />
+                <select
+                  value={dakSearchMode}
+                  onChange={(e) => setDakSearchMode(e.target.value)}
+                  className="px-2.5 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
+                >
+                  <option value="SEMANTIC">🧠 Semantic (--semantic-search)</option>
+                  <option value="KEYWORD">🔎 Keyword DSL (system=bigquery)</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleRunDakSearch}
+                  disabled={busyAction === 'DAK_SEARCH'}
+                  className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  {busyAction === 'DAK_SEARCH' ? 'Searching...' : 'Search Catalog'}
+                </button>
+              </div>
+
+              {dakSearchCli && (
+                <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[10px] font-mono text-violet-300 overflow-x-auto">
+                  $ {dakSearchCli}
+                </div>
+              )}
+
+              <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                {dakSearchResults.map((r) => (
+                  <div
+                    key={r.entryName}
+                    className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-violet-500/15 text-violet-400 border border-violet-500/30">
+                          {r.system}
+                        </span>
+                        <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate">
+                          {r.displayName}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-mono text-cyan-500 truncate mt-0.5">
+                        {r.dakUri}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 truncate">
+                        {r.description}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyText(r.dakUri, r.entryName)}
+                      className="px-2.5 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
+                    >
+                      {copiedKey === r.entryName ? '✓ Copied' : 'Copy URI'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right 6 Cols: Streaming Spark Event Log & Driver Output RCA Doctor (`gcp-spark-troubleshooting`) */}
+            <div className="lg:col-span-6 bg-white dark:bg-[#0c0c0f] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-4 shadow-sm">
+              <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-amber-500" />
+                  <span>
+                    Streaming Spark Event Log &amp; OOM Root-Cause Doctor (`gcp-spark-troubleshooting`)
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Streams multi-GB `.zst`/`.gz` Spark event logs in a single pass (`spark_gcs_log_reader.py --action=summarize_events`) without loading files into memory.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={sparkLogUri}
+                  onChange={(e) => setSparkLogUri(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={handleRunSparkRcaDoctor}
+                  disabled={busyAction === 'SPARK_RCA'}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  {busyAction === 'SPARK_RCA'
+                    ? 'Streaming...'
+                    : '🔬 Stream & Diagnose RCA'}
+                </button>
+              </div>
+
+              {sparkRcaReport && (
+                <div className="p-3.5 rounded-xl bg-zinc-950 border border-amber-500/40 space-y-2.5 text-xs font-mono">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
+                    <span className="text-amber-400 font-extrabold">
+                      🚨 {sparkRcaReport.rootCauseCategory}
+                    </span>
+                    <span className="text-[10px] text-zinc-400">
+                      {sparkRcaReport.fileSizeChecked}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-rose-400">
+                    {sparkRcaReport.exceptionSignature}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                      <div className="text-[9px] text-zinc-500">Median Task</div>
+                      <div className="text-emerald-400 font-bold">
+                        {sparkRcaReport.skewMetrics.medianTaskDurationMs} ms
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                      <div className="text-[9px] text-zinc-500">P99 Skew Task</div>
+                      <div className="text-rose-400 font-bold">
+                        {sparkRcaReport.skewMetrics.p99TaskDurationMs} ms
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                      <div className="text-[9px] text-zinc-500">Median Shuffle</div>
+                      <div className="text-emerald-400 font-bold">
+                        {sparkRcaReport.skewMetrics.medianTaskShuffleReadMb} MB
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                      <div className="text-[9px] text-zinc-500">Max Skew Partition</div>
+                      <div className="text-rose-400 font-bold">
+                        {sparkRcaReport.skewMetrics.maxTaskShuffleReadMb} MB
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1 pt-1">
+                    <div className="text-[10px] text-cyan-400 font-bold">
+                      ✅ Prescribed Spark 2.2 Fixes:
+                    </div>
+                    {sparkRcaReport.recommendedFixes.map((fix) => (
+                      <div key={fix} className="text-[10px] text-zinc-300">
+                        • {fix}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
