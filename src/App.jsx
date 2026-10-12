@@ -333,13 +333,21 @@ function CloudPulseCockpit() {
   const liveBurn = calculateLiveBurnRate(overview);
 
   const navTabs = [
-    // I. Global Command & Topology
+    // I. Flagship Command & 2026 Beyond-Console Innovation Lab (THE STAR!)
     {
       id: 'OVERVIEW',
       group: 'COMMAND',
       label: '2026 SRE Cockpit',
-      tip: 'Executive 2026 SRE Cockpit: Live Project KPIs, 5-Domain Architecture Hub, Unified Live Resource Inventory & Emergency API Kill-Switch',
+      tip: 'Executive 2026 SRE Cockpit: Live Project KPIs, Featured 2026 Innovation Lab, 5-Domain Architecture Hub, Live Resource Inventory & API Kill-Switch',
       icon: LayoutDashboard,
+    },
+    {
+      id: 'INNOVATION_LAB',
+      group: 'COMMAND',
+      label: '✦ 2026 Innovation Lab ★',
+      isStar: true,
+      tip: 'THE STAR OF CLOUDPULSE 2026 — 14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, Storage RAM DLP, Cold-Start Surgeon & AES-256-GCM Gemini 3.8 Vault',
+      icon: Sparkles,
     },
     {
       id: 'GLOBAL_MAP',
@@ -439,20 +447,13 @@ function CloudPulseCockpit() {
       icon: Flame,
     },
 
-    // V. FinOps, 2026 Lab, Cloud Shell & Docs
+    // V. FinOps, Cloud Shell & Docs
     {
       id: 'FINOPS',
       group: 'OPS_DOCS',
       label: 'FinOps & Telemetry',
       tip: 'Real-Time Cloud Monitoring Metrics, CPU/Memory/Network Telemetry Charts & FinOps Footprint',
       icon: BarChart3,
-    },
-    {
-      id: 'INNOVATION_LAB',
-      group: 'OPS_DOCS',
-      label: '2026 Lab ✦',
-      tip: '14 Exclusive Beyond-Console Engineering Tools grouped by FinOps, Latency/Topology, Zero-Trust DLP & AI/Terraform Automation',
-      icon: Sparkles,
     },
     {
       id: 'LOGS_SHELL',
@@ -712,10 +713,14 @@ function CloudPulseCockpit() {
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
                     title={tab.tip}
-                    className={`inline-flex items-center gap-1.5 pb-2 text-xs font-semibold whitespace-nowrap transition-colors border-b-2 cursor-pointer shrink-0 ${
-                      isActive
-                        ? 'border-[#3b82f6] text-[#2563eb] dark:text-[#60a5fa]'
-                        : 'text-zinc-500 hover:text-[#334155] dark:hover:text-[#e2e8f0] border-transparent hover:border-[#3b82f6]'
+                    className={`inline-flex items-center gap-1.5 text-xs whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                      tab.isStar
+                        ? isActive
+                          ? 'px-3 py-1 mb-1 rounded-full font-extrabold bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 text-white shadow-md shadow-violet-500/25 border border-amber-400/50'
+                          : 'px-3 py-1 mb-1 rounded-full font-extrabold bg-violet-500/15 hover:bg-violet-500/25 text-violet-600 dark:text-violet-300 border border-violet-500/40'
+                        : isActive
+                        ? 'pb-2 font-semibold border-b-2 border-[#3b82f6] text-[#2563eb] dark:text-[#60a5fa]'
+                        : 'pb-2 font-semibold border-b-2 text-zinc-500 hover:text-[#334155] dark:hover:text-[#e2e8f0] border-transparent hover:border-[#3b82f6]'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -796,7 +801,23 @@ function CloudPulseCockpit() {
                     fetchLatencyMs={overview?.fetchLatencyMs}
                   />
 
-                  {/* 5-Domain Organized Studio Hub (Zero Duplication Across Tabs) */}
+                  {/* ★ THE STAR OF CLOUDPULSE 2026: 2026 Beyond-Console Innovation Lab ★ */}
+                  <Revolutionary2026Suite
+                    projectId={selectedProjectId}
+                    overview={overview}
+                    initialSubTab={innovationSubTab}
+                    onRefreshOverview={() => {
+                      fetchProjectOverview(selectedProjectId);
+                      setVmRefreshTrigger((c) => c + 1);
+                    }}
+                    onOpenProvision={handleOpenProvision}
+                    onDeleteResource={handleDeleteResource}
+                    onSelectStudioTab={(tabId) => setActiveTab(tabId)}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+
+                  {/* 5-Domain Organized Studio Hub (Zero Duplication Across Standard GCP Services) */}
                   <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                       <div>
@@ -945,6 +966,7 @@ function CloudPulseCockpit() {
                   }}
                   onOpenProvision={handleOpenProvision}
                   onDeleteResource={handleDeleteResource}
+                  onSelectStudioTab={(tabId) => setActiveTab(tabId)}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />

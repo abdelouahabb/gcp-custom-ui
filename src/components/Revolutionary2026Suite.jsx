@@ -174,6 +174,7 @@ export default function Revolutionary2026Suite({
   onRefreshOverview,
   onOpenProvision,
   onDeleteResource,
+  onSelectStudioTab,
   onShowToast,
   onShowError,
 }) {
@@ -519,25 +520,23 @@ export default function Revolutionary2026Suite({
   const publicRun = runServices.filter((s) => s.allowUnauthenticated);
 
   return (
-    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
+    <div className="bg-white dark:bg-[#0c0c0f] border-2 border-violet-500/40 dark:border-violet-500/40 rounded-2xl p-5 shadow-lg shadow-violet-500/5 space-y-5 relative overflow-hidden">
       {/* Header & Live Wallet Burn-Rate Ticker */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 via-blue-500/20 to-emerald-500/20 border border-violet-500/30 flex items-center justify-center text-violet-500">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 via-fuchsia-600 to-amber-500 text-white flex items-center justify-center shadow-sm">
               <Sparkles className="w-4 h-4" />
             </div>
-            <h3 className="text-base font-extrabold text-zinc-950 dark:text-zinc-50">
-              2026 Beyond-Console Innovation Lab
+            <h3 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
+              ✦ 2026 Beyond-Console Innovation Lab ★
             </h3>
-            <span className="text-[10px] font-mono font-bold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30 px-2 py-0.5 rounded-full">
-              EXCLUSIVE TO CLOUDPULSE 2026
+            <span className="text-[10px] font-mono font-extrabold bg-gradient-to-r from-violet-600 to-amber-500 text-white px-2.5 py-0.5 rounded-full shadow-sm">
+              ★ FLAGSHIP STAR OF CLOUDPULSE 2026
             </span>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Live Attack-Surface Topology Graph, Real-Time Wallet Burn-Rate Radar,
-            1-Tap Night-Mode Hibernate, Reverse-Terraform Exporter & Zero-Trust
-            Security Scanner.
+            Where we build capabilities Google Cloud Console doesn&apos;t have: Pre-Crime FinOps, 1-Tap Night-Mode Hibernate ($0), Attack-Surface Topology, BigLake Iceberg, Spanner Graph ($65/mo), Serverless Spark &amp; SA Key Kill-Switch.
           </p>
         </div>
 
@@ -583,6 +582,58 @@ export default function Revolutionary2026Suite({
           </button>
         </div>
       </div>
+
+      {/* 2026 Deep-Dive Innovation Studios Launchpad */}
+      {onSelectStudioTab && (
+        <div className="p-3 rounded-xl bg-gradient-to-r from-violet-500/10 via-fuchsia-500/5 to-amber-500/10 border border-violet-500/30 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-md bg-violet-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
+              2026 Deep-Dive Studios
+            </span>
+            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+              Jump straight to our newest 2026 specialized engineering breakthroughs:
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              {
+                tabId: 'WAVE10_FRONTIER',
+                label: '🕸️ Spanner Graph ($65/mo) & Serverless Spark',
+                style: 'border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-500/25',
+              },
+              {
+                tabId: 'BIGQUERY_STUDIO',
+                label: '🌊 BigLake & Apache Iceberg vs BigQuery',
+                style: 'border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/25',
+              },
+              {
+                tabId: 'SOVEREIGN_IAM',
+                label: '🔑 SA .json Key & OAuth Token Kill-Switch',
+                style: 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25',
+              },
+              {
+                tabId: 'FUNCTIONS_STUDIO',
+                label: '⚡ Universal Eventarc (90+ GCP Events)',
+                style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
+              },
+              {
+                tabId: 'WAVE8_STUDIO',
+                label: '🚨 SRE War-Room & VPC-SC Perimeter',
+                style: 'border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25',
+              },
+            ].map((item) => (
+              <button
+                key={item.tabId}
+                type="button"
+                onClick={() => onSelectStudioTab(item.tabId)}
+                className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold transition-all cursor-pointer ${item.style}`}
+              >
+                {item.label} →
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Category Filter Bar for 14 Lab Tools */}
       <div className="space-y-3">
