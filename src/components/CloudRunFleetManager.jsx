@@ -21,6 +21,7 @@ import {
   Network,
   HardDrive,
 } from 'lucide-react';
+import XtermWebSshTerminal from './XtermWebSshTerminal';
 
 const QUICK_TEMPLATES = [
   {
@@ -1605,6 +1606,28 @@ spec:
                       </span>
                     </button>
 
+                    <button
+                      type="button"
+                      onClick={() => toggleServiceDrawer(srv, 'SSH_TERMINAL')}
+                      title={
+                        activeDrawer === 'SSH_TERMINAL'
+                          ? `SSH is active on ${srv.name} — click to disconnect & turn SSH off`
+                          : `Open interactive @xterm/xterm Container SSH session (gcloud beta run services ssh ${srv.name})`
+                      }
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm cursor-pointer ${
+                        activeDrawer === 'SSH_TERMINAL'
+                          ? 'bg-blue-600 hover:bg-rose-600 text-white'
+                          : 'bg-[#059669] hover:bg-[#047857] text-[#000000]'
+                      }`}
+                    >
+                      <Terminal className="w-3.5 h-3.5" />
+                      <span>
+                        {activeDrawer === 'SSH_TERMINAL'
+                          ? 'SSH Active (Turn Off)'
+                          : 'SSH / Container Shell'}
+                      </span>
+                    </button>
+
                     {onRunInShell && (
                       <button
                         type="button"
@@ -3132,6 +3155,18 @@ spec:
                     </div>
                   );
                 })()}
+
+                {/* Live Interactive Cloud Run Container SSH Drawer (Off by Default; Toggled by SSH / Container Shell button) */}
+                {activeDrawer === 'SSH_TERMINAL' && (
+                  <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                    <XtermWebSshTerminal
+                      projectId={projectId}
+                      targetType="CLOUD_RUN"
+                      cloudRunService={srv}
+                      onDisconnect={() => toggleServiceDrawer(srv, 'SSH_TERMINAL')}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}

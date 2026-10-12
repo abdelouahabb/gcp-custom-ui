@@ -15197,6 +15197,135 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
     }
   };
 
+  // Engine C: Cloud Run Interactive Container SSH & Proxy PTY (`gcloud beta run services ssh`)
+  const startCloudRunSshPtyBridge = async () => {
+    if (sessionClosed) return;
+    const serviceName = (params.get('serviceName') || vmName || '').trim();
+    const runRegion = (params.get('region') || zone || 'us-east1').trim();
+    const revision = (params.get('revision') || '').trim();
+    const container = (params.get('container') || '').trim();
+    const instanceId = (params.get('instance') || '').trim();
+    const serviceUri = (params.get('serviceUri') || '').trim();
+
+    wsSend({
+      type: 'status',
+      status: 'CONNECTING',
+      engine:
+        requestedEngine === 'cloudrun_proxy'
+          ? 'CLOUD_RUN_PROXY_PTY'
+          : 'CLOUD_RUN_SSH_PTY',
+      message: `Connecting to Cloud Run service "${serviceName}" (${runRegion})...`,
+    });
+
+    // Warm up scale-to-zero Cloud Run service so an active container instance is ready for SSH
+    if (serviceUri && serviceUri.startsWith('https://')) {
+      wsSend({
+        type: 'output',
+        data: `\x1b[38;5;45m⚡ Warming up Cloud Run container instance at ${serviceUri}...\x1b[0m\r\n`,
+      });
+      await axios.get(serviceUri, { timeout: 3500 }).catch(() => null);
+    }
+
+    const revFlag =
+      revision && revision !== 'LATEST'
+        ? ` --revision=${revision.replace(/[^a-zA-Z0-9._-]/g, '')}`
+        : '';
+    const containerFlag = container
+      ? ` --container=${container.replace(/[^a-zA-Z0-9._-]/g, '')}`
+      : '';
+    const instanceFlag = instanceId
+      ? ` --instance=${instanceId.replace(/[^a-zA-Z0-9._-]/g, '')}`
+      : '';
+
+    let shellCmdString = '';
+    if (requestedEngine === 'cloudrun_proxy') {
+      shellCmdString = `echo -e "\\033[1;36m➜ Starting Authenticated Cloud Run Local Proxy: gcloud beta run services proxy ${serviceName} --region=${runRegion} --project=${projectId}\\033[0m"; gcloud beta run services proxy ${serviceName} --region=${runRegion} --project=${projectId}; exec bash --login`;
+    } else if (requestedEngine === 'cloudrun_logs') {
+      shellCmdString = `echo -e "\\033[1;36m➜ Reading Live Cloud Run Logs & Opening Container Admin PTY (${serviceName} · ${runRegion})\\033[0m"; gcloud alpha run services logs read ${serviceName} --region=${runRegion} --project=${projectId} --limit=40; echo -e "\\n\\033[1;32m✔ Interactive Cloud Run Admin PTY Ready (env: \\$SERVICE_NAME=${serviceName}, \\$REGION=${runRegion})\\033[0m"; exec bash --login`;
+    } else {
+      const sshCli = `gcloud beta run services ssh ${serviceName} --region=${runRegion} --project=${projectId}${revFlag}${containerFlag}${instanceFlag}`;
+      shellCmdString = `echo -e "\\033[1;32m➜ Launching Live Cloud Run Container SSH PTY:\\033[0m \\033[1;33m${sshCli}\\033[0m"; ${sshCli} || { echo -e "\\n\\033[38;5;214mℹ️  Note: gcloud beta run services ssh exited or requires an active Gen2 instance / IAM role (roles/run.developer). Dropping into interactive Cloud Run Admin PTY where you can run '${sshCli}', 'curl -i \\$SERVICE_URI', or 'gcloud beta run services proxy \\$SERVICE_NAME --region=\\$REGION':\\033[0m\\n"; exec bash --login; }`;
+    }
+
+    const ptyProc = spawn(
+      'python3',
+      ['-u', '-c', PYTHON_PTY_BRIDGE_SCRIPT, 'bash', '-c', shellCmdString],
+      {
+        env: {
+          ...process.env,
+          ...ATTRIBUTION_ENV,
+          CLOUDSDK_CORE_PROJECT:
+            projectId || process.env.CLOUDSDK_CORE_PROJECT || '',
+          SERVICE_NAME: serviceName,
+          REGION: runRegion,
+          PROJECT_ID: projectId,
+          SERVICE_URI: serviceUri,
+          PTY_COLS: String(cols),
+          PTY_ROWS: String(rows),
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor',
+        },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }
+    );
+
+    let markedConnected = false;
+    ptyProc.stdout.on('data', (chunk) => {
+      if (!markedConnected) {
+        markedConnected = true;
+        wsSend({
+          type: 'status',
+          status: 'CONNECTED',
+          engine:
+            requestedEngine === 'cloudrun_proxy'
+              ? 'CLOUD_RUN_PROXY_PTY'
+              : 'CLOUD_RUN_SSH_PTY',
+          message: `Interactive Cloud Run SSH PTY active on ${serviceName} (${runRegion})`,
+        });
+      }
+      wsSend({ type: 'output', data: chunk.toString('utf8') });
+    });
+
+    ptyProc.stderr.on('data', (chunk) => {
+      wsSend({ type: 'output', data: chunk.toString('utf8') });
+    });
+
+    ptyProc.on('close', (code) => {
+      wsSend({
+        type: 'output',
+        data: `\r\n\x1b[38;5;244m[Cloud Run SSH PTY session exited with code ${
+          code ?? 0
+        }]\x1b[0m\r\n`,
+      });
+      wsSend({
+        type: 'status',
+        status: 'DISCONNECTED',
+        engine: 'CLOUD_RUN_SSH_PTY',
+        message: `Session closed (exit code ${code ?? 0})`,
+      });
+    });
+
+    activeInputWriter = (data) => {
+      if (ptyProc.stdin && !ptyProc.stdin.destroyed) {
+        ptyProc.stdin.write(data);
+      }
+    };
+
+    activeResizer = (newCols, newRows) => {
+      if (ptyProc.stdin && !ptyProc.stdin.destroyed) {
+        ptyProc.stdin.write(`\x00RESIZE:${newCols},${newRows}\n`);
+      }
+    };
+
+    activeCleanup = () => {
+      try {
+        ptyProc.kill('SIGTERM');
+      } catch {
+        // ignore
+      }
+    };
+  };
+
   ws.on('message', (rawMsg) => {
     try {
       const msg = JSON.parse(rawMsg.toString());
@@ -15232,8 +15361,15 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
   ws.on('close', cleanupSession);
   ws.on('error', cleanupSession);
 
+  const targetType = (params.get('targetType') || 'VM').trim().toUpperCase();
+
   // Start the requested engine immediately upon connection
-  if (vmName === '__CLOUD_SHELL__' || requestedEngine === 'gcloud_pty') {
+  if (
+    targetType === 'CLOUD_RUN' ||
+    requestedEngine.startsWith('cloudrun_')
+  ) {
+    startCloudRunSshPtyBridge();
+  } else if (vmName === '__CLOUD_SHELL__' || requestedEngine === 'gcloud_pty') {
     startGcloudPtyBridge();
   } else {
     startNativeSsh2Client();

@@ -18,7 +18,7 @@ import {
   PowerOff,
 } from 'lucide-react';
 
-const LIVE_PTY_MACROS = [
+const VM_PTY_MACROS = [
   { label: 'sudo apt update', cmd: 'sudo apt update\r' },
   { label: 'Top / Processes', cmd: 'top -b -n 1 | head -n 25\r' },
   { label: 'Disk & RAM', cmd: 'df -h && echo "---" && free -h\r' },
@@ -29,9 +29,22 @@ const LIVE_PTY_MACROS = [
   { label: 'Ctrl+C (Interrupt)', cmd: '\x03' },
 ];
 
+const CLOUD_RUN_PTY_MACROS = [
+  { label: 'Container Processes (ps aux)', cmd: 'ps aux\r' },
+  { label: 'Environment Vars', cmd: 'env | sort\r' },
+  { label: 'Filesystem & Mounts', cmd: 'df -h && ls -la\r' },
+  { label: 'Memory & Cgroups', cmd: 'free -h || cat /sys/fs/cgroup/memory.current\r' },
+  { label: 'Probe Container :8080', cmd: 'curl -is http://127.0.0.1:8080 | head -n 20\r' },
+  { label: 'apt update', cmd: 'apt-get update\r' },
+  { label: 'OS Release', cmd: 'uname -a && cat /etc/os-release\r' },
+  { label: 'Ctrl+C (Interrupt)', cmd: '\x03' },
+];
+
 export default function XtermWebSshTerminal({
   projectId,
-  activeVm,
+  targetType = 'VM', // 'VM' | 'CLOUD_RUN'
+  activeVm = null,
+  cloudRunService = null,
   defaultUsername = 'ubuntu',
   isExpanded = false,
   onToggleExpand,
@@ -40,17 +53,26 @@ export default function XtermWebSshTerminal({
   serialConsoleOutput = '',
   serialLoading = false,
 }) {
+  const isCloudRun = targetType === 'CLOUD_RUN';
   const containerRef = useRef(null);
   const xtermRef = useRef(null);
   const fitAddonRef = useRef(null);
   const wsRef = useRef(null);
 
   const [viewMode, setViewMode] = useState('LIVE_SSH_PTY'); // 'LIVE_SSH_PTY' | 'SERIAL_PORT_1'
-  const [sshEngine, setSshEngine] = useState('auto'); // 'auto' | 'ssh2' | 'gcloud_pty' | 'iap' | 'cloud_shell'
+  const [sshEngine, setSshEngine] = useState(
+    isCloudRun ? 'cloudrun_ssh' : 'auto'
+  );
+  const [selectedRevision, setSelectedRevision] = useState('LATEST');
+  const [selectedContainer, setSelectedContainer] = useState('');
+  const [selectedInstanceId, setSelectedInstanceId] = useState('');
+
   const [connStatus, setConnStatus] = useState({
     status: 'OFF',
     engine: 'STANDBY',
-    message: 'SSH is off until enabled on a VM card',
+    message: isCloudRun
+      ? 'Cloud Run SSH is off until enabled on a service card'
+      : 'SSH is off until enabled on a VM card',
   });
   const [copiedCli, setCopiedCli] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -60,7 +82,9 @@ export default function XtermWebSshTerminal({
   const [customPrivateKey, setCustomPrivateKey] = useState('');
   const [reconnectNonce, setReconnectNonce] = useState(0);
 
-  const isSessionEnabled = Boolean(activeVm) || sshEngine === 'cloud_shell';
+  const isSessionEnabled = isCloudRun
+    ? Boolean(cloudRunService)
+    : Boolean(activeVm) || sshEngine === 'cloud_shell';
 
   useEffect(() => {
     if (defaultUsername && !customUsername) {
@@ -75,13 +99,31 @@ export default function XtermWebSshTerminal({
     xtermRef.current?.focus();
   }, []);
 
-  // Only initialize XTerm.js & WebSocket when `isSessionEnabled` is true (user clicked "SSH / Console" on a VM!)
+  const cloudRunSshCli = cloudRunService
+    ? `gcloud beta run services ssh ${cloudRunService.name} --region=${
+        cloudRunService.region || 'us-east1'
+      } --project=${projectId}${
+        selectedRevision && selectedRevision !== 'LATEST'
+          ? ` --revision=${selectedRevision}`
+          : ''
+      }${selectedContainer ? ` --container=${selectedContainer}` : ''}${
+        selectedInstanceId ? ` --instance=${selectedInstanceId}` : ''
+      }`
+    : '';
+
+  const displayCli = isCloudRun
+    ? cloudRunSshCli
+    : activeVm?.sshCommand || '';
+
+  // Only initialize XTerm.js & WebSocket when `isSessionEnabled` is true
   useEffect(() => {
     if (!isSessionEnabled) {
       setConnStatus({
         status: 'OFF',
         engine: 'STANDBY',
-        message: 'SSH is off — click "SSH / Console" on a VM card to connect',
+        message: isCloudRun
+          ? 'SSH is off — click "SSH / Container Shell" on a Cloud Run service to connect'
+          : 'SSH is off — click "SSH / Console" on a VM card to connect',
       });
       return undefined;
     }
@@ -141,49 +183,74 @@ export default function XtermWebSshTerminal({
       }
     }, 50);
 
-    const targetVmName =
-      sshEngine === 'cloud_shell' || !activeVm
-        ? '__CLOUD_SHELL__'
-        : activeVm.name;
-    const targetZone = activeVm?.zone || 'us-east1-b';
-    const targetHost =
-      activeVm?.externalIp && activeVm.externalIp !== 'None'
-        ? activeVm.externalIp
-        : activeVm?.internalIp || '';
-
     term.writeln(
       `\x1b[1;32m╔══════════════════════════════════════════════════════════════════════════╗\x1b[0m`
     );
     term.writeln(
-      `\x1b[1;32m║  CloudPulse 2026 · Open-Source Xterm.js + SSH2 / PTY Interactive Client  ║\x1b[0m`
+      isCloudRun
+        ? `\x1b[1;32m║  CloudPulse 2026 · Cloud Run Interactive Container SSH (@xterm/xterm)    ║\x1b[0m`
+        : `\x1b[1;32m║  CloudPulse 2026 · Open-Source Xterm.js + SSH2 / PTY Interactive Client  ║\x1b[0m`
     );
     term.writeln(
       `\x1b[1;32m╚══════════════════════════════════════════════════════════════════════════╝\x1b[0m`
     );
 
-    if (targetVmName !== '__CLOUD_SHELL__' && activeVm && activeVm.status !== 'RUNNING') {
-      term.writeln(
-        `\x1b[38;5;214m⚠️  VM "${activeVm.name}" is currently ${activeVm.status}. Start the VM to SSH into it, or switch engine to "Local GCloud / Bash PTY".\x1b[0m`
-      );
-    }
-
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const query = new URLSearchParams({
-      projectId: projectId || '',
-      vmName: targetVmName,
-      zone: targetZone,
-      host: targetHost,
-      username: customUsername || defaultUsername || 'ubuntu',
-      engine:
-        sshEngine === 'iap'
-          ? 'gcloud_pty'
-          : sshEngine === 'cloud_shell'
-          ? 'gcloud_pty'
-          : sshEngine,
-      iap: sshEngine === 'iap' ? 'true' : 'false',
-      cols: String(term.cols || 100),
-      rows: String(term.rows || 28),
-    });
+    let query;
+
+    if (isCloudRun && cloudRunService) {
+      query = new URLSearchParams({
+        targetType: 'CLOUD_RUN',
+        projectId: projectId || '',
+        serviceName: cloudRunService.name || '',
+        region: cloudRunService.region || 'us-east1',
+        revision: selectedRevision || 'LATEST',
+        container: selectedContainer || '',
+        instance: selectedInstanceId || '',
+        serviceUri: cloudRunService.uri || '',
+        engine: sshEngine || 'cloudrun_ssh',
+        cols: String(term.cols || 100),
+        rows: String(term.rows || 28),
+      });
+    } else {
+      const targetVmName =
+        sshEngine === 'cloud_shell' || !activeVm
+          ? '__CLOUD_SHELL__'
+          : activeVm.name;
+      const targetZone = activeVm?.zone || 'us-east1-b';
+      const targetHost =
+        activeVm?.externalIp && activeVm.externalIp !== 'None'
+          ? activeVm.externalIp
+          : activeVm?.internalIp || '';
+
+      if (
+        targetVmName !== '__CLOUD_SHELL__' &&
+        activeVm &&
+        activeVm.status !== 'RUNNING'
+      ) {
+        term.writeln(
+          `\x1b[38;5;214m⚠️  VM "${activeVm.name}" is currently ${activeVm.status}. Start the VM to SSH into it, or switch engine to "Local GCloud / Bash PTY".\x1b[0m`
+        );
+      }
+
+      query = new URLSearchParams({
+        targetType: 'VM',
+        projectId: projectId || '',
+        vmName: targetVmName,
+        zone: targetZone,
+        host: targetHost,
+        username: customUsername || defaultUsername || 'ubuntu',
+        engine:
+          sshEngine === 'iap'
+            ? 'gcloud_pty'
+            : sshEngine === 'cloud_shell'
+            ? 'gcloud_pty'
+            : sshEngine,
+        iap: sshEngine === 'iap' ? 'true' : 'false',
+        cols: String(term.cols || 100),
+        rows: String(term.rows || 28),
+      });
+    }
 
     const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/ssh?${query.toString()}`;
     const ws = new WebSocket(wsUrl);
@@ -202,7 +269,7 @@ export default function XtermWebSshTerminal({
       } catch {
         // ignore
       }
-      if (customPassword || customPrivateKey) {
+      if (!isCloudRun && (customPassword || customPrivateKey)) {
         ws.send(
           JSON.stringify({
             type: 'custom_auth',
@@ -286,16 +353,25 @@ export default function XtermWebSshTerminal({
     };
   }, [
     isSessionEnabled,
+    isCloudRun,
     projectId,
     activeVm?.name,
     activeVm?.zone,
     activeVm?.externalIp,
     activeVm?.internalIp,
     activeVm?.status,
+    cloudRunService?.name,
+    cloudRunService?.region,
+    cloudRunService?.uri,
+    selectedRevision,
+    selectedContainer,
+    selectedInstanceId,
     sshEngine,
     viewMode,
     reconnectNonce,
   ]);
+
+  const macrosToRender = isCloudRun ? CLOUD_RUN_PTY_MACROS : VM_PTY_MACROS;
 
   return (
     <div className="bg-[#09090b] border border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-full">
@@ -309,7 +385,9 @@ export default function XtermWebSshTerminal({
           </div>
           <Terminal className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="font-mono text-xs font-bold text-zinc-100 truncate">
-            {sshEngine === 'cloud_shell'
+            {isCloudRun && cloudRunService
+              ? `root@${cloudRunService.name} (${cloudRunService.region} · Cloud Run Container SSH)`
+              : sshEngine === 'cloud_shell'
               ? `${customUsername}@cloud-shell (${projectId})`
               : activeVm
               ? `${customUsername}@${activeVm.name} (${activeVm.zone} · ${
@@ -349,19 +427,21 @@ export default function XtermWebSshTerminal({
 
           {isSessionEnabled && (
             <>
-              <button
-                type="button"
-                onClick={() => setShowAuthModal((v) => !v)}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
-                  showAuthModal
-                    ? 'bg-blue-600 text-white border-blue-500'
-                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
-                }`}
-                title="Configure SSH Username, Port, Password, or Private Key PEM"
-              >
-                <KeyRound className="w-3 h-3" />
-                <span>SSH Auth / Key</span>
-              </button>
+              {!isCloudRun && (
+                <button
+                  type="button"
+                  onClick={() => setShowAuthModal((v) => !v)}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
+                    showAuthModal
+                      ? 'bg-blue-600 text-white border-blue-500'
+                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
+                  }`}
+                  title="Configure SSH Username, Port, Password, or Private Key PEM"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  <span>SSH Auth / Key</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -421,7 +501,7 @@ export default function XtermWebSshTerminal({
 
       {/* Mode Switcher + SSH Engine Selector Bar */}
       <div className="bg-zinc-950 border-b border-zinc-800/90 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
             onClick={() => setViewMode('LIVE_SSH_PTY')}
@@ -432,23 +512,64 @@ export default function XtermWebSshTerminal({
             }`}
           >
             <Terminal className="w-3 h-3" />
-            <span>Interactive Xterm.js SSH PTY</span>
+            <span>
+              {isCloudRun
+                ? 'Interactive Cloud Run SSH (@xterm/xterm)'
+                : 'Interactive Xterm.js SSH PTY'}
+            </span>
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('SERIAL_PORT_1');
-              if (activeVm && onFetchSerialConsole) onFetchSerialConsole();
-            }}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'SERIAL_PORT_1'
-                ? 'bg-blue-600 text-white shadow'
-                : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
-            }`}
-          >
-            <FileText className="w-3 h-3" />
-            <span>Serial Port 1 Console (REST)</span>
-          </button>
+
+          {!isCloudRun && (
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('SERIAL_PORT_1');
+                if (activeVm && onFetchSerialConsole) onFetchSerialConsole();
+              }}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'SERIAL_PORT_1'
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+              }`}
+            >
+              <FileText className="w-3 h-3" />
+              <span>Serial Port 1 Console (REST)</span>
+            </button>
+          )}
+
+          {isCloudRun && cloudRunService && (
+            <div className="flex items-center gap-1.5 ml-1">
+              <span className="text-[10px] font-mono text-zinc-500">
+                Revision:
+              </span>
+              <select
+                value={selectedRevision}
+                onChange={(e) => setSelectedRevision(e.target.value)}
+                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-200"
+              >
+                <option value="LATEST">LATEST ({cloudRunService.latestReadyRevision || 'active'})</option>
+                {(cloudRunService.revisions || []).map((r) => (
+                  <option key={r.shortName} value={r.shortName}>
+                    {r.shortName}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={selectedContainer}
+                onChange={(e) => setSelectedContainer(e.target.value)}
+                placeholder="--container (optional)"
+                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-200 w-36"
+              />
+              <input
+                type="text"
+                value={selectedInstanceId}
+                onChange={(e) => setSelectedInstanceId(e.target.value)}
+                placeholder="--instance ID (optional)"
+                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-200 w-36"
+              />
+            </div>
+          )}
         </div>
 
         {viewMode === 'LIVE_SSH_PTY' && (
@@ -456,33 +577,51 @@ export default function XtermWebSshTerminal({
             <span className="text-[10px] font-mono text-zinc-500">
               SSH Engine:
             </span>
-            <select
-              value={sshEngine}
-              onChange={(e) => setSshEngine(e.target.value)}
-              className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-emerald-500"
-            >
-              <option value="auto">
-                ⚡ Auto (Native SSH2 + gcloud PTY Fallback)
-              </option>
-              <option value="ssh2">
-                🔑 Direct SSH2 Protocol (Node.js ssh2 :22)
-              </option>
-              <option value="gcloud_pty">
-                🛡️ gcloud compute ssh Full Linux PTY
-              </option>
-              <option value="iap">
-                🔒 Cloud IAP TCP Tunnel (--tunnel-through-iap)
-              </option>
-              <option value="cloud_shell">
-                💻 Local GCloud / Bash PTY Shell
-              </option>
-            </select>
+            {isCloudRun ? (
+              <select
+                value={sshEngine}
+                onChange={(e) => setSshEngine(e.target.value)}
+                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="cloudrun_ssh">
+                  🚀 gcloud beta run services ssh (Container SSH PTY)
+                </option>
+                <option value="cloudrun_proxy">
+                  🔌 gcloud beta run services proxy (Auth Local Proxy PTY)
+                </option>
+                <option value="cloudrun_logs">
+                  📜 Live Cloud Run Logs + Container Admin PTY
+                </option>
+              </select>
+            ) : (
+              <select
+                value={sshEngine}
+                onChange={(e) => setSshEngine(e.target.value)}
+                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="auto">
+                  ⚡ Auto (Native SSH2 + gcloud PTY Fallback)
+                </option>
+                <option value="ssh2">
+                  🔑 Direct SSH2 Protocol (Node.js ssh2 :22)
+                </option>
+                <option value="gcloud_pty">
+                  🛡️ gcloud compute ssh Full Linux PTY
+                </option>
+                <option value="iap">
+                  🔒 Cloud IAP TCP Tunnel (--tunnel-through-iap)
+                </option>
+                <option value="cloud_shell">
+                  💻 Local GCloud / Bash PTY Shell
+                </option>
+              </select>
+            )}
           </div>
         )}
       </div>
 
-      {/* Optional Custom SSH Credentials Drawer */}
-      {showAuthModal && isSessionEnabled && (
+      {/* Optional Custom SSH Credentials Drawer (for VM SSH2) */}
+      {!isCloudRun && showAuthModal && isSessionEnabled && (
         <div className="bg-zinc-900/95 border-b border-zinc-800 p-3.5 space-y-2.5 text-xs font-mono">
           <div className="flex items-center justify-between">
             <span className="font-bold text-emerald-400 flex items-center gap-1.5">
@@ -578,7 +717,7 @@ export default function XtermWebSshTerminal({
             <span className="px-1.5 py-0.5 rounded bg-[#059669] text-black font-bold">
               SSH / Console
             </span>{' '}
-            button on any Compute Engine VM card on the left to enable **`SSH Active`** and launch the live **`@xterm/xterm` + `ssh2`** interactive terminal.
+            button on any VM card on the left to enable **`SSH Active`** and launch the live **`@xterm/xterm` + `ssh2`** interactive terminal.
           </p>
           <div className="text-[11px] font-mono text-zinc-500">
             Click <span className="text-blue-400 font-bold">SSH Active (Turn Off)</span> at any time to close the SSH connection.
@@ -586,16 +725,16 @@ export default function XtermWebSshTerminal({
         </div>
       ) : viewMode === 'LIVE_SSH_PTY' ? (
         <div className="p-3 space-y-2.5 flex-1 flex flex-col">
-          {/* CLI Copy & Quick PTY Macro Injection Bar */}
-          {activeVm && (
+          {/* CLI Copy Bar */}
+          {displayCli && (
             <div className="bg-zinc-900/90 border border-zinc-800 rounded-lg px-3 py-1.5 flex items-center justify-between gap-2">
               <code className="text-[11px] font-mono text-zinc-300 truncate">
-                $ {activeVm.sshCommand}
+                $ {displayCli}
               </code>
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard?.writeText(activeVm.sshCommand);
+                  navigator.clipboard?.writeText(displayCli);
                   setCopiedCli(true);
                   setTimeout(() => setCopiedCli(false), 1500);
                 }}
@@ -621,7 +760,7 @@ export default function XtermWebSshTerminal({
             <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mr-1">
               Inject into PTY:
             </span>
-            {LIVE_PTY_MACROS.map((m) => (
+            {macrosToRender.map((m) => (
               <button
                 key={m.label}
                 type="button"
@@ -648,13 +787,15 @@ export default function XtermWebSshTerminal({
             ref={containerRef}
             onClick={() => xtermRef.current?.focus()}
             className={`w-full flex-1 rounded-lg border border-zinc-800 bg-[#070709] p-1.5 overflow-hidden ${
-              isExpanded ? 'min-h-[540px]' : 'min-h-[410px]'
+              isExpanded ? 'min-h-[540px]' : 'min-h-[390px]'
             }`}
           />
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-500">
             <span>
-              🟢 Real Full-Duplex PTY (@xterm/xterm + WebSocket SSH2 / Linux pty.openpty) — supports interactive apt update, vim, htop, nano, tab-completion & Ctrl+C
+              {isCloudRun
+                ? '🟢 Real Cloud Run Interactive Container SSH (@xterm/xterm + gcloud beta run services ssh PTY)'
+                : '🟢 Real Full-Duplex PTY (@xterm/xterm + WebSocket SSH2 / Linux pty.openpty) — supports interactive apt update, vim, htop, nano, tab-completion & Ctrl+C'}
             </span>
             <span>{connStatus.message}</span>
           </div>
