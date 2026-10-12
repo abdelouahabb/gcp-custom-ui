@@ -657,7 +657,7 @@ function CloudPulseCockpit() {
           if (localRaw) {
             try {
               const parsed = JSON.parse(localRaw);
-              if (Array.isArray(parsed)) list = parsed;
+              if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
             } catch {
               // ignore
             }

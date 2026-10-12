@@ -16156,6 +16156,100 @@ app.post('/api/project/:projectId/action', async (req, res) => {
 // (`console.cloud.google.com/billing` -> Credits -> Download CSV).
 // ============================================================================
 const gdeCreditGrantsByProject = new Map();
+const CREDITS_CSV_PATH = path.join(__dirname, 'billing-credits.csv');
+
+function parseCreditsCsvText(csvText = '') {
+  const lines = String(csvText || '')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return [];
+
+  const parseCsvLine = (line) => {
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const ch = line[i];
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        out.push(cur.trim());
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur.trim());
+    return out;
+  };
+
+  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const nameIdx = headers.findIndex((h) => h.includes('name'));
+  const remIdx = headers.findIndex((h) => h.includes('remaining value'));
+  const origIdx = headers.findIndex((h) => h.includes('original value'));
+  const startIdx = headers.findIndex((h) => h.includes('start'));
+  const endIdx = headers.findIndex((h) => h.includes('end'));
+  const appIdx = headers.findIndex((h) => h.includes('application'));
+
+  const toIsoDate = (raw) => {
+    if (!raw) return '';
+    const d = new Date(`${raw} 12:00:00 UTC`);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toISOString().slice(0, 10);
+    }
+    return raw;
+  };
+
+  const parseMoney = (raw) => {
+    if (!raw) return 0;
+    return Number(String(raw).replace(/[^0-9.-]/g, '')) || 0;
+  };
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i += 1) {
+    const cols = parseCsvLine(lines[i]);
+    if (cols.length < 3) continue;
+    const name = cols[nameIdx >= 0 ? nameIdx : 0] || `Credit Grant #${i}`;
+    const rem = parseMoney(cols[remIdx >= 0 ? remIdx : 3]);
+    const orig = parseMoney(cols[origIdx >= 0 ? origIdx : 4]) || rem;
+    const startDate = toIsoDate(cols[startIdx >= 0 ? startIdx : 5]);
+    const expirationDate = toIsoDate(cols[endIdx >= 0 ? endIdx : 6]);
+    const creditApplication = cols[appIdx >= 0 ? appIdx : 7] || 'Net price';
+
+    rows.push({
+      id: `csv-credit-${i}`,
+      name,
+      grantType: name.includes('MONTHLY') ? 'GDP_MONTHLY' : 'PROMOTIONAL',
+      creditCode: name.split('-').pop()?.trim() || 'GCP-CREDIT',
+      initialAmountUsd: orig,
+      remainingAmountUsd: rem,
+      startDate,
+      expirationDate,
+      creditApplication,
+      alertDaysThreshold: 30,
+    });
+  }
+  return rows;
+}
+
+function getProjectCreditsFromCsvOrMemory(projectId) {
+  if (gdeCreditGrantsByProject.has(projectId)) {
+    return gdeCreditGrantsByProject.get(projectId);
+  }
+  try {
+    if (fs.existsSync(CREDITS_CSV_PATH)) {
+      const csvRaw = fs.readFileSync(CREDITS_CSV_PATH, 'utf8');
+      const parsed = parseCreditsCsvText(csvRaw);
+      if (parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore file read errors
+  }
+  return [];
+}
 
 app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
   const { projectId } = req.params;
@@ -16240,16 +16334,16 @@ app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
     ok: true,
     billingInfo,
     billingAccounts,
-    grants: gdeCreditGrantsByProject.get(projectId) || [],
+    grants: getProjectCreditsFromCsvOrMemory(projectId),
   });
 });
 
 app.post('/api/project/:projectId/billing-guardian/grants', (req, res) => {
   const { projectId } = req.params;
-  const { action = 'BULK_IMPORT', grants: bulkGrants } = req.body || {};
+  const { action = 'BULK_IMPORT', grants: bulkGrants, rawCsv } = req.body || {};
 
   if (action === 'CLEAR') {
-    gdeCreditGrantsByProject.delete(projectId);
+    gdeCreditGrantsByProject.set(projectId, []);
     return res.json({
       ok: true,
       grants: [],
@@ -16259,6 +16353,13 @@ app.post('/api/project/:projectId/billing-guardian/grants', (req, res) => {
 
   if (action === 'BULK_IMPORT' && Array.isArray(bulkGrants)) {
     gdeCreditGrantsByProject.set(projectId, bulkGrants);
+    if (typeof rawCsv === 'string' && rawCsv.trim()) {
+      try {
+        fs.writeFileSync(CREDITS_CSV_PATH, rawCsv, 'utf8');
+      } catch {
+        // ignore write errors
+      }
+    }
     return res.json({
       ok: true,
       grants: bulkGrants,

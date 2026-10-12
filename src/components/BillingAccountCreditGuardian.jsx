@@ -193,7 +193,7 @@ export default function BillingAccountCreditGuardian({
     source: 'cloudbilling.googleapis.com',
   });
   const [billingAccounts, setBillingAccounts] = useState([]);
-  const [showAccountsDrawer, setShowAccountsDrawer] = useState(true);
+  const [showAccountsDrawer, setShowAccountsDrawer] = useState(false);
   const [grants, setGrants] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchFilter, setSearchFilter] = useState('');
@@ -222,7 +222,7 @@ export default function BillingAccountCreditGuardian({
       if (localRaw) {
         try {
           const parsed = JSON.parse(localRaw);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             setGrants(parsed);
             setLoading(false);
             return;
@@ -403,6 +403,7 @@ export default function BillingAccountCreditGuardian({
         await persistGrants(imported, {
           action: 'BULK_IMPORT',
           grants: imported,
+          rawCsv: text,
         });
         if (onShowToast) {
           onShowToast(
@@ -413,13 +414,6 @@ export default function BillingAccountCreditGuardian({
     };
     reader.readAsText(file);
     e.target.value = '';
-  };
-
-  const handleClearCsv = async () => {
-    await persistGrants([], { action: 'CLEAR' });
-    if (onShowToast) {
-      onShowToast('Cleared imported credits CSV.');
-    }
   };
 
   const handleDownloadCsv = () => {
@@ -532,12 +526,8 @@ ORDER BY
             <code className="font-mono text-zinc-700 dark:text-zinc-300">
               gcloud billing projects describe
             </code>{' '}
-            for your real Billing Accounts, and parses your exported Google Cloud
-            Console Credits CSV (since{' '}
-            <code className="font-mono text-zinc-700 dark:text-zinc-300">
-              cloudbilling.googleapis.com
-            </code>{' '}
-            does not expose a public REST endpoint for promotional credit rows).
+            for your real Billing Accounts, and dynamically parses your Google
+            Cloud Billing Credits CSV (`server/billing-credits.csv`).
           </p>
         </div>
 
@@ -571,25 +561,14 @@ ORDER BY
           </button>
 
           {grants.length > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={handleDownloadCsv}
-                className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
-              >
-                <Download className="w-3.5 h-3.5 shrink-0" />
-                <span>Download CSV</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleClearCsv}
-                className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-red-500/10 dark:bg-zinc-900 dark:hover:bg-red-500/20 text-zinc-600 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
-              >
-                <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Clear CSV</span>
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleDownloadCsv}
+              className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+            >
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span>Download CSV</span>
+            </button>
           )}
 
           <button
