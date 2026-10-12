@@ -199,26 +199,51 @@ const DOC_SECTIONS = [
   },
   {
     id: 'cloud-run-2026-vpc-storage-gke-migrator',
-    wave: 'CLOUD RUN 2026 · DIRECT VPC, STORAGE VOLUMES & 1-CLICK GKE MIGRATOR',
+    wave: 'CLOUD RUN 2026 · CONTAINER SSH, DIRECT VPC, STORAGE VOLUMES & GKE MIGRATOR',
     title:
-      '🚀 Cloud Run 2026 Direct VPC Egress, Beta Storage Volume Mounts (GCS FUSE / RAM Disk / NFS) & 1-Click GKE Kubernetes Transpiler',
+      '🚀 Cloud Run 2026 Container SSH (@xterm/xterm + gcloud beta run services ssh), Direct VPC Egress, Storage Volumes & 1-Click GKE Migrator',
     badge: 'CLOUD RUN ★ TAB + PROVISION MODAL',
     badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
     icon: Rocket,
     targetTab: 'CLOUD_RUN',
     problemSolved:
-      'In the standard Google Cloud Console, migrating a Cloud Run service to Kubernetes only gives you a bare Knative YAML file with no HPA, PDB, NetworkPolicy, or live cluster deployment—and configuring 2026 Direct VPC Egress or Stateful Storage Volume Mounts requires hunting through nested YAML tabs.',
+      'Debugging live Cloud Run containers, configuring Direct VPC Egress or Stateful Storage Volume Mounts, toggling Public vs. Private IAM access safely, or migrating a Cloud Run service to Kubernetes normally requires scattered CLI flags and manual YAML editing.',
     howItWorks: [
-      '🌐 2026 Direct VPC Egress Network (template.vpcAccess): Attach your Cloud Run revision directly to any VPC Network & Subnetwork with PRIVATE_RANGES_ONLY or ALL_TRAFFIC routing and custom Firewall Network Tags ($0.00 Serverless VPC Connector tax).',
-      '💾 2026 Beta Storage Volume Mounts (template.volumes + container.volumeMounts): Mount a live Cloud Storage Bucket via GCS FUSE (Read-Write or Read-Only), an ultra-fast In-Memory RAM Disk (emptyDir up to 32Gi), or a VPC Filestore NFSv3 Share at any container mountPath.',
-      '☸️ 1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator: Converts any running Cloud Run service into a 6-resource production Kubernetes bundle (Namespace, Workload Identity ServiceAccount, Spot VM/GPU Deployment with /dev/shm RAM disk, Service, HPA v2, PDB, and L3/L4 NetworkPolicy) and deploys it directly to your live GKE cluster in 1 click.',
+      '💻 Interactive Cloud Run Container SSH (@xterm/xterm + gcloud beta run services ssh): Click "SSH / Container Shell" on any Cloud Run service card (default OFF; toggle off with "SSH Active (Turn Off)") to open a real browser PTY shell inside the running container (~ #). Automatically enables --ssh and --execution-environment=gen2 (>=512Mi) if missing, warms up the active revision, and also supports gcloud beta run services proxy.',
+      '🛡️ Accurate Public (allUsers / invokerIamDisabled) vs. Private (IAM Auth) State & Gatekeeper: Detects both IAM allUsers bindings and Cloud Run v2 invokerIamDisabled state, displays "PUBLIC (Unauthenticated) · Switch to Private" vs. "PRIVATE (IAM Auth) · Switch to Public", and requires explicit confirmation before switching access modes.',
+      '🌐 2026 Direct VPC Egress Network (template.vpcAccess) & 💾 Beta Storage Volume Mounts (GCS FUSE / RAM Disk / Filestore NFS): Attach revisions directly to any VPC/Subnet ($0 Serverless VPC Connector tax) and mount stateful or RAM-disk volumes.',
+      '☸️ 1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator: Converts any running Cloud Run service into a 6-resource production Kubernetes bundle and deploys it directly to your live GKE cluster in 1 click.',
     ],
     apisUsed: [
+      'WS /api/ws/ssh?targetType=cloudrun → gcloud beta run services ssh / proxy PTY',
       'POST /api/project/:id/provision (serviceType: "CLOUD_RUN") & PATCH /api/project/:id/cloudrun/:region/:name',
-      'POST /api/project/:id/cloudrun/convert-to-gke → container.googleapis.com/v1 + kubectl apply',
+      'POST /api/project/:id/cloudrun/:region/:name/iam & POST /api/project/:id/cloudrun/convert-to-gke',
     ],
     billingImpact:
       'Direct VPC Egress eliminates ~$14.60/mo Serverless VPC Connector instance charges; migrating warm Cloud Run services to GKE Spot VMs/GPUs cuts compute spend by up to 68%.',
+  },
+  {
+    id: 'xterm-web-ssh-and-mandatory-delete-gatekeeper',
+    wave: 'OPEN-SOURCE @XTERM/XTERM WEB-SSH & ZERO-TRUST SAFETY GATEKEEPER',
+    title:
+      '💻 Real Open-Source Browser SSH (@xterm/xterm + ssh2 + Linux PTY) & 🛡️ Global Mandatory Delete / IAM Exposure Gatekeeper',
+    badge: 'VM FLEET 🖥️ + CLOUD RUN ★ + ALL 16 STUDIOS',
+    badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    icon: Terminal,
+    targetTab: 'VM_FLEET',
+    problemSolved:
+      'One-shot command emulators truncate multi-line streaming commands like "apt update" or interactive tools like htop/vim, while auto-connecting SSH on tab load wastes sessions and unconfirmed delete or IAM exposure buttons risk accidental production outages.',
+    howItWorks: [
+      '💻 Real Full-Duplex @xterm/xterm + ssh2 + Python PTY WebSocket Terminal (/api/ws/ssh): Streams 100% of live stdout/stderr bytes in real time for "apt update", htop, vim, top, tmux, and interactive prompts across Compute Engine VMs and Cloud Run Gen2 containers.',
+      '🔌 Default-OFF Explicit Toggle ("SSH / Console" → "SSH Active (Turn Off)"): Never auto-connects when landing on the VM Fleet or Cloud Run tab; connects only when you click the SSH button on a specific VM or Cloud Run card and disconnects cleanly when toggled off.',
+      '🛡️ Global Mandatory Delete & IAM Security Gatekeeper (src/App.jsx): Intercepts 100% of HTTP DELETE requests, destructive POST teardowns (VM delete, Bucket empty-and-delete, Zombie extermination, Artifact Registry image deletion, SA key revocation), and Cloud Run Public/Private IAM toggles with a high-visibility confirmation modal.',
+    ],
+    apisUsed: [
+      'WS /api/ws/ssh (Engines: Auto, Direct SSH2 :22, gcloud compute ssh PTY, IAP Tunnel, Cloud Run SSH PTY)',
+      'Global Axios Request Interceptor: classifyDestructiveAxiosConfig() + <MandatoryDeleteConfirmationModal />',
+    ],
+    billingImpact:
+      '100% free open-source browser terminal (@xterm/xterm + ssh2) and zero-cost safety gatekeeper that prevents accidental resource deletion or unintended public exposure.',
   },
   {
     id: 'cloud-functions-eventarc-demystified-studio',

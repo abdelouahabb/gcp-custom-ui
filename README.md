@@ -143,7 +143,12 @@
   - **2026 Serverless GPU Accelerators**: Attach `1x NVIDIA L4 (24GB VRAM)` or `1x NVIDIA RTX PRO 6000 Blackwell (96GB VRAM)` with configurable **GPU Zonal Redundancy** (`--no-gpu-zonal-redundancy` vs `--gpu-zonal-redundancy`) and automatic hardware minimum enforcement (`≥4 vCPU`, `≥16Gi RAM`, `GEN2`).
   - **2026 Billing Modes**: Switch between **Request-based Billing** (`cpuIdle: true` / `--billing=request`, `$0` when idle) and **Instance-based Billing** (`cpuIdle: false` / `--billing=instance`, CPU/GPU allocated for the entire instance lifetime).
   - **2026 Direct VPC Egress & Storage Volume Mounts (Beta)**: Native `template.vpcAccess` Direct VPC Egress (`PRIVATE_RANGES_ONLY` / `ALL_TRAFFIC` + firewall tags) and stateful/ephemeral volume mounts (`GCS_BUCKET` FUSE, `IN_MEMORY` RAM disk, `NFS_FILESTORE`).
+  - **Interactive Cloud Run Container SSH (`@xterm/xterm` + `gcloud beta run services ssh`)**: Real browser terminal into live Cloud Run Gen2 containers (default OFF; toggle via **`SSH / Container Shell`** $\rightarrow$ **`SSH Active (Turn Off)`**). Automatically inspects and enables `--ssh` (`run.googleapis.com/ssh-enabled: "true"`) and `--execution-environment=gen2` (`≥512Mi`), warms up the container instance, and opens a live root shell (`~ #`), plus **`gcloud beta run services proxy`** and live container logs.
+  - **Public (`allUsers` / `invokerIamDisabled`) vs. Private (`IAM Auth`) Gatekeeper**: Accurately detects both IAM `allUsers` bindings and Cloud Run v2 `invokerIamDisabled` state, displays **`PUBLIC (Unauthenticated) · Switch to Private`** vs **`PRIVATE (IAM Auth) · Switch to Public`**, and enforces a mandatory confirmation modal before switching access modes.
   - **1-Click Cloud Run → GKE Kubernetes Migration & Live Revision Tuner**: Transpile any Cloud Run service into a 6-resource Kubernetes manifest bundle and deploy straight to GKE, or scale Min/Max instances (`0` to `200`), Concurrency, CPU/Memory, Environment Variables, and Canary Traffic Splitting in place.
+
+- **🛡️ Global Mandatory Delete & IAM Exposure Confirmation Gatekeeper (`src/App.jsx`)**
+  - **100% Zero-Trust Destructive Action Interception**: Global Axios request interceptor (`classifyDestructiveAxiosConfig` + `MandatoryDeleteConfirmationModal`) pauses every `DELETE` and destructive `POST` operation across all 16 studios (VMs, Cloud Run, GKE, Cloud SQL, AlloyDB, GCS Buckets/Objects, BigQuery Datasets, BigLake Catalogs, VPCs, Firewalls, Artifact Registry Images/Orphans, Zombie Resources, SA Keys, Ephemeral PR Stacks, and Cloud Run Public/Private IAM toggles) until explicitly confirmed by the engineer.
 
 - **⚡ Cloud Functions (`v1` & `v2`) & Eventarc Trigger Studio (`cloudfunctions.googleapis.com/v2` + `eventarc.googleapis.com/v1`)**
   - Plain-English Eventarc trigger wizard, 4-stage visual Eventarc transport & billing X-Ray, 1-Tap Eventarc IAM Auto-Doctor, synthetic CloudEvent v1.0 tester, and 1-Click `v1 → v2` concurrency upgrader (`-78%` compute cost).
@@ -157,17 +162,17 @@
 - **🏗️ Cloud Build & Artifact Registry Supply-Chain Studios (`cloudbuild.googleapis.com/v1` + `artifactregistry.googleapis.com/v1`)**
   - Build container images directly from GitHub repositories using Zero-Dockerfile Google Cloud Buildpacks or Dockerfiles, auto-create Artifact Registry repositories, inspect SLSA-3 provenance, and delete or batch-sweep untagged orphan digests in 1 click.
 
-- **🖥️ Compute Engine Multi-Region Studio & Web SSH (`compute.googleapis.com/v1`)**
+- **🖥️ Compute Engine Multi-Region Studio & Real `@xterm/xterm` Web-SSH (`compute.googleapis.com/v1`)**
   - **40 Global Regions & 121 Availability Zones**: Americas, Europe, Asia-Pacific, MENA, and Africa.
   - **5 Machine Series**: `E2` (Cost-Optimized/Free Tier), `N2/N2D`, `C3/C4` (Gen-4/5 Sapphire/Emerald Rapids), `T2A Arm64` (Ampere Altra), and `G2/A2` GPU VMs.
-  - **Advanced VM Configuration**: Spot VM (`up to 91% off`) vs Standard VM, `pd-balanced` / `pd-ssd` / `hyperdisk-balanced` boot disks, dedicated NVIDIA GPUs (`T4`, `L4`, `V100`, `A100`), Shielded VM (`Secure Boot` + `vTPM`), Deletion Protection toggle, Startup Scripts (`metadata.startup-script`), Live Machine Type Resizing (`setMachineType`), Suspend/Resume, and interactive **Web SSH + Serial Port 1 Console**.
+  - **Real Open-Source `@xterm/xterm` + `ssh2` + Linux PTY WebSocket SSH Client**: Default OFF when landing on the VM Fleet tab; click **`SSH / Console`** on any VM card to connect (and **`SSH Active (Turn Off)`** to disconnect). Supports full streaming multi-line output (`apt update`, `htop`, `vim`, `top`, `tmux`), window resize (`TIOCSWINSZ`), and 5 selectable engines (`Auto`, `Direct SSH2 :22`, `gcloud compute ssh PTY`, `Cloud IAP TCP Tunnel`, `Local Cloud Shell PTY`) plus Serial Port 1 Console.
 
 - **🚨 DEFCON-1 Emergency Project Billing Kill-Switch & API Circuit Breaker**
   - **Project Billing Circuit Breaker (`cloudbilling.googleapis.com/v1`)**: 2-step emergency button to detach the active Cloud Billing Account from a compromised project (`billingAccountName: ""`) to immediately halt all billable spend, plus 1-tap re-linking.
   - **Emergency Mobile API Kill-Switch (`serviceusage.googleapis.com/v1`)**: Inspect all enabled APIs on your project with priority sorting and disable/enable services in 1 tap (`disableDependentServices: true`).
 
-- **🌐 VPC Networks, Enterprise Firewalls, Storage, BigQuery & Mobile Cloud Shell**
-  - Provision and manage custom/auto-mode VPC Networks (`REGIONAL` / `GLOBAL` BGP routing, Jumbo Frames MTU `8896`), `ALLOW`/`DENY` Ingress & Egress Firewall Rules with live `PATCH` editing and IAP lockdown, Cloud Storage Buckets, BigQuery Datasets & Partitioned/Clustered Tables, real-time Cloud Logging streams, and an interactive Mobile Cloud Shell (`gcloud` / `bq`).
+- **🌐 VPC Networks, Enterprise Firewalls, Storage, BigQuery, BigLake Metastore & Mobile Cloud Shell**
+  - Provision and manage custom/auto-mode VPC Networks (`REGIONAL` / `GLOBAL` BGP routing, Jumbo Frames MTU `8896`), `ALLOW`/`DENY` Ingress & Egress Firewall Rules with live `PATCH` editing and IAP lockdown, Cloud Storage Buckets, BigQuery Datasets & Partitioned/Clustered Tables, **BigLake Metastore Catalogs (`/biglake/metastore/catalogs` — `biglake.googleapis.com/v1`)**, real-time Cloud Logging streams, and an interactive Mobile Cloud Shell (`gcloud` / `bq`).
 
 - **🔐 Zero-Hardcoded-Credentials Multi-Account Onboarding Gate**
   - Sign in from mobile or desktop using:
@@ -178,10 +183,11 @@
 
 ---
 
-## 🔌 Backend REST API Endpoints (`server/index.js`)
+## 🔌 Backend REST & WebSocket API Endpoints (`server/index.js`)
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
+| `/api/ws/ssh` | `WS (WebSocket)` | **Full-Duplex `@xterm/xterm` Web-SSH PTY Bridge**: Connects to Compute Engine VMs (`ssh2` / `gcloud compute ssh` / IAP) and Cloud Run Gen2 Containers (`gcloud beta run services ssh` with auto `--ssh --execution-environment=gen2` preflight & `gcloud beta run services proxy`) |
 | `/api/auth/discover` | `GET` | Discovers local `gcloud` / ADC accounts and accessible GCP projects |
 | `/api/context` | `GET` | Returns active authenticated session account and project list |
 | `/api/pricing/live-sync` | `GET` | **Live Cloud Billing Price Sync**: Queries `cloudbilling.googleapis.com/v1` for live SKU rates |
@@ -194,11 +200,13 @@
 | `/api/project/:id/quantum-nexus/action` | `POST` | **2026 Quantum Nexus**: Executes `CAPTURE_SNAPSHOT`, `ROLLBACK_SNAPSHOT`, `UPDATE_FINOPS_CIRCUIT_BREAKER`, `CREATE_EPHEMERAL_PR_ENV`, `PLANT_HONEY_TOKEN` & `TRIGGER_HONEY_TRIPWIRE_TEST` |
 | `/api/project/:id/wave10/overview` | `GET` | **Wave-10 Frontier Studio**: Lists Spanner Graph instances, Serverless Spark batches, Cloud Workflows & Model Armor policies |
 | `/api/project/:id/wave10/action` | `POST` | **Wave-10 Frontier Studio**: Executes `CREATE_SPANNER_INSTANCE`, `RUN_SPANNER_GQL`, `SUBMIT_SERVERLESS_SPARK`, `DEPLOY_WORKFLOW_SAGA` & `SCAN_MODEL_ARMOR` |
-| `/api/project/:id/bigquery/biglake/overview` | `GET` | **BigLake & Iceberg Studio**: Lists BigLake Cloud Resource Connections and Open Apache Iceberg / Parquet tables |
-| `/api/project/:id/bigquery/biglake/create` | `POST` | **BigLake & Iceberg Studio**: Creates BigLake Connection, binds GCS IAM & provisions an Apache Iceberg / Parquet table |
+| `/api/project/:id/bigquery/biglake/overview` | `GET` | **BigLake Metastore & Iceberg Studio**: Lists BigLake Metastore Catalogs (`biglake.googleapis.com/v1`), Connections & Apache Iceberg / Parquet tables |
+| `/api/project/:id/bigquery/biglake/create` | `POST` | **BigLake & Iceberg Studio**: Creates BigLake Metastore Catalogs, Connections, binds GCS IAM & provisions Apache Iceberg tables |
+| `/api/project/:id/biglake/metastore/catalogs/:loc/:id` | `DELETE` | **BigLake Metastore**: Deletes a BigLake Metastore Catalog (`biglake.googleapis.com/v1`) |
 | `/api/project/:id/sovereign-iam/credentials` | `GET` | **Sovereign IAM Vault**: Lists Service Accounts, user-managed `.json` keys (`iam.googleapis.com/v1`) & active session OAuth2 token status |
 | `/api/project/:id/sovereign-iam/credentials/action` | `POST` | **Sovereign IAM Kill-Switch**: Executes `CREATE_SA_KEY`, `DISABLE_SA_KEY`, `ENABLE_SA_KEY`, `DELETE_SA_KEY`, `EMERGENCY_REVOKE_ALL_SA_KEYS` & `REVOKE_ACTIVE_OAUTH_TOKEN` |
 | `/api/project/:id/cloudrun` | `GET / PATCH` | Lists and live-patches Cloud Run Gen2 services (CPU, RAM, Min/Max scale, GPUs, Billing mode, Direct VPC Egress & Storage Volume Mounts) |
+| `/api/project/:id/cloudrun/:region/:name/iam` | `POST` | **Cloud Run Public/Private IAM Toggle**: Updates `roles/run.invoker` (`allUsers`) and `invokerIamDisabled` |
 | `/api/project/:id/cloudrun/convert-to-gke` | `POST` | **Cloud Run → GKE Migrator**: Transpiles & deploys a 6-resource K8s bundle onto a live GKE cluster |
 | `/api/project/:id/functions/overview` | `GET` | **Cloud Functions & Eventarc Studio**: Lists `v2` & `v1` functions (`cloudfunctions.googleapis.com`) and Eventarc triggers (`eventarc.googleapis.com`) |
 | `/api/project/:id/functions/iam-doctor` | `POST` | **1-Tap Eventarc IAM Auto-Doctor**: Grants missing GCS Publisher, Eventarc Receiver & Cloud Run Invoker service-agent IAM bindings |
