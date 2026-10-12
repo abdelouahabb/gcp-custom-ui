@@ -40,6 +40,9 @@ export default function SovereignTimeMachineIamStudio({
   const [iamSearch, setIamSearch] = useState('');
   const [remediatingId, setRemediatingId] = useState(null);
   const [selectedJitHours, setSelectedJitHours] = useState(24);
+  const [pendingIamApproval, setPendingIamApproval] = useState(null);
+  const [approvalChecked, setApprovalChecked] = useState(false);
+  const [approvalCustomRole, setApprovalCustomRole] = useState('');
 
   // --- Tab 2: Cryptographic State Time-Machine & Drift Radar State ---
   const [tmData, setTmData] = useState(null);
@@ -145,18 +148,38 @@ export default function SovereignTimeMachineIamStudio({
     if (activeSubTab === 'SECRETS_KMS_WAF') fetchVaultStudio();
   }, [activeSubTab, fetchIamSurgeon, fetchTimeMachine, fetchVaultStudio]);
 
-  const handleIamRemediate = async (payload, findingId) => {
+  // Step 1: Open the Approval & Impact Review Modal before mutating any IAM policy
+  const requestIamApproval = (payload, findingId, meta = {}) => {
+    setApprovalChecked(false);
+    setApprovalCustomRole(payload.newRole || '');
+    setPendingIamApproval({
+      payload,
+      findingId,
+      meta,
+    });
+  };
+
+  // Step 2: Execute only after explicit user confirmation in the Approval Modal
+  const handleConfirmIamRemediate = async () => {
+    if (!pendingIamApproval) return;
+    const { payload, findingId } = pendingIamApproval;
+    const finalPayload =
+      payload.action === 'DOWNGRADE_ROLE' && approvalCustomRole.trim()
+        ? { ...payload, newRole: approvalCustomRole.trim() }
+        : payload;
+
     setRemediatingId(findingId);
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
           projectId
         )}/sovereign/iam-surgeon/remediate`,
-        payload
+        finalPayload
       );
       if (onTriggerToast) {
-        onTriggerToast(res.data?.message || 'IAM policy updated');
+        onTriggerToast(res.data?.message || 'IAM policy updated after approval');
       }
+      setPendingIamApproval(null);
       await fetchIamSurgeon();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
@@ -597,21 +620,27 @@ export default function SovereignTimeMachineIamStudio({
                               type="button"
                               disabled={isBusy}
                               onClick={() =>
-                                handleIamRemediate(
+                                requestIamApproval(
                                   {
                                     action: 'APPLY_JIT_CONDITION',
                                     role: item.role,
                                     member: item.member,
                                     jitHours: selectedJitHours,
                                   },
-                                  item.findingId
+                                  item.findingId,
+                                  {
+                                    riskLabel: item.riskLabel,
+                                    remediationReason: item.remediationReason,
+                                    recommendedAltRoles: item.recommendedAltRoles || [],
+                                    blastRadiusScore: item.blastRadiusScore,
+                                  }
                                 )
                               }
-                              title={`Attach a ${selectedJitHours}-hour auto-expiring CEL condition (request.time < timestamp(...)) to ${item.role} via :setIamPolicy`}
+                              title={`Review & approve attaching a ${selectedJitHours}-hour auto-expiring CEL condition to ${item.role}`}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
                             >
                               <Clock className="w-3.5 h-3.5" />
-                              <span>Enforce {selectedJitHours}h JIT Lease</span>
+                              <span>Review {selectedJitHours}h JIT Lease...</span>
                             </button>
                           )}
 
@@ -621,21 +650,28 @@ export default function SovereignTimeMachineIamStudio({
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() =>
-                                  handleIamRemediate(
+                                  requestIamApproval(
                                     {
                                       action: 'DOWNGRADE_ROLE',
                                       role: item.role,
                                       member: item.member,
                                       newRole: item.recommendedRole,
                                     },
-                                    item.findingId
+                                    item.findingId,
+                                    {
+                                      riskLabel: item.riskLabel,
+                                      remediationReason: item.remediationReason,
+                                      recommendedAltRoles:
+                                        item.recommendedAltRoles || [],
+                                      blastRadiusScore: item.blastRadiusScore,
+                                    }
                                   )
                                 }
-                                title={`Atomically downgrade ${item.member} from ${item.role} to least-privilege ${item.recommendedRole}`}
+                                title={`Review & approve scoping ${item.member} from ${item.role} to least-privilege ${item.recommendedRole}`}
                                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
                               >
                                 <ShieldCheck className="w-3.5 h-3.5" />
-                                <span>Scope → {item.recommendedRole}</span>
+                                <span>Review Scope → {item.recommendedRole}...</span>
                               </button>
                             )}
 
@@ -694,19 +730,216 @@ export default function SovereignTimeMachineIamStudio({
                     <button
                       type="button"
                       onClick={() =>
-                        handleIamRemediate(
+                        requestIamApproval(
                           { action: 'DELETE_SA_KEY', keyName: k.name },
-                          k.name
+                          k.name,
+                          {
+                            serviceAccountEmail: k.serviceAccountEmail,
+                            keyId: k.keyId,
+                            ageDays: k.ageDays,
+                          }
                         )
                       }
-                      title="Delete this static Service Account JSON key from IAM"
+                      title="Review & approve revoking this static Service Account JSON key"
                       className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
                     >
                       <Trash2 className="w-3 h-3" />
-                      <span>Revoke Key</span>
+                      <span>Review Revoke...</span>
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* TWO-STEP IAM SURGERY APPROVAL & BEFORE/AFTER POLICY DIFF MODAL */}
+          {pendingIamApproval && (
+            <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="w-full max-w-2xl rounded-2xl border border-amber-500/40 bg-zinc-950 text-zinc-100 shadow-2xl p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3 border-b border-zinc-800 pb-3">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>MANDATORY IAM CHANGE APPROVAL & IMPACT REVIEW</span>
+                    </div>
+                    <h3 className="text-base font-extrabold text-white">
+                      {pendingIamApproval.payload.action === 'DOWNGRADE_ROLE'
+                        ? 'Approve Scoping Down IAM Privilege (:setIamPolicy)'
+                        : pendingIamApproval.payload.action ===
+                          'APPLY_JIT_CONDITION'
+                        ? `Approve ${pendingIamApproval.payload.jitHours}-Hour Auto-Expiring JIT IAM Lease`
+                        : 'Approve Permanent Service Account JSON Key Revocation'}
+                    </h3>
+                    <p className="text-xs text-zinc-400">
+                      No IAM policy change is ever executed without your explicit review and confirmation. Inspect the exact Before/After diff and rollback command below.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPendingIamApproval(null)}
+                    className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-mono cursor-pointer"
+                  >
+                    ✕ Cancel
+                  </button>
+                </div>
+
+                {/* Principal & Action Summary */}
+                <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1.5 text-xs font-mono">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Target GCP Project:</span>
+                    <span className="font-bold text-amber-400">{projectId}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Target Principal:</span>
+                    <span className="font-bold text-indigo-300 break-all">
+                      {pendingIamApproval.payload.member ||
+                        pendingIamApproval.meta?.serviceAccountEmail}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Before vs After IAM Binding Diff */}
+                {pendingIamApproval.payload.action !== 'DELETE_SA_KEY' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                    <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 space-y-1">
+                      <div className="text-[10px] font-bold text-rose-400 uppercase">
+                        BEFORE (Current IAM Binding)
+                      </div>
+                      <div className="font-extrabold text-rose-200">
+                        {pendingIamApproval.payload.role}
+                      </div>
+                      <div className="text-[10.5px] text-zinc-400">
+                        Unconditional permanent project-wide binding
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 space-y-1">
+                      <div className="text-[10px] font-bold text-emerald-400 uppercase">
+                        AFTER (Proposed IAM Binding)
+                      </div>
+                      {pendingIamApproval.payload.action === 'DOWNGRADE_ROLE' ? (
+                        <>
+                          <div className="font-extrabold text-emerald-200">
+                            {approvalCustomRole ||
+                              pendingIamApproval.payload.newRole}
+                          </div>
+                          <div className="text-[10.5px] text-zinc-300">
+                            Scoped least-privilege role replacement
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="font-extrabold text-emerald-200">
+                            {pendingIamApproval.payload.role} (JIT Condition)
+                          </div>
+                          <div className="text-[10.5px] text-zinc-300">
+                            Auto-expires after{' '}
+                            {pendingIamApproval.payload.jitHours} hours via CEL
+                            timestamp condition
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/40 text-xs font-mono space-y-1">
+                    <div className="text-rose-300 font-bold">
+                      ⚠️ Irreversible Key Deletion:
+                    </div>
+                    <div className="text-zinc-300">
+                      Key <code className="text-rose-300">{pendingIamApproval.payload.keyName}</code> will be permanently deleted from IAM. Any external workload using this static JSON file will immediately lose access.
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Alternative Role Picker when Scoping Down */}
+                {pendingIamApproval.payload.action === 'DOWNGRADE_ROLE' && (
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-mono text-zinc-400">
+                      Select or Customize Replacement Role Before Approving:
+                    </label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {[
+                        pendingIamApproval.payload.newRole,
+                        ...(pendingIamApproval.meta?.recommendedAltRoles || []),
+                      ]
+                        .filter(Boolean)
+                        .map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setApprovalCustomRole(r)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-mono cursor-pointer border ${
+                              approvalCustomRole === r
+                                ? 'bg-emerald-600 text-white border-emerald-400 font-bold'
+                                : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:border-emerald-500/40'
+                            }`}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                    </div>
+                    <input
+                      type="text"
+                      value={approvalCustomRole}
+                      onChange={(e) => setApprovalCustomRole(e.target.value)}
+                      className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                      placeholder="roles/..."
+                    />
+                  </div>
+                )}
+
+                {/* Instant Rollback CLI Rescue Command */}
+                {pendingIamApproval.payload.role && (
+                  <div className="space-y-1">
+                    <div className="text-[10.5px] font-mono text-zinc-400">
+                      1-Command Instant Rollback (Save this if you ever want to restore the original role):
+                    </div>
+                    <pre className="p-2.5 rounded-xl bg-black border border-zinc-800 text-[10.5px] font-mono text-cyan-300 overflow-x-auto">
+                      {`gcloud projects add-iam-policy-binding ${projectId} --member="${pendingIamApproval.payload.member}" --role="${pendingIamApproval.payload.role}"`}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Mandatory Approval Checkbox */}
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={approvalChecked}
+                    onChange={(e) => setApprovalChecked(e.target.checked)}
+                    className="mt-0.5 accent-amber-500 w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-xs text-amber-200 leading-snug">
+                    I have reviewed the Before/After IAM policy impact above and explicitly approve applying this change to project{' '}
+                    <strong className="font-mono">{projectId}</strong>.
+                  </span>
+                </label>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setPendingIamApproval(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-mono border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      !approvalChecked ||
+                      Boolean(remediatingId)
+                    }
+                    onClick={handleConfirmIamRemediate}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-40"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>
+                      {remediatingId
+                        ? 'Applying Approved Change...'
+                        : '✓ Approve & Execute IAM Change'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
