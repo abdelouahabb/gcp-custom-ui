@@ -980,7 +980,7 @@ function CloudPulseCockpit() {
                   setInnovationSubTab('FINOPS_SLEEP');
                   setActiveTab('INNOVATION_LAB');
                 }}
-                title="Open Live Wallet Burn-Rate Radar & Night-Mode Sleep Switch ($0/hr overnight hibernation)"
+                title="Open Live Wallet Burn-Rate Radar & Night-Mode FinOps Sleep Switch (Zeroes active vCPU/GPU compute via REST API or Google Cloud Scheduler; attached Persistent Disks & unused Static External IPs still bill)"
                 className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
               >
                 <DollarSign className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />

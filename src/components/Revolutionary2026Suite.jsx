@@ -56,6 +56,8 @@ export function calculateLiveBurnRate(overview, vms = []) {
   const vpcs = overview?.vpcs || [];
 
   let hourlyTotal = 0;
+  let computeHourly = 0;
+  let residualHourly = 0;
   const breakdown = [];
 
   // 1. Compute Engine VMs
@@ -73,14 +75,25 @@ export function calculateLiveBurnRate(overview, vms = []) {
     const spotFactor = isSpot ? 0.32 : 1.0;
     const computeHr = isRunning ? baseHr * spotFactor : 0;
     const diskGb = Number(vm.diskSizeGb || vm.details?.diskSizeGb || 20);
-    const diskHr = (diskGb * 0.1) / 730; // ~$0.10/GB-month pd-balanced
-    const totalVmHr = computeHr + diskHr;
+    const diskHr = (diskGb * 0.1) / 730; // ~$0.10/GB-month pd-balanced (still billed when VM is STOPPED)
+    const hasStaticIp = Boolean(
+      vm.staticExternalIp || vm.details?.staticExternalIp
+    );
+    // GCP charges $0.010/hr (~$7.30/mo) for a reserved static IPv4 attached to a STOPPED VM
+    const parkedStaticIpHr = !isRunning && hasStaticIp ? 0.01 : 0;
+    const totalVmHr = computeHr + diskHr + parkedStaticIpHr;
     hourlyTotal += totalVmHr;
+    computeHourly += computeHr;
+    residualHourly += diskHr + parkedStaticIpHr;
     breakdown.push({
       name: vm.name,
       category: 'Compute VM',
       detail: `${mType}${isSpot ? ' (Spot -68%)' : ''} · ${
-        isRunning ? 'RUNNING' : 'STOPPED (Disk Only)'
+        isRunning
+          ? `RUNNING (+${diskGb}GB Disk)`
+          : `STOPPED (${diskGb}GB Disk still billed${
+              hasStaticIp ? ' + $0.01/hr unused Static IP' : ''
+            })`
       }`,
       hourly: totalVmHr,
       monthly: totalVmHr * 730,
@@ -101,6 +114,7 @@ export function calculateLiveBurnRate(overview, vms = []) {
     // If minInstances === 0, idle cost is $0.00/hr
     const instHr = minInst > 0 ? minInst * (cpuHr + memHr + gpuHr) : 0;
     hourlyTotal += instHr;
+    computeHourly += instHr;
     breakdown.push({
       name: srv.name,
       category: 'Cloud Run',
@@ -124,6 +138,7 @@ export function calculateLiveBurnRate(overview, vms = []) {
   gkeClusters.forEach((c) => {
     const gkeHr = 0.1; // $0.10/hr cluster management fee
     hourlyTotal += gkeHr;
+    residualHourly += gkeHr;
     breakdown.push({
       name: c.name,
       category: 'GKE Cluster',
@@ -138,6 +153,7 @@ export function calculateLiveBurnRate(overview, vms = []) {
   buckets.forEach((b) => {
     const bHr = 0.00035; // ~$0.25/mo baseline
     hourlyTotal += bHr;
+    residualHourly += bHr;
     breakdown.push({
       name: b.name,
       category: 'Cloud Storage',
@@ -163,6 +179,10 @@ export function calculateLiveBurnRate(overview, vms = []) {
     hourly: hourlyTotal,
     daily: hourlyTotal * 24,
     monthly: hourlyTotal * 730,
+    computeHourly,
+    computeMonthly: computeHourly * 730,
+    residualHourly,
+    residualMonthly: residualHourly * 730,
     breakdown,
     vpcCount: vpcs.length,
   };
@@ -1133,39 +1153,60 @@ export default function Revolutionary2026Suite({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <div className="text-[10px] font-mono uppercase text-zinc-400">
-                Hourly Burn Rate
+                Total Hourly Burn Rate (Compute + Storage/IPs)
               </div>
               <div className="text-2xl font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1">
                 ${burn.hourly.toFixed(4)}
                 <span className="text-xs font-normal text-zinc-500"> / hr</span>
               </div>
-              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1">
-                Real-time active compute & storage ticker
+              <div className="text-[11px] font-mono text-zinc-500 mt-1.5 space-y-0.5">
+                <div className="text-emerald-600 dark:text-emerald-400">
+                  • Active Compute (Parked = $0/hr): ${(burn.computeHourly || 0).toFixed(4)}/hr
+                </div>
+                <div className="text-amber-600 dark:text-amber-400">
+                  • Residual Disks / Static IPs / Storage: ${(burn.residualHourly || 0).toFixed(4)}/hr
+                </div>
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800">
               <div className="text-[10px] font-mono uppercase text-zinc-400">
-                Projected 30-Day Run Rate
+                Projected 30-Day Run Rate (24/7 vs Night-Parked)
               </div>
               <div className="text-2xl font-extrabold font-mono text-blue-600 dark:text-blue-400 mt-1">
                 ${burn.monthly.toFixed(2)}
-                <span className="text-xs font-normal text-zinc-500"> / mo</span>
+                <span className="text-xs font-normal text-zinc-500"> / mo (24/7)</span>
               </div>
-              <div className="text-[11px] text-zinc-500 mt-1">
-                Assuming current instances run 730 hrs/mo
+              <div className="text-[11px] font-mono text-zinc-500 mt-1.5 space-y-0.5">
+                <div>
+                  • If Parked 16h/day + Weekends:{' '}
+                  <strong className="text-emerald-600 dark:text-emerald-400">
+                    ${((burn.computeMonthly || 0) * 0.24 + (burn.residualMonthly || 0)).toFixed(2)}/mo
+                  </strong>
+                </div>
+                <div className="text-amber-600 dark:text-amber-400">
+                  • Residual Parked Floor (Disks/IPs): ~${(burn.residualMonthly || 0).toFixed(2)}/mo
+                </div>
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 flex flex-col justify-between">
               <div>
-                <div className="text-[10px] font-mono uppercase text-blue-500 font-bold">
-                  Night-Mode FinOps Sleep Switch
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-mono uppercase text-blue-500 font-bold">
+                    Night-Mode FinOps Sleep Switch
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
+                    REST API + CLOUD SCHEDULER
+                  </span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-300 mt-1">
-                  Stops all running Compute VMs and scales all warm Cloud Run
-                  services down to <code className="font-mono">minInstances=0</code>{' '}
-                  without detaching your billing account.
+                  Stops running Compute VMs (<code className="font-mono">vCPU/RAM → $0/hr</code>)
+                  and scales warm Cloud Run services to{' '}
+                  <code className="font-mono">minInstances=0</code>.{' '}
+                  <strong className="text-amber-600 dark:text-amber-400">
+                    Note: Attached Persistent Disks &amp; unused Static External IPv4s still bill while parked.
+                  </strong>
                 </p>
               </div>
               <div className="flex items-center gap-2 mt-3">
@@ -1173,7 +1214,7 @@ export default function Revolutionary2026Suite({
                   type="button"
                   disabled={hibernateBusy}
                   onClick={() => handleHibernateToggle('SLEEP')}
-                  title="Stop all running Compute VMs and scale warm Cloud Run instances to minInstances=0 so overnight compute cost drops to $0.00/hr"
+                  title="Stop all running Compute VMs and scale warm Cloud Run instances to minInstances=0 (Note: Persistent Disks & Static External IPs still incur GCP storage/reservation charges)"
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded-lg inline-flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Moon className="w-3.5 h-3.5" />
@@ -1190,6 +1231,106 @@ export default function Revolutionary2026Suite({
                   <span>Wake All</span>
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* FinOps Transparency & Cloud Scheduler Automation Explainer */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {/* Left Card: What Still Bills When Parked (Disks, Static IPs, Storage) */}
+            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <h4 className="text-xs font-extrabold font-mono uppercase text-amber-600 dark:text-amber-400">
+                    Important Billing Notice: What Still Charges While Parked?
+                  </h4>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-300">
+                  UNALLOCATED &amp; DISK FLOOR
+                </span>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                Parking your project drops <strong>active vCPU, RAM, GPU, and warm Cloud Run instance charges to $0.00/hr</strong>, but Google Cloud still bills for persistent storage and unallocated network reservations:
+              </p>
+              <ul className="space-y-1.5 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                <li>
+                  • <strong>Attached Persistent Disks / Hyperdisks (`pd-balanced` / `pd-ssd`)</strong>: Billed at <strong>$0.04–$0.10/GB-month</strong> (~$2.00/mo per 20 GB boot disk) even when the VM is in <code className="text-amber-500">TERMINATED</code> (Stopped) state.
+                </li>
+                <li>
+                  • <strong>Unused / Parked Static External IPv4 Addresses</strong>: Google Cloud charges <strong>$0.010/hr (~$7.30/month)</strong> for any reserved Static External IPv4 address attached to a stopped VM or left unattached. <em>(Ephemeral external IPs are released automatically at $0.00/hr when stopped).</em>
+                </li>
+                <li>
+                  • <strong>Cloud Storage, Snapshots &amp; Standard GKE Control Planes</strong>: Stored GCS objects ($0.020/GB-mo) and non-Autopilot GKE cluster management fees continue unless deleted.
+                </li>
+              </ul>
+            </div>
+
+            {/* Right Card: How Cloud Scheduler + Compute Instance Schedules Automate Night-Mode */}
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                    <h4 className="text-xs font-extrabold font-mono uppercase text-zinc-900 dark:text-zinc-100">
+                      How It Works: Google Cloud Scheduler + Compute Instance Schedules
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const schedulerCli = `# 1. Native Compute Engine Instance Schedule (Stops VMs at 20:00, Wakes at 08:00 Mon-Fri)
+gcloud compute resource-policies create instance-schedule night-finops-schedule \\
+  --project=${projectId} \\
+  --region=us-central1 \\
+  --vm-start-schedule="0 8 * * 1-5" \\
+  --vm-stop-schedule="0 20 * * 1-5" \\
+  --timezone="UTC"
+
+# 2. Google Cloud Scheduler Cron Job for Cloud Run minInstances=0 Night Hibernation
+gcloud scheduler jobs create http cloudpulse-night-sleep-cron \\
+  --project=${projectId} \\
+  --location=us-central1 \\
+  --schedule="0 20 * * 1-5" \\
+  --time-zone="UTC" \\
+  --uri="https://us-central1-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/${projectId}/services" \\
+  --http-method=POST \\
+  --oauth-service-account-email="${projectId}@appspot.gserviceaccount.com"`;
+                      navigator.clipboard?.writeText(schedulerCli);
+                      setCopiedType('CLOUD_SCHEDULER_CLI');
+                      setTimeout(() => setCopiedType(null), 1800);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                  >
+                    {copiedType === 'CLOUD_SCHEDULER_CLI' ? (
+                      <>
+                        <Check className="w-3 h-3" />
+                        <span>Copied Cron CLI!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Cloud Scheduler CLI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                  Night-Mode supports both <strong>on-demand REST hibernation</strong> and <strong>autonomous 24/7 Google Cloud Scheduler cron automation</strong>:
+                </p>
+                <ul className="space-y-1 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                  <li>
+                    • <strong>1-Click Manual Trigger (Above)</strong>: Immediately calls <code className="text-blue-500">compute.instances.stop</code> and patches Cloud Run <code className="text-blue-500">minInstanceCount=0</code> via <code className="text-blue-500">POST /api/project/{projectId}/hibernate</code>.
+                  </li>
+                  <li>
+                    • <strong>Unattended Cron (`cloudscheduler.googleapis.com` + `resourcePolicies`)</strong>: Uses <strong>Google Cloud Scheduler</strong> (<code className="text-emerald-600 dark:text-emerald-400">0 20 * * 1-5</code> sleep / <code className="text-emerald-600 dark:text-emerald-400">0 8 * * 1-5</code> wake; first 3 jobs free) + <strong>Compute Engine Instance Schedules</strong> (<code className="text-emerald-600 dark:text-emerald-400">gcloud compute resource-policies create instance-schedule</code>) so GCP hibernates and wakes your fleet even when your browser is closed.
+                  </li>
+                </ul>
+              </div>
+              <pre className="bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-lg p-2.5 text-[10px] font-mono overflow-x-auto">
+{`gcloud compute resource-policies create instance-schedule night-finops-schedule \\
+  --project=${projectId} --region=us-central1 --vm-start-schedule="0 8 * * 1-5" --vm-stop-schedule="0 20 * * 1-5" --timezone="UTC"
+gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 * * 1-5" --location=us-central1 ...`}
+              </pre>
             </div>
           </div>
 

@@ -502,27 +502,27 @@ const DOC_SECTIONS = [
   },
   {
     id: 'wave1-night-sleep',
-    wave: 'WAVE 1 · 1-TAP FINOPS HIBERNATE',
-    title: 'Night-Mode FinOps Sleep & Wake Switch ("Park Project for the Night")',
+    wave: 'WAVE 1 · 1-TAP FINOPS HIBERNATE & CLOUD SCHEDULER',
+    title: 'Night-Mode FinOps Sleep & Wake Switch (Live REST + Google Cloud Scheduler & Instance Schedules)',
     badge: '2026 LAB · TAB 2',
     badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Moon,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'FINOPS_SLEEP',
     problemSolved:
-      'Development and staging projects often run 24 hours a day even though engineers only use them 8 hours a day—wasting ~66% of compute spend overnight and on weekends.',
+      'Development and staging projects often run 24 hours a day even though engineers only use them 8 hours a day—wasting ~66% of compute spend overnight and on weekends. At the same time, engineers need full transparency into which unallocated or storage resources continue billing even when VMs are stopped.',
     howItWorks: [
-      'When you click "Park Night-Mode ($0)", CloudPulse scans all availability zones for RUNNING Compute Engine VMs and all regions for warm Cloud Run services (minInstanceCount > 0).',
-      'It saves a snapshot of your exact running VMs and minInstance counts in server memory, then issues parallel stop commands to all running VMs and scales warm Cloud Run services down to minInstanceCount = 0.',
-      'When you return in the morning and click "Wake", it reads the saved snapshot and restarts those exact VMs and restores your warm Cloud Run instance counts.',
+      '1-Click On-Demand Hibernation (POST /api/project/:id/hibernate): Scans all availability zones for RUNNING Compute Engine VMs and all regions for warm Cloud Run services (minInstanceCount > 0), saves a restoration snapshot, stops running VMs, and scales warm Cloud Run services to minInstanceCount = 0.',
+      'Autonomous 24/7 Cron via Google Cloud Scheduler & Compute Instance Schedules: Generates ready-to-run gcloud compute resource-policies create instance-schedule (0 20 * * 1-5 sleep / 0 8 * * 1-5 wake) and Google Cloud Scheduler HTTP jobs (cloudscheduler.googleapis.com) so Google Cloud hibernates and wakes your fleet automatically without keeping a browser tab open.',
+      'Transparent Residual Floor Breakdown (Persistent Disks & Unused Static IPs): Explicitly separates Active Compute Burn ($0.00/hr when parked) from Residual Non-Compute Charges—explaining that Google Cloud still bills $0.04–$0.10/GB-mo for attached Persistent Disks/Hyperdisks on STOPPED VMs and $0.010/hr (~$7.30/mo) for reserved Static External IPv4 addresses attached to stopped VMs or left unattached.',
     ],
     apisUsed: [
       'POST /api/project/:id/hibernate ({ mode: "SLEEP" | "WAKE" })',
-      'POST compute.googleapis.com/compute/v1/projects/:id/zones/:zone/instances/:vm/stop & /start',
-      'PATCH run.googleapis.com/v2/projects/:id/locations/:region/services/:srv',
+      'POST compute.googleapis.com/compute/v1/projects/:id/zones/:zone/instances/:vm/stop & /start + compute.resourcePolicies (Instance Schedules)',
+      'PATCH run.googleapis.com/v2/projects/:id/locations/:region/services/:srv + cloudscheduler.googleapis.com/v1',
     ],
     billingImpact:
-      'Immediately drops running VM vCPU/GPU hourly charges and warm Cloud Run idle charges to $0.00/hr while parked.',
+      'Drops active VM vCPU/RAM/GPU and warm Cloud Run idle charges to $0.00/hr while parked, while transparently reporting the residual $/hr floor for attached Persistent Disks ($0.04–$0.10/GB-mo) and unused Static External IPv4 addresses ($0.010/hr).',
   },
   {
     id: 'wave1-topology',
