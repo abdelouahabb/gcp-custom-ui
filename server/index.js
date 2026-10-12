@@ -16148,158 +16148,30 @@ app.post('/api/project/:projectId/action', async (req, res) => {
 
 // ============================================================================
 // CLOUD BILLING ACCOUNT & GDE PROMOTIONAL CREDIT GUARDIAN
-// Queries live Cloud Billing API / gcloud CLI (`gcloud billing accounts list`
-// & `gcloud billing projects describe`) and tracks exact Google Cloud Billing
-// Credits table rows (Credit name, Status, Percent remaining, Remaining value,
-// Original value, Start date, End date, Credit application: Net price vs List price).
+// Queries live Cloud Billing API (`cloudbilling.googleapis.com/v1`) and
+// `gcloud billing accounts list` / `gcloud billing projects describe`.
+// Note: Google Cloud does not expose promotional credit balances or end dates
+// via any public REST endpoint (/credits returns 404). Credit rows are synced
+// exclusively from the user's real Google Cloud Console Credits CSV export
+// (`console.cloud.google.com/billing` -> Credits -> Download CSV).
 // ============================================================================
 const gdeCreditGrantsByProject = new Map();
-
-function buildInitialCreditsFromBillingConsole() {
-  return [
-    {
-      id: 'marketing-agentic-ai-sprint-rmandel-520155543',
-      name: 'Marketing - agentic AI Sprint - rmandel-520155543',
-      grantType: 'GDE_AI_SPRINT',
-      creditCode: 'rmandel-520155543',
-      initialAmountUsd: 1000.0,
-      remainingAmountUsd: 999.04,
-      startDate: '2026-06-27',
-      expirationDate: '2026-10-25',
-      creditApplication: 'Net price',
-      alertDaysThreshold: 30,
-      notes: 'Agentic AI Sprint promotional credit grant ($999.04 of $1,000.00 remaining, expiring Oct 25, 2026).',
-    },
-    {
-      id: 'gdp-monthly-2026-06-may2027',
-      name: 'Google Developer Program premium benefit - CREDIT_TYPE_MONTHLY',
-      grantType: 'GDP_MONTHLY',
-      creditCode: 'CREDIT_TYPE_MONTHLY',
-      initialAmountUsd: 10.0,
-      remainingAmountUsd: 10.0,
-      startDate: '2026-06-27',
-      expirationDate: '2027-05-14',
-      creditApplication: 'List price',
-      alertDaysThreshold: 30,
-      notes: 'Google Developer Program premium monthly credit tranche (May 2027).',
-    },
-    {
-      id: 'gdp-monthly-2026-06-jun2027',
-      name: 'Google Developer Program premium benefit - CREDIT_TYPE_MONTHLY',
-      grantType: 'GDP_MONTHLY',
-      creditCode: 'CREDIT_TYPE_MONTHLY',
-      initialAmountUsd: 10.0,
-      remainingAmountUsd: 10.0,
-      startDate: '2026-06-27',
-      expirationDate: '2027-06-14',
-      creditApplication: 'List price',
-      alertDaysThreshold: 30,
-      notes: 'Google Developer Program premium monthly credit tranche (June 2027).',
-    },
-    {
-      id: 'gdp-monthly-2026-07-jul2027-a',
-      name: 'Google Developer Program premium benefit - CREDIT_TYPE_MONTHLY',
-      grantType: 'GDP_MONTHLY',
-      creditCode: 'CREDIT_TYPE_MONTHLY',
-      initialAmountUsd: 10.0,
-      remainingAmountUsd: 10.0,
-      startDate: '2026-07-30',
-      expirationDate: '2027-07-14',
-      creditApplication: 'List price',
-      alertDaysThreshold: 30,
-      notes: 'Google Developer Program premium monthly credit tranche #1 (July 2027).',
-    },
-    {
-      id: 'gdp-monthly-2026-07-jul2027-b',
-      name: 'Google Developer Program premium benefit - CREDIT_TYPE_MONTHLY',
-      grantType: 'GDP_MONTHLY',
-      creditCode: 'CREDIT_TYPE_MONTHLY',
-      initialAmountUsd: 10.0,
-      remainingAmountUsd: 10.0,
-      startDate: '2026-07-30',
-      expirationDate: '2027-07-14',
-      creditApplication: 'List price',
-      alertDaysThreshold: 30,
-      notes: 'Google Developer Program premium monthly credit tranche #2 (July 2027).',
-    },
-    {
-      id: 'gdp-monthly-2026-08-aug2027',
-      name: 'Google Developer Program premium benefit - CREDIT_TYPE_MONTHLY',
-      grantType: 'GDP_MONTHLY',
-      creditCode: 'CREDIT_TYPE_MONTHLY',
-      initialAmountUsd: 10.0,
-      remainingAmountUsd: 10.0,
-      startDate: '2026-08-14',
-      expirationDate: '2027-08-14',
-      creditApplication: 'List price',
-      alertDaysThreshold: 30,
-      notes: 'Google Developer Program premium monthly credit tranche (August 2027).',
-    },
-    {
-      id: 'gdp-monthly-2026-09-sep2027',
-      name: 'Google Developer Program premium benefit - CREDIT_TYPE_MONTHLY',
-      grantType: 'GDP_MONTHLY',
-      creditCode: 'CREDIT_TYPE_MONTHLY',
-      initialAmountUsd: 10.0,
-      remainingAmountUsd: 10.0,
-      startDate: '2026-09-14',
-      expirationDate: '2027-09-14',
-      creditApplication: 'List price',
-      alertDaysThreshold: 30,
-      notes: 'Google Developer Program premium monthly credit tranche (September 2027).',
-    },
-    {
-      id: 'devrel-credit-rmandel-207806423',
-      name: 'DevRel Credit rmandel 207806423',
-      grantType: 'DEVREL_CREDIT',
-      creditCode: '207806423',
-      initialAmountUsd: 1200.0,
-      remainingAmountUsd: 1173.13,
-      startDate: '2022-08-05',
-      expirationDate: '2023-08-06',
-      creditApplication: 'Net price',
-      alertDaysThreshold: 30,
-      notes: 'Historical DevRel credit — expired with $1,173.13 unused because GCP Console did not send an expiry warning.',
-    },
-    {
-      id: 'devrel-credit-rmandel-207806378',
-      name: 'DevRel Credit rmandel 207806378',
-      grantType: 'DEVREL_CREDIT',
-      creditCode: '207806378',
-      initialAmountUsd: 1200.0,
-      remainingAmountUsd: 1017.5,
-      startDate: '2022-12-05',
-      expirationDate: '2023-12-05',
-      creditApplication: 'Net price',
-      alertDaysThreshold: 30,
-      notes: 'Historical DevRel credit — expired with $1,017.50 unused.',
-    },
-  ];
-}
-
-function getDefaultGdeGrants(projectId) {
-  if (!gdeCreditGrantsByProject.has(projectId)) {
-    gdeCreditGrantsByProject.set(projectId, buildInitialCreditsFromBillingConsole());
-  }
-  return gdeCreditGrantsByProject.get(projectId);
-}
 
 app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
   const { projectId } = req.params;
   let billingAccounts = [];
   let billingInfo = {
     projectId,
-    billingAccountName: 'billingAccounts/01FA0B-FCD761-CF61BA',
-    billingAccountId: '01FA0B-FCD761-CF61BA',
-    displayName: 'Abdelouahab',
-    billingEnabled: true,
-    open: true,
+    billingAccountName: null,
+    billingAccountId: null,
+    displayName: 'Unlinked or Loading Billing Account',
+    billingEnabled: false,
+    open: false,
     currencyCode: 'USD',
-    source: 'gcloud-billing',
+    source: 'cloudbilling.googleapis.com',
   };
 
   try {
-    // 1. Query all Cloud Billing Accounts via gcloud CLI (or REST fallback)
     const [accountsOut, projDescribeOut] = await Promise.all([
       execAsync('gcloud billing accounts list --format=json', {
         timeout: 8000,
@@ -16349,97 +16221,53 @@ app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
           projectId,
           billingAccountName: parsedProj.billingAccountName,
           billingAccountId: acctId,
-          displayName: matchedAcct?.displayName || 'Linked Cloud Billing Account',
+          displayName:
+            matchedAcct?.displayName || parsedProj.billingAccountName,
           billingEnabled: Boolean(parsedProj.billingEnabled),
-          open: matchedAcct ? Boolean(matchedAcct.open) : Boolean(parsedProj.billingEnabled),
+          open: matchedAcct
+            ? Boolean(matchedAcct.open)
+            : Boolean(parsedProj.billingEnabled),
           currencyCode: matchedAcct?.currencyCode || 'USD',
           source: 'gcloud billing projects describe',
         };
       }
     }
   } catch {
-    // Fallback if CLI fails
+    // Ignore CLI errors
   }
 
   return res.json({
     ok: true,
     billingInfo,
     billingAccounts,
-    grants: getDefaultGdeGrants(projectId),
+    grants: gdeCreditGrantsByProject.get(projectId) || [],
   });
 });
 
 app.post('/api/project/:projectId/billing-guardian/grants', (req, res) => {
   const { projectId } = req.params;
-  const { action = 'UPSERT', grant, grantId, grants: bulkGrants } = req.body || {};
-  const current = [...getDefaultGdeGrants(projectId)];
+  const { action = 'BULK_IMPORT', grants: bulkGrants } = req.body || {};
 
-  if (action === 'RESET_TO_CONSOLE') {
-    const fresh = buildInitialCreditsFromBillingConsole();
-    gdeCreditGrantsByProject.set(projectId, fresh);
+  if (action === 'CLEAR') {
+    gdeCreditGrantsByProject.delete(projectId);
     return res.json({
       ok: true,
-      grants: fresh,
-      message: 'Synced credit ledger with Google Cloud Billing Credits table.',
+      grants: [],
+      message: 'Cleared imported credit CSV data.',
     });
   }
 
-  if (action === 'BULK_IMPORT' && Array.isArray(bulkGrants) && bulkGrants.length > 0) {
+  if (action === 'BULK_IMPORT' && Array.isArray(bulkGrants)) {
     gdeCreditGrantsByProject.set(projectId, bulkGrants);
     return res.json({
       ok: true,
       grants: bulkGrants,
-      message: `Imported ${bulkGrants.length} credit grants from Google Cloud Billing CSV.`,
+      message: `Synced ${bulkGrants.length} credit rows from Google Cloud Billing CSV.`,
     });
   }
 
-  if (action === 'DELETE' && grantId) {
-    const next = current.filter((g) => g.id !== grantId);
-    gdeCreditGrantsByProject.set(projectId, next);
-    return res.json({
-      ok: true,
-      grants: next,
-      message: `Removed credit grant "${grantId}".`,
-    });
-  }
-
-  if (!grant || !grant.name) {
-    return res
-      .status(400)
-      .json({ error: 'Grant name, initial amount, and expiration date are required.' });
-  }
-
-  const normalized = {
-    id: grant.id || `gde-grant-${Date.now().toString(36)}`,
-    name: String(grant.name).trim(),
-    grantType: grant.grantType || 'GDE_AI_SPRINT',
-    creditCode: String(grant.creditCode || 'CREDIT_TYPE_PROMOTIONAL').trim(),
-    initialAmountUsd: Math.max(0.01, Number(grant.initialAmountUsd) || 1000),
-    remainingAmountUsd: Math.max(0, Number(grant.remainingAmountUsd) ?? 1000),
-    startDate:
-      grant.startDate || new Date().toISOString().slice(0, 10),
-    expirationDate:
-      grant.expirationDate ||
-      new Date(Date.now() + 30 * 86400 * 1000).toISOString().slice(0, 10),
-    creditApplication: grant.creditApplication || 'Net price',
-    alertDaysThreshold: Math.max(1, Number(grant.alertDaysThreshold) || 30),
-    notes: String(grant.notes || '').trim(),
-  };
-
-  const existingIdx = current.findIndex((g) => g.id === normalized.id);
-  if (existingIdx >= 0) {
-    current[existingIdx] = normalized;
-  } else {
-    current.unshift(normalized);
-  }
-  gdeCreditGrantsByProject.set(projectId, current);
-
-  return res.json({
-    ok: true,
-    grants: current,
-    message: `Saved credit grant "${normalized.name}" ($${normalized.remainingAmountUsd.toFixed(
-      2
-    )} remaining, expires ${normalized.expirationDate}).`,
+  return res.status(400).json({
+    error: 'Unsupported action. Upload a Google Cloud Billing Credits CSV.',
   });
 });
 

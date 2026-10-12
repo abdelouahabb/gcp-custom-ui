@@ -651,13 +651,13 @@ function CloudPulseCockpit() {
         )
         .then((res) => {
           const localRaw = localStorage.getItem(
-            `cloudpulse_gde_credits_v2_${selectedProjectId}`
+            `cloudpulse_gcp_credits_csv_v3_${selectedProjectId}`
           );
-          let list = res.data?.grants || INITIAL_CONSOLE_CREDITS;
+          let list = res.data?.grants || [];
           if (localRaw) {
             try {
               const parsed = JSON.parse(localRaw);
-              if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
+              if (Array.isArray(parsed)) list = parsed;
             } catch {
               // ignore
             }
@@ -1022,33 +1022,42 @@ function CloudPulseCockpit() {
                 </span>
               </button>
 
-              {/* GDE Promotional Credit & Bonus Expiration Alert Pill */}
+              {/* Cloud Billing Account & Promotional Credits Pill */}
               <button
                 type="button"
                 onClick={() => setActiveTab('FINOPS')}
-                title="Open Cloud Billing Account & GDE Promotional Credits Guardian: $1,059.04 active ($999.04 Marketing - agentic AI Sprint expiring in 12 days on Oct 25, 2026 + $60.00 across 6 monthly GDP benefits)"
+                title="Open Cloud Billing Account & Promotional Credits Guardian"
                 className={`inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm border cursor-pointer whitespace-nowrap ${
+                  gdeSummary.hasImportedCredits &&
                   gdeSummary.nearestExpiryDays !== null &&
                   gdeSummary.nearestExpiryDays <= 14 &&
                   gdeSummary.totalRemainingUsd > 0
                     ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30'
-                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                    : gdeSummary.hasImportedCredits
+                    ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                    : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
                 }`}
               >
-                {gdeSummary.urgentWarningsCount > 0 &&
+                {gdeSummary.hasImportedCredits &&
+                gdeSummary.urgentWarningsCount > 0 &&
                 gdeSummary.totalRemainingUsd > 0 ? (
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 ) : (
-                  <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                  <CreditCard className="w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" />
                 )}
                 <span>
-                  Credits: $
-                  {gdeSummary.totalRemainingUsd.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {gdeSummary.hasImportedCredits
+                    ? `Credits: $${gdeSummary.totalRemainingUsd.toLocaleString(
+                        'en-US',
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }
+                      )}`
+                    : 'Billing & Credits'}
                 </span>
-                {gdeSummary.expiringSoonRemainingUsd > 0 &&
+                {gdeSummary.hasImportedCredits &&
+                  gdeSummary.expiringSoonRemainingUsd > 0 &&
                   gdeSummary.nearestExpiryDays !== null && (
                     <span className="hidden sm:inline text-[10px] opacity-90">
                       · $
