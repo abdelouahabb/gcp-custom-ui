@@ -675,17 +675,17 @@ export default function AutonomousCloudBrain({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             <button
               type="button"
               onClick={() => setAutoBreakerArmed((p) => !p)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-extrabold border transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`h-9 px-3.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                 autoBreakerArmed
                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                  : 'bg-zinc-900 text-zinc-400 border-zinc-700'
+                  : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800'
               }`}
             >
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
               <span>
                 {autoBreakerArmed
                   ? 'Auto-Circuit-Breaker: ARMED'
@@ -697,10 +697,10 @@ export default function AutonomousCloudBrain({
               <button
                 type="button"
                 onClick={onHibernateSleep}
-                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer flex items-center gap-1.5"
+                className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white border border-blue-500/40 shadow-sm text-xs font-mono font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
               >
-                <Moon className="w-3.5 h-3.5" />
-                <span>Trigger Emergency $0 Park Now</span>
+                <Moon className="w-3.5 h-3.5 shrink-0" />
+                <span>Emergency Park Compute</span>
               </button>
             )}
           </div>
