@@ -366,6 +366,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-functions-eventarc-studio',
+        category: 'Compute & Containers Studios',
+        title: 'Open Cloud Functions (v1 & v2) & Demystified Eventarc Trigger Studio ⚡',
+        subtitle: 'Plain-English Eventarc trigger wizard, 4-stage visual pipeline X-Ray, 1-Tap Eventarc IAM Auto-Doctor & v1→v2 concurrency upgrader (-78% cost)',
+        keywords: 'cloud functions eventarc trigger v1 v2 gen2 gcs pubsub bigquery cron iam doctor serverless',
+        badge: 'FUNCTIONS & EVENTARC',
+        badgeColor: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
+        icon: Zap,
+        run: () => {
+          onSelectTab('FUNCTIONS_STUDIO');
+          onClose();
+        }
+      },
+      {
         id: 'open-bigquery-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
         title: 'Open BigQuery 2026 Lakehouse & Compliance Studio ★',

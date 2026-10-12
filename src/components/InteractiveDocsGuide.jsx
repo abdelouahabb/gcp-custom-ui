@@ -125,6 +125,29 @@ const DOC_SECTIONS = [
       'Direct VPC Egress eliminates ~$14.60/mo Serverless VPC Connector instance charges; migrating warm Cloud Run services to GKE Spot VMs/GPUs cuts compute spend by up to 68%.',
   },
   {
+    id: 'cloud-functions-eventarc-demystified-studio',
+    wave: 'CLOUD FUNCTIONS (v1 & v2) · DEMYSTIFIED EVENTARC TRIGGER STUDIO',
+    title:
+      '⚡ Cloud Functions (1st Gen & 2nd Gen) + Visual Eventarc Trigger Wizard & 1-Tap IAM Auto-Doctor',
+    badge: 'FUNCTIONS & EVENTARC ⚡ TAB',
+    badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    icon: Zap,
+    targetTab: 'FUNCTIONS_STUDIO',
+    problemSolved:
+      'When Google Cloud moved from 1st Gen (v1) to 2nd Gen (v2 + Eventarc), newcomers stayed stuck on v1 because Eventarc hid 3 required service-agent IAM roles, demanded raw CloudEvents strings, and mixed free direct Pub/Sub triggers with paid Cloud Audit Log (DATA_WRITE) triggers.',
+    howItWorks: [
+      '🎯 Plain-English Eventarc Trigger Wizard ("v1 Simplicity with v2 Power"): Pick "When a file is uploaded to Bucket X", "When a Pub/Sub message arrives", "When a BigQuery job finishes", or "On a Cron Schedule" without memorizing CloudEvents filter syntax.',
+      '🔬 4-Stage Visual Eventarc Pipeline X-Ray & Synthetic CloudEvent Tester: Shows Producer → Transport Bus ($0 Free Direct Pub/Sub vs Cloud Audit Logs) → Eventarc Filter & IAM → Function Handler, and lets you fire a synthetic CloudEvent v1.0 payload in 1 click.',
+      '🩺 1-Tap Eventarc IAM Auto-Doctor + 1-Click v1 → v2 Upgrader: Automatically binds roles/pubsub.publisher on the GCS Service Agent, roles/eventarc.eventReceiver, and roles/run.invoker, and upgrades legacy v1 functions (1 req/instance) to v2 (up to 1,000 req/instance, saving up to 78%).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/functions/overview → cloudfunctions.googleapis.com/v2 + v1 + eventarc.googleapis.com/v1',
+      'POST /api/project/:id/functions/iam-doctor, POST /api/project/:id/functions/deploy & POST /api/project/:id/functions/test-event',
+    ],
+    billingImpact:
+      'Includes 2,000,000 free invocations/month; upgrading I/O-bound functions from v1 (1x concurrency) to v2 (80–250x concurrency) cuts active instance hours by up to 78%.',
+  },
+  {
     id: 'cloud-build-github-cicd-studio',
     wave: 'CLOUD BUILD CI/CD · GITHUB SOURCE-TO-CONTAINER STUDIO',
     title:

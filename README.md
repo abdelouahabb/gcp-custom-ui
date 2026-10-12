@@ -110,6 +110,11 @@
 22. **📦 Artifact Registry SLSA-3 Supply-Chain & 1-Click Orphan Digest Sweeper (`Wave9EnterpriseStudio.jsx`)**
     - Audit container repositories (`artifactregistry.googleapis.com/v1`), enforce immutable tags (`dockerConfig.immutableTags = true`), delete individual container digests in 1 click, or batch-sweep all untagged orphan layers to reclaim wasted monthly storage spend.
 
+23. **⚡ Cloud Functions (`1st Gen v1` & `2nd Gen v2`) + Demystified Eventarc Visual Trigger Studio (`CloudFunctionsEventarcStudio.jsx`)**
+    - **🎯 Plain-English Eventarc Trigger Wizard ("`v1` Simplicity with `v2` Power")**: Eliminates raw CloudEvents filter memorization—pick *"When a file is uploaded/deleted in Cloud Storage"*, *"When a Pub/Sub message arrives"*, *"When a BigQuery job finishes"*, *"On a Cron Schedule"*, or *"Direct HTTPS Webhook"*.
+    - **🔬 4-Stage Visual Eventarc Pipeline X-Ray & Cost Guardrail**: Visually maps `1. Event Producer` ➔ `2. Transport Bus ($0 Free Direct Pub/Sub vs Cloud Audit Logs DATA_WRITE warning)` ➔ `3. Eventarc Filter & Hidden IAM Roles` ➔ `4. Function Handler`, with a **1-Click Synthetic CloudEvent v1.0 Tester** and copy-ready **Node.js 22 / Python 3.12 / Go 1.23** handler code.
+    - **🩺 1-Tap Eventarc IAM Auto-Doctor & `v1 → v2` Upgrader**: Automatically binds the 4 hidden service-agent IAM roles (`roles/pubsub.publisher` on the GCS Service Agent, `roles/eventarc.eventReceiver`, `roles/run.invoker`, and `roles/eventarc.serviceAgent`) that break newcomer deployments, and upgrades legacy `v1` functions (`1 req/instance`) to `v2` (`up to 1,000 req/instance`, saving up to **78%**).
+
 > 📖 **Full Engineering & User Manual**: Read [**`docs/REVOLUTIONARY_FEATURES_GUIDE.md`**](docs/REVOLUTIONARY_FEATURES_GUIDE.md) or click the **`Docs & Guide 📖`** tab directly inside the app for step-by-step explanations of every feature, the exact GCP REST APIs called, and billing impact.
 
 ---
@@ -121,6 +126,9 @@
   - **2026 Billing Modes**: Switch between **Request-based Billing** (`cpuIdle: true` / `--billing=request`, `$0` when idle) and **Instance-based Billing** (`cpuIdle: false` / `--billing=instance`, CPU/GPU allocated for the entire instance lifetime).
   - **2026 Direct VPC Egress & Storage Volume Mounts (Beta)**: Native `template.vpcAccess` Direct VPC Egress (`PRIVATE_RANGES_ONLY` / `ALL_TRAFFIC` + firewall tags) and stateful/ephemeral volume mounts (`GCS_BUCKET` FUSE, `IN_MEMORY` RAM disk, `NFS_FILESTORE`).
   - **1-Click Cloud Run → GKE Kubernetes Migration & Live Revision Tuner**: Transpile any Cloud Run service into a 6-resource Kubernetes manifest bundle and deploy straight to GKE, or scale Min/Max instances (`0` to `200`), Concurrency, CPU/Memory, Environment Variables, and Canary Traffic Splitting in place.
+
+- **⚡ Cloud Functions (`v1` & `v2`) & Eventarc Trigger Studio (`cloudfunctions.googleapis.com/v2` + `eventarc.googleapis.com/v1`)**
+  - Plain-English Eventarc trigger wizard, 4-stage visual Eventarc transport & billing X-Ray, 1-Tap Eventarc IAM Auto-Doctor, synthetic CloudEvent v1.0 tester, and 1-Click `v1 → v2` concurrency upgrader (`-78%` compute cost).
 
 - **☸️ Google Kubernetes Engine (GKE) Studio (`container.googleapis.com/v1`)**
   - Dedicated GKE Autopilot & Standard Spot GPU cluster provisioner with SEC/GDPR/HIPAA compliance locks, Workload YAML Composer, GitHub-to-GKE Cloud Build integration, and 1-tap `kubeconfig` / `kubectl` commands.
@@ -166,6 +174,10 @@
 | `/api/project/:id/overview` | `GET` | Parallel live fetch of VMs, Cloud Run, GKE, VPCs, Firewalls, GCS, BigQuery, APIs & Logs |
 | `/api/project/:id/cloudrun` | `GET / PATCH` | Lists and live-patches Cloud Run Gen2 services (CPU, RAM, Min/Max scale, GPUs, Billing mode, Direct VPC Egress & Storage Volume Mounts) |
 | `/api/project/:id/cloudrun/convert-to-gke` | `POST` | **Cloud Run → GKE Migrator**: Transpiles & deploys a 6-resource K8s bundle onto a live GKE cluster |
+| `/api/project/:id/functions/overview` | `GET` | **Cloud Functions & Eventarc Studio**: Lists `v2` & `v1` functions (`cloudfunctions.googleapis.com`) and Eventarc triggers (`eventarc.googleapis.com`) |
+| `/api/project/:id/functions/iam-doctor` | `POST` | **1-Tap Eventarc IAM Auto-Doctor**: Grants missing GCS Publisher, Eventarc Receiver & Cloud Run Invoker service-agent IAM bindings |
+| `/api/project/:id/functions/deploy` | `POST` | **Functions & Eventarc Deployer**: Deploys `GEN_2` or `GEN_1` Cloud Functions with plain-English Eventarc triggers |
+| `/api/project/:id/functions/test-event` | `POST` | **Synthetic CloudEvent Tester**: Fires a `CloudEvents v1.0` payload and traces 4-hop Eventarc delivery latency |
 | `/api/project/:id/cloudbuild/overview` | `GET` | **Cloud Build Studio**: Lists Cloud Build history (`cloudbuild.googleapis.com/v1`) & Artifact Registry images |
 | `/api/project/:id/cloudbuild/github-build` | `POST` | **GitHub Source-to-Container**: Clones GitHub repo, builds via Buildpacks/Dockerfile, pushes to Artifact Registry & optionally deploys to Cloud Run / GKE |
 | `/api/project/:id/wave9/gke-vertex` | `GET` | **GKE Studio**: Lists live GKE Autopilot & Standard clusters (`container.googleapis.com/v1`) + Vertex AI endpoints |

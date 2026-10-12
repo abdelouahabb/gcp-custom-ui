@@ -178,4 +178,12 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
 - **How it Works**:
   - Enforces `dockerConfig.immutableTags = true` across compliance blueprints, deletes individual container digests/tags in 1 click (`POST /api/project/:id/wave9/supply-chain/delete-image`), or batch-sweeps all untagged orphan layers (`POST /api/project/:id/wave9/supply-chain/sweep-orphans`) to reclaim wasted monthly Artifact Registry storage spend.
 
+### 23. ⚡ Cloud Functions (`1st Gen v1` & `2nd Gen v2`) + Demystified Eventarc Visual Trigger Studio (`CloudFunctionsEventarcStudio.jsx`)
+- **Where to find it**: Top navigation tab **`Functions & Eventarc ⚡`**.
+- **The Problem**: When Google Cloud introduced 2nd Gen Cloud Functions (`v2` powered by Eventarc & Cloud Run), newcomers stayed stuck on `v1` because Eventarc required 3 hidden service-agent IAM bindings (`roles/pubsub.publisher` on the GCS Service Agent, `roles/eventarc.eventReceiver`, and `roles/run.invoker`), replaced simple dropdowns with raw CloudEvents filter strings, and mixed free native Pub/Sub triggers with paid Cloud Audit Log (`DATA_WRITE`) triggers.
+- **How it Works**:
+  - **🎯 Plain-English Eventarc Trigger Wizard**: Pick *"When a file is uploaded/deleted in Cloud Storage"*, *"When a Pub/Sub message arrives"*, *"When a BigQuery job finishes"*, *"On a Cron Schedule"*, or *"Direct HTTPS Webhook"*—automatically synthesizing the exact Eventarc flags and CloudEvents v1.0 starter code in **Node.js 22**, **Python 3.12**, and **Go 1.23**.
+  - **🔬 4-Stage Visual Eventarc Pipeline X-Ray & Live CloudEvent Tester**: Maps `1. Producer` ➔ `2. Transport & Billing ($0 Direct Pub/Sub vs Cloud Audit Logs)` ➔ `3. Eventarc Filter & IAM` ➔ `4. Function Runtime`, and lets you fire a synthetic `CloudEvents v1.0` envelope (`POST /api/project/:id/functions/test-event`) to inspect per-hop latency.
+  - **🩺 1-Tap Eventarc IAM Auto-Doctor (`POST /api/project/:id/functions/iam-doctor`) & `v1 → v2` Upgrader**: Automatically resolves your `projectNumber` and grants the 4 required service-agent IAM bindings in 1 click, and upgrades legacy `v1` functions (`1 req/instance` limit) to `v2` (`up to 1,000 req/instance`, saving up to **78%** on monthly compute).
+
 

@@ -33,6 +33,7 @@ import {
   Flame,
   PackageCheck,
   Cpu,
+  Zap,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import SortableKpiRow from './components/SortableKpiRow';
@@ -45,6 +46,7 @@ import VmFleetAndSsh from './components/VmFleetAndSsh';
 import VpcNetworksAndFirewalls from './components/VpcNetworksAndFirewalls';
 import EmergencyApiKillSwitch from './components/EmergencyApiKillSwitch';
 import CloudRunFleetManager from './components/CloudRunFleetManager';
+import CloudFunctionsEventarcStudio from './components/CloudFunctionsEventarcStudio';
 import GkeFleetStudio from './components/GkeFleetStudio';
 import CloudStorageStudio from './components/CloudStorageStudio';
 import BigQueryStudio from './components/BigQueryStudio';
@@ -353,6 +355,13 @@ function CloudPulseCockpit() {
       label: 'Cloud Run Studio ★',
       tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, tune min/max autoscaling, and switch Request vs Instance billing',
       icon: Rocket,
+    },
+    {
+      id: 'FUNCTIONS_STUDIO',
+      group: 'COMPUTE_NET',
+      label: 'Functions & Eventarc ⚡',
+      tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Demystified Eventarc Trigger Studio: Plain-English trigger picker, 4-stage visual Eventarc X-Ray, 1-Tap Eventarc IAM Auto-Doctor & v1→v2 concurrency upgrader',
+      icon: Zap,
     },
     {
       id: 'GKE_STUDIO',
@@ -984,6 +993,14 @@ function CloudPulseCockpit() {
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'FUNCTIONS_STUDIO' && (
+                <CloudFunctionsEventarcStudio
+                  projectId={selectedProjectId}
+                  onRunInShell={handleRunInShell}
+                  onShowToast={showToast}
                 />
               )}
 
