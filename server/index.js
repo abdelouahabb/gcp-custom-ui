@@ -502,6 +502,12 @@ function formatCloudRunService(s, projectId, extra = {}) {
     percent: Number(t.percent ?? 100),
   }));
 
+  const invokerDisabled =
+    s.invokerIamDisabled === true ||
+    s.annotations?.['run.googleapis.com/invoker-iam-disabled'] === 'true' ||
+    s.metadata?.annotations?.['run.googleapis.com/invoker-iam-disabled'] ===
+      'true';
+
   return {
     id: `run-${region}-${shortName}`,
     name: shortName,
@@ -512,8 +518,8 @@ function formatCloudRunService(s, projectId, extra = {}) {
     ingress: s.ingress || 'INGRESS_TRAFFIC_ALL',
     allowUnauthenticated:
       extra.allowUnauthenticated !== undefined
-        ? Boolean(extra.allowUnauthenticated)
-        : true,
+        ? Boolean(extra.allowUnauthenticated) || invokerDisabled
+        : invokerDisabled,
     containerImage:
       container.image || 'us-docker.pkg.dev/cloudrun/container/hello',
     containerPort: Number(portObj.containerPort || 8080),
@@ -4635,11 +4641,8 @@ app.post(
         }
       }
 
-      const updatedPolicy = await gcpFetch(
-        `${iamBaseUrl}:setIamPolicy`,
-        token,
-        projectId,
-        {
+      const [updatedPolicy] = await Promise.all([
+        gcpFetch(`${iamBaseUrl}:setIamPolicy`, token, projectId, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: {
@@ -4648,15 +4651,28 @@ app.post(
             },
           },
           timeout: 8000,
-        }
-      );
+        }).catch(() => null),
+        gcpFetch(
+          `${iamBaseUrl}?updateMask=invokerIamDisabled`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              invokerIamDisabled: Boolean(allowUnauthenticated),
+            },
+            timeout: 8000,
+          }
+        ).catch(() => null),
+      ]);
 
       res.json({
         ok: true,
         allowUnauthenticated: Boolean(allowUnauthenticated),
         policy: updatedPolicy,
         message: allowUnauthenticated
-          ? `Granted Public HTTPS Invoker (allUsers) on Cloud Run service "${serviceName}".`
+          ? `Granted Public HTTPS Invoker (allUsers / invokerIamDisabled=true) on Cloud Run service "${serviceName}".`
           : `Locked down "${serviceName}" to Private IAM Authenticated invocations only.`,
       });
     } catch (err) {

@@ -1477,10 +1477,10 @@ spec:
                         disabled={Boolean(busyState)}
                         title={
                           srv.allowUnauthenticated
-                            ? `Currently PUBLIC HTTPS (allUsers). Click to lock down "${srv.name}" to Private (IAM Authenticated) — confirmation required.`
-                            : `Currently PRIVATE (IAM Authenticated). Click to expose "${srv.name}" to Public HTTPS (allUsers) — confirmation required.`
+                            ? `Current State: PUBLIC HTTPS (Unauthenticated / allUsers). Click to switch "${srv.name}" to Private (IAM Authenticated) — confirmation required.`
+                            : `Current State: PRIVATE (IAM Authenticated). Click to switch "${srv.name}" to Public HTTPS (allUsers) — confirmation required.`
                         }
-                        className={`inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                        className={`inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                           srv.allowUnauthenticated
                             ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/20'
                             : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25 hover:bg-amber-500/20'
@@ -1489,12 +1489,22 @@ spec:
                         {srv.allowUnauthenticated ? (
                           <>
                             <Globe className="w-3 h-3" />
-                            <span>PUBLIC HTTPS (allUsers)</span>
+                            <span className="font-extrabold">
+                              PUBLIC (Unauthenticated)
+                            </span>
+                            <span className="opacity-65 text-[9px]">
+                              · Switch to Private
+                            </span>
                           </>
                         ) : (
                           <>
                             <Lock className="w-3 h-3" />
-                            <span>PRIVATE (IAM AUTH)</span>
+                            <span className="font-extrabold">
+                              PRIVATE (IAM Auth)
+                            </span>
+                            <span className="opacity-65 text-[9px]">
+                              · Switch to Public
+                            </span>
                           </>
                         )}
                       </button>
