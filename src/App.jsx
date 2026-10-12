@@ -692,8 +692,8 @@ function CloudPulseCockpit() {
             </div>
           </div>
 
-          {/* Underline Navigation Tabs (Sorted into 5 Logical Architectural Domains) */}
-          <nav className="flex items-center gap-4 sm:gap-5 mt-4 border-b border-zinc-200 dark:border-zinc-800 -mb-4 overflow-x-auto">
+          {/* Wrapped Multi-Domain Navigation Bar (Zero Horizontal Scrollbar Needed for Mouse Users) */}
+          <nav className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 mt-3.5 pt-3 border-t border-zinc-200 dark:border-zinc-800">
             {navTabs.map((tab, idx) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -703,7 +703,7 @@ function CloudPulseCockpit() {
                 <React.Fragment key={tab.id}>
                   {showGroupDivider && (
                     <span
-                      className="h-4 w-px bg-zinc-300 dark:bg-zinc-700/80 mb-3 shrink-0"
+                      className="hidden sm:inline-block h-4 w-px bg-zinc-300 dark:bg-zinc-700/80 mx-1 shrink-0"
                       aria-hidden="true"
                     />
                   )}
@@ -711,10 +711,10 @@ function CloudPulseCockpit() {
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
                     title={tab.tip}
-                    className={`inline-flex items-center gap-1.5 pb-3 text-xs font-semibold whitespace-nowrap transition-colors border-b-2 cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer ${
                       isActive
-                        ? 'border-[#3b82f6] text-[#2563eb] dark:text-[#60a5fa]'
-                        : 'text-zinc-500 hover:text-[#334155] dark:hover:text-[#e2e8f0] border-transparent hover:border-[#3b82f6]'
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                        : 'bg-zinc-100/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-300 border-zinc-200/80 dark:border-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 hover:text-zinc-950 dark:hover:text-white'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />

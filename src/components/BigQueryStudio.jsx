@@ -705,7 +705,7 @@ df.filter("region = 'EU'").groupBy("user_id").sum("revenue_usd").show()`;
         </div>
 
         {/* Sub-Navigation Pills */}
-        <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
+        <div className="flex flex-wrap items-center gap-2 mt-4">
           {STUDIO_TABS.map((t) => {
             const Icon = t.icon;
             const active = activeSubTab === t.id;
