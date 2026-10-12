@@ -13,8 +13,10 @@ import { fileURLToPath } from 'url';
 import axios from 'axios';
 import express from 'express';
 import cors from 'cors';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
+import { WebSocketServer } from 'ws';
+import { Client as Ssh2Client } from 'ssh2';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1940,27 +1942,40 @@ app.post('/api/project/:projectId/vms/:vmName/ssh', async (req, res) => {
       });
     }
 
-    // Execute real gcloud compute ssh command
+    // Execute real gcloud compute ssh command (merging both stdout and stderr so multi-line commands like apt update return every line)
     const { stdout, stderr } = await execAsync(
       `gcloud compute ssh ${vmName} --zone=${zone} --project=${projectId} --command=${JSON.stringify(
-        cmd
-      )} --quiet --ssh-flag="-o ConnectTimeout=6"`,
-      { env: ATTRIBUTION_ENV, timeout: 9000 }
+        `export DEBIAN_FRONTEND=noninteractive; ${cmd}`
+      )} --quiet --ssh-flag="-o ConnectTimeout=10 -o StrictHostKeyChecking=no"`,
+      { env: ATTRIBUTION_ENV, timeout: 60000, maxBuffer: 10 * 1024 * 1024 }
     );
+    const combinedOut = [stdout, stderr]
+      .map((s) => (s || '').trim())
+      .filter(Boolean)
+      .join('\n');
     return res.json({
       command: cmd,
       exitCode: 0,
       durationMs: Date.now() - t0,
-      output: (stdout || stderr || '(Command completed with exit code 0)').trim(),
+      output: combinedOut || '(Command completed with exit code 0)',
     });
   } catch (err) {
+    const combinedErr = [
+      err.stdout,
+      err.stderr,
+      err.response?.data?.error?.message,
+      !err.stdout && !err.stderr ? err.message : '',
+    ]
+      .map((s) => (s || '').trim())
+      .filter(Boolean)
+      .join('\n');
     return res.json({
       command: cmd,
-      exitCode: 1,
+      exitCode: err.code || 1,
       durationMs: Date.now() - t0,
       output:
-        (err.stdout || err.stderr || err.response?.data?.error?.message || err.message || '').trim() +
-        `\n\nTip: You can also click "Serial Console Output" to read live kernel/boot logs via the Compute Engine REST API without requiring SSH firewall port 22!`,
+        combinedErr +
+        `\n\nTip: Use the Live Interactive Xterm.js Web-SSH Terminal tab for full real-time streaming PTY sessions, or click "Serial Console Output" to read live kernel/boot logs via the Compute Engine REST API!`,
     });
   }
 });
@@ -14744,9 +14759,490 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-app.listen(PORT, async () => {
+// ============================================================================
+// REAL BIDIRECTIONAL WEBSOCKET SSH2 & FULL-PTY SERVER (/api/ws/ssh)
+// Supports:
+//  1. Native Node.js `ssh2` client library (direct TCP port 22 with GCE keys,
+//     custom private key, or password + dynamic xterm-256color window resize)
+//  2. Live `gcloud compute ssh` Full Linux Kernel PTY (`python3 pty.openpty()`)
+//     with automatic SSH key metadata propagation, OS Login, and Cloud IAP
+//     TCP forwarding (`--tunnel-through-iap`) for private-IP VMs
+// ============================================================================
+const httpServer = http.createServer(app);
+const sshWss = new WebSocketServer({ noServer: true });
+
+httpServer.on('upgrade', (request, socket, head) => {
+  try {
+    const parsedUrl = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
+    if (parsedUrl.pathname === '/api/ws/ssh') {
+      sshWss.handleUpgrade(request, socket, head, (ws) => {
+        sshWss.emit('connection', ws, request, parsedUrl);
+      });
+    } else {
+      socket.destroy();
+    }
+  } catch {
+    socket.destroy();
+  }
+});
+
+// Python full-PTY bridge script that allocates a real /dev/pts/N pseudo-terminal
+// and supports live TIOCSWINSZ window resizing via a control frame
+const PYTHON_PTY_BRIDGE_SCRIPT = `
+import os, sys, pty, select, struct, fcntl, termios, signal
+
+cmd = sys.argv[1:]
+cols = int(os.environ.get('PTY_COLS', '100'))
+rows = int(os.environ.get('PTY_ROWS', '28'))
+
+pid, master_fd = pty.fork()
+if pid == 0:
+    os.environ['TERM'] = 'xterm-256color'
+    os.environ['COLORTERM'] = 'truecolor'
+    os.execvp(cmd[0], cmd)
+
+def set_winsize(fd, r, c):
+    try:
+        winsize = struct.pack('HHHH', int(r), int(c), 0, 0)
+        fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
+    except Exception:
+        pass
+
+set_winsize(master_fd, rows, cols)
+stdin_fd = sys.stdin.fileno()
+stdout_fd = sys.stdout.fileno()
+
+try:
+    while True:
+        rlist, _, _ = select.select([master_fd, stdin_fd], [], [])
+        if master_fd in rlist:
+            try:
+                data = os.read(master_fd, 8192)
+                if not data:
+                    break
+                os.write(stdout_fd, data)
+            except OSError:
+                break
+        if stdin_fd in rlist:
+            try:
+                inp = os.read(stdin_fd, 8192)
+                if not inp:
+                    break
+                if b'\\x00RESIZE:' in inp:
+                    parts = inp.split(b'\\x00RESIZE:')
+                    if parts[0]:
+                        os.write(master_fd, parts[0])
+                    for seg in parts[1:]:
+                        nl = seg.find(b'\\n')
+                        if nl != -1:
+                            dims = seg[:nl].decode('ascii', 'ignore').split(',')
+                            if len(dims) == 2:
+                                set_winsize(master_fd, int(dims[1]), int(dims[0]))
+                                try:
+                                    os.kill(pid, signal.SIGWINCH)
+                                except Exception:
+                                    pass
+                            rest = seg[nl+1:]
+                            if rest:
+                                os.write(master_fd, rest)
+                else:
+                    os.write(master_fd, inp)
+            except OSError:
+                break
+finally:
+    try:
+        os.close(master_fd)
+    except Exception:
+        pass
+`;
+
+sshWss.on('connection', (ws, request, parsedUrl) => {
+  const params = parsedUrl.searchParams;
+  const projectId = (params.get('projectId') || '').trim();
+  const vmName = (params.get('vmName') || '').trim();
+  const zone = (params.get('zone') || 'us-east1-b').trim();
+  const host = (params.get('host') || '').trim();
+  const requestedEngine = (params.get('engine') || 'auto').trim().toLowerCase();
+  const useIap = params.get('iap') === 'true';
+  let cols = Math.max(40, Math.min(300, Number(params.get('cols') || 100)));
+  let rows = Math.max(12, Math.min(120, Number(params.get('rows') || 28)));
+
+  let defaultOsUser = 'ubuntu';
+  try {
+    defaultOsUser = os.userInfo().username || 'ubuntu';
+  } catch {
+    // ignore
+  }
+  const rawUser = (params.get('username') || defaultOsUser).trim();
+  const sshUsername = rawUser
+    .split('@')[0]
+    .replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  let activeCleanup = null;
+  let activeInputWriter = null;
+  let activeResizer = null;
+  let sessionClosed = false;
+
+  const wsSend = (payload) => {
+    if (ws.readyState === 1) {
+      try {
+        ws.send(JSON.stringify(payload));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const cleanupSession = () => {
+    if (sessionClosed) return;
+    sessionClosed = true;
+    if (activeCleanup) {
+      try {
+        activeCleanup();
+      } catch {
+        // ignore
+      }
+      activeCleanup = null;
+    }
+  };
+
+  // Engine B: Real Linux Kernel PTY wrapping `gcloud compute ssh` (or local bash for __CLOUD_SHELL__)
+  const startGcloudPtyBridge = (reasonBanner = '') => {
+    if (sessionClosed) return;
+    if (reasonBanner) {
+      wsSend({
+        type: 'output',
+        data: `\r\n\x1b[38;5;214m⚡ ${reasonBanner}\x1b[0m\r\n`,
+      });
+    }
+
+    const isLocalCloudShell = vmName === '__CLOUD_SHELL__';
+    let spawnArgs = [];
+
+    if (isLocalCloudShell) {
+      wsSend({
+        type: 'status',
+        status: 'CONNECTED',
+        engine: 'CLOUD_SHELL_PTY',
+        message: `Connected to Interactive Local GCloud / Bash PTY (project: ${projectId})`,
+      });
+      spawnArgs = ['-c', PYTHON_PTY_BRIDGE_SCRIPT, 'bash', '--login'];
+    } else {
+      const needIap = useIap || !host || host === 'None';
+      wsSend({
+        type: 'status',
+        status: 'CONNECTING',
+        engine: needIap ? 'GCLOUD_IAP_PTY' : 'GCLOUD_SSH_PTY',
+        message: `Establishing interactive PTY session to ${sshUsername}@${vmName} (${zone})${
+          needIap ? ' via Cloud IAP TCP Tunnel' : ''
+        }...`,
+      });
+      wsSend({
+        type: 'output',
+        data: `\x1b[38;5;39m➜ Launching real interactive PTY: gcloud compute ssh ${sshUsername}@${vmName} --zone=${zone} --project=${projectId}${
+          needIap ? ' --tunnel-through-iap' : ''
+        }\x1b[0m\r\n`,
+      });
+
+      const gcloudCmd = [
+        'gcloud',
+        'compute',
+        'ssh',
+        `${sshUsername}@${vmName}`,
+        `--zone=${zone}`,
+        `--project=${projectId}`,
+        ...(needIap ? ['--tunnel-through-iap'] : []),
+        '--ssh-flag=-tt',
+        '--ssh-flag=-o StrictHostKeyChecking=no',
+        '--ssh-flag=-o UserKnownHostsFile=/dev/null',
+        '--ssh-flag=-o ServerAliveInterval=25',
+        '--ssh-flag=-o ConnectTimeout=12',
+      ];
+      spawnArgs = ['-u', '-c', PYTHON_PTY_BRIDGE_SCRIPT, ...gcloudCmd];
+    }
+
+    const ptyProc = spawn('python3', spawnArgs, {
+      env: {
+        ...process.env,
+        ...ATTRIBUTION_ENV,
+        CLOUDSDK_CORE_PROJECT: projectId || process.env.CLOUDSDK_CORE_PROJECT || '',
+        PTY_COLS: String(cols),
+        PTY_ROWS: String(rows),
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor',
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    let markedConnected = isLocalCloudShell;
+    ptyProc.stdout.on('data', (chunk) => {
+      if (!markedConnected) {
+        markedConnected = true;
+        wsSend({
+          type: 'status',
+          status: 'CONNECTED',
+          engine: useIap || !host || host === 'None' ? 'GCLOUD_IAP_PTY' : 'GCLOUD_SSH_PTY',
+          message: `Interactive PTY session active on ${sshUsername}@${vmName} (${zone})`,
+        });
+      }
+      wsSend({ type: 'output', data: chunk.toString('utf8') });
+    });
+
+    ptyProc.stderr.on('data', (chunk) => {
+      wsSend({ type: 'output', data: chunk.toString('utf8') });
+    });
+
+    ptyProc.on('close', (code) => {
+      wsSend({
+        type: 'output',
+        data: `\r\n\x1b[38;5;244m[SSH PTY session exited with code ${code ?? 0}]\x1b[0m\r\n`,
+      });
+      wsSend({
+        type: 'status',
+        status: 'DISCONNECTED',
+        engine: 'GCLOUD_SSH_PTY',
+        message: `Session closed (exit code ${code ?? 0})`,
+      });
+    });
+
+    ptyProc.on('error', (err) => {
+      wsSend({
+        type: 'output',
+        data: `\r\n\x1b[31m[PTY Spawn Error]: ${err.message}\x1b[0m\r\n`,
+      });
+    });
+
+    activeInputWriter = (data) => {
+      if (ptyProc.stdin && !ptyProc.stdin.destroyed) {
+        ptyProc.stdin.write(data);
+      }
+    };
+
+    activeResizer = (newCols, newRows) => {
+      if (ptyProc.stdin && !ptyProc.stdin.destroyed) {
+        ptyProc.stdin.write(`\x00RESIZE:${newCols},${newRows}\n`);
+      }
+    };
+
+    activeCleanup = () => {
+      try {
+        ptyProc.kill('SIGTERM');
+      } catch {
+        // ignore
+      }
+    };
+  };
+
+  // Engine A: Native Node.js `ssh2` library over TCP Port 22
+  const startNativeSsh2Client = (customAuth = {}) => {
+    const gceKeyPath = path.join(os.homedir(), '.ssh', 'google_compute_engine');
+    const idRsaPath = path.join(os.homedir(), '.ssh', 'id_rsa');
+    let privateKeyContent = customAuth.privateKey || null;
+
+    if (!privateKeyContent) {
+      if (fs.existsSync(gceKeyPath)) {
+        privateKeyContent = fs.readFileSync(gceKeyPath, 'utf8');
+      } else if (fs.existsSync(idRsaPath)) {
+        privateKeyContent = fs.readFileSync(idRsaPath, 'utf8');
+      }
+    }
+
+    if (!host || host === 'None' || useIap) {
+      return startGcloudPtyBridge(
+        'VM has no public IPv4 or IAP tunnel requested — routing via gcloud compute ssh PTY...'
+      );
+    }
+
+    if (!privateKeyContent && !customAuth.password) {
+      return startGcloudPtyBridge(
+        'Provisioning GCE SSH key & connecting via gcloud compute ssh PTY...'
+      );
+    }
+
+    wsSend({
+      type: 'status',
+      status: 'CONNECTING',
+      engine: 'SSH2_NATIVE',
+      message: `Connecting via Native SSH2 Protocol to ${sshUsername}@${host}:22 (${vmName})...`,
+    });
+    wsSend({
+      type: 'output',
+      data: `\x1b[38;5;48m⚡ [Open-Source SSH2 Engine] Connecting to ${sshUsername}@${host}:22 (VM: ${vmName} · Zone: ${zone})...\x1b[0m\r\n`,
+    });
+
+    const conn = new Ssh2Client();
+    let connectedOk = false;
+
+    conn.on('ready', () => {
+      connectedOk = true;
+      wsSend({
+        type: 'status',
+        status: 'CONNECTED',
+        engine: 'SSH2_NATIVE',
+        message: `Connected via Native SSH2 Protocol to ${sshUsername}@${host}:22`,
+      });
+      conn.shell(
+        {
+          term: 'xterm-256color',
+          cols,
+          rows,
+        },
+        (err, stream) => {
+          if (err) {
+            wsSend({
+              type: 'output',
+              data: `\r\n\x1b[31m[SSH2 Shell Error]: ${err.message}\x1b[0m\r\n`,
+            });
+            if (requestedEngine === 'auto') {
+              conn.end();
+              return startGcloudPtyBridge(
+                'Falling back to gcloud compute ssh PTY...'
+              );
+            }
+            return;
+          }
+
+          stream.on('data', (chunk) => {
+            wsSend({ type: 'output', data: chunk.toString('utf8') });
+          });
+
+          stream.stderr?.on('data', (chunk) => {
+            wsSend({ type: 'output', data: chunk.toString('utf8') });
+          });
+
+          stream.on('close', () => {
+            wsSend({
+              type: 'output',
+              data: `\r\n\x1b[38;5;244m[SSH2 connection closed by remote host ${host}]\x1b[0m\r\n`,
+            });
+            wsSend({
+              type: 'status',
+              status: 'DISCONNECTED',
+              engine: 'SSH2_NATIVE',
+              message: 'SSH2 session closed.',
+            });
+            conn.end();
+          });
+
+          activeInputWriter = (data) => {
+            if (stream.writable) {
+              stream.write(data);
+            }
+          };
+
+          activeResizer = (newCols, newRows) => {
+            try {
+              stream.setWindow(newRows, newCols, 0, 0);
+            } catch {
+              // ignore
+            }
+          };
+        }
+      );
+    });
+
+    conn.on('error', (err) => {
+      if (!connectedOk && requestedEngine === 'auto') {
+        try {
+          conn.end();
+        } catch {
+          // ignore
+        }
+        return startGcloudPtyBridge(
+          `Direct SSH2 handshake (${err.message}) — syncing GCE metadata SSH keys via gcloud compute ssh PTY...`
+        );
+      }
+      wsSend({
+        type: 'output',
+        data: `\r\n\x1b[31m[SSH2 Connection Error]: ${err.message}\x1b[0m\r\n`,
+      });
+      wsSend({
+        type: 'status',
+        status: 'ERROR',
+        engine: 'SSH2_NATIVE',
+        message: err.message,
+      });
+    });
+
+    activeCleanup = () => {
+      try {
+        conn.end();
+      } catch {
+        // ignore
+      }
+    };
+
+    try {
+      conn.connect({
+        host,
+        port: Number(customAuth.port || 22),
+        username: customAuth.username || sshUsername,
+        ...(customAuth.password
+          ? { password: customAuth.password }
+          : { privateKey: privateKeyContent }),
+        readyTimeout: 8000,
+        keepaliveInterval: 15000,
+      });
+    } catch (connectErr) {
+      if (requestedEngine === 'auto') {
+        startGcloudPtyBridge(
+          `Direct SSH2 init (${connectErr.message}) — routing via gcloud compute ssh PTY...`
+        );
+      } else {
+        wsSend({
+          type: 'output',
+          data: `\r\n\x1b[31m[SSH2 Error]: ${connectErr.message}\x1b[0m\r\n`,
+        });
+      }
+    }
+  };
+
+  ws.on('message', (rawMsg) => {
+    try {
+      const msg = JSON.parse(rawMsg.toString());
+      if (msg.type === 'input' && typeof msg.data === 'string') {
+        if (activeInputWriter) {
+          activeInputWriter(msg.data);
+        }
+      } else if (msg.type === 'resize') {
+        const nextCols = Math.max(40, Math.min(300, Number(msg.cols || cols)));
+        const nextRows = Math.max(10, Math.min(120, Number(msg.rows || rows)));
+        cols = nextCols;
+        rows = nextRows;
+        if (activeResizer) {
+          activeResizer(nextCols, nextRows);
+        }
+      } else if (msg.type === 'custom_auth') {
+        if (activeCleanup) activeCleanup();
+        startNativeSsh2Client({
+          username: msg.username || sshUsername,
+          password: msg.password || '',
+          privateKey: msg.privateKey || '',
+          port: msg.port || 22,
+        });
+      }
+    } catch {
+      // If raw text was sent instead of JSON
+      if (activeInputWriter) {
+        activeInputWriter(rawMsg.toString());
+      }
+    }
+  });
+
+  ws.on('close', cleanupSession);
+  ws.on('error', cleanupSession);
+
+  // Start the requested engine immediately upon connection
+  if (vmName === '__CLOUD_SHELL__' || requestedEngine === 'gcloud_pty') {
+    startGcloudPtyBridge();
+  } else {
+    startNativeSsh2Client();
+  }
+});
+
+httpServer.listen(PORT, async () => {
   console.log(
-    `CloudPulse 2026 Multi-Account GCP Bridge listening on http://localhost:${PORT}`
+    `CloudPulse 2026 Multi-Account GCP Bridge + WebSocket SSH2 Server listening on http://localhost:${PORT}`
   );
   // Pre-warm token and default project enabled APIs cache in background
   try {
@@ -14762,4 +15258,5 @@ app.listen(PORT, async () => {
     // ignore pre-warm errors
   }
 });
+
 

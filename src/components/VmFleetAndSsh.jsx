@@ -23,6 +23,7 @@ import {
   PauseCircle,
   Cpu,
 } from 'lucide-react';
+import XtermWebSshTerminal from './XtermWebSshTerminal';
 
 const SSH_QUICK_CHIPS = [
   { label: 'Serial Console Logs (REST API)', cmd: 'serial-console' },
@@ -109,6 +110,9 @@ export default function VmFleetAndSsh({
   const [sshRunning, setSshRunning] = useState(false);
   const [copiedSshCli, setCopiedSshCli] = useState(false);
   const [sshTranscript, setSshTranscript] = useState([]);
+  const [sshTerminalExpanded, setSshTerminalExpanded] = useState(false);
+  const [serialConsoleOutput, setSerialConsoleOutput] = useState('');
+  const [serialLoading, setSerialLoading] = useState(false);
   const [selectedRegionFilter, setSelectedRegionFilter] = useState('ALL');
   const [quickDeployingLabel, setQuickDeployingLabel] = useState(null);
   const [openResizeVm, setOpenResizeVm] = useState(null);
@@ -361,6 +365,29 @@ export default function VmFleetAndSsh({
     }
   };
 
+  const handleFetchSerialConsole = useCallback(async () => {
+    if (!activeSshVm) return;
+    setSerialLoading(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          activeSshVm.name
+        )}/ssh`,
+        {
+          command: 'serial-console',
+          zone: activeSshVm.zone,
+        }
+      );
+      setSerialConsoleOutput(res.data?.output || '(Empty serial port output)');
+    } catch (err) {
+      setSerialConsoleOutput(
+        err.response?.data?.error || err.message || 'Failed to read Serial Port 1.'
+      );
+    } finally {
+      setSerialLoading(false);
+    }
+  }, [activeSshVm, projectId]);
+
   const formatVmDate = (iso) => {
     try {
       return format(new Date(iso), 'MMM dd, yyyy');
@@ -534,7 +561,13 @@ export default function VmFleetAndSsh({
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
           {/* VM Fleet List */}
-          <div className="xl:col-span-7 space-y-3">
+          <div
+            className={`${
+              sshTerminalExpanded
+                ? 'xl:col-span-12 order-2'
+                : 'xl:col-span-6'
+            } space-y-3`}
+          >
             {filteredVms.map((vm) => {
               const pendingOp = pendingOps[vm.name];
               const isDeleting =
@@ -955,129 +988,28 @@ export default function VmFleetAndSsh({
             })}
           </div>
 
-          {/* Interactive Web SSH & Serial Port Console */}
-          <div className="xl:col-span-5 bg-[#09090b] border border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col">
-            <div className="bg-zinc-900/90 border-b border-zinc-800 px-4 py-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex items-center gap-1.5 mr-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                </div>
-                <Terminal className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="font-mono text-xs font-bold text-zinc-100 truncate">
-                  {activeSshVm
-                    ? `${userShort}@${activeSshVm.name} (${activeSshVm.zone})`
-                    : 'Select a VM'}
-                </span>
-              </div>
-
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded shrink-0">
-                <Wifi className="w-3 h-3" />
-                Live GCE SSH
-              </span>
-            </div>
-
-            {activeSshVm && (
-              <div className="p-4 space-y-3 flex-1 flex flex-col">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
-                  <code className="text-[11px] font-mono text-zinc-300 truncate">
-                    $ {activeSshVm.sshCommand}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(activeSshVm.sshCommand);
-                      setCopiedSshCli(true);
-                      setTimeout(() => setCopiedSshCli(false), 1500);
-                    }}
-                    className="inline-flex items-center gap-1 text-[11px] font-mono text-blue-400 hover:text-blue-300 shrink-0"
-                  >
-                    {copiedSshCli ? (
-                      <>
-                        <Check className="w-3 h-3" />
-                        <span>Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div>
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">
-                    1-Tap SSH & Serial Console Actions:
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SSH_QUICK_CHIPS.map((chip) => (
-                      <button
-                        key={chip.label}
-                        type="button"
-                        disabled={sshRunning}
-                        onClick={() => handleRunSshCommand(chip.cmd)}
-                        className="text-[11px] font-mono bg-zinc-900 hover:bg-emerald-500/15 text-zinc-300 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/40 px-2.5 py-1 rounded-md transition-colors disabled:opacity-40"
-                      >
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleRunSshCommand();
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <div className="relative flex-1">
-                    <span className="font-mono text-xs text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2">
-                      #
-                    </span>
-                    <input
-                      type="text"
-                      value={sshCommandInput}
-                      onChange={(e) => setSshCommandInput(e.target.value)}
-                      placeholder="Type Linux SSH command or serial-console..."
-                      aria-label="SSH Command Input"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-[8px] pl-7 pr-3 py-2 text-xs font-mono text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={sshRunning || !sshCommandInput.trim()}
-                    className="bg-[#059669] hover:bg-[#047857] text-[#000000] rounded-[8px] px-4 py-2 text-xs font-bold transition-colors disabled:opacity-50"
-                  >
-                    {sshRunning ? '...' : 'Exec'}
-                  </button>
-                </form>
-
-                <div className="flex-1 bg-black/70 border border-zinc-800/90 rounded-lg p-3.5 font-mono text-xs space-y-3 max-h-[380px] overflow-y-auto">
-                  {sshTranscript.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="border-b border-zinc-800/80 pb-3 last:border-b-0 last:pb-0"
-                    >
-                      <div className="flex items-center justify-between text-[11px] text-emerald-400 mb-1">
-                        <span>
-                          {userShort}@{activeSshVm.name}:~$ {entry.command}
-                        </span>
-                        <span className="text-zinc-500">{entry.durationMs}ms</span>
-                      </div>
-                      <pre className="text-[11px] text-zinc-200 whitespace-pre-wrap break-words leading-relaxed">
-                        {entry.output}
-                      </pre>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* Real Open-Source Interactive Web-SSH (@xterm/xterm + SSH2 / Linux PTY) */}
+          <div
+            className={`${
+              sshTerminalExpanded
+                ? 'xl:col-span-12 order-1'
+                : 'xl:col-span-6'
+            } w-full`}
+          >
+            <XtermWebSshTerminal
+              projectId={projectId}
+              activeVm={activeSshVm}
+              defaultUsername={userShort || 'ubuntu'}
+              isExpanded={sshTerminalExpanded}
+              onToggleExpand={() => setSshTerminalExpanded((prev) => !prev)}
+              onFetchSerialConsole={handleFetchSerialConsole}
+              serialConsoleOutput={serialConsoleOutput}
+              serialLoading={serialLoading}
+            />
           </div>
         </div>
       )}
     </div>
   );
 }
+
