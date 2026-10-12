@@ -82,24 +82,25 @@ const DOC_SECTIONS = [
     id: 'biglake-vs-bigquery-open-iceberg-2026',
     wave: 'BIGLAKE & APACHE ICEBERG · OPEN LAKEHOUSE STUDIO',
     title:
-      'BigLake vs. BigQuery Demystified Studio — Open Apache Iceberg Tables, Cross-Engine Governance & 1-Click BigLake Wizard',
-    badge: 'BIGQUERY & BIGLAKE TAB (TAB 5)',
+      'Dedicated BigLake & Apache Iceberg Open Lakehouse Studio — REST Catalogs, Zero-Trust Bucket IAM, Compaction Doctor & Cross-Cloud Omni',
+    badge: 'DEDICATED BIGLAKE TAB',
     badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Layers,
-    targetTab: 'BIGQUERY_STUDIO',
+    targetTab: 'BIGLAKE_STUDIO',
     problemSolved:
-      'Engineers frequently confuse Google BigQuery with Google BigLake, leading to duplicate data copies in proprietary storage when they actually need open Parquet/Apache Iceberg files on Cloud Storage governed by a single row/column-level security policy across BigQuery, Spark, Trino, and Vertex AI.',
+      'Engineers frequently confuse Google BigQuery with Google BigLake, struggle with 3-step CLOUD_RESOURCE connection IAM errors, suffer from the Apache Iceberg Small-File Problem when streaming from Kafka/PubSub, or pay steep egress fees copying AWS S3 / Azure ADLS Parquet files into GCP.',
     howItWorks: [
-      'Interactive "BigQuery vs. BigLake" Side-by-Side Architecture Clarifier: Explains Storage Location, File Format (Proprietary Capacitor vs Open Apache Iceberg/Parquet/Delta), Multi-Engine Read/Write (BigQuery + Spark + Flink + Presto), Fine-Grained Row/Column Security, and Governance Connection Architecture.',
-      '"Which One Do I Need?" Decision Matrix: Instant architectural recommendation based on your workload (Pure SQL Warehouse vs Open Apache Iceberg Lakehouse vs Multi-Cloud Omni).',
-      '1-Click BigLake Connection + Managed Apache Iceberg Table Provisioner: Creates the BigQuery Cloud Resource Connection, binds the Connection Service Account IAM role on your GCS bucket, and executes CREATE EXTERNAL TABLE ... WITH CONNECTION ... OPTIONS(format="ICEBERG" | "PARQUET", metadata_cache_mode="AUTOMATIC").',
+      'Tab 1 — BigLake Metastore & Iceberg REST Catalogs: Create and manage live BigLake Metastore Catalogs (/biglake/metastore/catalogs · biglake.googleapis.com/v1) with Iceberg REST Credential Vending and side-by-side architecture comparison.',
+      'Tab 2 — 1-Click BigLake Connection, Zero-Trust IAM & Iceberg Wizard: Generates and runs Step 1 (bq mk --connection --connection_type=CLOUD_RESOURCE), Step 2 (Zero-Trust bucket IAM delegation for serviceAccountId), and Step 3 (Managed Iceberg DDL or Cached External Table + Zero-Copy PySpark reader).',
+      'Tab 3 — Iceberg Small-File Compaction & Snapshot Doctor: Interactive simulator for streaming micro-files, generating EXPORT TABLE METADATA, CALL biglake.system.rewrite_data_files (SORT/Z-Order vs BINPACK), expire_snapshots, and remove_orphan_files.',
+      'Tab 4 — Row/Column Security & Cross-Cloud Omni (AWS S3 / Azure ADLS): Enforces CREATE ROW ACCESS POLICY and CREATE DATA POLICY masking directly on open gs:// Parquet files, plus $0-egress BigLake Omni federated SQL over s3:// and azure://.',
     ],
     apisUsed: [
-      'GET /api/project/:id/bigquery/biglake/overview',
-      'POST /api/project/:id/bigquery/biglake/create → bigqueryconnection.googleapis.com/v1 + bigquery.googleapis.com/bigquery/v2/projects/:id/jobs',
+      'GET & POST /api/project/:id/biglake/metastore/catalogs → biglake.googleapis.com/v1/projects/:id/locations/:loc/catalogs',
+      'DELETE /api/project/:id/biglake/metastore/catalogs/:location/:catalogId',
     ],
     billingImpact:
-      'Eliminates duplicate warehouse storage bills by keeping a single open Parquet/Iceberg copy on Cloud Storage ($0.020/GB-mo) with BigLake metadata caching.',
+      'Eliminates duplicate warehouse storage bills by keeping a single open Parquet/Iceberg copy on Cloud Storage ($0.020/GB-mo) and reduces query scan bytes by up to 80% via Iceberg compaction.',
   },
   {
     id: 'sovereign-iam-owner-guard-and-sa-key-killswitch',

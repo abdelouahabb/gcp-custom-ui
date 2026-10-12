@@ -657,8 +657,8 @@ export default function Revolutionary2026Suite({
                 style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
               },
               {
-                tabId: 'BIGQUERY_STUDIO',
-                label: 'BigLake & Apache Iceberg vs BigQuery',
+                tabId: 'BIGLAKE_STUDIO',
+                label: 'BigLake & Apache Iceberg Lakehouse Studio',
                 style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
               },
               {

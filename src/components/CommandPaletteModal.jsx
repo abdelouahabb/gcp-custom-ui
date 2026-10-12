@@ -150,14 +150,14 @@ export default function CommandPaletteModal({
       {
         id: 'open-biglake-iceberg',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open BigLake vs. BigQuery Demystified Studio & Open Apache Iceberg Wizard',
-        subtitle: 'Compare BigQuery vs BigLake side-by-side and provision governed Apache Iceberg tables in 1 click',
-        keywords: 'biglake bigquery iceberg parquet lakehouse open table governance',
+        title: 'Open Dedicated BigLake & Apache Iceberg Open Lakehouse Studio',
+        subtitle: 'Manage BigLake Metastore REST Catalogs, 1-Click CLOUD_RESOURCE Connections, Iceberg Compaction Doctor & Cross-Cloud Omni',
+        keywords: 'biglake bigquery iceberg parquet lakehouse open table governance compaction omni s3 azure',
         badge: 'BIGLAKE 2026',
         badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,
         run: () => {
-          onSelectTab('BIGQUERY_STUDIO');
+          onSelectTab('BIGLAKE_STUDIO');
           onClose();
         }
       },

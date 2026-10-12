@@ -50,6 +50,7 @@ import CloudFunctionsEventarcStudio from './components/CloudFunctionsEventarcStu
 import GkeFleetStudio from './components/GkeFleetStudio';
 import CloudStorageStudio from './components/CloudStorageStudio';
 import BigQueryStudio from './components/BigQueryStudio';
+import BigLakeIcebergStudio from './components/BigLakeIcebergStudio';
 import CloudSqlAndAlloyDbStudio from './components/CloudSqlAndAlloyDbStudio';
 import SovereignTimeMachineIamStudio from './components/SovereignTimeMachineIamStudio';
 import SreWarRoomPerimeterStudio from './components/SreWarRoomPerimeterStudio';
@@ -485,6 +486,7 @@ function CloudPulseCockpit() {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
   const [shellSeedCommand, setShellSeedCommand] = useState('');
+  const [bigQueryInitialSql, setBigQueryInitialSql] = useState('');
 
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [provisionInitialService, setProvisionInitialService] =
@@ -869,8 +871,15 @@ function CloudPulseCockpit() {
       id: 'BIGQUERY_STUDIO',
       group: 'DATA_AI',
       label: 'BigQuery',
-      tip: 'BigQuery & BigLake 2026 Enterprise Lakehouse Studio: BigLake Apache Iceberg & Parquet over gs:// buckets, Physical Billing (-54%), SQL X-Ray & 168h Time-Machine',
+      tip: 'BigQuery Capacitor Warehouse & SQL Optimizer Studio: Dataset Compliance Hardener, Physical Billing (-54%), Dry-Run SQL X-Ray, Slot FinOps & 168h Time-Machine',
       icon: Database,
+    },
+    {
+      id: 'BIGLAKE_STUDIO',
+      group: 'DATA_AI',
+      label: 'BigLake',
+      tip: 'BigLake & Apache Iceberg Open Lakehouse Studio: Metastore REST Catalogs (/biglake/metastore/catalogs), 1-Click CLOUD_RESOURCE Connection & Zero-Trust Bucket IAM, Iceberg Small-File Compaction Doctor & Cross-Cloud Omni (AWS S3 / Azure)',
+      icon: Layers,
     },
     {
       id: 'WAVE10_FRONTIER',
@@ -1307,9 +1316,10 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'CLOUD_SQL_STUDIO', label: 'Cloud SQL', meta: 'PG 17, MySQL 8.4 & AlloyDB Vectors' },
-                            { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer', meta: 'Medallion, Dataform & Data Agent Kit' },
-                            { id: 'BIGQUERY_STUDIO', label: 'BigQuery', meta: 'Capacitor + BigLake Apache Iceberg' },
-                            { id: 'WAVE10_FRONTIER', label: 'Spanner', meta: '100-PU Graph, Spark & Workflows' },
+                            { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer', meta: 'Medallion, Dataform & Serverless Spark' },
+                            { id: 'BIGQUERY_STUDIO', label: 'BigQuery', meta: 'Capacitor, SQL X-Ray & 7d Time-Machine' },
+                            { id: 'BIGLAKE_STUDIO', label: 'BigLake', meta: 'Iceberg REST Catalogs, Compaction & Omni' },
+                            { id: 'WAVE10_FRONTIER', label: 'Spanner', meta: '100-PU Sizer, ISO GQL Graph & ScaNN RAG' },
                           ],
                         },
                         {
@@ -1432,11 +1442,26 @@ function CloudPulseCockpit() {
               {activeTab === 'BIGQUERY_STUDIO' && (
                 <BigQueryStudio
                   projectId={selectedProjectId}
+                  initialSql={bigQueryInitialSql}
+                  onOpenBigLakeStudio={() => setActiveTab('BIGLAKE_STUDIO')}
                   onOpenProvision={handleOpenProvision}
                   onRunInShell={handleRunInShell}
                   onRefreshGlobal={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'BIGLAKE_STUDIO' && (
+                <BigLakeIcebergStudio
+                  projectId={selectedProjectId}
+                  onRunInShell={handleRunInShell}
+                  onOpenBigQuerySql={(sqlText) => {
+                    if (sqlText) setBigQueryInitialSql(sqlText);
+                    setActiveTab('BIGQUERY_STUDIO');
+                  }}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />
