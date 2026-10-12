@@ -28,6 +28,7 @@ import {
 import EngineerWishlistWave2 from './EngineerWishlistWave2';
 import AutonomousCloudBrain from './AutonomousCloudBrain';
 import EngineerMoonshotsWave3 from './EngineerMoonshotsWave3';
+import Lab2026QuantumNexus from './Lab2026QuantumNexus';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
 const VM_HOURLY_RATES = {
@@ -179,9 +180,9 @@ export default function Revolutionary2026Suite({
   onShowError,
 }) {
   const [subTab, setSubTab] = useState(
-    initialSubTab === 'TOPOLOGY' ? 'DREAM_BRAIN' : initialSubTab || 'DREAM_BRAIN'
+    initialSubTab === 'TOPOLOGY' ? 'QUANTUM_NEXUS' : initialSubTab || 'QUANTUM_NEXUS'
   );
-  const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
+  const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState([]);
   const [auditData, setAuditData] = useState(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
@@ -635,7 +636,7 @@ export default function Revolutionary2026Suite({
         </div>
       )}
 
-      {/* Category Filter Bar for 14 Lab Tools */}
+      {/* Category Filter Bar for 15 Lab Tools */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -643,7 +644,8 @@ export default function Revolutionary2026Suite({
               Lab Domain:
             </span>
             {[
-              { id: 'ALL', label: '✦ All 14 Lab Tools' },
+              { id: 'ALL', label: '✦ All 15 Lab Suites' },
+              { id: 'QUANTUM', label: '★ 2026 Quantum Nexus (5 Breakthroughs)' },
               { id: 'FINOPS', label: '💰 FinOps, Sleep & Egress (4)' },
               { id: 'PERF_TOPOLOGY', label: '⚡ Topology, Cold-Start & Latency (4)' },
               { id: 'SECURITY_DLP', label: '🛡️ DLP, Ransomware & Zero-Trust (3)' },
@@ -652,7 +654,10 @@ export default function Revolutionary2026Suite({
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setLabCategory(cat.id)}
+                onClick={() => {
+                  setLabCategory(cat.id);
+                  if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
+                }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
                   labCategory === cat.id
                     ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
@@ -668,6 +673,14 @@ export default function Revolutionary2026Suite({
         {/* Categorized Sub-Navigation Pills */}
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
           {[
+            {
+              id: 'QUANTUM_NEXUS',
+              category: 'QUANTUM',
+              badge: '★ 5-IN-1 NEXUS',
+              label: '✦ 2026 Quantum Nexus (Causal, Rollback, FinOps, PR, HoneyGrid)',
+              tip: 'Unified Cross-Cloud Causal Blast-Radius Graph, Time-Machine 1-Click State Rollback, Autonomous FinOps Arbitrage, Ephemeral PR Shadow Previews & Zero-Trust Honey-Token Deception Grid',
+              icon: Sparkles,
+            },
             {
               id: 'DREAM_BRAIN',
               category: 'AI_IAC',
@@ -817,6 +830,16 @@ export default function Revolutionary2026Suite({
             })}
         </div>
       </div>
+
+      {/* ★ FLAGSHIP TAB 0: 2026 QUANTUM NEXUS (5 WORLD-FIRST BREAKTHROUGHS) */}
+      {subTab === 'QUANTUM_NEXUS' && (
+        <Lab2026QuantumNexus
+          projectId={projectId}
+          onRefreshGlobal={onRefreshOverview}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
+      )}
 
       {/* TAB 1: INTERACTIVE LIVE CLOUD TOPOLOGY & BLAST-RADIUS GRAPH */}
       {subTab === 'TOPOLOGY' && (
