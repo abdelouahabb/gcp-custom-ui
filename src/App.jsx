@@ -636,7 +636,7 @@ function CloudPulseCockpit() {
   }, []);
 
   const [gdeSummary, setGdeSummary] = useState(() =>
-    summarizeCreditLedger(INITIAL_CONSOLE_CREDITS, 0)
+    summarizeCreditLedger([], 0)
   );
 
   useEffect(() => {
@@ -666,6 +666,8 @@ function CloudPulseCockpit() {
             billingInfo: res.data?.billingInfo || {},
             billingAccounts: res.data?.billingAccounts || [],
             liveBillingInsights: res.data?.liveBillingInsights || null,
+            syncedConsoleCredits:
+              res.data?.liveBillingInsights?.consoleCredits || [],
             envelopeOverride,
             dailyBurnUsd: 0,
           });
@@ -1055,18 +1057,14 @@ function CloudPulseCockpit() {
                 )}
                 <span>
                   {gdeSummary.hasImportedCredits
-                    ? `Credits: $${gdeSummary.totalRemainingUsd.toLocaleString(
+                    ? `Remaining Bonus: $${gdeSummary.totalRemainingUsd.toLocaleString(
                         'en-US',
                         {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         }
                       )}`
-                    : gdeSummary.liveCostMetrics?.hasLiveRows
-                    ? `Credits Applied: -$${gdeSummary.liveCostMetrics.absCreditsUsd.toFixed(
-                        2
-                      )}`
-                    : 'Billing & Credits'}
+                    : 'Remaining Bonus: $0.00 (Upload CSV)'}
                 </span>
                 {gdeSummary.hasImportedCredits &&
                 gdeSummary.expiringSoonRemainingUsd > 0 &&
@@ -1081,10 +1079,6 @@ function CloudPulseCockpit() {
                       }
                     )}{' '}
                     expiring in {gdeSummary.nearestExpiryDays}d
-                  </span>
-                ) : gdeSummary.liveCostMetrics?.hasLiveRows ? (
-                  <span className="hidden sm:inline text-[10px] opacity-90">
-                    · {gdeSummary.liveCostMetrics.coveragePct.toFixed(1)}% covered
                   </span>
                 ) : null}
               </button>

@@ -740,6 +740,30 @@ const DOC_SECTIONS = [
     billingImpact:
       'Unlinking billing immediately halts all billable GCP usage across the entire project.',
   },
+  {
+    id: 'remaining-bonus-billing-guardian',
+    wave: 'WAVE 1 · FINOPS & REMAINING BONUS GUARDIAN',
+    title:
+      'Remaining Bonus & Cloud Billing Guardian (CSV Importer, Auto-Expiry Countdown & 2-Minute Background Sync)',
+    badge: 'BILLING & APIS TAB',
+    badgeColor: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+    icon: DollarSign,
+    targetTab: 'BILLING_APIS',
+    problemSolved:
+      'Google Cloud public OAuth APIs (cloudbilling.googleapis.com and billingbudgets.googleapis.com) only expose consumed credits and budget alerts—they do not expose unspent promotional credit grant balances in real time, and multi-grant deduction is too complex to infer automatically.',
+    howItWorks: [
+      'Upload Remaining Bonus CSV: Download your 9-column Credits .csv file from console.cloud.google.com/billing/<id>/credits (Download CSV) and upload or paste it directly. The parser stores the exact Remaining value and Original value without automatic balance modification, and reminds you to upload a fresh CSV frequently to keep your balance current.',
+      'Automatic Expiration Date & Countdown Calculation: Dynamically calculates exact days remaining (Expiring in N days vs Available vs Expired), active CREDIT_TYPE_MONTHLY benefits, required daily burn rate ($/day) before expiration, and projected stranded credit dollars from each grant End date.',
+      '1-Click Reset & 2-Minute Non-Blocking Background Sync: Clicking Reset Bonus CSV empties all synced grants and cached ledger rows ($0.00). Entering the Billing tab returns the cached snapshot immediately (cached: true) without blocking on live API calls, while background polling refreshes live Cloud Billing telemetry every 2 minutes.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/billing-guardian (cached fast-path on page entry; ?refresh=true every 2m)',
+      'POST /api/project/:id/billing-guardian/sync-console-credits (9-column GCP Console Credits CSV parser)',
+      'POST /api/project/:id/billing-guardian/reset-console-credits (empties all grants & cached ledger rows)',
+    ],
+    billingImpact:
+      'Prevents promotional and GDE credits from expiring unused by tracking exact CSV balances alongside live expiration countdowns and required daily burn targets.',
+  },
 ];
 
 export default function InteractiveDocsGuide({

@@ -131,12 +131,21 @@ export function summarizeCreditLedger(grants = [], dailyBurnUsd = 0) {
   let expiringSoonCount = 0;
   let expiredUnusedUsd = 0;
   let expiredCount = 0;
+  let monthlyBenefitCount = 0;
+  let monthlyBenefitRemainingUsd = 0;
   let nearestExpiryDays = Infinity;
   let nearestExpiryGrant = null;
   let urgentWarningsCount = 0;
 
   for (const raw of grants) {
     const m = raw.metrics || computeGdeGrantMetrics(raw, dailyBurnUsd);
+    const isMonthlyBenefit =
+      String(raw.grantType || '').includes('MONTHLY') ||
+      String(raw.creditApplication || '').includes('MONTHLY') ||
+      String(raw.name || '')
+        .toLowerCase()
+        .includes('developer program premium benefit');
+
     if (m.isExpired) {
       expiredUnusedUsd += m.remaining;
       expiredCount += 1;
@@ -144,6 +153,11 @@ export function summarizeCreditLedger(grants = [], dailyBurnUsd = 0) {
       activeOriginalUsd += m.initial;
       activeRemainingUsd += m.remaining;
       activeCount += 1;
+
+      if (isMonthlyBenefit && m.remaining > 0) {
+        monthlyBenefitCount += 1;
+        monthlyBenefitRemainingUsd += m.remaining;
+      }
 
       if (
         m.remaining > 0 &&
@@ -175,6 +189,8 @@ export function summarizeCreditLedger(grants = [], dailyBurnUsd = 0) {
     expiringSoonCount,
     expiredUnusedUsd,
     expiredCount,
+    monthlyBenefitCount,
+    monthlyBenefitRemainingUsd,
     nearestExpiryDays: Number.isFinite(nearestExpiryDays)
       ? nearestExpiryDays
       : null,
@@ -183,35 +199,66 @@ export function summarizeCreditLedger(grants = [], dailyBurnUsd = 0) {
   };
 }
 
-const IDB_NAME = 'CloudPulseBillingGuardianDB';
+const IDB_NAME = 'CloudPulseBillingGuardianDB_v2';
 const IDB_VERSION = 1;
 
 function openBillingIndexedDb() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (typeof window === 'undefined' || !window.indexedDB) {
       resolve(null);
       return;
     }
-    const req = window.indexedDB.open(IDB_NAME, IDB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains('tempJsonSnapshots')) {
-        db.createObjectStore('tempJsonSnapshots', { keyPath: 'projectId' });
-      }
-      if (!db.objectStoreNames.contains('billingAccounts')) {
-        db.createObjectStore('billingAccounts', {
-          keyPath: 'billingAccountId',
-        });
-      }
-      if (!db.objectStoreNames.contains('costLedgerRows')) {
-        db.createObjectStore('costLedgerRows', { keyPath: 'rowKey' });
-      }
-      if (!db.objectStoreNames.contains('aggregatedDecisions')) {
-        db.createObjectStore('aggregatedDecisions', { keyPath: 'projectId' });
+    let settled = false;
+    const finish = (val) => {
+      if (!settled) {
+        settled = true;
+        resolve(val);
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    const timer = setTimeout(() => finish(null), 1500);
+    try {
+      const req = window.indexedDB.open(IDB_NAME, IDB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('tempJsonSnapshots')) {
+          db.createObjectStore('tempJsonSnapshots', { keyPath: 'projectId' });
+        }
+        if (!db.objectStoreNames.contains('billingAccounts')) {
+          db.createObjectStore('billingAccounts', {
+            keyPath: 'billingAccountId',
+          });
+        }
+        if (!db.objectStoreNames.contains('billingBudgets')) {
+          db.createObjectStore('billingBudgets', { keyPath: 'name' });
+        }
+        if (!db.objectStoreNames.contains('consoleCreditGrants')) {
+          db.createObjectStore('consoleCreditGrants', { keyPath: 'grantKey' });
+        }
+        if (!db.objectStoreNames.contains('costLedgerRows')) {
+          db.createObjectStore('costLedgerRows', { keyPath: 'rowKey' });
+        }
+        if (!db.objectStoreNames.contains('aggregatedDecisions')) {
+          db.createObjectStore('aggregatedDecisions', { keyPath: 'projectId' });
+        }
+      };
+      req.onsuccess = () => {
+        clearTimeout(timer);
+        const db = req.result;
+        db.onversionchange = () => db.close();
+        finish(db);
+      };
+      req.onerror = () => {
+        clearTimeout(timer);
+        finish(null);
+      };
+      req.onblocked = () => {
+        clearTimeout(timer);
+        finish(null);
+      };
+    } catch {
+      clearTimeout(timer);
+      finish(null);
+    }
   });
 }
 
@@ -220,6 +267,7 @@ export function programmaticallyAggregateBillingData({
   billingInfo = {},
   billingAccounts = [],
   liveBillingInsights = null,
+  syncedConsoleCredits = [],
   envelopeOverride = {},
   dailyBurnUsd = 0,
 }) {
@@ -232,6 +280,15 @@ export function programmaticallyAggregateBillingData({
   const monthlyRows = Array.isArray(liveBillingInsights?.monthlyTrendRows)
     ? liveBillingInsights.monthlyTrendRows
     : [];
+  const billingBudgets = Array.isArray(liveBillingInsights?.billingBudgets)
+    ? liveBillingInsights.billingBudgets
+    : [];
+  const consoleCredits =
+    Array.isArray(syncedConsoleCredits) && syncedConsoleCredits.length > 0
+      ? syncedConsoleCredits
+      : Array.isArray(liveBillingInsights?.consoleCredits)
+      ? liveBillingInsights.consoleCredits
+      : [];
 
   let grossUsageUsd = 0;
   let totalCreditUsd = 0;
@@ -283,37 +340,39 @@ export function programmaticallyAggregateBillingData({
     derivedAnnualEndDate: `${currentYear}-12-31`,
   };
 
-  // Programmatically derive the active grant pool from cross-account credit history
-  // (or user override if set), and subtract live active credits consumed (`absCreditsUsd`).
-  const overrideInit = Number(envelopeOverride?.initialGrantUsd) || 0;
-  const derivedPoolUsd =
-    overrideInit > 0
-      ? overrideInit
-      : Number(Math.max(absCrossCreditsUsd, grossUsageUsd).toFixed(2));
-  const derivedRemainingUsd = Math.max(
-    0,
-    Number((derivedPoolUsd - absCreditsUsd).toFixed(2))
-  );
-
-  const effectiveStartDate =
-    envelopeOverride?.startDate ||
-    temporalWindow.derivedStartDate ||
-    `${currentYear}-01-01`;
-  const effectiveExpirationDate =
-    envelopeOverride?.expirationDate ||
-    temporalWindow.derivedSprintEndDate ||
-    lastDayOfCurrentMonth;
   const effectiveThresholdDays = Math.max(
     1,
-    Number(envelopeOverride?.alertDaysThreshold) ||
-      getDaysUntil(effectiveExpirationDate) ||
-      1
+    Number(envelopeOverride?.alertDaysThreshold) || 30
   );
 
   const grants = [];
-  if (derivedPoolUsd > 0) {
+
+  // 1. Use the exact Remaining Bonus grants from the user's uploaded/pasted CSV without automatic balance modification, while calculating expiration countdowns dynamically
+  if (consoleCredits.length > 0) {
+    consoleCredits.forEach((c, idx) => {
+      grants.push({
+        id: c.id || `console-${c.creditCode || idx}`,
+        name: c.name || 'Promotional Credit',
+        grantType: c.grantType || 'PROMOTIONAL',
+        creditCode: c.creditCode || c.creditId || '',
+        initialAmountUsd: Math.max(0, Number(c.initialAmountUsd ?? 0)),
+        remainingAmountUsd: Math.max(0, Number(c.remainingAmountUsd ?? 0)),
+        startDate: c.startDate || temporalWindow.derivedStartDate,
+        expirationDate: c.expirationDate || temporalWindow.derivedAnnualEndDate,
+        creditApplication:
+          c.creditApplication ||
+          `${c.grantType || 'PROMOTIONAL'} · ${c.scope || 'Billing account'}`,
+        alertDaysThreshold: effectiveThresholdDays,
+      });
+    });
+  } else if (Number(envelopeOverride?.initialGrantUsd) > 0) {
+    const overrideInit = Number(envelopeOverride.initialGrantUsd);
+    const derivedRemainingUsd = Math.max(
+      0,
+      Number((overrideInit - absCreditsUsd).toFixed(2))
+    );
     grants.push({
-      id: 'idb-aggregated-active-grant',
+      id: 'idb-custom-envelope-grant',
       name:
         envelopeOverride?.name ||
         (billingInfo?.displayName &&
@@ -321,19 +380,25 @@ export function programmaticallyAggregateBillingData({
           ? `${billingInfo.displayName} Promotional Credit Pool`
           : 'Active GDE Promotional Credit Pool'),
       grantType: 'GDE_BONUS',
-      creditCode: billingInfo?.billingAccountId || 'IDB-AGGREGATED',
-      initialAmountUsd: derivedPoolUsd,
+      creditCode: billingInfo?.billingAccountId || 'IDB-CUSTOM',
+      initialAmountUsd: overrideInit,
       remainingAmountUsd: derivedRemainingUsd,
-      startDate: effectiveStartDate,
-      expirationDate: effectiveExpirationDate,
-      creditApplication: `IndexedDB Aggregated (-$${absCreditsUsd.toFixed(
+      startDate:
+        envelopeOverride?.startDate ||
+        temporalWindow.derivedStartDate ||
+        `${currentYear}-01-01`,
+      expirationDate:
+        envelopeOverride?.expirationDate ||
+        temporalWindow.derivedSprintEndDate ||
+        lastDayOfCurrentMonth,
+      creditApplication: `Custom Pool (-$${absCreditsUsd.toFixed(
         2
-      )} active used · Annual cycle ${temporalWindow.derivedAnnualEndDate})`,
+      )} active used from costs.v2)`,
       alertDaysThreshold: effectiveThresholdDays,
     });
   }
 
-  // Also include historical/closed dated or exhausted bonus accounts discovered from `gcloud billing accounts list`
+  // Also include historical/closed dated or exhausted bonus accounts discovered from `gcloud billing accounts list` if not already in consoleCredits
   const closedBonusAcct = billingAccounts.find(
     (a) =>
       !a.open &&
@@ -341,7 +406,11 @@ export function programmaticallyAggregateBillingData({
         String(a.displayName || '').toLowerCase().includes('bonus') ||
         String(a.displayName || '').toLowerCase().includes('gdp credit'))
   );
-  if (closedBonusAcct && historicalClosedCreditsUsd > 0) {
+  if (
+    consoleCredits.length === 0 &&
+    closedBonusAcct &&
+    historicalClosedCreditsUsd > 0
+  ) {
     grants.push({
       id: `idb-historical-${closedBonusAcct.billingAccountId}`,
       name: closedBonusAcct.displayName,
@@ -350,11 +419,12 @@ export function programmaticallyAggregateBillingData({
         closedBonusAcct.parsedCouponCode || closedBonusAcct.billingAccountId,
       initialAmountUsd: historicalClosedCreditsUsd,
       remainingAmountUsd: 0,
-      startDate: effectiveStartDate,
-      expirationDate: closedBonusAcct.parsedDateTag || effectiveStartDate,
+      startDate: temporalWindow.derivedStartDate,
+      expirationDate:
+        closedBonusAcct.parsedDateTag || temporalWindow.derivedStartDate,
       creditApplication: `Closed Bonus Account (-$${historicalClosedCreditsUsd.toFixed(
         2
-      )} exhausted)`,
+      )} consumed in costs.v2)`,
       alertDaysThreshold: effectiveThresholdDays,
     });
   }
@@ -365,37 +435,46 @@ export function programmaticallyAggregateBillingData({
   }));
 
   const ledgerSummary = summarizeCreditLedger(enrichedGrants, dailyBurnUsd);
-  const activeGrantMetrics = enrichedGrants[0]?.metrics || null;
+  const nearestGrant = ledgerSummary.nearestExpiryGrant;
 
-  let decisionVerdict = 'OPTIMAL_BURN_PACE';
+  let decisionVerdict = 'SYNC_CONSOLE_CREDITS_NEEDED';
   let decisionMessage =
-    'Active credit consumption is aligned with your current billing window.';
-  if (activeGrantMetrics && activeGrantMetrics.remaining > 0) {
-    if (
-      activeGrantMetrics.daysLeft !== null &&
-      activeGrantMetrics.strandedMoneyUsd > 0
-    ) {
+    'Google Cloud OAuth APIs (`costs.v2` & `billingbudgets.googleapis.com/v1`) only expose consumed credits and budgets. Click "Sync Console Credits" to paste your `console.cloud.google.com/billing` Credits table into IndexedDB.';
+  if (nearestGrant && nearestGrant.metrics.remaining > 0) {
+    const m = nearestGrant.metrics;
+    if (m.daysLeft !== null && m.strandedMoneyUsd > 0) {
       decisionVerdict = 'ACCELERATE_WORKLOADS_BEFORE_EXPIRY';
-      decisionMessage = `$${activeGrantMetrics.remaining.toFixed(
+      decisionMessage = `$${m.remaining.toFixed(2)} USD in "${
+        nearestGrant.name
+      }" expires in ${m.daysLeft} days (${formatHumanDate(
+        nearestGrant.expirationDate
+      )})${
+        ledgerSummary.monthlyBenefitCount > 0
+          ? `, plus ${ledgerSummary.monthlyBenefitCount}× monthly benefits ($${ledgerSummary.monthlyBenefitRemainingUsd.toFixed(
+              2
+            )} USD)`
+          : ''
+      }. Target $${m.requiredDailyBurnToUseAll.toFixed(
         2
-      )} USD remains in your active credit pool with ${
-        activeGrantMetrics.daysLeft
-      } days left in the current window (${formatHumanDate(
-        effectiveExpirationDate
-      )}). Scale Vertex AI / Gemini batch workloads to $${activeGrantMetrics.requiredDailyBurnToUseAll.toFixed(
+      )}/day before expiry so $${m.strandedMoneyUsd.toFixed(
         2
-      )}/day so $${activeGrantMetrics.strandedMoneyUsd.toFixed(
-        2
-      )} does not go unused.`;
-    } else if (activeGrantMetrics.willExhaustBeforeExpiry) {
+      )} does not expire unused.`;
+    } else if (m.willExhaustBeforeExpiry) {
       decisionVerdict = 'CREDIT_EXHAUSTION_WARNING';
       decisionMessage = `At $${dailyBurnUsd.toFixed(
         2
-      )}/day, your remaining $${activeGrantMetrics.remaining.toFixed(
+      )}/day, your remaining $${m.remaining.toFixed(
         2
-      )} USD credit pool will exhaust in ~${Math.ceil(
-        activeGrantMetrics.daysUntilExhausted
-      )} days before ${formatHumanDate(effectiveExpirationDate)}.`;
+      )} USD credit grant will exhaust in ~${Math.ceil(
+        m.daysUntilExhausted
+      )} days before ${formatHumanDate(nearestGrant.expirationDate)}.`;
+    } else {
+      decisionVerdict = 'OPTIMAL_BURN_PACE';
+      decisionMessage = `$${ledgerSummary.totalRemainingUsd.toFixed(
+        2
+      )} USD active promotional credits available across ${
+        ledgerSummary.activeCount
+      } grant(s).`;
     }
   }
 
@@ -404,6 +483,8 @@ export function programmaticallyAggregateBillingData({
     rows: openRows.length > 0 ? openRows : crossRows,
     crossRows,
     monthlyRows,
+    billingBudgets,
+    consoleCreditsCount: consoleCredits.length,
     grossUsageUsd,
     totalCreditUsd,
     absCreditsUsd,
@@ -415,10 +496,11 @@ export function programmaticallyAggregateBillingData({
     crossGrossUsd,
     crossSubtotalUsd,
     coveragePct,
-    derivedPoolUsd,
-    derivedRemainingUsd,
-    effectiveStartDate,
-    effectiveExpirationDate,
+    derivedPoolUsd: ledgerSummary.totalInitialUsd,
+    derivedRemainingUsd: ledgerSummary.totalRemainingUsd,
+    effectiveStartDate: temporalWindow.derivedStartDate,
+    effectiveExpirationDate:
+      nearestGrant?.expirationDate || temporalWindow.derivedSprintEndDate,
     temporalWindow,
     tempJsonPath: liveBillingInsights?.tempJsonPath || '',
     summary: liveBillingInsights?.summary || '',
@@ -432,7 +514,8 @@ export function programmaticallyAggregateBillingData({
 
   return {
     ...ledgerSummary,
-    hasImportedCredits: enrichedGrants.length > 0,
+    hasImportedCredits:
+      consoleCredits.length > 0 || Number(envelopeOverride?.initialGrantUsd) > 0,
     enrichedGrants,
     liveCostMetrics,
   };
@@ -443,6 +526,7 @@ export async function syncAndAggregateBillingIndexedDb({
   billingInfo,
   billingAccounts,
   liveBillingInsights,
+  syncedConsoleCredits = [],
   envelopeOverride,
   dailyBurnUsd = 0,
 }) {
@@ -451,6 +535,7 @@ export async function syncAndAggregateBillingIndexedDb({
     billingInfo,
     billingAccounts,
     liveBillingInsights,
+    syncedConsoleCredits,
     envelopeOverride,
     dailyBurnUsd,
   });
@@ -462,6 +547,8 @@ export async function syncAndAggregateBillingIndexedDb({
         [
           'tempJsonSnapshots',
           'billingAccounts',
+          'billingBudgets',
+          'consoleCreditGrants',
           'costLedgerRows',
           'aggregatedDecisions',
         ],
@@ -480,6 +567,27 @@ export async function syncAndAggregateBillingIndexedDb({
         if (acct.billingAccountId) {
           acctStore.put(acct);
         }
+      }
+
+      const budgetStore = tx.objectStore('billingBudgets');
+      for (const b of liveBillingInsights?.billingBudgets || []) {
+        if (b.name) {
+          budgetStore.put({ ...b, projectId });
+        }
+      }
+
+      const grantStore = tx.objectStore('consoleCreditGrants');
+      grantStore.clear();
+      const creditsToSave =
+        Array.isArray(syncedConsoleCredits) && syncedConsoleCredits.length > 0
+          ? syncedConsoleCredits
+          : liveBillingInsights?.consoleCredits || [];
+      for (const g of creditsToSave) {
+        grantStore.put({
+          ...g,
+          grantKey: `${projectId}-${g.id || g.creditCode}`,
+          projectId,
+        });
       }
 
       const rowStore = tx.objectStore('costLedgerRows');
@@ -514,6 +622,8 @@ export async function syncAndAggregateBillingIndexedDb({
         totalInitialUsd: aggregated.totalInitialUsd,
         totalRemainingUsd: aggregated.totalRemainingUsd,
         nearestExpiryDays: aggregated.nearestExpiryDays,
+        monthlyBenefitCount: aggregated.monthlyBenefitCount,
+        monthlyBenefitRemainingUsd: aggregated.monthlyBenefitRemainingUsd,
         decisionVerdict: aggregated.liveCostMetrics.decisionVerdict,
         decisionMessage: aggregated.liveCostMetrics.decisionMessage,
       });
@@ -544,9 +654,16 @@ export default function BillingAccountCreditGuardian({
   });
   const [billingAccounts, setBillingAccounts] = useState([]);
   const [liveBillingInsights, setLiveBillingInsights] = useState(null);
+  const [syncedConsoleCredits, setSyncedConsoleCredits] = useState([]);
+  const [showConsoleSyncDrawer, setShowConsoleSyncDrawer] = useState(false);
+  const [consolePasteText, setConsolePasteText] = useState('');
+  const [syncingConsoleCredits, setSyncingConsoleCredits] = useState(false);
+  const [syncError, setSyncError] = useState('');
   const [idbStats, setIdbStats] = useState({
     synced: false,
     accountsCount: 0,
+    budgetsCount: 0,
+    grantsCount: 0,
     ledgerRowsCount: 0,
     tempJsonPath: '',
   });
@@ -586,13 +703,16 @@ export default function BillingAccountCreditGuardian({
     });
   };
 
-  // Hydrate cached snapshot from IndexedDB immediately on mount before network completes
+  // Hydrate cached snapshot & synced console credits from IndexedDB immediately on mount
   useEffect(() => {
     let active = true;
     openBillingIndexedDb()
       .then((db) => {
         if (!db || !projectId) return;
-        const tx = db.transaction(['tempJsonSnapshots'], 'readonly');
+        const tx = db.transaction(
+          ['tempJsonSnapshots', 'consoleCreditGrants'],
+          'readonly'
+        );
         const req = tx.objectStore('tempJsonSnapshots').get(projectId);
         req.onsuccess = () => {
           if (!active || !req.result) return;
@@ -604,6 +724,28 @@ export default function BillingAccountCreditGuardian({
           if (req.result.liveBillingInsights) {
             setLiveBillingInsights((prev) =>
               prev || req.result.liveBillingInsights
+            );
+            if (
+              Array.isArray(req.result.liveBillingInsights.consoleCredits) &&
+              req.result.liveBillingInsights.consoleCredits.length > 0
+            ) {
+              setSyncedConsoleCredits((prev) =>
+                prev.length > 0
+                  ? prev
+                  : req.result.liveBillingInsights.consoleCredits
+              );
+            }
+          }
+        };
+        const grantsReq = tx.objectStore('consoleCreditGrants').getAll();
+        grantsReq.onsuccess = () => {
+          if (!active || !Array.isArray(grantsReq.result)) return;
+          const matching = grantsReq.result.filter(
+            (g) => g.projectId === projectId
+          );
+          if (matching.length > 0) {
+            setSyncedConsoleCredits((prev) =>
+              prev.length > 0 ? prev : matching
             );
           }
         };
@@ -617,7 +759,9 @@ export default function BillingAccountCreditGuardian({
   const loadBillingGuardian = useCallback(
     async (forceRefresh = false) => {
       if (!projectId) return;
-      setLoading(true);
+      if (forceRefresh) {
+        setLoading(true);
+      }
       try {
         const res = await axios.get(
           `/api/project/${encodeURIComponent(projectId)}/billing-guardian${
@@ -632,19 +776,143 @@ export default function BillingAccountCreditGuardian({
         }
         if (res.data?.liveBillingInsights) {
           setLiveBillingInsights(res.data.liveBillingInsights);
+          if (
+            Array.isArray(res.data.liveBillingInsights.consoleCredits) &&
+            res.data.liveBillingInsights.consoleCredits.length > 0
+          ) {
+            setSyncedConsoleCredits(
+              res.data.liveBillingInsights.consoleCredits
+            );
+          }
         }
       } catch {
         // ignore network errors
       } finally {
-        setLoading(false);
+        if (forceRefresh) {
+          setLoading(false);
+        }
       }
     },
     [projectId]
   );
 
+  // On page entry: load cached snapshot without triggering live APIs; refresh live APIs automatically every 2 minutes (120,000 ms)
   useEffect(() => {
     loadBillingGuardian(false);
+    const intervalId = setInterval(() => {
+      loadBillingGuardian(true);
+    }, 2 * 60 * 1000);
+    return () => clearInterval(intervalId);
   }, [loadBillingGuardian]);
+
+  const handleSyncConsoleCredits = async (overrideRawText) => {
+    const rawToParse =
+      typeof overrideRawText === 'string' ? overrideRawText : consolePasteText;
+    if (!rawToParse.trim()) {
+      setSyncError(
+        'Upload your Credits CSV file or paste the CSV / Credits table text from console.cloud.google.com/billing first.'
+      );
+      return;
+    }
+    setSyncingConsoleCredits(true);
+    setSyncError('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/sync-console-credits`,
+        { rawText: rawToParse }
+      );
+      if (res.data?.ok && Array.isArray(res.data.consoleCredits)) {
+        setSyncedConsoleCredits(res.data.consoleCredits);
+        setLiveBillingInsights((prev) =>
+          prev
+            ? { ...prev, consoleCredits: res.data.consoleCredits }
+            : { consoleCredits: res.data.consoleCredits }
+        );
+        setConsolePasteText('');
+        setShowConsoleSyncDrawer(false);
+        if (onShowToast) {
+          onShowToast(
+            `Parsed & synced ${res.data.consoleCredits.length} credit grants to Temp JSON and IndexedDB.`
+          );
+        }
+      }
+    } catch (err) {
+      setSyncError(
+        err?.response?.data?.error ||
+          err.message ||
+          'Failed to parse Console Credits CSV / table.'
+      );
+    } finally {
+      setSyncingConsoleCredits(false);
+    }
+  };
+
+  const handleUploadCreditsCsvFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = String(ev.target?.result || '');
+      if (text.trim()) {
+        setConsolePasteText(text);
+        handleSyncConsoleCredits(text);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleClearConsoleCredits = async () => {
+    try {
+      await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/reset-console-credits`
+      );
+    } catch {
+      // ignore network error and still reset local + IndexedDB state immediately
+    }
+    setSyncedConsoleCredits([]);
+    setLiveBillingInsights(null);
+    setGdeEnvelope({
+      name: '',
+      initialGrantUsd: '',
+      startDate: '',
+      expirationDate: '',
+      alertDaysThreshold: '',
+    });
+    localStorage.removeItem('cloudpulse_gde_bonus_envelope_v2');
+    try {
+      const db = await openBillingIndexedDb();
+      if (db) {
+        const tx = db.transaction(
+          [
+            'consoleCreditGrants',
+            'costCreditLedger',
+            'tempJsonSnapshots',
+            'aggregatedDecisions',
+          ],
+          'readwrite'
+        );
+        tx.objectStore('consoleCreditGrants').clear();
+        tx.objectStore('costCreditLedger').clear();
+        tx.objectStore('tempJsonSnapshots').clear();
+        tx.objectStore('aggregatedDecisions').clear();
+      }
+    } catch {
+      // ignore
+    }
+    setConsolePasteText('');
+    setSyncError('');
+    setShowConsoleSyncDrawer(true);
+    if (onShowToast) {
+      onShowToast(
+        'Reset all Remaining Bonus credits. Upload your Credits CSV file to load your balance.'
+      );
+    }
+  };
 
   const aggregated = useMemo(() => {
     return programmaticallyAggregateBillingData({
@@ -652,6 +920,7 @@ export default function BillingAccountCreditGuardian({
       billingInfo,
       billingAccounts,
       liveBillingInsights,
+      syncedConsoleCredits,
       envelopeOverride: gdeEnvelope,
       dailyBurnUsd,
     });
@@ -660,6 +929,7 @@ export default function BillingAccountCreditGuardian({
     billingInfo,
     billingAccounts,
     liveBillingInsights,
+    syncedConsoleCredits,
     gdeEnvelope,
     dailyBurnUsd,
   ]);
@@ -668,23 +938,27 @@ export default function BillingAccountCreditGuardian({
   const summary = aggregated;
 
   useEffect(() => {
-    if (!liveBillingInsights) return;
+    if (!liveBillingInsights && syncedConsoleCredits.length === 0) return;
     syncAndAggregateBillingIndexedDb({
       projectId,
       billingInfo,
       billingAccounts,
       liveBillingInsights,
+      syncedConsoleCredits,
       envelopeOverride: gdeEnvelope,
       dailyBurnUsd,
     }).then(() => {
-      const openCount = (liveBillingInsights.costCreditRows || []).length;
-      const crossCount = (liveBillingInsights.crossAccountRows || []).length;
-      const monthCount = (liveBillingInsights.monthlyTrendRows || []).length;
+      const openCount = (liveBillingInsights?.costCreditRows || []).length;
+      const crossCount = (liveBillingInsights?.crossAccountRows || []).length;
+      const monthCount = (liveBillingInsights?.monthlyTrendRows || []).length;
+      const budgetsCount = (liveBillingInsights?.billingBudgets || []).length;
       setIdbStats({
         synced: true,
         accountsCount: billingAccounts.length,
+        budgetsCount,
+        grantsCount: enrichedGrants.length,
         ledgerRowsCount: openCount + crossCount + monthCount,
-        tempJsonPath: liveBillingInsights.tempJsonPath || '',
+        tempJsonPath: liveBillingInsights?.tempJsonPath || '',
       });
     });
   }, [
@@ -692,6 +966,8 @@ export default function BillingAccountCreditGuardian({
     billingInfo,
     billingAccounts,
     liveBillingInsights,
+    syncedConsoleCredits,
+    enrichedGrants.length,
     gdeEnvelope,
     dailyBurnUsd,
   ]);
@@ -785,15 +1061,19 @@ ORDER BY
     }
   };
 
+  const consoleCreditsUrl = billingInfo.billingAccountId
+    ? `https://console.cloud.google.com/billing/${billingInfo.billingAccountId}/credits`
+    : 'https://console.cloud.google.com/billing';
+
   return (
     <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-5">
-      {/* Header Row: Live Billing Account Identity + Sync Action */}
+      {/* Header Row: Live Billing Account Identity + Sync Actions */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <h2 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
-              Cloud Billing Account & Promotional Credits Guardian
+              Remaining Bonus & Cloud Billing Guardian
             </h2>
             {billingInfo.billingAccountId && (
               <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
@@ -812,28 +1092,53 @@ ORDER BY
             {idbStats.synced && (
               <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
                 INDEXEDDB SYNCED ({idbStats.accountsCount} accts ·{' '}
+                {idbStats.budgetsCount} budgets · {idbStats.grantsCount} grants ·{' '}
                 {idbStats.ledgerRowsCount} rows)
               </span>
             )}
           </div>
           <p className="text-xs text-zinc-500">
-            Programmatically parses{' '}
-            <code className="font-mono text-zinc-700 dark:text-zinc-300">
-              gcloud billing accounts list
-            </code>{' '}
-            +{' '}
-            <code className="font-mono text-zinc-700 dark:text-zinc-300">
-              cloudbilling.googleapis.com/v1beta:generateInsights
-            </code>{' '}
-            → Temp JSON (
-            <code className="font-mono">
-              {idbStats.tempJsonPath || '/tmp/cloudpulse-billing-insights.json'}
-            </code>
-            ) → IndexedDB (<code className="font-mono">{IDB_NAME}</code>) aggregation.
+            <strong>Remaining Bonus</strong> balances are loaded directly from your uploaded Google Cloud Console Credits <code className="font-mono">.csv</code> file without automatic balance modification — please <strong>upload a fresh CSV frequently</strong> to update your remaining bonus amount, while <strong>expiration dates & countdowns are calculated automatically</strong>.
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <label className="h-9 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all">
+            <Database className="w-3.5 h-3.5 shrink-0" />
+            <span>Upload Remaining Bonus CSV</span>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              onChange={handleUploadCreditsCsvFile}
+              className="hidden"
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() => setShowConsoleSyncDrawer((p) => !p)}
+            className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+          >
+            <CreditCard className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              {syncedConsoleCredits.length > 0
+                ? `Paste / Update Bonus CSV (${syncedConsoleCredits.length} Rows)`
+                : 'Paste Remaining Bonus CSV'}
+            </span>
+          </button>
+
+          {(syncedConsoleCredits.length > 0 || summary.hasImportedCredits) && (
+            <button
+              type="button"
+              onClick={handleClearConsoleCredits}
+              className="h-9 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+              title="Clear all uploaded Remaining Bonus rows and upload a new CSV"
+            >
+              <XCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>Reset Bonus CSV</span>
+            </button>
+          )}
+
           {billingAccounts.length > 0 && (
             <button
               type="button"
@@ -850,14 +1155,105 @@ ORDER BY
             onClick={() => loadBillingGuardian(true)}
             disabled={loading}
             className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+            title="Live APIs auto-refresh every 2 minutes in the background without blocking page entry"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`}
             />
-            <span>Sync Live API → Temp JSON → IndexedDB</span>
+            <span>Refresh Live APIs (Auto 2m)</span>
           </button>
         </div>
       </div>
+
+      {/* Remaining Bonus CSV Sync Drawer: Upload or Paste the CSV exported from `console.cloud.google.com/billing/<id>/credits` */}
+      {(showConsoleSyncDrawer || !summary.hasImportedCredits) && (
+        <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/30 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-0.5">
+              <div className="text-xs font-mono font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Remaining Bonus CSV Upload (`Credit name,Status,Currency,Percent remaining,Remaining value,Original value,Start date,End date,Credit application type`)
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                Because Google’s real-time OAuth APIs do not expose unspent credit grant balances and multi-grant deduction is too complex to calculate automatically, <strong>Remaining Bonus</strong> displays the exact <code className="font-mono">Remaining value</code> from your uploaded CSV while calculating <strong>expiration dates & countdowns automatically</strong>. Please download and <strong>upload your Credits <code className="font-mono">.csv</code> file frequently</strong> from your{' '}
+                <a
+                  href={consoleCreditsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono font-bold underline text-blue-600 dark:text-blue-400"
+                >
+                  GCP Console Billing Credits page
+                </a>{' '}
+                (click <strong>Download CSV</strong>) to keep your Remaining Bonus up to date:
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <a
+                href={consoleCreditsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="h-8 px-3 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-xs font-mono font-bold inline-flex items-center justify-center whitespace-nowrap shrink-0"
+              >
+                1. Open {billingInfo.billingAccountId || 'Billing'} Credits ↗
+              </a>
+              <label className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer">
+                <Database className="w-3.5 h-3.5 shrink-0" />
+                <span>2a. Upload Remaining Bonus .CSV</span>
+                <input
+                  type="file"
+                  accept=".csv,text/csv,text/plain"
+                  onChange={handleUploadCreditsCsvFile}
+                  className="hidden"
+                />
+              </label>
+              {(syncedConsoleCredits.length > 0 || summary.hasImportedCredits) && (
+                <button
+                  type="button"
+                  onClick={handleClearConsoleCredits}
+                  className="h-8 px-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 text-xs font-mono font-bold cursor-pointer"
+                >
+                  Reset / Clear Bonus ({enrichedGrants.length})
+                </button>
+              )}
+            </div>
+          </div>
+
+          <textarea
+            rows={5}
+            value={consolePasteText}
+            onChange={(e) => setConsolePasteText(e.target.value)}
+            placeholder={'2b. Or paste your Google Cloud Billing Credits CSV here:\nCredit name,Status,Currency,Percent remaining,Remaining value,Original value,Start date,End date,Credit application type\nPromotional Credit Grant,Available,$,100,500.00,500.00,2026-01-01,2026-12-31,Net pricing,'}
+            className="w-full p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500"
+          />
+
+          {syncError && (
+            <div className="text-xs font-mono text-red-600 dark:text-red-400">
+              {syncError}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-mono text-zinc-500">
+              Saves exact CSV Remaining Bonus values (no automatic balance modification) + auto-calculates expiration countdowns.
+            </span>
+            <button
+              type="button"
+              onClick={() => handleSyncConsoleCredits()}
+              disabled={syncingConsoleCredits}
+              className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                {syncingConsoleCredits
+                  ? 'Parsing & Saving Bonus CSV...'
+                  : '3. Save Remaining Bonus CSV'}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Live Discovered Cloud Billing Accounts Drawer (from gcloud billing accounts list) */}
       {showAccountsDrawer && billingAccounts.length > 0 && (
@@ -908,104 +1304,11 @@ ORDER BY
         </div>
       )}
 
-      {/* Programmatic IndexedDB Aggregation & Calibration Bar */}
-      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
-            Programmatic IndexedDB Credit Pool Aggregation (`Remaining = Aggregated Pool $${liveCostMetrics.derivedPoolUsd.toFixed(
-              2
-            )} - Active Used $${liveCostMetrics.absCreditsUsd.toFixed(2)} = $${liveCostMetrics.derivedRemainingUsd.toFixed(
-              2
-            )}`)
-          </div>
-          <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
-            Active Open Credits Used: -${liveCostMetrics.absCreditsUsd.toFixed(2)}{' '}
-            USD · Cross-Account Pool: $
-            {liveCostMetrics.absCrossCreditsUsd.toFixed(2)} USD
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-          <div>
-            <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-              Grant / Pool Label (Auto-parsed or Custom)
-            </label>
-            <input
-              type="text"
-              value={gdeEnvelope.name}
-              placeholder={
-                billingInfo.displayName
-                  ? `${billingInfo.displayName} Promotional Credit Pool`
-                  : 'Active GDE Promotional Credit Pool'
-              }
-              onChange={(e) => updateGdeEnvelope({ name: e.target.value })}
-              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-              Credit Pool Baseline ($ USD — Auto: $
-              {liveCostMetrics.absCrossCreditsUsd.toFixed(2)})
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={gdeEnvelope.initialGrantUsd}
-              placeholder={liveCostMetrics.absCrossCreditsUsd.toFixed(2)}
-              onChange={(e) =>
-                updateGdeEnvelope({
-                  initialGrantUsd: e.target.value,
-                })
-              }
-              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-              Active Cycle End Date (Auto:{' '}
-              {liveCostMetrics.effectiveExpirationDate})
-            </label>
-            <input
-              type="date"
-              value={
-                gdeEnvelope.expirationDate ||
-                liveCostMetrics.effectiveExpirationDate
-              }
-              onChange={(e) =>
-                updateGdeEnvelope({ expirationDate: e.target.value })
-              }
-              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-              Warn Me Before Expiry (Days)
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={gdeEnvelope.alertDaysThreshold}
-              placeholder="Days"
-              onChange={(e) =>
-                updateGdeEnvelope({
-                  alertDaysThreshold: e.target.value,
-                })
-              }
-              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 4 Dynamically Calculated KPI Cards: Money Remaining, Nearest Expiry Countdown, Stranded/Expired, Required Burn */}
+      {/* 4 Dynamically Calculated KPI Cards: Remaining Bonus, Nearest Expiry Countdown, Monthly Benefits / Budgets, Required Burn */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
         <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/30 space-y-1">
           <div className="flex items-center justify-between text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
-            <span>REMAINING GDE BONUS CREDITS</span>
+            <span>REMAINING BONUS (FROM CSV)</span>
             <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
           {summary.totalInitialUsd > 0 ? (
@@ -1024,19 +1327,45 @@ ORDER BY
                   })}
                 </span>
               </div>
-              <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
-                ${summary.totalInitialUsd.toFixed(2)} grant - $
-                {liveCostMetrics.absCreditsUsd.toFixed(2)} live API credits used
+              <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap">
+                <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
+                  {summary.activeCount} active grant(s)
+                  {summary.monthlyBenefitCount > 0
+                    ? ` · incl. ${summary.monthlyBenefitCount}× monthly ($${summary.monthlyBenefitRemainingUsd.toFixed(
+                        2
+                      )})`
+                    : ''}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <label className="px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold cursor-pointer">
+                    Upload CSV
+                    <input
+                      type="file"
+                      accept=".csv,text/csv,text/plain"
+                      onChange={handleUploadCreditsCsvFile}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleClearConsoleCredits}
+                    className="px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-mono font-bold cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+              <div className="text-[10px] font-mono text-amber-700 dark:text-amber-400 pt-0.5">
+                Upload fresh Credits CSV frequently to update balance · Expiry dates auto-calculated
               </div>
             </>
           ) : (
             <>
               <div className="text-sm font-mono font-bold text-amber-600 dark:text-amber-400">
-                Enter Initial Grant ($ USD) above
+                Upload Remaining Bonus CSV above
               </div>
               <div className="text-[11px] font-mono text-zinc-500">
-                Live API credits used so far: -$
-                {liveCostMetrics.absCreditsUsd.toFixed(2)} USD
+                Upload your GCP Billing Credits CSV frequently to track Remaining Bonus
               </div>
             </>
           )}
@@ -1046,26 +1375,35 @@ ORDER BY
           <div className="flex items-center justify-between text-[11px] font-mono text-amber-700 dark:text-amber-400 font-bold">
             <span>
               {summary.nearestExpiryDays !== null
-                ? `EXPIRES IN ${summary.nearestExpiryDays} DAYS`
-                : 'BONUS EXPIRATION COUNTDOWN'}
+                ? `EXPIRING IN ${summary.nearestExpiryDays} DAYS`
+                : 'NEAREST GRANT EXPIRATION'}
             </span>
             <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           </div>
-          {summary.nearestExpiryDays !== null ? (
+          {summary.nearestExpiryGrant ? (
             <>
               <div className="text-xl font-mono font-extrabold text-amber-600 dark:text-amber-400">
-                {summary.nearestExpiryDays} day
-                {summary.nearestExpiryDays === 1 ? '' : 's'} left
+                $
+                {summary.nearestExpiryGrant.metrics.remaining.toLocaleString(
+                  'en-US',
+                  {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }
+                )}
+                <span className="text-xs font-normal text-zinc-500 ml-1.5">
+                  ({summary.nearestExpiryDays}d left)
+                </span>
               </div>
               <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400 truncate">
-                Ends{' '}
-                {formatHumanDate(summary.nearestExpiryGrant?.expirationDate)}
+                {summary.nearestExpiryGrant.name} · Ends{' '}
+                {formatHumanDate(summary.nearestExpiryGrant.expirationDate)}
               </div>
             </>
           ) : (
             <>
               <div className="text-sm font-mono font-bold text-amber-600 dark:text-amber-400">
-                Set Bonus Expiration Date above
+                Awaiting Console Credits Sync
               </div>
               <div className="text-[11px] font-mono text-zinc-500">
                 Calculates exact days left & expiry warning
@@ -1076,21 +1414,37 @@ ORDER BY
 
         <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
           <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
-            <span>EXPIRED UNUSED CREDITS</span>
-            <XCircle className="w-3.5 h-3.5 text-red-500" />
+            <span>MONTHLY BENEFITS & LIVE BUDGETS</span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
           </div>
-          <div className="text-xl font-mono font-extrabold text-zinc-500 dark:text-zinc-400">
-            $
-            {summary.expiredUnusedUsd.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-            <span className="text-xs font-normal text-zinc-500 ml-1.5">
-              ({summary.expiredCount} expired)
-            </span>
+          <div className="text-xl font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+            {summary.monthlyBenefitCount > 0 ? (
+              <>
+                {summary.monthlyBenefitCount} × $
+                {(
+                  summary.monthlyBenefitRemainingUsd /
+                  summary.monthlyBenefitCount
+                ).toFixed(2)}
+                <span className="text-xs font-normal text-zinc-500 ml-1.5">
+                  (${summary.monthlyBenefitRemainingUsd.toFixed(2)} USD)
+                </span>
+              </>
+            ) : (
+              <>
+                {liveCostMetrics.billingBudgets.length} Budget
+                {liveCostMetrics.billingBudgets.length === 1 ? '' : 's'}
+                <span className="text-xs font-normal text-zinc-500 ml-1.5">
+                  (`billingbudgets.googleapis.com`)
+                </span>
+              </>
+            )}
           </div>
-          <div className="text-[11px] font-mono text-zinc-500">
-            Balance left unused after expiration date
+          <div className="text-[11px] font-mono text-zinc-500 truncate">
+            {summary.expiredCount > 0
+              ? `${summary.expiredCount} expired grant(s) ($${summary.expiredUnusedUsd.toFixed(
+                  2
+                )} unused)`
+              : `${liveCostMetrics.billingBudgets.length} live budget rule(s) active`}
           </div>
         </div>
 
@@ -1112,10 +1466,48 @@ ORDER BY
             </span>
           </div>
           <div className="text-[11px] font-mono text-zinc-500">
-            Target daily spend to use 100% before expiry
+            Target daily spend to use expiring grant before end date
           </div>
         </div>
       </div>
+
+      {/* Live Cloud Billing Budgets API Section (`billingbudgets.googleapis.com/v1`) */}
+      {liveCostMetrics.billingBudgets.length > 0 && (
+        <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">
+              Live Cloud Billing Budgets (`billingbudgets.googleapis.com/v1/{billingInfo.billingAccountId}/budgets`)
+            </span>
+            <span className="text-[11px] font-mono text-zinc-500">
+              {liveCostMetrics.billingBudgets.length} configured budget alert(s)
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {liveCostMetrics.billingBudgets.map((b) => (
+              <div
+                key={b.name}
+                className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
+              >
+                <div className="min-w-0">
+                  <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                    {b.displayName} — ${b.amountUsd.toFixed(2)} {b.currencyCode}/
+                    {b.calendarPeriod}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate">
+                    {b.creditTypesTreatment} · Thresholds:{' '}
+                    {b.thresholdPercents.map((p) => `${p}%`).join(', ')}
+                  </div>
+                </div>
+                {b.spendCapConfigured && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                    SPEND CAP
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Dynamic Urgent Warning Banner when a grant is expiring within threshold */}
       {summary.nearestExpiryGrant &&
@@ -1161,6 +1553,21 @@ ORDER BY
                     summary.nearestExpiryGrant.expirationDate
                   )}
                 </span>
+                {summary.monthlyBenefitCount > 0 && (
+                  <>
+                    {' '}
+                    (plus{' '}
+                    <span className="font-mono font-bold">
+                      {summary.monthlyBenefitCount} × $
+                      {(
+                        summary.monthlyBenefitRemainingUsd /
+                        summary.monthlyBenefitCount
+                      ).toFixed(2)}{' '}
+                      USD = ${summary.monthlyBenefitRemainingUsd.toFixed(2)} USD
+                    </span>{' '}
+                    in active monthly benefits)
+                  </>
+                )}
                 . At your current project burn rate (
                 <span className="font-mono font-bold">
                   ${dailyBurnUsd.toFixed(2)}/day
@@ -1240,6 +1647,13 @@ ORDER BY
                   {tab.label}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={handleClearConsoleCredits}
+                className="h-7 px-2.5 rounded-lg text-[11px] font-mono font-bold border bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 transition-all cursor-pointer whitespace-nowrap"
+              >
+                Reset All Credits
+              </button>
             </div>
           </div>
 
@@ -1254,7 +1668,7 @@ ORDER BY
                   <th className="py-2.5 px-3 text-right">Original value</th>
                   <th className="py-2.5 px-3">Start date</th>
                   <th className="py-2.5 px-3">End date</th>
-                  <th className="py-2.5 px-4">Credit application</th>
+                  <th className="py-2.5 px-4">Credit application type</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -1374,7 +1788,7 @@ ORDER BY
                       </td>
 
                       <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
-                        {grant.creditApplication || 'Net price'}
+                        {grant.creditApplication || 'Net pricing'}
                       </td>
                     </tr>
                   );

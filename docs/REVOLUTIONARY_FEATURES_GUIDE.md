@@ -220,5 +220,23 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   - **✋ Mandatory Human Approval Modal**: Requires explicit review of the exact `gcloud` command and human approval before any IAM privilege reduction is executed.
   - **🔑 Service Account `.json` Key & OAuth2 Token Kill-Switch Vault**: Dedicated top sub-tab switcher + compact collapsible IAM roles list so you can immediately inspect all Service Accounts, create & download a `.json` key, disable/re-enable a key to test breakage, permanently delete a leaked key, or trigger the **1-Click Emergency Key Purge + Active OAuth2 Token Revocation**.
 
+### 28. 🧑‍🔬 2026 Data Engineering Studio — Medallion ELT, Dataform/dbt SQLX, Dataplex Data Mesh & Slot Doctor (`DataEngineeringStudio.jsx`)
+- **Where to find it**: Top navigation tab **`Data Engineering 🧑‍🔬`**.
+- **How it Works**:
+  - **🥉🥈🥇 1-Canvas "Source-to-Gold" Medallion ELT Pipeline Builder**: Wire any source (`GCS Parquet/CSV/JSON`, `BigQuery Data Transfer Service`, `Pub/Sub Stream`, or `Cloud SQL / AlloyDB CDC`) into **Bronze (`BigLake External / Raw Landing`)** $\rightarrow$ **Silver (`Deduplicated, Typed & PII-Cleaned`)** $\rightarrow$ **Gold (`Partitioned + Clustered BI Mart`)** in 1 click, paired with an interactive **Workload Engine & FinOps Advisor** (`BigQuery ELT` vs. `Dataproc Serverless Spark 2.2` vs. `Dataflow` vs. `Cloud Workflows`).
+  - **📐 Dataform (`.sqlx`) & `dbt` (`.sql`) Auto-Clean Studio**: Generates copy-ready Dataform `.sqlx`, dbt `.sql`, and Executable BigQuery DDL with `QUALIFY ROW_NUMBER() OVER (...) = 1` deduplication, `SAFE_CAST` hygiene, and `TO_HEX(SHA256(...))` PII masking, plus 1-click Dataform Repository creation (`dataform.googleapis.com/v1beta1`).
+  - **🛡️ Dataplex Auto Data Profiling, Data Quality Scans & Data Mesh Products**: Launches native `dataplex.googleapis.com/v1` DataScans and Data Mesh Products (`gcloud 588.0.0`) and syncs `dbt` `manifest.json` lineage.
+  - **📜 Schema Drift Firewall & 🩺 BigQuery Slot Contention Doctor**: Generates non-breaking SQL View Adapters when source columns rename or re-type, audits live `INFORMATION_SCHEMA.JOBS_BY_PROJECT` telemetry, and deploys serverless **Cloud Workflows (`workflows.googleapis.com/v1`)** ELT DAGs (`~$0.05/mo` vs `$350/mo` Cloud Composer).
+
+### 29. 💳 Remaining Bonus & Cloud Billing Guardian (`BillingAccountCreditGuardian.jsx`)
+- **Where to find it**: Top navigation tab **`Billing & APIs 💳`** (or click the **`Remaining Bonus`** pill in the top header).
+- **Why it Works this Way**:
+  - Google Cloud's public OAuth APIs (`cloudbilling.googleapis.com/v1beta:generateInsights` and `billingbudgets.googleapis.com/v1`) only expose *consumed* promotional credits and budget rules—they do not expose unspent credit grant balances in real time, and multi-grant deduction is too complex to infer automatically.
+- **How it Works**:
+  - **📥 Upload Remaining Bonus `.CSV` File (`Upload Remaining Bonus CSV`)**: Download the 9-column `.csv` file from `console.cloud.google.com/billing/<id>/credits` (`Credit name,Status,Currency,Percent remaining,Remaining value,Original value,Start date,End date,Credit application type`) and upload or paste it directly. The parser stores the exact `Remaining value` and `Original value` from your CSV without automatic balance modification, and reminds you to upload a fresh CSV frequently to update your balance.
+  - **⏳ Automatic Expiration Date & Countdown Calculation**: Dynamically computes days remaining (`Expiring in N days`, `Available`, `Expired`), active `CREDIT_TYPE_MONTHLY` Developer Program benefits, required daily burn rate (`$/day`) before expiration, and projected stranded credit dollars from each grant's `End date`.
+  - **🧹 1-Click Reset & Non-Blocking 2-Minute Background Sync**: Clicking **Reset Bonus CSV** (`POST /api/project/:id/billing-guardian/reset-console-credits`) completely empties all synced grants and cached ledger rows (`Remaining Bonus: $0.00 (Upload CSV)`). Entering the Billing tab returns the cached snapshot immediately (`cached: true`) without firing heavy live API calls on page load, while background polling refreshes live Cloud Billing telemetry every **2 minutes (`120,000 ms`)** and persists snapshots in IndexedDB (`CloudPulseBillingGuardianDB_v2`).
+
+
 
 

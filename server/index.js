@@ -16206,6 +16206,361 @@ async function queryGenerateInsights(token, projectId, parents, prompt) {
   }
 }
 
+async function fetchBillingBudgetsForAccounts(token, projectId, accountNames = []) {
+  const budgets = [];
+  await Promise.all(
+    accountNames.slice(0, 5).map(async (accountName) => {
+      try {
+        const res = await fetch(
+          `https://billingbudgets.googleapis.com/v1/${accountName}/budgets`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'x-goog-user-project': projectId,
+            },
+          }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data?.budgets)) {
+          for (const b of data.budgets) {
+            budgets.push({
+              name: b.name,
+              billingAccountName: accountName,
+              displayName: b.displayName || b.name,
+              amountUsd: Number(b.amount?.specifiedAmount?.units || 0),
+              currencyCode: b.amount?.specifiedAmount?.currencyCode || 'USD',
+              creditTypesTreatment:
+                b.budgetFilter?.creditTypesTreatment || 'INCLUDE_ALL_CREDITS',
+              calendarPeriod: b.budgetFilter?.calendarPeriod || 'MONTH',
+              projects: b.budgetFilter?.projects || [],
+              services: b.budgetFilter?.services || [],
+              thresholdPercents: (b.thresholdRules || []).map((r) =>
+                Math.round(Number(r.thresholdPercent || 0) * 100)
+              ),
+              spendCapConfigured: b.spendCap?.outputState === 'CONFIGURED',
+            });
+          }
+        }
+      } catch {
+        // ignore per-account budget errors
+      }
+    })
+  );
+  return budgets;
+}
+
+function normalizeIsoDateString(rawDateStr) {
+  if (!rawDateStr) return null;
+  const cleaned = String(rawDateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned;
+  const parsed = new Date(`${cleaned} 12:00:00 UTC`);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  return null;
+}
+
+function splitCsvLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseConsoleCreditsText(rawText = '') {
+  const text = String(rawText || '').trim();
+  if (!text) return [];
+
+  // 1. Allow JSON array paste
+  if (text.startsWith('[')) {
+    try {
+      const arr = JSON.parse(text);
+      if (Array.isArray(arr)) {
+        return arr
+          .map((item, idx) => ({
+            id: item.id || item.creditId || `console-credit-${idx + 1}`,
+            name: String(item.name || item.creditName || 'Promotional Credit').trim(),
+            statusLabel: String(item.statusLabel || item.status || 'Available').trim(),
+            remainingAmountUsd: Number(item.remainingAmountUsd ?? item.remainingValue ?? 0),
+            initialAmountUsd: Number(item.initialAmountUsd ?? item.originalValue ?? 0),
+            grantType: String(item.grantType || item.type || 'PROMOTIONAL').trim(),
+            creditId: String(item.creditId || item.creditCode || '').trim(),
+            scope: String(item.scope || 'Billing account').trim(),
+            startDate: normalizeIsoDateString(item.startDate),
+            expirationDate: normalizeIsoDateString(item.expirationDate || item.endDate),
+            creditApplication: String(
+              item.creditApplication || item.type || 'Net pricing'
+            ).trim(),
+          }))
+          .filter((g) => g.initialAmountUsd > 0 || g.remainingAmountUsd > 0);
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  // 2. First-class parser for Google Cloud Console Billing Credits CSV export:
+  // Header: Credit name,Status,Currency,Percent remaining,Remaining value,Original value,Start date,End date,Credit application type
+  const rawLines = text
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const csvGrants = [];
+  for (let i = 0; i < rawLines.length; i += 1) {
+    const line = rawLines[i];
+    if (!line.includes(',')) continue;
+    if (/^Credit\s*name\s*,\s*Status/i.test(line)) continue;
+
+    const cols = splitCsvLine(line);
+    // Expected columns:
+    // [0] Credit name, [1] Status, [2] Currency, [3] Percent remaining,
+    // [4] Remaining value, [5] Original value, [6] Start date, [7] End date, [8] Credit application type
+    if (cols.length >= 8) {
+      const cName = cols[0];
+      const cStatus = cols[1];
+      if (/^(Available|Expired|Expiring\b|Depleted)/i.test(cStatus)) {
+        const hasCurrencyCol =
+          /^(\$|[A-Z]{3}|€|£|¥)$/i.test(cols[2]) || cols.length >= 9;
+        const pctIdx = hasCurrencyCol ? 3 : 2;
+        const remIdx = hasCurrencyCol ? 4 : 3;
+        const origIdx = hasCurrencyCol ? 5 : 4;
+        const startIdx = hasCurrencyCol ? 6 : 5;
+        const endIdx = hasCurrencyCol ? 7 : 6;
+        const appIdx = hasCurrencyCol ? 8 : 7;
+
+        const pctRemaining = Number(
+          String(cols[pctIdx] || '0').replace(/[,%$]/g, '')
+        );
+        const remainingAmountUsd = Number(
+          String(cols[remIdx] || '0').replace(/[,$]/g, '')
+        );
+        const initialAmountUsd = Number(
+          String(cols[origIdx] || '0').replace(/[,$]/g, '')
+        );
+        const startDate = normalizeIsoDateString(cols[startIdx]);
+        const expirationDate = normalizeIsoDateString(cols[endIdx]);
+        const creditApplication =
+          String(cols[appIdx] || 'Net pricing').trim() || 'Net pricing';
+
+        const typeMatch = cName.match(
+          /\b(CREDIT_TYPE_[A-Z0-9_]+|RESELLER_MARGIN|PROMOTIONAL|FREE_TRIAL)\b/i
+        );
+        const grantType = typeMatch
+          ? typeMatch[1].toUpperCase()
+          : /monthly/i.test(cName)
+          ? 'CREDIT_TYPE_MONTHLY'
+          : /annual/i.test(cName)
+          ? 'CREDIT_TYPE_ANNUAL'
+          : 'PROMOTIONAL';
+
+        const codeMatch = cName.match(/([0-9]{7,14})\s*$/);
+        const creditCode = codeMatch
+          ? codeMatch[1]
+          : `csv-${csvGrants.length + 1}`;
+
+        if (initialAmountUsd > 0 || remainingAmountUsd > 0) {
+          csvGrants.push({
+            id: `console-csv-${csvGrants.length + 1}-${creditCode}`,
+            name: cName,
+            statusLabel: cStatus,
+            percentRemaining: Number.isFinite(pctRemaining)
+              ? pctRemaining
+              : null,
+            remainingAmountUsd,
+            initialAmountUsd,
+            grantType,
+            creditCode,
+            scope: 'Billing account',
+            startDate,
+            expirationDate,
+            creditApplication,
+          });
+        }
+      }
+    }
+  }
+
+  if (csvGrants.length > 0) {
+    return csvGrants;
+  }
+
+  // 3. Normalize multi-line copied Console table text into a single stream or line records
+  const datePattern =
+    '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\s+\\d{1,2},\\s+\\d{4}|\\d{4}-\\d{2}-\\d{2}';
+  const moneyPattern = '\\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\\.[0-9]{2})|[0-9]+\\.[0-9]{2})';
+
+  // Collapse line breaks inside copied table cells while preserving row boundaries after date pairs
+  const flattened = text
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(
+      (l) =>
+        l &&
+        !/^(Credit name|Status|Percent remaining|Remaining value|Original value|Type|Credit ID|Scope|Start date|End date|Credit application|Credits|Promotional credits help|Filter|Grants)\b/i.test(
+          l
+        )
+    )
+    .join('  ');
+
+  const rowRegex = new RegExp(
+    `([^$]+?)\\s+(Available|Expired|Expiring[^$\\d]*)\\s+(?:\\d+(?:\\.\\d+)?%?\\s+|—\\s+|-\\s+)?\\$${moneyPattern}\\s+\\$${moneyPattern}\\s*(.*?)(${datePattern})\\s+(${datePattern})`,
+    'gi'
+  );
+
+  const grants = [];
+  let match;
+  let idx = 0;
+  while ((match = rowRegex.exec(flattened)) !== null) {
+    idx += 1;
+    const rawName = String(match[1] || '')
+      .replace(/^.*?(?:End date|Credit application|Scope)\s+/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const statusLabel = String(match[2] || 'Available').trim();
+    const remainingAmountUsd = Number(String(match[3] || '0').replace(/,/g, ''));
+    const initialAmountUsd = Number(String(match[4] || '0').replace(/,/g, ''));
+    const middleMeta = String(match[5] || '').trim();
+    const startDate = normalizeIsoDateString(match[6]);
+    const expirationDate = normalizeIsoDateString(match[7]);
+
+    const typeMatch = `${rawName} ${middleMeta}`.match(
+      /\b(CREDIT_TYPE_[A-Z0-9_]+|RESELLER_MARGIN|PROMOTIONAL|FREE_TRIAL)\b/i
+    );
+    const idMatch = middleMeta.match(/\b([a-f0-9]{16,32}|[A-Z0-9_-]{8,32})\b/);
+    const grantType = typeMatch ? typeMatch[1] : 'PROMOTIONAL';
+    const creditId =
+      idMatch && idMatch[1] !== grantType ? idMatch[1] : `grant-${idx}`;
+
+    grants.push({
+      id: `console-grant-${idx}-${creditId}`,
+      name: rawName || `Promotional Credit #${idx}`,
+      statusLabel,
+      remainingAmountUsd,
+      initialAmountUsd,
+      grantType,
+      creditCode: creditId,
+      scope: 'Billing account',
+      startDate,
+      expirationDate,
+      creditApplication: typeMatch
+        ? `${grantType} · Billing account`
+        : 'Net pricing',
+    });
+  }
+
+  if (grants.length === 0) {
+    // 4. Also support simple numeric / line paste (e.g. "$500.00" or "Free Trial $500.00 $500.00 2026-12-31")
+    const simpleMoneyMatches = [...text.matchAll(/\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/g)];
+    if (simpleMoneyMatches.length > 0) {
+      const remVal = Number(String(simpleMoneyMatches[0][1] || '0').replace(/,/g, ''));
+      const initVal = simpleMoneyMatches[1]
+        ? Number(String(simpleMoneyMatches[1][1] || remVal).replace(/,/g, ''))
+        : remVal;
+      const anyDateMatch = text.match(new RegExp(datePattern, 'i'));
+      const expDate = anyDateMatch
+        ? normalizeIsoDateString(anyDateMatch[0])
+        : new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+      if (remVal > 0 || initVal > 0) {
+        grants.push({
+          id: `console-grant-1-${Date.now()}`,
+          name: 'Promotional Credit Grant',
+          statusLabel: 'Available',
+          remainingAmountUsd: remVal,
+          initialAmountUsd: Math.max(remVal, initVal),
+          grantType: 'PROMOTIONAL',
+          creditCode: 'MANUAL-SYNC',
+          scope: 'Billing account',
+          startDate: new Date().toISOString().slice(0, 10),
+          expirationDate: expDate,
+          creditApplication: 'Net pricing',
+        });
+      }
+    }
+  }
+
+  return grants;
+}
+
+async function readSavedConsoleCredits(projectId) {
+  const safeProject = String(projectId || 'default').replace(
+    /[^a-zA-Z0-9_-]/g,
+    '_'
+  );
+  const creditsPath = path.join(
+    os.tmpdir(),
+    `cloudpulse-console-credits-${safeProject}.json`
+  );
+  const globalCreditsPath = path.join(
+    os.tmpdir(),
+    'cloudpulse-console-credits-global.json'
+  );
+  try {
+    const raw = await fs.promises.readFile(creditsPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed?.grants) && parsed.grants.length > 0) {
+      return parsed.grants;
+    }
+  } catch {
+    // Fall back to shared billing-account credits file
+  }
+  try {
+    const rawGlobal = await fs.promises.readFile(globalCreditsPath, 'utf8');
+    const parsedGlobal = JSON.parse(rawGlobal);
+    return Array.isArray(parsedGlobal?.grants) ? parsedGlobal.grants : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeSavedConsoleCredits(projectId, grants = []) {
+  const safeProject = String(projectId || 'default').replace(
+    /[^a-zA-Z0-9_-]/g,
+    '_'
+  );
+  const creditsPath = path.join(
+    os.tmpdir(),
+    `cloudpulse-console-credits-${safeProject}.json`
+  );
+  const globalCreditsPath = path.join(
+    os.tmpdir(),
+    'cloudpulse-console-credits-global.json'
+  );
+  const payload = JSON.stringify(
+    {
+      projectId,
+      syncedAt: new Date().toISOString(),
+      grants,
+    },
+    null,
+    2
+  );
+  await fs.promises.writeFile(creditsPath, payload, 'utf8');
+  await fs.promises.writeFile(globalCreditsPath, payload, 'utf8');
+  return creditsPath;
+}
+
 async function fetchLiveCloudBillingInsights(
   projectId,
   billingAccounts = [],
@@ -16216,10 +16571,15 @@ async function fetchLiveCloudBillingInsights(
     .map((a) => a.name);
   const cacheKey = openAccountNames.join(',') || projectId;
 
+  const consoleCredits = await readSavedConsoleCredits(projectId);
+
   if (!forceRefresh && liveBillingInsightsCache.has(cacheKey)) {
     const cached = liveBillingInsightsCache.get(cacheKey);
     if (Date.now() - cached.fetchedAt < 5 * 60 * 1000) {
-      return cached.data;
+      return {
+        ...cached.data,
+        consoleCredits,
+      };
     }
   }
 
@@ -16240,7 +16600,6 @@ async function fetchLiveCloudBillingInsights(
         ? openAccountNames.slice(0, 5).map((name) => ({ resource: name }))
         : [{ resource: `projects/${projectId}` }];
 
-    // Select accessible promotional/bonus/sprint accounts (excluding closed generic trial/personal accounts that return 403)
     const bonusCandidates = billingAccounts.filter((a) => {
       if (!a.name) return false;
       if (a.open) return true;
@@ -16255,26 +16614,26 @@ async function fetchLiveCloudBillingInsights(
         ? bonusCandidates.slice(0, 8).map((a) => ({ resource: a.name }))
         : openParents;
 
-    const [openFinalResult, crossFinalResult] = await Promise.all([
-      queryGenerateInsights(
-        token,
-        projectId,
-        openParents,
-        `Show usage_month, project_id, service_display_name, usage_cost, total_credit, other_savings, savings_programs, and subtotal from ${currentYear}-01-01 to ${todayIso}.`
-      ),
-      crossParents.length > openParents.length
-        ? queryGenerateInsights(
-            token,
-            projectId,
-            crossParents,
-            `Show project_id, service_display_name, usage_cost, total_credit, other_savings, savings_programs, and subtotal from ${
-              currentYear - 1
-            }-01-01 to ${todayIso}.`
-          )
-        : Promise.resolve(null),
-    ]);
-
-    if (!openFinalResult && !crossFinalResult) return null;
+    const [openFinalResult, crossFinalResult, billingBudgets] =
+      await Promise.all([
+        queryGenerateInsights(
+          token,
+          projectId,
+          openParents,
+          `Show usage_month, project_id, service_display_name, usage_cost, total_credit, other_savings, savings_programs, and subtotal from ${currentYear}-01-01 to ${todayIso}.`
+        ),
+        crossParents.length > openParents.length
+          ? queryGenerateInsights(
+              token,
+              projectId,
+              crossParents,
+              `Show project_id, service_display_name, usage_cost, total_credit, other_savings, savings_programs, and subtotal from ${
+                currentYear - 1
+              }-01-01 to ${todayIso}.`
+            )
+          : Promise.resolve(null),
+        fetchBillingBudgetsForAccounts(token, projectId, openAccountNames),
+      ]);
 
     const openDataSets = Array.isArray(openFinalResult?.dataSets)
       ? openFinalResult.dataSets
@@ -16313,7 +16672,6 @@ async function fetchLiveCloudBillingInsights(
       crossAccountRows = costCreditRows;
     }
 
-    // Programmatically extract active usage_month range from live data
     const monthStrings = monthlyTrendRows
       .map((r) => String(r.usage_month || '').trim())
       .filter(Boolean)
@@ -16347,7 +16705,7 @@ async function fetchLiveCloudBillingInsights(
 
     const resultData = {
       source:
-        'cloudbilling.googleapis.com/v1beta:generateInsights (cloud_billing_data.public.costs.v2)',
+        'cloudbilling.googleapis.com/v1beta:generateInsights (costs.v2) + billingbudgets.googleapis.com/v1',
       tempJsonPath,
       queriedParents: openParents.map((p) => p.resource),
       queriedCrossParents: crossParents.map((p) => p.resource),
@@ -16358,6 +16716,8 @@ async function fetchLiveCloudBillingInsights(
       costCreditRows,
       crossAccountRows,
       monthlyTrendRows,
+      billingBudgets,
+      consoleCredits,
       temporalWindow: {
         earliestMonthRaw,
         latestMonthRaw:
@@ -16393,9 +16753,170 @@ async function fetchLiveCloudBillingInsights(
     });
     return resultData;
   } catch {
-    return null;
+    return {
+      source: 'cached-console-credits',
+      costCreditRows: [],
+      crossAccountRows: [],
+      monthlyTrendRows: [],
+      billingBudgets: [],
+      consoleCredits,
+      fetchedAt: new Date().toISOString(),
+    };
   }
 }
+
+app.post(
+  '/api/project/:projectId/billing-guardian/sync-console-credits',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { rawText, grants: inputGrants } = req.body || {};
+
+    const parsedGrants = Array.isArray(inputGrants)
+      ? inputGrants
+      : parseConsoleCreditsText(rawText || '');
+
+    if (!Array.isArray(inputGrants) && !parsedGrants.length) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Could not parse any promotional credit rows from the provided text. Upload the Credits CSV or paste it.',
+      });
+    }
+
+    try {
+      const creditsPath = await writeSavedConsoleCredits(
+        projectId,
+        parsedGrants
+      );
+      liveBillingInsightsCache.delete(projectId);
+      const safeProject = String(projectId || 'default').replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+      const tempJsonPath = path.join(
+        os.tmpdir(),
+        `cloudpulse-billing-insights-${safeProject}.json`
+      );
+      let existingJson = {
+        projectId,
+        billingAccounts: [],
+        insights: {
+          tempJsonPath,
+          costCreditRows: [],
+          crossAccountRows: [],
+          monthlyTrendRows: [],
+          billingBudgets: [],
+          consoleCredits: parsedGrants,
+          fetchedAt: new Date().toISOString(),
+        },
+      };
+      try {
+        const existingRaw = await fs.promises.readFile(tempJsonPath, 'utf8');
+        const parsedExisting = JSON.parse(existingRaw);
+        if (parsedExisting && typeof parsedExisting === 'object') {
+          existingJson = {
+            ...parsedExisting,
+            insights: {
+              ...(parsedExisting.insights || {
+                tempJsonPath,
+                costCreditRows: [],
+                crossAccountRows: [],
+                monthlyTrendRows: [],
+                billingBudgets: [],
+              }),
+              consoleCredits: parsedGrants,
+            },
+          };
+        }
+      } catch {
+        // use initialized existingJson
+      }
+      await fs.promises.writeFile(
+        tempJsonPath,
+        JSON.stringify(existingJson, null, 2),
+        'utf8'
+      );
+
+      return res.json({
+        ok: true,
+        count: parsedGrants.length,
+        creditsPath,
+        tempJsonPath,
+        consoleCredits: parsedGrants,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        ok: false,
+        error: err.message || 'Failed to save synced Console credits.',
+      });
+    }
+  }
+);
+
+app.post(
+  '/api/project/:projectId/billing-guardian/reset-console-credits',
+  async (req, res) => {
+    const { projectId } = req.params;
+    try {
+      await writeSavedConsoleCredits(projectId, []);
+      liveBillingInsightsCache.clear();
+      try {
+        const tmpFiles = await fs.promises.readdir(os.tmpdir());
+        for (const f of tmpFiles) {
+          if (f.startsWith('cloudpulse-console-credits-')) {
+            await fs.promises.writeFile(
+              path.join(os.tmpdir(), f),
+              JSON.stringify(
+                { projectId, syncedAt: new Date().toISOString(), grants: [] },
+                null,
+                2
+              ),
+              'utf8'
+            );
+          } else if (f.startsWith('cloudpulse-billing-insights-')) {
+            const p = path.join(os.tmpdir(), f);
+            try {
+              const raw = await fs.promises.readFile(p, 'utf8');
+              const parsed = JSON.parse(raw);
+              if (parsed?.insights) {
+                parsed.insights.consoleCredits = [];
+                parsed.insights.costCreditRows = [];
+                parsed.insights.crossAccountRows = [];
+                parsed.insights.monthlyTrendRows = [];
+              }
+              await fs.promises.writeFile(
+                p,
+                JSON.stringify(parsed, null, 2),
+                'utf8'
+              );
+            } catch {
+              // ignore
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+      return res.json({ ok: true, consoleCredits: [] });
+    } catch (err) {
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+app.delete(
+  '/api/project/:projectId/billing-guardian/sync-console-credits',
+  async (req, res) => {
+    const { projectId } = req.params;
+    try {
+      await writeSavedConsoleCredits(projectId, []);
+      liveBillingInsightsCache.clear();
+      return res.json({ ok: true, consoleCredits: [] });
+    } catch (err) {
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+);
 
 app.get(
   '/api/project/:projectId/billing-guardian/temp-json',
@@ -16422,6 +16943,69 @@ app.get(
 app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
   const { projectId } = req.params;
   const forceRefresh = req.query.refresh === 'true';
+  const safeProject = String(projectId || 'default').replace(
+    /[^a-zA-Z0-9_-]/g,
+    '_'
+  );
+  const tempJsonPath = path.join(
+    os.tmpdir(),
+    `cloudpulse-billing-insights-${safeProject}.json`
+  );
+
+  // Fast path on page entry (when forceRefresh is false): never trigger live GCP APIs on page entry!
+  if (!forceRefresh) {
+    const savedCredits = await readSavedConsoleCredits(projectId);
+    let existingJson = null;
+    try {
+      const existingRaw = await fs.promises.readFile(tempJsonPath, 'utf8');
+      existingJson = JSON.parse(existingRaw);
+    } catch {
+      existingJson = null;
+    }
+
+    const baseInsights = existingJson?.insights || {
+      source: 'cached-temp-json',
+      tempJsonPath,
+      costCreditRows: [],
+      crossAccountRows: [],
+      monthlyTrendRows: [],
+      billingBudgets: [],
+      consoleCredits: savedCredits,
+      fetchedAt: new Date().toISOString(),
+    };
+
+    baseInsights.consoleCredits =
+      savedCredits.length > 0
+        ? savedCredits
+        : baseInsights.consoleCredits || [];
+
+    const cachedAccounts = Array.isArray(existingJson?.billingAccounts)
+      ? existingJson.billingAccounts
+      : [];
+    const openAcct =
+      cachedAccounts.find((a) => a.open) || cachedAccounts[0] || null;
+    const cachedBillingInfo = existingJson?.billingInfo?.billingAccountId
+      ? existingJson.billingInfo
+      : {
+          projectId,
+          billingAccountName: openAcct?.name || null,
+          billingAccountId: openAcct?.billingAccountId || null,
+          displayName: openAcct?.displayName || 'Billing Account (Cached · Auto-syncs every 2m)',
+          billingEnabled: Boolean(openAcct?.open ?? true),
+          open: Boolean(openAcct?.open ?? true),
+          currencyCode: openAcct?.currencyCode || 'USD',
+          source: 'cached-temp-json',
+        };
+
+    return res.json({
+      ok: true,
+      cached: true,
+      billingInfo: cachedBillingInfo,
+      billingAccounts: cachedAccounts,
+      liveBillingInsights: baseInsights,
+    });
+  }
+
   let billingAccounts = [];
   let billingInfo = {
     projectId,
@@ -16514,8 +17098,30 @@ app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
     forceRefresh
   );
 
+  if (liveBillingInsights) {
+    try {
+      await fs.promises.writeFile(
+        tempJsonPath,
+        JSON.stringify(
+          {
+            projectId,
+            billingInfo,
+            billingAccounts,
+            insights: liveBillingInsights,
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+    } catch {
+      // ignore
+    }
+  }
+
   return res.json({
     ok: true,
+    cached: false,
     billingInfo,
     billingAccounts,
     liveBillingInsights,
