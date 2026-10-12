@@ -16153,11 +16153,64 @@ app.post('/api/project/:projectId/action', async (req, res) => {
 // 2. `gcloud billing projects describe <projectId> --format=json`
 // 3. `POST https://cloudbilling.googleapis.com/v1beta:generateInsights`
 //    (queries `cloud_billing_data.public.costs.v2` for live `usage_cost`,
-//    `total_credit`, `other_savings`, `savings_programs`, and `subtotal`).
+//    `total_credit`, `other_savings`, `savings_programs`, `subtotal`, and
+//    `usage_month`, saves a temporary JSON snapshot to `os.tmpdir()`, and
+//    returns the structured datasets for client-side IndexedDB aggregation).
 // ============================================================================
 const liveBillingInsightsCache = new Map();
 
-async function fetchLiveCloudBillingInsights(projectId, billingAccounts = [], forceRefresh = false) {
+function parseDataSetRows(ds, prefix = 'row') {
+  const colInfo = ds?.billingData?.columnInfo || [];
+  const cols = colInfo.map((c) => c.column);
+  const rawRows = ds?.billingData?.rows || [];
+  return {
+    cols,
+    rows: rawRows.map((r, idx) => {
+      const vals = r.values || [];
+      const obj = { id: `${prefix}-${idx}` };
+      cols.forEach((colName, cIdx) => {
+        const cell = vals[cIdx] || {};
+        obj[colName] =
+          cell.doubleValue !== undefined
+            ? Number(cell.doubleValue)
+            : cell.stringValue !== undefined
+            ? String(cell.stringValue)
+            : null;
+      });
+      return obj;
+    }),
+  };
+}
+
+async function queryGenerateInsights(token, projectId, parents, prompt) {
+  try {
+    const response = await fetch(
+      'https://cloudbilling.googleapis.com/v1beta:generateInsights',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-goog-user-project': projectId,
+        },
+        body: JSON.stringify({ parents, prompt }),
+      }
+    );
+    if (!response.ok) return null;
+    const streamItems = await response.json();
+    if (!Array.isArray(streamItems)) return null;
+    const finalItem = streamItems.find((item) => item && item.finalResult);
+    return finalItem?.finalResult || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchLiveCloudBillingInsights(
+  projectId,
+  billingAccounts = [],
+  forceRefresh = false
+) {
   const openAccountNames = billingAccounts
     .filter((a) => a.open && a.name)
     .map((a) => a.name);
@@ -16178,73 +16231,161 @@ async function fetchLiveCloudBillingInsights(projectId, billingAccounts = [], fo
     const token = String(tokenOut?.stdout || '').trim();
     if (!token) return null;
 
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const parents =
+    const now = new Date();
+    const todayIso = now.toISOString().slice(0, 10);
+    const currentYear = now.getFullYear();
+
+    const openParents =
       openAccountNames.length > 0
         ? openAccountNames.slice(0, 5).map((name) => ({ resource: name }))
         : [{ resource: `projects/${projectId}` }];
 
-    const response = await fetch(
-      'https://cloudbilling.googleapis.com/v1beta:generateInsights',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'x-goog-user-project': projectId,
-        },
-        body: JSON.stringify({
-          parents,
-          prompt: `Show usage_cost, total_credit, other_savings, savings_programs, and subtotal by service_display_name and project_id from 2025-01-01 to ${todayIso}.`,
-        }),
-      }
-    );
+    // Select accessible promotional/bonus/sprint accounts (excluding closed generic trial/personal accounts that return 403)
+    const bonusCandidates = billingAccounts.filter((a) => {
+      if (!a.name) return false;
+      if (a.open) return true;
+      const dn = String(a.displayName || '').toLowerCase();
+      return (
+        !dn.includes('trial billing account') &&
+        !dn.includes('my billing account')
+      );
+    });
+    const crossParents =
+      bonusCandidates.length > 0
+        ? bonusCandidates.slice(0, 8).map((a) => ({ resource: a.name }))
+        : openParents;
 
-    if (!response.ok) return null;
-    const streamItems = await response.json();
-    if (!Array.isArray(streamItems)) return null;
+    const [openFinalResult, crossFinalResult] = await Promise.all([
+      queryGenerateInsights(
+        token,
+        projectId,
+        openParents,
+        `Show usage_month, project_id, service_display_name, usage_cost, total_credit, other_savings, savings_programs, and subtotal from ${currentYear}-01-01 to ${todayIso}.`
+      ),
+      crossParents.length > openParents.length
+        ? queryGenerateInsights(
+            token,
+            projectId,
+            crossParents,
+            `Show project_id, service_display_name, usage_cost, total_credit, other_savings, savings_programs, and subtotal from ${
+              currentYear - 1
+            }-01-01 to ${todayIso}.`
+          )
+        : Promise.resolve(null),
+    ]);
 
-    const finalItem = streamItems.find((item) => item && item.finalResult);
-    if (!finalItem?.finalResult) return null;
+    if (!openFinalResult && !crossFinalResult) return null;
 
-    const finalResult = finalItem.finalResult;
-    const dataSets = Array.isArray(finalResult.dataSets)
-      ? finalResult.dataSets
+    const openDataSets = Array.isArray(openFinalResult?.dataSets)
+      ? openFinalResult.dataSets
       : [];
+    let costCreditRows = [];
+    let monthlyTrendRows = [];
 
-    // Find the richest dataset that includes total_credit / usage_cost
-    let bestRows = [];
-    for (const ds of dataSets) {
-      const colInfo = ds?.billingData?.columnInfo || [];
-      const cols = colInfo.map((c) => c.column);
-      const rawRows = ds?.billingData?.rows || [];
-      if (cols.includes('total_credit') || cols.includes('usage_cost')) {
-        bestRows = rawRows.map((r, idx) => {
-          const vals = r.values || [];
-          const obj = { id: `live-cost-row-${idx}` };
-          cols.forEach((colName, cIdx) => {
-            const cell = vals[cIdx] || {};
-            obj[colName] =
-              cell.doubleValue !== undefined
-                ? Number(cell.doubleValue)
-                : cell.stringValue !== undefined
-                ? String(cell.stringValue)
-                : null;
-          });
-          return obj;
-        });
-        if (cols.includes('total_credit')) break;
+    for (const ds of openDataSets) {
+      const parsed = parseDataSetRows(ds, 'open-cost-row');
+      if (parsed.cols.includes('usage_month')) {
+        monthlyTrendRows = parsed.rows;
+      }
+      if (
+        parsed.cols.includes('total_credit') ||
+        parsed.cols.includes('usage_cost')
+      ) {
+        costCreditRows = parsed.rows;
       }
     }
 
+    const crossDataSets = Array.isArray(crossFinalResult?.dataSets)
+      ? crossFinalResult.dataSets
+      : [];
+    let crossAccountRows = [];
+    for (const ds of crossDataSets) {
+      const parsed = parseDataSetRows(ds, 'cross-cost-row');
+      if (
+        parsed.cols.includes('total_credit') ||
+        parsed.cols.includes('usage_cost')
+      ) {
+        crossAccountRows = parsed.rows;
+        if (parsed.cols.includes('total_credit')) break;
+      }
+    }
+    if (crossAccountRows.length === 0) {
+      crossAccountRows = costCreditRows;
+    }
+
+    // Programmatically extract active usage_month range from live data
+    const monthStrings = monthlyTrendRows
+      .map((r) => String(r.usage_month || '').trim())
+      .filter(Boolean)
+      .sort();
+    const earliestMonthRaw = monthStrings[0] || `${currentYear}-01`;
+    const earliestYearMatch = earliestMonthRaw.match(/^(\d{4})-(\d{2})/);
+    const derivedStartDate = earliestYearMatch
+      ? `${earliestYearMatch[1]}-${earliestYearMatch[2]}-01`
+      : `${currentYear}-01-01`;
+    const activeCycleYear = earliestYearMatch
+      ? Number(earliestYearMatch[1])
+      : currentYear;
+    const derivedAnnualEndDate = `${activeCycleYear}-12-31`;
+
+    const lastDayOfCurrentMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0
+    )
+      .toISOString()
+      .slice(0, 10);
+
+    const safeProject = String(projectId || 'default').replace(
+      /[^a-zA-Z0-9_-]/g,
+      '_'
+    );
+    const tempJsonPath = path.join(
+      os.tmpdir(),
+      `cloudpulse-billing-insights-${safeProject}.json`
+    );
+
     const resultData = {
-      source: 'cloudbilling.googleapis.com/v1beta:generateInsights (cloud_billing_data.public.costs.v2)',
-      queriedParents: parents.map((p) => p.resource),
-      summary: finalResult.summary || '',
-      fullAnalysis: finalResult.fullAnalysis || '',
-      costCreditRows: bestRows,
+      source:
+        'cloudbilling.googleapis.com/v1beta:generateInsights (cloud_billing_data.public.costs.v2)',
+      tempJsonPath,
+      queriedParents: openParents.map((p) => p.resource),
+      queriedCrossParents: crossParents.map((p) => p.resource),
+      summary: openFinalResult?.summary || crossFinalResult?.summary || '',
+      fullAnalysis:
+        openFinalResult?.fullAnalysis || crossFinalResult?.fullAnalysis || '',
+      crossSummary: crossFinalResult?.summary || '',
+      costCreditRows,
+      crossAccountRows,
+      monthlyTrendRows,
+      temporalWindow: {
+        earliestMonthRaw,
+        latestMonthRaw:
+          monthStrings[monthStrings.length - 1] || todayIso,
+        derivedStartDate,
+        derivedSprintEndDate: lastDayOfCurrentMonth,
+        derivedAnnualEndDate,
+      },
       fetchedAt: new Date().toISOString(),
     };
+
+    try {
+      await fs.promises.writeFile(
+        tempJsonPath,
+        JSON.stringify(
+          {
+            projectId,
+            billingAccounts,
+            insights: resultData,
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+    } catch {
+      // Ignore tmp write errors
+    }
 
     liveBillingInsightsCache.set(cacheKey, {
       fetchedAt: Date.now(),
@@ -16255,6 +16396,28 @@ async function fetchLiveCloudBillingInsights(projectId, billingAccounts = [], fo
     return null;
   }
 }
+
+app.get(
+  '/api/project/:projectId/billing-guardian/temp-json',
+  async (req, res) => {
+    const safeProject = String(req.params.projectId || 'default').replace(
+      /[^a-zA-Z0-9_-]/g,
+      '_'
+    );
+    const tempJsonPath = path.join(
+      os.tmpdir(),
+      `cloudpulse-billing-insights-${safeProject}.json`
+    );
+    try {
+      const raw = await fs.promises.readFile(tempJsonPath, 'utf8');
+      return res.type('application/json').send(raw);
+    } catch {
+      return res
+        .status(404)
+        .json({ ok: false, error: 'Temporary JSON snapshot not created yet.' });
+    }
+  }
+);
 
 app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
   const { projectId } = req.params;
@@ -16292,16 +16455,25 @@ app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
     if (accountsOut?.stdout) {
       const parsedAccounts = JSON.parse(accountsOut.stdout);
       if (Array.isArray(parsedAccounts) && parsedAccounts.length > 0) {
-        billingAccounts = parsedAccounts.map((acct) => ({
-          name: acct.name,
-          billingAccountId: String(acct.name || '').replace(
-            /^billingAccounts\//,
-            ''
-          ),
-          displayName: acct.displayName || acct.name,
-          open: Boolean(acct.open),
-          currencyCode: acct.currencyCode || 'USD',
-        }));
+        billingAccounts = parsedAccounts.map((acct) => {
+          const displayName = acct.displayName || acct.name;
+          const dateMatch = String(displayName).match(/\[(\d{4}-\d{2}-\d{2})\]/);
+          const codeMatch = String(displayName).match(
+            /([A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})/
+          );
+          return {
+            name: acct.name,
+            billingAccountId: String(acct.name || '').replace(
+              /^billingAccounts\//,
+              ''
+            ),
+            displayName,
+            open: Boolean(acct.open),
+            currencyCode: acct.currencyCode || 'USD',
+            parsedDateTag: dateMatch ? dateMatch[1] : null,
+            parsedCouponCode: codeMatch ? codeMatch[1] : null,
+          };
+        });
       }
     }
 

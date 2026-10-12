@@ -70,7 +70,7 @@ import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
 import DataEngineeringStudio from './components/DataEngineeringStudio';
 import BillingAccountCreditGuardian, {
   summarizeCreditLedger,
-  INITIAL_CONSOLE_CREDITS,
+  syncAndAggregateBillingIndexedDb,
 } from './components/BillingAccountCreditGuardian';
 
 /**
@@ -649,66 +649,27 @@ function CloudPulseCockpit() {
             selectedProjectId
           )}/billing-guardian`
         )
-        .then((res) => {
-          const rows = Array.isArray(
-            res.data?.liveBillingInsights?.costCreditRows
-          )
-            ? res.data.liveBillingInsights.costCreditRows
-            : [];
-          let grossUsageUsd = 0;
-          let totalCreditUsd = 0;
-          let netSubtotalUsd = 0;
-          for (const r of rows) {
-            grossUsageUsd += Number(r.usage_cost || 0);
-            totalCreditUsd += Number(r.total_credit || 0);
-            netSubtotalUsd += Number(r.subtotal || 0);
-          }
-          const absCreditsUsd = Math.abs(totalCreditUsd);
-          const coveragePct =
-            grossUsageUsd > 0
-              ? Math.min(100, (absCreditsUsd / grossUsageUsd) * 100)
-              : 0;
-
-          let list = [];
+        .then(async (res) => {
+          let envelopeOverride = {};
           const savedEnv = localStorage.getItem(
             'cloudpulse_gde_bonus_envelope_v2'
           );
           if (savedEnv) {
             try {
-              const env = JSON.parse(savedEnv);
-              const initAmt = Number(env?.initialGrantUsd) || 0;
-              if (initAmt > 0 && env?.expirationDate) {
-                list = [
-                  {
-                    id: 'live-api-deducted-gde-grant',
-                    name: env.name || 'GDE Promotional Credit Grant',
-                    initialAmountUsd: initAmt,
-                    remainingAmountUsd: Math.max(
-                      0,
-                      Number((initAmt - absCreditsUsd).toFixed(2))
-                    ),
-                    startDate: env.startDate || '',
-                    expirationDate: env.expirationDate,
-                    alertDaysThreshold: Number(env.alertDaysThreshold) || 30,
-                  },
-                ];
-              }
+              envelopeOverride = JSON.parse(savedEnv) || {};
             } catch {
               // ignore
             }
           }
-
-          setGdeSummary({
-            ...summarizeCreditLedger(list, 0),
-            hasImportedCredits: list.length > 0,
-            liveCostMetrics: {
-              hasLiveRows: rows.length > 0,
-              grossUsageUsd,
-              absCreditsUsd,
-              netSubtotalUsd,
-              coveragePct,
-            },
+          const aggregated = await syncAndAggregateBillingIndexedDb({
+            projectId: selectedProjectId,
+            billingInfo: res.data?.billingInfo || {},
+            billingAccounts: res.data?.billingAccounts || [],
+            liveBillingInsights: res.data?.liveBillingInsights || null,
+            envelopeOverride,
+            dailyBurnUsd: 0,
           });
+          setGdeSummary(aggregated);
         })
         .catch(() => null);
     }
