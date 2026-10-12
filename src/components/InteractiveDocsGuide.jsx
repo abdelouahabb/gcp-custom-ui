@@ -24,6 +24,7 @@ import {
   Terminal,
   Info,
   Layers,
+  Database,
 } from 'lucide-react';
 
 const DOC_SECTIONS = [
@@ -41,7 +42,7 @@ const DOC_SECTIONS = [
       'Standard cloud consoles treat IAM, VPC Firewalls, Compute, Storage/BigLake, CI/CD, and Billing as isolated silos—so you cannot see cross-domain causal failure cascades, cannot snapshot and roll back whole-project configuration drift in 1 click, cannot automate Spot/Slot arbitrage with a hard-cap circuit-breaker, cannot mirror live production traffic into auto-expiring PR preview branches, and cannot plant active deception tripwires against credential thieves.',
     howItWorks: [
       'Breakthrough #1 — Cross-Cloud Blast-Radius & Causal Dependency Graph: Connects Identity (IAM Service Accounts), Network (VPC Firewalls), Compute (Cloud Run & VMs), Data (BigLake Iceberg & GCS), and Billing into one interactive causal simulator. Click any node and switch between Simulate Credential Breach, Cascading Outage, or DDoS/Spend Spike to inspect 1st/2nd-hop blast propagation.',
-      '⏳ Breakthrough #2 — Time-Machine Flight Recorder & Verified 1-Click State Rollback: Captures cryptographic SHA-256 project state checkpoints (IAM bindings, open firewalls, Cloud Run revisions, VMs, and hourly burn), diffs any two snapshots side-by-side, and restores state behind a Human-in-the-Loop Approval Gate.',
+      'Breakthrough #2 — Time-Machine Flight Recorder & Verified 1-Click State Rollback: Captures cryptographic SHA-256 project state checkpoints (IAM bindings, open firewalls, Cloud Run revisions, VMs, and hourly burn), diffs any two snapshots side-by-side, and restores state behind a Human-in-the-Loop Approval Gate.',
       'Breakthrough #3 — Autonomous FinOps Autopilot & Commitment Arbitrage Engine: Identifies live Standard → Spot VM (-72%), Cloud Run Always-Allocated → Request-Only CPU (-68%), and BigQuery → BigLake Partition Pruning (-71%) arbitrage, plus an Automated Hard-Cap Budget Circuit-Breaker ($/mo & $/hr spike triggers).',
       'Breakthrough #4 — Live Ephemeral PR Preview Environments & Shadow Traffic Mirror: Clones any Cloud Run service into a PR preview stack that mirrors 5%–25% of live traffic asynchronously, compares Prod vs Shadow P95 latency & 5xx errors, and auto-self-destructs after its TTL (2h–24h) so dev stacks never become zombie bills.',
       'Breakthrough #5 — Zero-Trust Honey-Token & Active Breach Deception Grid: Plants decoy IAM Service Account .json keys, canary BigLake Parquet files, and Secret Manager honey-secrets that trigger instant VPC /32 IP-ban + credential quarantine the millisecond an attacker touches them.',

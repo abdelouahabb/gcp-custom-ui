@@ -2451,10 +2451,10 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     Reproducible `gcloud dataproc batches submit pyspark` Command:
                   </span>
                   <div className="flex items-center gap-1.5">
-                    {onRunInTerminal && (
+                    {onRunInShell && (
                       <button
                         type="button"
-                        onClick={() => onRunInTerminal(sparkArtifacts.cliCmd)}
+                        onClick={() => onRunInShell(sparkArtifacts.cliCmd)}
                         className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                       >
                         Run in Cloud Shell
