@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import {
   CreditCard,
@@ -13,14 +13,9 @@ import {
   ShieldAlert,
   TrendingDown,
   DollarSign,
-  Upload,
-  Download,
   Filter,
   Building2,
-  Trash2,
 } from 'lucide-react';
-
-const STORAGE_KEY_PREFIX = 'cloudpulse_gcp_credits_csv_v3_';
 
 function getDaysUntil(dateStr) {
   if (!dateStr) return 0;
@@ -195,9 +190,8 @@ export default function BillingAccountCreditGuardian({
   const [billingAccounts, setBillingAccounts] = useState([]);
   const [liveBillingInsights, setLiveBillingInsights] = useState(null);
   const [showAccountsDrawer, setShowAccountsDrawer] = useState(false);
-  const [grants, setGrants] = useState([]);
   const [gdeEnvelope, setGdeEnvelope] = useState(() => {
-    const saved = localStorage.getItem('cloudpulse_gde_bonus_envelope_v1');
+    const saved = localStorage.getItem('cloudpulse_gde_bonus_envelope_v2');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -205,25 +199,18 @@ export default function BillingAccountCreditGuardian({
         // ignore
       }
     }
-    const defaultExpiry = new Date(Date.now() + 13 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
-    const defaultStart = new Date(Date.now() - 77 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
     return {
-      name: 'GDE / AI Sprint Promotional Credit Grant',
-      initialGrantUsd: 1000,
-      startDate: defaultStart,
-      expirationDate: defaultExpiry,
-      alertDaysThreshold: 30,
+      name: '',
+      initialGrantUsd: '',
+      startDate: '',
+      expirationDate: '',
+      alertDaysThreshold: '',
     };
   });
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchFilter, setSearchFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
-  const fileInputRef = useRef(null);
 
   const dailyBurnUsd = Number(liveBurn?.daily || 0);
 
@@ -231,7 +218,7 @@ export default function BillingAccountCreditGuardian({
     setGdeEnvelope((prev) => {
       const next = { ...prev, ...patch };
       localStorage.setItem(
-        'cloudpulse_gde_bonus_envelope_v1',
+        'cloudpulse_gde_bonus_envelope_v2',
         JSON.stringify(next)
       );
       return next;
@@ -257,35 +244,8 @@ export default function BillingAccountCreditGuardian({
         if (res.data?.liveBillingInsights) {
           setLiveBillingInsights(res.data.liveBillingInsights);
         }
-        const localRaw = localStorage.getItem(
-          `${STORAGE_KEY_PREFIX}${projectId}`
-        );
-        if (localRaw) {
-          try {
-            const parsed = JSON.parse(localRaw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setGrants(parsed);
-              setLoading(false);
-              return;
-            }
-          } catch {
-            // ignore invalid cache
-          }
-        }
-        if (Array.isArray(res.data?.grants)) {
-          setGrants(res.data.grants);
-        }
       } catch {
-        const localRaw = localStorage.getItem(
-          `${STORAGE_KEY_PREFIX}${projectId}`
-        );
-        if (localRaw) {
-          try {
-            setGrants(JSON.parse(localRaw));
-          } catch {
-            // ignore
-          }
-        }
+        // ignore network errors
       } finally {
         setLoading(false);
       }
@@ -338,11 +298,11 @@ export default function BillingAccountCreditGuardian({
     };
   }, [liveBillingInsights]);
 
-  // When no CSV is imported, compute the active GDE grant by subtracting live API
-  // `total_credit` consumed (`liveCostMetrics.absCreditsUsd`) from `gdeEnvelope.initialGrantUsd`.
+  // Compute active GDE grant dynamically when the user has entered their Grant Amount,
+  // subtracting live API `total_credit` consumed (`liveCostMetrics.absCreditsUsd`).
   const effectiveGrants = useMemo(() => {
-    if (grants.length > 0) return grants;
-    const initAmt = Math.max(1, Number(gdeEnvelope.initialGrantUsd) || 1000);
+    const initAmt = Number(gdeEnvelope.initialGrantUsd) || 0;
+    if (initAmt <= 0) return [];
     const liveDeductedRemaining = Math.max(
       0,
       Number((initAmt - liveCostMetrics.absCreditsUsd).toFixed(2))
@@ -350,20 +310,31 @@ export default function BillingAccountCreditGuardian({
     return [
       {
         id: 'live-api-deducted-gde-grant',
-        name: gdeEnvelope.name || 'GDE Promotional Credit Grant',
+        name:
+          gdeEnvelope.name ||
+          billingInfo.displayName ||
+          'Promotional Credit Grant',
         grantType: 'GDE_BONUS',
-        creditCode: 'LIVE-API-DEDUCTION',
+        creditCode: billingInfo.billingAccountId || 'LIVE-API',
         initialAmountUsd: initAmt,
         remainingAmountUsd: liveDeductedRemaining,
-        startDate: gdeEnvelope.startDate,
-        expirationDate: gdeEnvelope.expirationDate,
+        startDate: gdeEnvelope.startDate || '',
+        expirationDate: gdeEnvelope.expirationDate || '',
         creditApplication: `Live API Deduction (-$${liveCostMetrics.absCreditsUsd.toFixed(
           2
         )} used)`,
-        alertDaysThreshold: Number(gdeEnvelope.alertDaysThreshold) || 30,
+        alertDaysThreshold: Math.max(
+          1,
+          Number(gdeEnvelope.alertDaysThreshold) || 0
+        ),
       },
     ];
-  }, [grants, gdeEnvelope, liveCostMetrics.absCreditsUsd]);
+  }, [
+    gdeEnvelope,
+    liveCostMetrics.absCreditsUsd,
+    billingInfo.displayName,
+    billingInfo.billingAccountId,
+  ]);
 
   const enrichedGrants = useMemo(() => {
     return effectiveGrants.map((g) => ({
@@ -376,11 +347,10 @@ export default function BillingAccountCreditGuardian({
     const base = summarizeCreditLedger(enrichedGrants, dailyBurnUsd);
     return {
       ...base,
-      hasImportedCredits: true,
-      isCsvImported: grants.length > 0,
+      hasImportedCredits: enrichedGrants.length > 0,
       liveCostMetrics,
     };
-  }, [enrichedGrants, dailyBurnUsd, grants.length, liveCostMetrics]);
+  }, [enrichedGrants, dailyBurnUsd, liveCostMetrics]);
 
   useEffect(() => {
     if (onGrantsSummaryChange) {
@@ -411,152 +381,6 @@ export default function BillingAccountCreditGuardian({
     });
   }, [enrichedGrants, statusFilter, searchFilter]);
 
-  const persistGrants = async (nextGrants, payloadForServer) => {
-    setGrants(nextGrants);
-    if (projectId) {
-      if (nextGrants.length === 0) {
-        localStorage.removeItem(`${STORAGE_KEY_PREFIX}${projectId}`);
-      } else {
-        localStorage.setItem(
-          `${STORAGE_KEY_PREFIX}${projectId}`,
-          JSON.stringify(nextGrants)
-        );
-      }
-      if (payloadForServer) {
-        await axios
-          .post(
-            `/api/project/${encodeURIComponent(
-              projectId
-            )}/billing-guardian/grants`,
-            payloadForServer
-          )
-          .catch(() => null);
-      }
-    }
-  };
-
-  // Parse Google Cloud Console "Download CSV" file
-  const handleCsvUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const text = String(evt.target?.result || '');
-      const lines = text
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean);
-      if (lines.length < 2) return;
-
-      const parseCsvLine = (line) => {
-        const out = [];
-        let cur = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i += 1) {
-          const ch = line[i];
-          if (ch === '"') {
-            inQuotes = !inQuotes;
-          } else if (ch === ',' && !inQuotes) {
-            out.push(cur.trim());
-            cur = '';
-          } else {
-            cur += ch;
-          }
-        }
-        out.push(cur.trim());
-        return out;
-      };
-
-      const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
-      const nameIdx = headers.findIndex((h) => h.includes('name'));
-      const remIdx = headers.findIndex((h) => h.includes('remaining value'));
-      const origIdx = headers.findIndex((h) => h.includes('original value'));
-      const startIdx = headers.findIndex((h) => h.includes('start'));
-      const endIdx = headers.findIndex((h) => h.includes('end'));
-      const appIdx = headers.findIndex((h) => h.includes('application'));
-
-      const toIsoDate = (raw) => {
-        if (!raw) return '';
-        const d = new Date(raw);
-        if (!Number.isNaN(d.getTime())) {
-          return d.toISOString().slice(0, 10);
-        }
-        return raw;
-      };
-
-      const parseMoney = (raw) => {
-        if (!raw) return 0;
-        return Number(String(raw).replace(/[^0-9.-]/g, '')) || 0;
-      };
-
-      const imported = [];
-      for (let i = 1; i < lines.length; i += 1) {
-        const cols = parseCsvLine(lines[i]);
-        if (cols.length < 3) continue;
-        const name = cols[nameIdx >= 0 ? nameIdx : 0] || `Credit Grant #${i}`;
-        const rem = parseMoney(cols[remIdx >= 0 ? remIdx : 3]);
-        const orig = parseMoney(cols[origIdx >= 0 ? origIdx : 4]) || rem;
-        const startDate = toIsoDate(cols[startIdx >= 0 ? startIdx : 5]);
-        const expirationDate = toIsoDate(cols[endIdx >= 0 ? endIdx : 6]);
-        const creditApplication =
-          cols[appIdx >= 0 ? appIdx : 7] || 'Net price';
-
-        imported.push({
-          id: `csv-credit-${i}-${Date.now().toString(36)}`,
-          name,
-          grantType: name.includes('MONTHLY') ? 'GDP_MONTHLY' : 'PROMOTIONAL',
-          creditCode: name.split('-').pop()?.trim() || 'GCP-CREDIT',
-          initialAmountUsd: orig,
-          remainingAmountUsd: rem,
-          startDate,
-          expirationDate,
-          creditApplication,
-          alertDaysThreshold: 30,
-        });
-      }
-
-      if (imported.length > 0) {
-        await persistGrants(imported, {
-          action: 'BULK_IMPORT',
-          grants: imported,
-          rawCsv: text,
-        });
-        if (onShowToast) {
-          onShowToast(
-            `Imported ${imported.length} credit rows from your Google Cloud Billing CSV.`
-          );
-        }
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  const handleDownloadCsv = () => {
-    if (enrichedGrants.length === 0) return;
-    const header =
-      'Credit name,Status,Percent remaining,Remaining value,Original value,Start date,End date,Credit application';
-    const rows = enrichedGrants.map((g) => {
-      const m = g.metrics;
-      const pct = m.isExpired ? '—' : `${m.displayPct}%`;
-      return `"${g.name}","${m.consoleStatusLabel}","${pct}","$${m.remaining.toFixed(
-        2
-      )}","$${m.initial.toFixed(2)}","${formatHumanDate(
-        g.startDate
-      )}","${formatHumanDate(g.expirationDate)}","${
-        g.creditApplication || 'Net price'
-      }"`;
-    });
-    const csvContent = [header, ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `gcp-billing-credits-${projectId || 'export'}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const bqCreditExportSql = useMemo(() => {
     const cleanAcct = (billingInfo.billingAccountId || 'XXXXXX_XXXXXX_XXXXXX').replace(
       /-/g,
@@ -585,8 +409,8 @@ ORDER BY
   const budgetAlertCli = useMemo(() => {
     const acctId = billingInfo.billingAccountId || 'YOUR_BILLING_ACCOUNT_ID';
     const targetAmount = Math.max(
-      50,
-      Math.round(summary.totalRemainingUsd || 100)
+      1,
+      Math.round(summary.totalRemainingUsd || liveCostMetrics.grossUsageUsd || 1)
     );
     return `gcloud billing budgets create \\
   --billing-account=${acctId} \\
@@ -597,7 +421,12 @@ ORDER BY
   --threshold-rule=percent=0.8 \\
   --threshold-rule=percent=0.95 \\
   --filter-projects="projects/${projectId || 'my-gcp-project'}"`;
-  }, [billingInfo.billingAccountId, summary.totalRemainingUsd, projectId]);
+  }, [
+    billingInfo.billingAccountId,
+    summary.totalRemainingUsd,
+    liveCostMetrics.grossUsageUsd,
+    projectId,
+  ]);
 
   const handleCopyText = (id, text, label) => {
     navigator.clipboard.writeText(text);
@@ -610,7 +439,7 @@ ORDER BY
 
   return (
     <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-5">
-      {/* Header Row: Live Billing Account Identity + Real Sync / CSV Actions */}
+      {/* Header Row: Live Billing Account Identity + Sync Action */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -646,8 +475,7 @@ ORDER BY
             <code className="font-mono text-zinc-700 dark:text-zinc-300">
               cloudbilling.googleapis.com/v1beta:generateInsights
             </code>{' '}
-            (<code className="font-mono">cloud_billing_data.public.costs.v2</code>)
-            with zero hardcoded values or static CSV files.
+            (<code className="font-mono">cloud_billing_data.public.costs.v2</code>).
           </p>
         </div>
 
@@ -660,34 +488,6 @@ ORDER BY
             >
               <Building2 className="w-3.5 h-3.5 shrink-0" />
               <span>Billing Accounts ({billingAccounts.length})</span>
-            </button>
-          )}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={handleCsvUpload}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            title="Optionally import a CSV downloaded in your browser from Google Cloud Console -> Billing -> Credits -> Download CSV"
-            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white border border-blue-500/40 shadow-sm text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
-          >
-            <Upload className="w-3.5 h-3.5 shrink-0" />
-            <span>Import GCP Credits CSV</span>
-          </button>
-
-          {grants.length > 0 && (
-            <button
-              type="button"
-              onClick={handleDownloadCsv}
-              className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
-            >
-              <Download className="w-3.5 h-3.5 shrink-0" />
-              <span>Download CSV</span>
             </button>
           )}
 
@@ -899,103 +699,82 @@ ORDER BY
       )}
 
       {/* GDE Bonus Grant Baseline Bar (combines your GDE Coupon Amount & Expiry Date with Live API `total_credit` deduction) */}
-      {grants.length === 0 && (
-        <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
-              GDE Bonus Grant Baseline + Live Cloud Billing API Deduction (`Remaining = Grant - Live API Credits Used`)
-            </div>
-            <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
-              Live API Credits Deducted: -${liveCostMetrics.absCreditsUsd.toFixed(2)} USD
-            </span>
+      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+            GDE Bonus Grant Baseline + Live Cloud Billing API Deduction (`Remaining = Grant - Live API Credits Used`)
+          </div>
+          <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+            Live API Credits Deducted: -${liveCostMetrics.absCreditsUsd.toFixed(2)} USD
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div>
+            <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+              Grant / Bonus Name
+            </label>
+            <input
+              type="text"
+              value={gdeEnvelope.name}
+              placeholder={billingInfo.displayName || 'Enter Grant Name'}
+              onChange={(e) => updateGdeEnvelope({ name: e.target.value })}
+              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Grant / Bonus Name
-              </label>
-              <input
-                type="text"
-                value={gdeEnvelope.name}
-                onChange={(e) => updateGdeEnvelope({ name: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
+          <div>
+            <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+              Initial GDE Grant Amount ($ USD)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={gdeEnvelope.initialGrantUsd}
+              placeholder="Enter Grant Amount ($)"
+              onChange={(e) =>
+                updateGdeEnvelope({
+                  initialGrantUsd: e.target.value,
+                })
+              }
+              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
+            />
+          </div>
 
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Initial GDE Grant Amount ($ USD)
-              </label>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min="1"
-                  step="50"
-                  value={gdeEnvelope.initialGrantUsd}
-                  onChange={(e) =>
-                    updateGdeEnvelope({
-                      initialGrantUsd: Math.max(1, Number(e.target.value) || 0),
-                    })
-                  }
-                  className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
-                />
-                {[500, 1000, 2500].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() =>
-                      updateGdeEnvelope({ initialGrantUsd: preset })
-                    }
-                    className={`h-9 px-2 rounded-lg text-[10px] font-mono font-bold border cursor-pointer shrink-0 ${
-                      Number(gdeEnvelope.initialGrantUsd) === preset
-                        ? 'bg-blue-600 text-white border-blue-500'
-                        : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700'
-                    }`}
-                  >
-                    ${preset}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div>
+            <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+              Bonus Expiration Date
+            </label>
+            <input
+              type="date"
+              value={gdeEnvelope.expirationDate}
+              onChange={(e) =>
+                updateGdeEnvelope({ expirationDate: e.target.value })
+              }
+              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
+            />
+          </div>
 
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Bonus Expiration Date
-              </label>
-              <input
-                type="date"
-                value={gdeEnvelope.expirationDate}
-                onChange={(e) =>
-                  updateGdeEnvelope({ expirationDate: e.target.value })
-                }
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Warn Me Before Expiry (Days)
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="180"
-                value={gdeEnvelope.alertDaysThreshold}
-                onChange={(e) =>
-                  updateGdeEnvelope({
-                    alertDaysThreshold: Math.max(
-                      1,
-                      Number(e.target.value) || 30
-                    ),
-                  })
-                }
-                className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
+          <div>
+            <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+              Warn Me Before Expiry (Days)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={gdeEnvelope.alertDaysThreshold}
+              placeholder="Days"
+              onChange={(e) =>
+                updateGdeEnvelope({
+                  alertDaysThreshold: e.target.value,
+                })
+              }
+              className="w-full h-9 px-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+            />
           </div>
         </div>
-      )}
+      </div>
 
       {/* 4 Dynamically Calculated KPI Cards: Money Remaining, Nearest Expiry Countdown, Stranded/Expired, Required Burn */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">

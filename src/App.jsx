@@ -650,18 +650,6 @@ function CloudPulseCockpit() {
           )}/billing-guardian`
         )
         .then((res) => {
-          const localRaw = localStorage.getItem(
-            `cloudpulse_gcp_credits_csv_v3_${selectedProjectId}`
-          );
-          let list = res.data?.grants || [];
-          if (localRaw) {
-            try {
-              const parsed = JSON.parse(localRaw);
-              if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
-            } catch {
-              // ignore
-            }
-          }
           const rows = Array.isArray(
             res.data?.liveBillingInsights?.costCreditRows
           )
@@ -681,48 +669,38 @@ function CloudPulseCockpit() {
               ? Math.min(100, (absCreditsUsd / grossUsageUsd) * 100)
               : 0;
 
-          if (list.length === 0) {
-            let env = {
-              name: 'GDE Promotional Credit Grant',
-              initialGrantUsd: 1000,
-              startDate: new Date(Date.now() - 77 * 24 * 60 * 60 * 1000)
-                .toISOString()
-                .slice(0, 10),
-              expirationDate: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000)
-                .toISOString()
-                .slice(0, 10),
-              alertDaysThreshold: 30,
-            };
-            const savedEnv = localStorage.getItem(
-              'cloudpulse_gde_bonus_envelope_v1'
-            );
-            if (savedEnv) {
-              try {
-                env = { ...env, ...JSON.parse(savedEnv) };
-              } catch {
-                // ignore
+          let list = [];
+          const savedEnv = localStorage.getItem(
+            'cloudpulse_gde_bonus_envelope_v2'
+          );
+          if (savedEnv) {
+            try {
+              const env = JSON.parse(savedEnv);
+              const initAmt = Number(env?.initialGrantUsd) || 0;
+              if (initAmt > 0 && env?.expirationDate) {
+                list = [
+                  {
+                    id: 'live-api-deducted-gde-grant',
+                    name: env.name || 'GDE Promotional Credit Grant',
+                    initialAmountUsd: initAmt,
+                    remainingAmountUsd: Math.max(
+                      0,
+                      Number((initAmt - absCreditsUsd).toFixed(2))
+                    ),
+                    startDate: env.startDate || '',
+                    expirationDate: env.expirationDate,
+                    alertDaysThreshold: Number(env.alertDaysThreshold) || 30,
+                  },
+                ];
               }
+            } catch {
+              // ignore
             }
-            const initAmt = Math.max(1, Number(env.initialGrantUsd) || 1000);
-            list = [
-              {
-                id: 'live-api-deducted-gde-grant',
-                name: env.name,
-                initialAmountUsd: initAmt,
-                remainingAmountUsd: Math.max(
-                  0,
-                  Number((initAmt - absCreditsUsd).toFixed(2))
-                ),
-                startDate: env.startDate,
-                expirationDate: env.expirationDate,
-                alertDaysThreshold: Number(env.alertDaysThreshold) || 30,
-              },
-            ];
           }
 
           setGdeSummary({
             ...summarizeCreditLedger(list, 0),
-            hasImportedCredits: true,
+            hasImportedCredits: list.length > 0,
             liveCostMetrics: {
               hasLiveRows: rows.length > 0,
               grossUsageUsd,

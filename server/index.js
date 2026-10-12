@@ -16154,9 +16154,7 @@ app.post('/api/project/:projectId/action', async (req, res) => {
 // 3. `POST https://cloudbilling.googleapis.com/v1beta:generateInsights`
 //    (queries `cloud_billing_data.public.costs.v2` for live `usage_cost`,
 //    `total_credit`, `other_savings`, `savings_programs`, and `subtotal`).
-// Zero hardcoded credit rows or repo CSV files.
 // ============================================================================
-const gdeCreditGrantsByProject = new Map();
 const liveBillingInsightsCache = new Map();
 
 async function fetchLiveCloudBillingInsights(projectId, billingAccounts = [], forceRefresh = false) {
@@ -16349,34 +16347,6 @@ app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
     billingInfo,
     billingAccounts,
     liveBillingInsights,
-    grants: gdeCreditGrantsByProject.get(projectId) || [],
-  });
-});
-
-app.post('/api/project/:projectId/billing-guardian/grants', (req, res) => {
-  const { projectId } = req.params;
-  const { action = 'BULK_IMPORT', grants: bulkGrants } = req.body || {};
-
-  if (action === 'CLEAR') {
-    gdeCreditGrantsByProject.delete(projectId);
-    return res.json({
-      ok: true,
-      grants: [],
-      message: 'Cleared imported credit CSV data.',
-    });
-  }
-
-  if (action === 'BULK_IMPORT' && Array.isArray(bulkGrants)) {
-    gdeCreditGrantsByProject.set(projectId, bulkGrants);
-    return res.json({
-      ok: true,
-      grants: bulkGrants,
-      message: `Synced ${bulkGrants.length} credit rows from uploaded Google Cloud Billing CSV.`,
-    });
-  }
-
-  return res.status(400).json({
-    error: 'Unsupported action. Upload a Google Cloud Billing Credits CSV.',
   });
 });
 
