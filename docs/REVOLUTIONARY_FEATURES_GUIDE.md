@@ -186,4 +186,39 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   - **🔬 4-Stage Visual Eventarc Pipeline X-Ray & Live CloudEvent Tester**: Maps `1. Producer` ➔ `2. Transport & Billing ($0 Direct Pub/Sub vs Cloud Audit Logs)` ➔ `3. Eventarc Filter & IAM` ➔ `4. Function Runtime`, and lets you fire a synthetic `CloudEvents v1.0` envelope (`POST /api/project/:id/functions/test-event`) to inspect per-hop latency.
   - **🩺 1-Tap Eventarc IAM Auto-Doctor (`POST /api/project/:id/functions/iam-doctor`) & `v1 → v2` Upgrader**: Automatically resolves your `projectNumber` and grants the 4 required service-agent IAM bindings in 1 click, and upgrades legacy `v1` functions (`1 req/instance` limit) to `v2` (`up to 1,000 req/instance`, saving up to **78%** on monthly compute).
 
+---
+
+## ★ Wave 10 & 2026 Quantum Nexus — The Star of CloudPulse 2026
+
+### 24. ✦ 2026 Quantum Nexus — 5 World-First Breakthroughs (`Lab2026QuantumNexus.jsx`)
+- **Where to find it**: Featured directly on the **`2026 SRE Cockpit`** home screen AND at position #2 in the top navigation bar (**`✦ 2026 Innovation Lab ★` → `✦ 2026 Quantum Nexus`**).
+- **How it Works**:
+  1. **🕸️ Breakthrough #1 — Cross-Cloud Blast-Radius & Causal Dependency Graph**: Connects Identity (`IAM Service Accounts`), Network (`VPC Firewalls`), Compute (`Cloud Run` & `Compute Engine VMs`), Data (`BigLake Iceberg` & `GCS`), and Billing (`FinOps Circuit-Breaker`) into one interactive causal graph. Click any node and switch between `🔓 Simulate Credential Breach`, `⚡ Simulate Cascading Outage`, and `💸 Simulate DDoS / Spend Spike` to trace 1st- and 2nd-hop blast propagation.
+  2. **⏳ Breakthrough #2 — Time-Machine Flight Recorder & Verified 1-Click State Rollback**: Captures immutable `sha256` checkpoints of project state, diffs any two checkpoints side-by-side (`Open 0.0.0.0/0 Firewalls`, `IAM Bindings`, `VPC-SC Mode`, `Hourly Burn`), and restores state behind a mandatory **Human-in-the-Loop Approval Modal**.
+  3. **🤖 Breakthrough #3 — Autonomous FinOps Autopilot & Commitment Arbitrage Engine**: Calculates live monthly savings across **Standard → Spot VM conversion (`-72%`)**, **Cloud Run Always-Allocated → Request-Only CPU (`-68%`)**, and **BigQuery On-Demand → BigLake Partition Pruning (`-71%`)**, paired with an **Automated Hard-Cap Budget Circuit-Breaker** (`PARK_NIGHT_MODE` or `THROTTLE_WARM_INSTANCES`).
+  4. **🪞 Breakthrough #4 — Live Ephemeral PR Preview Environments & Shadow Traffic Mirror**: Clones a Cloud Run service into an isolated PR preview stack (`PR #402`, `PR #409`) that mirrors `5%–25%` of live production requests asynchronously, compares Prod vs. Shadow P95 latency & 5xx errors, and auto-self-destructs after its TTL (`2h–24h`).
+  5. **🍯 Breakthrough #5 — Zero-Trust Honey-Token & Active Breach Deception Grid**: Plants decoy IAM Service Account `.json` keys, canary BigLake Parquet files, and Secret Manager honey-secrets wired to an active tripwire that revokes the decoy credential and injects a `/32` VPC Firewall deny rule in milliseconds.
+
+### 25. 🚀 Wave-10 2026 Frontier Studio (`Wave10Frontier2026Studio.jsx`)
+- **Where to find it**: Top navigation tab **`Spanner Graph & Spark 🚀`** (or via the **2026 Deep-Dive Studios** launch bar inside `✦ 2026 Innovation Lab ★`).
+- **How it Works**:
+  - **🕸️ Tab 1 — Spanner Graph (`ISO GQL`) & Granular 100-PU Sizing (`~$65/mo`)**: Provision fractional Cloud Spanner instances starting at `100 Processing Units` (`0.1 node`) with Geo-Partitioning and execute unified `SQL + ISO GQL` graph queries on the same tables with zero ETL.
+  - **🔥 Tab 2 — Dataproc Serverless for Apache Spark 2.2 (`Scale-to-$0`)**: Submit sub-5-second startup PySpark 3.5 / Spark SQL batches over BigLake Apache Iceberg tables with zero cluster management overhead.
+  - **🎼 Tab 3 — Cloud Workflows Visual Saga Choreographer**: Design and execute multi-service YAML sagas with exponential backoff and rollback compensation.
+  - **🛡️ Tab 4 — Vertex AI Model Armor & Prompt-Injection / PII Firewall**: Inspect prompts in real time to block jailbreaks, system-prompt extraction, SSRF metadata probes, and regulated PII before calling Gemini / Vertex AI.
+
+### 26. 🌊 BigLake vs. BigQuery Demystified & Open Apache Iceberg Studio (`BigQueryStudio.jsx` Tab 5)
+- **Where to find it**: Top navigation tab **`BigQuery & BigLake 🌊` → Tab 5 (`🌊 BigLake & Open Iceberg (2026)`)**.
+- **How it Works**:
+  - Demystifies **BigQuery** (native managed Capacitor storage + SQL compute) vs. **BigLake** (unified open storage governance & table engine over Cloud Storage Parquet/Iceberg/Delta files across BigQuery, Spark, Trino, and Vertex AI).
+  - Includes an interactive *"Which One Do I Need?"* workload recommender and a **1-Click BigLake Connection + Managed Apache Iceberg Table Provisioner** (`POST /api/project/:id/bigquery/biglake/create`).
+
+### 27. 🔑 Sovereign IAM Owner Self-Protection, Human Approval Gate & SA Key / Token Kill-Switch Vault (`SovereignTimeMachineIamStudio.jsx`)
+- **Where to find it**: Top navigation tab **`Sovereign & IAM 🔑`**.
+- **How it Works**:
+  - **🛡️ Active Session Owner Self-Protection**: Automatically detects the authenticated session email and marks your own `roles/owner` binding as **`PROTECTED OWNER`** so IAM drift recommenders never suggest locking yourself out.
+  - **✋ Mandatory Human Approval Modal**: Requires explicit review of the exact `gcloud` command and human approval before any IAM privilege reduction is executed.
+  - **🔑 Service Account `.json` Key & OAuth2 Token Kill-Switch Vault**: Dedicated top sub-tab switcher + compact collapsible IAM roles list so you can immediately inspect all Service Accounts, create & download a `.json` key, disable/re-enable a key to test breakage, permanently delete a leaked key, or trigger the **1-Click Emergency Key Purge + Active OAuth2 Token Revocation**.
+
+
 

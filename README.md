@@ -111,9 +111,27 @@
     - Audit container repositories (`artifactregistry.googleapis.com/v1`), enforce immutable tags (`dockerConfig.immutableTags = true`), delete individual container digests in 1 click, or batch-sweep all untagged orphan layers to reclaim wasted monthly storage spend.
 
 23. **⚡ Cloud Functions (`1st Gen v1` & `2nd Gen v2`) + Demystified Eventarc Visual Trigger Studio (`CloudFunctionsEventarcStudio.jsx`)**
-    - **🎯 Plain-English Eventarc Trigger Wizard ("`v1` Simplicity with `v2` Power")**: Eliminates raw CloudEvents filter memorization—pick *"When a file is uploaded/deleted in Cloud Storage"*, *"When a Pub/Sub message arrives"*, *"When a BigQuery job finishes"*, *"On a Cron Schedule"*, or *"Direct HTTPS Webhook"*.
+    - **🎯 Plain-English Eventarc Trigger Wizard ("`v1` Simplicity with `v2` Power")**: Eliminates raw CloudEvents filter memorization—pick *"When a file is uploaded/deleted in Cloud Storage"*, *"When a Pub/Sub message arrives"*, *"When a BigQuery job finishes"*, *"On a Cron Schedule"*, or *"Direct HTTPS Webhook"*, plus the **Universal 2026 Eventarc Multi-Service Catalog (90+ GCP Providers across 8 Architecture Domains)**.
     - **🔬 4-Stage Visual Eventarc Pipeline X-Ray & Cost Guardrail**: Visually maps `1. Event Producer` ➔ `2. Transport Bus ($0 Free Direct Pub/Sub vs Cloud Audit Logs DATA_WRITE warning)` ➔ `3. Eventarc Filter & Hidden IAM Roles` ➔ `4. Function Handler`, with a **1-Click Synthetic CloudEvent v1.0 Tester** and copy-ready **Node.js 22 / Python 3.12 / Go 1.23** handler code.
     - **🩺 1-Tap Eventarc IAM Auto-Doctor & `v1 → v2` Upgrader**: Automatically binds the 4 hidden service-agent IAM roles (`roles/pubsub.publisher` on the GCS Service Agent, `roles/eventarc.eventReceiver`, `roles/run.invoker`, and `roles/eventarc.serviceAgent`) that break newcomer deployments, and upgrades legacy `v1` functions (`1 req/instance`) to `v2` (`up to 1,000 req/instance`, saving up to **78%**).
+
+24. **✦ 2026 Quantum Nexus — 5 World-First Breakthroughs Inside the `✦ 2026 Innovation Lab ★` (`Lab2026QuantumNexus.jsx`)**
+    - **🕸️ Breakthrough #1 — Cross-Cloud Blast-Radius & Causal Dependency Graph**: Connects **Identity (IAM Service Accounts)**, **Network (VPC Firewalls)**, **Serverless (Cloud Run)**, **Compute VMs**, **Data Lakehouse (BigLake Iceberg & GCS)**, and **Billing** into one interactive causal simulator (`🔓 Simulate Credential Breach`, `⚡ Simulate Cascading Outage`, `💸 Simulate DDoS / Spend Spike`).
+    - **⏳ Breakthrough #2 — Time-Machine Flight Recorder & Verified 1-Click State Rollback**: Captures cryptographic `sha256` checkpoints of project state, diffs any two checkpoints side-by-side, and executes state rollback behind a **Human-in-the-Loop Approval Gate**.
+    - **🤖 Breakthrough #3 — Autonomous FinOps Autopilot & Commitment Arbitrage Engine**: Calculates live monthly savings across **Standard → Spot VM (`-72%`)**, **Cloud Run Request-Only CPU (`-68%`)**, and **BigQuery → BigLake Partition Pruning (`-71%`)**, paired with an **Automated Hard-Cap Budget Circuit-Breaker**.
+    - **🪞 Breakthrough #4 — Live Ephemeral PR Preview Environments & Shadow Traffic Mirror**: Spawns isolated Cloud Run PR preview stacks mirroring `5%–25%` of live production traffic asynchronously with an **Auto-TTL Self-Destruct Timer (`2h–24h`)**.
+    - **🍯 Breakthrough #5 — Zero-Trust Honey-Token & Active Breach Deception Grid**: Plants decoy Service Account `.json` keys, canary BigLake Parquet files, and Secret Manager honey-secrets wired to an automated VPC `/32` IP-ban + IAM quarantine tripwire.
+
+25. **🚀 Wave-10 2026 Frontier Studio — Spanner Graph (`$65/mo` 100-PU), Serverless Apache Spark 2.2, Cloud Workflows & Vertex AI Model Armor (`Wave10Frontier2026Studio.jsx`)**
+    - **🕸️ Spanner Graph (`ISO GQL`) & Granular 100-PU Sizing (`~$65/mo`)**: Provision fractional Spanner instances (`100` to `1,000` Processing Units) with Geo-Partitioning and run unified `SQL + ISO GQL` graph traversal queries with zero ETL.
+    - **🔥 Dataproc Serverless for Apache Spark 2.2 (`Scale-to-$0`)**: Submit sub-5-second startup PySpark 3.5 / Spark SQL batches directly over BigLake Apache Iceberg tables with `$0` idle cluster waste.
+    - **🎼 Cloud Workflows Visual Saga Choreographer & 🛡️ Vertex AI Model Armor Prompt-Injection / PII Firewall**.
+
+26. **🌊 BigLake vs. BigQuery Demystified & Open Apache Iceberg Studio (`BigQueryStudio.jsx` Tab 5)**
+    - Side-by-side architectural clarifier (`BigQuery` vs. `BigLake`), interactive *"Which One Do I Need?"* workload recommender, and **1-Click BigLake Cloud Resource Connection + Managed Apache Iceberg Table Provisioner**.
+
+27. **🔑 Sovereign IAM Owner Self-Protection, Human Approval Gate & Service Account `.json` Key / OAuth2 Token Kill-Switch Vault (`SovereignTimeMachineIamStudio.jsx`)**
+    - Protects the authenticated Project Owner (`PROTECTED OWNER` badge) from accidental self-downgrade, enforces a mandatory **Human Approval Modal** before any IAM privilege reduction, and provides a full **Service Account `.json` Key & OAuth2 Token Vault** to create, download, disable/re-enable, delete, or emergency-purge stolen credentials in 1 click.
 
 > 📖 **Full Engineering & User Manual**: Read [**`docs/REVOLUTIONARY_FEATURES_GUIDE.md`**](docs/REVOLUTIONARY_FEATURES_GUIDE.md) or click the **`Docs & Guide 📖`** tab directly inside the app for step-by-step explanations of every feature, the exact GCP REST APIs called, and billing impact.
 
@@ -172,6 +190,14 @@
 | `/api/ai-vault/configure` | `POST` | Accepts an **ECDH P-256 + HKDF-SHA256 + AES-256-GCM** encrypted client envelope and seals the key in volatile RAM |
 | `/api/project/:id/ai-vault/ask` | `POST` | Runs live `gemini-3.8-flash` / `gemini-3.1-pro` SRE & FinOps reasoning (`8,192` token budget) |
 | `/api/project/:id/overview` | `GET` | Parallel live fetch of VMs, Cloud Run, GKE, VPCs, Firewalls, GCS, BigQuery, APIs & Logs |
+| `/api/project/:id/quantum-nexus/overview` | `GET` | **2026 Quantum Nexus**: Returns Cross-Cloud Causal Blast-Radius Graph, Time-Machine Snapshots, FinOps Arbitrage, Ephemeral PR Stacks & Honey-Tokens |
+| `/api/project/:id/quantum-nexus/action` | `POST` | **2026 Quantum Nexus**: Executes `CAPTURE_SNAPSHOT`, `ROLLBACK_SNAPSHOT`, `UPDATE_FINOPS_CIRCUIT_BREAKER`, `CREATE_EPHEMERAL_PR_ENV`, `PLANT_HONEY_TOKEN` & `TRIGGER_HONEY_TRIPWIRE_TEST` |
+| `/api/project/:id/wave10/overview` | `GET` | **Wave-10 Frontier Studio**: Lists Spanner Graph instances, Serverless Spark batches, Cloud Workflows & Model Armor policies |
+| `/api/project/:id/wave10/action` | `POST` | **Wave-10 Frontier Studio**: Executes `CREATE_SPANNER_INSTANCE`, `RUN_SPANNER_GQL`, `SUBMIT_SERVERLESS_SPARK`, `DEPLOY_WORKFLOW_SAGA` & `SCAN_MODEL_ARMOR` |
+| `/api/project/:id/bigquery/biglake/overview` | `GET` | **BigLake & Iceberg Studio**: Lists BigLake Cloud Resource Connections and Open Apache Iceberg / Parquet tables |
+| `/api/project/:id/bigquery/biglake/create` | `POST` | **BigLake & Iceberg Studio**: Creates BigLake Connection, binds GCS IAM & provisions an Apache Iceberg / Parquet table |
+| `/api/project/:id/sovereign-iam/credentials` | `GET` | **Sovereign IAM Vault**: Lists Service Accounts, user-managed `.json` keys (`iam.googleapis.com/v1`) & active session OAuth2 token status |
+| `/api/project/:id/sovereign-iam/credentials/action` | `POST` | **Sovereign IAM Kill-Switch**: Executes `CREATE_SA_KEY`, `DISABLE_SA_KEY`, `ENABLE_SA_KEY`, `DELETE_SA_KEY`, `EMERGENCY_REVOKE_ALL_SA_KEYS` & `REVOKE_ACTIVE_OAUTH_TOKEN` |
 | `/api/project/:id/cloudrun` | `GET / PATCH` | Lists and live-patches Cloud Run Gen2 services (CPU, RAM, Min/Max scale, GPUs, Billing mode, Direct VPC Egress & Storage Volume Mounts) |
 | `/api/project/:id/cloudrun/convert-to-gke` | `POST` | **Cloud Run → GKE Migrator**: Transpiles & deploys a 6-resource K8s bundle onto a live GKE cluster |
 | `/api/project/:id/functions/overview` | `GET` | **Cloud Functions & Eventarc Studio**: Lists `v2` & `v1` functions (`cloudfunctions.googleapis.com`) and Eventarc triggers (`eventarc.googleapis.com`) |

@@ -120,6 +120,62 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-quantum-nexus',
+        category: '★ 2026 Innovation Lab (Star)',
+        title: 'Open 2026 Quantum Nexus (Causal Blast-Radius, State Rollback, FinOps, PR Mirror & Honey-Grid)',
+        subtitle: 'Launch all 5 world-first 2026 breakthroughs inside the 2026 Innovation Lab',
+        keywords: 'quantum nexus causal blast radius rollback snapshot finops arbitrage ephemeral pr preview shadow mirror honey token deception',
+        badge: '★ 2026 STAR',
+        badgeColor: 'text-amber-300 bg-violet-500/25 border-amber-400/50',
+        icon: Sparkles,
+        run: () => {
+          onSelectTab('INNOVATION_LAB', 'QUANTUM_NEXUS');
+          onClose();
+        }
+      },
+      {
+        id: 'open-wave10-frontier',
+        category: '★ 2026 Innovation Lab (Star)',
+        title: 'Open Spanner Graph ($65/mo 100-PU), Serverless Spark 2.2, Workflows & Model Armor',
+        subtitle: 'ISO GQL Graph queries, scale-to-$0 Spark over BigLake Iceberg, Saga Workflows & AI Prompt Firewall',
+        keywords: 'spanner graph gql spark serverless dataproc workflows saga model armor vertex ai wave 10',
+        badge: '2026 FRONTIER',
+        badgeColor: 'text-fuchsia-300 bg-fuchsia-500/15 border-fuchsia-500/30',
+        icon: Rocket,
+        run: () => {
+          onSelectTab('WAVE10_FRONTIER');
+          onClose();
+        }
+      },
+      {
+        id: 'open-biglake-iceberg',
+        category: '★ 2026 Innovation Lab (Star)',
+        title: 'Open BigLake vs. BigQuery Demystified Studio & Open Apache Iceberg Wizard',
+        subtitle: 'Compare BigQuery vs BigLake side-by-side and provision governed Apache Iceberg tables in 1 click',
+        keywords: 'biglake bigquery iceberg parquet lakehouse open table governance',
+        badge: 'BIGLAKE 2026',
+        badgeColor: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab('BIGQUERY_STUDIO');
+          onClose();
+        }
+      },
+      {
+        id: 'open-sa-key-killswitch',
+        category: '★ 2026 Innovation Lab (Star)',
+        title: 'Open Service Account .json Key & OAuth Token Kill-Switch Vault (Sovereign IAM)',
+        subtitle: 'Create, download, disable, or emergency-revoke stolen SA .json keys & active tokens with Owner self-protection',
+        keywords: 'iam service account key json token revoke kill switch stolen credential sovereign owner',
+        badge: 'IAM KILL-SWITCH',
+        badgeColor: 'text-rose-300 bg-rose-500/15 border-rose-500/30',
+        icon: Key,
+        run: () => {
+          onSelectTab('SOVEREIGN_IAM');
+          onClose();
+        }
+      },
+      {
         id: 'sleep-project',
         category: 'FinOps & Sleep Mode',
         title: 'Park Project for the Night (Hibernate All Running VMs & Warm Cloud Run)',

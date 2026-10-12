@@ -28,11 +28,107 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'quantum-nexus-2026-lab-star',
+    wave: '★ FLAGSHIP STAR · 2026 QUANTUM NEXUS (5 WORLD-FIRST BREAKTHROUGHS)',
+    title:
+      '✦ 2026 Quantum Nexus — Causal Blast-Radius Graph, Time-Machine State Rollback, FinOps Arbitrage Autopilot, Ephemeral PR Shadow Previews & Zero-Trust Honey-Token Deception Grid',
+    badge: '✦ 2026 INNOVATION LAB ★ (DEFAULT STAR)',
+    badgeColor: 'bg-violet-500/20 text-violet-400 border-violet-500/40',
+    icon: Sparkles,
+    targetTab: 'INNOVATION_LAB',
+    targetSubTab: 'QUANTUM_NEXUS',
+    problemSolved:
+      'Standard cloud consoles treat IAM, VPC Firewalls, Compute, Storage/BigLake, CI/CD, and Billing as isolated silos—so you cannot see cross-domain causal failure cascades, cannot snapshot and roll back whole-project configuration drift in 1 click, cannot automate Spot/Slot arbitrage with a hard-cap circuit-breaker, cannot mirror live production traffic into auto-expiring PR preview branches, and cannot plant active deception tripwires against credential thieves.',
+    howItWorks: [
+      '🕸️ Breakthrough #1 — Cross-Cloud Blast-Radius & Causal Dependency Graph: Connects Identity (IAM Service Accounts), Network (VPC Firewalls), Compute (Cloud Run & VMs), Data (BigLake Iceberg & GCS), and Billing into one interactive causal simulator. Click any node and switch between Simulate Credential Breach, Cascading Outage, or DDoS/Spend Spike to inspect 1st/2nd-hop blast propagation.',
+      '⏳ Breakthrough #2 — Time-Machine Flight Recorder & Verified 1-Click State Rollback: Captures cryptographic SHA-256 project state checkpoints (IAM bindings, open firewalls, Cloud Run revisions, VMs, and hourly burn), diffs any two snapshots side-by-side, and restores state behind a Human-in-the-Loop Approval Gate.',
+      '🤖 Breakthrough #3 — Autonomous FinOps Autopilot & Commitment Arbitrage Engine: Identifies live Standard → Spot VM (-72%), Cloud Run Always-Allocated → Request-Only CPU (-68%), and BigQuery → BigLake Partition Pruning (-71%) arbitrage, plus an Automated Hard-Cap Budget Circuit-Breaker ($/mo & $/hr spike triggers).',
+      '🪞 Breakthrough #4 — Live Ephemeral PR Preview Environments & Shadow Traffic Mirror: Clones any Cloud Run service into a PR preview stack that mirrors 5%–25% of live traffic asynchronously, compares Prod vs Shadow P95 latency & 5xx errors, and auto-self-destructs after its TTL (2h–24h) so dev stacks never become zombie bills.',
+      '🍯 Breakthrough #5 — Zero-Trust Honey-Token & Active Breach Deception Grid: Plants decoy IAM Service Account .json keys, canary BigLake Parquet files, and Secret Manager honey-secrets that trigger instant VPC /32 IP-ban + credential quarantine the millisecond an attacker touches them.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/quantum-nexus/overview (aggregates compute, run, storage, firewall & IAM state)',
+      'POST /api/project/:id/quantum-nexus/action (CAPTURE_SNAPSHOT, ROLLBACK_SNAPSHOT, UPDATE_FINOPS_CIRCUIT_BREAKER, CREATE_EPHEMERAL_PR_ENV, PLANT_HONEY_TOKEN, TRIGGER_HONEY_TRIPWIRE_TEST)',
+    ],
+    billingImpact:
+      '100% free control-plane engine; actively prevents runaway cloud bills, zombie PR preview environments, and credential-breach exfiltration costs.',
+  },
+  {
+    id: 'wave10-2026-frontier-spanner-spark-workflows-armor',
+    wave: 'WAVE 10 · 2026 FRONTIER STUDIO (SPANNER GRAPH, SPARK, WORKFLOWS & MODEL ARMOR)',
+    title:
+      '🚀 Spanner Graph & Geo-Partitioning ($65/mo 100-PU), Serverless Apache Spark 2.2, Cloud Workflows Visual Choreographer & Vertex AI Model Armor',
+    badge: 'SPANNER GRAPH & SPARK 🚀 TAB',
+    badgeColor: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30',
+    icon: Rocket,
+    targetTab: 'WAVE10_FRONTIER',
+    problemSolved:
+      'Engineers often think Cloud Spanner still costs $730+/mo for a full node or requires a separate graph database like Neo4j, struggle with idle Dataproc cluster waste when running PySpark over BigLake Iceberg, lack a visual retry/compensation choreographer for multi-service sagas, and need inline prompt-injection & PII defense for Vertex AI / Gemini workloads.',
+    howItWorks: [
+      '🕸️ Tab 1 — Spanner Graph (ISO GQL) + Granular 100-PU Sizing ($65/mo) & Geo-Partitioning: Provision fractional Spanner instances starting at 100 Processing Units (0.1 node = ~$65/mo with 99.999% SLA) and run unified SQL + ISO GQL Graph queries (GRAPH FinTechFraudGraph MATCH (a:Account)-[t:TRANSFERRED]->(b:Account)) on the same tables with zero ETL.',
+      '🔥 Tab 2 — Dataproc Serverless for Apache Spark 2.2 (Scale-to-$0 Lakehouse Engine): Submit sub-5-second startup PySpark 3.5 / Spark SQL batches directly over BigLake Apache Iceberg tables with zero master/worker cluster management fees.',
+      '🎼 Tab 3 — Cloud Workflows Visual Step-by-Step Saga & Compensation Choreographer: Visually design and execute multi-API cloud sagas with exponential backoff retries and automatic rollback compensation.',
+      '🛡️ Tab 4 — Vertex AI Model Armor & Prompt-Injection / PII Firewall: Real-time adversarial prompt scanner that intercepts jailbreaks, system-prompt extraction, SSRF/metadata probes, and regulated PII before reaching Gemini / Vertex AI.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/wave10/overview → spanner.googleapis.com/v1 + dataproc.googleapis.com/v1 + workflows.googleapis.com/v1',
+      'POST /api/project/:id/wave10/action (CREATE_SPANNER_INSTANCE, RUN_SPANNER_GQL, SUBMIT_SERVERLESS_SPARK, DEPLOY_WORKFLOW_SAGA, SCAN_MODEL_ARMOR)',
+    ],
+    billingImpact:
+      'Unlocks fractional 100-PU Spanner (~$65/mo instead of $730/mo) and scale-to-$0 Serverless Spark batches ($0 idle cluster waste).',
+  },
+  {
+    id: 'biglake-vs-bigquery-open-iceberg-2026',
+    wave: 'BIGLAKE & APACHE ICEBERG · OPEN LAKEHOUSE STUDIO',
+    title:
+      '🌊 BigLake vs. BigQuery Demystified Studio — Open Apache Iceberg Tables, Cross-Engine Governance & 1-Click BigLake Wizard',
+    badge: 'BIGQUERY & BIGLAKE 🌊 TAB (TAB 5)',
+    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    icon: Layers,
+    targetTab: 'BIGQUERY_STUDIO',
+    problemSolved:
+      'Engineers frequently confuse Google BigQuery with Google BigLake, leading to duplicate data copies in proprietary storage when they actually need open Parquet/Apache Iceberg files on Cloud Storage governed by a single row/column-level security policy across BigQuery, Spark, Trino, and Vertex AI.',
+    howItWorks: [
+      '🧭 Interactive "BigQuery vs. BigLake" Side-by-Side Architecture Clarifier: Explains Storage Location, File Format (Proprietary Capacitor vs Open Apache Iceberg/Parquet/Delta), Multi-Engine Read/Write (BigQuery + Spark + Flink + Presto), Fine-Grained Row/Column Security, and Governance Connection Architecture.',
+      '🎯 "Which One Do I Need?" Decision Matrix: Instant architectural recommendation based on your workload (Pure SQL Warehouse vs Open Apache Iceberg Lakehouse vs Multi-Cloud Omni).',
+      '⚡ 1-Click BigLake Connection + Managed Apache Iceberg Table Provisioner: Creates the BigQuery Cloud Resource Connection, binds the Connection Service Account IAM role on your GCS bucket, and executes CREATE EXTERNAL TABLE ... WITH CONNECTION ... OPTIONS(format="ICEBERG" | "PARQUET", metadata_cache_mode="AUTOMATIC").',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/bigquery/biglake/overview',
+      'POST /api/project/:id/bigquery/biglake/create → bigqueryconnection.googleapis.com/v1 + bigquery.googleapis.com/bigquery/v2/projects/:id/jobs',
+    ],
+    billingImpact:
+      'Eliminates duplicate warehouse storage bills by keeping a single open Parquet/Iceberg copy on Cloud Storage ($0.020/GB-mo) with BigLake metadata caching.',
+  },
+  {
+    id: 'sovereign-iam-owner-guard-and-sa-key-killswitch',
+    wave: 'SOVEREIGN IAM · OWNER SELF-PROTECTION & STOLEN KEY KILL-SWITCH VAULT',
+    title:
+      '🔑 Sovereign IAM Owner Self-Protection, Human Approval Gate & Service Account .json Key / OAuth2 Token Kill-Switch Vault',
+    badge: 'SOVEREIGN & IAM 🔑 TAB',
+    badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    icon: ShieldAlert,
+    targetTab: 'SOVEREIGN_IAM',
+    problemSolved:
+      'Standard IAM recommenders naively flag the authenticated project owner (roles/owner) as "excessive privilege" and can lock you out if clicked accidentally—and if a Service Account .json key or OAuth token is stolen, engineers need one place to inspect, create, download, disable, or permanently revoke keys in seconds.',
+    howItWorks: [
+      '🛡️ Active Session Owner Self-Protection (PROTECTED OWNER badge): Cross-references every IAM binding against your active authenticated account so your own roles/owner binding is protected and never auto-targeted for downgrade.',
+      '✋ Mandatory Human-in-the-Loop Approval Modal: Every IAM privilege reduction requires reviewing the exact gcloud iam command, typing or confirming impact, and clicking Approve & Execute.',
+      '🔑 Service Account .json Key & OAuth2 Token Kill-Switch Vault: Dedicated top sub-tab switcher + compact collapsible IAM roles list so you can immediately access all Service Accounts, create & download a new .json key, disable/re-enable a key to test breakage, permanently delete a leaked key, or run the 1-Click Emergency Key Purge + Active OAuth Token Revocation.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/sovereign-iam/credentials → iam.googleapis.com/v1/projects/:id/serviceAccounts/:email/keys',
+      'POST /api/project/:id/sovereign-iam/credentials/action (CREATE_SA_KEY, DISABLE_SA_KEY, ENABLE_SA_KEY, DELETE_SA_KEY, EMERGENCY_REVOKE_ALL_SA_KEYS, REVOKE_ACTIVE_OAUTH_TOKEN)',
+    ],
+    billingImpact:
+      '100% free IAM control plane; neutralizes stolen Service Account .json keys before attackers can spin up rogue GPU/crypto miners.',
+  },
+  {
     id: 'wave3-engineer-moonshots-x1-x6',
     wave: 'WAVE 6 · ENGINEER MOONSHOT LAB (X1–X6)',
     title:
       '🚀 6 Out-of-the-Box Cloud Engineering Moonshots (DLP X-Ray, Cold-Start Surgeon, Egress Tollbooth, Ransomware Air-Gap, Anycast Latency & AES-256-GCM Gemini 3.8 / 3.1 Vault)',
-    badge: '2026 LAB · MOONSHOTS X1–X6 (NEW)',
+    badge: '2026 LAB · MOONSHOTS X1–X6',
     badgeColor: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
     icon: Rocket,
     targetTab: 'INNOVATION_LAB',
