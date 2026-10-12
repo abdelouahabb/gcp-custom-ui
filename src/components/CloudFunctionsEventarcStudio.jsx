@@ -135,6 +135,204 @@ const TRIGGER_RECIPES = [
     costNote:
       'First 2,000,000 invocations/month + 400,000 GB-seconds + 200,000 GHz-seconds are 100% FREE every month.',
   },
+  {
+    id: 'UNIVERSAL_AUDIT',
+    title: '🚀 Universal GCP Service Event (130+ Services)',
+    plainEnglish: 'When a Compute VM is created, Firewall changes, IAM key is added, or GKE/SQL mutates',
+    transportMode: 'ADMIN_AUDIT_FREE',
+    transportBadge: '🟢 ADMIN_ACTIVITY Audit Log (Always ON · $0.00 Free)',
+    eventTypeDefault: 'google.cloud.audit.log.v1.written',
+    eventSubtypes: [],
+    hiddenIamNote:
+      'Requires Default Compute Service Account to have roles/eventarc.eventReceiver + roles/run.invoker (auto-healed by our 1-Tap IAM Doctor).',
+    costNote:
+      '100% Free Ingestion! Google Cloud ADMIN_ACTIVITY Audit Logs (VM creation, IAM, Firewall, GKE, Cloud SQL) are ALWAYS ON by default and incur $0.00 Cloud Logging fees.',
+  },
+];
+
+const ADVANCED_EVENTARC_CATALOG = [
+  {
+    id: 'VM_CREATED',
+    group: 'COMPUTE_VM',
+    badge: '🖥️ Compute Engine',
+    title: 'Compute VM Instance Created',
+    plainEnglish: 'Triggers the instant a new VM is provisioned in any zone (auto-tag, compliance check, or Slack alert)',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'compute.googleapis.com',
+    methodName: 'v1.compute.instances.insert',
+    samplePathPattern: '/projects/*/zones/*/instances/prod-*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'vm-creation-guardrail',
+  },
+  {
+    id: 'VM_DELETED',
+    group: 'COMPUTE_VM',
+    badge: '🖥️ Compute Engine',
+    title: 'Compute VM Instance Deleted / Terminated',
+    plainEnglish: 'Triggers when a VM is destroyed (clean up DNS records, release static IPs, or archive metadata)',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'compute.googleapis.com',
+    methodName: 'v1.compute.instances.delete',
+    samplePathPattern: '/projects/*/zones/*/instances/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'vm-cleanup-handler',
+  },
+  {
+    id: 'VM_STOPPED',
+    group: 'COMPUTE_VM',
+    badge: '🖥️ Compute Engine',
+    title: 'Compute VM Instance Stopped / Halted',
+    plainEnglish: 'Triggers when a running VM is stopped (detect unexpected production shutdowns or snapshot disks)',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'compute.googleapis.com',
+    methodName: 'v1.compute.instances.stop',
+    samplePathPattern: '/projects/*/zones/*/instances/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'vm-stop-monitor',
+  },
+  {
+    id: 'DISK_SNAPSHOT',
+    group: 'COMPUTE_VM',
+    badge: '🖥️ Compute Engine',
+    title: 'Persistent Disk Snapshot Created',
+    plainEnglish: 'Triggers when a disk snapshot finishes (replicate cross-region or verify backup retention labels)',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'compute.googleapis.com',
+    methodName: 'v1.compute.snapshots.insert',
+    samplePathPattern: '/projects/*/global/snapshots/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'snapshot-replicator',
+  },
+  {
+    id: 'FIREWALL_MUTATED',
+    group: 'IAM_SECURITY',
+    badge: '🛡️ Network Security',
+    title: 'VPC Firewall Rule Created or Opened',
+    plainEnglish: 'Auto-remediate if someone opens 0.0.0.0/0 on port 22 (SSH) or 3389 (RDP) in your VPC',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'compute.googleapis.com',
+    methodName: 'v1.compute.firewalls.insert',
+    samplePathPattern: '/projects/*/global/firewalls/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'firewall-zero-trust-enforcer',
+  },
+  {
+    id: 'IAM_SA_KEY_CREATED',
+    group: 'IAM_SECURITY',
+    badge: '🔑 IAM & Zero-Trust',
+    title: 'Service Account JSON Key Exported',
+    plainEnglish: 'High-priority SecOps trigger when a long-lived Service Account key is created (alert or auto-revoke)',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'iam.googleapis.com',
+    methodName: 'google.iam.admin.v1.CreateServiceAccountKey',
+    samplePathPattern: '/projects/*/serviceAccounts/*/keys/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'sa-key-leak-responder',
+  },
+  {
+    id: 'IAM_POLICY_CHANGED',
+    group: 'IAM_SECURITY',
+    badge: '🔐 IAM & Zero-Trust',
+    title: 'Project IAM Policy Modified (SetIamPolicy)',
+    plainEnglish: 'Audit privilege escalations (roles/owner or roles/editor grants) in real time',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'cloudresourcemanager.googleapis.com',
+    methodName: 'SetIamPolicy',
+    samplePathPattern: '',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'iam-policy-auditor',
+  },
+  {
+    id: 'SECRET_VERSION_ADDED',
+    group: 'IAM_SECURITY',
+    badge: '🗝️ Secret Manager',
+    title: 'New Secret Version Added / Rotated',
+    plainEnglish: 'Hot-reload downstream services or verify secret rotation when a new Secret Manager version is added',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'secretmanager.googleapis.com',
+    methodName: 'google.cloud.secretmanager.v1.SecretManagerService.AddSecretVersion',
+    samplePathPattern: 'projects/*/secrets/*/versions/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'secret-rotation-sync',
+  },
+  {
+    id: 'GKE_CLUSTER_CREATED',
+    group: 'GKE_CONTAINERS',
+    badge: '☸️ Kubernetes (GKE)',
+    title: 'GKE Cluster Provisioned (CreateCluster)',
+    plainEnglish: 'Bootstrap ArgoCD, network policies, or workload identity when a new GKE cluster is created',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'container.googleapis.com',
+    methodName: 'google.container.v1.ClusterManager.CreateCluster',
+    samplePathPattern: 'projects/*/locations/*/clusters/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'gke-cluster-bootstrapper',
+  },
+  {
+    id: 'GKE_NODEPOOL_RESIZED',
+    group: 'GKE_CONTAINERS',
+    badge: '☸️ Kubernetes (GKE)',
+    title: 'GKE NodePool Resized (SetNodePoolSize)',
+    plainEnglish: 'Track Kubernetes node scaling and GPU quota consumption across clusters',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'container.googleapis.com',
+    methodName: 'google.container.v1.ClusterManager.SetNodePoolSize',
+    samplePathPattern: 'projects/*/locations/*/clusters/*/nodePools/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'gke-scale-tracker',
+  },
+  {
+    id: 'CLOUD_RUN_DEPLOYED',
+    group: 'GKE_CONTAINERS',
+    badge: '🚀 Cloud Run & CI/CD',
+    title: 'Cloud Run Service Deployed / Updated',
+    plainEnglish: 'Run automated smoke tests or synthetic canary checks after every Cloud Run revision deploy',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'run.googleapis.com',
+    methodName: 'google.cloud.run.v1.Services.ReplaceService',
+    samplePathPattern: 'namespaces/*/services/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'cloudrun-canary-verifier',
+  },
+  {
+    id: 'CLOUDSQL_CREATED',
+    group: 'DATABASES',
+    badge: '🐘 Cloud SQL & DBs',
+    title: 'Cloud SQL Database Instance Created',
+    plainEnglish: 'Verify private IP enforcement and automated backup flags on new Cloud SQL instances',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'sqladmin.googleapis.com',
+    methodName: 'cloudsql.instances.insert',
+    samplePathPattern: 'projects/*/instances/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'sql-compliance-checker',
+  },
+  {
+    id: 'CLOUDSQL_FAILOVER',
+    group: 'DATABASES',
+    badge: '🐘 Cloud SQL & DBs',
+    title: 'Cloud SQL High-Availability Failover',
+    plainEnglish: 'Alert PagerDuty and flush application caches when a regional Cloud SQL instance fails over',
+    eventType: 'google.cloud.audit.log.v1.written',
+    serviceName: 'sqladmin.googleapis.com',
+    methodName: 'cloudsql.instances.failover',
+    samplePathPattern: 'projects/*/instances/*',
+    auditStreamType: 'ADMIN_ACTIVITY (Always ON · $0.00 Free)',
+    suggestedFnName: 'sql-failover-responder',
+  },
+  {
+    id: 'FIRESTORE_DOC_WRITTEN',
+    group: 'DATABASES',
+    badge: '🔥 Firestore NoSQL',
+    title: 'Firestore Document Created / Updated / Deleted',
+    plainEnglish: 'Stream real-time NoSQL document changes into BigQuery or Vertex AI Vector Search',
+    eventType: 'google.cloud.firestore.document.v1.written',
+    serviceName: 'firestore.googleapis.com',
+    methodName: 'google.cloud.firestore.document.v1.written',
+    samplePathPattern: 'documents/users/{userId}',
+    auditStreamType: 'DIRECT_NATIVE (Zero Audit Log Tax)',
+    suggestedFnName: 'firestore-bq-streamer',
+  },
 ];
 
 export default function CloudFunctionsEventarcStudio({
@@ -151,6 +349,16 @@ export default function CloudFunctionsEventarcStudio({
   // IAM Auto-Doctor state
   const [iamDoctorBusy, setIamDoctorBusy] = useState(false);
   const [iamDoctorReport, setIamDoctorReport] = useState(null);
+
+  // Beginner vs Advanced Universal Eventarc Mode
+  const [wizardMode, setWizardMode] = useState('BEGINNER'); // 'BEGINNER' | 'ADVANCED'
+  const [advGroupFilter, setAdvGroupFilter] = useState('ALL');
+  const [advSearchQuery, setAdvSearchQuery] = useState('');
+  const [selectedAdvPresetId, setSelectedAdvPresetId] = useState('VM_CREATED');
+  const [auditServiceName, setAuditServiceName] = useState('compute.googleapis.com');
+  const [auditMethodName, setAuditMethodName] = useState('v1.compute.instances.insert');
+  const [customEventType, setCustomEventType] = useState('google.cloud.audit.log.v1.written');
+  const [resourceNamePattern, setResourceNamePattern] = useState('');
 
   // Trigger Wizard Form State
   const [fnName, setFnName] = useState('invoice-ocr-processor');
@@ -217,10 +425,47 @@ export default function CloudFunctionsEventarcStudio({
     [triggerCategory]
   );
 
+  const filteredAdvCatalog = useMemo(() => {
+    const q = advSearchQuery.trim().toLowerCase();
+    return ADVANCED_EVENTARC_CATALOG.filter((item) => {
+      if (advGroupFilter !== 'ALL' && item.group !== advGroupFilter) return false;
+      if (!q) return true;
+      return (
+        item.title.toLowerCase().includes(q) ||
+        item.plainEnglish.toLowerCase().includes(q) ||
+        item.serviceName.toLowerCase().includes(q) ||
+        item.methodName.toLowerCase().includes(q) ||
+        item.badge.toLowerCase().includes(q)
+      );
+    });
+  }, [advGroupFilter, advSearchQuery]);
+
+  const activeAdvPreset = useMemo(
+    () =>
+      ADVANCED_EVENTARC_CATALOG.find((p) => p.id === selectedAdvPresetId) ||
+      ADVANCED_EVENTARC_CATALOG[0],
+    [selectedAdvPresetId]
+  );
+
   // Synthesize starter code in Node.js 22, Python 3.12, or Go 1.23 for the selected Eventarc trigger
   const starterCode = useMemo(() => {
     const bucketName = triggerBucket || `${projectId}-ingest-bucket`;
+    const isAudit =
+      triggerCategory === 'UNIVERSAL_AUDIT' || triggerCategory === 'BIGQUERY_AUDIT';
     if (codeLangPreview === 'PYTHON') {
+      if (isAudit) {
+        return `import functions_framework
+from cloudevents.http import CloudEvent
+
+# CloudPulse 2026 — ${fnGen} Universal Eventarc Handler (${auditServiceName} -> ${auditMethodName})
+@functions_framework.cloud_event
+def ${fnEntryPoint}(cloud_event: CloudEvent) -> None:
+    proto = (cloud_event.data or {}).get("protoPayload", {})
+    resource_name = proto.get("resourceName", cloud_event.get("subject", ""))
+    caller = proto.get("authenticationInfo", {}).get("principalEmail", "system")
+    print(f"[Eventarc Audit] service={proto.get('serviceName', '${auditServiceName}')} method={proto.get('methodName', '${auditMethodName}')} resource={resource_name} caller={caller}")
+`;
+      }
       return `import functions_framework
 from cloudevents.http import CloudEvent
 
@@ -253,6 +498,24 @@ func ${fnEntryPoint}(ctx context.Context, e event.Event) error {
 }
 `;
     }
+    if (isAudit) {
+      return `const functions = require('@google-cloud/functions-framework');
+
+// CloudPulse 2026 — ${fnGen} Universal Eventarc Handler (${auditServiceName} -> ${auditMethodName})
+functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
+  const payload = cloudEvent.data || {};
+  const proto = payload.protoPayload || {};
+  console.log(JSON.stringify({
+    severity: 'INFO',
+    eventId: cloudEvent.id,
+    serviceName: proto.serviceName || '${auditServiceName}',
+    methodName: proto.methodName || '${auditMethodName}',
+    resourceName: proto.resourceName || cloudEvent.subject || null,
+    callerEmail: proto.authenticationInfo?.principalEmail || null,
+    requestSpec: proto.request || null,
+  }));
+});`;
+    }
     return `const functions = require('@google-cloud/functions-framework');
 
 // CloudPulse 2026 — ${fnGen} Eventarc Handler (${activeRecipe.title})
@@ -268,7 +531,17 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
     objectName: payload.name || null,
   }));
 });`;
-  }, [codeLangPreview, fnGen, activeRecipe, fnEntryPoint, triggerBucket, projectId]);
+  }, [
+    codeLangPreview,
+    fnGen,
+    activeRecipe,
+    fnEntryPoint,
+    triggerBucket,
+    projectId,
+    triggerCategory,
+    auditServiceName,
+    auditMethodName,
+  ]);
 
   // Exact gcloud functions deploy CLI command
   const gcloudDeployCommand = useMemo(() => {
@@ -285,6 +558,17 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
       triggerFlags = ` \\\n  --trigger-topic="${triggerTopic || 'orders-events-topic'}"`;
     } else if (triggerCategory === 'BIGQUERY_AUDIT') {
       triggerFlags = ` \\\n  --trigger-event-filters="type=google.cloud.audit.log.v1.written" \\\n  --trigger-event-filters="serviceName=bigquery.googleapis.com" \\\n  --trigger-event-filters="methodName=google.cloud.bigquery.v2.JobService.InsertJob"`;
+    } else if (triggerCategory === 'UNIVERSAL_AUDIT') {
+      const evType = customEventType || 'google.cloud.audit.log.v1.written';
+      if (evType === 'google.cloud.audit.log.v1.written') {
+        const pathPatternLine =
+          resourceNamePattern && resourceNamePattern.trim()
+            ? ` \\\n  --trigger-event-filters-path-pattern="resourceName=${resourceNamePattern.trim()}"`
+            : '';
+        triggerFlags = ` \\\n  --trigger-event-filters="type=google.cloud.audit.log.v1.written" \\\n  --trigger-event-filters="serviceName=${auditServiceName}" \\\n  --trigger-event-filters="methodName=${auditMethodName}"${pathPatternLine}`;
+      } else {
+        triggerFlags = ` \\\n  --trigger-event-filters="type=${evType}"`;
+      }
     } else if (triggerCategory === 'CRON_SCHEDULE') {
       triggerFlags = ` \\\n  --trigger-topic="${fnName}-cron-topic"`;
     } else {
@@ -320,6 +604,10 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
     triggerBucket,
     gcsEventType,
     triggerTopic,
+    auditServiceName,
+    auditMethodName,
+    customEventType,
+    resourceNamePattern,
     allowUnauth,
     enableRetry,
     projectId,
@@ -364,6 +652,10 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
       gcsEventType,
       triggerBucket: triggerBucket || `${projectId}-ingest-bucket`,
       triggerTopic,
+      auditServiceName,
+      auditMethodName,
+      customEventType,
+      resourceNamePattern,
       cronSchedule,
       allowUnauthenticated: allowUnauth,
       enableRetry,
@@ -405,10 +697,15 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
             fnObj?.eventType ||
             (triggerCategory === 'GCS_OBJECT'
               ? gcsEventType
+              : triggerCategory === 'UNIVERSAL_AUDIT'
+              ? customEventType
               : activeRecipe.eventTypeDefault),
           bucket:
             fnObj?.triggerBucket || triggerBucket || `${projectId}-ingest-bucket`,
           topic: fnObj?.triggerTopic || triggerTopic,
+          auditServiceName,
+          auditMethodName,
+          resourceNamePattern,
         }
       );
       setTestEventResult(res.data);
@@ -676,51 +973,203 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
       {/* SUB-TAB 1: PLAIN-ENGLISH EVENTARC TRIGGER WIZARD & 4-HOP VISUAL PIPELINE */}
       {activeSubTab === 'TRIGGER_WIZARD' && (
         <div className="space-y-4">
-          {/* Step 1: Pick Event Trigger in Plain English */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="text-xs font-extrabold uppercase tracking-wider font-mono text-amber-500">
-                Step 1 — Pick Your Trigger in Plain English (No Raw CloudEvents Memorization)
+          {/* Step 1: Pick Event Trigger (Dual-Mode: Beginner Everyday Recipes vs Advanced Universal 130+ GCP Services Catalog) */}
+          <div className="p-4 rounded-2xl bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 space-y-3.5">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <div className="text-xs font-extrabold uppercase tracking-wider font-mono text-amber-500">
+                  Step 1 — Pick Your Trigger: Everyday Recipes or Any Google Cloud Event (130+ Services)
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Start with 1-click recipes for Storage/PubSub/Cron, or switch to{' '}
+                  <strong className="text-indigo-400">Advanced Universal Eventarc</strong> to trigger from VM creation, Firewall rules, IAM keys, GKE clusters, or Cloud SQL!
+                </p>
               </div>
-              <span className="text-[11px] font-mono text-zinc-500">
-                Automatically translates to Eventarc v1 or Cloud Functions v1 flags
-              </span>
+
+              {/* Dual-Mode Toggle: Beginner vs Advanced Universal Eventarc */}
+              <div className="inline-flex rounded-xl p-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWizardMode('BEGINNER');
+                    if (triggerCategory === 'UNIVERSAL_AUDIT') {
+                      setTriggerCategory('GCS_OBJECT');
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    wizardMode === 'BEGINNER'
+                      ? 'bg-amber-500 text-zinc-950 shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  🌱 Beginner Mode (5 Essential Recipes)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWizardMode('ADVANCED');
+                    setTriggerCategory('UNIVERSAL_AUDIT');
+                    setFnGen('GEN_2');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    wizardMode === 'ADVANCED'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  🚀 Advanced: Universal GCP Events (VM Creation, IAM, GKE, SQL...)
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-              {TRIGGER_RECIPES.map((rec) => {
-                const active = triggerCategory === rec.id;
-                return (
-                  <button
-                    key={rec.id}
-                    type="button"
-                    onClick={() => {
-                      setTriggerCategory(rec.id);
-                      if (rec.id === 'GCS_OBJECT') {
-                        setGcsEventType(rec.eventTypeDefault);
-                      }
-                    }}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                      active
-                        ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
-                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-amber-500/40'
-                    }`}
-                  >
-                    <div>
-                      <div className="text-xs font-extrabold font-mono">
-                        {rec.title}
+            {wizardMode === 'BEGINNER' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+                {TRIGGER_RECIPES.filter((r) => r.id !== 'UNIVERSAL_AUDIT').map((rec) => {
+                  const active = triggerCategory === rec.id;
+                  return (
+                    <button
+                      key={rec.id}
+                      type="button"
+                      onClick={() => {
+                        setTriggerCategory(rec.id);
+                        if (rec.id === 'GCS_OBJECT') {
+                          setGcsEventType(rec.eventTypeDefault);
+                        }
+                      }}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        active
+                          ? 'bg-amber-500/15 border-amber-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
+                          : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-amber-500/40'
+                      }`}
+                    >
+                      <div>
+                        <div className="text-xs font-extrabold font-mono">
+                          {rec.title}
+                        </div>
+                        <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">
+                          {rec.plainEnglish}
+                        </p>
                       </div>
-                      <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">
-                        {rec.plainEnglish}
-                      </p>
-                    </div>
-                    <div className="mt-2 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-800 text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 truncate">
-                      {rec.transportBadge}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                      <div className="mt-2 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-800 text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 truncate">
+                        {rec.transportBadge}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* ADVANCED UNIVERSAL EVENTARC CATALOG (130+ GCP SERVICES) */
+              <div className="space-y-3 pt-1">
+                {/* Architectural FinOps Insight Banner for Advanced Mode */}
+                <div className="p-3 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/30 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs text-zinc-700 dark:text-zinc-200">
+                    <span className="font-bold font-mono text-indigo-400">
+                      💡 Why Eventarc Universal Triggers Are Game-Changing:
+                    </span>{' '}
+                    In 1st Gen (`v1`), you could never trigger a function when a{' '}
+                    <strong>Compute VM was created</strong> or an{' '}
+                    <strong>IAM key was exported</strong>. Eventarc (`v2`) taps directly into{' '}
+                    <code className="text-emerald-400 font-mono">ADMIN_ACTIVITY</code> Cloud Audit Logs—which are{' '}
+                    <strong className="text-emerald-400">
+                      ALWAYS ON by default in Google Cloud and 100% FREE ($0.00 ingestion fee)
+                    </strong>
+                    !
+                  </div>
+                </div>
+
+                {/* Category Filter Pills + Search Input */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { id: 'ALL', label: '🌐 All GCP Events (14)' },
+                      { id: 'COMPUTE_VM', label: '🖥️ Compute VM & Disks' },
+                      { id: 'IAM_SECURITY', label: '🛡️ IAM, Keys & Firewall' },
+                      { id: 'GKE_CONTAINERS', label: '☸️ GKE & Cloud Run' },
+                      { id: 'DATABASES', label: '🐘 Cloud SQL & Firestore' },
+                    ].map((grp) => (
+                      <button
+                        key={grp.id}
+                        type="button"
+                        onClick={() => setAdvGroupFilter(grp.id)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer transition-all ${
+                          advGroupFilter === grp.id
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                        }`}
+                      >
+                        {grp.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <input
+                    type="text"
+                    value={advSearchQuery}
+                    onChange={(e) => setAdvSearchQuery(e.target.value)}
+                    placeholder="Search e.g. 'vm creation', 'instances.insert', 'firewall', 'iam'..."
+                    className="w-full sm:w-80 h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                {/* Searchable Grid of Universal GCP Events */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
+                  {filteredAdvCatalog.map((preset) => {
+                    const isSelected =
+                      triggerCategory === 'UNIVERSAL_AUDIT' &&
+                      selectedAdvPresetId === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          setTriggerCategory('UNIVERSAL_AUDIT');
+                          setFnGen('GEN_2');
+                          setSelectedAdvPresetId(preset.id);
+                          setAuditServiceName(preset.serviceName);
+                          setAuditMethodName(preset.methodName);
+                          setCustomEventType(preset.eventType);
+                          setFnName(preset.suggestedFnName);
+                        }}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-indigo-500/15 border-indigo-500 text-zinc-950 dark:text-zinc-100 shadow-sm'
+                            : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-indigo-500/40'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-mono font-bold text-indigo-400">
+                              {preset.badge}
+                            </span>
+                            <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
+                              $0 Free
+                            </span>
+                          </div>
+                          <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                            {preset.title}
+                          </div>
+                          <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                            {preset.plainEnglish}
+                          </p>
+                        </div>
+
+                        <div className="mt-2 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-800 space-y-0.5">
+                          <div className="text-[9.5px] font-mono text-cyan-500 truncate">
+                            svc: {preset.serviceName}
+                          </div>
+                          <div
+                            className="text-[9.5px] font-mono text-amber-500 truncate"
+                            title={preset.methodName}
+                          >
+                            method: {preset.methodName}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Step 2: Interactive 4-Stage "How Eventarc Actually Works" Visual Pipeline X-Ray */}
@@ -754,19 +1203,30 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                   <span>1. EVENT PRODUCER</span>
                   <span>CloudEvents v1.0</span>
                 </div>
-                <div className="text-xs font-bold font-mono text-white truncate">
+                <div
+                  className="text-xs font-bold font-mono text-white truncate"
+                  title={
+                    triggerCategory === 'UNIVERSAL_AUDIT'
+                      ? `${auditServiceName} (${auditMethodName})`
+                      : ''
+                  }
+                >
                   {triggerCategory === 'GCS_OBJECT'
                     ? `gs://${triggerBucket || `${projectId}-ingest-bucket`}`
                     : triggerCategory === 'PUBSUB_TOPIC'
                     ? `projects/${projectId}/topics/${triggerTopic}`
                     : triggerCategory === 'BIGQUERY_AUDIT'
                     ? 'bigquery.googleapis.com (InsertJob)'
+                    : triggerCategory === 'UNIVERSAL_AUDIT'
+                    ? `${auditServiceName} (${auditMethodName})`
                     : triggerCategory === 'CRON_SCHEDULE'
                     ? `Cloud Scheduler (${cronSchedule})`
                     : 'HTTPS Client / Webhook Caller'}
                 </div>
                 <p className="text-[10.5px] text-zinc-400 leading-snug">
-                  Emits a structured JSON event the instant your resource changes.
+                  {triggerCategory === 'UNIVERSAL_AUDIT'
+                    ? `Emits a CloudEvent envelope containing protoPayload.resourceName & caller Email the instant ${auditMethodName} occurs.`
+                    : 'Emits a structured JSON event the instant your resource changes.'}
                 </p>
               </div>
 
@@ -791,7 +1251,7 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                   <span className="px-1.5 py-0.5 rounded bg-black/40 text-[9.5px]">
                     {activeRecipe.transportMode === 'CLOUD_AUDIT_LOGS'
                       ? 'AUDIT LOG BUS'
-                      : '$0 DIRECT BUS'}
+                      : '$0 FREE BUS'}
                   </span>
                 </div>
                 <div className="text-xs font-bold font-mono text-white">
@@ -811,6 +1271,8 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                 <div className="text-xs font-bold font-mono text-white truncate">
                   {triggerCategory === 'GCS_OBJECT'
                     ? gcsEventType
+                    : triggerCategory === 'UNIVERSAL_AUDIT'
+                    ? `${customEventType} (${auditMethodName})`
                     : activeRecipe.eventTypeDefault}
                 </div>
                 <p className="text-[10.5px] text-zinc-400 leading-snug">
@@ -900,11 +1362,17 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
                   </button>
                   <button
                     type="button"
+                    disabled={triggerCategory === 'UNIVERSAL_AUDIT'}
+                    title={
+                      triggerCategory === 'UNIVERSAL_AUDIT'
+                        ? 'Universal GCP Eventarc triggers (VM creation, IAM, GKE, SQL) require 2nd Gen (v2)'
+                        : 'Switch to 1st Gen (v1)'
+                    }
                     onClick={() => {
                       setFnGen('GEN_1');
                       setFnConcurrency(1);
                     }}
-                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold cursor-pointer disabled:opacity-40 ${
                       fnGen === 'GEN_1'
                         ? 'bg-amber-500 text-zinc-950'
                         : 'text-zinc-500'
@@ -964,6 +1432,78 @@ functions.cloudEvent('${fnEntryPoint}', async (cloudEvent) => {
               </div>
 
               {/* Dynamic Trigger-Specific Fields */}
+              {triggerCategory === 'UNIVERSAL_AUDIT' && (
+                <div className="p-3 rounded-xl bg-indigo-500/[0.06] border border-indigo-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-[11px] font-mono font-bold text-indigo-400">
+                      🎛️ Universal Eventarc Filter Composer (Edit Any GCP Service, Method, or Resource Wildcard)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setResourceNamePattern(
+                          activeAdvPreset?.samplePathPattern ||
+                            '/projects/*/zones/*/instances/prod-*'
+                        )
+                      }
+                      className="text-[10px] font-mono text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      + Fill Sample Path Wildcard ({activeAdvPreset?.samplePathPattern || '/projects/*/zones/*/instances/*'})
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
+                    <div className="min-w-0">
+                      <label
+                        title="Google Cloud API serviceName (e.g. compute.googleapis.com, iam.googleapis.com, container.googleapis.com)"
+                        className="block text-[11px] font-mono text-indigo-600 dark:text-indigo-300 mb-1 truncate whitespace-nowrap"
+                      >
+                        GCP Service (`serviceName`)
+                      </label>
+                      <input
+                        type="text"
+                        value={auditServiceName}
+                        onChange={(e) => setAuditServiceName(e.target.value)}
+                        placeholder="compute.googleapis.com"
+                        className="w-full h-[34px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <label
+                        title="Audit Log methodName (e.g. v1.compute.instances.insert for VM creation)"
+                        className="block text-[11px] font-mono text-indigo-600 dark:text-indigo-300 mb-1 truncate whitespace-nowrap"
+                      >
+                        API Method (`methodName`)
+                      </label>
+                      <input
+                        type="text"
+                        value={auditMethodName}
+                        onChange={(e) => setAuditMethodName(e.target.value)}
+                        placeholder="v1.compute.instances.insert"
+                        className="w-full h-[34px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <label
+                        title="Optional Eventarc path pattern filter (--trigger-event-filters-path-pattern) using * wildcards"
+                        className="block text-[11px] font-mono text-indigo-600 dark:text-indigo-300 mb-1 truncate whitespace-nowrap"
+                      >
+                        Resource Path Wildcard (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={resourceNamePattern}
+                        onChange={(e) => setResourceNamePattern(e.target.value)}
+                        placeholder="e.g. /projects/*/zones/*/instances/prod-*"
+                        className="w-full h-[34px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {triggerCategory === 'GCS_OBJECT' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 rounded-xl bg-amber-500/[0.06] border border-amber-500/30 items-end">
                   <div className="min-w-0">

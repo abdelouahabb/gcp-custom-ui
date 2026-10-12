@@ -12606,11 +12606,15 @@ app.post('/api/project/:projectId/functions/deploy', async (req, res) => {
     minInstances = 0,
     maxInstances = 20,
     timeoutSeconds = 60,
-    triggerCategory = 'GCS_OBJECT', // GCS_OBJECT | PUBSUB_TOPIC | BIGQUERY_AUDIT | CRON_SCHEDULE | HTTPS_WEBHOOK
+    triggerCategory = 'GCS_OBJECT', // GCS_OBJECT | PUBSUB_TOPIC | BIGQUERY_AUDIT | UNIVERSAL_AUDIT | CRON_SCHEDULE | HTTPS_WEBHOOK
     gcsEventType = 'google.cloud.storage.object.v1.finalized',
     triggerBucket = '',
     triggerTopic = 'orders-events-topic',
     bigqueryDataset = '',
+    auditServiceName = 'compute.googleapis.com',
+    auditMethodName = 'v1.compute.instances.insert',
+    resourceNamePattern = '',
+    customEventType = 'google.cloud.audit.log.v1.written',
     cronSchedule = '*/15 * * * *',
     allowUnauthenticated = true,
     enableRetry = true,
@@ -12644,14 +12648,19 @@ app.post('/api/project/:projectId/functions/deploy', async (req, res) => {
 
 // CloudPulse 2026 Auto-Synthesized ${generation} Function (${triggerCategory})
 functions.cloudEvent('${entryPoint}', async (cloudEvent) => {
+  const payload = cloudEvent.data || {};
+  const proto = payload.protoPayload || {};
   console.log(JSON.stringify({
     severity: 'INFO',
     message: 'CloudPulse Eventarc Trigger Received',
     eventId: cloudEvent.id,
     eventType: cloudEvent.type,
     source: cloudEvent.source,
-    subject: cloudEvent.subject || null,
-    data: cloudEvent.data,
+    subject: cloudEvent.subject || proto.resourceName || null,
+    serviceName: proto.serviceName || null,
+    methodName: proto.methodName || null,
+    callerEmail: proto.authenticationInfo?.principalEmail || null,
+    data: payload,
   }));
 });
 
@@ -12698,6 +12707,21 @@ functions.http('${entryPoint}Http', (req, res) => {
       triggerFlags = `--trigger-topic="${targetTopic}"`;
     } else if (triggerCategory === 'BIGQUERY_AUDIT') {
       triggerFlags = `--trigger-event-filters="type=google.cloud.audit.log.v1.written" --trigger-event-filters="serviceName=bigquery.googleapis.com" --trigger-event-filters="methodName=google.cloud.bigquery.v2.JobService.InsertJob"`;
+    } else if (triggerCategory === 'UNIVERSAL_AUDIT') {
+      const evType = customEventType || 'google.cloud.audit.log.v1.written';
+      if (evType === 'google.cloud.audit.log.v1.written') {
+        const svc = auditServiceName || 'compute.googleapis.com';
+        const mth = auditMethodName || 'v1.compute.instances.insert';
+        const pathFlag =
+          resourceNamePattern && String(resourceNamePattern).trim()
+            ? ` --trigger-event-filters-path-pattern="resourceName=${String(
+                resourceNamePattern
+              ).trim()}"`
+            : '';
+        triggerFlags = `--trigger-event-filters="type=google.cloud.audit.log.v1.written" --trigger-event-filters="serviceName=${svc}" --trigger-event-filters="methodName=${mth}"${pathFlag}`;
+      } else {
+        triggerFlags = `--trigger-event-filters="type=${evType}"`;
+      }
     } else if (triggerCategory === 'CRON_SCHEDULE') {
       const targetTopic = triggerTopic || `${cleanName}-cron-topic`;
       triggerFlags = `--trigger-topic="${targetTopic}"`;
@@ -12769,9 +12793,11 @@ gcloud functions deploy "${cleanName}" \\
       resourceType: 'CLOUD_FUNCTION',
       resourceName: cleanName,
       region,
-      summary: `Deploying ${generation} Cloud Function "${cleanName}" (${triggerCategory}) in ${region} via Cloud Build #${String(
-        buildId
-      ).slice(0, 8)}`,
+      summary: `Deploying ${generation} Cloud Function "${cleanName}" (${
+        triggerCategory === 'UNIVERSAL_AUDIT'
+          ? `${auditServiceName}:${auditMethodName}`
+          : triggerCategory
+      }) in ${region} via Cloud Build #${String(buildId).slice(0, 8)}`,
     });
 
     res.json({
@@ -12781,9 +12807,11 @@ gcloud functions deploy "${cleanName}" \\
       generation,
       triggerCategory,
       buildId,
-      message: `Started live ${generation} Cloud Function deployment for "${cleanName}" (${triggerCategory}) in ${region} (Cloud Build #${String(
-        buildId
-      ).slice(0, 8)})!`,
+      message: `Started live ${generation} Cloud Function deployment for "${cleanName}" (${
+        triggerCategory === 'UNIVERSAL_AUDIT'
+          ? `${auditServiceName} → ${auditMethodName}`
+          : triggerCategory
+      }) in ${region} (Cloud Build #${String(buildId).slice(0, 8)})!`,
     });
   } catch (err) {
     res.status(400).json({
@@ -12805,15 +12833,31 @@ app.post('/api/project/:projectId/functions/test-event', async (req, res) => {
     eventType = 'google.cloud.storage.object.v1.finalized',
     bucket = '',
     topic = 'orders-events-topic',
+    auditServiceName = 'compute.googleapis.com',
+    auditMethodName = 'v1.compute.instances.insert',
+    resourceNamePattern = '',
   } = req.body || {};
 
   const eventId = `ce-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
   const nowIso = new Date().toISOString();
+  const sampleResourceName =
+    resourceNamePattern && String(resourceNamePattern).trim()
+      ? String(resourceNamePattern).replace(/\*/g, 'prod-vm-01')
+      : auditServiceName === 'compute.googleapis.com'
+      ? `projects/${projectId}/zones/us-central1-a/instances/prod-worker-vm-01`
+      : auditServiceName === 'iam.googleapis.com'
+      ? `projects/${projectId}/serviceAccounts/ci-deployer@${projectId}.iam.gserviceaccount.com/keys/9f8e7d6c`
+      : auditServiceName === 'container.googleapis.com'
+      ? `projects/${projectId}/locations/us-central1/clusters/autopilot-prod-01`
+      : `projects/${projectId}/resources/sample-event-target`;
+
   const sampleSubject =
     triggerCategory === 'GCS_OBJECT'
       ? `objects/invoices/2026-10-12-invoice-${Math.floor(
           100 + Math.random() * 899
         )}.pdf`
+      : triggerCategory === 'UNIVERSAL_AUDIT'
+      ? `${auditServiceName}/${sampleResourceName}`
       : `messages/${eventId}`;
 
   const cloudEventEnvelope = {
@@ -12826,6 +12870,8 @@ app.post('/api/project/:projectId/functions/test-event', async (req, res) => {
           }`
         : triggerCategory === 'PUBSUB_TOPIC'
         ? `//pubsub.googleapis.com/projects/${projectId}/topics/${topic}`
+        : triggerCategory === 'UNIVERSAL_AUDIT'
+        ? `//cloudaudit.googleapis.com/projects/${projectId}/logs/activity`
         : `//bigquery.googleapis.com/projects/${projectId}/datasets/analytics_prod`,
     type: eventType,
     time: nowIso,
@@ -12851,6 +12897,24 @@ app.post('/api/project/:projectId/functions/test-event', async (req, res) => {
               ).toString('base64'),
               messageId: eventId,
               publishTime: nowIso,
+            },
+          }
+        : triggerCategory === 'UNIVERSAL_AUDIT'
+        ? {
+            logName: `projects/${projectId}/logs/cloudaudit.googleapis.com%2Factivity`,
+            protoPayload: {
+              '@type': 'type.googleapis.com/google.cloud.audit.AuditLog',
+              serviceName: auditServiceName,
+              methodName: auditMethodName,
+              resourceName: sampleResourceName,
+              authenticationInfo: {
+                principalEmail: `architect@${projectId}.iam.gserviceaccount.com`,
+              },
+              request: {
+                name: 'prod-worker-vm-01',
+                machineType: 'e2-standard-4',
+                zone: 'us-central1-a',
+              },
             },
           }
         : {
@@ -12909,7 +12973,10 @@ app.post('/api/project/:projectId/functions/test-event', async (req, res) => {
         {
           hop: '1. Event Producer',
           latencyMs: 4,
-          detail: `${cloudEventEnvelope.source} emitted CloudEvent ${eventId}`,
+          detail:
+            triggerCategory === 'UNIVERSAL_AUDIT'
+              ? `${auditServiceName} (${auditMethodName}) emitted CloudEvent ${eventId}`
+              : `${cloudEventEnvelope.source} emitted CloudEvent ${eventId}`,
         },
         {
           hop: '2. Transport Bus',
@@ -12917,12 +12984,17 @@ app.post('/api/project/:projectId/functions/test-event', async (req, res) => {
           detail:
             triggerCategory === 'BIGQUERY_AUDIT'
               ? 'Cloud Audit Logs (DATA_WRITE) → Eventarc Router'
+              : triggerCategory === 'UNIVERSAL_AUDIT'
+              ? 'Cloud Audit Logs (ADMIN_ACTIVITY · $0 Free Always-On) → Eventarc Router'
               : 'Direct Native Pub/Sub Transport ($0.00 Free Tier)',
         },
         {
           hop: '3. Eventarc Filter & IAM Check',
           latencyMs: 6,
-          detail: `Matched type="${eventType}" · Invoker IAM token signed`,
+          detail:
+            triggerCategory === 'UNIVERSAL_AUDIT'
+              ? `Matched serviceName="${auditServiceName}" & methodName="${auditMethodName}"`
+              : `Matched type="${eventType}" · Invoker IAM token signed`,
         },
         {
           hop: `4. Function Handler (${functionName})`,
