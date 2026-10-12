@@ -69,7 +69,8 @@ import InteractiveDocsGuide from './components/InteractiveDocsGuide';
 import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
 import DataEngineeringStudio from './components/DataEngineeringStudio';
 import BillingAccountCreditGuardian, {
-  computeGdeGrantMetrics,
+  summarizeCreditLedger,
+  INITIAL_CONSOLE_CREDITS,
 } from './components/BillingAccountCreditGuardian';
 
 /**
@@ -634,11 +635,9 @@ function CloudPulseCockpit() {
     }
   }, []);
 
-  const [gdeSummary, setGdeSummary] = useState({
-    totalRemainingUsd: 815.5,
-    nearestExpiryDays: 19,
-    urgentWarningsCount: 1,
-  });
+  const [gdeSummary, setGdeSummary] = useState(() =>
+    summarizeCreditLedger(INITIAL_CONSOLE_CREDITS, 0)
+  );
 
   useEffect(() => {
     if (isAuthenticated && selectedProjectId) {
@@ -652,9 +651,9 @@ function CloudPulseCockpit() {
         )
         .then((res) => {
           const localRaw = localStorage.getItem(
-            `cloudpulse_gde_grants_v1_${selectedProjectId}`
+            `cloudpulse_gde_credits_v2_${selectedProjectId}`
           );
-          let list = res.data?.grants || [];
+          let list = res.data?.grants || INITIAL_CONSOLE_CREDITS;
           if (localRaw) {
             try {
               const parsed = JSON.parse(localRaw);
@@ -663,24 +662,7 @@ function CloudPulseCockpit() {
               // ignore
             }
           }
-          let totalRem = 0;
-          let nearest = Infinity;
-          let urgent = 0;
-          for (const g of list) {
-            const m = computeGdeGrantMetrics(g, 0);
-            totalRem += m.remaining;
-            if (m.remaining > 0 && m.daysLeft > 0 && m.daysLeft < nearest) {
-              nearest = m.daysLeft;
-            }
-            if (m.daysLeft <= m.alertThreshold && m.remaining > 0) {
-              urgent += 1;
-            }
-          }
-          setGdeSummary({
-            totalRemainingUsd: totalRem,
-            nearestExpiryDays: Number.isFinite(nearest) ? nearest : null,
-            urgentWarningsCount: urgent,
-          });
+          setGdeSummary(summarizeCreditLedger(list, 0));
         })
         .catch(() => null);
     }
@@ -1044,14 +1026,11 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={() => setActiveTab('FINOPS')}
-                title="Open Cloud Billing Account & GDE Promotional Credit Guardian: Track remaining money inside your GDE bonus grants, expiration cliff countdowns, and stranded unspent balance warnings"
+                title="Open Cloud Billing Account & GDE Promotional Credits Guardian: $1,059.04 active ($999.04 Marketing - agentic AI Sprint expiring in 12 days on Oct 25, 2026 + $60.00 across 6 monthly GDP benefits)"
                 className={`inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm border cursor-pointer whitespace-nowrap ${
                   gdeSummary.nearestExpiryDays !== null &&
                   gdeSummary.nearestExpiryDays <= 14 &&
                   gdeSummary.totalRemainingUsd > 0
-                    ? 'bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
-                    : gdeSummary.urgentWarningsCount > 0 &&
-                      gdeSummary.totalRemainingUsd > 0
                     ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30'
                     : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
                 }`}
@@ -1062,12 +1041,27 @@ function CloudPulseCockpit() {
                 ) : (
                   <CreditCard className="w-3.5 h-3.5 shrink-0" />
                 )}
-                <span>GDE Bonus: ${gdeSummary.totalRemainingUsd.toFixed(2)}</span>
-                {gdeSummary.nearestExpiryDays !== null && (
-                  <span className="hidden sm:inline text-[10px] opacity-85">
-                    · {gdeSummary.nearestExpiryDays}d left
-                  </span>
-                )}
+                <span>
+                  Credits: $
+                  {gdeSummary.totalRemainingUsd.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                {gdeSummary.expiringSoonRemainingUsd > 0 &&
+                  gdeSummary.nearestExpiryDays !== null && (
+                    <span className="hidden sm:inline text-[10px] opacity-90">
+                      · $
+                      {gdeSummary.expiringSoonRemainingUsd.toLocaleString(
+                        'en-US',
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }
+                      )}{' '}
+                      expiring in {gdeSummary.nearestExpiryDays}d
+                    </span>
+                  )}
               </button>
 
               {/* ⌘K Global Command & Voice Action Bar */}
