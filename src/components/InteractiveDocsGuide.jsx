@@ -25,6 +25,7 @@ import {
   Info,
   Layers,
   Database,
+  HardDrive,
 } from 'lucide-react';
 
 const DOC_SECTIONS = [
@@ -859,6 +860,31 @@ const DOC_SECTIONS = [
     ],
     billingImpact:
       'Prevents promotional and GDE credits from expiring unused by tracking exact CSV balances alongside live expiration countdowns and required daily burn targets.',
+  },
+  {
+    id: 'cloudrun-dead-container-gcs-artifact-hunter',
+    wave: 'WAVE 11 SRE & FINOPS',
+    title:
+      '37. Cloud Run Dead Container (Artifact Registry) & Cloud Storage Build-Artifact Hunter',
+    badge: 'Cloud Run ★ → 🧹 Search Dead Containers & GCS Artifacts',
+    badgeColor:
+      'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30',
+    icon: HardDrive,
+    targetTab: 'CLOUD_RUN',
+    problemSolved:
+      'Every time you deploy Cloud Run from source or run Cloud Build, Google Cloud leaves behind old container images and untagged digests in Artifact Registry ($0.10/GB/mo beyond 0.5 GB free tier) plus source tarballs (.tgz) in _cloudbuild, run-sources-*, and gcf-v2-* Cloud Storage buckets—even after you delete the Cloud Run service.',
+    howItWorks: [
+      '1-Click Cross-Reference Hygiene Scan: Click "🧹 Search Dead Containers & GCS Artifacts" in the Cloud Run header. Queries run.googleapis.com/v2, artifactregistry.googleapis.com/v1, and storage.googleapis.com/v1 in parallel.',
+      'Active Container Protection + Dead Image Classification: Locks any container image actively serving a live Cloud Run service (🔒 Protected) while flagging Dead Containers from Deleted Services, Dead Untagged Digests (0 tags), and Unused/Superseded Images.',
+      '1-Click Sweep & Purge: Delete individual dead container images or sweep all dead containers in 1 click (automatically removing attached tags via REST before deleting the version digest), and purge leftover .tgz build staging tarballs or empty & delete staging buckets in Cloud Storage.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/cloudrun/dead-artifacts-scan (cross-references Cloud Run v2 + Artifact Registry v1 + Cloud Storage v1)',
+      'POST /api/project/:id/wave9/supply-chain/delete-image & /sweep-orphans (REST tag + version deletion)',
+      'POST /api/project/:id/cloudrun/dead-artifacts-purge-gcs (batch-deletes GCS build/staging tarballs)',
+    ],
+    billingImpact:
+      'Reclaims $0.10/GB/mo in Artifact Registry storage and $0.02/GB/mo in Cloud Storage by eliminating orphaned container digests from deleted Cloud Run services and leftover Cloud Build .tgz source archives.',
   },
 ];
 

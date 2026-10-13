@@ -305,3 +305,19 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     - Combines live regional Compute Engine quota pools (`compute.googleapis.com/projects/:id/regions`) with live fleet consumption across **CPUs**, **Static External IPs**, **In-Use IPv4 Addresses**, **Persistent Disk SSD GB**, **NVIDIA L4 / A100 / H100 GPUs**, **Cloud Run Regional Instances**, **Secret Manager Active Versions**, and **Vertex AI Gemini RPM**, plus scans Cloud Logging for `RESOURCE_EXHAUSTED` / `RATE_LIMIT_EXCEEDED` (`HTTP 429`) bursts in the last 24 hours.
     - Clicking **`📋 Copy Quota Increase CLI`** on any saturated metric copies the exact `gcloud alpha services quota update` command and links directly to the Google Cloud Console Quotas page.
 
+### 37. 🧹 Cloud Run Dead Container (`artifactregistry.googleapis.com/v1`) & Cloud Storage Build-Artifact Hunter (`CloudRunFleetManager.jsx`)
+- **Where to find it**: Top navigation tab **`Cloud Run ★`** $\rightarrow$ click **`🧹 Search Dead Containers & GCS Artifacts`** in the top action bar.
+- **How it Works**:
+  - **1-Click Cross-Reference Hygiene Scan (`GET /api/project/:id/cloudrun/dead-artifacts-scan`)**:
+    - Fetches all active Cloud Run services (`run.googleapis.com/v2/projects/:id/locations/-/services`) to build the exact set of **in-use** container image URIs, digests, and service names.
+    - **Tab 1 — `📦 Artifact Registry Containers (Dead vs Active)`**: Scans regional Artifact Registry repositories (`cloud-run-source-deploy`, `gcf-artifacts`, custom Docker repos) and classifies every image into:
+      1. **`🔒 Active in Cloud Run`** — Currently deployed on a live Cloud Run service (locked and protected from deletion).
+      2. **`💀 Dead Container (Deleted Service)`** — Container image belonging to a Cloud Run service that was deleted or renamed.
+      3. **`💀 Dead Untagged Digest (Orphan)`** — Untagged `sha256:...` layer digest (`0` tags) superseded by a newer build.
+      4. **`💀 Unused / Superseded Container Image`** — Tagged image not referenced by any running Cloud Run revision.
+    - **Tab 2 — `🗄️ Cloud Storage Artifacts (Build Staging & Buckets)`**: Scans Cloud Storage buckets (`storage.googleapis.com/storage/v1`), prioritizing Cloud Run & Cloud Build staging buckets (`run-sources-*`, `*_cloudbuild`, `gcf-v2-*`, `artifacts.*.appspot.com`) and listing all `.tgz` / `.tar.gz` / `.zip` build tarballs and storage objects with size (`MB`), age (`d old`), and storage class.
+  - **1-Click Safe Cleanup (Protected by the Mandatory Delete Confirmation Modal)**:
+    - **Delete Individual Dead Container** (`POST /api/project/:id/wave9/supply-chain/delete-image`) or **Sweep All Dead Containers** (`POST /api/project/:id/wave9/supply-chain/sweep-orphans`), automatically deleting attached tags via REST before deleting the version digest.
+    - **Delete Individual Cloud Storage Artifact** (`DELETE /api/project/:id/storage/buckets/:bucket/objects`), **Batch-Purge All Build Staging Tarballs** (`POST /api/project/:id/cloudrun/dead-artifacts-purge-gcs`), or **Force Empty & Delete Staging Bucket** (`POST /api/project/:id/storage/buckets/:bucket/empty-and-delete`).
+
+

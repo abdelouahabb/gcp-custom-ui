@@ -562,6 +562,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-cloudrun-dead-artifacts-hunter',
+        category: '2026 SRE & Developer Velocity',
+        title: 'Search & Purge Dead Containers (Artifact Registry) & Build Artifacts (Cloud Storage)',
+        subtitle: 'Cross-reference live Cloud Run services against Artifact Registry images & _cloudbuild / run-sources-* buckets to sweep dead containers & tarballs',
+        keywords: 'cloud run dead container artifact registry orphan digest cloud storage build staging tarball sweep purge',
+        badge: 'ARTIFACT HUNTER',
+        badgeColor: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab('CLOUD_RUN');
+          onClose();
+        }
+      },
+      {
         id: 'open-local-iap-tunnel-bridge',
         category: '2026 SRE & Developer Velocity',
         title: 'Open 127.0.0.1 Zero-Public-IP Developer Port-Forward & IAP Tunnel Manager',
