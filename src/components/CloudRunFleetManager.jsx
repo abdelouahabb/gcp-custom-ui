@@ -104,6 +104,17 @@ export default function CloudRunFleetManager({
   const [revisionAutopsyMap, setRevisionAutopsyMap] = useState({});
   // 2-step delete confirmation
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  // Dead Container (Artifact Registry) & Cloud Storage Artifact Hunter state
+  const [showArtifactHunter, setShowArtifactHunter] = useState(false);
+  const [artifactScanState, setArtifactScanState] = useState({
+    loading: false,
+    data: null,
+    error: null,
+  });
+  const [artifactHunterTab, setArtifactHunterTab] = useState('CONTAINERS'); // 'CONTAINERS' | 'STORAGE'
+  const [artifactHunterSearch, setArtifactHunterSearch] = useState('');
+  const [artifactOnlyDead, setArtifactOnlyDead] = useState(false);
+  const [artifactActionBusy, setArtifactActionBusy] = useState(null);
 
   useEffect(() => {
     if (Array.isArray(initialServices) && initialServices.length > 0 && services.length === 0) {
@@ -1095,6 +1106,212 @@ spec:
     }
   };
 
+  const handleScanDeadArtifacts = useCallback(async () => {
+    if (!projectId) return;
+    setArtifactScanState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloudrun/dead-artifacts-scan`
+      );
+      setArtifactScanState({
+        loading: false,
+        data: res.data,
+        error: null,
+      });
+    } catch (err) {
+      setArtifactScanState({
+        loading: false,
+        data: null,
+        error:
+          err.response?.data?.error ||
+          err.message ||
+          'Failed to scan Artifact Registry & Cloud Storage artifacts.',
+      });
+    }
+  }, [projectId]);
+
+  const handleToggleArtifactHunter = () => {
+    const nextOpen = !showArtifactHunter;
+    setShowArtifactHunter(nextOpen);
+    if (nextOpen && !artifactScanState.data && !artifactScanState.loading) {
+      handleScanDeadArtifacts();
+    }
+  };
+
+  const handleDeleteDeadContainerImage = async (img) => {
+    if (!img || !img.isDead) return;
+    setArtifactActionBusy(`img:${img.uri || img.name}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/wave9/supply-chain/delete-image`,
+        {
+          name: img.name,
+          uri: img.uri,
+          tags: img.tags || [],
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Deleted dead container image ${img.shortPackage} from Artifact Registry.`
+        );
+      }
+      await handleScanDeadArtifacts();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to delete dead container image.'
+        );
+      }
+    } finally {
+      setArtifactActionBusy(null);
+    }
+  };
+
+  const handleSweepAllDeadContainers = async (deadImagesList = []) => {
+    if (!Array.isArray(deadImagesList) || deadImagesList.length === 0) return;
+    setArtifactActionBusy('SWEEP_ALL_CONTAINERS');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/wave9/supply-chain/sweep-orphans`,
+        {
+          orphans: deadImagesList.map((img) => ({
+            name: img.name,
+            uri: img.uri,
+            tags: img.tags || [],
+          })),
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Swept ${deadImagesList.length} dead container image(s) from Artifact Registry!`
+        );
+      }
+      await handleScanDeadArtifacts();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to sweep dead container images.'
+        );
+      }
+    } finally {
+      setArtifactActionBusy(null);
+    }
+  };
+
+  const handleDeleteSingleGcsArtifact = async (obj) => {
+    if (!obj?.bucket || !obj?.name) return;
+    setArtifactActionBusy(`gcs:${obj.id}`);
+    try {
+      const res = await axios.delete(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          obj.bucket
+        )}/objects?objectName=${encodeURIComponent(obj.name)}`,
+        {
+          data: {
+            objectName: obj.name,
+          },
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Deleted artifact gs://${obj.bucket}/${obj.name}.`
+        );
+      }
+      await handleScanDeadArtifacts();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to delete Cloud Storage artifact.'
+        );
+      }
+    } finally {
+      setArtifactActionBusy(null);
+    }
+  };
+
+  const handlePurgeGcsArtifacts = async (objectsToPurge = []) => {
+    if (!Array.isArray(objectsToPurge) || objectsToPurge.length === 0) return;
+    setArtifactActionBusy('PURGE_ALL_GCS');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloudrun/dead-artifacts-purge-gcs`,
+        {
+          objects: objectsToPurge.map((o) => ({
+            bucket: o.bucket,
+            name: o.name,
+          })),
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Purged ${objectsToPurge.length} Cloud Storage artifact object(s)!`
+        );
+      }
+      await handleScanDeadArtifacts();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to purge Cloud Storage artifacts.'
+        );
+      }
+    } finally {
+      setArtifactActionBusy(null);
+    }
+  };
+
+  const handleEmptyAndDeleteStagingBucket = async (bucketName) => {
+    if (!bucketName) return;
+    setArtifactActionBusy(`bucket:${bucketName}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(bucketName)}/empty-and-delete`,
+        {}
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Emptied and deleted staging bucket gs://${bucketName}.`
+        );
+      }
+      await handleScanDeadArtifacts();
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to empty and delete bucket gs://${bucketName}.`
+        );
+      }
+    } finally {
+      setArtifactActionBusy(null);
+    }
+  };
+
   const selfDeployCmd = `gcloud run deploy cloudpulse-2026 --source . --project=${projectId} --region=us-east1 --allow-unauthenticated`;
 
   return (
@@ -1125,6 +1342,26 @@ spec:
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleArtifactHunter}
+            title="Search Artifact Registry for dead/unused container images & Cloud Storage for leftover build/staging artifacts"
+            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+              showArtifactHunter
+                ? 'bg-amber-500 text-zinc-950 border-amber-400 shadow-sm'
+                : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/35'
+            }`}
+          >
+            <HardDrive className="w-3.5 h-3.5" />
+            <span>🧹 Search Dead Containers & GCS Artifacts</span>
+            {artifactScanState.data?.summary && (
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-900/80 text-amber-300 text-[10px] font-mono">
+                {artifactScanState.data.summary.deadContainerImagesCount} Dead ·{' '}
+                {artifactScanState.data.summary.totalStorageObjectsCount} GCS
+              </span>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={() => setShowGlobalGkeTranspiler((v) => !v)}
@@ -1163,6 +1400,428 @@ spec:
           </button>
         </div>
       </div>
+
+      {/* DEAD CONTAINER (ARTIFACT REGISTRY) & CLOUD STORAGE ARTIFACT HUNTER STUDIO */}
+      {showArtifactHunter && (() => {
+        const scanData = artifactScanState.data;
+        const summary = scanData?.summary || {
+          activeCloudRunServicesCount: services.length,
+          repositoriesScannedCount: 0,
+          totalContainerImagesCount: 0,
+          activeContainerImagesCount: 0,
+          deadContainerImagesCount: 0,
+          deadContainerSizeMb: 0,
+          deadContainerSizeGb: 0,
+          bucketsScannedCount: 0,
+          totalStorageObjectsCount: 0,
+          buildStagingArtifactsCount: 0,
+          totalStorageSizeMb: 0,
+          buildStagingSizeMb: 0,
+          reclaimableMonthlyUsd: 0,
+        };
+        const rawContainers = scanData?.containerImages || [];
+        const rawStorage = scanData?.storageArtifacts || [];
+        const storageBuckets = scanData?.storageBuckets || [];
+        const q = artifactHunterSearch.trim().toLowerCase();
+
+        const filteredContainers = rawContainers.filter((img) => {
+          if (artifactOnlyDead && !img.isDead) return false;
+          if (!q) return true;
+          const hay = `${img.shortPackage} ${img.uri} ${img.repository} ${img.location} ${(img.tags || []).join(' ')} ${img.statusLabel}`.toLowerCase();
+          return hay.includes(q);
+        });
+
+        const filteredStorage = rawStorage.filter((obj) => {
+          if (artifactOnlyDead && !obj.isBuildStagingArtifact) return false;
+          if (!q) return true;
+          const hay = `${obj.bucket} ${obj.name} ${obj.location} ${obj.bucketLabel} ${obj.contentType}`.toLowerCase();
+          return hay.includes(q);
+        });
+
+        const deadContainersList = rawContainers.filter((img) => img.isDead);
+        const buildStagingObjectsList = rawStorage.filter(
+          (obj) => obj.isBuildStagingArtifact
+        );
+
+        return (
+          <div className="p-4 rounded-xl border border-amber-500/40 bg-zinc-950 text-zinc-100 space-y-4 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-mono font-extrabold">
+                    <HardDrive className="w-3 h-3" />
+                    <span>ARTIFACT REGISTRY & CLOUD STORAGE HYGIENE SCANNER</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                    🔒 Active Cloud Run Containers Protected from Deletion
+                  </span>
+                </div>
+                <h4 className="text-sm sm:text-base font-extrabold text-white mt-1">
+                  Dead Container Images (Artifact Registry) & Build / Staging Artifacts (Cloud Storage)
+                </h4>
+                <p className="text-xs text-zinc-400">
+                  Cross-references all live Cloud Run services against{' '}
+                  <code className="text-amber-300">artifactregistry.googleapis.com/v1</code>{' '}
+                  repositories and <code className="text-blue-300">storage.googleapis.com/v1</code>{' '}
+                  buckets (`_cloudbuild`, `run-sources-*`, `gcf-v2-*`, and project buckets) to find unused container digests and leftover build tarballs.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleScanDeadArtifacts}
+                  disabled={artifactScanState.loading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      artifactScanState.loading ? 'animate-spin' : ''
+                    }`}
+                  />
+                  <span>
+                    {artifactScanState.loading ? 'Scanning GCP...' : 'Rescan Now'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowArtifactHunter(false)}
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-mono text-zinc-300 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {artifactScanState.error && (
+              <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/40 text-xs text-red-200 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{artifactScanState.error}</span>
+              </div>
+            )}
+
+            {/* 4 Live KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+                <div className="text-[10px] font-mono text-zinc-400">
+                  1. Dead Container Images (Artifact Registry)
+                </div>
+                <div className="text-base font-extrabold text-amber-400 mt-0.5">
+                  {summary.deadContainerImagesCount} Dead / Unused ({summary.deadContainerSizeMb} MB)
+                </div>
+                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  {summary.activeContainerImagesCount} Active in Cloud Run · {summary.repositoriesScannedCount} Repo(s)
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+                <div className="text-[10px] font-mono text-zinc-400">
+                  2. Cloud Storage Build & Staging Artifacts
+                </div>
+                <div className="text-base font-extrabold text-blue-400 mt-0.5">
+                  {summary.buildStagingArtifactsCount} Staging · {summary.totalStorageObjectsCount} Total Objects
+                </div>
+                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  {summary.totalStorageSizeMb} MB across {summary.bucketsScannedCount} Bucket(s)
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+                <div className="text-[10px] font-mono text-zinc-400">
+                  3. Reclaimable Storage Spend
+                </div>
+                <div className="text-base font-extrabold text-emerald-400 mt-0.5">
+                  ${summary.reclaimableMonthlyUsd}/mo Reclaimable
+                </div>
+                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  $0.10/GB Artifact Registry · $0.02/GB Cloud Storage
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800 flex flex-col justify-between gap-1.5">
+                <div className="text-[10px] font-mono text-zinc-400">
+                  4. 1-Click Bulk Cleanup Actions
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    disabled={
+                      deadContainersList.length === 0 ||
+                      artifactActionBusy === 'SWEEP_ALL_CONTAINERS'
+                    }
+                    onClick={() => handleSweepAllDeadContainers(deadContainersList)}
+                    className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                  >
+                    🧹 Sweep {deadContainersList.length} Dead Container(s)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      buildStagingObjectsList.length === 0 ||
+                      artifactActionBusy === 'PURGE_ALL_GCS'
+                    }
+                    onClick={() => handlePurgeGcsArtifacts(buildStagingObjectsList)}
+                    className="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                  >
+                    🗑️ Purge {buildStagingObjectsList.length} Build Tarball(s)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Tab Switcher + Search + Filter */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setArtifactHunterTab('CONTAINERS')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
+                    artifactHunterTab === 'CONTAINERS'
+                      ? 'bg-amber-500 text-zinc-950'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  📦 Artifact Registry Containers ({filteredContainers.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setArtifactHunterTab('STORAGE')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
+                    artifactHunterTab === 'STORAGE'
+                      ? 'bg-blue-500 text-white'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  🗄️ Cloud Storage Artifacts ({filteredStorage.length})
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={artifactHunterSearch}
+                  onChange={(e) => setArtifactHunterSearch(e.target.value)}
+                  placeholder="Filter by image, repo, bucket, digest, or .tgz..."
+                  className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-zinc-100 placeholder-zinc-500 font-mono w-64"
+                />
+                <label className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-300 cursor-pointer select-none bg-zinc-900 px-2.5 py-1.5 rounded-lg border border-zinc-800">
+                  <input
+                    type="checkbox"
+                    checked={artifactOnlyDead}
+                    onChange={(e) => setArtifactOnlyDead(e.target.checked)}
+                    className="rounded border-zinc-700"
+                  />
+                  <span>Only Dead / Staging Artifacts</span>
+                </label>
+              </div>
+            </div>
+
+            {/* TAB 1: ARTIFACT REGISTRY CONTAINER IMAGES */}
+            {artifactHunterTab === 'CONTAINERS' && (
+              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                {artifactScanState.loading && !scanData ? (
+                  <div className="p-6 text-center text-xs font-mono text-zinc-400">
+                    Scanning Artifact Registry repositories across regions and cross-referencing live Cloud Run revisions...
+                  </div>
+                ) : filteredContainers.length === 0 ? (
+                  <div className="p-6 rounded-lg bg-zinc-900/60 border border-zinc-800 text-center text-xs font-mono text-zinc-400">
+                    No matching container images found in Artifact Registry.
+                  </div>
+                ) : (
+                  filteredContainers.map((img) => {
+                    const busyThis =
+                      artifactActionBusy === `img:${img.uri || img.name}`;
+                    return (
+                      <div
+                        key={img.name || img.uri}
+                        className={`p-3 rounded-lg border flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
+                          img.isDead
+                            ? 'bg-zinc-900/90 border-amber-500/30'
+                            : 'bg-zinc-900/40 border-emerald-500/25'
+                        }`}
+                      >
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                                !img.isDead
+                                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                  : img.statusCategory === 'DEAD_DELETED_SERVICE'
+                                  ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              }`}
+                            >
+                              {!img.isDead ? '🔒 ' : '💀 '}
+                              {img.statusLabel}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-white truncate">
+                              {img.shortPackage}
+                            </span>
+                            <span className="text-[11px] font-mono text-zinc-400">
+                              ({img.repository} · {img.location})
+                            </span>
+                            <span className="text-[11px] font-mono font-semibold text-amber-300">
+                              {img.sizeMb} MB
+                            </span>
+                            {img.ageDays !== null && (
+                              <span className="text-[10px] font-mono text-zinc-500">
+                                · {img.ageDays}d old
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] font-mono text-zinc-400 truncate">
+                            Digest: <span className="text-zinc-300">{img.digestShort}</span>{' '}
+                            · Tags:{' '}
+                            {img.tags?.length > 0 ? (
+                              <span className="text-blue-300">
+                                {img.tags.join(', ')}
+                              </span>
+                            ) : (
+                              <span className="text-amber-400">
+                                &lt;untagged orphan&gt;
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-zinc-400">
+                            {img.reason}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {img.isDead ? (
+                            <button
+                              type="button"
+                              disabled={busyThis}
+                              onClick={() => handleDeleteDeadContainerImage(img)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>
+                                {busyThis ? 'Deleting...' : 'Delete Dead Container'}
+                              </span>
+                            </button>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
+                              🔒 Protected (Serving Cloud Run)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: CLOUD STORAGE BUILD & STAGING ARTIFACTS */}
+            {artifactHunterTab === 'STORAGE' && (
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {/* Bucket Summary Strip */}
+                {storageBuckets.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pb-1">
+                    {storageBuckets.map((b) => (
+                      <div
+                        key={b.name}
+                        className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-mono flex items-center gap-2 ${
+                          b.isBuildStagingBucket
+                            ? 'bg-amber-500/10 border-amber-500/35 text-amber-200'
+                            : 'bg-zinc-900 border-zinc-800 text-zinc-300'
+                        }`}
+                      >
+                        <span>
+                          gs://{b.name} ({b.objectsCount} obj · {b.totalSizeMb} MB)
+                        </span>
+                        {b.isBuildStagingBucket && (
+                          <button
+                            type="button"
+                            disabled={artifactActionBusy === `bucket:${b.name}`}
+                            onClick={() => handleEmptyAndDeleteStagingBucket(b.name)}
+                            title="Force-empty and delete this entire staging bucket"
+                            className="px-1.5 py-0.5 rounded bg-red-500/20 hover:bg-red-500/35 border border-red-500/40 text-red-300 text-[10px] font-bold cursor-pointer"
+                          >
+                            Empty & Delete Bucket
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {artifactScanState.loading && !scanData ? (
+                  <div className="p-6 text-center text-xs font-mono text-zinc-400">
+                    Scanning Cloud Storage buckets (`_cloudbuild`, `run-sources-*`, `gcf-v2-*`, and project buckets) for build artifacts...
+                  </div>
+                ) : filteredStorage.length === 0 ? (
+                  <div className="p-6 rounded-lg bg-zinc-900/60 border border-zinc-800 text-center text-xs font-mono text-zinc-400">
+                    No matching artifacts found in Cloud Storage buckets.
+                  </div>
+                ) : (
+                  filteredStorage.map((obj) => {
+                    const busyObj = artifactActionBusy === `gcs:${obj.id}`;
+                    return (
+                      <div
+                        key={obj.id}
+                        className={`p-3 rounded-lg border flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
+                          obj.isBuildStagingArtifact
+                            ? 'bg-zinc-900/90 border-amber-500/30'
+                            : 'bg-zinc-900/50 border-zinc-800'
+                        }`}
+                      >
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                                obj.isBuildStagingArtifact
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                              }`}
+                            >
+                              {obj.isBuildStagingArtifact
+                                ? '📦 BUILD / STAGING ARTIFACT'
+                                : '🗄️ GCS ARTIFACT OBJECT'}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-white truncate">
+                              gs://{obj.bucket}/{obj.name}
+                            </span>
+                            <span className="text-[11px] font-mono font-semibold text-amber-300">
+                              {obj.sizeMb} MB
+                            </span>
+                            <span className="text-[10px] font-mono text-zinc-400">
+                              ({obj.location} · {obj.storageClass})
+                            </span>
+                            {obj.ageDays !== null && (
+                              <span className="text-[10px] font-mono text-zinc-500">
+                                · {obj.ageDays}d old
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-zinc-400">
+                            {obj.reason}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            disabled={busyObj}
+                            onClick={() => handleDeleteSingleGcsArtifact(obj)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>
+                              {busyObj ? 'Deleting...' : 'Delete Artifact'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* GLOBAL CLOUD RUN -> GKE KUBERNETES TRANSPILER & 1-CLICK MIGRATOR STUDIO */}
       {showGlobalGkeTranspiler && (() => {

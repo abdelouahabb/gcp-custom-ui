@@ -380,14 +380,28 @@ function classifyDestructiveAxiosConfig(config) {
         ? body.images.length
         : 'all untagged';
       return {
-        title: 'Sweep & Delete Orphaned Container Images',
-        resourceKind: 'Artifact Registry Orphan Sweep',
-        targetName: `${count} Untagged / Orphaned Images`,
+        title: 'Sweep & Delete Dead / Orphaned Container Images',
+        resourceKind: 'Artifact Registry Dead Container Sweep',
+        targetName: `${count} Dead / Unused Container Images`,
         location: 'Artifact Registry',
         projectId,
         method: 'POST (SWEEP ORPHANS)',
         endpoint: rawUrl,
-        impactWarning: `This will permanently purge ${count} untagged/orphaned container image digests from Artifact Registry.`,
+        impactWarning: `This will permanently purge ${count} dead/unused container image digests from Artifact Registry. Active container images currently running on Cloud Run are protected and untouched.`,
+      };
+    }
+
+    if (rawUrl.includes('/cloudrun/dead-artifacts-purge-gcs')) {
+      const count = Array.isArray(body.objects) ? body.objects.length : 'selected';
+      return {
+        title: 'Purge Leftover Cloud Storage Build & Staging Artifacts?',
+        resourceKind: 'Cloud Storage Build / Staging Artifacts',
+        targetName: `${count} Cloud Storage Artifact Object(s)`,
+        location: 'Cloud Storage (storage.googleapis.com)',
+        projectId,
+        method: 'POST (PURGE GCS ARTIFACTS)',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete ${count} leftover Cloud Storage build/staging artifact object(s) from project "${projectId}".`,
       };
     }
 

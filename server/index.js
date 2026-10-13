@@ -15249,7 +15249,13 @@ app.post(
 );
 
 // Helper to delete a single Artifact Registry dockerImage resource
-async function deleteArtifactDockerImage({ projectId, token, imageName, imageUri }) {
+async function deleteArtifactDockerImage({
+  projectId,
+  token,
+  imageName,
+  imageUri,
+  tags = [],
+}) {
   // imageName format: projects/{project}/locations/{loc}/repositories/{repo}/dockerImages/{pkg}@{digest}
   if (imageName && imageName.includes('/dockerImages/')) {
     const [repoPrefix, pkgAndDigest] = imageName.split('/dockerImages/');
@@ -15257,10 +15263,24 @@ async function deleteArtifactDockerImage({ projectId, token, imageName, imageUri
     if (repoPrefix && atIdx > 0) {
       const pkgName = pkgAndDigest.slice(0, atIdx);
       const digest = pkgAndDigest.slice(atIdx + 1);
-      // First delete any tags pointing to this version if needed, or try deleting the version directly
+      // If tags are attached, delete them via REST first so version deletion succeeds cleanly
+      if (Array.isArray(tags) && tags.length > 0) {
+        await Promise.allSettled(
+          tags.map((tag) =>
+            gcpApiRequest({
+              method: 'DELETE',
+              url: `https://artifactregistry.googleapis.com/v1/${repoPrefix}/packages/${encodeURIComponent(
+                pkgName
+              )}/tags/${encodeURIComponent(tag)}`,
+              token,
+              quotaProject: projectId,
+            })
+          )
+        );
+      }
       const versionUrl = `https://artifactregistry.googleapis.com/v1/${repoPrefix}/packages/${encodeURIComponent(
         pkgName
-      )}/versions/${encodeURIComponent(digest)}`;
+      )}/versions/${encodeURIComponent(digest)}?force=true`;
       try {
         return await gcpApiRequest({
           method: 'DELETE',
@@ -15269,7 +15289,7 @@ async function deleteArtifactDockerImage({ projectId, token, imageName, imageUri
           quotaProject: projectId,
         });
       } catch (restErr) {
-        // If version has tags attached, fallback to gcloud artifacts docker images delete --delete-tags
+        // Fallback to gcloud artifacts docker images delete --delete-tags
         if (imageUri) {
           execFileSync(
             'gcloud',
@@ -15316,7 +15336,7 @@ app.post(
   '/api/project/:projectId/wave9/supply-chain/delete-image',
   async (req, res) => {
     const { projectId } = req.params;
-    const { name: imageName, uri: imageUri } = req.body || {};
+    const { name: imageName, uri: imageUri, tags = [] } = req.body || {};
     try {
       const token = await resolveRequestToken(req);
       if (!token) {
@@ -15327,6 +15347,7 @@ app.post(
         token,
         imageName,
         imageUri,
+        tags,
       });
 
       recordFlightEvent(projectId, {
@@ -15340,7 +15361,7 @@ app.post(
       return res.json({
         ok: true,
         operation: op,
-        message: `Deleted container image digest "${
+        message: `Deleted container image "${
           (imageUri || imageName || '').split('/').pop()
         }" from Artifact Registry.`,
       });
@@ -15367,7 +15388,7 @@ app.post(
         return res.status(401).json({ error: 'Not authenticated.' });
       }
       if (!Array.isArray(orphans) || orphans.length === 0) {
-        return res.status(400).json({ error: 'No untagged orphan digests provided to sweep.' });
+        return res.status(400).json({ error: 'No dead/orphan container digests provided to sweep.' });
       }
 
       const results = await Promise.allSettled(
@@ -15377,6 +15398,7 @@ app.post(
             token,
             imageName: img.name,
             imageUri: img.uri,
+            tags: img.tags || [],
           })
         )
       );
@@ -15387,16 +15409,16 @@ app.post(
       recordFlightEvent(projectId, {
         action: 'ARTIFACT_ORPHAN_DIGESTS_SWEPT',
         resourceType: 'ARTIFACT_DOCKER_IMAGE',
-        resourceName: `${deletedCount} untagged orphan digests`,
+        resourceName: `${deletedCount} dead/orphan container images`,
         region: 'multi-region',
-        summary: `Swept ${deletedCount} untagged orphan container digests from Artifact Registry`,
+        summary: `Swept ${deletedCount} dead/orphan container image(s) from Artifact Registry`,
       });
 
       return res.json({
         ok: true,
         deletedCount,
         failedCount,
-        message: `Swept ${deletedCount} untagged orphan container digest(s) from Artifact Registry${
+        message: `Swept ${deletedCount} dead/unused container image(s) from Artifact Registry${
           failedCount > 0 ? ` (${failedCount} failed)` : ''
         }!`,
       });
@@ -15405,7 +15427,7 @@ app.post(
         error:
           err.response?.data?.error?.message ||
           err.message ||
-          'Failed to sweep untagged orphan digests.',
+          'Failed to sweep dead/orphan container images.',
       });
     }
   }
@@ -15455,6 +15477,509 @@ app.delete(
     }
   }
 );
+
+// 2d-bis. GET /api/project/:projectId/cloudrun/dead-artifacts-scan
+// Cross-references live Cloud Run services against Artifact Registry container images AND Cloud Storage build/staging artifacts
+app.get(
+  '/api/project/:projectId/cloudrun/dead-artifacts-scan',
+  async (req, res) => {
+    const { projectId } = req.params;
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+
+      // 1. Fetch all active Cloud Run services across all regions
+      const runServicesRes = await gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/-/services`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => ({ services: [] }));
+
+      const liveServices = Array.isArray(runServicesRes?.services)
+        ? runServicesRes.services
+        : [];
+
+      const activeServiceNames = new Set();
+      const activeImageUris = new Set();
+      const activeImageDigests = new Set();
+      const imageToServiceMap = new Map();
+      const activeRegions = new Set([
+        'us-central1',
+        'us-east1',
+        'us-west1',
+        'europe-west1',
+        'us',
+        'europe',
+        'asia',
+      ]);
+
+      for (const srv of liveServices) {
+        const shortName = (srv.name || '').split('/').pop() || '';
+        const region = (srv.name || '').split('/')[3] || '';
+        if (shortName) activeServiceNames.add(shortName.toLowerCase());
+        if (region) activeRegions.add(region);
+
+        const containers = srv.template?.containers || [];
+        for (const c of containers) {
+          const img = String(c.image || '').trim();
+          if (!img) continue;
+          activeImageUris.add(img);
+          imageToServiceMap.set(img, `${shortName} (${region})`);
+          const shaIdx = img.indexOf('@sha256:');
+          if (shaIdx > 0) {
+            const digest = img.slice(shaIdx + 1);
+            activeImageDigests.add(digest);
+            imageToServiceMap.set(digest, `${shortName} (${region})`);
+          }
+          const noTagStem = img.split('@')[0].split(':')[0];
+          if (noTagStem) {
+            // Keep track of package stem -> active tag/digest
+            imageToServiceMap.set(`stem:${noTagStem}`, `${shortName} (${region})`);
+          }
+        }
+      }
+
+      // 2. Scan Artifact Registry repositories across all candidate regions
+      const candidateLocations = Array.from(activeRegions).slice(0, 10);
+      const repoCalls = await Promise.allSettled(
+        candidateLocations.map((loc) =>
+          gcpFetch(
+            `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/locations/${encodeURIComponent(loc)}/repositories`,
+            token,
+            projectId,
+            { timeout: 5000 }
+          )
+        )
+      );
+
+      const rawRepos = [];
+      const seenRepoNames = new Set();
+      for (const rc of repoCalls) {
+        if (
+          rc.status === 'fulfilled' &&
+          Array.isArray(rc.value?.repositories)
+        ) {
+          for (const repo of rc.value.repositories) {
+            if (repo?.name && !seenRepoNames.has(repo.name)) {
+              seenRepoNames.add(repo.name);
+              rawRepos.push(repo);
+            }
+          }
+        }
+      }
+
+      const imageCalls = await Promise.allSettled(
+        rawRepos.slice(0, 10).map(async (repo) => {
+          const imgRes = await gcpFetch(
+            `https://artifactregistry.googleapis.com/v1/${repo.name}/dockerImages?pageSize=50`,
+            token,
+            projectId,
+            { timeout: 5000 }
+          ).catch(() => ({ dockerImages: [] }));
+          return {
+            repo,
+            images: Array.isArray(imgRes?.dockerImages)
+              ? imgRes.dockerImages
+              : [],
+          };
+        })
+      );
+
+      const containerImages = [];
+      let deadImagesCount = 0;
+      let deadImagesBytes = 0;
+      let activeImagesCount = 0;
+
+      for (const ic of imageCalls) {
+        if (ic.status !== 'fulfilled') continue;
+        const { repo, images } = ic.value;
+        const repoParts = (repo.name || '').split('/');
+        const repoShortName = repoParts[repoParts.length - 1] || repo.name;
+        const location = repoParts[3] || 'us-central1';
+
+        for (const img of images) {
+          const uri = String(img.uri || '');
+          const sizeBytes = Number(img.imageSizeBytes || 0);
+          const tags = Array.isArray(img.tags) ? img.tags : [];
+          const shaIdx = uri.indexOf('@sha256:');
+          const digest = shaIdx > 0 ? uri.slice(shaIdx + 1) : '';
+          const pkgStem = uri.split('@')[0];
+          const pkgShortName = (pkgStem.split('/').pop() || '').toLowerCase();
+
+          // Check if this specific image digest or tagged URI is actively serving a live Cloud Run service
+          let inUseByService =
+            imageToServiceMap.get(uri) ||
+            (digest && imageToServiceMap.get(digest)) ||
+            null;
+
+          if (!inUseByService && tags.length > 0) {
+            for (const t of tags) {
+              const taggedUri = `${pkgStem}:${t}`;
+              if (activeImageUris.has(taggedUri)) {
+                inUseByService =
+                  imageToServiceMap.get(taggedUri) ||
+                  imageToServiceMap.get(`stem:${pkgStem}`) ||
+                  pkgShortName;
+                break;
+              }
+            }
+          }
+
+          const isActivelyUsed = Boolean(inUseByService);
+          let statusCategory = 'ACTIVE_IN_CLOUD_RUN';
+          let statusLabel = `Active in Cloud Run (${inUseByService})`;
+          let reason = `Currently deployed and serving live traffic on Cloud Run service ${inUseByService}.`;
+
+          if (!isActivelyUsed) {
+            const belongsToExistingService =
+              activeServiceNames.has(pkgShortName) ||
+              Array.from(activeServiceNames).some(
+                (s) => pkgShortName.includes(s) || s.includes(pkgShortName)
+              );
+
+            if (!belongsToExistingService && pkgShortName) {
+              statusCategory = 'DEAD_DELETED_SERVICE';
+              statusLabel = 'Dead Container (Deleted Service)';
+              reason = `No live Cloud Run service matches "${pkgShortName}" — leftover image from a deleted or renamed service.`;
+            } else if (tags.length === 0) {
+              statusCategory = 'DEAD_UNTAGGED_DIGEST';
+              statusLabel = 'Dead Untagged Digest (Orphan)';
+              reason =
+                'Untagged container layer digest (0 tags) superseded by a newer Cloud Run build.';
+            } else {
+              statusCategory = 'DEAD_SUPERSEDED_IMAGE';
+              statusLabel = 'Unused / Superseded Container Image';
+              reason =
+                'Tagged container image in Artifact Registry that is not referenced by any running Cloud Run revision.';
+            }
+            deadImagesCount += 1;
+            deadImagesBytes += sizeBytes;
+          } else {
+            activeImagesCount += 1;
+          }
+
+          const uploadTime = img.uploadTime || img.buildTime || null;
+          const ageDays = uploadTime
+            ? Math.max(
+                0,
+                Math.floor(
+                  (Date.now() - new Date(uploadTime).getTime()) / 86400000
+                )
+              )
+            : null;
+
+          containerImages.push({
+            name: img.name,
+            uri,
+            shortPackage: pkgShortName || uri.split('/').pop(),
+            digestShort: digest ? digest.slice(0, 19) : 'sha256:unknown',
+            repository: repoShortName,
+            location,
+            tags,
+            sizeBytes,
+            sizeMb: Number((sizeBytes / (1024 * 1024)).toFixed(2)),
+            uploadTime,
+            ageDays,
+            isDead: !isActivelyUsed,
+            inUseByService,
+            statusCategory,
+            statusLabel,
+            reason,
+          });
+        }
+      }
+
+      // Sort dead images first, largest size first
+      containerImages.sort((a, b) => {
+        if (a.isDead !== b.isDead) return a.isDead ? -1 : 1;
+        return b.sizeBytes - a.sizeBytes;
+      });
+
+      // 3. Scan Cloud Storage Buckets & Objects for Build / Staging / Container Artifacts
+      const bucketsRes = await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+          projectId
+        )}`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ).catch(() => ({ items: [] }));
+
+      const rawBuckets = Array.isArray(bucketsRes?.items)
+        ? bucketsRes.items
+        : [];
+
+      const classifyBucketRole = (bName) => {
+        const lower = String(bName || '').toLowerCase();
+        if (lower.startsWith('run-sources-') || lower.includes('cloud-run')) {
+          return {
+            isBuildStagingBucket: true,
+            bucketCategory: 'CLOUD_RUN_SOURCE_STAGING',
+            bucketLabel: 'Cloud Run Source Deploy Staging Bucket',
+          };
+        }
+        if (lower.endsWith('_cloudbuild') || lower.includes('cloudbuild')) {
+          return {
+            isBuildStagingBucket: true,
+            bucketCategory: 'CLOUD_BUILD_STAGING',
+            bucketLabel: 'Cloud Build Source Tarball Bucket',
+          };
+        }
+        if (
+          lower.startsWith('gcf-v2-') ||
+          lower.startsWith('gcf-sources-') ||
+          lower.includes('gcf-uploads')
+        ) {
+          return {
+            isBuildStagingBucket: true,
+            bucketCategory: 'CLOUD_FUNCTIONS_STAGING',
+            bucketLabel: 'Cloud Functions / Gen2 Build Staging Bucket',
+          };
+        }
+        if (
+          lower.startsWith('artifacts.') ||
+          lower.startsWith('staging.') ||
+          lower.includes('.appspot.com')
+        ) {
+          return {
+            isBuildStagingBucket: true,
+            bucketCategory: 'LEGACY_GCR_OR_APPENGINE_STAGING',
+            bucketLabel: 'Legacy GCR / App Engine Container Staging Bucket',
+          };
+        }
+        return {
+          isBuildStagingBucket: false,
+          bucketCategory: 'PROJECT_STORAGE_BUCKET',
+          bucketLabel: 'Cloud Storage Bucket',
+        };
+      };
+
+      // Prioritize build/staging buckets first, then other project buckets (up to 12 buckets)
+      const sortedBuckets = [...rawBuckets].sort((a, b) => {
+        const aStaging = classifyBucketRole(a.name).isBuildStagingBucket;
+        const bStaging = classifyBucketRole(b.name).isBuildStagingBucket;
+        if (aStaging !== bStaging) return aStaging ? -1 : 1;
+        return 0;
+      });
+
+      const bucketObjCalls = await Promise.allSettled(
+        sortedBuckets.slice(0, 12).map(async (b) => {
+          const objRes = await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              b.name
+            )}/o?maxResults=50`,
+            token,
+            projectId,
+            { timeout: 5000 }
+          ).catch(() => ({ items: [] }));
+          return {
+            bucket: b,
+            objects: Array.isArray(objRes?.items) ? objRes.items : [],
+          };
+        })
+      );
+
+      const storageArtifacts = [];
+      const storageBucketsSummary = [];
+      let totalGcsArtifactBytes = 0;
+      let buildStagingArtifactCount = 0;
+      let buildStagingArtifactBytes = 0;
+
+      for (const bc of bucketObjCalls) {
+        if (bc.status !== 'fulfilled') continue;
+        const { bucket, objects } = bc.value;
+        const role = classifyBucketRole(bucket.name);
+        let bucketBytes = 0;
+
+        for (const obj of objects) {
+          const sz = Number(obj.size || 0);
+          bucketBytes += sz;
+          totalGcsArtifactBytes += sz;
+
+          const objName = String(obj.name || '');
+          const lowerObj = objName.toLowerCase();
+          const isBuildArchive =
+            role.isBuildStagingBucket ||
+            lowerObj.endsWith('.tgz') ||
+            lowerObj.endsWith('.tar.gz') ||
+            lowerObj.endsWith('.zip') ||
+            lowerObj.startsWith('source/') ||
+            lowerObj.startsWith('services/') ||
+            lowerObj.startsWith('containers/images/');
+
+          if (isBuildArchive) {
+            buildStagingArtifactCount += 1;
+            buildStagingArtifactBytes += sz;
+          }
+
+          const updatedTime = obj.updated || obj.timeCreated || null;
+          const ageDays = updatedTime
+            ? Math.max(
+                0,
+                Math.floor(
+                  (Date.now() - new Date(updatedTime).getTime()) / 86400000
+                )
+              )
+            : null;
+
+          storageArtifacts.push({
+            id: `${bucket.name}/${objName}`,
+            bucket: bucket.name,
+            location: bucket.location || 'US',
+            storageClass: obj.storageClass || bucket.storageClass || 'STANDARD',
+            name: objName,
+            contentType: obj.contentType || 'application/octet-stream',
+            sizeBytes: sz,
+            sizeMb: Number((sz / (1024 * 1024)).toFixed(2)),
+            updatedTime,
+            ageDays,
+            isBuildStagingArtifact: isBuildArchive,
+            bucketCategory: role.bucketCategory,
+            bucketLabel: role.bucketLabel,
+            reason: role.isBuildStagingBucket
+              ? `${role.bucketLabel} — build/source tarball only needed during Cloud Build compilation; safe to purge once deployed.`
+              : isBuildArchive
+              ? 'Archived source tarball / container build artifact in Cloud Storage.'
+              : 'Stored object in Cloud Storage bucket.',
+          });
+        }
+
+        storageBucketsSummary.push({
+          name: bucket.name,
+          location: bucket.location || 'US',
+          storageClass: bucket.storageClass || 'STANDARD',
+          objectsCount: objects.length,
+          totalSizeMb: Number((bucketBytes / (1024 * 1024)).toFixed(2)),
+          isBuildStagingBucket: role.isBuildStagingBucket,
+          bucketCategory: role.bucketCategory,
+          bucketLabel: role.bucketLabel,
+        });
+      }
+
+      // Sort build/staging artifacts first, then largest size first
+      storageArtifacts.sort((a, b) => {
+        if (a.isBuildStagingArtifact !== b.isBuildStagingArtifact) {
+          return a.isBuildStagingArtifact ? -1 : 1;
+        }
+        return b.sizeBytes - a.sizeBytes;
+      });
+
+      const deadImagesGb = deadImagesBytes / 1e9;
+      const gcsArtifactsGb = totalGcsArtifactBytes / 1e9;
+      const reclaimableArMonthlyUsd = Number((deadImagesGb * 0.1).toFixed(3));
+      const reclaimableGcsMonthlyUsd = Number(
+        (gcsArtifactsGb * 0.02).toFixed(3)
+      );
+
+      return res.json({
+        projectId,
+        scannedAt: new Date().toISOString(),
+        summary: {
+          activeCloudRunServicesCount: liveServices.length,
+          repositoriesScannedCount: rawRepos.length,
+          totalContainerImagesCount: containerImages.length,
+          activeContainerImagesCount: activeImagesCount,
+          deadContainerImagesCount: deadImagesCount,
+          deadContainerSizeMb: Number(
+            (deadImagesBytes / (1024 * 1024)).toFixed(2)
+          ),
+          deadContainerSizeGb: Number(deadImagesGb.toFixed(3)),
+          bucketsScannedCount: storageBucketsSummary.length,
+          totalStorageObjectsCount: storageArtifacts.length,
+          buildStagingArtifactsCount: buildStagingArtifactCount,
+          totalStorageSizeMb: Number(
+            (totalGcsArtifactBytes / (1024 * 1024)).toFixed(2)
+          ),
+          buildStagingSizeMb: Number(
+            (buildStagingArtifactBytes / (1024 * 1024)).toFixed(2)
+          ),
+          reclaimableMonthlyUsd: Number(
+            (reclaimableArMonthlyUsd + reclaimableGcsMonthlyUsd).toFixed(2)
+          ),
+        },
+        containerImages,
+        storageBuckets: storageBucketsSummary,
+        storageArtifacts,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to scan Artifact Registry and Cloud Storage for dead containers and artifacts.',
+      });
+    }
+  }
+);
+
+// 2d-ter. POST /api/project/:projectId/cloudrun/dead-artifacts-purge-gcs
+// Batch-deletes selected Cloud Storage build/staging artifact objects
+app.post(
+  '/api/project/:projectId/cloudrun/dead-artifacts-purge-gcs',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { objects = [] } = req.body || {};
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+      if (!Array.isArray(objects) || objects.length === 0) {
+        return res.status(400).json({
+          error: 'No Cloud Storage artifact objects provided to purge.',
+        });
+      }
+
+      const results = await Promise.allSettled(
+        objects.map((item) =>
+          gcpApiRequest({
+            method: 'DELETE',
+            url: `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              item.bucket
+            )}/o/${encodeURIComponent(item.name)}`,
+            token,
+            quotaProject: projectId,
+          })
+        )
+      );
+
+      const deletedCount = results.filter((r) => r.status === 'fulfilled').length;
+      const failedCount = results.length - deletedCount;
+
+      recordFlightEvent(projectId, {
+        action: 'GCS_BUILD_ARTIFACTS_PURGED',
+        resourceType: 'GCS_OBJECT_BATCH',
+        resourceName: `${deletedCount} Cloud Storage artifact object(s)`,
+        region: 'multi-region',
+        summary: `Purged ${deletedCount} leftover Cloud Storage build/staging artifact object(s)`,
+      });
+
+      return res.json({
+        ok: true,
+        deletedCount,
+        failedCount,
+        message: `Purged ${deletedCount} Cloud Storage artifact object(s)${
+          failedCount > 0 ? ` (${failedCount} failed)` : ''
+        }!`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to purge Cloud Storage artifact objects.',
+      });
+    }
+  }
+);
+
 
 // 2e. GET /api/project/:projectId/cloud-build/builds
 app.get('/api/project/:projectId/cloud-build/builds', async (req, res) => {
