@@ -316,19 +316,21 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
       3. **`💀 Dead Untagged Digest (Orphan)`** — Untagged `sha256:...` layer digest (`0` tags) superseded by a newer build.
       4. **`💀 Unused / Superseded Container Image`** — Tagged image not referenced by any running Cloud Run revision.
     - **Tab 2 — `🗄️ Cloud Storage Artifacts (Build Staging & Buckets)`**: Scans Cloud Storage buckets (`storage.googleapis.com/storage/v1`), prioritizing Cloud Run & Cloud Build staging buckets (`run-sources-*`, `*_cloudbuild`, `gcf-v2-*`, `artifacts.*.appspot.com`) and listing all `.tgz` / `.tar.gz` / `.zip` build tarballs and storage objects with size (`MB`), age (`d old`), and storage class.
-  - **1-Click Safe Cleanup (Protected by the Mandatory Delete Confirmation Modal)**:
+  - **1-Click Safe Cleanup + Async `⏳ DELETING...` Visual Feedback (Protected by the Mandatory Delete Confirmation Modal)**:
     - **Delete Individual Dead Container** (`POST /api/project/:id/wave9/supply-chain/delete-image`) or **Sweep All Dead Containers** (`POST /api/project/:id/wave9/supply-chain/sweep-orphans`), automatically deleting attached tags via REST before deleting the version digest.
     - **Delete Individual Cloud Storage Artifact** (`DELETE /api/project/:id/storage/buckets/:bucket/objects`), **Batch-Purge All Build Staging Tarballs** (`POST /api/project/:id/cloudrun/dead-artifacts-purge-gcs`), or **Force Empty & Delete Staging Bucket** (`POST /api/project/:id/storage/buckets/:bucket/empty-and-delete`).
+    - **Grayed-Out `line-through` + `⏳ DELETING...` State & Server Tombstone Cache**: Both the Cloud Run Dead Container Hunter and the Artifact Registry Supply-Chain Studio immediately mark deleting containers, objects, and buckets in gray (`opacity-50`) with `line-through` text and a pulsing `⏳ DELETING...` badge (`60s` backend tombstone cache) so asynchronous GCP propagation never leaves stale rows looking active.
 
 ### 38. 🎥 GDE Streamer & Video Tutorial Privacy Shield (`GdeStreamerPrivacyShield.jsx`)
 - **Where to find it**: Top header bar **`GDE Mode`** split button (right next to the Promotional Credits pill and **`⌘K Ops`**), or press **`Alt+G`** / **`Ctrl+Shift+G`** anywhere, or run **`Toggle GDE Streamer & Video Tutorial Privacy Shield`** from **`⌘K`**.
 - **How it Works**:
-  - **Zero-Breakage DOM & Tooltip Redaction Engine**: Keeps React's internal `selectedProjectId`, `contextData.account`, and `billingAccountName` untouched in memory so every live GCP REST API call (`run.googleapis.com`, `compute.googleapis.com`, `cloudbilling.googleapis.com`) continues working normally while a real-time `MutationObserver` + `TreeWalker` + `WeakMap` cache masks sensitive text nodes and `title` / `data-hud-tip` tooltips across all 20 studios and modals:
+  - **Zero-Breakage Post-Commit DOM Redaction Engine**: Keeps React's internal `selectedProjectId`, `contextData.account`, and `billingAccountName` untouched in memory so every live GCP REST API call (`run.googleapis.com`, `compute.googleapis.com`, `cloudbilling.googleapis.com`) continues working normally while a post-commit (`requestAnimationFrame` + debounced `MutationObserver` + `WeakMap` cache) masks sensitive text nodes across all 20 studios and modals:
     1. **Hide Personal & IAM Emails**: Replaces your authenticated email with your custom demo alias (default `gde-instructor@google-cloud-demo.dev`) and masks project numbers inside Service Account emails (`9900••••01-compute@developer.gserviceaccount.com`).
     2. **Hide Cloud Billing Account IDs**: Masks `01XXXX-XXXXXX-XXXXXX` and `billingAccounts/01XXXX-...` into `01GDE•-••••••-TUTOR1`.
     3. **Hide GCP Project Numbers**: Masks 10–14 digit project numbers (`#9900••••••01`).
     4. **Hide External / Public IPv4s**: Masks public IPv4 addresses (`34.•••.•••.88`) while keeping RFC1918 private IPs (`10.x.x.x`, `127.0.0.1`) and Google Cloud IAP (`35.235.240.0/20`) readable for teaching networking.
     5. **Optional Project ID & Credit Balance Masking**: Toggleable switches in the `⚙️` popover to replace live Project IDs with `gde-demo-project` and mask large dollar balances (`$•,•••.••`).
   - **Persistent Across Browser Refreshes (`localStorage`)**: Saves your shield state in `cloudpulse_gde_tutorial_mode_v1` so refreshing the page during a live stream never flashes your email or billing account ID.
+
 
 
