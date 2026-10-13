@@ -2650,6 +2650,45 @@ export default function SovereignTimeMachineIamStudio({
                   </span>
                 </div>
 
+                {/* Critical Clarification: Does Delete / Destroy Revert to Plaintext or Disappear Forever? */}
+                <div className="p-3 rounded-[9px] bg-red-500/[0.06] border border-red-500/35 space-y-1.5 text-[11px] leading-relaxed">
+                  <div className="font-mono font-extrabold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      ⚠️ CRITICAL: Does Delete or Destroy Put a Secret Back into Plaintext? NO — It Disappears Forever!
+                    </span>
+                  </div>
+                  <p className="text-zinc-700 dark:text-zinc-300 text-[10.5px]">
+                    When Cloud Run&apos;s Leak Surgeon seals an environment variable into Secret Manager, the **plaintext value is completely removed** from Cloud Run and replaced with a pointer (<code className="font-mono font-bold">valueSource.secretKeyRef</code>). Secret Manager does **not** keep a backup in Cloud Run:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[10px] font-mono">
+                    <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-amber-500/35">
+                      <div className="font-extrabold text-amber-600 dark:text-amber-400">
+                        ⏸ 1. DISABLE Version ($0/mo · Reversible)
+                      </div>
+                      <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
+                        Encrypted bytes stay safely stored at <strong>$0.00/mo</strong>, but workloads cannot read it until you click <strong>▶ Enable</strong>. <em>Never reverts to plaintext.</em>
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/35">
+                      <div className="font-extrabold text-red-600 dark:text-red-400">
+                        🔥 2. DESTROY Version ($0/mo · Permanent)
+                      </div>
+                      <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
+                        Cryptographically shreds that version&apos;s payload <strong>forever</strong> (cannot be undone). <strong>It will NOT return to plaintext</strong>—the value is gone!
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/45">
+                      <div className="font-extrabold text-red-600 dark:text-red-400">
+                        🗑️ 3. DELETE Secret (Permanent)
+                      </div>
+                      <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
+                        Erases the entire secret &amp; all versions forever. Any Cloud Run service still referencing <code className="font-bold">secretKeyRef</code> will <strong>fail to start</strong> until you update or remove that env var!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {vaultData?.secrets?.length > 0 ? (
                   <div className="space-y-2.5 max-h-[540px] overflow-y-auto pr-1">
                     {vaultData.secrets.map((s) => {
@@ -2725,7 +2764,7 @@ export default function SovereignTimeMachineIamStudio({
                                 type="button"
                                 disabled={deleteBusy}
                                 onClick={() => handleDeleteSecret(s.secretId)}
-                                title={`Delete secret "${s.secretId}" and all its versions from Secret Manager`}
+                                title={`Permanently delete secret "${s.secretId}" and all its versions. WARNING: This does NOT revert Cloud Run back to plaintext — the secret value will disappear forever!`}
                                 className="p-1.5 rounded-[7px] bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 cursor-pointer disabled:opacity-50"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2830,7 +2869,9 @@ export default function SovereignTimeMachineIamStudio({
                                               {v.state}{' '}
                                               {isEnabled
                                                 ? '(Active Quota)'
-                                                : '($0.00/mo)'}
+                                                : isDisabled
+                                                ? '($0.00/mo · Reversible)'
+                                                : '($0.00/mo · Erased Forever)'}
                                             </span>
                                             {v.createTime && (
                                               <span className="text-[10px] text-zinc-500">
@@ -2856,7 +2897,7 @@ export default function SovereignTimeMachineIamStudio({
                                                       'DISABLE'
                                                     )
                                                   }
-                                                  title={`Disable version ${v.version} so it costs $0.00/mo and frees up an active version slot`}
+                                                  title={`Disable version ${v.version} ($0.00/mo). The encrypted secret is kept safe and can be re-enabled anytime; it does NOT revert to plaintext.`}
                                                   className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
                                                 >
                                                   ⏸ Disable ($0/mo)
@@ -2893,10 +2934,10 @@ export default function SovereignTimeMachineIamStudio({
                                                     'DESTROY'
                                                   )
                                                 }
-                                                title={`Permanently destroy version ${v.version} cryptographic payload ($0.00/mo)`}
+                                                title={`IRREVERSIBLE: Permanently shreds version ${v.version}'s cryptographic payload ($0.00/mo). It will disappear forever and will NOT revert back to plaintext!`}
                                                 className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
                                               >
-                                                🔥 Destroy
+                                                🔥 Destroy (Disappears Forever)
                                               </button>
                                             </div>
                                           )}

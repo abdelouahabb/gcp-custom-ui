@@ -2632,6 +2632,9 @@ spec:
                               </button>{' '}
                               to rotate secrets and auto-disable old versions so you stay inside the Free Tier.
                             </div>
+                            <div className="pt-1 border-t border-emerald-500/20 text-[10px] text-amber-800 dark:text-amber-300 font-mono">
+                              ⚠️ <strong>Important — Does Delete/Destroy Revert Back to Plaintext? NO!</strong> Sealing a variable removes the plaintext from Cloud Run and replaces it with a <code className="font-bold">secretKeyRef</code> pointer. If you later <strong>Destroy</strong> a version or <strong>Delete</strong> the secret in Secret Manager, it <strong>disappears forever</strong> (it never reverts to plaintext). Use <strong>⏸ Disable ($0/mo)</strong> to pause a version safely without losing its value!
+                            </div>
                           </div>
 
                           <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed">

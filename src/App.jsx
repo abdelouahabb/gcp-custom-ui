@@ -404,7 +404,7 @@ function classifyDestructiveAxiosConfig(config) {
           projectId,
           method: 'DELETE SECRET',
           endpoint: rawUrl,
-          impactWarning: `This will permanently delete Secret Manager secret "${sid}" and all of its cryptographic versions. Any Cloud Run service or VM mounting this secret via secretKeyRef will fail to start new instances if the secret is missing.`,
+          impactWarning: `⚠️ NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Deleting "${sid}" permanently erases the secret and all of its versions. It does NOT revert Cloud Run environment variables back into plaintext! Because the Leak Surgeon removed the plaintext value from Cloud Run and replaced it with a secretKeyRef pointer, any Cloud Run service still referencing "${sid}" will fail to start new instances until that reference is updated or removed.`,
         };
       }
       if (
@@ -421,7 +421,7 @@ function classifyDestructiveAxiosConfig(config) {
           projectId,
           method: 'DESTROY VERSION',
           endpoint: rawUrl,
-          impactWarning: `Destroying secret version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently erased (costing $0.00/mo). Tip: If you might need to roll back later, use "Disable ($0/mo)" instead—disabled versions also cost $0.00/mo!`,
+          impactWarning: `⚠️ NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Destroying version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently shredded and does NOT return to plaintext in Cloud Run. Tip: If you only want $0.00/mo billing or might need to roll back later, click Cancel and use "⏸ Disable ($0/mo)" instead—disabled versions also cost $0.00/mo and can be re-enabled anytime!`,
         };
       }
     }
