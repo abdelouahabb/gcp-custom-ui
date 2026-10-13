@@ -10757,6 +10757,267 @@ app.post(
         });
       }
 
+      // H. KEYLESS GITHUB ACTIONS OIDC WORKLOAD IDENTITY FEDERATION ARCHITECT ("KILL THE .JSON KEY FOREVER")
+      if (action === 'PROVISION_GITHUB_OIDC_WIF') {
+        const cleanRepo = String(
+          req.body?.githubRepo || 'abdelouahabb/gcp-custom-ui'
+        )
+          .trim()
+          .replace(/^https?:\/\/github\.com\//i, '')
+          .replace(/\.git$/i, '')
+          .replace(/^\/+|\/+$/g, '');
+        if (!cleanRepo.includes('/')) {
+          return res.status(400).json({
+            error:
+              'githubRepo must be in "owner/repo" format (e.g. abdelouahabb/gcp-custom-ui).',
+          });
+        }
+        const targetSa = String(serviceAccountEmail || '').trim();
+        if (!targetSa) {
+          return res.status(400).json({
+            error:
+              'serviceAccountEmail is required to bind Keyless GitHub OIDC Workload Identity Federation.',
+          });
+        }
+        const poolId = String(req.body?.poolId || 'github-actions-pool')
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .slice(0, 32);
+        const providerId = String(
+          req.body?.providerId || 'github-oidc-provider'
+        )
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .slice(0, 32);
+
+        await Promise.allSettled([
+          ensureServiceApiEnabled(
+            projectId,
+            'iamcredentials.googleapis.com',
+            token
+          ),
+          ensureServiceApiEnabled(projectId, 'sts.googleapis.com', token),
+          ensureServiceApiEnabled(projectId, 'iam.googleapis.com', token),
+        ]);
+
+        // Discover projectNumber for principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/...
+        let projectNumber = 'PROJECT_NUMBER';
+        try {
+          const projMeta = await gcpApiRequest({
+            method: 'GET',
+            url: `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}`,
+            token,
+            quotaProject: projectId,
+          });
+          if (projMeta?.projectNumber) {
+            projectNumber = String(projMeta.projectNumber);
+          }
+        } catch {
+          // fallback if cloudresourcemanager.projects.get is restricted
+        }
+
+        let livePoolProvisioned = false;
+        let liveBindingApplied = false;
+        const stepsCompleted = [];
+
+        // 1. Create Workload Identity Pool (ignore 409 Already Exists)
+        try {
+          await gcpApiRequest({
+            method: 'POST',
+            url: `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/locations/global/workloadIdentityPools?workloadIdentityPoolId=${encodeURIComponent(
+              poolId
+            )}`,
+            token,
+            quotaProject: projectId,
+            data: {
+              displayName: 'GitHub Actions Keyless OIDC Pool',
+              description:
+                'Provisioned by CloudPulse 2026 Keyless OIDC Architect (Zero Static .json Keys)',
+              disabled: false,
+            },
+          });
+          livePoolProvisioned = true;
+          stepsCompleted.push(`Created Workload Identity Pool "${poolId}"`);
+        } catch (poolErr) {
+          if (poolErr.response?.status === 409) {
+            livePoolProvisioned = true;
+            stepsCompleted.push(
+              `Verified existing Workload Identity Pool "${poolId}"`
+            );
+          }
+        }
+
+        // 2. Create GitHub OIDC Provider inside the pool (ignore 409 Already Exists)
+        const repoOwner = cleanRepo.split('/')[0];
+        try {
+          await gcpApiRequest({
+            method: 'POST',
+            url: `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/locations/global/workloadIdentityPools/${encodeURIComponent(
+              poolId
+            )}/providers?workloadIdentityPoolProviderId=${encodeURIComponent(
+              providerId
+            )}`,
+            token,
+            quotaProject: projectId,
+            data: {
+              displayName: 'GitHub Actions OIDC Provider',
+              description: `Scoped to GitHub repository ${cleanRepo}`,
+              attributeMapping: {
+                'google.subject': 'assertion.sub',
+                'attribute.actor': 'assertion.actor',
+                'attribute.repository': 'assertion.repository',
+                'attribute.repository_owner': 'assertion.repository_owner',
+              },
+              attributeCondition: `assertion.repository == '${cleanRepo}'`,
+              oidc: {
+                issuerUri: 'https://token.actions.githubusercontent.com',
+              },
+            },
+          });
+          stepsCompleted.push(
+            `Configured OIDC Provider "${providerId}" (issuer: token.actions.githubusercontent.com, condition: repository=='${cleanRepo}')`
+          );
+        } catch (provErr) {
+          if (provErr.response?.status === 409) {
+            stepsCompleted.push(
+              `Verified existing OIDC Provider "${providerId}"`
+            );
+          }
+        }
+
+        // 3. Bind roles/iam.workloadIdentityUser on the Service Account for principalSet
+        const principalMember = `principalSet://iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${poolId}/attribute.repository/${cleanRepo}`;
+        if (projectNumber !== 'PROJECT_NUMBER') {
+          try {
+            const saUrl = `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/serviceAccounts/${encodeURIComponent(targetSa)}`;
+            const curSaPol = await gcpApiRequest({
+              method: 'POST',
+              url: `${saUrl}:getIamPolicy`,
+              token,
+              quotaProject: projectId,
+              data: {},
+            });
+            const saBindings = Array.isArray(curSaPol?.bindings)
+              ? [...curSaPol.bindings]
+              : [];
+            const wifRole = 'roles/iam.workloadIdentityUser';
+            const existingWif = saBindings.find((b) => b.role === wifRole);
+            if (existingWif) {
+              if (!existingWif.members.includes(principalMember)) {
+                existingWif.members.push(principalMember);
+              }
+            } else {
+              saBindings.push({
+                role: wifRole,
+                members: [principalMember],
+              });
+            }
+            await gcpApiRequest({
+              method: 'POST',
+              url: `${saUrl}:setIamPolicy`,
+              token,
+              quotaProject: projectId,
+              data: {
+                policy: {
+                  ...curSaPol,
+                  bindings: saBindings,
+                },
+              },
+            });
+            liveBindingApplied = true;
+            stepsCompleted.push(
+              `Bound roles/iam.workloadIdentityUser on ${targetSa} for ${cleanRepo}`
+            );
+          } catch {
+            // fallback CLI provided below
+          }
+        }
+
+        const providerResourceName = `projects/${projectNumber}/locations/global/workloadIdentityPools/${poolId}/providers/${providerId}`;
+        const githubActionsYaml = `name: Keyless Google Cloud Deploy (Zero Stored .json Secrets)
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write # Required for GitHub OIDC federation with Google Cloud STS
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud via Keyless OIDC (No .json Key!)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${providerResourceName}'
+          service_account: '${targetSa}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Verify Keyless Identity
+        run: gcloud auth list && gcloud config set project ${projectId}
+`;
+
+        const gcloudCliScript = `# 1. Create Workload Identity Pool ($0.00/mo)
+gcloud iam workload-identity-pools create "${poolId}" \\
+  --project="${projectId}" --location="global" \\
+  --display-name="GitHub Actions Keyless OIDC Pool"
+
+# 2. Create OIDC Provider locked to ${cleanRepo}
+gcloud iam workload-identity-pools providers create-oidc "${providerId}" \\
+  --project="${projectId}" --location="global" \\
+  --workload-identity-pool="${poolId}" \\
+  --issuer-uri="https://token.actions.githubusercontent.com" \\
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \\
+  --attribute-condition="assertion.repository == '${cleanRepo}'"
+
+# 3. Allow GitHub repo "${cleanRepo}" to impersonate ${targetSa} without any .json key
+gcloud iam service-accounts add-iam-policy-binding "${targetSa}" \\
+  --project="${projectId}" \\
+  --role="roles/iam.workloadIdentityUser" \\
+  --member="${principalMember}"`;
+
+        recordFlightEvent(projectId, {
+          action: 'IAM_KEYLESS_GITHUB_OIDC_ARCHITECT',
+          resourceType: 'WORKLOAD_IDENTITY_POOL',
+          resourceName: `${poolId}/${providerId}`,
+          region: 'global',
+          summary: `Configured Keyless GitHub OIDC Workload Identity Federation for ${cleanRepo} → ${targetSa} (Owner: ${repoOwner})`,
+        });
+
+        return res.json({
+          ok: true,
+          action,
+          githubRepo: cleanRepo,
+          serviceAccountEmail: targetSa,
+          projectNumber,
+          poolId,
+          providerId,
+          providerResourceName,
+          principalMember,
+          livePoolProvisioned,
+          liveBindingApplied,
+          stepsCompleted,
+          githubActionsYaml,
+          gcloudCliScript,
+          message: liveBindingApplied
+            ? `Provisioned Keyless GitHub OIDC Federation for "${cleanRepo}" → ${targetSa}! You can now delete static .json keys.`
+            : `Generated Keyless GitHub OIDC Pool "${poolId}" & workflow YAML for "${cleanRepo}" → ${targetSa}!`,
+        });
+      }
+
       // Fetch current policy with version 3
       const currentPolicy = await gcpApiRequest({
         method: 'POST',
@@ -11302,42 +11563,100 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
         .json({ error: 'Not authenticated with Google Cloud.' });
     }
 
-    const [secretsRes, kmsGlobalRes, kmsUsRes, armorRes, saListRes] =
-      await Promise.allSettled([
-        gcpApiRequest({
-          method: 'GET',
-          url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets`,
-          token,
-          quotaProject: projectId,
-        }),
-        gcpApiRequest({
-          method: 'GET',
-          url: `https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/global/keyRings`,
-          token,
-          quotaProject: projectId,
-        }),
-        gcpApiRequest({
-          method: 'GET',
-          url: `https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/us-central1/keyRings`,
-          token,
-          quotaProject: projectId,
-        }),
-        gcpApiRequest({
-          method: 'GET',
-          url: `https://compute.googleapis.com/v1/projects/${projectId}/global/securityPolicies`,
-          token,
-          quotaProject: projectId,
-        }),
-        gcpApiRequest({
-          method: 'GET',
-          url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`,
-          token,
-          quotaProject: projectId,
-        }),
-      ]);
+    const [
+      secretsRes,
+      kmsGlobalRes,
+      kmsUsRes,
+      armorRes,
+      saListRes,
+      cloudRunRes,
+    ] = await Promise.allSettled([
+      gcpApiRequest({
+        method: 'GET',
+        url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets`,
+        token,
+        quotaProject: projectId,
+      }),
+      gcpApiRequest({
+        method: 'GET',
+        url: `https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/global/keyRings`,
+        token,
+        quotaProject: projectId,
+      }),
+      gcpApiRequest({
+        method: 'GET',
+        url: `https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/us-central1/keyRings`,
+        token,
+        quotaProject: projectId,
+      }),
+      gcpApiRequest({
+        method: 'GET',
+        url: `https://compute.googleapis.com/v1/projects/${projectId}/global/securityPolicies`,
+        token,
+        quotaProject: projectId,
+      }),
+      gcpApiRequest({
+        method: 'GET',
+        url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`,
+        token,
+        quotaProject: projectId,
+      }),
+      gcpApiRequest({
+        method: 'GET',
+        url: `https://run.googleapis.com/v2/projects/${projectId}/locations/-/services`,
+        token,
+        quotaProject: projectId,
+      }),
+    ]);
 
     const rawSecrets =
       secretsRes.status === 'fulfilled' ? secretsRes.value?.secrets || [] : [];
+
+    // Extract all live Cloud Run secretKeyRef env-var and volume mounts across the project
+    const rawRunServices =
+      cloudRunRes.status === 'fulfilled'
+        ? cloudRunRes.value?.services || []
+        : [];
+    const cloudRunSecretMounts = [];
+    for (const svc of rawRunServices) {
+      const svcParts = String(svc.name || '').split('/');
+      const svcShortName = svcParts[svcParts.length - 1] || svc.name;
+      const svcRegion = svcParts[3] || 'us-central1';
+      const runtimeSa = svc.template?.serviceAccount || 'Default Compute SA';
+      const containers = svc.template?.containers || [];
+      for (const c of containers) {
+        for (const envItem of c.env || []) {
+          const ref = envItem?.valueSource?.secretKeyRef;
+          if (ref?.secret) {
+            const cleanRefSecret = String(ref.secret).split('/').pop();
+            cloudRunSecretMounts.push({
+              serviceName: svcShortName,
+              region: svcRegion,
+              mountType: 'ENV_VAR',
+              envVarName: envItem.name,
+              secretId: cleanRefSecret,
+              pinnedVersion: String(ref.version || 'latest'),
+              runtimeSa,
+            });
+          }
+        }
+      }
+      for (const vol of svc.template?.volumes || []) {
+        if (vol?.secret?.secret) {
+          const cleanRefSecret = String(vol.secret.secret).split('/').pop();
+          const firstVer = vol.secret.items?.[0]?.version || 'latest';
+          cloudRunSecretMounts.push({
+            serviceName: svcShortName,
+            region: svcRegion,
+            mountType: 'VOLUME_MOUNT',
+            envVarName: `vol:${vol.name}`,
+            secretId: cleanRefSecret,
+            pinnedVersion: String(firstVer),
+            runtimeSa,
+          });
+        }
+      }
+    }
 
     // Fetch live versions & IAM policy for each secret concurrently so we can calculate exact Free Tier usage & rotation state
     const enrichedSecrets = await Promise.all(
@@ -11346,7 +11665,9 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
         const isAuto = Boolean(s.replication?.automatic);
         const locations =
           s.replication?.userManaged?.replicas?.map((r) => r.location) || [];
-        const hasRotation = Boolean(s.rotation?.rotationPeriod);
+        const hasRotation = Boolean(
+          s.rotation?.rotationPeriod || s.labels?.rotation_cadence
+        );
 
         const [versRes, iamRes] = await Promise.allSettled([
           gcpApiRequest({
@@ -11399,6 +11720,40 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
           bindings.find((b) => b.role === 'roles/secretmanager.secretAccessor')
             ?.members || [];
 
+        // Cross-reference Cloud Run workloads mounting this secret
+        const mountedByWorkloads = cloudRunSecretMounts
+          .filter((m) => m.secretId === shortName)
+          .map((m) => {
+            let isHealthy = true;
+            let statusReason = `Healthy (${m.pinnedVersion})`;
+            if (enabledVersionsCount === 0) {
+              isHealthy = false;
+              statusReason =
+                'ALL_VERSIONS_DISABLED_OR_DESTROYED — Cloud Run cannot read any version!';
+            } else if (m.pinnedVersion !== 'latest') {
+              const matchedVer = versions.find(
+                (v) => String(v.version) === String(m.pinnedVersion)
+              );
+              if (!matchedVer) {
+                isHealthy = false;
+                statusReason = `Pinned version v${m.pinnedVersion} does not exist`;
+              } else if (matchedVer.state !== 'ENABLED') {
+                isHealthy = false;
+                statusReason = `Pinned version v${m.pinnedVersion} is ${matchedVer.state} — Cloud Run will fail on startup!`;
+              } else if (
+                String(m.pinnedVersion) !== String(latestEnabledVersion)
+              ) {
+                statusReason = `Pinned to older v${m.pinnedVersion} (newest ENABLED is v${latestEnabledVersion})`;
+              }
+            }
+            return {
+              ...m,
+              isHealthy,
+              statusReason,
+              latestEnabledVersion,
+            };
+          });
+
         return {
           name: s.name,
           secretId: shortName,
@@ -11408,7 +11763,8 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
             : 'USER_MANAGED_SOVEREIGN',
           locations,
           hasRotation,
-          rotationPeriod: s.rotation?.rotationPeriod || null,
+          rotationPeriod:
+            s.rotation?.rotationPeriod || s.labels?.rotation_cadence || null,
           nextRotationTime: s.rotation?.nextRotationTime || null,
           labels: s.labels || {},
           versions,
@@ -11417,9 +11773,46 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
           disabledVersionsCount,
           destroyedVersionsCount,
           accessorMembers,
+          mountedByWorkloads,
         };
       })
     );
+
+    // Detect orphaned or broken secretKeyRef pointers across all Cloud Run services (including deleted secrets!)
+    const existingSecretMap = new Map(
+      enrichedSecrets.map((s) => [s.secretId, s])
+    );
+    const brokenSecretReferences = [];
+    for (const mount of cloudRunSecretMounts) {
+      const targetSecret = existingSecretMap.get(mount.secretId);
+      if (!targetSecret) {
+        brokenSecretReferences.push({
+          ...mount,
+          issueType: 'DELETED_SECRET_POINTER',
+          severity: 'CRITICAL',
+          reason: `Cloud Run service "${mount.serviceName}" (${mount.region}) still references secret "${mount.secretId}" in env var "${mount.envVarName}", but that secret was DELETED from Secret Manager!`,
+          remediationHint:
+            'Detach broken secretKeyRef from Cloud Run or recreate the secret in Secret Manager.',
+        });
+      } else {
+        const workloadStatus = (targetSecret.mountedByWorkloads || []).find(
+          (w) =>
+            w.serviceName === mount.serviceName &&
+            w.envVarName === mount.envVarName
+        );
+        if (workloadStatus && !workloadStatus.isHealthy) {
+          brokenSecretReferences.push({
+            ...mount,
+            issueType: 'UNHEALTHY_VERSION_POINTER',
+            severity: 'HIGH',
+            latestEnabledVersion: targetSecret.latestEnabledVersion,
+            reason: `Cloud Run service "${mount.serviceName}" (${mount.region}) env var "${mount.envVarName}" points to "${mount.secretId}@${mount.pinnedVersion}": ${workloadStatus.statusReason}`,
+            remediationHint:
+              '1-Click Heal & Rebind Cloud Run to the latest ENABLED version.',
+          });
+        }
+      }
+    }
 
     const totalEnabledVersions = enrichedSecrets.reduce(
       (acc, s) => acc + (s.enabledVersionsCount || 0),
@@ -11456,6 +11849,8 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
       pricePer10kAccessOpsUsd: 0.03,
       pricePerRotationNotificationUsd: 0.05,
       withinFreeTier: totalEnabledVersions <= freeTierActiveVersionsLimit,
+      totalMountedWorkloads: cloudRunSecretMounts.length,
+      brokenReferencesCount: brokenSecretReferences.length,
     };
 
     const serviceAccounts =
@@ -11505,6 +11900,8 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
     res.json({
       projectId,
       secrets: enrichedSecrets,
+      brokenSecretReferences,
+      cloudRunSecretMounts,
       finopsSummary,
       serviceAccounts,
       keyRings,
@@ -11946,6 +12343,194 @@ app.post(
           action: 'DELETE_SECRET',
           secretId: cleanId,
           message: `Deleted secret "${cleanId}" and all its versions from Secret Manager.`,
+        });
+      }
+
+      if (act === 'CONFIGURE_AUTO_ROTATION_SCHEDULE') {
+        // Configures native Secret Manager rotationSchedule (`rotation.rotationPeriod`, `rotation.nextRotationTime`)
+        // using Secret Manager's 3 Free Rotations/month quota!
+        const periodDays = Math.max(1, Math.min(365, Number(req.body?.rotationPeriodDays) || 30));
+        const periodSeconds = `${periodDays * 86400}s`;
+        const nextRotationTime = new Date(Date.now() + periodDays * 86400 * 1000).toISOString();
+
+        // Fetch existing secret to preserve replication/annotations/topics
+        const existingSec = await gcpApiRequest({
+          method: 'GET',
+          url: secretBaseUrl,
+          token,
+          quotaProject: projectId,
+        });
+
+        // Ensure Pub/Sub topic exists if user provided one or if we auto-provision a lightweight rotation topic
+        let topics = Array.isArray(existingSec?.topics) ? [...existingSec.topics] : [];
+        if (topics.length === 0) {
+          const topicId = `cloudpulse-secret-rotation-${cleanId}`.slice(0, 240);
+          const topicFullName = `projects/${projectId}/topics/${topicId}`;
+          try {
+            await gcpApiRequest({
+              method: 'PUT',
+              url: `https://pubsub.googleapis.com/v1/${topicFullName}`,
+              token,
+              quotaProject: projectId,
+              data: {},
+            });
+            topics = [{ name: topicFullName }];
+          } catch (topicErr) {
+            if (topicErr?.response?.status === 409) {
+              topics = [{ name: topicFullName }];
+            }
+          }
+        }
+
+        const patchPayload = {
+          rotation: {
+            rotationPeriod: periodSeconds,
+            nextRotationTime,
+          },
+          ...(topics.length > 0 ? { topics } : {}),
+        };
+        const updateMask = topics.length > 0 ? 'rotation,topics' : 'rotation';
+
+        const updatedSec = await gcpApiRequest({
+          method: 'PATCH',
+          url: `${secretBaseUrl}?updateMask=${encodeURIComponent(updateMask)}`,
+          token,
+          quotaProject: projectId,
+          data: patchPayload,
+        });
+
+        recordFlightEvent(projectId, {
+          action: 'SECRET_AUTO_ROTATION_SCHEDULE',
+          resourceType: 'SECRET_MANAGER_SECRET',
+          resourceName: cleanId,
+          region: 'global',
+          summary: `Configured ${periodDays}-day auto-rotation schedule on "${cleanId}" ($0.00/mo via 3 Free Rotations/mo tier)`,
+        });
+
+        return res.json({
+          ok: true,
+          action: 'CONFIGURE_AUTO_ROTATION_SCHEDULE',
+          secretId: cleanId,
+          rotationPeriodDays: periodDays,
+          nextRotationTime: updatedSec?.rotation?.nextRotationTime || nextRotationTime,
+          message: `Configured ${periodDays}-day autonomous rotation schedule on "${cleanId}" (Next rotation: ${new Date(
+            nextRotationTime
+          ).toLocaleDateString()} — $0.00/mo within Google Cloud's 3 Free Rotations/mo tier).`,
+        });
+      }
+
+      if (act === 'RELOAD_MOUNTED_WORKLOADS' || act === 'HEAL_CLOUDRUN_SECRET_REF') {
+        const targetWorkloads = Array.isArray(req.body?.workloads)
+          ? req.body.workloads
+          : req.body?.serviceName && req.body?.region
+          ? [{ serviceName: req.body.serviceName, region: req.body.region, envKey: req.body.envKey }]
+          : [];
+        const healStrategy = String(req.body?.healStrategy || 'POINT_TO_LATEST').toUpperCase(); // POINT_TO_LATEST | UNBIND_BROKEN_REF
+
+        if (targetWorkloads.length === 0) {
+          return res.status(400).json({
+            error: 'At least one Cloud Run workload ({ serviceName, region }) is required.',
+          });
+        }
+
+        const patchedServices = [];
+        for (const wk of targetWorkloads) {
+          const svcName = String(wk.serviceName || '').trim();
+          const svcRegion = String(wk.region || '').trim();
+          if (!svcName || !svcRegion) continue;
+
+          const svcUrl = `https://run.googleapis.com/v2/projects/${projectId}/locations/${encodeURIComponent(
+            svcRegion
+          )}/services/${encodeURIComponent(svcName)}`;
+          const currentSvc = await gcpApiRequest({
+            method: 'GET',
+            url: svcUrl,
+            token,
+            quotaProject: projectId,
+          });
+
+          const sanitized = sanitizeCloudRunV2ServicePayloadForPatch(currentSvc);
+          const containers = sanitized?.template?.containers || [];
+
+          for (const container of containers) {
+            if (Array.isArray(container.env)) {
+              if (act === 'HEAL_CLOUDRUN_SECRET_REF' && healStrategy === 'UNBIND_BROKEN_REF') {
+                container.env = container.env.filter((envItem) => {
+                  const ref = envItem?.valueSource?.secretKeyRef;
+                  if (!ref) return true;
+                  const refId = String(ref.secret || '').split('/').pop();
+                  return refId !== cleanId;
+                });
+              } else {
+                container.env = container.env.map((envItem) => {
+                  const ref = envItem?.valueSource?.secretKeyRef;
+                  if (!ref) return envItem;
+                  const refId = String(ref.secret || '').split('/').pop();
+                  if (refId === cleanId) {
+                    return {
+                      ...envItem,
+                      valueSource: {
+                        ...envItem.valueSource,
+                        secretKeyRef: {
+                          ...ref,
+                          version: 'latest',
+                        },
+                      },
+                    };
+                  }
+                  return envItem;
+                });
+              }
+            }
+          }
+
+          // Stamp a rotation/reload annotation on template so Cloud Run rolls a fresh zero-downtime revision
+          sanitized.template = sanitized.template || {};
+          sanitized.template.annotations = {
+            ...(sanitized.template.annotations || {}),
+            'client.knative.dev/user-image':
+              sanitized.template.annotations?.['client.knative.dev/user-image'] ||
+              sanitized?.template?.containers?.[0]?.image ||
+              '',
+            'cloudpulse.dev/last-secret-sync': new Date().toISOString(),
+          };
+
+          await gcpApiRequest({
+            method: 'PATCH',
+            url: `${svcUrl}?updateMask=template`,
+            token,
+            quotaProject: projectId,
+            data: sanitized,
+          });
+          patchedServices.push(`${svcName} (${svcRegion})`);
+        }
+
+        recordFlightEvent(projectId, {
+          action: act,
+          resourceType: 'CLOUD_RUN_SERVICE',
+          resourceName: patchedServices.join(', '),
+          region: 'multi-region',
+          summary:
+            act === 'HEAL_CLOUDRUN_SECRET_REF'
+              ? `Healed broken secretKeyRef on "${cleanId}" across ${patchedServices.join(', ')} (${healStrategy})`
+              : `Hot-reloaded Cloud Run workloads [${patchedServices.join(', ')}] with latest "${cleanId}" secret version`,
+        });
+
+        return res.json({
+          ok: true,
+          action: act,
+          secretId: cleanId,
+          patchedServices,
+          message:
+            act === 'HEAL_CLOUDRUN_SECRET_REF'
+              ? `Healed broken secret reference "${cleanId}" on ${patchedServices.join(', ')} (${
+                  healStrategy === 'UNBIND_BROKEN_REF'
+                    ? 'removed dead secretKeyRef binding'
+                    : 're-pointed secretKeyRef to version "latest"'
+                }).`
+              : `Rolled fresh zero-downtime Cloud Run revision(s) for ${patchedServices.join(
+                  ', '
+                )} synced to "${cleanId}@latest".`,
         });
       }
 
@@ -19576,6 +20161,267 @@ app.get(
           err.response?.data?.error?.message ||
           err.message ||
           'Failed to audit Always Free tier usage limits.',
+      });
+    }
+  }
+);
+
+// ============================================================================
+// ALWAYS FREE TIER 1-CLICK MICRO-CHARGE ENFORCER
+// POST /api/project/:projectId/finops/always-free-enforcer
+// Actions:
+//  - ENFORCE_ARTIFACT_REGISTRY_CLEANUP: Attaches cleanupPolicies (keep latest 2 versions, purge untagged >7d) across Artifact Registry repos to stay under 0.5 GB free limit
+//  - ENFORCE_LOGGING_HEALTHCHECK_EXCLUSION: Adds a noisy health-check exclusion filter on _Default Cloud Logging sink to stay under 50 GiB/mo free ingestion limit
+//  - TRIM_EXCESS_SECRET_VERSIONS: Auto-disables older ENABLED Secret Manager versions (keeping the newest ENABLED version per secret) so total active versions fit inside the 6 Free Versions/mo quota
+// ============================================================================
+app.post(
+  '/api/project/:projectId/finops/always-free-enforcer',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { enforcerAction } = req.body || {};
+
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const act = String(enforcerAction || '').toUpperCase();
+
+      if (act === 'TRIM_EXCESS_SECRET_VERSIONS') {
+        const secretsRes = await gcpApiRequest({
+          method: 'GET',
+          url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets?pageSize=100`,
+          token,
+          quotaProject: projectId,
+        });
+        const rawSecrets = secretsRes?.secrets || [];
+        const disabledList = [];
+        let remainingEnabled = 0;
+
+        for (const s of rawSecrets) {
+          const secId = (s.name || '').split('/').pop();
+          if (!secId) continue;
+          try {
+            const verRes = await gcpApiRequest({
+              method: 'GET',
+              url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${encodeURIComponent(
+                secId
+              )}/versions?pageSize=50`,
+              token,
+              quotaProject: projectId,
+            });
+            const enabledVers = (verRes?.versions || [])
+              .filter((v) => String(v.state || '').toUpperCase() === 'ENABLED')
+              .sort(
+                (a, b) =>
+                  Number((b.name || '').split('/').pop() || 0) -
+                  Number((a.name || '').split('/').pop() || 0)
+              );
+
+            if (enabledVers.length > 0) {
+              remainingEnabled += 1; // keep newest enabled version
+            }
+            for (let i = 1; i < enabledVers.length; i++) {
+              const oldVerNum = (enabledVers[i].name || '').split('/').pop();
+              if (!oldVerNum) continue;
+              try {
+                await gcpApiRequest({
+                  method: 'POST',
+                  url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${encodeURIComponent(
+                    secId
+                  )}/versions/${encodeURIComponent(oldVerNum)}:disable`,
+                  token,
+                  quotaProject: projectId,
+                  data: {},
+                });
+                disabledList.push(`${secId}@v${oldVerNum}`);
+              } catch {
+                remainingEnabled += 1;
+              }
+            }
+          } catch {
+            // ignore individual secret errors
+          }
+        }
+
+        recordFlightEvent(projectId, {
+          action: 'ALWAYS_FREE_TRIM_SECRET_VERSIONS',
+          resourceType: 'SECRET_MANAGER_SECRET',
+          resourceName: projectId,
+          region: 'global',
+          summary: `Auto-disabled ${disabledList.length} older ENABLED secret version(s) ($0.00/mo Always Free hygiene)`,
+        });
+
+        return res.json({
+          ok: true,
+          enforcerAction: act,
+          disabledList,
+          remainingEnabled,
+          message:
+            disabledList.length > 0
+              ? `Auto-disabled ${disabledList.length} older ENABLED secret version(s) (${disabledList.join(
+                  ', '
+                )}) — keeping only the newest active version per secret (${remainingEnabled} active total).`
+              : `All secrets already have at most 1 active version (${remainingEnabled} active total) — zero redundant versions to disable!`,
+        });
+      }
+
+      if (act === 'ENFORCE_LOGGING_HEALTHCHECK_EXCLUSION') {
+        const sinkUrl = `https://logging.googleapis.com/v2/projects/${projectId}/sinks/_Default`;
+        const currentSink = await gcpApiRequest({
+          method: 'GET',
+          url: sinkUrl,
+          token,
+          quotaProject: projectId,
+        });
+
+        const existingExclusions = Array.isArray(currentSink?.exclusions)
+          ? [...currentSink.exclusions]
+          : [];
+        const exclusionName = 'cloudpulse-always-free-healthcheck-shield';
+        const exclusionFilter =
+          'httpRequest.status=200 AND (httpRequest.requestUrl:"/healthz" OR httpRequest.requestUrl:"/readyz" OR httpRequest.userAgent:"GoogleHC" OR httpRequest.userAgent:"kube-probe")';
+
+        const idx = existingExclusions.findIndex((e) => e.name === exclusionName);
+        const newEntry = {
+          name: exclusionName,
+          description:
+            'CloudPulse $0.00 Always Free Enforcer: Excludes noisy HTTP 200 health check probes from consuming the 50 GiB/month Cloud Logging free tier.',
+          filter: exclusionFilter,
+          disabled: false,
+        };
+        if (idx >= 0) {
+          existingExclusions[idx] = newEntry;
+        } else {
+          existingExclusions.push(newEntry);
+        }
+
+        await gcpApiRequest({
+          method: 'PATCH',
+          url: `${sinkUrl}?updateMask=exclusions`,
+          token,
+          quotaProject: projectId,
+          data: {
+            ...currentSink,
+            exclusions: existingExclusions,
+          },
+        });
+
+        recordFlightEvent(projectId, {
+          action: 'ALWAYS_FREE_LOGGING_SHIELD',
+          resourceType: 'LOGGING_SINK',
+          resourceName: '_Default',
+          region: 'global',
+          summary:
+            'Activated noisy health-check exclusion filter on _Default Cloud Logging sink to protect the 50 GiB/mo Always Free limit',
+        });
+
+        return res.json({
+          ok: true,
+          enforcerAction: act,
+          exclusionName,
+          exclusionFilter,
+          message:
+            'Installed "cloudpulse-always-free-healthcheck-shield" on the _Default Cloud Logging sink — HTTP 200 health probes (/healthz, /readyz, GoogleHC, kube-probe) will no longer eat your 50 GiB/month Always Free ingestion quota.',
+        });
+      }
+
+      if (act === 'ENFORCE_ARTIFACT_REGISTRY_CLEANUP') {
+        // Scan common locations for Artifact Registry repositories and attach a 2-version keep + 7d untagged cleanup policy
+        const candidateLocations = [
+          'us',
+          'europe',
+          'asia',
+          'us-central1',
+          'us-east1',
+          'us-west1',
+          'europe-west1',
+        ];
+        const patchedRepos = [];
+        await Promise.all(
+          candidateLocations.map(async (loc) => {
+            try {
+              const listRes = await gcpApiRequest({
+                method: 'GET',
+                url: `https://artifactregistry.googleapis.com/v1/projects/${projectId}/locations/${loc}/repositories?pageSize=25`,
+                token,
+                quotaProject: projectId,
+              });
+              const repos = listRes?.repositories || [];
+              for (const repo of repos) {
+                if (!repo?.name) continue;
+                try {
+                  await gcpApiRequest({
+                    method: 'PATCH',
+                    url: `https://artifactregistry.googleapis.com/v1/${repo.name}?updateMask=cleanupPolicies,cleanupPolicyDryRun`,
+                    token,
+                    quotaProject: projectId,
+                    data: {
+                      name: repo.name,
+                      cleanupPolicyDryRun: false,
+                      cleanupPolicies: {
+                        'cloudpulse-purge-untagged-7d': {
+                          id: 'cloudpulse-purge-untagged-7d',
+                          action: 'DELETE',
+                          condition: {
+                            tagState: 'UNTAGGED',
+                            olderThan: '604800s',
+                          },
+                        },
+                        'cloudpulse-keep-latest-2': {
+                          id: 'cloudpulse-keep-latest-2',
+                          action: 'KEEP',
+                          mostRecentVersions: {
+                            keepCount: 2,
+                          },
+                        },
+                      },
+                    },
+                  });
+                  patchedRepos.push(repo.name.split('/').slice(-3).join('/'));
+                } catch {
+                  // ignore individual repo patch error
+                }
+              }
+            } catch {
+              // location may have no repos or API not enabled
+            }
+          })
+        );
+
+        recordFlightEvent(projectId, {
+          action: 'ALWAYS_FREE_ARTIFACT_CLEANUP',
+          resourceType: 'ARTIFACT_REGISTRY',
+          resourceName: patchedRepos.join(', ') || projectId,
+          region: 'multi-region',
+          summary: `Enforced <0.5 GB Artifact Registry cleanup policies across ${patchedRepos.length} repository(s)`,
+        });
+
+        return res.json({
+          ok: true,
+          enforcerAction: act,
+          patchedRepos,
+          message:
+            patchedRepos.length > 0
+              ? `Enforced live Artifact Registry cleanup policy (Keep Latest 2 Versions + Delete Untagged >7d) on ${patchedRepos.length} repository(s): ${patchedRepos.join(
+                  ', '
+                )} — keeping storage within the 0.5 GB Always Free limit.`
+              : 'Scanned Artifact Registry locations — no repositories currently exist in this project (0.00 GB used of 0.5 GB Always Free limit).',
+        });
+      }
+
+      return res
+        .status(400)
+        .json({ error: `Unsupported Always Free enforcer action: ${act}` });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Always Free enforcer action failed.',
       });
     }
   }

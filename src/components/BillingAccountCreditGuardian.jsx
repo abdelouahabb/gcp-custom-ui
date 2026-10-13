@@ -805,6 +805,7 @@ export default function BillingAccountCreditGuardian({
   const [alwaysFreeAudit, setAlwaysFreeAudit] = useState(null);
   const [loadingAlwaysFree, setLoadingAlwaysFree] = useState(false);
   const [alwaysFreeFilter, setAlwaysFreeFilter] = useState('ALL');
+  const [enforcerBusy, setEnforcerBusy] = useState(null);
 
   const scanEgressAndLeftovers = useCallback(async () => {
     if (!projectId) return;
@@ -846,6 +847,34 @@ export default function BillingAccountCreditGuardian({
       setLoadingAlwaysFree(false);
     }
   }, [projectId]);
+
+  const handleRunAlwaysFreeEnforcer = async (enforcerAction) => {
+    if (!projectId) return;
+    setEnforcerBusy(enforcerAction);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/finops/always-free-enforcer`,
+        { enforcerAction }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message || `Executed Always Free Enforcer: ${enforcerAction}`
+        );
+      }
+      await scanAlwaysFreeAuditor();
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error ||
+            `Failed to execute Always Free Enforcer (${enforcerAction})`
+        );
+      }
+    } finally {
+      setEnforcerBusy(null);
+    }
+  };
 
   useEffect(() => {
     loadBillingGuardian(false);
@@ -2713,6 +2742,91 @@ ORDER BY
                 {loadingAlwaysFree ? 'Auditing...' : 'Audit Always Free'}
               </span>
             </button>
+          </div>
+        </div>
+
+        {/* 1-Click "$0.00 Free-Tier Micro-Charge Killer" Bar */}
+        <div className="p-3 rounded-xl bg-white/90 dark:bg-[#131314] border border-emerald-500/40 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-mono font-extrabold text-emerald-700 dark:text-emerald-300">
+              🛡️ 1-Click &ldquo;$0.00 Free-Tier Micro-Charge Killer&rdquo; Enforcers (Prevent Silent $0.10–$2.50/mo Overages)
+            </span>
+            <span className="text-[10px] font-mono text-zinc-500">
+              Executes live REST API policies against Artifact Registry, Cloud Logging & Secret Manager
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[10.5px] font-mono">
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2">
+              <div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  1. Artifact Registry `&lt;0.5 GB` Auto-Purge Policy
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-0.5">
+                  Every `gcloud run deploy --source` leaves old container layers behind that breach the `0.5 GB` Always Free limit ($0.10/GB/mo after). Attaches `keepCount=2` + `delete untagged &gt;7d`.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={Boolean(enforcerBusy)}
+                onClick={() =>
+                  handleRunAlwaysFreeEnforcer('ENFORCE_ARTIFACT_REGISTRY_CLEANUP')
+                }
+                className="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
+              >
+                {enforcerBusy === 'ENFORCE_ARTIFACT_REGISTRY_CLEANUP'
+                  ? 'Applying Cleanup Policy...'
+                  : '🧹 Enforce <0.5 GB Image Cleanup Policy'}
+              </button>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2">
+              <div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  2. Cloud Logging `50 GiB/mo` Health-Check Shield
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-0.5">
+                  Patches the `_Default` log sink to exclude noisy `HTTP 200` `/healthz`, `/readyz`, and `kube-probe` logs so your project stays inside the `50 GiB/mo` Always Free quota.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={Boolean(enforcerBusy)}
+                onClick={() =>
+                  handleRunAlwaysFreeEnforcer(
+                    'ENFORCE_LOGGING_HEALTHCHECK_EXCLUSION'
+                  )
+                }
+                className="w-full py-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
+              >
+                {enforcerBusy === 'ENFORCE_LOGGING_HEALTHCHECK_EXCLUSION'
+                  ? 'Patching _Default Log Sink...'
+                  : '🛡️ Install 50 GiB/mo Health-Check Log Shield'}
+              </button>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2">
+              <div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  3. Secret Manager `≤6 Free Versions` Auto-Trimmer
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-0.5">
+                  Scans all Secret Manager secrets and auto-disables (`:disable`) older `ENABLED` versions (keeping the newest active version per secret untouched) so old versions cost **$0.00/mo**.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={Boolean(enforcerBusy)}
+                onClick={() =>
+                  handleRunAlwaysFreeEnforcer('TRIM_EXCESS_SECRET_VERSIONS')
+                }
+                className="w-full py-1.5 px-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer"
+              >
+                {enforcerBusy === 'TRIM_EXCESS_SECRET_VERSIONS'
+                  ? 'Disabling Redundant Versions...'
+                  : '✂️ Auto-Disable Old Secret Versions ($0/mo)'}
+              </button>
+            </div>
           </div>
         </div>
 

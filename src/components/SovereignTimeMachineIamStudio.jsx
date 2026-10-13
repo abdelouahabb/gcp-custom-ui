@@ -91,6 +91,9 @@ export default function SovereignTimeMachineIamStudio({
   const [rotateDisableOld, setRotateDisableOld] = useState(true);
   const [grantSaBySecret, setGrantSaBySecret] = useState({});
   const [secretActionBusy, setSecretActionBusy] = useState(null);
+  const [githubRepoSlug, setGithubRepoSlug] = useState('');
+  const [wifBusy, setWifBusy] = useState(false);
+  const [wifResult, setWifResult] = useState(null);
 
   const handleCopy = (text, label = 'CLI command') => {
     navigator.clipboard.writeText(text);
@@ -660,6 +663,156 @@ export default function SovereignTimeMachineIamStudio({
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error || `Failed to delete ${targetSecretId}`
+        );
+      }
+    } finally {
+      setSecretActionBusy(null);
+    }
+  };
+
+  const handleProvisionGithubOidcWif = async (e) => {
+    if (e) e.preventDefault();
+    const cleanRepo = String(githubRepoSlug || '').trim();
+    if (!cleanRepo || !cleanRepo.includes('/')) {
+      if (onTriggerToast) {
+        onTriggerToast('Enter a valid GitHub owner/repository (e.g., acme-org/cloud-app)');
+      }
+      return;
+    }
+    const targetSa = selectedSaEmail || iamData?.serviceAccounts?.[0]?.email || '';
+    if (!targetSa) {
+      if (onTriggerToast) {
+        onTriggerToast('Select or create a Service Account first');
+      }
+      return;
+    }
+    setWifBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
+        {
+          action: 'PROVISION_GITHUB_OIDC_WIF',
+          serviceAccountEmail: targetSa,
+          githubRepo: cleanRepo,
+        }
+      );
+      setWifResult(res.data);
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message ||
+            `Provisioned Keyless GitHub OIDC Workload Identity Federation for ${cleanRepo}`
+        );
+      }
+      await fetchIamSurgeon();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error ||
+            'Failed to provision Workload Identity Pool / OIDC Provider'
+        );
+      }
+    } finally {
+      setWifBusy(false);
+    }
+  };
+
+  const handleScheduleAutoRotation = async (targetSecretId, rotationPeriodDays = 30) => {
+    setSecretActionBusy(`SCHED:${targetSecretId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/secrets-kms/action`,
+        {
+          action: 'CONFIGURE_AUTO_ROTATION_SCHEDULE',
+          secretId: targetSecretId,
+          rotationPeriodDays,
+        }
+      );
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message ||
+            `Configured ${rotationPeriodDays}d auto-rotation schedule on ${targetSecretId}`
+        );
+      }
+      await fetchVaultStudio();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error ||
+            `Failed to configure auto-rotation schedule on ${targetSecretId}`
+        );
+      }
+    } finally {
+      setSecretActionBusy(null);
+    }
+  };
+
+  const handleReloadMountedWorkloads = async (targetSecretId, workloads = []) => {
+    setSecretActionBusy(`RELOAD:${targetSecretId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/secrets-kms/action`,
+        {
+          action: 'RELOAD_MOUNTED_WORKLOADS',
+          secretId: targetSecretId,
+          workloads,
+        }
+      );
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message ||
+            `Reloaded Cloud Run workloads mounted to ${targetSecretId}`
+        );
+      }
+      await fetchVaultStudio();
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error ||
+            `Failed to reload Cloud Run workloads for ${targetSecretId}`
+        );
+      }
+    } finally {
+      setSecretActionBusy(null);
+    }
+  };
+
+  const handleHealBrokenSecretRef = async (brokenRef, healStrategy = 'POINT_TO_LATEST') => {
+    const busyKey = `HEAL:${brokenRef.serviceName}:${brokenRef.secretId}:${healStrategy}`;
+    setSecretActionBusy(busyKey);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/secrets-kms/action`,
+        {
+          action: 'HEAL_CLOUDRUN_SECRET_REF',
+          secretId: brokenRef.secretId,
+          serviceName: brokenRef.serviceName,
+          region: brokenRef.region,
+          envKey: brokenRef.envKey,
+          healStrategy,
+        }
+      );
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message ||
+            `Healed broken secret reference ${brokenRef.secretId} on ${brokenRef.serviceName}`
+        );
+      }
+      await fetchVaultStudio();
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error ||
+            `Failed to heal broken secret reference on ${brokenRef.serviceName}`
         );
       }
     } finally {
@@ -1855,6 +2008,84 @@ export default function SovereignTimeMachineIamStudio({
                 </div>
               </div>
             )}
+
+            {/* 4. 1-Click Keyless GitHub Actions OIDC Workload Identity Federation Architect ("Kill the .json Key Forever") */}
+            <div className="space-y-2.5 pt-3 border-t border-zinc-800">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Fingerprint className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs font-bold font-mono text-emerald-300">
+                    4. Keyless GitHub Actions OIDC Workload Identity Federation Architect ("Kill the `.json` Key Forever")
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                  $0.00/mo · Zero Static Keys Stored in GitHub
+                </span>
+              </div>
+
+              <p className="text-[11px] text-zinc-400">
+                Instead of pasting static `.json` Service Account keys into GitHub Secrets, provision a live Google Cloud **Workload Identity Pool** (`cloudpulse-github-pool`), **GitHub OIDC Provider** (`https://token.actions.githubusercontent.com`), and repository-pinned `roles/iam.workloadIdentityUser` binding in 1 click.
+              </p>
+
+              <form
+                onSubmit={handleProvisionGithubOidcWif}
+                className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center"
+              >
+                <div className="sm:col-span-5">
+                  <input
+                    type="text"
+                    value={githubRepoSlug}
+                    onChange={(e) => setGithubRepoSlug(e.target.value)}
+                    placeholder="GitHub owner/repository (e.g. my-org/cloudpulse-api)"
+                    className="w-full h-[36px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                  />
+                </div>
+                <div className="sm:col-span-4">
+                  <div className="h-[36px] px-3 rounded-lg bg-zinc-900/70 border border-zinc-800 flex items-center text-[11px] font-mono text-zinc-300 truncate">
+                    Target SA: {selectedSaEmail || iamData?.serviceAccounts?.[0]?.email || 'Select SA above'}
+                  </div>
+                </div>
+                <div className="sm:col-span-3">
+                  <button
+                    type="submit"
+                    disabled={wifBusy || !githubRepoSlug.trim()}
+                    className="w-full h-[36px] px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-mono font-extrabold cursor-pointer"
+                  >
+                    {wifBusy
+                      ? 'Provisioning OIDC Pool...'
+                      : '🛡️ Provision Keyless GitHub OIDC'}
+                  </button>
+                </div>
+              </form>
+
+              {wifResult && (
+                <div className="p-3 rounded-xl bg-emerald-950/25 border border-emerald-500/40 space-y-2 text-xs font-mono">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-extrabold text-emerald-300">
+                      ✓ Keyless OIDC Provider Ready for `{wifResult.githubRepo}` → `{wifResult.serviceAccountEmail}`
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(
+                          wifResult.githubActionsYaml,
+                          'GitHub Actions OIDC YAML snippet'
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer"
+                    >
+                      Copy GitHub Actions `.yml` Snippet
+                    </button>
+                  </div>
+                  <div className="text-[10.5px] text-zinc-300 break-all">
+                    Provider Resource: <code className="text-blue-300">{wifResult.providerResourceName}</code>
+                  </div>
+                  <pre className="p-2.5 rounded-lg bg-black/90 border border-zinc-800 text-[10.5px] text-emerald-200 overflow-x-auto">
+                    {wifResult.githubActionsYaml}
+                  </pre>
+                </div>
+              )}
+            </div>
           </div>
           )}
 
@@ -2689,6 +2920,64 @@ export default function SovereignTimeMachineIamStudio({
                   </div>
                 </div>
 
+                {/* Live Broken Cloud Run secretKeyRef Dependency Radar & 1-Click Healer */}
+                {(vaultData?.brokenSecretReferences || []).length > 0 && (
+                  <div className="p-3 rounded-[9px] bg-red-950/25 border border-red-500/50 space-y-2 text-xs font-mono">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-red-400 flex items-center gap-1.5">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>
+                          🚨 LIVE BROKEN `secretKeyRef` RADAR ({vaultData.brokenSecretReferences.length} Cloud Run Binding(s) at Crash Risk!)
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-red-300">
+                        Cloud Run v2 services referencing deleted, disabled, or destroyed Secret Manager versions
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {vaultData.brokenSecretReferences.map((br, idx) => (
+                        <div
+                          key={`${br.serviceName}-${br.secretId}-${br.envKey}-${idx}`}
+                          className="p-2.5 rounded-lg bg-black/60 border border-red-500/40 flex flex-wrap items-center justify-between gap-2"
+                        >
+                          <div className="space-y-0.5 min-w-0">
+                            <div className="font-bold text-white">
+                              Cloud Run `{br.serviceName}` ({br.region}) → `{br.envKey}` → `{br.secretId}@${br.version}`
+                            </div>
+                            <div className="text-[10.5px] text-red-300">
+                              [{br.status}] {br.reason}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {br.status !== 'MISSING_SECRET' && (
+                              <button
+                                type="button"
+                                disabled={Boolean(secretActionBusy)}
+                                onClick={() =>
+                                  handleHealBrokenSecretRef(br, 'POINT_TO_LATEST')
+                                }
+                                className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                              >
+                                🩹 Heal: Point to `latest`
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={Boolean(secretActionBusy)}
+                              onClick={() =>
+                                handleHealBrokenSecretRef(br, 'UNBIND_BROKEN_REF')
+                              }
+                              className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer"
+                            >
+                              🧹 Unbind Dead `secretKeyRef`
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {vaultData?.secrets?.length > 0 ? (
                   <div className="space-y-2.5 max-h-[540px] overflow-y-auto pr-1">
                     {vaultData.secrets.map((s) => {
@@ -2699,6 +2988,11 @@ export default function SovereignTimeMachineIamStudio({
                         secretActionBusy === `GRANT:${s.secretId}`;
                       const deleteBusy =
                         secretActionBusy === `DELETE:${s.secretId}`;
+                      const schedBusy =
+                        secretActionBusy === `SCHED:${s.secretId}`;
+                      const reloadBusy =
+                        secretActionBusy === `RELOAD:${s.secretId}`;
+                      const mountedList = s.mountedByWorkloads || [];
 
                       return (
                         <div
@@ -2725,6 +3019,16 @@ export default function SovereignTimeMachineIamStudio({
                                     (s.destroyedVersionsCount || 0)}{' '}
                                   Disabled/Destroyed ($0)
                                 </span>
+                                {mountedList.length > 0 && (
+                                  <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold">
+                                    🚀 Mounted by {mountedList.length} Cloud Run Ref(s)
+                                  </span>
+                                )}
+                                {s.rotationSchedule?.rotationPeriod && (
+                                  <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                                    ⏱️ Auto-Rotate Active
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[10px] text-zinc-500 mt-1 flex flex-wrap items-center gap-2">
                                 <span>
@@ -3012,6 +3316,71 @@ export default function SovereignTimeMachineIamStudio({
                                       : '🔑 Grant secretAccessor'}
                                   </button>
                                 </div>
+                              </div>
+
+                              {/* 4. Live Cloud Run Mounts Hot-Reload & $0/mo Autonomous Rotation Schedule */}
+                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-purple-500/30 space-y-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+                                  <span className="font-extrabold text-purple-600 dark:text-purple-300">
+                                    4. Live Cloud Run `secretKeyRef` Mounts ({mountedList.length}) & $0/mo Auto-Rotation
+                                  </span>
+                                  <button
+                                    type="button"
+                                    disabled={schedBusy}
+                                    onClick={() =>
+                                      handleScheduleAutoRotation(s.secretId, 30)
+                                    }
+                                    title="Configure Google Cloud Secret Manager native 30-day rotationSchedule ($0.00/mo inside the 3 Free Rotations/month quota)"
+                                    className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
+                                  >
+                                    {schedBusy
+                                      ? 'Scheduling...'
+                                      : s.rotationSchedule?.rotationPeriod
+                                      ? `⏱️ Next Auto-Rotation: ${
+                                          s.rotationSchedule.nextRotationTime
+                                            ? new Date(
+                                                s.rotationSchedule
+                                                  .nextRotationTime
+                                              ).toLocaleDateString()
+                                            : 'Active'
+                                        } (Re-Sync 30d)`
+                                      : '⏱️ Enable $0/mo 30-Day Auto-Rotation'}
+                                  </button>
+                                </div>
+
+                                {mountedList.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      {mountedList.map((mw, mIdx) => (
+                                        <span
+                                          key={`${mw.serviceName}-${mw.envKey}-${mIdx}`}
+                                          className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-200 border border-purple-500/30 text-[10px] font-mono"
+                                        >
+                                          🚀 {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      disabled={reloadBusy}
+                                      onClick={() =>
+                                        handleReloadMountedWorkloads(
+                                          s.secretId,
+                                          mountedList
+                                        )
+                                      }
+                                      className="w-full py-1.5 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                                    >
+                                      {reloadBusy
+                                        ? 'Rolling Fresh Cloud Run Revision(s)...'
+                                        : `🚀 1-Click Hot-Reload ${mountedList.length} Mounted Cloud Run Service(s) to "${s.secretId}@latest"`}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="text-[10.5px] font-mono text-zinc-500">
+                                    No Cloud Run services currently mount `{s.secretId}` via `secretKeyRef`. Seal an env var in the Cloud Run Leak Surgeon to link it automatically.
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}

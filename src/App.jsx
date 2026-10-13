@@ -1980,6 +1980,7 @@ function CloudPulseCockpit() {
       <MandatoryDeleteConfirmationModal
         activeItem={pendingDeleteQueue[0] || null}
         queueLength={pendingDeleteQueue.length}
+        overview={overview}
         onConfirm={() => {
           const current = pendingDeleteQueue[0];
           setPendingDeleteQueue((prev) => prev.slice(1));
@@ -2006,6 +2007,7 @@ function CloudPulseCockpit() {
 function MandatoryDeleteConfirmationModal({
   activeItem,
   queueLength = 0,
+  overview = null,
   onConfirm,
   onCancel,
 }) {
@@ -2035,6 +2037,66 @@ function MandatoryDeleteConfirmationModal({
     confirmLabel,
     impactWarning,
   } = activeItem.descriptor;
+
+  // Compute live dependency blast radius from project overview state
+  const blastRadiusItems = [];
+  const vms = overview?.compute?.vms || overview?.vms || [];
+  const runServices = overview?.cloudRun?.services || overview?.cloudRunServices || [];
+  const cleanTarget = String(targetName || '')
+    .split(' ')[0]
+    .split('@')[0]
+    .trim();
+
+  if (String(resourceKind || '').includes('Secret Manager')) {
+    blastRadiusItems.push(
+      `Secret payload "${cleanTarget}" will NEVER revert to plaintext — encrypted bytes are permanently erased.`
+    );
+    const matchingRun = runServices.filter((svc) =>
+      JSON.stringify(svc || {}).includes(cleanTarget)
+    );
+    if (matchingRun.length > 0) {
+      blastRadiusItems.push(
+        `🚨 ${matchingRun.length} Cloud Run service(s) (${matchingRun
+          .map((s) => s.name)
+          .join(', ')}) reference "${cleanTarget}" and will fail to start until healed!`
+      );
+    } else if (runServices.length > 0) {
+      blastRadiusItems.push(
+        `Scanned ${runServices.length} live Cloud Run service(s) in project "${projectId}" — verify no container mounts secretKeyRef "${cleanTarget}".`
+      );
+    }
+  } else if (String(resourceKind || '').includes('VPC')) {
+    const attachedVms = vms.filter((vm) =>
+      String(vm.network || 'default').includes(cleanTarget)
+    );
+    if (attachedVms.length > 0) {
+      blastRadiusItems.push(
+        `🚨 ${attachedVms.length} live Compute VM(s) (${attachedVms
+          .map((v) => v.name)
+          .join(', ')}) are attached to VPC "${cleanTarget}".`
+      );
+    } else {
+      blastRadiusItems.push(
+        `Scanned ${vms.length} Compute VM(s) — zero active VM NICs blocking VPC teardown.`
+      );
+    }
+  } else if (String(resourceKind || '').includes('Compute Engine')) {
+    const matchedVm = vms.find((v) => v.name === cleanTarget);
+    if (matchedVm) {
+      blastRadiusItems.push(
+        `Live VM State: ${matchedVm.status || 'RUNNING'} · Machine: ${
+          matchedVm.machineType || 'unknown'
+        } · External IP: ${matchedVm.externalIp || 'None (Internal Only)'}`
+      );
+    }
+  } else if (String(resourceKind || '').includes('Cloud Run')) {
+    const matchedRun = runServices.find((s) => s.name === cleanTarget);
+    if (matchedRun?.uri) {
+      blastRadiusItems.push(
+        `Live HTTPS Traffic Endpoint ${matchedRun.uri} will immediately return 404.`
+      );
+    }
+  }
 
   return (
     <div
@@ -2104,6 +2166,20 @@ function MandatoryDeleteConfirmationModal({
               </div>
             </div>
           </div>
+
+          {/* Live Dependency & Blast-Radius Pre-Flight Scan */}
+          {blastRadiusItems.length > 0 && (
+            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 space-y-1">
+              <div className="font-extrabold text-blue-600 dark:text-blue-400">
+                🧭 Live Dependency & Blast-Radius Pre-Flight Scan
+              </div>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {blastRadiusItems.map((msg, idx) => (
+                  <li key={idx}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Impact Warning */}
           <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1.5">
