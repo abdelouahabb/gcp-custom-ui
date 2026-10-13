@@ -265,6 +265,36 @@
 
 ---
 
+## 🛠️ Prerequisites & Optional Google Cloud SDK (`gcloud`) Power-User Perks
+
+### 1. Required (Core Runtime — Zero `gcloud` Needed)
+- **Node.js `20+` / `22+`** (or Docker `node:22-alpine`)
+- **Is `gcloud` required? No.** Over **95% of CloudPulse 2026** communicates directly with official **Google Cloud HTTPS REST APIs** (`compute.googleapis.com`, `run.googleapis.com`, `storage.googleapis.com`, `bigquery.googleapis.com`, `cloudbilling.googleapis.com`, `iam.googleapis.com`, `container.googleapis.com`, etc.) using standard OAuth 2.0 Bearer tokens:
+  - **Browser OAuth2 Sign-In / Token Paste (`ya29...`)** or **`application_default_credentials.json`** in the Onboarding Gate
+  - **Cloud Run / GCE Metadata Server** when deployed on Google Cloud
+  - **Pure-JS Direct TCP Web-SSH (`ssh2` on port `:22`)** for Compute Engine VMs
+  - **Remaining Bonus CSV Guardian** (`⚡ Auto-Grab Downloaded CSV` & `.csv` upload)
+
+### 2. Optional Power-User Perks (Unlocked Automatically When `gcloud` Is Installed Locally)
+If you run CloudPulse locally on a machine with the **[Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install)** installed, the backend (`server/index.js`) automatically detects it and unlocks **5 extra local capabilities**:
+
+| Feature Unlocked by Local `gcloud` | CLI Command Used Under the Hood | What Works Without `gcloud` (Pure REST Fallback) |
+| :--- | :--- | :--- |
+| **1. Zero-Click Local Account & Token Auto-Discovery** | `gcloud auth list` & `gcloud auth print-access-token` | Sign in via Google OAuth PKCE, paste an OAuth2 token (`ya29...`), or upload `application_default_credentials.json` |
+| **2. Interactive Cloud Run Gen2 Container SSH & Proxy** | `gcloud beta run services ssh` & `gcloud beta run services proxy` | Full Cloud Run Gen2 deployment, live logs, revision tuning, GPU attachment, and IAM toggling via `run.googleapis.com/v2` |
+| **3. Zero-Public-IP Cloud IAP Tunnel SSH for VMs** | `gcloud compute ssh --tunnel-through-iap` | Direct Web-SSH over port `:22` via the built-in pure-Node `ssh2` client + Serial Port 1 Console output via REST |
+| **4. Live Interactive Local Cloud Shell Tab** | Local PTY running `gcloud`, `bq`, and `gsutil` commands | Copy-ready `gcloud` / `bq` / Terraform snippets in every studio |
+| **5. `gcloud billing` & `gcloud beta orchestration-pipelines` CLI Helpers** | `gcloud billing accounts list` & `gcloud dataplex` CLI fallbacks | Direct `cloudbilling.googleapis.com` & `dataplex.googleapis.com/v1` REST API calls |
+
+```bash
+# Optional: Install & authenticate Google Cloud SDK locally to unlock all 5 perks above
+gcloud auth login
+gcloud auth application-default login
+gcloud components install beta
+```
+
+---
+
 ## 🚀 Quick Start (Local Development vs Single-Port Production)
 
 ```bash
