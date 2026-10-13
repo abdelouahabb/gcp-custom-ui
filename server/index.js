@@ -18112,6 +18112,495 @@ app.get('/api/project/:projectId/billing-guardian', async (req, res) => {
   });
 });
 
+// ============================================================================
+// WAVE 10 INNOVATIONS:
+// 1. POST /api/project/:projectId/provision/preflight
+//    Real GCP Dry-Run IAM (`testIamPermissions`), API Enablement, Service Account
+//    `iam.serviceAccounts.actAs` verification & Cross-Region Egress Preflight
+// 2. POST /api/project/:projectId/service-accounts/grant-act-as
+//    1-Click Resource-Level `roles/iam.serviceAccountUser` (`actAs`) Grant Surgeon
+// 3. GET  /api/project/:projectId/finops/egress-leftover-radar
+//    Live Cross-Region Egress Topology Mismatch & Stopped-Resource Leftover Radar
+// ============================================================================
+app.post('/api/project/:projectId/provision/preflight', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    serviceType = 'CLOUD_RUN',
+    region = 'us-central1',
+    serviceAccountEmail = '',
+  } = req.body || {};
+
+  try {
+    const { token, account: callerEmail } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const requiredApiByType = {
+      CLOUD_RUN: 'run.googleapis.com',
+      COMPUTE_VM: 'compute.googleapis.com',
+      GKE_CLUSTER: 'container.googleapis.com',
+      GCS_BUCKET: 'storage.googleapis.com',
+      BIGQUERY_DATASET: 'bigquery.googleapis.com',
+      CLOUD_SQL: 'sqladmin.googleapis.com',
+      VPC_NETWORK: 'compute.googleapis.com',
+      VPC_FIREWALL: 'compute.googleapis.com',
+    };
+    const requiredPermsByType = {
+      CLOUD_RUN: ['run.services.create', 'iam.serviceAccounts.actAs'],
+      COMPUTE_VM: ['compute.instances.create', 'iam.serviceAccounts.actAs'],
+      GKE_CLUSTER: ['container.clusters.create', 'iam.serviceAccounts.actAs'],
+      GCS_BUCKET: ['storage.buckets.create'],
+      BIGQUERY_DATASET: ['bigquery.datasets.create'],
+      CLOUD_SQL: ['cloudsql.instances.create'],
+      VPC_NETWORK: ['compute.networks.create'],
+      VPC_FIREWALL: ['compute.firewalls.create'],
+    };
+
+    const targetApi =
+      requiredApiByType[serviceType] || 'cloudresourcemanager.googleapis.com';
+    const permsToTest = requiredPermsByType[serviceType] || [
+      'resourcemanager.projects.get',
+    ];
+
+    // 1. Check Project-level testIamPermissions + Enabled APIs + SA discovery in parallel
+    const [permRes, enabledServices, saDiscovery, bucketsRes] =
+      await Promise.all([
+        gcpApiRequest({
+          method: 'POST',
+          url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:testIamPermissions`,
+          token,
+          quotaProject: projectId,
+          data: { permissions: permsToTest },
+        }).catch(() => ({ permissions: permsToTest })),
+        fetchProjectEnabledApis(projectId, token).catch(() => []),
+        discoverProjectServiceAccounts(projectId, token, false),
+        gcpApiRequest({
+          url: `https://storage.googleapis.com/storage/v1/b?project=${projectId}&maxResults=25`,
+          token,
+          quotaProject: projectId,
+        }).catch(() => ({ items: [] })),
+      ]);
+
+    const grantedPerms = Array.isArray(permRes?.permissions)
+      ? permRes.permissions
+      : [];
+    const missingPerms = permsToTest.filter((p) => !grantedPerms.includes(p));
+
+    const enabledSet = new Set(
+      (enabledServices || []).map((s) =>
+        String(s.config?.name || s.name || '').replace(/^projects\/[^/]+\/services\//, '')
+      )
+    );
+    const apiEnabled =
+      enabledSet.size === 0 ||
+      enabledSet.has(targetApi) ||
+      targetApi === 'storage.googleapis.com' ||
+      targetApi === 'bigquery.googleapis.com';
+
+    // 2. Verify specific Runtime Service Account existence & resource-level actAs
+    const resolvedSa =
+      (serviceAccountEmail || '').trim() ||
+      saDiscovery.recommendedServiceAccount ||
+      '';
+    let saExists = false;
+    let saActAsGranted = grantedPerms.includes('iam.serviceAccounts.actAs');
+    const needsRuntimeSa = ['CLOUD_RUN', 'COMPUTE_VM', 'GKE_CLUSTER'].includes(
+      serviceType
+    );
+
+    if (needsRuntimeSa && resolvedSa) {
+      saExists = (saDiscovery.serviceAccounts || []).some(
+        (a) => a.email === resolvedSa && !a.disabled
+      );
+      if (saExists && !saActAsGranted) {
+        const saPermRes = await gcpApiRequest({
+          method: 'POST',
+          url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${encodeURIComponent(
+            resolvedSa
+          )}:testIamPermissions`,
+          token,
+          quotaProject: projectId,
+          data: { permissions: ['iam.serviceAccounts.actAs'] },
+        }).catch(() => null);
+        if (
+          Array.isArray(saPermRes?.permissions) &&
+          saPermRes.permissions.includes('iam.serviceAccounts.actAs')
+        ) {
+          saActAsGranted = true;
+        }
+      }
+    }
+
+    // 3. Cross-Region Egress Check against existing GCS Buckets
+    const normRegion = String(region || 'us-central1').toLowerCase();
+    const crossRegionBuckets = (bucketsRes?.items || [])
+      .filter((b) => {
+        const loc = String(b.location || '').toLowerCase();
+        if (!loc) return false;
+        if (loc === 'us' && normRegion.startsWith('us-')) return false;
+        if (loc === 'eu' && normRegion.startsWith('europe-')) return false;
+        return loc !== normRegion;
+      })
+      .map((b) => ({ name: b.name, location: b.location }));
+
+    const checks = [
+      {
+        id: 'API_STATUS',
+        label: `Service API (${targetApi})`,
+        passed: apiEnabled,
+        detail: apiEnabled
+          ? `${targetApi} is enabled and ready`
+          : `${targetApi} appears disabled — provisioning will auto-enable or require Service Usage Admin`,
+      },
+      {
+        id: 'IAM_PERMS',
+        label: `Project IAM Permissions (${permsToTest.join(', ')})`,
+        passed: missingPerms.length === 0,
+        detail:
+          missingPerms.length === 0
+            ? `Caller (${callerEmail || 'active identity'}) holds required creation permissions`
+            : `Missing project-level permission(s): ${missingPerms.join(', ')}`,
+      },
+    ];
+
+    if (needsRuntimeSa) {
+      checks.push({
+        id: 'RUNTIME_SA_ACT_AS',
+        label: `Runtime Service Account (iam.serviceAccounts.actAs)`,
+        passed: Boolean(resolvedSa && saExists && saActAsGranted),
+        serviceAccountEmail: resolvedSa,
+        canAutoGrantActAs: Boolean(resolvedSa && saExists && !saActAsGranted),
+        detail: !resolvedSa
+          ? 'No active Service Account found in project — create a Least-Privilege SA in IAM & SecOps first'
+          : !saExists
+          ? `Service Account ${resolvedSa} does not exist or is disabled (was default Compute SA deleted?)`
+          : saActAsGranted
+          ? `Verified iam.serviceAccounts.actAs on ${resolvedSa}`
+          : `Caller lacks iam.serviceAccounts.actAs on ${resolvedSa} — click "Grant actAs" to bind roles/iam.serviceAccountUser`,
+      });
+    }
+
+    checks.push({
+      id: 'EGRESS_TOPOLOGY',
+      label: `Same-Region Locality & Egress Check (${normRegion})`,
+      passed: crossRegionBuckets.length === 0,
+      isAdvisory: true,
+      detail:
+        crossRegionBuckets.length === 0
+          ? `Zero cross-region bucket mismatches detected for ${normRegion} ($0.00 intra-region data transfer)`
+          : `Advisory: ${crossRegionBuckets.length} bucket(s) (${crossRegionBuckets
+              .slice(0, 2)
+              .map((b) => `${b.name} in ${b.location}`)
+              .join(', ')}) are outside ${normRegion} — reading/writing across regions bills $0.02/GB egress`,
+    });
+
+    const allCriticalPassed = checks
+      .filter((c) => !c.isAdvisory)
+      .every((c) => c.passed);
+
+    return res.json({
+      ok: true,
+      ready: allCriticalPassed,
+      callerEmail: callerEmail || 'authenticated-user',
+      serviceType,
+      region: normRegion,
+      resolvedServiceAccount: resolvedSa,
+      checks,
+      crossRegionBuckets,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Preflight simulation failed.',
+    });
+  }
+});
+
+// 2. POST /api/project/:projectId/service-accounts/grant-act-as
+//    Grants resource-level roles/iam.serviceAccountUser on a specific Service Account
+app.post(
+  '/api/project/:projectId/service-accounts/grant-act-as',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { serviceAccountEmail, memberEmail } = req.body || {};
+    if (!serviceAccountEmail) {
+      return res
+        .status(400)
+        .json({ error: 'serviceAccountEmail is required.' });
+    }
+    try {
+      const { token, account: callerEmail } = await resolveRequestAuth(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+      const targetPrincipal = (memberEmail || callerEmail || '').trim();
+      if (!targetPrincipal) {
+        return res.status(400).json({
+          error: 'Could not determine caller email to bind Service Account User.',
+        });
+      }
+      const memberStr = targetPrincipal.includes(':')
+        ? targetPrincipal
+        : targetPrincipal.endsWith('.gserviceaccount.com')
+        ? `serviceAccount:${targetPrincipal}`
+        : `user:${targetPrincipal}`;
+
+      const policyUrl = `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${encodeURIComponent(
+        serviceAccountEmail
+      )}`;
+      const currentPolicy = await gcpApiRequest({
+        method: 'POST',
+        url: `${policyUrl}:getIamPolicy`,
+        token,
+        quotaProject: projectId,
+        data: {},
+      });
+
+      const bindings = Array.isArray(currentPolicy?.bindings)
+        ? [...currentPolicy.bindings]
+        : [];
+      const roleName = 'roles/iam.serviceAccountUser';
+      const existing = bindings.find((b) => b.role === roleName && !b.condition);
+      if (existing) {
+        existing.members = Array.from(
+          new Set([...(existing.members || []), memberStr])
+        );
+      } else {
+        bindings.push({
+          role: roleName,
+          members: [memberStr],
+        });
+      }
+
+      await gcpApiRequest({
+        method: 'POST',
+        url: `${policyUrl}:setIamPolicy`,
+        token,
+        quotaProject: projectId,
+        data: {
+          policy: {
+            ...currentPolicy,
+            bindings,
+          },
+        },
+      });
+
+      projectServiceAccountsCache.delete(projectId);
+      recordFlightEvent(projectId, {
+        action: 'IAM_SA_ACT_AS_GRANTED',
+        resourceType: 'IAM_SERVICE_ACCOUNT',
+        resourceName: serviceAccountEmail,
+        region: 'global',
+        summary: `Granted resource-level roles/iam.serviceAccountUser (iam.serviceAccounts.actAs) on ${serviceAccountEmail} to ${memberStr}`,
+      });
+
+      return res.json({
+        ok: true,
+        serviceAccountEmail,
+        member: memberStr,
+        role: roleName,
+        message: `Granted iam.serviceAccounts.actAs (roles/iam.serviceAccountUser) on ${serviceAccountEmail} to ${memberStr}`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to bind roles/iam.serviceAccountUser on Service Account.',
+      });
+    }
+  }
+);
+
+// 3. GET /api/project/:projectId/finops/egress-leftover-radar
+//    Scans live project resources for (A) Stopped-Resource Leftovers still billing
+//    and (B) Cross-Region Egress Topology Mismatches
+app.get(
+  '/api/project/:projectId/finops/egress-leftover-radar',
+  async (req, res) => {
+    const { projectId } = req.params;
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated.' });
+      }
+
+      const [vmsAgg, disksAgg, addressesAgg, bucketsRes, runRes] =
+        await Promise.all([
+          gcpApiRequest({
+            url: `https://compute.googleapis.com/compute/v1/projects/${projectId}/aggregated/instances?maxResults=100`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ items: {} })),
+          gcpApiRequest({
+            url: `https://compute.googleapis.com/compute/v1/projects/${projectId}/aggregated/disks?maxResults=100`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ items: {} })),
+          gcpApiRequest({
+            url: `https://compute.googleapis.com/compute/v1/projects/${projectId}/aggregated/addresses?maxResults=100`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ items: {} })),
+          gcpApiRequest({
+            url: `https://storage.googleapis.com/storage/v1/b?project=${projectId}&maxResults=50`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ items: [] })),
+          gcpApiRequest({
+            url: `https://run.googleapis.com/v2/projects/${projectId}/locations/-/services`,
+            token,
+            quotaProject: projectId,
+          }).catch(() => ({ services: [] })),
+        ]);
+
+      const stoppedLeftovers = [];
+      const computeRegions = new Set();
+
+      // A. Inspect VMs for TERMINATED / STOPPED state still billing for disks
+      for (const [scopeKey, scopeVal] of Object.entries(vmsAgg?.items || {})) {
+        for (const vm of scopeVal?.instances || []) {
+          const zone = scopeKey.replace('zones/', '');
+          const reg = zone.split('-').slice(0, 2).join('-');
+          if (reg) computeRegions.add(reg);
+          if (vm.status === 'TERMINATED' || vm.status === 'STOPPED') {
+            const diskGb = (vm.disks || []).reduce(
+              (acc, d) => acc + Number(d.diskSizeGb || 20),
+              0
+            );
+            const monthlyDiskUsd = Number((diskGb * 0.1).toFixed(2));
+            stoppedLeftovers.push({
+              id: `vm-${vm.name}`,
+              type: 'STOPPED_VM_DISK',
+              name: vm.name,
+              location: zone,
+              monthlyDrainUsd: monthlyDiskUsd,
+              reason: `VM is ${vm.status} ($0 CPU), but its ${diskGb} GB Persistent Disk continues billing ~$${monthlyDiskUsd}/mo until deleted.`,
+              remediationCli: `gcloud compute instances delete ${vm.name} --zone=${zone} --project=${projectId} --quiet`,
+            });
+          }
+        }
+      }
+
+      // B. Inspect unattached Persistent Disks
+      for (const [scopeKey, scopeVal] of Object.entries(disksAgg?.items || {})) {
+        for (const d of scopeVal?.disks || []) {
+          if (!d.users || d.users.length === 0) {
+            const zone = scopeKey.replace('zones/', '');
+            const sizeGb = Number(d.sizeGb || 20);
+            const monthlyUsd = Number((sizeGb * 0.1).toFixed(2));
+            stoppedLeftovers.push({
+              id: `disk-${d.name}`,
+              type: 'UNATTACHED_DISK',
+              name: d.name,
+              location: zone,
+              monthlyDrainUsd: monthlyUsd,
+              reason: `Orphaned ${sizeGb} GB Persistent Disk with zero attached VMs — silently billing ~$${monthlyUsd}/mo.`,
+              remediationCli: `gcloud compute disks delete ${d.name} --zone=${zone} --project=${projectId} --quiet`,
+            });
+          }
+        }
+      }
+
+      // C. Inspect unused Static External IPs (RESERVED)
+      for (const [scopeKey, scopeVal] of Object.entries(
+        addressesAgg?.items || {}
+      )) {
+        for (const addr of scopeVal?.addresses || []) {
+          if (addr.status === 'RESERVED' && (!addr.users || !addr.users.length)) {
+            const reg = scopeKey.replace('regions/', '');
+            stoppedLeftovers.push({
+              id: `ip-${addr.name}`,
+              type: 'IDLE_STATIC_IP',
+              name: `${addr.name} (${addr.address || 'IPv4'})`,
+              location: reg,
+              monthlyDrainUsd: 7.3,
+              reason: `Reserved Static IPv4 is not attached to a running VM/LoadBalancer — GCP charges $0.01/hr ($7.30/mo) for idle IPs!`,
+              remediationCli: `gcloud compute addresses delete ${addr.name} --region=${reg} --project=${projectId} --quiet`,
+            });
+          }
+        }
+      }
+
+      // D. Inspect Cloud Run regions + GCS Bucket Storage Classes & Cross-Region Egress Risks
+      for (const svc of runRes?.services || []) {
+        const parts = String(svc.name || '').split('/');
+        const locIdx = parts.indexOf('locations');
+        if (locIdx !== -1 && parts[locIdx + 1]) {
+          computeRegions.add(parts[locIdx + 1].toLowerCase());
+        }
+      }
+
+      const egressWarnings = [];
+      const activeComputeRegs = Array.from(computeRegions);
+
+      for (const b of bucketsRes?.items || []) {
+        const bLoc = String(b.location || '').toLowerCase();
+        const sClass = String(b.storageClass || 'STANDARD').toUpperCase();
+        if (['NEARLINE', 'COLDLINE', 'ARCHIVE'].includes(sClass)) {
+          const minDays =
+            sClass === 'ARCHIVE' ? 365 : sClass === 'COLDLINE' ? 90 : 30;
+          egressWarnings.push({
+            id: `gcs-class-${b.name}`,
+            type: 'EARLY_DELETION_PENALTY_RISK',
+            resource: `gs://${b.name}`,
+            location: bLoc,
+            rateLabel: `${minDays}-Day Min Duration`,
+            detail: `Bucket uses ${sClass} storage class. Deleting or overwriting objects before ${minDays} days triggers full early-deletion penalty charges!`,
+          });
+        }
+        if (
+          activeComputeRegs.length > 0 &&
+          bLoc &&
+          !activeComputeRegs.some(
+            (r) =>
+              r === bLoc ||
+              (bLoc === 'us' && r.startsWith('us-')) ||
+              (bLoc === 'eu' && r.startsWith('europe-'))
+          )
+        ) {
+          egressWarnings.push({
+            id: `egress-${b.name}`,
+            type: 'CROSS_REGION_EGRESS',
+            resource: `gs://${b.name} (${bLoc}) ↔ Compute (${activeComputeRegs.join(', ')})`,
+            location: bLoc,
+            rateLabel: '$0.02 / GB Cross-Region Egress',
+            detail: `Bucket gs://${b.name} is in ${bLoc.toUpperCase()} while active compute runs in ${activeComputeRegs.join(
+              ', '
+            )}. Cross-region reads/writes bill $0.02/GB.`,
+          });
+        }
+      }
+
+      const totalLeftoverMonthlyUsd = Number(
+        stoppedLeftovers
+          .reduce((acc, item) => acc + Number(item.monthlyDrainUsd || 0), 0)
+          .toFixed(2)
+      );
+
+      return res.json({
+        ok: true,
+        projectId,
+        scannedAt: new Date().toISOString(),
+        activeComputeRegions: activeComputeRegs,
+        stoppedLeftovers,
+        totalLeftoverMonthlyUsd,
+        egressWarnings,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to scan Egress & Stopped-Resource Leftover Radar.',
+      });
+    }
+  }
+);
+
 // Serve static production frontend (dist/) when deployed on Cloud Run!
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {

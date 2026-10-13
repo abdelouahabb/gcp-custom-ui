@@ -798,13 +798,36 @@ export default function BillingAccountCreditGuardian({
   );
 
   // On page entry: load cached snapshot without triggering live APIs; refresh live APIs automatically every 2 minutes (120,000 ms)
+  const [egressRadar, setEgressRadar] = useState(null);
+  const [loadingEgressRadar, setLoadingEgressRadar] = useState(false);
+
+  const scanEgressAndLeftovers = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingEgressRadar(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/finops/egress-leftover-radar`
+      );
+      if (res.data?.ok) {
+        setEgressRadar(res.data);
+      }
+    } catch {
+      // ignore if offline
+    } finally {
+      setLoadingEgressRadar(false);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     loadBillingGuardian(false);
+    scanEgressAndLeftovers();
     const intervalId = setInterval(() => {
       loadBillingGuardian(true);
     }, 2 * 60 * 1000);
     return () => clearInterval(intervalId);
-  }, [loadBillingGuardian]);
+  }, [loadBillingGuardian, scanEgressAndLeftovers]);
 
   const handleSyncConsoleCredits = async (overrideRawText) => {
     const rawToParse =
@@ -2420,6 +2443,127 @@ ORDER BY
           </div>
         </div>
       )}
+
+      {/* WAVE 10: LIVE CROSS-REGION EGRESS & STOPPED-RESOURCE LEFTOVER RADAR */}
+      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                Live Cross-Region Egress & &ldquo;Stopped-Resource Leftover&rdquo; FinOps Radar
+              </span>
+              {egressRadar && (
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    (egressRadar.stoppedLeftovers?.length || 0) === 0 &&
+                    (egressRadar.egressWarnings?.length || 0) === 0
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                  }`}
+                >
+                  {egressRadar.stoppedLeftovers?.length || 0} Stopped Leftovers ($
+                  {Number(egressRadar.totalLeftoverMonthlyUsd || 0).toFixed(2)}
+                  /mo) · {egressRadar.egressWarnings?.length || 0} Egress / Penalty Risks
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              Automatically scans `compute.googleapis.com`, `storage.googleapis.com`, and `run.googleapis.com` for STOPPED VMs still billing for Persistent Disks, idle reserved IPv4s ($0.01/hr), Nearline/Coldline early-deletion penalty risks, and cross-region bucket↔compute egress ($0.02/GB).
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={scanEgressAndLeftovers}
+            disabled={loadingEgressRadar}
+            className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${
+                loadingEgressRadar ? 'animate-spin' : ''
+              }`}
+            />
+            <span>
+              {loadingEgressRadar
+                ? 'Scanning Project Topology...'
+                : 'Scan Egress & Leftovers'}
+            </span>
+          </button>
+        </div>
+
+        {egressRadar &&
+          (egressRadar.stoppedLeftovers?.length || 0) === 0 &&
+          (egressRadar.egressWarnings?.length || 0) === 0 && (
+            <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/25 text-xs font-mono text-emerald-700 dark:text-emerald-400">
+              ✓ Zero stopped-VM disk leftovers, zero idle static IPs, and zero cross-region compute↔storage egress mismatches detected in `{projectId}`.
+            </div>
+          )}
+
+        {egressRadar &&
+          ((egressRadar.stoppedLeftovers?.length || 0) > 0 ||
+            (egressRadar.egressWarnings?.length || 0) > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {(egressRadar.stoppedLeftovers || []).map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3 rounded-lg bg-red-500/5 border border-red-500/30 flex flex-col justify-between gap-2"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs font-mono font-bold text-red-700 dark:text-red-300">
+                      <span>
+                        [{item.type}] {item.name} ({item.location})
+                      </span>
+                      <span>-${item.monthlyDrainUsd}/mo</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                      {item.reason}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopyText(
+                          item.id,
+                          item.remediationCli,
+                          'Leftover Cleanup CLI'
+                        )
+                      }
+                      className="h-7 px-2.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                    >
+                      {copiedId === item.id ? 'Copied CLI' : 'Copy Cleanup CLI'}
+                    </button>
+                    {onRunInShell && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInShell(item.remediationCli)}
+                        className="h-7 px-2.5 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                      >
+                        Delete Leftover in Shell
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {(egressRadar.egressWarnings || []).map((warn) => (
+                <div
+                  key={warn.id}
+                  className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/30 space-y-1"
+                >
+                  <div className="flex items-center justify-between text-xs font-mono font-bold text-amber-800 dark:text-amber-300">
+                    <span>{warn.resource}</span>
+                    <span>{warn.rateLabel}</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                    {warn.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+      </div>
 
       {/* Bottom Automation Strip: BigQuery Billing Export SQL + Cloud Billing Budget CLI */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">

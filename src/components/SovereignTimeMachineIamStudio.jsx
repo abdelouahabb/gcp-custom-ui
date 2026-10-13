@@ -1347,9 +1347,9 @@ export default function SovereignTimeMachineIamStudio({
               </form>
             )}
 
-            {/* Quick Mint & Download Bar: Pick Service Account -> Download .json Key or 1h OAuth2 Token */}
+            {/* Quick Mint & Download Bar: Pick Service Account -> Grant actAs, Download .json Key, or 1h OAuth2 Token */}
             <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-end">
-              <div className="lg:col-span-6 min-w-0">
+              <div className="lg:col-span-5 min-w-0">
                 <label className="block text-[11px] font-mono text-amber-300 mb-1 truncate">
                   Target Service Account (`iam.googleapis.com`)
                 </label>
@@ -1371,6 +1371,46 @@ export default function SovereignTimeMachineIamStudio({
                 </select>
               </div>
 
+              <div className="lg:col-span-2">
+                <button
+                  type="button"
+                  disabled={saActionBusy || !selectedSaEmail}
+                  onClick={async () => {
+                    if (!selectedSaEmail) return;
+                    setSaActionBusy(true);
+                    try {
+                      const res = await axios.post(
+                        `/api/project/${encodeURIComponent(
+                          projectId
+                        )}/service-accounts/grant-act-as`,
+                        { serviceAccountEmail: selectedSaEmail }
+                      );
+                      if (onTriggerToast) {
+                        onTriggerToast(
+                          res.data?.message ||
+                            `Granted iam.serviceAccounts.actAs on ${selectedSaEmail}`
+                        );
+                      }
+                      await fetchIamSurgeon();
+                    } catch (err) {
+                      if (onTriggerToast) {
+                        onTriggerToast(
+                          err.response?.data?.error ||
+                            'Failed to bind roles/iam.serviceAccountUser'
+                        );
+                      }
+                    } finally {
+                      setSaActionBusy(false);
+                    }
+                  }}
+                  title="Bind resource-level roles/iam.serviceAccountUser (iam.serviceAccounts.actAs) on this Service Account so you can deploy Cloud Run, VM, and GKE workloads with it"
+                  className="w-full h-[36px] px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Grant `actAs`</span>
+                </button>
+              </div>
+
               <div className="lg:col-span-3">
                 <button
                   type="button"
@@ -1384,7 +1424,7 @@ export default function SovereignTimeMachineIamStudio({
                 </button>
               </div>
 
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 <button
                   type="button"
                   disabled={saActionBusy || !selectedSaEmail}

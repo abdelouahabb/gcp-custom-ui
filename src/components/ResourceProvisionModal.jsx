@@ -759,6 +759,71 @@ export default function ResourceProvisionModal({
   const [defaultComputeSaMissing, setDefaultComputeSaMissing] = useState(false);
   const [loadingSa, setLoadingSa] = useState(false);
 
+  // Wave 10: Pre-Provision Dry-Run IAM (`testIamPermissions`), `actAs` & Egress Preflight Simulator
+  const [preflightData, setPreflightData] = useState(null);
+  const [loadingPreflight, setLoadingPreflight] = useState(false);
+  const [grantingActAs, setGrantingActAs] = useState(false);
+
+  const runPreflightSimulation = async (
+    overrideType = serviceType,
+    overrideSa = selectedServiceAccount
+  ) => {
+    if (!projectId) return;
+    setLoadingPreflight(true);
+    try {
+      const targetRegion =
+        overrideType === 'COMPUTE_VM'
+          ? vmRegion
+          : overrideType === 'GKE_CLUSTER'
+          ? gkeLocation
+          : overrideType === 'CLOUD_SQL'
+          ? sqlRegion
+          : region;
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/provision/preflight`,
+        {
+          serviceType: overrideType,
+          region: targetRegion,
+          serviceAccountEmail: overrideSa,
+        }
+      );
+      setPreflightData(res.data);
+    } catch (err) {
+      setPreflightData({
+        ok: false,
+        ready: false,
+        error:
+          err.response?.data?.error ||
+          err.message ||
+          'Preflight simulation failed',
+      });
+    } finally {
+      setLoadingPreflight(false);
+    }
+  };
+
+  const handleGrantActAsOnSelectedSa = async (targetSaEmail) => {
+    const saToBind = targetSaEmail || selectedServiceAccount;
+    if (!projectId || !saToBind) return;
+    setGrantingActAs(true);
+    try {
+      await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/service-accounts/grant-act-as`,
+        { serviceAccountEmail: saToBind }
+      );
+      await runPreflightSimulation(serviceType, saToBind);
+    } catch (err) {
+      setErrorMsg(
+        err.response?.data?.error ||
+          `Failed to grant roles/iam.serviceAccountUser on ${saToBind}`
+      );
+    } finally {
+      setGrantingActAs(false);
+    }
+  };
+
   const fetchServiceAccounts = async (forceRefresh = false) => {
     if (!projectId) return;
     setLoadingSa(true);
@@ -1969,6 +2034,19 @@ export default function ResourceProvisionModal({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() =>
+                      runPreflightSimulation(serviceType, selectedServiceAccount)
+                    }
+                    disabled={loadingPreflight}
+                    title="Run live Google Cloud testIamPermissions + Service Account actAs + Cross-Region Egress Preflight before deploying"
+                    className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 px-2.5 py-1 rounded border border-blue-500/30 bg-blue-500/5 cursor-pointer"
+                  >
+                    {loadingPreflight
+                      ? 'Simulating IAM & Egress...'
+                      : '🧪 Dry-Run IAM & Egress Preflight'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => fetchServiceAccounts(true)}
                     disabled={loadingSa}
                     className="text-[11px] font-mono text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] cursor-pointer"
@@ -1992,7 +2070,13 @@ export default function ResourceProvisionModal({
                         fetchServiceAccounts(true);
                       }
                     }}
-                    onChange={(e) => setSelectedServiceAccount(e.target.value)}
+                    onChange={(e) => {
+                      const nextSa = e.target.value;
+                      setSelectedServiceAccount(nextSa);
+                      if (preflightData) {
+                        runPreflightSimulation(serviceType, nextSa);
+                      }
+                    }}
                     className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 shadow-sm cursor-pointer"
                   >
                     {serviceAccounts.filter((sa) => !sa.disabled).length === 0 && (
@@ -2023,6 +2107,67 @@ export default function ResourceProvisionModal({
                   )}
                 </div>
               </div>
+
+              {preflightData && Array.isArray(preflightData.checks) && (
+                <div className="mt-2 p-2.5 rounded-lg bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      Live Pre-Provision Simulation (`projects.testIamPermissions` + `actAs` + Egress)
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        preflightData.ready
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                      }`}
+                    >
+                      {preflightData.ready
+                        ? 'ALL CRITICAL CHECKS PASSED'
+                        : 'ACTION NEEDED BEFORE DEPLOY'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                    {preflightData.checks.map((chk) => (
+                      <div
+                        key={chk.id}
+                        className={`p-2 rounded border text-[10.5px] font-mono flex items-start justify-between gap-2 ${
+                          chk.passed
+                            ? 'bg-emerald-500/5 border-emerald-500/25 text-zinc-800 dark:text-zinc-200'
+                            : chk.isAdvisory
+                            ? 'bg-amber-500/5 border-amber-500/25 text-amber-800 dark:text-amber-300'
+                            : 'bg-red-500/5 border-red-500/30 text-red-800 dark:text-red-300'
+                        }`}
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-bold truncate">
+                            {chk.passed ? '✓ ' : chk.isAdvisory ? '⚠️ ' : '✗ '}
+                            {chk.label}
+                          </div>
+                          <div className="text-[10px] opacity-85 leading-snug">
+                            {chk.detail}
+                          </div>
+                        </div>
+                        {chk.canAutoGrantActAs && (
+                          <button
+                            type="button"
+                            disabled={grantingActAs}
+                            onClick={() =>
+                              handleGrantActAsOnSelectedSa(
+                                chk.serviceAccountEmail
+                              )
+                            }
+                            className="shrink-0 px-2 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer"
+                          >
+                            {grantingActAs
+                              ? 'Granting...'
+                              : '1-Click Grant actAs'}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
