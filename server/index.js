@@ -10258,7 +10258,7 @@ app.post(
       const projKeyVault = mintedSaKeysVaultByProject.get(projectId);
       const projTokens = mintedSaTokensByProject.get(projectId);
 
-      // A. CREATE A NEW SERVICE ACCOUNT
+      // A. CREATE A NEW SERVICE ACCOUNT (Dedicated IAM & SecOps Studio with Least-Privilege Role Scoping)
       if (action === 'CREATE_SERVICE_ACCOUNT') {
         const cleanId = String(accountId || 'cloudpulse-bot')
           .trim()
@@ -10271,6 +10271,20 @@ app.post(
             error: 'Service Account ID must be between 6 and 30 characters.',
           });
         }
+        const customDescription = String(
+          req.body?.description ||
+            'Least-privilege custom Service Account architected in CloudPulse IAM & SecOps Studio'
+        ).slice(0, 256);
+        const requestedRoles = Array.isArray(req.body?.roles)
+          ? req.body.roles
+              .map((r) => String(r || '').trim())
+              .filter(
+                (r) =>
+                  r.startsWith('roles/') &&
+                  !['roles/owner', 'roles/editor'].includes(r)
+              )
+          : [];
+
         const createdSa = await gcpApiRequest({
           method: 'POST',
           url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`,
@@ -10279,24 +10293,89 @@ app.post(
           data: {
             accountId: cleanId,
             serviceAccount: {
-              displayName: displayName || `CloudPulse Managed SA (${cleanId})`,
-              description:
-                'Provisioned via CloudPulse Sovereign IAM Studio',
+              displayName: displayName || `CloudPulse Custom SA (${cleanId})`,
+              description: customDescription,
             },
           },
         });
+
+        const boundRoles = [];
+        const roleBindingWarnings = [];
+        if (createdSa?.email && requestedRoles.length > 0) {
+          try {
+            const policy = await gcpApiRequest({
+              method: 'POST',
+              url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:getIamPolicy`,
+              token,
+              quotaProject: projectId,
+              data: { options: { requestedPolicyVersion: 3 } },
+            });
+            const bindings = Array.isArray(policy.bindings)
+              ? [...policy.bindings]
+              : [];
+            const saMember = `serviceAccount:${createdSa.email}`;
+            for (const targetRole of requestedRoles) {
+              const existing = bindings.find(
+                (b) => b.role === targetRole && !b.condition
+              );
+              if (existing) {
+                existing.members = Array.from(
+                  new Set([...(existing.members || []), saMember])
+                );
+              } else {
+                bindings.push({
+                  role: targetRole,
+                  members: [saMember],
+                });
+              }
+              boundRoles.push(targetRole);
+            }
+            await gcpApiRequest({
+              method: 'POST',
+              url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:setIamPolicy`,
+              token,
+              quotaProject: projectId,
+              data: {
+                policy: {
+                  ...policy,
+                  version: Math.max(policy.version || 1, 3),
+                  bindings,
+                },
+              },
+            });
+          } catch (policyErr) {
+            roleBindingWarnings.push(
+              policyErr.response?.data?.error?.message ||
+                policyErr.message ||
+                'Service Account created, but binding project IAM roles required resourcemanager.projects.setIamPolicy.'
+            );
+          }
+        }
+
+        // Invalidate Service Account discovery cache so Cloud Run, Compute VM & GKE modals see it immediately
+        projectServiceAccountsCache.delete(projectId);
+
         recordFlightEvent(projectId, {
           action: 'IAM_SA_CREATED',
           resourceType: 'IAM_SERVICE_ACCOUNT',
           resourceName: createdSa.email || cleanId,
           region: 'global',
-          summary: `Created Service Account ${createdSa.email}`,
+          summary: `Created Least-Privilege Service Account ${createdSa.email} (${
+            boundRoles.length > 0
+              ? `bound ${boundRoles.length} scoped role(s): ${boundRoles.join(', ')}`
+              : 'zero project-wide roles by default'
+          })`,
         });
         return res.json({
           ok: true,
           action,
           serviceAccount: createdSa,
-          message: `Created Service Account ${createdSa.email}`,
+          boundRoles,
+          roleBindingWarnings,
+          message:
+            boundRoles.length > 0
+              ? `Created ${createdSa.email} with ${boundRoles.length} least-privilege role(s)`
+              : `Created zero-privilege Service Account ${createdSa.email}`,
         });
       }
 

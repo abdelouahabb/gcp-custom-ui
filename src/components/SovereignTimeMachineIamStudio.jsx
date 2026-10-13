@@ -45,6 +45,14 @@ export default function SovereignTimeMachineIamStudio({
   const [approvalCustomRole, setApprovalCustomRole] = useState('');
   const [selectedSaEmail, setSelectedSaEmail] = useState('');
   const [newSaAccountId, setNewSaAccountId] = useState('');
+  const [newSaDisplayName, setNewSaDisplayName] = useState('');
+  const [newSaDescription, setNewSaDescription] = useState(
+    'Least-privilege custom runtime Service Account'
+  );
+  const [newSaRoles, setNewSaRoles] = useState([
+    'roles/logging.logWriter',
+    'roles/monitoring.metricWriter',
+  ]);
   const [showCreateSaForm, setShowCreateSaForm] = useState(false);
   const [saActionBusy, setSaActionBusy] = useState(false);
   const [iamSectionView, setIamSectionView] = useState('SPLIT'); // 'SPLIT' | 'SA_VAULT' | 'ROLES'
@@ -221,6 +229,62 @@ export default function SovereignTimeMachineIamStudio({
     }
   };
 
+  const handleToggleNewSaRole = (roleName) => {
+    setNewSaRoles((prev) =>
+      prev.includes(roleName)
+        ? prev.filter((r) => r !== roleName)
+        : [...prev, roleName]
+    );
+  };
+
+  const handleApplySaRolePreset = (presetKey) => {
+    if (presetKey === 'ZERO') {
+      setNewSaRoles([]);
+      setNewSaDescription(
+        'Zero project-wide IAM roles (bind resource-level permissions only)'
+      );
+    } else if (presetKey === 'CLOUD_RUN') {
+      setNewSaAccountId((prev) => prev || 'cloudrun-least-priv-sa');
+      setNewSaDisplayName(
+        (prev) => prev || 'Cloud Run Least-Privilege Runtime SA'
+      );
+      setNewSaDescription(
+        'Minimal Cloud Run runtime identity (Logs, Metrics & Secret Manager Accessor)'
+      );
+      setNewSaRoles([
+        'roles/logging.logWriter',
+        'roles/monitoring.metricWriter',
+        'roles/secretmanager.secretAccessor',
+      ]);
+    } else if (presetKey === 'VM_GKE') {
+      setNewSaAccountId((prev) => prev || 'compute-node-least-priv');
+      setNewSaDisplayName(
+        (prev) => prev || 'Compute / GKE Node Least-Privilege SA'
+      );
+      setNewSaDescription(
+        'Replaces over-privileged default Compute SA with Logs, Metrics & Artifact Registry Reader'
+      );
+      setNewSaRoles([
+        'roles/logging.logWriter',
+        'roles/monitoring.metricWriter',
+        'roles/artifactregistry.reader',
+      ]);
+    } else if (presetKey === 'DATA_PIPELINE') {
+      setNewSaAccountId((prev) => prev || 'data-pipeline-worker-sa');
+      setNewSaDisplayName(
+        (prev) => prev || 'Data Pipeline Least-Privilege Worker SA'
+      );
+      setNewSaDescription(
+        'Scoped identity for Storage Object Viewer & BigQuery Job User'
+      );
+      setNewSaRoles([
+        'roles/logging.logWriter',
+        'roles/storage.objectViewer',
+        'roles/bigquery.jobUser',
+      ]);
+    }
+  };
+
   const handleCreateServiceAccount = async (e) => {
     e.preventDefault();
     if (!newSaAccountId.trim()) return;
@@ -233,16 +297,23 @@ export default function SovereignTimeMachineIamStudio({
         {
           action: 'CREATE_SERVICE_ACCOUNT',
           accountId: newSaAccountId.trim(),
+          displayName:
+            newSaDisplayName.trim() ||
+            `CloudPulse Custom SA (${newSaAccountId.trim()})`,
+          description: newSaDescription.trim(),
+          roles: newSaRoles,
         }
       );
       const createdEmail = res.data?.serviceAccount?.email || '';
       if (createdEmail) setSelectedSaEmail(createdEmail);
       setNewSaAccountId('');
+      setNewSaDisplayName('');
       setShowCreateSaForm(false);
       if (onTriggerToast) {
         onTriggerToast(res.data?.message || 'Created Service Account');
       }
       await fetchIamSurgeon();
+      if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
@@ -1059,38 +1130,220 @@ export default function SovereignTimeMachineIamStudio({
               <button
                 type="button"
                 onClick={() => setShowCreateSaForm((v) => !v)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold cursor-pointer"
               >
-                <PlusCircle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                <span>{showCreateSaForm ? 'Close New SA Form' : '+ New Service Account'}</span>
+                <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+                <span>
+                  {showCreateSaForm
+                    ? 'Close Least-Privilege SA Architect'
+                    : '+ Architect Least-Privilege Service Account'}
+                </span>
               </button>
             </div>
 
-            {/* Optional Create New Service Account Mini-Form */}
+            {/* Dedicated Least-Privilege Service Account Architect */}
             {showCreateSaForm && (
               <form
                 onSubmit={handleCreateServiceAccount}
-                className="p-3 rounded-xl bg-zinc-950/90 border border-zinc-800 flex flex-wrap items-end gap-2.5"
+                className="p-4 rounded-xl bg-zinc-950/95 border border-amber-500/40 space-y-3.5"
               >
-                <div className="flex-1 min-w-[220px]">
-                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
-                    New Service Account ID (`6-28 chars`)
-                  </label>
-                  <input
-                    type="text"
-                    value={newSaAccountId}
-                    onChange={(e) => setNewSaAccountId(e.target.value)}
-                    placeholder="e.g. ci-cd-deployer-bot"
-                    className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
-                  />
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
+                  <div>
+                    <div className="text-xs font-extrabold font-mono text-amber-300">
+                      Least-Privilege Service Account Architect (`iam.googleapis.com`)
+                    </div>
+                    <p className="text-[11px] text-zinc-400">
+                      Never use the default Compute Engine Service Account (`*-compute@developer.gserviceaccount.com`) with `roles/editor`. Create a dedicated identity here with explicit, minimal IAM roles — it will immediately appear in Cloud Run, Compute VM & GKE `iam.serviceAccounts.actAs` selectors.
+                    </p>
+                  </div>
+
+                  {/* Workload Least-Privilege Presets */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-zinc-400 mr-1">
+                      Blueprint:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleApplySaRolePreset('ZERO')}
+                      className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[10px] font-mono text-zinc-200 cursor-pointer"
+                    >
+                      Zero Roles (Strictest)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplySaRolePreset('CLOUD_RUN')}
+                      className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[10px] font-mono text-blue-300 cursor-pointer"
+                    >
+                      Cloud Run Runtime
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplySaRolePreset('VM_GKE')}
+                      className="px-2 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 cursor-pointer"
+                    >
+                      Compute VM / GKE Node
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplySaRolePreset('DATA_PIPELINE')}
+                      className="px-2 py-1 rounded bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-[10px] font-mono text-purple-300 cursor-pointer"
+                    >
+                      Data Pipeline Worker
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="submit"
-                  disabled={saActionBusy || !newSaAccountId.trim()}
-                  className="h-[34px] px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {saActionBusy ? 'Creating...' : 'Create Service Account'}
-                </button>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-mono text-zinc-300 mb-1">
+                      1. Account ID (`6-28 lowercase chars`) *
+                    </label>
+                    <input
+                      type="text"
+                      value={newSaAccountId}
+                      onChange={(e) => setNewSaAccountId(e.target.value)}
+                      placeholder="e.g. cloudrun-prod-runtime"
+                      className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                    />
+                    <div className="text-[10px] font-mono text-zinc-500 mt-1 truncate">
+                      {newSaAccountId.trim()
+                        ? `${newSaAccountId
+                            .trim()
+                            .toLowerCase()
+                            .replace(/[^a-z0-9-]/g, '-')}@${projectId}.iam.gserviceaccount.com`
+                        : `<account-id>@${projectId}.iam.gserviceaccount.com`}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-mono text-zinc-300 mb-1">
+                      2. Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newSaDisplayName}
+                      onChange={(e) => setNewSaDisplayName(e.target.value)}
+                      placeholder="e.g. Cloud Run Production Runtime SA"
+                      className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-mono text-zinc-300 mb-1">
+                      3. Audit Purpose / Description
+                    </label>
+                    <input
+                      type="text"
+                      value={newSaDescription}
+                      onChange={(e) => setNewSaDescription(e.target.value)}
+                      placeholder="Why this Service Account exists"
+                      className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Explicit Least-Privilege IAM Role Checkboxes */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-mono text-zinc-300">
+                      4. Explicit Least-Privilege IAM Roles (`roles/owner` & `roles/editor` are blocked by policy)
+                    </label>
+                    <span className="text-[10.5px] font-mono text-amber-300">
+                      {newSaRoles.length === 0
+                        ? 'Zero project-wide roles selected (Strictest)'
+                        : `${newSaRoles.length} scoped role(s) selected`}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                    {[
+                      {
+                        role: 'roles/logging.logWriter',
+                        title: 'Logs Writer',
+                        desc: 'Write container/VM logs to Cloud Logging',
+                      },
+                      {
+                        role: 'roles/monitoring.metricWriter',
+                        title: 'Monitoring Metric Writer',
+                        desc: 'Export latency & CPU telemetry',
+                      },
+                      {
+                        role: 'roles/secretmanager.secretAccessor',
+                        title: 'Secret Manager Accessor',
+                        desc: 'Read mounted Secret Manager secrets',
+                      },
+                      {
+                        role: 'roles/artifactregistry.reader',
+                        title: 'Artifact Registry Reader',
+                        desc: 'Pull private container images',
+                      },
+                      {
+                        role: 'roles/storage.objectViewer',
+                        title: 'Storage Object Viewer',
+                        desc: 'Read-only access to GCS buckets',
+                      },
+                      {
+                        role: 'roles/cloudsql.client',
+                        title: 'Cloud SQL Client',
+                        desc: 'Connect via Cloud SQL Auth Proxy',
+                      },
+                      {
+                        role: 'roles/pubsub.publisher',
+                        title: 'Pub/Sub Publisher',
+                        desc: 'Publish events to Pub/Sub topics',
+                      },
+                      {
+                        role: 'roles/bigquery.jobUser',
+                        title: 'BigQuery Job User',
+                        desc: 'Run scoped BigQuery queries',
+                      },
+                    ].map((item) => {
+                      const checked = newSaRoles.includes(item.role);
+                      return (
+                        <label
+                          key={item.role}
+                          className={`p-2 rounded-lg border text-left cursor-pointer transition flex items-start gap-2 ${
+                            checked
+                              ? 'bg-amber-500/15 border-amber-500/50 text-white'
+                              : 'bg-zinc-900/70 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => handleToggleNewSaRole(item.role)}
+                            className="mt-0.5 accent-amber-400"
+                          />
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-mono font-bold truncate">
+                              {item.title}
+                            </div>
+                            <div className="text-[10px] font-mono text-amber-300/90 truncate">
+                              {item.role}
+                            </div>
+                            <div className="text-[10px] text-zinc-400 truncate">
+                              {item.desc}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <span className="text-[10.5px] font-mono text-zinc-400">
+                    ✓ Once created, this Service Account is immediately selectable in **Cloud Run**, **Compute VM**, **GKE**, and **Provision Resource** (`iam.serviceAccounts.actAs`).
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={saActionBusy || newSaAccountId.trim().length < 6}
+                    className="h-[36px] px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {saActionBusy
+                      ? 'Provisioning SA & Binding Scoped Roles...'
+                      : `Provision Custom SA (${newSaRoles.length} Scoped Roles)`}
+                  </button>
+                </div>
               </form>
             )}
 
