@@ -1225,7 +1225,10 @@ function CloudPulseCockpit() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono truncate max-w-[230px] sm:max-w-none">
+                <p
+                  data-gde-ignore="true"
+                  className="text-xs text-zinc-500 dark:text-zinc-400 font-mono truncate max-w-[230px] sm:max-w-none"
+                >
                   {gdePrivacyConfig.enabled
                     ? redactTextForGdeMode(
                         contextData.account,

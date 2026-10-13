@@ -157,7 +157,8 @@ export default function GdeStreamerPrivacyShield({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef(null);
   const textNodeCacheRef = useRef(new WeakMap());
-  const titleAttrCacheRef = useRef(new WeakMap());
+  const modifiedNodesRef = useRef(new Set());
+  const isMutatingRef = useRef(false);
 
   const updateConfig = useCallback(
     (patch) => {
@@ -206,8 +207,34 @@ export default function GdeStreamerPrivacyShield({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [updateConfig]);
 
-  // Global DOM TextNode & Tooltip Redaction Engine
+  // Global DOM TextNode Redaction Engine (runs post-commit via rAF, zero work when disabled)
   useEffect(() => {
+    const cache = textNodeCacheRef.current;
+    const modifiedNodes = modifiedNodesRef.current;
+
+    // When disabled, restore any previously redacted text nodes and exit immediately
+    if (!config.enabled) {
+      if (modifiedNodes.size > 0) {
+        isMutatingRef.current = true;
+        try {
+          modifiedNodes.forEach((node) => {
+            const entry = cache.get(node);
+            if (
+              entry &&
+              entry.originalText !== undefined &&
+              node.nodeValue === entry.lastMaskedText
+            ) {
+              node.nodeValue = entry.originalText;
+            }
+          });
+          modifiedNodes.clear();
+        } finally {
+          isMutatingRef.current = false;
+        }
+      }
+      return undefined;
+    }
+
     const contextObj = {
       accountEmail,
       projects:
@@ -226,31 +253,27 @@ export default function GdeStreamerPrivacyShield({
       'INPUT',
       'SVG',
       'PATH',
+      'CANVAS',
     ]);
 
     const processTextNode = (node) => {
       if (!node || node.nodeType !== Node.TEXT_NODE) return;
       const parent = node.parentElement;
-      if (!parent || SKIP_TAGS.has(parent.tagName)) return;
-      if (parent.closest('[data-gde-ignore="true"]')) return;
-
-      const currentVal = node.nodeValue || '';
-      if (!currentVal.trim()) return;
-
-      const cache = textNodeCacheRef.current;
-      let entry = cache.get(node);
-
-      if (!config.enabled) {
-        if (
-          entry &&
-          entry.originalText !== undefined &&
-          currentVal === entry.lastMaskedText
-        ) {
-          node.nodeValue = entry.originalText;
-        }
+      if (!parent) return;
+      const tag = (parent.tagName || '').toUpperCase();
+      if (SKIP_TAGS.has(tag)) return;
+      if (
+        parent.closest(
+          'svg, canvas, script, style, textarea, input, .xterm, [data-gde-ignore="true"]'
+        )
+      ) {
         return;
       }
 
+      const currentVal = node.nodeValue || '';
+      if (!currentVal || currentVal.length < 3) return;
+
+      let entry = cache.get(node);
       if (!entry) {
         entry = { originalText: currentVal, lastMaskedText: currentVal };
         cache.set(node, entry);
@@ -266,108 +289,57 @@ export default function GdeStreamerPrivacyShield({
       if (masked !== currentVal) {
         entry.lastMaskedText = masked;
         node.nodeValue = masked;
+        modifiedNodes.add(node);
       } else {
         entry.lastMaskedText = currentVal;
       }
     };
 
-    const processElementTitles = (rootEl) => {
-      if (!rootEl || rootEl.nodeType !== Node.ELEMENT_NODE) return;
-      const els = rootEl.querySelectorAll
-        ? rootEl.querySelectorAll('[title], [data-hud-tip]')
-        : [];
-      const list =
-        rootEl.hasAttribute?.('title') || rootEl.hasAttribute?.('data-hud-tip')
-          ? [rootEl, ...els]
-          : els;
-      const cache = titleAttrCacheRef.current;
-
-      list.forEach((el) => {
-        if (el.closest?.('[data-gde-ignore="true"]')) return;
-        let entry = cache.get(el);
-        if (!entry) {
-          entry = {};
-          cache.set(el, entry);
-        }
-
-        ['title', 'data-hud-tip'].forEach((attrName) => {
-          const curVal = el.getAttribute(attrName) || '';
-          if (!curVal) return;
-          const origKey = `${attrName}_orig`;
-          const maskedKey = `${attrName}_masked`;
-
-          if (!config.enabled) {
-            if (entry[origKey] && curVal === entry[maskedKey]) {
-              el.setAttribute(attrName, entry[origKey]);
-            }
-            return;
-          }
-
-          if (!entry[origKey] || curVal !== entry[maskedKey]) {
-            entry[origKey] = curVal;
-          }
-
-          const maskedVal = redactTextForGdeMode(
-            entry[origKey],
-            config,
-            contextObj
-          );
-          if (maskedVal !== curVal) {
-            entry[maskedKey] = maskedVal;
-            el.setAttribute(attrName, maskedVal);
-          } else {
-            entry[maskedKey] = curVal;
-          }
-        });
-      });
-    };
-
     const walkSubtree = (rootNode) => {
-      if (!rootNode) return;
-      if (rootNode.nodeType === Node.TEXT_NODE) {
-        processTextNode(rootNode);
-        return;
-      }
-      if (rootNode.nodeType !== Node.ELEMENT_NODE) return;
-      processElementTitles(rootNode);
-      const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT);
-      let n = walker.nextNode();
-      while (n) {
-        processTextNode(n);
-        n = walker.nextNode();
+      if (!rootNode || isMutatingRef.current) return;
+      isMutatingRef.current = true;
+      try {
+        if (rootNode.nodeType === Node.TEXT_NODE) {
+          processTextNode(rootNode);
+          return;
+        }
+        if (rootNode.nodeType !== Node.ELEMENT_NODE) return;
+        const walker = document.createTreeWalker(
+          rootNode,
+          NodeFilter.SHOW_TEXT
+        );
+        let n = walker.nextNode();
+        while (n) {
+          processTextNode(n);
+          n = walker.nextNode();
+        }
+      } finally {
+        isMutatingRef.current = false;
       }
     };
 
-    walkSubtree(document.body);
+    let rafId = requestAnimationFrame(() => {
+      walkSubtree(document.body);
+    });
 
-    if (!config.enabled) {
-      return undefined;
-    }
-
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.type === 'characterData') {
-          processTextNode(m.target);
-        } else if (m.type === 'childList') {
-          m.addedNodes.forEach((added) => walkSubtree(added));
-        } else if (
-          m.type === 'attributes' &&
-          (m.attributeName === 'title' || m.attributeName === 'data-hud-tip')
-        ) {
-          processElementTitles(m.target);
-        }
-      }
+    let debounceTimer = null;
+    const observer = new MutationObserver(() => {
+      if (isMutatingRef.current) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        walkSubtree(document.body);
+      }, 60);
     });
 
     observer.observe(document.body, {
       subtree: true,
       childList: true,
       characterData: true,
-      attributes: true,
-      attributeFilter: ['title', 'data-hud-tip'],
     });
 
     return () => {
+      cancelAnimationFrame(rafId);
+      if (debounceTimer) clearTimeout(debounceTimer);
       observer.disconnect();
     };
   }, [config, accountEmail, projects, selectedProjectId]);
