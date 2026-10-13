@@ -1487,7 +1487,7 @@ spec:
           >
             {serviceAccounts.filter((sa) => !sa.disabled).length === 0 && (
               <option value="">
-                Auto-Resolve / Auto-Create Custom Service Account ({projectId})
+                Select Available Service Account ({projectId})
               </option>
             )}
             {serviceAccounts

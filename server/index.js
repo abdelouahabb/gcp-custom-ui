@@ -757,47 +757,6 @@ async function resolveRuntimeServiceAccount(
   if (discovered.recommendedServiceAccount) {
     return discovered.recommendedServiceAccount;
   }
-
-  // If the project has NO active service accounts at all (e.g. default compute SA was deleted and no custom SA exists yet),
-  // auto-create a dedicated `cloudpulse-runtime@<projectId>.iam.gserviceaccount.com` service account so creation never fails!
-  try {
-    await gcpFetch(
-      `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
-        projectId
-      )}/services/iam.googleapis.com:enable`,
-      token,
-      projectId,
-      { method: 'POST', timeout: 6000 }
-    ).catch(() => null);
-
-    const accountId = 'cloudpulse-runtime';
-    const createdSa = await gcpFetch(
-      `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
-        projectId
-      )}/serviceAccounts`,
-      token,
-      projectId,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: {
-          accountId,
-          serviceAccount: {
-            displayName: 'CloudPulse 2026 Custom Runtime Service Account',
-            description:
-              'Auto-provisioned custom runtime Service Account (replaces deleted default Compute SA)',
-          },
-        },
-        timeout: 8000,
-      }
-    );
-    projectServiceAccountsCache.delete(projectId);
-    if (createdSa?.email) {
-      return createdSa.email;
-    }
-  } catch {
-    // ignore if already exists or insufficient IAM permission
-  }
   return '';
 }
 
@@ -2238,7 +2197,7 @@ app.post('/api/project/:projectId/vms/:vmName/ssh', async (req, res) => {
   }
 });
 
-// 8z. GET & POST /api/project/:projectId/service-accounts -> Universal Runtime Service Account Discovery & 1-Click Creation
+// 8z. GET /api/project/:projectId/service-accounts -> Universal Read-Only Runtime Service Account Discovery
 app.get('/api/project/:projectId/service-accounts', async (req, res) => {
   const { projectId } = req.params;
   const force = req.query.refresh === '1' || req.query.refresh === 'true';
@@ -2259,102 +2218,6 @@ app.get('/api/project/:projectId/service-accounts', async (req, res) => {
         err.response?.data?.error?.message ||
         err.message ||
         'Failed to discover project Service Accounts.',
-    });
-  }
-});
-
-app.post('/api/project/:projectId/service-accounts', async (req, res) => {
-  const { projectId } = req.params;
-  const {
-    accountId = 'cloudpulse-runtime',
-    displayName = 'CloudPulse Custom Runtime Service Account',
-    description = 'Custom least-privilege runtime identity for Cloud Run, Compute VMs, GKE, and Cloud Functions',
-  } = req.body || {};
-
-  try {
-    const { token } = await resolveRequestAuth(req);
-    if (!token) {
-      return res.status(401).json({ error: 'Not authenticated.' });
-    }
-
-    const cleanId = String(accountId || 'cloudpulse-runtime')
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 28);
-    const validAccountId =
-      cleanId.length >= 6 ? cleanId : `${cleanId}-sa-runner`.slice(0, 28);
-
-    await gcpFetch(
-      `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
-        projectId
-      )}/services/iam.googleapis.com:enable`,
-      token,
-      projectId,
-      { method: 'POST', timeout: 6000 }
-    ).catch(() => null);
-
-    let createdSa;
-    try {
-      createdSa = await gcpFetch(
-        `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
-          projectId
-        )}/serviceAccounts`,
-        token,
-        projectId,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: {
-            accountId: validAccountId,
-            serviceAccount: {
-              displayName: String(displayName).trim(),
-              description: String(description).trim(),
-            },
-          },
-          timeout: 8000,
-        }
-      );
-    } catch (createErr) {
-      const msg =
-        createErr.response?.data?.error?.message || createErr.message || '';
-      if (/already exists/i.test(msg)) {
-        createdSa = {
-          email: `${validAccountId}@${projectId}.iam.gserviceaccount.com`,
-          displayName: String(displayName).trim(),
-        };
-      } else {
-        throw createErr;
-      }
-    }
-
-    const discovered = await discoverProjectServiceAccounts(
-      projectId,
-      token,
-      true
-    );
-
-    return res.json({
-      ok: true,
-      serviceAccount: createdSa,
-      email:
-        createdSa?.email ||
-        `${validAccountId}@${projectId}.iam.gserviceaccount.com`,
-      accounts: discovered.accounts,
-      recommendedServiceAccount:
-        createdSa?.email || discovered.recommendedServiceAccount,
-      message: `Created custom Service Account "${
-        createdSa?.email ||
-        `${validAccountId}@${projectId}.iam.gserviceaccount.com`
-      }" on project ${projectId}!`,
-    });
-  } catch (err) {
-    return res.status(400).json({
-      error:
-        err.response?.data?.error?.message ||
-        err.message ||
-        'Failed to create custom Service Account.',
     });
   }
 });

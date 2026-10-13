@@ -753,15 +753,11 @@ export default function ResourceProvisionModal({
   const [errorMsg, setErrorMsg] = useState(null);
   const [copiedCmd, setCopiedCmd] = useState(false);
 
-  // Universal Runtime Service Account (iam.serviceAccounts.actAs) Discovery & Custom SA Creator
+  // Universal Runtime Service Account (iam.serviceAccounts.actAs) Discovery
   const [serviceAccounts, setServiceAccounts] = useState([]);
   const [selectedServiceAccount, setSelectedServiceAccount] = useState('');
   const [defaultComputeSaMissing, setDefaultComputeSaMissing] = useState(false);
   const [loadingSa, setLoadingSa] = useState(false);
-  const [showCreateSaForm, setShowCreateSaForm] = useState(false);
-  const [newSaAccountId, setNewSaAccountId] = useState('cloudpulse-runtime');
-  const [newSaDisplayName, setNewSaDisplayName] = useState('CloudPulse Custom Runtime Service Account');
-  const [creatingSa, setCreatingSa] = useState(false);
 
   const fetchServiceAccounts = async (forceRefresh = false) => {
     if (!projectId) return;
@@ -792,35 +788,6 @@ export default function ResourceProvisionModal({
       // ignore if offline
     } finally {
       setLoadingSa(false);
-    }
-  };
-
-  const handleCreateCustomServiceAccount = async () => {
-    if (!newSaAccountId.trim() || creatingSa) return;
-    setCreatingSa(true);
-    setErrorMsg(null);
-    try {
-      const res = await axios.post(
-        `/api/project/${encodeURIComponent(projectId)}/service-accounts`,
-        {
-          accountId: newSaAccountId.trim(),
-          displayName: newSaDisplayName.trim() || newSaAccountId.trim(),
-          grantRecommendedRoles: true,
-        }
-      );
-      if (res.data?.serviceAccount?.email) {
-        await fetchServiceAccounts(true);
-        setSelectedServiceAccount(res.data.serviceAccount.email);
-        setShowCreateSaForm(false);
-      }
-    } catch (err) {
-      setErrorMsg(
-        err.response?.data?.error ||
-          err.message ||
-          'Failed to create custom Service Account.'
-      );
-    } finally {
-      setCreatingSa(false);
     }
   };
 
@@ -1984,7 +1951,7 @@ export default function ResourceProvisionModal({
             )}
           </div>
 
-          {/* Universal Runtime Service Account (iam.serviceAccounts.actAs) Selector & 1-Click Custom SA Creator */}
+          {/* Universal Runtime Service Account (iam.serviceAccounts.actAs) Selector */}
           {['CLOUD_RUN', 'COMPUTE_VM', 'GKE_CLUSTER'].includes(serviceType) && (
             <div className="p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20 space-y-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2007,13 +1974,6 @@ export default function ResourceProvisionModal({
                     className="text-[11px] font-mono text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] cursor-pointer"
                   >
                     {loadingSa ? 'Syncing IAM...' : '↻ Refresh SAs'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateSaForm((prev) => !prev)}
-                    className="text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/15 px-2.5 py-1 rounded border border-indigo-500/30 cursor-pointer transition-colors"
-                  >
-                    {showCreateSaForm ? 'Cancel' : '+ Create Custom SA'}
                   </button>
                 </div>
               </div>
@@ -2039,7 +1999,7 @@ export default function ResourceProvisionModal({
                       <option value="">
                         {loadingSa
                           ? `Loading Service Accounts from ${projectId}...`
-                          : `Auto-Discover / Auto-Create Custom Service Account (${projectId})`}
+                          : `Select Available Service Account (${projectId})`}
                       </option>
                     )}
                     {serviceAccounts
@@ -2059,49 +2019,10 @@ export default function ResourceProvisionModal({
                       ✓ Explicit SA attached (prevents Compute SA 403)
                     </span>
                   ) : (
-                    <span>Backend auto-resolves active custom SA</span>
+                    <span>Select an existing project Service Account</span>
                   )}
                 </div>
               </div>
-
-              {showCreateSaForm && (
-                <div className="pt-2 border-t border-indigo-500/20 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                  <div>
-                    <label className="block text-[10px] font-mono text-zinc-500 mb-1">
-                      New SA Account ID (e.g. cloudpulse-runner)
-                    </label>
-                    <input
-                      type="text"
-                      value={newSaAccountId}
-                      onChange={(e) => setNewSaAccountId(e.target.value)}
-                      placeholder="cloudpulse-runtime"
-                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-zinc-500 mb-1">
-                      Display Name
-                    </label>
-                    <input
-                      type="text"
-                      value={newSaDisplayName}
-                      onChange={(e) => setNewSaDisplayName(e.target.value)}
-                      placeholder="CloudPulse Custom Runtime SA"
-                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={creatingSa || !newSaAccountId.trim()}
-                    onClick={handleCreateCustomServiceAccount}
-                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold font-mono cursor-pointer transition-colors"
-                  >
-                    {creatingSa
-                      ? 'Creating IAM SA...'
-                      : `Create @${projectId}.iam...`}
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
