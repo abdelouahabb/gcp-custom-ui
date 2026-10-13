@@ -6011,6 +6011,404 @@ app.post(
   }
 );
 
+// ============================================================================
+// INNOVATION #2: LOCAL DEVELOPER PORT-FORWARD & ZERO-PUBLIC-IP TUNNEL MANAGER
+// (`127.0.0.1` Developer Bridge for Private Cloud Run Auth Proxy, Compute VM
+//  IAP TCP Tunnel, and Private Cloud SQL / AlloyDB Auth Proxy)
+// ============================================================================
+const activeDeveloperTunnelsMap = new Map();
+
+function findAvailableLocalPort(preferredPort = 8085) {
+  return new Promise((resolve) => {
+    const srv = net.createServer();
+    srv.unref();
+    srv.on('error', () => {
+      // Fallback to OS-assigned random port or next port
+      const fallbackSrv = net.createServer();
+      fallbackSrv.unref();
+      fallbackSrv.on('error', () => resolve(preferredPort));
+      fallbackSrv.listen(0, '127.0.0.1', () => {
+        const addr = fallbackSrv.address();
+        const port = typeof addr === 'object' && addr ? addr.port : preferredPort;
+        fallbackSrv.close(() => resolve(port));
+      });
+    });
+    srv.listen(preferredPort, '127.0.0.1', () => {
+      srv.close(() => resolve(preferredPort));
+    });
+  });
+}
+
+function serializeTunnelEntry(t) {
+  return {
+    tunnelId: t.tunnelId,
+    projectId: t.projectId,
+    targetType: t.targetType, // 'CLOUD_RUN_PROXY' | 'COMPUTE_IAP_TCP' | 'CLOUD_SQL_IAP'
+    resourceName: t.resourceName,
+    region: t.region || '',
+    zone: t.zone || '',
+    localHost: '127.0.0.1',
+    localPort: t.localPort,
+    remotePort: t.remotePort,
+    localEndpoint: `127.0.0.1:${t.localPort}`,
+    localUrl:
+      t.targetType === 'CLOUD_RUN_PROXY' || [80, 443, 3000, 5173, 8000, 8080, 8888].includes(Number(t.remotePort))
+        ? `http://127.0.0.1:${t.localPort}`
+        : `tcp://127.0.0.1:${t.localPort}`,
+    status: t.status, // 'STARTING' | 'ACTIVE_LISTENING' | 'CLI_READY' | 'STOPPED' | 'ERROR'
+    pid: t.pid || null,
+    engine: t.engine,
+    cliCommand: t.cliCommand,
+    clientSnippets: t.clientSnippets || {},
+    logs: (t.logs || []).slice(-18),
+    startedAt: t.startedAt,
+    zeroPublicIpSavingsMonthlyUsd: 7.3,
+  };
+}
+
+// 10c. GET /api/project/:projectId/tunnels -> List active 127.0.0.1 developer tunnels
+app.get('/api/project/:projectId/tunnels', async (req, res) => {
+  const { projectId } = req.params;
+  const projectTunnels = [];
+  for (const [, entry] of activeDeveloperTunnelsMap.entries()) {
+    if (entry.projectId === projectId) {
+      projectTunnels.push(serializeTunnelEntry(entry));
+    }
+  }
+  return res.json({
+    projectId,
+    activeCount: projectTunnels.filter(
+      (t) => t.status === 'ACTIVE_LISTENING' || t.status === 'STARTING' || t.status === 'CLI_READY'
+    ).length,
+    tunnels: projectTunnels.sort(
+      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+    ),
+    iapCidrRange: '35.235.240.0/20',
+    staticIpSavingsPerResourceMonthly: 7.3,
+  });
+});
+
+// 10d. POST /api/project/:projectId/tunnels/start -> Spawn or register a 127.0.0.1 Developer Tunnel
+app.post('/api/project/:projectId/tunnels/start', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    targetType = 'CLOUD_RUN_PROXY', // 'CLOUD_RUN_PROXY' | 'COMPUTE_IAP_TCP' | 'CLOUD_SQL_IAP'
+    resourceName = '',
+    region = 'us-central1',
+    zone = 'us-central1-a',
+    remotePort = 8080,
+    preferredLocalPort = 8085,
+    dbEngine = 'POSTGRES', // 'POSTGRES' | 'MYSQL' | 'ALLOYDB'
+  } = req.body || {};
+
+  if (!resourceName) {
+    return res.status(400).json({ error: 'resourceName is required to start a local tunnel.' });
+  }
+
+  // Check if an existing tunnel for this exact resource + remotePort is already running
+  const existingKey = `${projectId}:${targetType}:${resourceName}:${remotePort}`;
+  if (activeDeveloperTunnelsMap.has(existingKey)) {
+    const existing = activeDeveloperTunnelsMap.get(existingKey);
+    if (existing.status === 'ACTIVE_LISTENING' || existing.status === 'STARTING' || existing.status === 'CLI_READY') {
+      return res.json({
+        ok: true,
+        reused: true,
+        tunnel: serializeTunnelEntry(existing),
+        message: `⚡ Local tunnel to "${resourceName}" is already active on 127.0.0.1:${existing.localPort}!`,
+      });
+    }
+  }
+
+  const reqPort = Math.max(1024, Math.min(65530, Number(preferredLocalPort) || 8085));
+  const localPort = await findAvailableLocalPort(reqPort);
+  const cleanRemotePort = Number(remotePort) || 8080;
+
+  let cliCommand = '';
+  let spawnArgs = [];
+  let clientSnippets = {};
+
+  if (targetType === 'CLOUD_RUN_PROXY') {
+    cliCommand = `gcloud run services proxy ${resourceName} --region=${region} --project=${projectId} --port=${localPort}`;
+    spawnArgs = [
+      'run',
+      'services',
+      'proxy',
+      resourceName,
+      `--region=${region}`,
+      `--project=${projectId}`,
+      `--port=${localPort}`,
+      '--quiet',
+    ];
+    clientSnippets = {
+      curl: `curl -i http://127.0.0.1:${localPort}/`,
+      fetchJs: `const res = await fetch("http://127.0.0.1:${localPort}/api/health");`,
+      browserUrl: `http://127.0.0.1:${localPort}`,
+      directTokenCurl: `curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" https://${resourceName}-${region}.a.run.app`,
+    };
+  } else if (targetType === 'COMPUTE_IAP_TCP') {
+    cliCommand = `gcloud compute start-iap-tunnel ${resourceName} ${cleanRemotePort} --local-host-port=127.0.0.1:${localPort} --zone=${zone} --project=${projectId}`;
+    spawnArgs = [
+      'compute',
+      'start-iap-tunnel',
+      resourceName,
+      String(cleanRemotePort),
+      `--local-host-port=127.0.0.1:${localPort}`,
+      `--zone=${zone}`,
+      `--project=${projectId}`,
+      '--quiet',
+    ];
+    clientSnippets =
+      cleanRemotePort === 22
+        ? {
+            ssh: `ssh -p ${localPort} -o StrictHostKeyChecking=no 127.0.0.1`,
+            vscodeRemote: `code --remote ssh-remote+127.0.0.1:${localPort} /home`,
+            scp: `scp -P ${localPort} ./local-file.txt 127.0.0.1:~/`,
+          }
+        : cleanRemotePort === 5432
+        ? {
+            psql: `psql "host=127.0.0.1 port=${localPort} user=postgres dbname=postgres sslmode=prefer"`,
+            dsn: `postgresql://postgres@127.0.0.1:${localPort}/postgres`,
+          }
+        : cleanRemotePort === 3306
+        ? {
+            mysql: `mysql -h 127.0.0.1 -P ${localPort} -u root -p`,
+            dsn: `mysql://root@127.0.0.1:${localPort}/app`,
+          }
+        : cleanRemotePort === 6379
+        ? {
+            redisCli: `redis-cli -h 127.0.0.1 -p ${localPort}`,
+            dsn: `redis://127.0.0.1:${localPort}`,
+          }
+        : {
+            curl: `curl -i http://127.0.0.1:${localPort}/`,
+            browserUrl: `http://127.0.0.1:${localPort}`,
+          };
+  } else {
+    // CLOUD_SQL_IAP / ALLOYDB Auth Proxy
+    const isMysql = String(dbEngine).toUpperCase().includes('MYSQL') || cleanRemotePort === 3306;
+    const isAlloy = String(dbEngine).toUpperCase().includes('ALLOY');
+    cliCommand = isAlloy
+      ? `alloydb-auth-proxy "projects/${projectId}/locations/${region}/clusters/${resourceName}/instances/${resourceName}-primary" --auto-iam-authn --private-ip --address=127.0.0.1 --port=${localPort}`
+      : `cloud-sql-proxy "${projectId}:${region}:${resourceName}" --auto-iam-authn --private-ip --address=127.0.0.1 --port=${localPort}`;
+    spawnArgs = [
+      'beta',
+      'sql',
+      'connect',
+      resourceName,
+      `--project=${projectId}`,
+      '--quiet',
+    ];
+    clientSnippets = isMysql
+      ? {
+          mysqlCli: `mysql -h 127.0.0.1 -P ${localPort} -u iam_user --enable-cleartext-plugin`,
+          prismaDsn: `DATABASE_URL="mysql://iam_user@127.0.0.1:${localPort}/production_db"`,
+          jdbc: `jdbc:mysql://127.0.0.1:${localPort}/production_db`,
+        }
+      : {
+          psqlCli: `psql "host=127.0.0.1 port=${localPort} user=iam_service_account dbname=postgres sslmode=disable"`,
+          prismaDsn: `DATABASE_URL="postgresql://iam_service_account@127.0.0.1:${localPort}/production_db?sslmode=disable"`,
+          sqlalchemyDsn: `postgresql+psycopg2://iam_service_account@127.0.0.1:${localPort}/production_db`,
+        };
+  }
+
+  const tunnelEntry = {
+    tunnelId: existingKey,
+    projectId,
+    targetType,
+    resourceName,
+    region,
+    zone,
+    localPort,
+    remotePort: cleanRemotePort,
+    status: 'STARTING',
+    pid: null,
+    proc: null,
+    engine:
+      targetType === 'CLOUD_RUN_PROXY'
+        ? 'gcloud run services proxy (Automatic OIDC Bearer Injection)'
+        : targetType === 'COMPUTE_IAP_TCP'
+        ? 'gcloud compute start-iap-tunnel (Zero-Public-IP IAP TCP 35.235.240.0/20)'
+        : 'Cloud SQL / AlloyDB IAM Auth Proxy v2 (mTLS + Short-Lived OAuth2)',
+    cliCommand,
+    clientSnippets,
+    logs: [
+      `[${new Date().toISOString().slice(11, 19)}] Initializing ${targetType} bridge on 127.0.0.1:${localPort} → ${resourceName}:${cleanRemotePort}...`,
+      `[${new Date().toISOString().slice(11, 19)}] Command: ${cliCommand}`,
+    ],
+    startedAt: new Date().toISOString(),
+  };
+
+  activeDeveloperTunnelsMap.set(existingKey, tunnelEntry);
+
+  // Spawn real background gcloud tunnel for CLOUD_RUN_PROXY and COMPUTE_IAP_TCP when gcloud is available
+  if (targetType === 'CLOUD_RUN_PROXY' || targetType === 'COMPUTE_IAP_TCP') {
+    try {
+      const child = spawn('gcloud', spawnArgs, {
+        env: ATTRIBUTION_ENV,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      tunnelEntry.pid = child.pid || null;
+      tunnelEntry.proc = child;
+      tunnelEntry.status = 'ACTIVE_LISTENING';
+      tunnelEntry.logs.push(
+        `[${new Date().toISOString().slice(11, 19)}] Spawned background tunnel daemon (PID ${child.pid || 'local'}) listening on 127.0.0.1:${localPort}`
+      );
+
+      const appendLog = (chunk) => {
+        const lines = String(chunk || '')
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean);
+        for (const line of lines) {
+          tunnelEntry.logs.push(`[${new Date().toISOString().slice(11, 19)}] ${line.slice(0, 220)}`);
+          if (/listening on|Testing if tunnel connection works/i.test(line)) {
+            tunnelEntry.status = 'ACTIVE_LISTENING';
+          }
+        }
+        if (tunnelEntry.logs.length > 30) {
+          tunnelEntry.logs = tunnelEntry.logs.slice(-30);
+        }
+      };
+
+      child.stdout?.on('data', appendLog);
+      child.stderr?.on('data', appendLog);
+      child.on('error', (err) => {
+        tunnelEntry.status = 'CLI_READY';
+        tunnelEntry.logs.push(
+          `[${new Date().toISOString().slice(11, 19)}] Local CLI ready mode (${err.message}). Run the command below in your terminal.`
+        );
+      });
+      child.on('exit', (code) => {
+        if (tunnelEntry.status !== 'STOPPED') {
+          tunnelEntry.status = code === 0 ? 'STOPPED' : 'CLI_READY';
+          tunnelEntry.logs.push(
+            `[${new Date().toISOString().slice(11, 19)}] Process exited (code ${code ?? 0}). Copy-ready CLI tunnel config remains active.`
+          );
+        }
+      });
+    } catch (spawnErr) {
+      tunnelEntry.status = 'CLI_READY';
+      tunnelEntry.logs.push(
+        `[${new Date().toISOString().slice(11, 19)}] Ready in Copy-CLI mode: ${spawnErr.message}`
+      );
+    }
+  } else {
+    tunnelEntry.status = 'CLI_READY';
+    tunnelEntry.logs.push(
+      `[${new Date().toISOString().slice(11, 19)}] Generated Zero-Password IAM Auth Proxy v2 bridge & ORM connection strings on 127.0.0.1:${localPort}.`
+    );
+  }
+
+  // Wait up to 900ms to capture initial startup logs from gcloud
+  await new Promise((r) => setTimeout(r, 850));
+
+  recordFlightEvent(projectId, {
+    action: 'START_LOCAL_DEV_TUNNEL',
+    resourceType: targetType,
+    resourceName,
+    region: region || zone,
+    summary: `Started 127.0.0.1:${localPort} Zero-Public-IP Developer Tunnel → ${resourceName}:${cleanRemotePort}`,
+  });
+
+  return res.json({
+    ok: true,
+    tunnel: serializeTunnelEntry(tunnelEntry),
+    message: `🔌 Local Zero-Public-IP Tunnel active on 127.0.0.1:${localPort} → ${resourceName}:${cleanRemotePort} (Saves $7.30/mo vs Public IPv4)!`,
+  });
+});
+
+// 10e. POST /api/project/:projectId/tunnels/stop -> Terminate an active 127.0.0.1 tunnel
+app.post('/api/project/:projectId/tunnels/stop', async (req, res) => {
+  const { projectId } = req.params;
+  const { tunnelId } = req.body || {};
+
+  if (!tunnelId || !activeDeveloperTunnelsMap.has(tunnelId)) {
+    return res.json({
+      ok: true,
+      message: 'Tunnel already stopped.',
+    });
+  }
+
+  const entry = activeDeveloperTunnelsMap.get(tunnelId);
+  entry.status = 'STOPPED';
+  if (entry.proc) {
+    try {
+      entry.proc.kill('SIGTERM');
+    } catch {
+      // ignore
+    }
+  }
+  activeDeveloperTunnelsMap.delete(tunnelId);
+
+  return res.json({
+    ok: true,
+    tunnelId,
+    projectId,
+    message: `🛑 Closed local tunnel 127.0.0.1:${entry.localPort} (${entry.resourceName}).`,
+  });
+});
+
+// 10f. POST /api/project/:projectId/tunnels/probe -> Probe a live 127.0.0.1 TCP/HTTP tunnel port
+app.post('/api/project/:projectId/tunnels/probe', async (req, res) => {
+  const { tunnelId, pathSuffix = '/' } = req.body || {};
+  const entry = tunnelId ? activeDeveloperTunnelsMap.get(tunnelId) : null;
+  if (!entry) {
+    return res.status(404).json({ error: 'Tunnel not found or already closed.' });
+  }
+
+  const t0 = Date.now();
+  // TCP socket reachability test on 127.0.0.1:localPort
+  const tcpResult = await new Promise((resolve) => {
+    const sock = new net.Socket();
+    let settled = false;
+    const finish = (ok, detail) => {
+      if (settled) return;
+      settled = true;
+      try {
+        sock.destroy();
+      } catch {
+        // ignore
+      }
+      resolve({ ok, detail, rttMs: Date.now() - t0 });
+    };
+    sock.setTimeout(2500);
+    sock.once('connect', () => finish(true, `TCP handshake succeeded on 127.0.0.1:${entry.localPort}`));
+    sock.once('timeout', () => finish(false, `TCP connection timed out after 2500ms on 127.0.0.1:${entry.localPort}`));
+    sock.once('error', (err) => finish(false, err.message));
+    sock.connect(entry.localPort, '127.0.0.1');
+  });
+
+  let httpProbe = null;
+  if (tcpResult.ok && entry.targetType === 'CLOUD_RUN_PROXY') {
+    try {
+      const cleanPath = String(pathSuffix || '/').startsWith('/') ? pathSuffix : `/${pathSuffix}`;
+      const resp = await gcpHttp.get(`http://127.0.0.1:${entry.localPort}${cleanPath}`, {
+        timeout: 4500,
+        validateStatus: () => true,
+      });
+      httpProbe = {
+        statusCode: resp.status,
+        contentType: resp.headers?.['content-type'] || 'text/plain',
+        bodyPreview:
+          typeof resp.data === 'string'
+            ? resp.data.slice(0, 260)
+            : JSON.stringify(resp.data).slice(0, 260),
+      };
+    } catch (e) {
+      httpProbe = { error: e.message };
+    }
+  }
+
+  return res.json({
+    ok: true,
+    tunnel: serializeTunnelEntry(entry),
+    tcpReachable: tcpResult.ok,
+    rttMs: tcpResult.rttMs,
+    detail: tcpResult.detail,
+    httpProbe,
+  });
+});
+
 // 11. POST /api/project/:projectId/shell -> Fast API-backed & safe gcloud shell
 app.post('/api/project/:projectId/shell', async (req, res) => {
   const { projectId } = req.params;

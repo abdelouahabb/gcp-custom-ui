@@ -24,6 +24,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
+import LocalDevTunnelBar from './LocalDevTunnelBar';
 
 const QUICK_TEMPLATES = [
   {
@@ -1946,6 +1947,20 @@ spec:
                       <span>
                         ⏪ Time-Machine & Autopsy ({srv.revisions?.length || 1})
                       </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleServiceDrawer(srv, 'LOCAL_TUNNEL')}
+                      title="Open 127.0.0.1 Zero-Public-IP Developer Port-Forward Tunnel (gcloud run services proxy with automatic OIDC Bearer token injection)"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                        activeDrawer === 'LOCAL_TUNNEL'
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                      }`}
+                    >
+                      <Network className="w-3.5 h-3.5" />
+                      <span>🔌 127.0.0.1 Proxy</span>
                     </button>
 
                     <button
@@ -4197,6 +4212,30 @@ spec:
                       targetType="CLOUD_RUN"
                       cloudRunService={srv}
                       onDisconnect={() => toggleServiceDrawer(srv, 'SSH_TERMINAL')}
+                    />
+                  </div>
+                )}
+
+                {/* DRAWER 5: 127.0.0.1 ZERO-PUBLIC-IP DEVELOPER PORT-FORWARD TUNNEL */}
+                {activeDrawer === 'LOCAL_TUNNEL' && (
+                  <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                    <LocalDevTunnelBar
+                      projectId={projectId}
+                      defaultTargetType="CLOUD_RUN_PROXY"
+                      defaultResourceName={srv.name}
+                      defaultRegion={srv.region}
+                      defaultRemotePort={srv.containerPort || 8080}
+                      defaultLocalPort={8085}
+                      availableResources={services.map((s) => ({
+                        name: s.name,
+                        region: s.region,
+                        port: s.containerPort || 8080,
+                        isPublic: s.isPublic,
+                      }))}
+                      onShowToast={onShowToast}
+                      onClose={() =>
+                        setOpenDrawer((prev) => ({ ...prev, [srv.id]: null }))
+                      }
                     />
                   </div>
                 )}

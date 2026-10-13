@@ -24,6 +24,7 @@ import {
   Cpu,
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
+import LocalDevTunnelBar from './LocalDevTunnelBar';
 
 const SSH_QUICK_CHIPS = [
   { label: 'Serial Console Logs (REST API)', cmd: 'serial-console' },
@@ -117,6 +118,7 @@ export default function VmFleetAndSsh({
   const [quickDeployingLabel, setQuickDeployingLabel] = useState(null);
   const [openResizeVm, setOpenResizeVm] = useState(null);
   const [resizeMachineTarget, setResizeMachineTarget] = useState('e2-medium');
+  const [openTunnelVm, setOpenTunnelVm] = useState(null);
 
   const userShort = (account || 'user').split('@')[0];
 
@@ -742,7 +744,26 @@ export default function VmFleetAndSsh({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() =>
+                          setOpenTunnelVm((prev) =>
+                            prev === vm.name ? null : vm.name
+                          )
+                        }
+                        title="Open 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel (gcloud compute start-iap-tunnel for :22 SSH, :8080 Web, :5432 Postgres, :6379 Redis)"
+                        className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                          openTunnelVm === vm.name
+                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                        }`}
+                      >
+                        <Wifi className="w-3.5 h-3.5" />
+                        <span>🔌 127.0.0.1 IAP Tunnel</span>
+                      </button>
+
                       <button
                         type="button"
                         disabled={isDeleting}
@@ -854,6 +875,26 @@ export default function VmFleetAndSsh({
                           Cancel
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel Drawer */}
+                  {openTunnelVm === vm.name && (
+                    <div className="mb-3">
+                      <LocalDevTunnelBar
+                        projectId={projectId}
+                        defaultTargetType="COMPUTE_IAP_TCP"
+                        defaultResourceName={vm.name}
+                        defaultZone={vm.zone}
+                        defaultRemotePort={22}
+                        defaultLocalPort={2222}
+                        availableResources={vms.map((v) => ({
+                          name: v.name,
+                          zone: v.zone,
+                          port: 22,
+                        }))}
+                        onClose={() => setOpenTunnelVm(null)}
+                      />
                     </div>
                   )}
 

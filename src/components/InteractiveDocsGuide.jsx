@@ -276,26 +276,28 @@ const DOC_SECTIONS = [
   },
   {
     id: 'xterm-web-ssh-and-mandatory-delete-gatekeeper',
-    wave: 'OPEN-SOURCE @XTERM/XTERM WEB-SSH & LIVE BLAST-RADIUS SAFETY GATEKEEPER',
+    wave: 'OPEN-SOURCE @XTERM/XTERM WEB-SSH, 127.0.0.1 ZERO-PUBLIC-IP TUNNEL BRIDGE & BLAST-RADIUS SAFETY GATEKEEPER',
     title:
-      'Real Open-Source Browser SSH (@xterm/xterm + ssh2 + Linux PTY) & Global Mandatory Delete / Live Dependency Blast-Radius Gatekeeper',
-    badge: 'VM FLEET + CLOUD RUN + ALL 18 STUDIOS',
+      'Real Open-Source Browser SSH (@xterm/xterm + ssh2 + Linux PTY), 127.0.0.1 Zero-Public-IP Developer Tunnel Manager & Global Mandatory Delete Gatekeeper',
+    badge: 'VM FLEET + CLOUD RUN + CLOUD SQL + ALL 18 STUDIOS',
     badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
     icon: Terminal,
     targetTab: 'VM_SSH',
     problemSolved:
-      'One-shot command emulators truncate multi-line streaming commands like "apt update" or interactive tools like htop/vim, while auto-connecting SSH on tab load wastes sessions and unconfirmed delete actions risk breaking live Cloud Run services or workloads.',
+      'One-shot command emulators truncate multi-line streaming commands like "apt update" or interactive tools like htop/vim, connecting a local IDE/ORM to private Cloud Run services, private Compute VMs, or private Cloud SQL databases normally requires public IPv4 addresses ($7.30/mo) or manual CLI flags, and unconfirmed delete actions risk breaking live workloads.',
     howItWorks: [
+      '🔌 127.0.0.1 Zero-Public-IP Developer Port-Forward & IAP Tunnel Manager (`LocalDevTunnelBar.jsx`): Connects your local browser, IDE, Postman, or ORM (`Prisma`, `psql`, `mysql`, `curl`, `ssh`) to Private IAM-Locked Cloud Run services (`gcloud run services proxy` with automatic OIDC Bearer injection), Zero-External-IP Compute VMs (`gcloud compute start-iap-tunnel` over IAP TCP `35.235.240.0/20` on `:22`, `:8080`, `:5432`, `:6379`, `:8888`), and Private Cloud SQL / AlloyDB (`cloud-sql-proxy` / `alloydb-auth-proxy`)—with live `127.0.0.1:PORT` TCP/HTTP socket probing and `$7.30/mo` static IPv4 savings.',
       'Real Full-Duplex @xterm/xterm + ssh2 + Python PTY WebSocket Terminal (/api/ws/ssh): Streams 100% of live stdout/stderr bytes in real time for "apt update", htop, vim, top, tmux, and interactive prompts across Compute Engine VMs and Cloud Run Gen2 containers.',
       'Default-OFF Explicit Toggle ("SSH / Console" → "SSH Active (Turn Off)"): Never auto-connects when landing on the VM Fleet or Cloud Run tab; connects only when you click the SSH button on a specific VM or Cloud Run card and disconnects cleanly when toggled off.',
       'Global Mandatory Delete & IAM Security Gatekeeper with Live Blast-Radius Pre-Flight Scan (src/App.jsx): Intercepts 100% of HTTP DELETE requests and destructive POST teardowns across all 18 studios, and automatically runs a live dependency scan (GET /api/project/:id/sovereign/secrets-kms) when deleting a Secret Manager secret or destroying a version to warn you of exact Cloud Run services that will fail to start if you proceed.',
     ],
     apisUsed: [
+      'GET /api/project/:id/tunnels, POST /api/project/:id/tunnels/start, POST /api/project/:id/tunnels/stop & POST /api/project/:id/tunnels/probe',
       'WS /api/ws/ssh (Engines: Auto, Direct SSH2 :22, gcloud compute ssh PTY, IAP Tunnel, Cloud Run SSH PTY)',
       'Global Axios Request Interceptor: classifyDestructiveAxiosConfig() + <MandatoryDeleteConfirmationModal /> + Live Blast-Radius Pre-Flight Scan',
     ],
     billingImpact:
-      '100% free open-source browser terminal (@xterm/xterm + ssh2) and zero-cost safety gatekeeper that prevents accidental resource deletion, broken Cloud Run secret mounts, or unintended public exposure.',
+      '100% free open-source browser terminal (@xterm/xterm + ssh2) and 127.0.0.1 IAP/OIDC tunnel bridge that saves $7.30/mo per private VM/DB by eliminating public IPv4 addresses.',
   },
   {
     id: 'cloud-functions-eventarc-demystified-studio',

@@ -16,6 +16,7 @@ import {
   Terminal,
   Trash2,
 } from 'lucide-react';
+import LocalDevTunnelBar from './LocalDevTunnelBar';
 
 const SQL_TIERS = {
   ENTERPRISE: [
@@ -1321,6 +1322,41 @@ WITH (m = 16, ef_construction = 64);`;
           <p className="text-xs text-zinc-500">
             Connect to `{sqlName}` without static database passwords using short-lived OAuth 2.0 IAM tokens and mTLS encryption.
           </p>
+
+          <LocalDevTunnelBar
+            projectId={projectId}
+            defaultTargetType="CLOUD_SQL_IAP"
+            defaultResourceName={
+              instancesList[0]?.name || alloyClustersList[0]?.name || sqlName
+            }
+            defaultRegion={
+              instancesList[0]?.region ||
+              alloyClustersList[0]?.location ||
+              sqlRegion
+            }
+            defaultRemotePort={sqlEngineFamily === 'MYSQL' ? 3306 : 5432}
+            defaultLocalPort={sqlEngineFamily === 'MYSQL' ? 3306 : 5432}
+            defaultDbEngine={
+              sqlArchitecture === 'ALLOYDB' ? 'ALLOYDB' : sqlEngineFamily
+            }
+            availableResources={[
+              ...instancesList.map((i) => ({
+                name: i.name,
+                region: i.region,
+                port: String(i.databaseVersion).startsWith('MYSQL') ? 3306 : 5432,
+                dbEngine: String(i.databaseVersion).startsWith('MYSQL')
+                  ? 'MYSQL'
+                  : 'POSTGRES',
+              })),
+              ...alloyClustersList.map((a) => ({
+                name: a.name,
+                region: a.location,
+                port: 5432,
+                dbEngine: 'ALLOYDB',
+              })),
+            ]}
+            onShowToast={onTriggerToast}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="p-3 rounded-[8px] bg-zinc-950 text-blue-300 font-mono text-[11px] space-y-1.5">
