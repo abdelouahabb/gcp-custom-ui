@@ -9466,7 +9466,8 @@ app.delete(
   '/api/project/:id/storage/buckets/:bucketName/objects',
   async (req, res) => {
     const { id: projectId, bucketName } = req.params;
-    const objectName = req.query.name || req.body?.objectName;
+    const objectName =
+      req.query.name || req.query.objectName || req.body?.objectName;
     const generation = req.query.generation || req.body?.generation;
     if (!objectName) {
       return res.status(400).json({ error: 'Missing object name to delete.' });
@@ -9476,6 +9477,8 @@ app.delete(
       if (!token) {
         return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
       }
+
+      markArtifactDeleting(`${bucketName}/${objectName}`);
 
       const url = `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
         bucketName
@@ -9517,6 +9520,8 @@ app.post(
         return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
       }
 
+      markArtifactDeleting(`bucket:${bucketName}`);
+
       // List all object versions
       const listRes = await gcpHttp.get(
         `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
@@ -9538,8 +9543,9 @@ app.post(
       for (let i = 0; i < items.length; i += 15) {
         const batch = items.slice(i, i + 15);
         await Promise.allSettled(
-          batch.map((obj) =>
-            gcpHttp
+          batch.map((obj) => {
+            markArtifactDeleting(`${bucketName}/${obj.name}`);
+            return gcpHttp
               .delete(
                 `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
                   bucketName
@@ -9558,8 +9564,8 @@ app.post(
               )
               .then(() => {
                 purgedCount += 1;
-              })
-          )
+              });
+          })
         );
       }
 
@@ -15009,6 +15015,23 @@ app.post(
 //         GKE AUTOPILOT / VERTEX AI GPU CLUSTER STUDIO
 // ============================================================================
 
+// Track async Artifact Registry & GCS deletions for 35s so eventual consistency shows DELETING state
+const recentAsyncDeletingArtifacts = new Map();
+function markArtifactDeleting(key, ttlMs = 35000) {
+  if (!key) return;
+  recentAsyncDeletingArtifacts.set(String(key), Date.now() + ttlMs);
+}
+function isArtifactDeleting(key) {
+  if (!key) return false;
+  const exp = recentAsyncDeletingArtifacts.get(String(key));
+  if (!exp) return false;
+  if (Date.now() > exp) {
+    recentAsyncDeletingArtifacts.delete(String(key));
+    return false;
+  }
+  return true;
+}
+
 // 1. GET /api/project/:projectId/wave9/supply-chain
 app.get('/api/project/:projectId/wave9/supply-chain', async (req, res) => {
   const { projectId } = req.params;
@@ -15075,6 +15098,9 @@ app.get('/api/project/:projectId/wave9/supply-chain', async (req, res) => {
       const hasKms = Boolean(repo.kmsKeyName);
       const hasCleanupPolicy =
         Array.isArray(repo.cleanupPolicies) && repo.cleanupPolicies.length > 0;
+      const repoIsDeleting =
+        isArtifactDeleting(repo.name) ||
+        isArtifactDeleting(`${location}/${shortName}`);
 
       const repoImages = imagesByRepo.get(repo.name) || [];
       let repoBytes = 0;
@@ -15083,13 +15109,19 @@ app.get('/api/project/:projectId/wave9/supply-chain', async (req, res) => {
       for (const img of repoImages) {
         const sz = Number(img.imageSizeBytes || 0);
         const tags = Array.isArray(img.tags) ? img.tags : [];
+        const imgIsDeleting =
+          repoIsDeleting ||
+          isArtifactDeleting(img.name) ||
+          isArtifactDeleting(img.uri);
         const isOrphan = tags.length === 0;
-        totalBytes += sz;
-        repoBytes += sz;
-        if (isOrphan) {
-          orphanDigestBytes += sz;
-          orphanDigestCount += 1;
-          repoOrphans += 1;
+        if (!imgIsDeleting) {
+          totalBytes += sz;
+          repoBytes += sz;
+          if (isOrphan) {
+            orphanDigestBytes += sz;
+            orphanDigestCount += 1;
+            repoOrphans += 1;
+          }
         }
         allImages.push({
           name: img.name,
@@ -15099,6 +15131,7 @@ app.get('/api/project/:projectId/wave9/supply-chain', async (req, res) => {
           location,
           tags,
           isOrphan,
+          isDeleting: imgIsDeleting,
           sizeBytes: sz,
           sizeMb: Number((sz / (1024 * 1024)).toFixed(1)),
           uploadTime: img.uploadTime || img.buildTime || null,
@@ -15119,6 +15152,7 @@ app.get('/api/project/:projectId/wave9/supply-chain', async (req, res) => {
         immutableTags,
         kmsKeyName: repo.kmsKeyName || null,
         hasCleanupPolicy,
+        isDeleting: repoIsDeleting,
         imagesCount: repoImages.length,
         orphanDigestsCount: repoOrphans,
         totalSizeGb: Number((repoBytes / 1e9).toFixed(2)),
@@ -15256,6 +15290,8 @@ async function deleteArtifactDockerImage({
   imageUri,
   tags = [],
 }) {
+  if (imageName) markArtifactDeleting(imageName);
+  if (imageUri) markArtifactDeleting(imageUri);
   // imageName format: projects/{project}/locations/{loc}/repositories/{repo}/dockerImages/{pkg}@{digest}
   if (imageName && imageName.includes('/dockerImages/')) {
     const [repoPrefix, pkgAndDigest] = imageName.split('/dockerImages/');
@@ -15443,6 +15479,10 @@ app.delete(
       if (!token) {
         return res.status(401).json({ error: 'Not authenticated.' });
       }
+      markArtifactDeleting(`${location}/${repositoryId}`);
+      markArtifactDeleting(
+        `projects/${projectId}/locations/${location}/repositories/${repositoryId}`
+      );
       const op = await gcpApiRequest({
         method: 'DELETE',
         url: `https://artifactregistry.googleapis.com/v1/projects/${encodeURIComponent(
@@ -15603,6 +15643,9 @@ app.get(
         const repoParts = (repo.name || '').split('/');
         const repoShortName = repoParts[repoParts.length - 1] || repo.name;
         const location = repoParts[3] || 'us-central1';
+        const repoIsDeleting =
+          isArtifactDeleting(repo.name) ||
+          isArtifactDeleting(`${location}/${repoShortName}`);
 
         for (const img of images) {
           const uri = String(img.uri || '');
@@ -15612,6 +15655,10 @@ app.get(
           const digest = shaIdx > 0 ? uri.slice(shaIdx + 1) : '';
           const pkgStem = uri.split('@')[0];
           const pkgShortName = (pkgStem.split('/').pop() || '').toLowerCase();
+          const imgIsDeleting =
+            repoIsDeleting ||
+            isArtifactDeleting(img.name) ||
+            isArtifactDeleting(uri);
 
           // Check if this specific image digest or tagged URI is actively serving a live Cloud Run service
           let inUseByService =
@@ -15637,7 +15684,12 @@ app.get(
           let statusLabel = `Active in Cloud Run (${inUseByService})`;
           let reason = `Currently deployed and serving live traffic on Cloud Run service ${inUseByService}.`;
 
-          if (!isActivelyUsed) {
+          if (imgIsDeleting) {
+            statusCategory = 'DELETING_IN_GCP';
+            statusLabel = 'DELETING IN GCP...';
+            reason =
+              'Async deletion dispatched to Google Cloud Artifact Registry — layer purge in progress.';
+          } else if (!isActivelyUsed) {
             const belongsToExistingService =
               activeServiceNames.has(pkgShortName) ||
               Array.from(activeServiceNames).some(
@@ -15687,7 +15739,8 @@ app.get(
             sizeMb: Number((sizeBytes / (1024 * 1024)).toFixed(2)),
             uploadTime,
             ageDays,
-            isDead: !isActivelyUsed,
+            isDead: !isActivelyUsed && !imgIsDeleting,
+            isDeleting: imgIsDeleting,
             inUseByService,
             statusCategory,
             statusLabel,
@@ -15796,14 +15849,21 @@ app.get(
         if (bc.status !== 'fulfilled') continue;
         const { bucket, objects } = bc.value;
         const role = classifyBucketRole(bucket.name);
+        const bucketIsDeleting = isArtifactDeleting(`bucket:${bucket.name}`);
         let bucketBytes = 0;
 
         for (const obj of objects) {
           const sz = Number(obj.size || 0);
-          bucketBytes += sz;
-          totalGcsArtifactBytes += sz;
-
           const objName = String(obj.name || '');
+          const objKey = `${bucket.name}/${objName}`;
+          const objIsDeleting =
+            bucketIsDeleting || isArtifactDeleting(objKey);
+
+          if (!objIsDeleting) {
+            bucketBytes += sz;
+            totalGcsArtifactBytes += sz;
+          }
+
           const lowerObj = objName.toLowerCase();
           const isBuildArchive =
             role.isBuildStagingBucket ||
@@ -15814,7 +15874,7 @@ app.get(
             lowerObj.startsWith('services/') ||
             lowerObj.startsWith('containers/images/');
 
-          if (isBuildArchive) {
+          if (isBuildArchive && !objIsDeleting) {
             buildStagingArtifactCount += 1;
             buildStagingArtifactBytes += sz;
           }
@@ -15830,7 +15890,7 @@ app.get(
             : null;
 
           storageArtifacts.push({
-            id: `${bucket.name}/${objName}`,
+            id: objKey,
             bucket: bucket.name,
             location: bucket.location || 'US',
             storageClass: obj.storageClass || bucket.storageClass || 'STANDARD',
@@ -15840,10 +15900,13 @@ app.get(
             sizeMb: Number((sz / (1024 * 1024)).toFixed(2)),
             updatedTime,
             ageDays,
+            isDeleting: objIsDeleting,
             isBuildStagingArtifact: isBuildArchive,
             bucketCategory: role.bucketCategory,
             bucketLabel: role.bucketLabel,
-            reason: role.isBuildStagingBucket
+            reason: objIsDeleting
+              ? 'Async deletion dispatched to Google Cloud Storage — object purge in progress.'
+              : role.isBuildStagingBucket
               ? `${role.bucketLabel} — build/source tarball only needed during Cloud Build compilation; safe to purge once deployed.`
               : isBuildArchive
               ? 'Archived source tarball / container build artifact in Cloud Storage.'
@@ -15857,6 +15920,7 @@ app.get(
           storageClass: bucket.storageClass || 'STANDARD',
           objectsCount: objects.length,
           totalSizeMb: Number((bucketBytes / (1024 * 1024)).toFixed(2)),
+          isDeleting: bucketIsDeleting,
           isBuildStagingBucket: role.isBuildStagingBucket,
           bucketCategory: role.bucketCategory,
           bucketLabel: role.bucketLabel,
@@ -15935,6 +15999,12 @@ app.post(
         return res.status(400).json({
           error: 'No Cloud Storage artifact objects provided to purge.',
         });
+      }
+
+      for (const item of objects) {
+        if (item?.bucket && item?.name) {
+          markArtifactDeleting(`${item.bucket}/${item.name}`);
+        }
       }
 
       const results = await Promise.allSettled(

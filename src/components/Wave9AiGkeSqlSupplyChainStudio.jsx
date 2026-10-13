@@ -65,6 +65,7 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   const [confirmSweepAll, setConfirmSweepAll] = useState(false);
   const [deletingRepoName, setDeletingRepoName] = useState(null);
   const [confirmRepoName, setConfirmRepoName] = useState(null);
+  const [deletingArtifactsMap, setDeletingArtifactsMap] = useState({});
 
   const handleCopy = (text, label = 'command') => {
     navigator.clipboard.writeText(text);
@@ -92,25 +93,45 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
     }
   }, [projectId, onTriggerToast]);
 
-  const fetchSupplyChain = useCallback(async () => {
-    if (!projectId) return;
-    setLoadingAr(true);
-    try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/wave9/supply-chain`
-      );
-      setArData(res.data);
-    } catch (err) {
-      if (onTriggerToast) {
-        onTriggerToast(
-          err.response?.data?.error ||
-            'Failed to load Artifact Registry Supply-Chain'
+  const fetchSupplyChain = useCallback(
+    async (silent = false) => {
+      if (!projectId) return;
+      if (!silent) setLoadingAr(true);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/wave9/supply-chain`
         );
+        setArData(res.data);
+        const liveKeys = new Set();
+        (res.data?.repositories || []).forEach((r) => {
+          if (r.name) liveKeys.add(`repo:${r.name}`);
+        });
+        (res.data?.images || []).forEach((img) => {
+          if (img.name) liveKeys.add(`img:${img.name}`);
+          if (img.uri) liveKeys.add(`img:${img.uri}`);
+        });
+        setDeletingArtifactsMap((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((k) => {
+            if (!liveKeys.has(k)) {
+              delete next[k];
+            }
+          });
+          return next;
+        });
+      } catch (err) {
+        if (!silent && onTriggerToast) {
+          onTriggerToast(
+            err.response?.data?.error ||
+              'Failed to load Artifact Registry Supply-Chain'
+          );
+        }
+      } finally {
+        if (!silent) setLoadingAr(false);
       }
-    } finally {
-      setLoadingAr(false);
-    }
-  }, [projectId, onTriggerToast]);
+    },
+    [projectId, onTriggerToast]
+  );
 
   useEffect(() => {
     fetchCloudBuild();
@@ -243,10 +264,22 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
     }
   };
 
+  const scheduleFollowUpSupplyChainRescans = useCallback(() => {
+    setTimeout(() => fetchSupplyChain(true), 4000);
+    setTimeout(() => fetchSupplyChain(true), 11000);
+  }, [fetchSupplyChain]);
+
   const handleDeleteDigest = async (img) => {
     if (!projectId || !img) return;
     setDeletingDigestName(img.name);
     setConfirmDigestName(null);
+    const keyName = img.name ? `img:${img.name}` : null;
+    const keyUri = img.uri ? `img:${img.uri}` : null;
+    setDeletingArtifactsMap((prev) => ({
+      ...prev,
+      ...(keyName ? { [keyName]: true } : {}),
+      ...(keyUri ? { [keyUri]: true } : {}),
+    }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -263,10 +296,17 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
             'Deleted container image digest from Artifact Registry'
         );
       }
-      await fetchSupplyChain();
+      await fetchSupplyChain(true);
+      scheduleFollowUpSupplyChainRescans();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
-      if (onTriggerToast) {
+      setDeletingArtifactsMap((prev) => {
+        const next = { ...prev };
+        if (keyName) delete next[keyName];
+        if (keyUri) delete next[keyUri];
+        return next;
+      });
+      if (!err?.__cancelledByUser && onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error || 'Failed to delete container image digest'
         );
@@ -277,10 +317,22 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   };
 
   const handleSweepAllOrphans = async () => {
-    const orphans = (arData?.images || []).filter((i) => i.isOrphan);
+    const orphans = (arData?.images || []).filter(
+      (i) =>
+        i.isOrphan &&
+        !i.isDeleting &&
+        !deletingArtifactsMap[`img:${i.name}`] &&
+        !deletingArtifactsMap[`img:${i.uri}`]
+    );
     if (!projectId || orphans.length === 0) return;
     setSweepingOrphans(true);
     setConfirmSweepAll(false);
+    const batchMap = {};
+    orphans.forEach((o) => {
+      if (o.name) batchMap[`img:${o.name}`] = true;
+      if (o.uri) batchMap[`img:${o.uri}`] = true;
+    });
+    setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -295,10 +347,16 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
           res.data?.message || `Swept ${orphans.length} untagged orphan digests`
         );
       }
-      await fetchSupplyChain();
+      await fetchSupplyChain(true);
+      scheduleFollowUpSupplyChainRescans();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
-      if (onTriggerToast) {
+      setDeletingArtifactsMap((prev) => {
+        const next = { ...prev };
+        Object.keys(batchMap).forEach((k) => delete next[k]);
+        return next;
+      });
+      if (!err?.__cancelledByUser && onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error || 'Failed to sweep untagged orphan digests'
         );
@@ -312,6 +370,8 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
     if (!projectId || !repo) return;
     setDeletingRepoName(repo.name);
     setConfirmRepoName(null);
+    const repoKey = `repo:${repo.name}`;
+    setDeletingArtifactsMap((prev) => ({ ...prev, [repoKey]: true }));
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(
@@ -326,10 +386,16 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
             `Deleted Artifact Registry repository ${repo.shortName}`
         );
       }
-      await fetchSupplyChain();
+      await fetchSupplyChain(true);
+      scheduleFollowUpSupplyChainRescans();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
-      if (onTriggerToast) {
+      setDeletingArtifactsMap((prev) => {
+        const next = { ...prev };
+        delete next[repoKey];
+        return next;
+      });
+      if (!err?.__cancelledByUser && onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
             `Failed to delete repository ${repo.shortName}`
@@ -350,7 +416,13 @@ export default function Wave9AiGkeSqlSupplyChainStudio({
   const isArGdpr = arBlueprint === 'gdpr-eu-registry';
   const isArUsOnly =
     arBlueprint === 'slsa3-immutable' || arBlueprint === 'hipaa-signed-oci';
-  const orphanImages = (arData?.images || []).filter((i) => i.isOrphan);
+  const orphanImages = (arData?.images || []).filter(
+    (i) =>
+      i.isOrphan &&
+      !i.isDeleting &&
+      !deletingArtifactsMap[`img:${i.name}`] &&
+      !deletingArtifactsMap[`img:${i.uri}`]
+  );
 
   const targetImageUriPreview = `${arLocation}-docker.pkg.dev/${projectId}/${
     arRepository.trim() || 'cloudpulse-containers'
@@ -1157,72 +1229,107 @@ options:
 
                 {(arData?.repositories || []).length > 0 ? (
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {arData.repositories.map((repo) => (
-                      <div
-                        key={repo.name}
-                        className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 flex items-center justify-between gap-2 text-xs font-mono"
-                      >
-                        <div className="min-w-0">
-                          <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap">
-                            <span>{repo.shortName}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400">
-                              {repo.location}
-                            </span>
-                            <span
-                              className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                repo.immutableTags
-                                  ? 'bg-emerald-500/15 text-emerald-400'
-                                  : 'bg-amber-500/15 text-amber-400'
-                              }`}
-                            >
-                              {repo.immutableTags
-                                ? 'Immutable Tags'
-                                : 'Mutable Tags'}
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-zinc-500 mt-0.5">
-                            {repo.imagesCount} Digests ({repo.orphanDigestsCount}{' '}
-                            Orphans) · {repo.totalSizeGb} GB · Score{' '}
-                            {repo.postureScore}/100
-                          </div>
-                        </div>
+                    {arData.repositories.map((repo) => {
+                      const isDeletingRepo = Boolean(
+                        repo.isDeleting ||
+                          deletingRepoName === repo.name ||
+                          deletingArtifactsMap[`repo:${repo.name}`]
+                      );
+                      return (
+                        <div
+                          key={repo.name}
+                          className={`relative overflow-hidden p-2.5 rounded-[8px] border flex items-center justify-between gap-2 text-xs font-mono transition-all ${
+                            isDeletingRepo
+                              ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
+                              : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70'
+                          }`}
+                        >
+                          {isDeletingRepo && (
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-red-500/20 overflow-hidden">
+                              <div className="h-full w-1/2 animate-pulse bg-red-500" />
+                            </div>
+                          )}
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {confirmRepoName === repo.name ? (
-                            <>
+                          <div className="min-w-0">
+                            <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={
+                                  isDeletingRepo
+                                    ? 'line-through text-zinc-400'
+                                    : ''
+                                }
+                              >
+                                {repo.shortName}
+                              </span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400">
+                                {repo.location}
+                              </span>
+                              {isDeletingRepo ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40">
+                                  ⏳ DELETING REPO...
+                                </span>
+                              ) : (
+                                <span
+                                  className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                    repo.immutableTags
+                                      ? 'bg-emerald-500/15 text-emerald-400'
+                                      : 'bg-amber-500/15 text-amber-400'
+                                  }`}
+                                >
+                                  {repo.immutableTags
+                                    ? 'Immutable Tags'
+                                    : 'Mutable Tags'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-zinc-500 mt-0.5">
+                              {isDeletingRepo
+                                ? 'Async GCP repository deletion in progress...'
+                                : `${repo.imagesCount} Digests (${repo.orphanDigestsCount} Orphans) · ${repo.totalSizeGb} GB · Score ${repo.postureScore}/100`}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isDeletingRepo ? (
+                              <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
+                                ⏳ Deleting in GCP...
+                              </span>
+                            ) : confirmRepoName === repo.name ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={deletingRepoName === repo.name}
+                                  onClick={() => handleDeleteRepository(repo)}
+                                  className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
+                                >
+                                  {deletingRepoName === repo.name
+                                    ? 'Deleting...'
+                                    : 'Confirm Delete'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmRepoName(null)}
+                                  className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
                               <button
                                 type="button"
                                 disabled={deletingRepoName === repo.name}
-                                onClick={() => handleDeleteRepository(repo)}
-                                className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
+                                onClick={() => setConfirmRepoName(repo.name)}
+                                title={`Delete repository ${repo.shortName} (${repo.location})`}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
                               >
-                                {deletingRepoName === repo.name
-                                  ? 'Deleting...'
-                                  : 'Confirm Delete'}
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete Repo</span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmRepoName(null)}
-                                className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={deletingRepoName === repo.name}
-                              onClick={() => setConfirmRepoName(repo.name)}
-                              title={`Delete repository ${repo.shortName} (${repo.location})`}
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Delete Repo</span>
-                            </button>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-xs font-mono text-zinc-500 py-4 text-center">
@@ -1289,7 +1396,12 @@ options:
 
               <div className="space-y-2 max-h-[430px] overflow-y-auto pr-1">
                 {(arData?.images || []).map((img) => {
-                  const isDeletingThis = deletingDigestName === img.name;
+                  const isDeletingThis = Boolean(
+                    img.isDeleting ||
+                      deletingDigestName === img.name ||
+                      deletingArtifactsMap[`img:${img.name}`] ||
+                      deletingArtifactsMap[`img:${img.uri}`]
+                  );
                   const isConfirmingThis = confirmDigestName === img.name;
                   const taggedUri =
                     img.tags?.length > 0
@@ -1298,82 +1410,126 @@ options:
                   return (
                     <div
                       key={img.name}
-                      className={`p-2.5 rounded-[8px] border flex items-center justify-between gap-2 text-xs font-mono ${
-                        img.isOrphan
+                      className={`relative overflow-hidden p-2.5 rounded-[8px] border flex items-center justify-between gap-2 text-xs font-mono transition-all ${
+                        isDeletingThis
+                          ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
+                          : img.isOrphan
                           ? 'border-amber-500/30 bg-amber-500/5'
                           : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70'
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                          {img.repository} · {img.sizeMb} MB
+                      {isDeletingThis && (
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-red-500/20 overflow-hidden">
+                          <div className="h-full w-1/2 animate-pulse bg-red-500" />
                         </div>
-                        <div className="text-[10px] text-zinc-500 truncate">
+                      )}
+
+                      <div className="min-w-0">
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap truncate">
+                          <span
+                            className={
+                              isDeletingThis
+                                ? 'line-through text-zinc-400'
+                                : ''
+                            }
+                          >
+                            {img.repository} · {img.sizeMb} MB
+                          </span>
+                          {isDeletingThis && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40">
+                              ⏳ DELETING CONTAINER...
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className={`text-[10px] truncate ${
+                            isDeletingThis
+                              ? 'line-through text-zinc-500'
+                              : 'text-zinc-500'
+                          }`}
+                        >
                           {img.tags?.length > 0
                             ? `Tags: ${img.tags.join(', ')}`
                             : 'UNTAGGED ORPHAN DIGEST'}
                         </div>
-                        <div className="text-[9.5px] text-zinc-400 truncate">
+                        <div
+                          className={`text-[9.5px] truncate ${
+                            isDeletingThis
+                              ? 'line-through text-zinc-500'
+                              : 'text-zinc-400'
+                          }`}
+                        >
                           {taggedUri}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleCopy(taggedUri, 'Artifact Registry Image URI')
-                          }
-                          title="Copy full Artifact Registry Image URI for Cloud Run or GKE"
-                          className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
-                        >
-                          Copy URI
-                        </button>
-
-                        {isConfirmingThis ? (
-                          <>
-                            <button
-                              type="button"
-                              disabled={isDeletingThis}
-                              onClick={() => handleDeleteDigest(img)}
-                              className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
-                            >
-                              {isDeletingThis ? 'Deleting...' : 'Confirm Delete'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDigestName(null)}
-                              className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          </>
+                        {isDeletingThis ? (
+                          <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
+                            ⏳ Deleting in GCP...
+                          </span>
                         ) : (
                           <>
                             <button
                               type="button"
-                              disabled={isDeletingThis}
-                              onClick={() => setConfirmDigestName(img.name)}
-                              title={
-                                img.isOrphan
-                                  ? 'Delete this untagged orphan container digest directly from Artifact Registry'
-                                  : 'Delete this container image digest (and its tags) directly from Artifact Registry'
+                              onClick={() =>
+                                handleCopy(
+                                  taggedUri,
+                                  'Artifact Registry Image URI'
+                                )
                               }
-                              className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
-                                img.isOrphan
-                                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
-                                  : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
-                              }`}
+                              title="Copy full Artifact Registry Image URI for Cloud Run or GKE"
+                              className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
                             >
-                              <Trash2 className="w-3 h-3" />
-                              <span>
-                                {isDeletingThis
-                                  ? 'Deleting...'
-                                  : img.isOrphan
-                                  ? 'Sweep Now'
-                                  : 'Delete'}
-                              </span>
+                              Copy URI
                             </button>
+
+                            {isConfirmingThis ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={isDeletingThis}
+                                  onClick={() => handleDeleteDigest(img)}
+                                  className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
+                                >
+                                  {isDeletingThis
+                                    ? 'Deleting...'
+                                    : 'Confirm Delete'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDigestName(null)}
+                                  className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={isDeletingThis}
+                                onClick={() => setConfirmDigestName(img.name)}
+                                title={
+                                  img.isOrphan
+                                    ? 'Delete this untagged orphan container digest directly from Artifact Registry'
+                                    : 'Delete this container image digest (and its tags) directly from Artifact Registry'
+                                }
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
+                                  img.isOrphan
+                                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                                    : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
+                                }`}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>
+                                  {isDeletingThis
+                                    ? 'Deleting...'
+                                    : img.isOrphan
+                                    ? 'Sweep Now'
+                                    : 'Delete'}
+                                </span>
+                              </button>
+                            )}
                           </>
                         )}
                       </div>

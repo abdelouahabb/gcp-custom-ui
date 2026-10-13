@@ -115,6 +115,7 @@ export default function CloudRunFleetManager({
   const [artifactHunterSearch, setArtifactHunterSearch] = useState('');
   const [artifactOnlyDead, setArtifactOnlyDead] = useState(false);
   const [artifactActionBusy, setArtifactActionBusy] = useState(null);
+  const [deletingArtifactsMap, setDeletingArtifactsMap] = useState({});
 
   useEffect(() => {
     if (Array.isArray(initialServices) && initialServices.length > 0 && services.length === 0) {
@@ -1106,43 +1107,87 @@ spec:
     }
   };
 
-  const handleScanDeadArtifacts = useCallback(async () => {
-    if (!projectId) return;
-    setArtifactScanState((prev) => ({ ...prev, loading: true, error: null }));
-    try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(
-          projectId
-        )}/cloudrun/dead-artifacts-scan`
-      );
-      setArtifactScanState({
-        loading: false,
-        data: res.data,
-        error: null,
-      });
-    } catch (err) {
-      setArtifactScanState({
-        loading: false,
-        data: null,
-        error:
-          err.response?.data?.error ||
-          err.message ||
-          'Failed to scan Artifact Registry & Cloud Storage artifacts.',
-      });
-    }
-  }, [projectId]);
+  const handleScanDeadArtifacts = useCallback(
+    async (silent = false) => {
+      if (!projectId) return;
+      if (!silent) {
+        setArtifactScanState((prev) => ({
+          ...prev,
+          loading: true,
+          error: null,
+        }));
+      }
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/cloudrun/dead-artifacts-scan`
+        );
+        setArtifactScanState({
+          loading: false,
+          data: res.data,
+          error: null,
+        });
+        // Prune deletingArtifactsMap entries that have fully vanished from GCP
+        const liveKeys = new Set();
+        (res.data?.containerImages || []).forEach((img) => {
+          if (img.uri) liveKeys.add(`img:${img.uri}`);
+          if (img.name) liveKeys.add(`img:${img.name}`);
+        });
+        (res.data?.storageArtifacts || []).forEach((obj) => {
+          if (obj.id) liveKeys.add(`gcs:${obj.id}`);
+        });
+        (res.data?.storageBuckets || []).forEach((b) => {
+          if (b.name) liveKeys.add(`bucket:${b.name}`);
+        });
+        setDeletingArtifactsMap((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((k) => {
+            if (!liveKeys.has(k)) {
+              delete next[k];
+            }
+          });
+          return next;
+        });
+      } catch (err) {
+        if (!silent) {
+          setArtifactScanState({
+            loading: false,
+            data: null,
+            error:
+              err.response?.data?.error ||
+              err.message ||
+              'Failed to scan Artifact Registry & Cloud Storage artifacts.',
+          });
+        }
+      }
+    },
+    [projectId]
+  );
+
+  const scheduleFollowUpArtifactRescans = useCallback(() => {
+    setTimeout(() => handleScanDeadArtifacts(true), 4000);
+    setTimeout(() => handleScanDeadArtifacts(true), 11000);
+  }, [handleScanDeadArtifacts]);
 
   const handleToggleArtifactHunter = () => {
     const nextOpen = !showArtifactHunter;
     setShowArtifactHunter(nextOpen);
     if (nextOpen && !artifactScanState.data && !artifactScanState.loading) {
-      handleScanDeadArtifacts();
+      handleScanDeadArtifacts(false);
     }
   };
 
   const handleDeleteDeadContainerImage = async (img) => {
     if (!img || !img.isDead) return;
+    const keyUri = img.uri ? `img:${img.uri}` : null;
+    const keyName = img.name ? `img:${img.name}` : null;
     setArtifactActionBusy(`img:${img.uri || img.name}`);
+    setDeletingArtifactsMap((prev) => ({
+      ...prev,
+      ...(keyUri ? { [keyUri]: true } : {}),
+      ...(keyName ? { [keyName]: true } : {}),
+    }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -1160,9 +1205,16 @@ spec:
             `Deleted dead container image ${img.shortPackage} from Artifact Registry.`
         );
       }
-      await handleScanDeadArtifacts();
+      await handleScanDeadArtifacts(true);
+      scheduleFollowUpArtifactRescans();
     } catch (err) {
-      if (onShowError) {
+      setDeletingArtifactsMap((prev) => {
+        const next = { ...prev };
+        if (keyUri) delete next[keyUri];
+        if (keyName) delete next[keyName];
+        return next;
+      });
+      if (!err?.__cancelledByUser && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1177,6 +1229,12 @@ spec:
   const handleSweepAllDeadContainers = async (deadImagesList = []) => {
     if (!Array.isArray(deadImagesList) || deadImagesList.length === 0) return;
     setArtifactActionBusy('SWEEP_ALL_CONTAINERS');
+    const batchMap = {};
+    deadImagesList.forEach((img) => {
+      if (img.uri) batchMap[`img:${img.uri}`] = true;
+      if (img.name) batchMap[`img:${img.name}`] = true;
+    });
+    setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -1196,9 +1254,15 @@ spec:
             `Swept ${deadImagesList.length} dead container image(s) from Artifact Registry!`
         );
       }
-      await handleScanDeadArtifacts();
+      await handleScanDeadArtifacts(true);
+      scheduleFollowUpArtifactRescans();
     } catch (err) {
-      if (onShowError) {
+      setDeletingArtifactsMap((prev) => {
+        const next = { ...prev };
+        Object.keys(batchMap).forEach((k) => delete next[k]);
+        return next;
+      });
+      if (!err?.__cancelledByUser && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1212,7 +1276,9 @@ spec:
 
   const handleDeleteSingleGcsArtifact = async (obj) => {
     if (!obj?.bucket || !obj?.name) return;
-    setArtifactActionBusy(`gcs:${obj.id}`);
+    const objKey = `gcs:${obj.id}`;
+    setArtifactActionBusy(objKey);
+    setDeletingArtifactsMap((prev) => ({ ...prev, [objKey]: true }));
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(
@@ -1232,9 +1298,15 @@ spec:
             `Deleted artifact gs://${obj.bucket}/${obj.name}.`
         );
       }
-      await handleScanDeadArtifacts();
+      await handleScanDeadArtifacts(true);
+      scheduleFollowUpArtifactRescans();
     } catch (err) {
-      if (onShowError) {
+      setDeletingArtifactsMap((prev) => {
+        const next = { ...prev };
+        delete next[objKey];
+        return next;
+      });
+      if (!err?.__cancelledByUser && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1249,6 +1321,11 @@ spec:
   const handlePurgeGcsArtifacts = async (objectsToPurge = []) => {
     if (!Array.isArray(objectsToPurge) || objectsToPurge.length === 0) return;
     setArtifactActionBusy('PURGE_ALL_GCS');
+    const batchMap = {};
+    objectsToPurge.forEach((o) => {
+      if (o.id) batchMap[`gcs:${o.id}`] = true;
+    });
+    setDeletingArtifactsMap((prev) => ({ ...prev, ...batchMap }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -1267,9 +1344,15 @@ spec:
             `Purged ${objectsToPurge.length} Cloud Storage artifact object(s)!`
         );
       }
-      await handleScanDeadArtifacts();
+      await handleScanDeadArtifacts(true);
+      scheduleFollowUpArtifactRescans();
     } catch (err) {
-      if (onShowError) {
+      setDeletingArtifactsMap((prev) => {
+        const next = { ...prev };
+        Object.keys(batchMap).forEach((k) => delete next[k]);
+        return next;
+      });
+      if (!err?.__cancelledByUser && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1283,7 +1366,9 @@ spec:
 
   const handleEmptyAndDeleteStagingBucket = async (bucketName) => {
     if (!bucketName) return;
-    setArtifactActionBusy(`bucket:${bucketName}`);
+    const bKey = `bucket:${bucketName}`;
+    setArtifactActionBusy(bKey);
+    setDeletingArtifactsMap((prev) => ({ ...prev, [bKey]: true }));
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
@@ -1297,10 +1382,16 @@ spec:
             `Emptied and deleted staging bucket gs://${bucketName}.`
         );
       }
-      await handleScanDeadArtifacts();
+      await handleScanDeadArtifacts(true);
+      scheduleFollowUpArtifactRescans();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err) {
-      if (onShowError) {
+      setDeletingArtifactsMap((prev) => {
+        const next = { ...prev };
+        delete next[bKey];
+        return next;
+      });
+      if (!err?.__cancelledByUser && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -1438,9 +1529,18 @@ spec:
           return hay.includes(q);
         });
 
-        const deadContainersList = rawContainers.filter((img) => img.isDead);
+        const deadContainersList = rawContainers.filter(
+          (img) =>
+            img.isDead &&
+            !img.isDeleting &&
+            !deletingArtifactsMap[`img:${img.uri}`] &&
+            !deletingArtifactsMap[`img:${img.name}`]
+        );
         const buildStagingObjectsList = rawStorage.filter(
-          (obj) => obj.isBuildStagingArtifact
+          (obj) =>
+            obj.isBuildStagingArtifact &&
+            !obj.isDeleting &&
+            !deletingArtifactsMap[`gcs:${obj.id}`]
         );
 
         return (
@@ -1470,7 +1570,7 @@ spec:
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleScanDeadArtifacts}
+                  onClick={() => handleScanDeadArtifacts(false)}
                   disabled={artifactScanState.loading}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
                 >
@@ -1631,30 +1731,55 @@ spec:
                   filteredContainers.map((img) => {
                     const busyThis =
                       artifactActionBusy === `img:${img.uri || img.name}`;
+                    const isDeletingImg = Boolean(
+                      img.isDeleting ||
+                        busyThis ||
+                        deletingArtifactsMap[`img:${img.uri}`] ||
+                        deletingArtifactsMap[`img:${img.name}`]
+                    );
                     return (
                       <div
                         key={img.name || img.uri}
-                        className={`p-3 rounded-lg border flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
-                          img.isDead
+                        className={`relative overflow-hidden p-3 rounded-lg border flex flex-col lg:flex-row lg:items-center justify-between gap-3 transition-all ${
+                          isDeletingImg
+                            ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
+                            : img.isDead
                             ? 'bg-zinc-900/90 border-amber-500/30'
                             : 'bg-zinc-900/40 border-emerald-500/25'
                         }`}
                       >
+                        {isDeletingImg && (
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-red-500/20 overflow-hidden">
+                            <div className="h-full w-1/2 animate-pulse bg-red-500" />
+                          </div>
+                        )}
+
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
-                                !img.isDead
+                                isDeletingImg
+                                  ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                                  : !img.isDead
                                   ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                                   : img.statusCategory === 'DEAD_DELETED_SERVICE'
                                   ? 'bg-red-500/20 text-red-300 border-red-500/40'
                                   : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                               }`}
                             >
-                              {!img.isDead ? '🔒 ' : '💀 '}
-                              {img.statusLabel}
+                              {isDeletingImg
+                                ? '⏳ DELETING CONTAINER...'
+                                : !img.isDead
+                                ? `🔒 ${img.statusLabel}`
+                                : `💀 ${img.statusLabel}`}
                             </span>
-                            <span className="text-xs font-mono font-bold text-white truncate">
+                            <span
+                              className={`text-xs font-mono font-bold truncate ${
+                                isDeletingImg
+                                  ? 'line-through text-zinc-400'
+                                  : 'text-white'
+                              }`}
+                            >
                               {img.shortPackage}
                             </span>
                             <span className="text-[11px] font-mono text-zinc-400">
@@ -1669,8 +1794,17 @@ spec:
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] font-mono text-zinc-400 truncate">
-                            Digest: <span className="text-zinc-300">{img.digestShort}</span>{' '}
+                          <div
+                            className={`text-[11px] font-mono truncate ${
+                              isDeletingImg
+                                ? 'line-through text-zinc-500'
+                                : 'text-zinc-400'
+                            }`}
+                          >
+                            Digest:{' '}
+                            <span className="text-zinc-300">
+                              {img.digestShort}
+                            </span>{' '}
                             · Tags:{' '}
                             {img.tags?.length > 0 ? (
                               <span className="text-blue-300">
@@ -1683,12 +1817,18 @@ spec:
                             )}
                           </div>
                           <div className="text-[11px] text-zinc-400">
-                            {img.reason}
+                            {isDeletingImg
+                              ? 'Async GCP Artifact Registry deletion in progress — purging manifest & layers...'
+                              : img.reason}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          {img.isDead ? (
+                          {isDeletingImg ? (
+                            <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-300">
+                              ⏳ Deleting in GCP...
+                            </span>
+                          ) : img.isDead ? (
                             <button
                               type="button"
                               disabled={busyThis}
@@ -1719,31 +1859,54 @@ spec:
                 {/* Bucket Summary Strip */}
                 {storageBuckets.length > 0 && (
                   <div className="flex flex-wrap gap-2 pb-1">
-                    {storageBuckets.map((b) => (
-                      <div
-                        key={b.name}
-                        className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-mono flex items-center gap-2 ${
-                          b.isBuildStagingBucket
-                            ? 'bg-amber-500/10 border-amber-500/35 text-amber-200'
-                            : 'bg-zinc-900 border-zinc-800 text-zinc-300'
-                        }`}
-                      >
-                        <span>
-                          gs://{b.name} ({b.objectsCount} obj · {b.totalSizeMb} MB)
-                        </span>
-                        {b.isBuildStagingBucket && (
-                          <button
-                            type="button"
-                            disabled={artifactActionBusy === `bucket:${b.name}`}
-                            onClick={() => handleEmptyAndDeleteStagingBucket(b.name)}
-                            title="Force-empty and delete this entire staging bucket"
-                            className="px-1.5 py-0.5 rounded bg-red-500/20 hover:bg-red-500/35 border border-red-500/40 text-red-300 text-[10px] font-bold cursor-pointer"
+                    {storageBuckets.map((b) => {
+                      const isDeletingBucket = Boolean(
+                        b.isDeleting ||
+                          artifactActionBusy === `bucket:${b.name}` ||
+                          deletingArtifactsMap[`bucket:${b.name}`]
+                      );
+                      return (
+                        <div
+                          key={b.name}
+                          className={`relative overflow-hidden px-2.5 py-1.5 rounded-lg border text-[11px] font-mono flex items-center gap-2 transition-all ${
+                            isDeletingBucket
+                              ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
+                              : b.isBuildStagingBucket
+                              ? 'bg-amber-500/10 border-amber-500/35 text-amber-200'
+                              : 'bg-zinc-900 border-zinc-800 text-zinc-300'
+                          }`}
+                        >
+                          <span
+                            className={
+                              isDeletingBucket
+                                ? 'line-through text-zinc-400'
+                                : ''
+                            }
                           >
-                            Empty & Delete Bucket
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                            gs://{b.name} ({b.objectsCount} obj · {b.totalSizeMb} MB)
+                          </span>
+                          {isDeletingBucket ? (
+                            <span className="px-1.5 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
+                              ⏳ DELETING BUCKET...
+                            </span>
+                          ) : (
+                            b.isBuildStagingBucket && (
+                              <button
+                                type="button"
+                                disabled={artifactActionBusy === `bucket:${b.name}`}
+                                onClick={() =>
+                                  handleEmptyAndDeleteStagingBucket(b.name)
+                                }
+                                title="Force-empty and delete this entire staging bucket"
+                                className="px-1.5 py-0.5 rounded bg-red-500/20 hover:bg-red-500/35 border border-red-500/40 text-red-300 text-[10px] font-bold cursor-pointer"
+                              >
+                                Empty & Delete Bucket
+                              </button>
+                            )
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -1758,29 +1921,52 @@ spec:
                 ) : (
                   filteredStorage.map((obj) => {
                     const busyObj = artifactActionBusy === `gcs:${obj.id}`;
+                    const isDeletingObj = Boolean(
+                      obj.isDeleting ||
+                        busyObj ||
+                        deletingArtifactsMap[`gcs:${obj.id}`]
+                    );
                     return (
                       <div
                         key={obj.id}
-                        className={`p-3 rounded-lg border flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
-                          obj.isBuildStagingArtifact
+                        className={`relative overflow-hidden p-3 rounded-lg border flex flex-col lg:flex-row lg:items-center justify-between gap-3 transition-all ${
+                          isDeletingObj
+                            ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
+                            : obj.isBuildStagingArtifact
                             ? 'bg-zinc-900/90 border-amber-500/30'
                             : 'bg-zinc-900/50 border-zinc-800'
                         }`}
                       >
+                        {isDeletingObj && (
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-red-500/20 overflow-hidden">
+                            <div className="h-full w-1/2 animate-pulse bg-red-500" />
+                          </div>
+                        )}
+
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
-                                obj.isBuildStagingArtifact
+                                isDeletingObj
+                                  ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                                  : obj.isBuildStagingArtifact
                                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                   : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
                               }`}
                             >
-                              {obj.isBuildStagingArtifact
+                              {isDeletingObj
+                                ? '⏳ DELETING ARTIFACT...'
+                                : obj.isBuildStagingArtifact
                                 ? '📦 BUILD / STAGING ARTIFACT'
                                 : '🗄️ GCS ARTIFACT OBJECT'}
                             </span>
-                            <span className="text-xs font-mono font-bold text-white truncate">
+                            <span
+                              className={`text-xs font-mono font-bold truncate ${
+                                isDeletingObj
+                                  ? 'line-through text-zinc-400'
+                                  : 'text-white'
+                              }`}
+                            >
                               gs://{obj.bucket}/{obj.name}
                             </span>
                             <span className="text-[11px] font-mono font-semibold text-amber-300">
@@ -1796,22 +1982,30 @@ spec:
                             )}
                           </div>
                           <div className="text-[11px] text-zinc-400">
-                            {obj.reason}
+                            {isDeletingObj
+                              ? 'Deleting Cloud Storage artifact from GCP bucket...'
+                              : obj.reason}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            disabled={busyObj}
-                            onClick={() => handleDeleteSingleGcsArtifact(obj)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>
-                              {busyObj ? 'Deleting...' : 'Delete Artifact'}
+                          {isDeletingObj ? (
+                            <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-300">
+                              ⏳ Deleting in GCP...
                             </span>
-                          </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={busyObj}
+                              onClick={() => handleDeleteSingleGcsArtifact(obj)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>
+                                {busyObj ? 'Deleting...' : 'Delete Artifact'}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
