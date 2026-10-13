@@ -18126,7 +18126,7 @@ app.post('/api/project/:projectId/provision/preflight', async (req, res) => {
   const { projectId } = req.params;
   const {
     serviceType = 'CLOUD_RUN',
-    region = 'us-central1',
+    region = '',
     serviceAccountEmail = '',
   } = req.body || {};
 
@@ -18232,8 +18232,17 @@ app.post('/api/project/:projectId/provision/preflight', async (req, res) => {
       }
     }
 
-    // 3. Cross-Region Egress Check against existing GCS Buckets
-    const normRegion = String(region || 'us-central1').toLowerCase();
+    // 3. Cross-Region Egress Check against existing GCS Buckets (dynamically inferred if region not passed)
+    const firstBucketLoc = String(
+      bucketsRes?.items?.[0]?.location || ''
+    ).toLowerCase();
+    const inferredRegion =
+      firstBucketLoc && firstBucketLoc.includes('-')
+        ? firstBucketLoc
+        : runGcloudSafe('config get-value compute/region') ||
+          runGcloudSafe('config get-value run/region') ||
+          'europe-west1';
+    const normRegion = String(region || inferredRegion).toLowerCase();
     const crossRegionBuckets = (bucketsRes?.items || [])
       .filter((b) => {
         const loc = String(b.location || '').toLowerCase();
@@ -18536,9 +18545,17 @@ app.get(
 
       const egressWarnings = [];
       const activeComputeRegs = Array.from(computeRegions);
+      const bucketRegions = [];
 
       for (const b of bucketsRes?.items || []) {
         const bLoc = String(b.location || '').toLowerCase();
+        if (bLoc && bLoc.includes('-')) {
+          bucketRegions.push(bLoc);
+        } else if (bLoc === 'eu') {
+          bucketRegions.push('europe-west1');
+        } else if (bLoc === 'asia') {
+          bucketRegions.push('asia-east1');
+        }
         const sClass = String(b.storageClass || 'STANDARD').toUpperCase();
         if (['NEARLINE', 'COLDLINE', 'ARCHIVE'].includes(sClass)) {
           const minDays =
@@ -18575,6 +18592,13 @@ app.get(
         }
       }
 
+      const preferredRegion =
+        activeComputeRegs[0] ||
+        bucketRegions[0] ||
+        runGcloudSafe('config get-value compute/region') ||
+        runGcloudSafe('config get-value run/region') ||
+        'europe-west1';
+
       const totalLeftoverMonthlyUsd = Number(
         stoppedLeftovers
           .reduce((acc, item) => acc + Number(item.monthlyDrainUsd || 0), 0)
@@ -18585,7 +18609,9 @@ app.get(
         ok: true,
         projectId,
         scannedAt: new Date().toISOString(),
+        preferredRegion,
         activeComputeRegions: activeComputeRegs,
+        bucketRegions,
         stoppedLeftovers,
         totalLeftoverMonthlyUsd,
         egressWarnings,

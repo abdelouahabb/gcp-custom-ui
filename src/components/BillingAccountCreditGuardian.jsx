@@ -800,6 +800,7 @@ export default function BillingAccountCreditGuardian({
   // On page entry: load cached snapshot without triggering live APIs; refresh live APIs automatically every 2 minutes (120,000 ms)
   const [egressRadar, setEgressRadar] = useState(null);
   const [loadingEgressRadar, setLoadingEgressRadar] = useState(false);
+  const [harvestRegion, setHarvestRegion] = useState('');
 
   const scanEgressAndLeftovers = useCallback(async () => {
     if (!projectId) return;
@@ -812,6 +813,9 @@ export default function BillingAccountCreditGuardian({
       );
       if (res.data?.ok) {
         setEgressRadar(res.data);
+        if (res.data.preferredRegion) {
+          setHarvestRegion((prev) => prev || res.data.preferredRegion);
+        }
       }
     } catch {
       // ignore if offline
@@ -1783,16 +1787,24 @@ ORDER BY
                   const bqTibScans = Math.floor(stranded / 6.25); // $6.25/TiB
                   const cloudSqlHours = Math.floor(stranded / 0.19); // db-custom-2-7680 ~$0.19/hr
 
+                  const targetHarvestRegion =
+                    harvestRegion ||
+                    egressRadar?.preferredRegion ||
+                    egressRadar?.activeComputeRegions?.[0] ||
+                    egressRadar?.bucketRegions?.[0] ||
+                    'europe-west1';
+                  const targetHarvestZone = `${targetHarvestRegion}-b`;
+
                   const vmCreateCmd = `gcloud compute instances create bonus-harvester-vm --project=${
                     projectId || 'my-gcp-project'
-                  } --zone=us-central1-a --machine-type=c3-standard-4 --provisioning-model=SPOT --instance-termination-action=STOP --max-run-duration=${days}d`;
+                  } --zone=${targetHarvestZone} --machine-type=c3-standard-4 --provisioning-model=SPOT --instance-termination-action=STOP --max-run-duration=${days}d`;
                   const gcsCreateCmd = `gcloud storage buckets create gs://${
                     projectId || 'my-gcp'
-                  }-bonus-harvester-lake --location=us-central1 --default-storage-class=STANDARD --uniform-bucket-level-access --public-access-prevention`;
-                  const gkeCreateCmd = `gcloud container clusters create-auto bonus-harvester-gke --region=us-central1 --project=${
+                  }-bonus-harvester-lake --location=${targetHarvestRegion} --default-storage-class=STANDARD --uniform-bucket-level-access --public-access-prevention`;
+                  const gkeCreateCmd = `gcloud container clusters create-auto bonus-harvester-gke --region=${targetHarvestRegion} --project=${
                     projectId || 'my-gcp-project'
                   }`;
-                  const l4BatchCmd = `gcloud run jobs create bonus-credit-l4-harvester --image=us-docker.pkg.dev/cloudrun/container/job:latest --region=us-central1 --cpu=4 --memory=16Gi --gpu=1 --gpu-type=nvidia-l4 --no-gpu-zonal-redundancy --max-retries=0 --project=${
+                  const l4BatchCmd = `gcloud run jobs create bonus-credit-l4-harvester --image=us-docker.pkg.dev/cloudrun/container/job:latest --region=${targetHarvestRegion} --cpu=4 --memory=16Gi --gpu=1 --gpu-type=nvidia-l4 --no-gpu-zonal-redundancy --max-retries=0 --project=${
                     projectId || 'my-gcp-project'
                   }`;
                   const bqMaterializeSql = `-- Harvest expiring credits before ${expIso}: Pre-compute & cluster high-value Gold BI tables (~${bqTibScans} TiB scan budget)\nCREATE OR REPLACE TABLE \`${
@@ -1800,7 +1812,7 @@ ORDER BY
                   }.analytics_gold.precomputed_feature_store\`\nPARTITION BY DATE(event_timestamp)\nCLUSTER BY entity_id AS\nSELECT CURRENT_TIMESTAMP() AS event_timestamp, 'entity-1' AS entity_id;`;
                   const safeCutoffCmd = `gcloud scheduler jobs create http credit-expiry-cutoff-${
                     projectId || 'gcp'
-                  } --location=us-central1 --schedule="0 12 * * *" --uri="https://cloudbilling.googleapis.com/v1/projects/${
+                  } --location=${targetHarvestRegion} --schedule="0 12 * * *" --uri="https://cloudbilling.googleapis.com/v1/projects/${
                     projectId || 'my-gcp-project'
                   }/billingInfo" --http-method=PUT --description="Auto-stop warm VM/GKE/SQL spend 12h before ${expIso} credit expiry"`;
 
@@ -1815,7 +1827,7 @@ ORDER BY
                         'Notice: Stopping a VM halts vCPU/GPU billing in ~30s, but attached Persistent Disk (`pd-balanced` / `pd-ssd`) and static External IP STILL bill until the VM & disk are deleted (`--max-run-duration` auto-terminates).',
                       hiddenCostWarning:
                         '⚠️ Hidden Cost Trap: Internet Egress ($0.085–$0.12/GB), Cross-Zone/Region traffic ($0.01–$0.02/GB), and unattached Boot Disks after `STOP`.',
-                      desc: `Launch a high-IPC C3/C4 Spot VM or g2-standard-4 L4 GPU VM for CI builds, model fine-tuning, or load testing (~$${dailyHarvestBudget.toFixed(
+                      desc: `Launch a high-IPC C3/C4 Spot VM or g2-standard-4 L4 GPU VM in ${targetHarvestZone} for CI builds, model fine-tuning, or load testing (~$${dailyHarvestBudget.toFixed(
                         2
                       )}/day harvest budget).`,
                       cliId: 'harvester-vm',
@@ -1834,7 +1846,7 @@ ORDER BY
                         'Notice: Deleting a bucket requires deleting all objects & noncurrent versions first. Set an Object Lifecycle `Delete` rule before credit expiry for zero-touch cleanup.',
                       hiddenCostWarning:
                         '⚠️ Hidden Cost Trap: Internet Download Egress ($0.12/GB), Cross-Region Replication/Reads ($0.02/GB), Class A/B Operations, and Nearline/Coldline early-deletion penalties (30–90 day minimum storage duration!).',
-                      desc: 'Stage large ML datasets, container artifacts, or database backups in a single-region Standard bucket (avoid Nearline/Archive if deleting in <30 days).',
+                      desc: `Stage large ML datasets, container artifacts, or database backups in a single-region Standard bucket (${targetHarvestRegion}; avoid Nearline/Archive if deleting in <30 days).`,
                       cliId: 'harvester-gcs',
                       cliCmd: gcsCreateCmd,
                       cliLabel: 'GCS Bucket CLI',
@@ -1851,7 +1863,7 @@ ORDER BY
                         'Notice: GKE cannot simply be "paused"—even with 0 nodes, the GKE Control Plane bills $0.10/hr ($73/mo) after the first free zonal/Autopilot cluster, and LoadBalancers + PersistentVolumeClaims keep billing until the cluster is deleted!',
                       hiddenCostWarning:
                         '⚠️ Hidden Cost Trap: Cloud NAT Gateway ($0.045/GB + hourly per-VM fee), Multi-Zone Pod-to-Pod Egress ($0.01/GB), and orphaned `LoadBalancer` forwarding rules ($18/mo).',
-                      desc: 'Spin up a GKE Autopilot cluster for multi-service Kubernetes staging, service-mesh chaos testing, or distributed Ray/vLLM workloads.',
+                      desc: `Spin up a GKE Autopilot cluster in ${targetHarvestRegion} for multi-service Kubernetes staging, service-mesh chaos testing, or distributed Ray/vLLM workloads.`,
                       cliId: 'harvester-gke',
                       cliCmd: gkeCreateCmd,
                       cliLabel: 'GKE Autopilot CLI',
@@ -1868,7 +1880,7 @@ ORDER BY
                         'Notice: Setting `min-instances=0` drops compute & GPU billing to $0.00 the exact second a request or batch job finishes.',
                       hiddenCostWarning:
                         '⚠️ Hidden Cost Trap: Keeping `min-instances >= 1` warm 24/7, Artifact Registry image storage over 0.5 GB, and VPC Serverless Connector / outbound Internet Egress ($0.12/GB).',
-                      desc: 'Run batch embeddings, LLM evaluations, or high-concurrency HTTP services with `--no-gpu-zonal-redundancy` ($0.72/hr) and $0 idle cost.',
+                      desc: `Run batch embeddings, LLM evaluations, or high-concurrency HTTP services in ${targetHarvestRegion} with --no-gpu-zonal-redundancy ($0.72/hr) and $0 idle cost.`,
                       cliId: 'harvester-l4',
                       cliCmd: l4BatchCmd,
                       cliLabel: 'Cloud Run L4 Job CLI',
@@ -1885,9 +1897,9 @@ ORDER BY
                         'Notice: Stopping a Cloud SQL instance halts vCPU/RAM charges in ~3 mins, but SSD storage ($0.17/GB-mo), automated backups, and Public IPv4 idle reservation ($0.01/hr while stopped!) continue billing until deleted.',
                       hiddenCostWarning:
                         '⚠️ Hidden Cost Trap: Idle Public IPv4 charge while instance is STOPPED, HA Regional standby (2× cost), Point-in-Time Recovery (PITR) transaction logs, and cross-region replica egress.',
-                      desc: 'Benchmark Postgres 16 `pgvector` indexes, test schema migrations, or run load tests against a disposable Cloud SQL instance before credit expiry.',
+                      desc: `Benchmark Postgres 16 pgvector indexes, test schema migrations, or run load tests against a disposable Cloud SQL instance in ${targetHarvestRegion} before credit expiry.`,
                       cliId: 'harvester-sql',
-                      cliCmd: `gcloud sql instances create bonus-harvester-pg16 --database-version=POSTGRES_16 --cpu=2 --memory=7680MB --region=us-central1 --deletion-protection=false --project=${
+                      cliCmd: `gcloud sql instances create bonus-harvester-pg16 --database-version=POSTGRES_16 --cpu=2 --memory=7680MB --region=${targetHarvestRegion} --deletion-protection=false --project=${
                         projectId || 'my-gcp-project'
                       }`,
                       cliLabel: 'Cloud SQL CLI',
@@ -1914,6 +1926,22 @@ ORDER BY
                     },
                   ];
 
+                  const availableRegionOptions = Array.from(
+                    new Set([
+                      ...(egressRadar?.activeComputeRegions || []),
+                      ...(egressRadar?.bucketRegions || []),
+                      targetHarvestRegion,
+                      'europe-west1',
+                      'europe-west4',
+                      'europe-west9',
+                      'us-east1',
+                      'us-central1',
+                      'us-west1',
+                      'asia-east1',
+                      'asia-northeast1',
+                    ])
+                  ).filter(Boolean);
+
                   return (
                     <>
                       {/* FinOps Hidden Cost & Egress Traffic Advisory Banner */}
@@ -1925,9 +1953,30 @@ ORDER BY
                               FINOPS HIDDEN COST & NETWORK EGRESS WARNING (READ BEFORE HARVESTING CREDITS)
                             </span>
                           </div>
-                          <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-800 dark:text-red-200 text-[10px] font-mono font-bold">
-                            Shut Off All Resources ≥12h Before {expIso}
-                          </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <label className="inline-flex items-center gap-1.5 text-[10.5px] font-mono font-bold text-zinc-800 dark:text-zinc-200">
+                              <span>Target Co-Located Region:</span>
+                              <select
+                                value={targetHarvestRegion}
+                                onChange={(e) =>
+                                  setHarvestRegion(e.target.value)
+                                }
+                                className="h-6 px-2 rounded bg-white dark:bg-zinc-900 border border-red-500/40 text-[10.5px] font-mono text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                              >
+                                {availableRegionOptions.map((regOpt) => (
+                                  <option key={regOpt} value={regOpt}>
+                                    {regOpt}
+                                    {regOpt === egressRadar?.preferredRegion
+                                      ? ' (Detected Project Region)'
+                                      : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-800 dark:text-red-200 text-[10px] font-mono font-bold">
+                              Shut Off All Resources ≥12h Before {expIso}
+                            </span>
+                          </div>
                         </div>
                         <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
                           While Compute, Storage, and GKE base rates are covered by your{' '}
@@ -1942,7 +1991,7 @@ ORDER BY
                           Outbound Internet Egress bills{' '}
                           <code className="font-mono">$0.085–$0.12/GB</code>, Cross-Region traffic bills{' '}
                           <code className="font-mono">$0.02/GB</code>, and Cross-Zone VM/GKE pod traffic bills{' '}
-                          <code className="font-mono">$0.01/GB</code> — keep VMs, GKE, GCS buckets, and BigQuery in the **exact same region & zone** (`us-central1-a`).
+                          <code className="font-mono">$0.01/GB</code> — keep VMs, GKE, GCS buckets, and BigQuery co-located in the **exact same region & zone** (<code className="font-mono">{targetHarvestZone}</code>).
                           {' '}
                           <strong className="font-mono text-red-700 dark:text-red-300">
                             (2) &ldquo;Stopped&rdquo; Resource Leftovers:
@@ -2005,12 +2054,12 @@ ORDER BY
                                   onClick={() =>
                                     onOpenProvision(
                                       bp.provisionType,
-                                      'us-central1'
+                                      targetHarvestRegion
                                     )
                                   }
                                   className="h-7 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-mono font-extrabold cursor-pointer transition-all"
                                 >
-                                  {bp.provisionBtnLabel}
+                                  {bp.provisionBtnLabel} ({targetHarvestRegion})
                                 </button>
                               )}
 
