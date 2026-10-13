@@ -2987,9 +2987,6 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
 
       const serviceBody = {
         ingress,
-        annotations: {
-          'run.googleapis.com/ssh-enabled': 'true',
-        },
         template: {
           ...(runtimeServiceAccount
             ? { serviceAccount: runtimeServiceAccount }
@@ -4855,10 +4852,6 @@ app.patch(
 
       const patchBody = {
         ingress,
-        annotations: {
-          ...(existing.annotations || {}),
-          'run.googleapis.com/ssh-enabled': 'true',
-        },
         template: templateObj,
       };
 
