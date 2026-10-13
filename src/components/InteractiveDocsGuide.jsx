@@ -275,6 +275,28 @@ const DOC_SECTIONS = [
       'Revision Time-Machine & Autopsy are 100% free control-plane operations; Direct VPC Egress eliminates ~$14.60/mo Serverless VPC Connector instance charges; migrating warm Cloud Run services to GKE Spot VMs/GPUs cuts compute spend by up to 68%.',
   },
   {
+    id: 'cloud-audit-who-changed-what-timeline',
+    wave: 'CLOUD AUDIT LOGS · LIVE "WHO-CHANGED-WHAT" ACTIVITY TIMELINE & 1-CLICK CHANGE INSPECTOR',
+    title:
+      'Live Cloud Audit "Who-Changed-What" Activity Timeline, Actor Attribution (`principalEmail`) & IAM Policy Delta Inspector',
+    badge: 'LOGS & SHELL TAB · 400-DAY FREE RETENTION',
+    badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
+    icon: History,
+    targetTab: 'LOGS_SHELL',
+    problemSolved:
+      'When a Cloud Run service suddenly breaks, a firewall rule changes, or a Secret Manager version is disabled, engineers struggle to answer "Who changed what, from which IP, and at what exact second?" without writing complex Cloud Logging protoPayload queries.',
+    howItWorks: [
+      'Live Cloud Audit Admin Activity Stream (`cloudaudit.googleapis.com/activity`): Queries `logging.googleapis.com/v2/entries:list` and merges real-time in-session Flight Recorder mutations so actions appear immediately.',
+      'Actor Attribution & Action Classification: Groups every mutation by Principal (`principalEmail` user vs `.gserviceaccount.com`), Caller IP, and Action Category (`CREATE`, `UPDATE`, `IAM_SECURITY`, `DELETE`, `POWER`).',
+      'IAM Policy Delta & Request Spec X-Ray: Expands any audit event to inspect `serviceData.policyDelta.bindingDeltas` (`ADD`/`REMOVE` role bindings), `protoPayload.request`, and a 1-click `$ Inspect in Shell` command.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/audit-timeline → logging.googleapis.com/v2 (`cloudaudit.googleapis.com/activity`)',
+    ],
+    billingImpact:
+      '100% Always Free ($0.00/mo). Google Cloud retains Admin Activity audit logs for 400 days free of charge and does not count them toward the 50 GiB/mo Cloud Logging limit.',
+  },
+  {
     id: 'xterm-web-ssh-and-mandatory-delete-gatekeeper',
     wave: 'OPEN-SOURCE @XTERM/XTERM WEB-SSH, 127.0.0.1 ZERO-PUBLIC-IP TUNNEL BRIDGE & BLAST-RADIUS SAFETY GATEKEEPER',
     title:

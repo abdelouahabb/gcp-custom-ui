@@ -173,6 +173,10 @@
     - **3-Engine Localhost Bridge (`GET/POST /api/project/:id/tunnels/*`)**: Binds local `127.0.0.1:<PORT>` sockets directly to **(1) Private IAM-Locked Cloud Run services** (`gcloud run services proxy` with automatic OIDC Bearer token injection), **(2) Zero-External-IP Compute Engine VMs** (`gcloud compute start-iap-tunnel` over IAP TCP `35.235.240.0/20` for `:22` SSH, `:8080` Web, `:5432` Postgres, `:6379` Redis, `:8888` Jupyter/vLLM), and **(3) Private VPC Cloud SQL / AlloyDB** (`cloud-sql-proxy` / `alloydb-auth-proxy` with `--auto-iam-authn --private-ip`).
     - **⚡ Live `127.0.0.1` Socket/HTTP Probe & Copy-Ready ORM/IDE Snippets**: Tests local TCP handshake RTT (`ms`) and HTTP status directly from the UI (`POST /api/project/:id/tunnels/probe`), outputs copy-ready `Prisma` / `SQLAlchemy` / `psql` / `mysql` / `VS Code Remote-SSH` snippets, and saves **`$7.30/mo` per VM or Database** by eliminating public IPv4 addresses.
 
+35. **🕵️ Live Cloud Audit "Who-Changed-What" Activity Timeline & 1-Click Change Inspector (`LogStreamerAndShell.jsx`)**
+    - **Live `cloudaudit.googleapis.com/activity` Forensics (`GET /api/project/:id/audit-timeline`)**: Queries `logging.googleapis.com/v2` for Admin Activity & System Event audit logs (retained **400 days for `$0.00/mo` Always Free**) and merges in-session Flight Recorder mutations so every resource creation, patch, IAM policy change, secret rotation, and deletion appears with zero lag.
+    - **👤 Principal Attribution, IAM Policy Binding Deltas & 1-Click Shell Inspection**: Filter mutations by service (`run`, `compute`, `secretmanager`, `iam`, `storage`, `bigquery`), Action Category (`CREATE`, `UPDATE`, `IAM_SECURITY`, `DELETE`), or Actor (`principalEmail`), inspect `serviceData.policyDelta.bindingDeltas` (`ADD`/`REMOVE`) + `protoPayload.request`, and run the generated inspection CLI in the Mobile Cloud Shell in 1 click.
+
 > 📖 **Full Engineering & User Manual**: Read [**`docs/REVOLUTIONARY_FEATURES_GUIDE.md`**](docs/REVOLUTIONARY_FEATURES_GUIDE.md) or click the **`Docs & Guide 📖`** tab directly inside the app for step-by-step explanations of every feature, the exact GCP REST APIs called, and billing impact.
 
 ---
@@ -214,7 +218,7 @@
   - **Emergency Mobile API Kill-Switch (`serviceusage.googleapis.com/v1`)**: Inspect all enabled APIs on your project with priority sorting and disable/enable services in 1 tap (`disableDependentServices: true`).
 
 - **🌐 VPC Networks, Enterprise Firewalls, Storage, BigQuery, BigLake Metastore & Mobile Cloud Shell**
-  - Provision and manage custom/auto-mode VPC Networks (`REGIONAL` / `GLOBAL` BGP routing, Jumbo Frames MTU `8896`), `ALLOW`/`DENY` Ingress & Egress Firewall Rules with live `PATCH` editing and IAP lockdown, Cloud Storage Buckets, BigQuery Datasets & Partitioned/Clustered Tables, **BigLake Metastore Catalogs (`/biglake/metastore/catalogs` — `biglake.googleapis.com/v1`)**, real-time Cloud Logging streams, and an interactive Mobile Cloud Shell (`gcloud` / `bq`).
+  - Provision and manage custom/auto-mode VPC Networks (`REGIONAL` / `GLOBAL` BGP routing, Jumbo Frames MTU `8896`), `ALLOW`/`DENY` Ingress & Egress Firewall Rules with live `PATCH` editing and IAP lockdown, Cloud Storage Buckets, BigQuery Datasets & Partitioned/Clustered Tables, **BigLake Metastore Catalogs (`/biglake/metastore/catalogs` — `biglake.googleapis.com/v1`)**, real-time Cloud Logging & **400-Day Cloud Audit "Who-Changed-What" Activity Timeline**, and an interactive Mobile Cloud Shell (`gcloud` / `bq`).
 
 - **🔐 Zero-Hardcoded-Credentials Multi-Account Onboarding Gate**
   - Sign in from mobile or desktop using:
@@ -231,6 +235,7 @@
 | :--- | :--- | :--- |
 | `/api/ws/ssh` | `WS (WebSocket)` | **Full-Duplex `@xterm/xterm` Web-SSH PTY Bridge**: Connects to Compute Engine VMs (`ssh2` / `gcloud compute ssh` / IAP) and Cloud Run Gen2 Containers (`gcloud beta run services ssh` with auto `--ssh --execution-environment=gen2` preflight & `gcloud beta run services proxy`) |
 | `/api/project/:id/tunnels` | `GET / POST` | **127.0.0.1 Developer Tunnel Manager**: Starts, stops, lists, and probes local port-forward tunnels (`/tunnels/start`, `/tunnels/stop`, `/tunnels/probe`) for Cloud Run OIDC Proxy, Compute VM IAP TCP, and Cloud SQL / AlloyDB Auth Proxy |
+| `/api/project/:id/audit-timeline` | `GET` | **Live Cloud Audit "Who-Changed-What" Timeline**: Queries `logging.googleapis.com/v2` (`cloudaudit.googleapis.com/activity`) + in-session Flight Recorder for principal attribution, IAM binding deltas & request payloads |
 | `/api/auth/discover` | `GET` | Discovers local `gcloud` / ADC accounts and accessible GCP projects |
 | `/api/context` | `GET` | Returns active authenticated session account and project list |
 | `/api/pricing/live-sync` | `GET` | **Live Cloud Billing Price Sync**: Queries `cloudbilling.googleapis.com/v1` for live SKU rates |

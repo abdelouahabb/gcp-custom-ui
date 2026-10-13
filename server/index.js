@@ -6409,6 +6409,249 @@ app.post('/api/project/:projectId/tunnels/probe', async (req, res) => {
   });
 });
 
+// ============================================================================
+// INNOVATION #3: LIVE CLOUD AUDIT "WHO-CHANGED-WHAT" ACTIVITY TIMELINE &
+// 1-CLICK CHANGE INSPECTOR (`logging.googleapis.com/v2` `cloudaudit.googleapis.com/activity`)
+// ============================================================================
+function classifyAuditActivityMethod(serviceName = '', methodName = '', resourceName = '') {
+  const m = String(methodName || '');
+  const s = String(serviceName || '');
+  const lowerM = m.toLowerCase();
+  const shortResource = String(resourceName || '').split('/').pop() || resourceName || 'resource';
+
+  let actionCategory = 'UPDATE';
+  if (/delete|destroy|remove|purge|drop|unlink/i.test(lowerM)) {
+    actionCategory = 'DELETE';
+  } else if (/SetIamPolicy|Grant|Revoke|CreateServiceAccountKey|DisableServiceAccountKey/i.test(m)) {
+    actionCategory = 'IAM_SECURITY';
+  } else if (/create|insert|deploy|addversion|enable/i.test(lowerM)) {
+    actionCategory = 'CREATE';
+  } else if (/stop|start|reset|suspend|resume/i.test(lowerM)) {
+    actionCategory = 'POWER';
+  }
+
+  let humanSummary = `${m.split('.').slice(-2).join('.')} on ${shortResource}`;
+  let reverseCli = `gcloud logging read 'protoPayload.methodName="${m}"' --project=${
+    String(resourceName).match(/projects\/([^/]+)/)?.[1] || 'PROJECT_ID'
+  } --limit=5`;
+
+  if (s.includes('run.googleapis.com')) {
+    if (lowerM.includes('createservice')) {
+      humanSummary = `Deployed new Cloud Run service "${shortResource}"`;
+      reverseCli = `gcloud run services delete ${shortResource} --quiet`;
+    } else if (lowerM.includes('updateservice') || lowerM.includes('replaceservice')) {
+      humanSummary = `Updated Cloud Run service "${shortResource}" revision / traffic spec`;
+      reverseCli = `gcloud run services describe ${shortResource} --format=yaml`;
+    } else if (lowerM.includes('deleteservice')) {
+      humanSummary = `Deleted Cloud Run service "${shortResource}"`;
+    } else if (lowerM.includes('setiampolicy')) {
+      humanSummary = `Modified Cloud Run Invoker IAM policy on "${shortResource}"`;
+    }
+  } else if (s.includes('compute.googleapis.com')) {
+    if (lowerM.includes('instances.insert')) {
+      humanSummary = `Provisioned Compute Engine VM "${shortResource}"`;
+      reverseCli = `gcloud compute instances delete ${shortResource} --quiet`;
+    } else if (lowerM.includes('instances.delete')) {
+      humanSummary = `Deleted Compute Engine VM "${shortResource}"`;
+    } else if (lowerM.includes('instances.stop')) {
+      humanSummary = `Stopped Compute Engine VM "${shortResource}" ($0/hr vCPU)`;
+      reverseCli = `gcloud compute instances start ${shortResource}`;
+    } else if (lowerM.includes('instances.start')) {
+      humanSummary = `Started Compute Engine VM "${shortResource}"`;
+      reverseCli = `gcloud compute instances stop ${shortResource}`;
+    } else if (lowerM.includes('firewalls.')) {
+      humanSummary = `${actionCategory === 'DELETE' ? 'Deleted' : 'Updated'} VPC Firewall Rule "${shortResource}"`;
+      reverseCli = `gcloud compute firewall-rules describe ${shortResource}`;
+    }
+  } else if (s.includes('secretmanager.googleapis.com')) {
+    if (lowerM.includes('addsecretversion')) {
+      humanSummary = `Rotated / added encrypted Secret Manager version on "${shortResource}"`;
+    } else if (lowerM.includes('destroysecretversion')) {
+      humanSummary = `Permanently destroyed Secret Manager version on "${shortResource}"`;
+    } else if (lowerM.includes('disablesecretversion')) {
+      humanSummary = `Disabled Secret Manager version on "${shortResource}" ($0.00/mo)`;
+    } else if (lowerM.includes('deletesecret')) {
+      humanSummary = `Deleted Secret Manager secret "${shortResource}"`;
+    }
+  } else if (s.includes('storage.googleapis.com')) {
+    humanSummary = `${actionCategory === 'CREATE' ? 'Created' : actionCategory === 'DELETE' ? 'Deleted' : 'Modified'} Cloud Storage bucket "${shortResource}"`;
+  } else if (s.includes('bigquery.googleapis.com')) {
+    humanSummary = `Executed BigQuery ${m.split('.').pop()} on "${shortResource}"`;
+  } else if (s.includes('iam.googleapis.com') || lowerM.includes('setiampolicy')) {
+    humanSummary = `Modified IAM Policy / Service Account on "${shortResource}"`;
+  }
+
+  return {
+    actionCategory,
+    humanSummary,
+    reverseCli,
+    shortResource,
+  };
+}
+
+app.get('/api/project/:projectId/audit-timeline', async (req, res) => {
+  const { projectId } = req.params;
+  const { token, account } = await resolveRequestAuth(req);
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated.' });
+  }
+
+  const serviceFilter = String(req.query.service || 'ALL').trim();
+  const limit = Math.min(100, Math.max(10, Number(req.query.limit) || 45));
+
+  try {
+    let filterStr = `logName:"cloudaudit.googleapis.com%2Factivity" OR logName:"cloudaudit.googleapis.com%2Fsystem_event"`;
+    if (serviceFilter !== 'ALL') {
+      filterStr = `(${filterStr}) AND protoPayload.serviceName="${serviceFilter}"`;
+    }
+
+    const logResp = await gcpFetch(
+      `https://logging.googleapis.com/v2/entries:list`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          resourceNames: [`projects/${projectId}`],
+          filter: filterStr,
+          orderBy: 'timestamp desc',
+          pageSize: limit,
+        },
+        timeout: 9000,
+      }
+    );
+
+    const rawEntries = Array.isArray(logResp?.entries) ? logResp.entries : [];
+    const auditEvents = rawEntries.map((entry, idx) => {
+      const proto = entry.protoPayload || {};
+      const serviceName = proto.serviceName || entry.resource?.type || 'gcp.service';
+      const methodName = proto.methodName || 'AdminActivity';
+      const resourceName =
+        proto.resourceName ||
+        entry.resource?.labels?.service_name ||
+        entry.resource?.labels?.instance_id ||
+        entry.resource?.labels?.bucket_name ||
+        projectId;
+      const principalEmail =
+        proto.authenticationInfo?.principalEmail ||
+        proto.authenticationInfo?.principalSubject ||
+        account ||
+        'system@google.com';
+      const callerIp = proto.requestMetadata?.callerIp || 'internal';
+      const userAgent = proto.requestMetadata?.callerSuppliedUserAgent || 'gcloud / REST';
+      const statusObj = proto.status || {};
+      const isError =
+        entry.severity === 'ERROR' ||
+        (typeof statusObj.code === 'number' && statusObj.code !== 0);
+
+      // Extract IAM policy bindings delta if present
+      const policyDelta =
+        proto.serviceData?.policyDelta?.bindingDeltas ||
+        proto.metadata?.datasetChange?.bindingDeltas ||
+        [];
+
+      const classified = classifyAuditActivityMethod(
+        serviceName,
+        methodName,
+        resourceName
+      );
+
+      return {
+        id: entry.insertId || `audit-${idx}-${entry.timestamp}`,
+        timestamp: entry.timestamp || new Date().toISOString(),
+        severity: isError ? 'ERROR' : entry.severity || 'NOTICE',
+        serviceName,
+        methodName,
+        resourceType: entry.resource?.type || 'project',
+        resourceName,
+        shortResource: classified.shortResource,
+        region:
+          entry.resource?.labels?.location ||
+          entry.resource?.labels?.zone ||
+          entry.resource?.labels?.region ||
+          'global',
+        principalEmail,
+        isServiceAccount: principalEmail.endsWith('.gserviceaccount.com'),
+        callerIp,
+        userAgent: String(userAgent).slice(0, 90),
+        actionCategory: classified.actionCategory,
+        humanSummary: classified.humanSummary,
+        reverseCli: classified.reverseCli,
+        statusMessage: statusObj.message || (isError ? 'Operation failed' : 'OK (0)'),
+        policyDelta,
+        requestPayload: proto.request || null,
+        responsePayload: proto.response || null,
+        source: 'CLOUD_AUDIT_LOGS',
+      };
+    });
+
+    // Also merge any recent in-session Flight Recorder mutations so immediate actions appear even before Cloud Logging indexes them
+    const sessionLedger = flightRecorderByProject.get(projectId) || [];
+    const sessionEvents = sessionLedger.slice(0, 15).map((fl, i) => ({
+      id: `flight-${fl.id || i}`,
+      timestamp: fl.timestamp || new Date().toISOString(),
+      severity: 'NOTICE',
+      serviceName: `${String(fl.resourceType || 'cloudpulse').toLowerCase()}.googleapis.com`,
+      methodName: fl.action || 'CloudPulseMutation',
+      resourceType: fl.resourceType || 'CLOUD_RESOURCE',
+      resourceName: fl.resourceName || projectId,
+      shortResource: fl.resourceName || projectId,
+      region: fl.region || 'global',
+      principalEmail: account || 'active-session-owner',
+      isServiceAccount: false,
+      callerIp: '127.0.0.1 (CloudPulse Studio)',
+      userAgent: 'CloudPulse 2026 Control Plane',
+      actionCategory: /DELETE|DESTROY|EXTERMINATE/i.test(fl.action)
+        ? 'DELETE'
+        : /IAM|SECRET|GRANT/i.test(fl.action)
+        ? 'IAM_SECURITY'
+        : 'UPDATE',
+      humanSummary: fl.summary || `${fl.action} on ${fl.resourceName}`,
+      reverseCli: fl.undoHint || `gcloud projects describe ${projectId}`,
+      statusMessage: 'OK (Verified Session Action)',
+      policyDelta: [],
+      requestPayload: fl.details || null,
+      responsePayload: null,
+      source: 'SESSION_FLIGHT_RECORDER',
+    }));
+
+    const combined = [...auditEvents, ...sessionEvents].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    // Compute summary breakdown
+    const actorCounts = {};
+    const categoryCounts = { CREATE: 0, UPDATE: 0, DELETE: 0, IAM_SECURITY: 0, POWER: 0 };
+    for (const ev of combined) {
+      actorCounts[ev.principalEmail] = (actorCounts[ev.principalEmail] || 0) + 1;
+      categoryCounts[ev.actionCategory] = (categoryCounts[ev.actionCategory] || 0) + 1;
+    }
+
+    return res.json({
+      projectId,
+      totalEvents: combined.length,
+      cloudAuditCount: auditEvents.length,
+      sessionLedgerCount: sessionEvents.length,
+      categoryCounts,
+      topActors: Object.entries(actorCounts)
+        .map(([email, count]) => ({ email, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6),
+      events: combined,
+      alwaysFreeTierInfo:
+        'Cloud Audit Admin Activity logs (cloudaudit.googleapis.com/activity) are 100% Always Free and retained for 400 days at $0.00/mo.',
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to query Cloud Audit Activity logs',
+    });
+  }
+});
+
 // 11. POST /api/project/:projectId/shell -> Fast API-backed & safe gcloud shell
 app.post('/api/project/:projectId/shell', async (req, res) => {
   const { projectId } = req.params;
