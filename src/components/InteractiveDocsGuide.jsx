@@ -8,6 +8,7 @@ import {
   Moon,
   FileCode2,
   ShieldAlert,
+  ShieldCheck,
   Command,
   Zap,
   AlertTriangle,
