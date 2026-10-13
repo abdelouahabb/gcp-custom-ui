@@ -753,6 +753,72 @@ export default function ResourceProvisionModal({
   const [errorMsg, setErrorMsg] = useState(null);
   const [copiedCmd, setCopiedCmd] = useState(false);
 
+  // Universal Runtime Service Account (iam.serviceAccounts.actAs) Discovery & Custom SA Creator
+  const [serviceAccounts, setServiceAccounts] = useState([]);
+  const [selectedServiceAccount, setSelectedServiceAccount] = useState('');
+  const [defaultComputeSaMissing, setDefaultComputeSaMissing] = useState(false);
+  const [loadingSa, setLoadingSa] = useState(false);
+  const [showCreateSaForm, setShowCreateSaForm] = useState(false);
+  const [newSaAccountId, setNewSaAccountId] = useState('cloudpulse-runtime');
+  const [newSaDisplayName, setNewSaDisplayName] = useState('CloudPulse Custom Runtime Service Account');
+  const [creatingSa, setCreatingSa] = useState(false);
+
+  const fetchServiceAccounts = async (forceRefresh = false) => {
+    if (!projectId) return;
+    setLoadingSa(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/service-accounts${
+          forceRefresh ? '?refresh=true' : ''
+        }`
+      );
+      const list = res.data?.serviceAccounts || [];
+      setServiceAccounts(list);
+      setDefaultComputeSaMissing(Boolean(res.data?.defaultComputeSaMissing));
+      if (res.data?.recommendedServiceAccount) {
+        setSelectedServiceAccount((prev) => {
+          if (prev && list.some((sa) => sa.email === prev && !sa.disabled)) {
+            return prev;
+          }
+          return res.data.recommendedServiceAccount;
+        });
+      }
+    } catch {
+      // ignore if offline
+    } finally {
+      setLoadingSa(false);
+    }
+  };
+
+  const handleCreateCustomServiceAccount = async () => {
+    if (!newSaAccountId.trim() || creatingSa) return;
+    setCreatingSa(true);
+    setErrorMsg(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/service-accounts`,
+        {
+          accountId: newSaAccountId.trim(),
+          displayName: newSaDisplayName.trim() || newSaAccountId.trim(),
+          grantRecommendedRoles: true,
+        }
+      );
+      if (res.data?.serviceAccount?.email) {
+        await fetchServiceAccounts(true);
+        setSelectedServiceAccount(res.data.serviceAccount.email);
+        setShowCreateSaForm(false);
+      }
+    } catch (err) {
+      setErrorMsg(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to create custom Service Account.'
+      );
+    } finally {
+      setCreatingSa(false);
+    }
+  };
+
   const generateDefaultName = (type, proj) => {
     const suffix = Math.floor(1000 + Math.random() * 8999);
     if (type === 'COMPUTE_VM') return `${proj}-vm-${suffix}`;
@@ -787,6 +853,8 @@ export default function ResourceProvisionModal({
       }
       setErrorMsg(null);
       if (projectId) {
+        fetchServiceAccounts(false);
+
         axios
           .get(
             `/api/project/${encodeURIComponent(projectId)}/wave9/supply-chain`
@@ -831,6 +899,9 @@ export default function ResourceProvisionModal({
 
   const gcloudPreview = useMemo(() => {
     const clean = (name || 'resource').trim().toLowerCase();
+    const saFlag = selectedServiceAccount
+      ? ` --service-account=${selectedServiceAccount}`
+      : '';
     if (serviceType === 'GKE_CLUSTER') {
       const cleanGke = clean.replace(/[^a-z0-9-]/g, '-');
       const secFlags = [
@@ -845,7 +916,7 @@ export default function ResourceProvisionModal({
         .filter(Boolean)
         .join(' ');
       if (gkeMode === 'AUTOPILOT') {
-        return `gcloud container clusters create-auto ${cleanGke} --project=${projectId} --region=${gkeLocation} ${secFlags}`;
+        return `gcloud container clusters create-auto ${cleanGke} --project=${projectId} --region=${gkeLocation}${saFlag} ${secFlags}`;
       }
       const spotFlag = gkeSpotNodes ? ' --spot' : '';
       const shieldFlag = gkeEnableShieldedNodes
@@ -855,7 +926,7 @@ export default function ResourceProvisionModal({
         gkeGpuAcceleratorType !== 'NONE'
           ? ` --accelerator=type=${gkeGpuAcceleratorType},count=${gkeGpuAcceleratorCount}`
           : '';
-      return `gcloud container clusters create ${cleanGke} --project=${projectId} --location=${gkeLocation} --machine-type=${gkeNodeMachineType} --num-nodes=${gkeInitialNodeCount}${spotFlag}${gpuFlag}${shieldFlag} ${secFlags}`;
+      return `gcloud container clusters create ${cleanGke} --project=${projectId} --location=${gkeLocation} --machine-type=${gkeNodeMachineType} --num-nodes=${gkeInitialNodeCount}${saFlag}${spotFlag}${gpuFlag}${shieldFlag} ${secFlags}`;
     }
     if (serviceType === 'COMPUTE_VM') {
       const tags = [
@@ -877,7 +948,7 @@ export default function ResourceProvisionModal({
       }`;
       const shieldFlag = shieldedSecureBoot ? ' --shielded-secure-boot' : '';
       const delProtFlag = deletionProtection ? ' --deletion-protection' : '';
-      return `gcloud compute instances create ${clean} --project=${projectId} --zone=${zone} --machine-type=${machineType} --boot-disk-size=${diskSizeGb}GB --boot-disk-type=${diskType}${spotFlag}${gpuFlag}${netFlag}${tagFlag}${shieldFlag}${delProtFlag}`;
+      return `gcloud compute instances create ${clean} --project=${projectId} --zone=${zone} --machine-type=${machineType}${saFlag} --boot-disk-size=${diskSizeGb}GB --boot-disk-type=${diskType}${spotFlag}${gpuFlag}${netFlag}${tagFlag}${shieldFlag}${delProtFlag}`;
     }
     if (serviceType === 'VPC_NETWORK') {
       return `gcloud compute networks create ${clean} --project=${projectId} --subnet-mode=${
@@ -998,7 +1069,7 @@ export default function ResourceProvisionModal({
         runStorageVolumeType !== 'NONE' || runEnableDirectVpc
           ? 'gcloud beta run deploy'
           : 'gcloud run deploy';
-      return `${cmdPrefix} ${clean} --project=${projectId} --region=${region} --image=${containerImage} --port=${runPort} --cpu=${runCpu} --memory=${runMemory}${gpuFlags}${vpcFlags}${volFlags} --min-instances=${runMinInstances} --max-instances=${runMaxInstances} --concurrency=${runConcurrency} --timeout=${runTimeout}s --ingress=${ingressFlag} --execution-environment=${
+      return `${cmdPrefix} ${clean} --project=${projectId} --region=${region}${saFlag} --image=${containerImage} --port=${runPort} --cpu=${runCpu} --memory=${runMemory}${gpuFlags}${vpcFlags}${volFlags} --min-instances=${runMinInstances} --max-instances=${runMaxInstances} --concurrency=${runConcurrency} --timeout=${runTimeout}s --ingress=${ingressFlag} --execution-environment=${
         runExecEnv === 'EXECUTION_ENVIRONMENT_GEN2' ? 'gen2' : 'gen1'
       } ${billingFlag} ${
         runAllowUnauth ? '--allow-unauthenticated' : '--no-allow-unauthenticated'
@@ -1147,6 +1218,7 @@ export default function ResourceProvisionModal({
     bqEncryptionType,
     bqCmekKeyName,
     bqComplianceRegime,
+    selectedServiceAccount,
   ]);
 
   const liveCostEstimate = useMemo(() => {
@@ -1433,6 +1505,7 @@ export default function ResourceProvisionModal({
             cloudRunRegion: region,
             cloudRunPort: Number(runPort || 8080),
             cloudRunAllowUnauth: runAllowUnauth,
+            serviceAccount: selectedServiceAccount,
           }
         );
         onProvisionSuccess(res.data, serviceType);
@@ -1455,6 +1528,7 @@ export default function ResourceProvisionModal({
               : region,
           zone,
           config: {
+            serviceAccount: selectedServiceAccount,
             sqlArchitecture,
             sqlEngineFamily,
             databaseVersion: sqlDatabaseVersion,
@@ -1904,6 +1978,115 @@ export default function ResourceProvisionModal({
               </div>
             )}
           </div>
+
+          {/* Universal Runtime Service Account (iam.serviceAccounts.actAs) Selector & 1-Click Custom SA Creator */}
+          {['CLOUD_RUN', 'COMPUTE_VM', 'GKE_CLUSTER'].includes(serviceType) && (
+            <div className="p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Runtime Service Account (iam.serviceAccounts.actAs)
+                  </span>
+                  {defaultComputeSaMissing && (
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                      Default Compute SA Deleted · Auto-Bound Custom SA
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fetchServiceAccounts(true)}
+                    disabled={loadingSa}
+                    className="text-[11px] font-mono text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] cursor-pointer"
+                  >
+                    {loadingSa ? 'Syncing IAM...' : '↻ Refresh SAs'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateSaForm((prev) => !prev)}
+                    className="text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/15 px-2.5 py-1 rounded border border-indigo-500/30 cursor-pointer transition-colors"
+                  >
+                    {showCreateSaForm ? 'Cancel' : '+ Create Custom SA'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+                <div className="sm:col-span-2">
+                  <select
+                    value={selectedServiceAccount}
+                    onChange={(e) => setSelectedServiceAccount(e.target.value)}
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 shadow-sm"
+                  >
+                    {serviceAccounts.filter((sa) => !sa.disabled).length === 0 && (
+                      <option value="">
+                        Auto-Discover / Auto-Create Custom Service Account ({projectId})
+                      </option>
+                    )}
+                    {serviceAccounts
+                      .filter((sa) => !sa.disabled)
+                      .map((sa) => (
+                        <option key={sa.email} value={sa.email}>
+                          {sa.isCustom ? '★ [CUSTOM SA] ' : '[DEFAULT SA] '}
+                          {sa.email}
+                          {sa.displayName ? ` — ${sa.displayName}` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+                  {selectedServiceAccount ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                      ✓ Explicit SA attached (prevents Compute SA 403)
+                    </span>
+                  ) : (
+                    <span>Backend auto-resolves active custom SA</span>
+                  )}
+                </div>
+              </div>
+
+              {showCreateSaForm && (
+                <div className="pt-2 border-t border-indigo-500/20 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                  <div>
+                    <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                      New SA Account ID (e.g. cloudpulse-runner)
+                    </label>
+                    <input
+                      type="text"
+                      value={newSaAccountId}
+                      onChange={(e) => setNewSaAccountId(e.target.value)}
+                      placeholder="cloudpulse-runtime"
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newSaDisplayName}
+                      onChange={(e) => setNewSaDisplayName(e.target.value)}
+                      placeholder="CloudPulse Custom Runtime SA"
+                      className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={creatingSa || !newSaAccountId.trim()}
+                    onClick={handleCreateCustomServiceAccount}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold font-mono cursor-pointer transition-colors"
+                  >
+                    {creatingSa
+                      ? 'Creating IAM SA...'
+                      : `Create @${projectId}.iam...`}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {serviceType === 'VPC_NETWORK' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

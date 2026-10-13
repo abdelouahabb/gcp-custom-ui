@@ -92,6 +92,9 @@ export default function CloudRunFleetManager({
   const [gkeClusters, setGkeClusters] = useState([]);
   const [projectVpcs, setProjectVpcs] = useState(['default']);
   const [projectBuckets, setProjectBuckets] = useState([]);
+  const [serviceAccounts, setServiceAccounts] = useState([]);
+  const [selectedQuickSa, setSelectedQuickSa] = useState('');
+  const [defaultComputeSaMissing, setDefaultComputeSaMissing] = useState(false);
   const [showGlobalGkeTranspiler, setShowGlobalGkeTranspiler] = useState(false);
   // Per-service transitional busy state: { [serviceId]: 'UPDATING' | 'DELETING' | 'IAM' | 'TRAFFIC' | 'GRADUATING_GKE' }
   const [busyMap, setBusyMap] = useState({});
@@ -109,7 +112,7 @@ export default function CloudRunFleetManager({
       if (!projectId) return;
       if (!silent) setLoading(true);
       try {
-        const [res, gkeRes, ovRes] = await Promise.all([
+        const [res, gkeRes, ovRes, saRes] = await Promise.all([
           axios.get(`/api/project/${encodeURIComponent(projectId)}/cloudrun`),
           axios
             .get(
@@ -119,7 +122,19 @@ export default function CloudRunFleetManager({
           axios
             .get(`/api/project/${encodeURIComponent(projectId)}/overview`)
             .catch(() => ({ data: { resources: [] } })),
+          axios
+            .get(
+              `/api/project/${encodeURIComponent(projectId)}/service-accounts`
+            )
+            .catch(() => ({ data: { serviceAccounts: [] } })),
         ]);
+        if (Array.isArray(saRes.data?.serviceAccounts)) {
+          setServiceAccounts(saRes.data.serviceAccounts);
+          setDefaultComputeSaMissing(Boolean(saRes.data.defaultComputeSaMissing));
+          if (saRes.data.recommendedServiceAccount) {
+            setSelectedQuickSa((prev) => prev || saRes.data.recommendedServiceAccount);
+          }
+        }
         if (Array.isArray(gkeRes.data?.clusters)) {
           setGkeClusters(gkeRes.data.clusters);
         }
@@ -534,6 +549,7 @@ spec:
       setEditForms((prev) => ({
         ...prev,
         [srv.id]: {
+          serviceAccount: srv.serviceAccount || selectedQuickSa || '',
           containerImage: srv.containerImage,
           containerPort: srv.containerPort || 8080,
           cpu: srv.cpu || '1',
@@ -678,6 +694,7 @@ spec:
           name: serviceName,
           region: 'us-east1',
           config: {
+            serviceAccount: selectedQuickSa,
             containerImage: tpl.image,
             containerPort: tpl.port,
             cpu: tpl.cpu,
@@ -1360,58 +1377,94 @@ spec:
       })()}
 
       {/* Quick 1-Tap Cloud Run Templates & Self-Deploy Banner */}
-      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-            <Zap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-            <span>1-Tap Instant Deploy:</span>
-          </span>
-          {QUICK_TEMPLATES.map((tpl) => {
-            const isDeployingThis = quickDeploying === tpl.label;
-            return (
-              <button
-                key={tpl.label}
-                type="button"
-                disabled={Boolean(quickDeploying)}
-                onClick={() => handleQuickDeployTemplate(tpl)}
-                className="inline-flex items-center gap-1.5 text-xs font-mono bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                {isDeployingThis ? (
-                  <RefreshCw className="w-3 h-3 animate-spin text-zinc-500 dark:text-zinc-400" />
-                ) : (
-                  <Rocket className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
-                )}
-                <span>
-                  {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
-                </span>
-              </button>
-            );
-          })}
+      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+              <Zap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+              <span>1-Tap Instant Deploy:</span>
+            </span>
+            {QUICK_TEMPLATES.map((tpl) => {
+              const isDeployingThis = quickDeploying === tpl.label;
+              return (
+                <button
+                  key={tpl.label}
+                  type="button"
+                  disabled={Boolean(quickDeploying)}
+                  onClick={() => handleQuickDeployTemplate(tpl)}
+                  className="inline-flex items-center gap-1.5 text-xs font-mono bg-white dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isDeployingThis ? (
+                    <RefreshCw className="w-3 h-3 animate-spin text-zinc-500 dark:text-zinc-400" />
+                  ) : (
+                    <Rocket className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
+                  )}
+                  <span>
+                    {isDeployingThis ? `Deploying ${tpl.namePrefix}...` : tpl.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Copy command to deploy CloudPulse 2026 itself to Cloud Run */}
+          <div className="flex items-center gap-2 bg-zinc-900/95 text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-800 text-[11px] font-mono">
+            <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+            <span className="truncate max-w-xs sm:max-w-md" title={selfDeployCmd}>
+              {selfDeployCmd}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleCopy(selfDeployCmd, 'self-deploy')}
+              className="text-blue-400 hover:text-blue-300 shrink-0 inline-flex items-center gap-1 ml-1"
+            >
+              {copiedId === 'self-deploy' ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  <span>Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Copy command to deploy CloudPulse 2026 itself to Cloud Run */}
-        <div className="flex items-center gap-2 bg-zinc-900/95 text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-800 text-[11px] font-mono">
-          <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
-          <span className="truncate max-w-xs sm:max-w-md" title={selfDeployCmd}>
-            {selfDeployCmd}
-          </span>
-          <button
-            type="button"
-            onClick={() => handleCopy(selfDeployCmd, 'self-deploy')}
-            className="text-blue-400 hover:text-blue-300 shrink-0 inline-flex items-center gap-1 ml-1"
-          >
-            {copiedId === 'self-deploy' ? (
-              <>
-                <Check className="w-3 h-3" />
-                <span>Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3 h-3" />
-                <span>Copy</span>
-              </>
+        {/* Runtime Service Account Selector for 1-Tap Instant Deploy */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200/70 dark:border-zinc-800/70">
+          <div className="flex items-center gap-2 flex-wrap">
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <span className="text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300">
+              Runtime Service Account (iam.serviceAccounts.actAs):
+            </span>
+            {defaultComputeSaMissing && (
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                Default Compute SA Deleted · Using Custom SA
+              </span>
             )}
-          </button>
+          </div>
+          <select
+            value={selectedQuickSa}
+            onChange={(e) => setSelectedQuickSa(e.target.value)}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100 max-w-full sm:max-w-md"
+          >
+            {serviceAccounts.filter((sa) => !sa.disabled).length === 0 && (
+              <option value="">
+                Auto-Resolve / Auto-Create Custom Service Account ({projectId})
+              </option>
+            )}
+            {serviceAccounts
+              .filter((sa) => !sa.disabled)
+              .map((sa) => (
+                <option key={sa.email} value={sa.email}>
+                  {sa.isCustom ? '★ [CUSTOM SA] ' : '[DEFAULT SA] '}
+                  {sa.email}
+                </option>
+              ))}
+          </select>
         </div>
       </div>
 
@@ -1608,6 +1661,19 @@ spec:
                             </span>
                           </span>
                         )}
+
+                      {/* Runtime Service Account Badge */}
+                      {srv.serviceAccount && (
+                        <span
+                          title={`Runtime Service Account: ${srv.serviceAccount}`}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30"
+                        >
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>
+                            SA: {srv.serviceAccount.split('@')[0]}
+                          </span>
+                        </span>
+                      )}
 
                       {/* Secret Manager Mounted Secrets Badge */}
                       {(srv.secretEnvRefs || []).length > 0 && (
@@ -2304,7 +2370,45 @@ spec:
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                      <div className="min-w-0">
+                        <label
+                          title="Runtime Service Account (iam.serviceAccounts.actAs)"
+                          className="block text-[11px] font-medium text-indigo-600 dark:text-indigo-400 mb-1 truncate whitespace-nowrap"
+                        >
+                          Runtime Service Account (iam.serviceAccounts.actAs)
+                        </label>
+                        <select
+                          value={form.serviceAccount || ''}
+                          onChange={(e) =>
+                            setEditForms((prev) => ({
+                              ...prev,
+                              [srv.id]: {
+                                ...form,
+                                serviceAccount: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                        >
+                          {serviceAccounts.filter((sa) => !sa.disabled).length ===
+                            0 && (
+                            <option value={form.serviceAccount || ''}>
+                              {form.serviceAccount ||
+                                `Auto-Resolve Custom SA (${projectId})`}
+                            </option>
+                          )}
+                          {serviceAccounts
+                            .filter((sa) => !sa.disabled)
+                            .map((sa) => (
+                              <option key={sa.email} value={sa.email}>
+                                {sa.isCustom ? '★ [CUSTOM SA] ' : '[DEFAULT SA] '}
+                                {sa.email}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
                       <div className="min-w-0">
                         <label
                           title="Container Image URI"

@@ -577,6 +577,7 @@ function formatCloudRunService(s, projectId, extra = {}) {
     envVars,
     secretEnvRefs,
     plaintextSecretCount,
+    serviceAccount: s.template?.serviceAccount || '',
     latestReadyRevision:
       s.latestReadyRevision?.split('/').pop() ||
       s.latestCreatedRevision?.split('/').pop() ||
@@ -598,6 +599,182 @@ function formatCloudRunService(s, projectId, extra = {}) {
           ],
     revisions: extra.revisions || [],
   };
+}
+
+// ============================================================================
+// UNIVERSAL RUNTIME SERVICE ACCOUNT DISCOVERY & FALLBACK RESOLVER
+// Automatically handles projects where the default Compute Engine Service Account
+// (`<projectNumber>-compute@developer.gserviceaccount.com`) was deleted or disabled
+// by routing all compute/serverless creations to an active custom Service Account.
+// ============================================================================
+const projectServiceAccountsCache = new Map();
+
+async function discoverProjectServiceAccounts(
+  projectId,
+  token,
+  forceRefresh = false
+) {
+  if (!projectId || !token) {
+    return {
+      projectId,
+      accounts: [],
+      recommendedServiceAccount: '',
+      defaultComputeSaMissing: false,
+    };
+  }
+  const cached = projectServiceAccountsCache.get(projectId);
+  if (!forceRefresh && cached && Date.now() - cached.ts < 25000) {
+    return cached.data;
+  }
+
+  try {
+    const iamRes = await gcpFetch(
+      `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/serviceAccounts?pageSize=100`,
+      token,
+      projectId,
+      { timeout: 6000 }
+    );
+    const rawList = Array.isArray(iamRes?.accounts) ? iamRes.accounts : [];
+    const accounts = rawList
+      .filter((a) => a && a.email)
+      .map((a) => {
+        const email = String(a.email).trim();
+        const isDefaultCompute =
+          /^\d+-compute@developer\.gserviceaccount\.com$/i.test(email);
+        const isDefaultAppEngine =
+          email.toLowerCase() ===
+          `${String(projectId).toLowerCase()}@appspot.gserviceaccount.com`;
+        const isCustom =
+          email
+            .toLowerCase()
+            .endsWith(`@${String(projectId).toLowerCase()}.iam.gserviceaccount.com`) &&
+          !isDefaultCompute &&
+          !isDefaultAppEngine;
+        return {
+          email,
+          name: a.name || `projects/${projectId}/serviceAccounts/${email}`,
+          displayName:
+            a.displayName ||
+            (isDefaultCompute
+              ? 'Default Compute Engine Service Account'
+              : isDefaultAppEngine
+              ? 'App Engine Default Service Account'
+              : email.split('@')[0]),
+          description: a.description || '',
+          disabled: Boolean(a.disabled),
+          uniqueId: a.uniqueId || '',
+          isCustom,
+          isDefaultCompute,
+          isDefaultAppEngine,
+        };
+      });
+
+    // Sort: active custom SAs first, then active default compute SA, then others
+    accounts.sort((a, b) => {
+      if (a.disabled !== b.disabled) return a.disabled ? 1 : -1;
+      if (a.isCustom !== b.isCustom) return a.isCustom ? -1 : 1;
+      if (a.isDefaultCompute !== b.isDefaultCompute)
+        return a.isDefaultCompute ? -1 : 1;
+      return a.email.localeCompare(b.email);
+    });
+
+    const activeAccounts = accounts.filter((a) => !a.disabled);
+    const hasActiveDefaultCompute = activeAccounts.some(
+      (a) => a.isDefaultCompute
+    );
+    const firstCustom = activeAccounts.find((a) => a.isCustom);
+    const firstDefaultCompute = activeAccounts.find((a) => a.isDefaultCompute);
+    const recommendedObj =
+      firstCustom || firstDefaultCompute || activeAccounts[0] || null;
+
+    const result = {
+      projectId,
+      accounts,
+      activeCount: activeAccounts.length,
+      customCount: activeAccounts.filter((a) => a.isCustom).length,
+      defaultComputeSaMissing: !hasActiveDefaultCompute,
+      recommendedServiceAccount: recommendedObj ? recommendedObj.email : '',
+    };
+    projectServiceAccountsCache.set(projectId, {
+      ts: Date.now(),
+      data: result,
+    });
+    return result;
+  } catch {
+    return {
+      projectId,
+      accounts: [],
+      activeCount: 0,
+      customCount: 0,
+      defaultComputeSaMissing: false,
+      recommendedServiceAccount: '',
+    };
+  }
+}
+
+async function resolveRuntimeServiceAccount(
+  projectId,
+  token,
+  explicitSaEmail = ''
+) {
+  const cleanExplicit = String(explicitSaEmail || '').trim();
+  if (
+    cleanExplicit &&
+    cleanExplicit !== 'AUTO' &&
+    cleanExplicit !== 'DEFAULT' &&
+    cleanExplicit.includes('@')
+  ) {
+    return cleanExplicit;
+  }
+
+  const discovered = await discoverProjectServiceAccounts(projectId, token);
+  if (discovered.recommendedServiceAccount) {
+    return discovered.recommendedServiceAccount;
+  }
+
+  // If the project has NO active service accounts at all (e.g. default compute SA was deleted and no custom SA exists yet),
+  // auto-create a dedicated `cloudpulse-runtime@<projectId>.iam.gserviceaccount.com` service account so creation never fails!
+  try {
+    await gcpFetch(
+      `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/services/iam.googleapis.com:enable`,
+      token,
+      projectId,
+      { method: 'POST', timeout: 6000 }
+    ).catch(() => null);
+
+    const accountId = 'cloudpulse-runtime';
+    const createdSa = await gcpFetch(
+      `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/serviceAccounts`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          accountId,
+          serviceAccount: {
+            displayName: 'CloudPulse 2026 Custom Runtime Service Account',
+            description:
+              'Auto-provisioned custom runtime Service Account (replaces deleted default Compute SA)',
+          },
+        },
+        timeout: 8000,
+      }
+    );
+    projectServiceAccountsCache.delete(projectId);
+    if (createdSa?.email) {
+      return createdSa.email;
+    }
+  } catch {
+    // ignore if already exists or insufficient IAM permission
+  }
+  return '';
 }
 
 // Discover local gcloud accounts & ADC files without spawning slow Python subprocesses
@@ -2037,6 +2214,127 @@ app.post('/api/project/:projectId/vms/:vmName/ssh', async (req, res) => {
   }
 });
 
+// 8z. GET & POST /api/project/:projectId/service-accounts -> Universal Runtime Service Account Discovery & 1-Click Creation
+app.get('/api/project/:projectId/service-accounts', async (req, res) => {
+  const { projectId } = req.params;
+  const force = req.query.refresh === '1' || req.query.refresh === 'true';
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+    const discovered = await discoverProjectServiceAccounts(
+      projectId,
+      token,
+      force
+    );
+    return res.json(discovered);
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to discover project Service Accounts.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/service-accounts', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    accountId = 'cloudpulse-runtime',
+    displayName = 'CloudPulse Custom Runtime Service Account',
+    description = 'Custom least-privilege runtime identity for Cloud Run, Compute VMs, GKE, and Cloud Functions',
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const cleanId = String(accountId || 'cloudpulse-runtime')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 28);
+    const validAccountId =
+      cleanId.length >= 6 ? cleanId : `${cleanId}-sa-runner`.slice(0, 28);
+
+    await gcpFetch(
+      `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/services/iam.googleapis.com:enable`,
+      token,
+      projectId,
+      { method: 'POST', timeout: 6000 }
+    ).catch(() => null);
+
+    let createdSa;
+    try {
+      createdSa = await gcpFetch(
+        `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/serviceAccounts`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            accountId: validAccountId,
+            serviceAccount: {
+              displayName: String(displayName).trim(),
+              description: String(description).trim(),
+            },
+          },
+          timeout: 8000,
+        }
+      );
+    } catch (createErr) {
+      const msg =
+        createErr.response?.data?.error?.message || createErr.message || '';
+      if (/already exists/i.test(msg)) {
+        createdSa = {
+          email: `${validAccountId}@${projectId}.iam.gserviceaccount.com`,
+          displayName: String(displayName).trim(),
+        };
+      } else {
+        throw createErr;
+      }
+    }
+
+    const discovered = await discoverProjectServiceAccounts(
+      projectId,
+      token,
+      true
+    );
+
+    return res.json({
+      ok: true,
+      serviceAccount: createdSa,
+      email:
+        createdSa?.email ||
+        `${validAccountId}@${projectId}.iam.gserviceaccount.com`,
+      accounts: discovered.accounts,
+      recommendedServiceAccount:
+        createdSa?.email || discovered.recommendedServiceAccount,
+      message: `Created custom Service Account "${
+        createdSa?.email ||
+        `${validAccountId}@${projectId}.iam.gserviceaccount.com`
+      }" on project ${projectId}!`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to create custom Service Account.',
+    });
+  }
+});
+
 // 9. POST /api/project/:projectId/provision -> 100% Real GCP Resource Creation via REST APIs
 app.post('/api/project/:projectId/provision', async (req, res) => {
   const { projectId } = req.params;
@@ -2668,6 +2966,20 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         ];
       }
 
+      const runtimeServiceAccount = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        config.serviceAccount || config.serviceAccountEmail
+      );
+      if (runtimeServiceAccount) {
+        body.serviceAccounts = [
+          {
+            email: runtimeServiceAccount,
+            scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          },
+        ];
+      }
+
       if (startupScript) {
         body.metadata = {
           items: [
@@ -2695,9 +3007,10 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
 
       return res.json({
         ok: true,
+        serviceAccount: runtimeServiceAccount || null,
         message: `Dispatched real Compute Engine VM creation for "${cleanName}" (${machineType}, ${diskSizeGb}GB ${diskType}${
           spotInstance ? ', Spot VM' : ''
-        }) in ${zone}!`,
+        }${runtimeServiceAccount ? `, SA: ${runtimeServiceAccount}` : ''}) in ${zone}!`,
         operation: op,
       });
     }
@@ -2769,6 +3082,11 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
           ? Boolean(config.allowUnauthenticated)
           : true;
       const envList = parseEnvVarsInput(config.envVars);
+      const runtimeServiceAccount = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        config.serviceAccount || config.serviceAccountEmail
+      );
 
       const limits = {
         cpu,
@@ -2786,6 +3104,9 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
           'run.googleapis.com/ssh-enabled': 'true',
         },
         template: {
+          ...(runtimeServiceAccount
+            ? { serviceAccount: runtimeServiceAccount }
+            : {}),
           scaling: {
             minInstanceCount: minInstances,
             maxInstanceCount: maxInstances,
@@ -2872,12 +3193,16 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         : 'Instance-Based Billing';
       const vpcBadge = vpcSummary ? `, ${vpcSummary}` : '';
       const storageBadge = storageSummary ? `, ${storageSummary}` : '';
+      const saBadge = runtimeServiceAccount
+        ? `, SA: ${runtimeServiceAccount}`
+        : '';
 
       return res.json({
         ok: true,
+        serviceAccount: runtimeServiceAccount || null,
         message: `Dispatched real Cloud Run deployment for "${cleanName}" in ${region} (${cpu} vCPU, ${memory}${gpuBadge}, ${billingBadge}${vpcBadge}${storageBadge}, scale ${minInstances}→${maxInstances}, ${
           allowUnauthenticated ? 'Public HTTPS' : 'IAM Auth'
-        })!`,
+        }${saBadge})!`,
         operation: op,
       });
     }
@@ -3158,8 +3483,22 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         };
       }
 
+      const runtimeServiceAccount = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        config.serviceAccount || config.serviceAccountEmail
+      );
+
       if (gkeMode === 'AUTOPILOT') {
         clusterObj.autopilot = { enabled: true };
+        if (runtimeServiceAccount) {
+          clusterObj.autoscaling = {
+            autoprovisioningNodePoolDefaults: {
+              serviceAccount: runtimeServiceAccount,
+              oauthScopes: ['https://www.googleapis.com/auth/cloud-platform'],
+            },
+          };
+        }
       } else {
         clusterObj.shieldedNodes = { enabled: enableShieldedNodes };
         const nodeConfig = {
@@ -3167,6 +3506,9 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
           diskSizeGb: 50,
           diskType: 'pd-balanced',
           spot: spotNodes,
+          ...(runtimeServiceAccount
+            ? { serviceAccount: runtimeServiceAccount }
+            : {}),
           oauthScopes: ['https://www.googleapis.com/auth/cloud-platform'],
           shieldedInstanceConfig: {
             enableSecureBoot: enableShieldedNodes,
@@ -3218,14 +3560,19 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         resourceType: 'GKE_CLUSTER',
         resourceName: cleanName,
         region: gkeLocation,
-        summary: `Dispatched GKE ${gkeMode} cluster "${cleanName}" in ${gkeLocation} (${releaseChannel} channel)`,
+        summary: `Dispatched GKE ${gkeMode} cluster "${cleanName}" in ${gkeLocation} (${releaseChannel} channel${
+          runtimeServiceAccount ? `, SA: ${runtimeServiceAccount}` : ''
+        })`,
       });
 
       return res.json({
         ok: true,
+        serviceAccount: runtimeServiceAccount || null,
         message: `Dispatched real GKE ${gkeMode} Cluster creation for "${cleanName}" in ${gkeLocation} (${releaseChannel} channel${
           enablePrivateNodes ? ', Private Nodes' : ''
-        }${enableBinaryAuth ? ', Binary Auth Enforced' : ''})!`,
+        }${enableBinaryAuth ? ', Binary Auth Enforced' : ''}${
+          runtimeServiceAccount ? `, SA: ${runtimeServiceAccount}` : ''
+        })!`,
         operation: op,
       });
     }
@@ -4588,7 +4935,18 @@ app.patch(
         delete nextContainer.volumeMounts;
       }
 
+      const runtimeServiceAccount = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        config.serviceAccount ||
+          config.serviceAccountEmail ||
+          existing.template?.serviceAccount
+      );
+
       const templateObj = {
+        ...(runtimeServiceAccount
+          ? { serviceAccount: runtimeServiceAccount }
+          : {}),
         scaling: {
           minInstanceCount: minInstances,
           maxInstanceCount: maxInstances,
@@ -4903,25 +5261,12 @@ app.post(
         });
       }
 
-      // 3. Resolve runtime service account email (or default compute SA via projectNumber)
-      let runtimeSaEmail = existing.template?.serviceAccount || '';
-      if (!runtimeSaEmail) {
-        try {
-          const projMeta = await gcpFetch(
-            `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
-              projectId
-            )}`,
-            token,
-            projectId,
-            { timeout: 5000 }
-          );
-          if (projMeta?.projectNumber) {
-            runtimeSaEmail = `${projMeta.projectNumber}-compute@developer.gserviceaccount.com`;
-          }
-        } catch {
-          // ignore
-        }
-      }
+      // 3. Resolve runtime service account email (prefers active custom SA if default compute SA was deleted)
+      const runtimeSaEmail = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        existing.template?.serviceAccount
+      );
 
       const sealedSecrets = [];
       const updatedEnv = [];
@@ -6256,10 +6601,19 @@ app.post('/api/project/:projectId/cloudrun/teleport', async (req, res) => {
       image: 'us-docker.pkg.dev/cloudrun/container/hello',
     };
 
+    const runtimeServiceAccount = await resolveRuntimeServiceAccount(
+      projectId,
+      token,
+      req.body?.serviceAccount || sourceSvc.template?.serviceAccount
+    );
+
     const clonePayload = {
       description: `Teleported from ${sourceServiceName} (${sourceRegion}) to ${targetRegion} via CloudPulse 2026`,
       ingress: sourceSvc.ingress || 'INGRESS_TRAFFIC_ALL',
       template: {
+        ...(runtimeServiceAccount
+          ? { serviceAccount: runtimeServiceAccount }
+          : {}),
         executionEnvironment:
           sourceSvc.template?.executionEnvironment ||
           'EXECUTION_ENVIRONMENT_GEN2',
@@ -6341,8 +6695,11 @@ app.post('/api/project/:projectId/cloudrun/teleport', async (req, res) => {
       sourceRegion,
       targetServiceName: targetSvcId,
       targetRegion,
+      serviceAccount: runtimeServiceAccount || null,
       operationName: createRes.data?.name || '',
-      message: `Teleported "${sourceServiceName}" (${sourceRegion}) → "${targetSvcId}" (${targetRegion})!`,
+      message: `Teleported "${sourceServiceName}" (${sourceRegion}) → "${targetSvcId}" (${targetRegion})${
+        runtimeServiceAccount ? ` [SA: ${runtimeServiceAccount}]` : ''
+      }!`,
     });
   } catch (err) {
     res.status(500).json({
@@ -6396,6 +6753,7 @@ app.post('/api/project/:projectId/stack-deploy', async (req, res) => {
     blueprintId = 'AI_INFERENCE_STACK',
     stackPrefix = 'pulse-stack',
     region = 'europe-north1',
+    serviceAccount = '',
   } = req.body || {};
 
   try {
@@ -6403,6 +6761,12 @@ app.post('/api/project/:projectId/stack-deploy', async (req, res) => {
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated.' });
     }
+
+    const runtimeServiceAccount = await resolveRuntimeServiceAccount(
+      projectId,
+      token,
+      serviceAccount
+    );
 
     const suffix = Math.floor(1000 + Math.random() * 8999);
     const cleanPrefix = String(stackPrefix)
@@ -6516,6 +6880,9 @@ app.post('/api/project/:projectId/stack-deploy', async (req, res) => {
           description: `Synthesized ${blueprintId} via CloudPulse 2026 Stack Composer`,
           ingress: 'INGRESS_TRAFFIC_ALL',
           template: {
+            ...(runtimeServiceAccount
+              ? { serviceAccount: runtimeServiceAccount }
+              : {}),
             executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
             scaling: { minInstanceCount: 0, maxInstanceCount: 10 },
             containers: [
@@ -12613,6 +12980,12 @@ app.post(
         });
       }
 
+      const runtimeSa = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        req.body?.serviceAccount
+      );
+
       if (deployTarget === 'CLOUD_RUN' && cloudRunService) {
         const cleanRunSvc = String(cloudRunService)
           .toLowerCase()
@@ -12629,6 +13002,7 @@ app.post(
             `--region=${cloudRunRegion || arLocation}`,
             `--port=${Number(cloudRunPort || 8080)}`,
             '--platform=managed',
+            ...(runtimeSa ? [`--service-account=${runtimeSa}`] : []),
             allowUnauthenticated
               ? '--allow-unauthenticated'
               : '--no-allow-unauthenticated',
@@ -12656,6 +13030,11 @@ app.post(
       }
 
       const buildPayload = {
+        ...(runtimeSa
+          ? {
+              serviceAccount: `projects/${projectId}/serviceAccounts/${runtimeSa}`,
+            }
+          : {}),
         steps,
         images: buildMode === 'BUILDPACKS' ? [] : [targetImageUri],
         timeout: '1200s',
@@ -12999,6 +13378,12 @@ app.post(
         : String(gkeCluster || '').trim();
       const targetLocation = String(gkeLocation || region || 'us-central1').trim();
 
+      const runtimeSa = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        req.body?.serviceAccount
+      );
+
       let clusterOperation = null;
       if (createAutopilotCluster) {
         clusterOperation = await gcpApiRequest({
@@ -13013,6 +13398,18 @@ app.post(
               name: targetCluster,
               description: `Auto-provisioned GKE Autopilot cluster for Cloud Run graduation (${name})`,
               autopilot: { enabled: true },
+              ...(runtimeSa
+                ? {
+                    autoscaling: {
+                      autoprovisioningNodePoolDefaults: {
+                        serviceAccount: runtimeSa,
+                        oauthScopes: [
+                          'https://www.googleapis.com/auth/cloud-platform',
+                        ],
+                      },
+                    },
+                  }
+                : {}),
               releaseChannel: { channel: 'REGULAR' },
               workloadIdentityConfig: {
                 workloadPool: `${projectId}.svc.id.goog`,
@@ -13034,6 +13431,11 @@ app.post(
       );
 
       const buildPayload = {
+        ...(runtimeSa
+          ? {
+              serviceAccount: `projects/${projectId}/serviceAccounts/${runtimeSa}`,
+            }
+          : {}),
         steps: [
           {
             name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim',
@@ -13372,6 +13774,13 @@ app.post('/api/project/:projectId/functions/iam-doctor', async (req, res) => {
     const policy = policyRes.data || { bindings: [] };
     const bindings = Array.isArray(policy.bindings) ? [...policy.bindings] : [];
 
+    const targetRuntimeSa =
+      (await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        req.body?.serviceAccount
+      )) || `${projectNumber}-compute@developer.gserviceaccount.com`;
+
     const requiredBindings = [
       {
         role: 'roles/pubsub.publisher',
@@ -13380,13 +13789,13 @@ app.post('/api/project/:projectId/functions/iam-doctor', async (req, res) => {
       },
       {
         role: 'roles/eventarc.eventReceiver',
-        member: `serviceAccount:${projectNumber}-compute@developer.gserviceaccount.com`,
-        label: 'Default Compute Service Account → Eventarc Event Receiver',
+        member: `serviceAccount:${targetRuntimeSa}`,
+        label: `Runtime Service Account (${targetRuntimeSa}) → Eventarc Event Receiver`,
       },
       {
         role: 'roles/run.invoker',
-        member: `serviceAccount:${projectNumber}-compute@developer.gserviceaccount.com`,
-        label: 'Default Compute Service Account → Cloud Run Invoker (Allows Eventarc to invoke v2 Function)',
+        member: `serviceAccount:${targetRuntimeSa}`,
+        label: `Runtime Service Account (${targetRuntimeSa}) → Cloud Run Invoker (Allows Eventarc to invoke v2 Function)`,
       },
       {
         role: 'roles/eventarc.serviceAgent',
@@ -13434,19 +13843,20 @@ app.post('/api/project/:projectId/functions/iam-doctor', async (req, res) => {
       resourceType: 'IAM_EVENTARC_BINDINGS',
       resourceName: `projectNumber:${projectNumber}`,
       region: 'global',
-      summary: `Eventarc IAM Auto-Doctor verified 4 service-agent bindings (${newlyGrantedCount} newly granted) on ${projectId}`,
+      summary: `Eventarc IAM Auto-Doctor verified 4 service-agent bindings (${newlyGrantedCount} newly granted, SA: ${targetRuntimeSa}) on ${projectId}`,
     });
 
     res.json({
       ok: true,
       projectId,
       projectNumber,
+      serviceAccount: targetRuntimeSa,
       newlyGrantedCount,
       bindings: applied,
       message:
         newlyGrantedCount > 0
-          ? `Granted ${newlyGrantedCount} missing Eventarc & Cloud Storage Service Agent IAM role(s) on project ${projectId} (#${projectNumber})!`
-          : `All 4 Eventarc, GCS Publisher & Cloud Run Invoker IAM bindings are already active on ${projectId} (#${projectNumber})!`,
+          ? `Granted ${newlyGrantedCount} missing Eventarc & Cloud Storage Service Agent IAM role(s) for ${targetRuntimeSa} on project ${projectId}!`
+          : `All 4 Eventarc, GCS Publisher & Cloud Run Invoker IAM bindings for ${targetRuntimeSa} are already active on ${projectId}!`,
     });
   } catch (err) {
     res.status(400).json({
@@ -13486,6 +13896,7 @@ app.post('/api/project/:projectId/functions/deploy', async (req, res) => {
     allowUnauthenticated = true,
     enableRetry = true,
     sourceCodeJs = '',
+    serviceAccount = '',
   } = req.body || {};
 
   const cleanName = String(name || 'pulse-event-fn')
@@ -13507,6 +13918,12 @@ app.post('/api/project/:projectId/functions/deploy', async (req, res) => {
       ensureServiceApiEnabled(projectId, 'eventarc.googleapis.com', token),
       ensureServiceApiEnabled(projectId, 'artifactregistry.googleapis.com', token),
     ]);
+
+    const runtimeSa = await resolveRuntimeServiceAccount(
+      projectId,
+      token,
+      serviceAccount
+    );
 
     const defaultIndexJs =
       sourceCodeJs && String(sourceCodeJs).trim()
@@ -13602,8 +14019,22 @@ functions.http('${entryPoint}Http', (req, res) => {
       enableRetry && triggerCategory !== 'HTTPS_WEBHOOK' ? '--retry' : '';
     const concurrencyFlag =
       generation === 'GEN_2' ? `--concurrency=${Number(concurrency || 80)}` : '';
+    const saFlags = runtimeSa
+      ? generation === 'GEN_2'
+        ? `--service-account="${runtimeSa}" --run-service-account="${runtimeSa}"${
+            triggerCategory !== 'HTTPS_WEBHOOK' &&
+            triggerCategory !== 'PUBSUB_TOPIC' &&
+            triggerCategory !== 'CRON_SCHEDULE'
+              ? ` --trigger-service-account="${runtimeSa}"`
+              : ''
+          }`
+        : `--service-account="${runtimeSa}"`
+      : '';
 
     const buildPayload = {
+      ...(runtimeSa
+        ? { serviceAccount: `projects/${projectId}/serviceAccounts/${runtimeSa}` }
+        : {}),
       steps: [
         {
           name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim',
@@ -13628,6 +14059,7 @@ gcloud functions deploy "${cleanName}" \\
   --max-instances=${Number(maxInstances || 20)} \\
   --timeout=${Number(timeoutSeconds || 60)}s \\
   ${concurrencyFlag} \\
+  ${saFlags} \\
   ${triggerFlags} \\
   ${retryFlag} \\
   --project="${projectId}" \\
@@ -14150,6 +14582,11 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, '-')
         .slice(0, 45);
+      const runtimeSa = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        req.body?.serviceAccount
+      );
 
       const op = await gcpApiRequest({
         method: 'POST',
@@ -14164,6 +14601,15 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
           runtimeConfig: {
             version: '2.2',
           },
+          ...(runtimeSa
+            ? {
+                environmentConfig: {
+                  executionConfig: {
+                    serviceAccount: runtimeSa,
+                  },
+                },
+              }
+            : {}),
           pysparkBatch: {
             mainPythonFileUri:
               mainPythonFileUri ||
@@ -14177,13 +14623,18 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
         resourceType: 'DATAPROC_SERVERLESS_BATCH',
         resourceName: cleanBatchId,
         region,
-        summary: `Submitted Zero-Cluster Dataproc Serverless PySpark batch ${cleanBatchId} (${region})`,
+        summary: `Submitted Zero-Cluster Dataproc Serverless PySpark batch ${cleanBatchId} (${region}${
+          runtimeSa ? `, SA: ${runtimeSa}` : ''
+        })`,
       });
 
       return res.json({
         ok: true,
+        serviceAccount: runtimeSa || null,
         operation: op?.name || null,
-        message: `Submitted Serverless PySpark Batch "${cleanBatchId}" in ${region}.`,
+        message: `Submitted Serverless PySpark Batch "${cleanBatchId}" in ${region}${
+          runtimeSa ? ` (SA: ${runtimeSa})` : ''
+        }.`,
       });
     }
 
@@ -14192,6 +14643,11 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, '-')
         .slice(0, 45);
+      const runtimeSa = await resolveRuntimeServiceAccount(
+        projectId,
+        token,
+        req.body?.serviceAccount
+      );
 
       const op = await gcpApiRequest({
         method: 'POST',
@@ -14205,6 +14661,11 @@ app.post('/api/project/:projectId/wave10/action', async (req, res) => {
         data: {
           description:
             'Provisioned via CloudPulse 2026 Frontier Studio (Durable YAML Saga)',
+          ...(runtimeSa
+            ? {
+                serviceAccount: `projects/${projectId}/serviceAccounts/${runtimeSa}`,
+              }
+            : {}),
           sourceContents:
             workflowYaml ||
             `main:\n  params: [input]\n  steps:\n    - init:\n        assign:\n          - project: "${projectId}"\n    - done:\n        return: \${project}`,
