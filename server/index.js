@@ -16853,6 +16853,259 @@ app.post(
   }
 );
 
+// Helper: Scan ~/Downloads, ~/Desktop, and /tmp for the newest Google Cloud Console Billing Credits CSV file
+async function discoverLatestLocalCreditsCsv() {
+  const homeDir = os.homedir();
+  const candidateDirs = [
+    path.join(homeDir, 'Downloads'),
+    path.join(homeDir, 'Desktop'),
+    os.tmpdir(),
+  ];
+  const matches = [];
+
+  for (const dir of candidateDirs) {
+    try {
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile() || !/\.csv$/i.test(entry.name)) continue;
+        const fullPath = path.join(dir, entry.name);
+        try {
+          const stat = await fs.promises.stat(fullPath);
+          if (stat.size <= 0 || stat.size > 5 * 1024 * 1024) continue;
+          const raw = await fs.promises.readFile(fullPath, 'utf8');
+          const firstLine = String(raw.split(/\r?\n/)[0] || '');
+          if (
+            /Credit name\s*,\s*Status\s*,\s*Currency\s*,\s*Percent remaining\s*,\s*Remaining value\s*,\s*Original value/i.test(
+              firstLine
+            )
+          ) {
+            matches.push({
+              filePath: fullPath,
+              fileName: entry.name,
+              mtimeMs: stat.mtimeMs,
+              mtimeIso: new Date(stat.mtimeMs).toISOString(),
+              rawText: raw,
+            });
+          }
+        } catch {
+          // ignore unreadable files
+        }
+      }
+    } catch {
+      // ignore missing directories
+    }
+  }
+
+  matches.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return matches[0] || null;
+}
+
+// Helper: Connect to an active Chrome DevTools port (if open) or spawn a headless/profile CDP session to click `button[id$="billingtest-download-credits-csv"]`
+async function tryCdpClickConsoleDownloadCsv(billingAccountId) {
+  const targetUrl = billingAccountId
+    ? `https://console.cloud.google.com/billing/${billingAccountId}/credits`
+    : 'https://console.cloud.google.com/billing';
+
+  const cdpPorts = [9222, 9229, 9333];
+  for (const port of cdpPorts) {
+    try {
+      const listRes = await fetch(`http://127.0.0.1:${port}/json/list`, {
+        signal: AbortSignal.timeout(1200),
+      });
+      if (!listRes.ok) continue;
+      const tabs = await listRes.json();
+      let targetTab = tabs.find((t) =>
+        String(t.url || '').includes('console.cloud.google.com/billing')
+      );
+      if (!targetTab) {
+        const newRes = await fetch(
+          `http://127.0.0.1:${port}/json/new?${encodeURIComponent(targetUrl)}`,
+          { method: 'PUT', signal: AbortSignal.timeout(2000) }
+        );
+        if (newRes.ok) {
+          targetTab = await newRes.json();
+        }
+      }
+      if (targetTab?.webSocketDebuggerUrl) {
+        const clicked = await new Promise((resolve) => {
+          const ws = new WebSocket(targetTab.webSocketDebuggerUrl);
+          const timer = setTimeout(() => {
+            try {
+              ws.close();
+            } catch {
+              // ignore
+            }
+            resolve(false);
+          }, 8000);
+
+          ws.on('open', () => {
+            const downloadDir = path.join(os.homedir(), 'Downloads');
+            ws.send(
+              JSON.stringify({
+                id: 1,
+                method: 'Page.setDownloadBehavior',
+                params: { behavior: 'allow', downloadPath: downloadDir },
+              })
+            );
+            const clickScript = `
+              (async () => {
+                for (let attempt = 0; attempt < 15; attempt++) {
+                  const btn =
+                    document.querySelector('button[id$="billingtest-download-credits-csv"]') ||
+                    document.querySelector('button[cfctooltip="Download CSV"]') ||
+                    Array.from(document.querySelectorAll('cfc-exposed-filter button, button.cm-button')).find(
+                      (el) => /Download CSV/i.test(el.textContent || '')
+                    );
+                  if (btn) {
+                    btn.click();
+                    return { clicked: true, id: btn.id || 'download-csv-btn' };
+                  }
+                  await new Promise((r) => setTimeout(r, 400));
+                }
+                return { clicked: false };
+              })()
+            `;
+            ws.send(
+              JSON.stringify({
+                id: 2,
+                method: 'Runtime.evaluate',
+                params: {
+                  expression: clickScript,
+                  awaitPromise: true,
+                  returnByValue: true,
+                },
+              })
+            );
+          });
+
+          ws.on('message', (data) => {
+            try {
+              const msg = JSON.parse(String(data));
+              if (msg.id === 2) {
+                clearTimeout(timer);
+                const val = msg?.result?.result?.value;
+                try {
+                  ws.close();
+                } catch {
+                  // ignore
+                }
+                resolve(Boolean(val?.clicked));
+              }
+            } catch {
+              // ignore
+            }
+          });
+
+          ws.on('error', () => {
+            clearTimeout(timer);
+            resolve(false);
+          });
+        });
+
+        if (clicked) {
+          // Wait briefly for the browser to write the CSV to disk
+          await new Promise((r) => setTimeout(r, 1500));
+          return { cdpClicked: true, port, targetUrl };
+        }
+      }
+    } catch {
+      // port not active
+    }
+  }
+  return { cdpClicked: false, targetUrl };
+}
+
+// POST /api/project/:projectId/billing-guardian/auto-download-credits-csv
+// 1. Attempts to trigger `button[id$="billingtest-download-credits-csv"]` via Chrome CDP if available
+// 2. Automatically scans ~/Downloads, ~/Desktop, and /tmp for the newest Google Cloud Console Credits CSV
+// 3. Parses all 9-column rows and updates Temp JSON + in-memory cache automatically
+app.post(
+  '/api/project/:projectId/billing-guardian/auto-download-credits-csv',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { billingAccountId } = req.body || {};
+    try {
+      const cdpResult = await tryCdpClickConsoleDownloadCsv(billingAccountId);
+      const discovered = await discoverLatestLocalCreditsCsv();
+
+      if (!discovered) {
+        return res.status(404).json({
+          ok: false,
+          cdpResult,
+          error:
+            'No Google Cloud Console Billing Credits CSV file was found in ~/Downloads or ~/Desktop yet. Click "1-Click Console Auto-Export" (or Download CSV in Console) and it will be ingested automatically.',
+        });
+      }
+
+      const parsedGrants = parseConsoleCreditsText(discovered.rawText);
+      if (parsedGrants.length === 0) {
+        return res.status(400).json({
+          ok: false,
+          filePath: discovered.filePath,
+          error: `Found ${discovered.fileName}, but could not parse any credit grant rows.`,
+        });
+      }
+
+      const creditsPath = await writeSavedConsoleCredits(
+        projectId,
+        parsedGrants
+      );
+      liveBillingInsightsCache.delete(projectId);
+
+      const safeProject = String(projectId || 'default').replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
+      const tempJsonPath = path.join(
+        os.tmpdir(),
+        `cloudpulse-billing-insights-${safeProject}.json`
+      );
+      try {
+        const existingRaw = await fs.promises.readFile(tempJsonPath, 'utf8');
+        const parsedExisting = JSON.parse(existingRaw);
+        if (parsedExisting && typeof parsedExisting === 'object') {
+          parsedExisting.insights = {
+            ...(parsedExisting.insights || {
+              tempJsonPath,
+              costCreditRows: [],
+              crossAccountRows: [],
+              monthlyTrendRows: [],
+              billingBudgets: [],
+            }),
+            consoleCredits: parsedGrants,
+          };
+          await fs.promises.writeFile(
+            tempJsonPath,
+            JSON.stringify(parsedExisting, null, 2),
+            'utf8'
+          );
+        }
+      } catch {
+        // ignore if temp json not created yet
+      }
+
+      return res.json({
+        ok: true,
+        autoDiscovered: true,
+        cdpClicked: cdpResult.cdpClicked,
+        fileName: discovered.fileName,
+        filePath: discovered.filePath,
+        fileModifiedAt: discovered.mtimeIso,
+        count: parsedGrants.length,
+        creditsPath,
+        consoleCredits: parsedGrants,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        ok: false,
+        error:
+          err.message ||
+          'Failed to auto-discover or download Console Credits CSV.',
+      });
+    }
+  }
+);
+
 app.post(
   '/api/project/:projectId/billing-guardian/reset-console-credits',
   async (req, res) => {

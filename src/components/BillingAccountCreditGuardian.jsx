@@ -849,6 +849,45 @@ export default function BillingAccountCreditGuardian({
     }
   };
 
+  const [autoGrabbingCsv, setAutoGrabbingCsv] = useState(false);
+
+  const handleAutoGrabCreditsCsv = async () => {
+    setAutoGrabbingCsv(true);
+    setSyncError('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/auto-download-credits-csv`,
+        { billingAccountId: billingInfo.billingAccountId }
+      );
+      if (res.data?.ok && Array.isArray(res.data.consoleCredits)) {
+        setSyncedConsoleCredits(res.data.consoleCredits);
+        setLiveBillingInsights((prev) =>
+          prev
+            ? { ...prev, consoleCredits: res.data.consoleCredits }
+            : { consoleCredits: res.data.consoleCredits }
+        );
+        setConsolePasteText('');
+        setShowConsoleSyncDrawer(false);
+        if (onShowToast) {
+          onShowToast(
+            `Auto-ingested ${res.data.consoleCredits.length} credit grants from ${res.data.fileName}!`
+          );
+        }
+      }
+    } catch (err) {
+      setSyncError(
+        err?.response?.data?.error ||
+          err.message ||
+          'Could not auto-detect a downloaded Credits CSV file.'
+      );
+      setShowConsoleSyncDrawer(true);
+    } finally {
+      setAutoGrabbingCsv(false);
+    }
+  };
+
   const handleUploadCreditsCsvFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1065,6 +1104,8 @@ ORDER BY
     ? `https://console.cloud.google.com/billing/${billingInfo.billingAccountId}/credits`
     : 'https://console.cloud.google.com/billing';
 
+  const consoleDomAutoClickSnippet = `(function(){const b=document.querySelector('button[id$="billingtest-download-credits-csv"]')||document.querySelector('button[cfctooltip="Download CSV"]')||Array.from(document.querySelectorAll('cfc-exposed-filter button,button.cm-button')).find(e=>/Download CSV/i.test(e.textContent||''));if(b){b.click();}else{alert('Open your GCP Billing Credits page first');}})();`;
+
   return (
     <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-5">
       {/* Header Row: Live Billing Account Identity + Sync Actions */}
@@ -1098,12 +1139,31 @@ ORDER BY
             )}
           </div>
           <p className="text-xs text-zinc-500">
-            <strong>Remaining Bonus</strong> balances are loaded directly from your uploaded Google Cloud Console Credits <code className="font-mono">.csv</code> file without automatic balance modification — please <strong>upload a fresh CSV frequently</strong> to update your remaining bonus amount, while <strong>expiration dates & countdowns are calculated automatically</strong>.
+            <strong>Remaining Bonus</strong> balances can be <strong>auto-grabbed in 1 click</strong> (`Auto-Grab CSV` triggers <code className="font-mono">button[id$=&quot;billingtest-download-credits-csv&quot;]</code> via CDP or ingests the latest Credits <code className="font-mono">.csv</code> from <code className="font-mono">~/Downloads</code> / <code className="font-mono">~/Desktop</code>) or uploaded manually — while <strong>expiration dates & countdowns are calculated automatically</strong>.
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          <label className="h-9 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all">
+          <button
+            type="button"
+            onClick={handleAutoGrabCreditsCsv}
+            disabled={autoGrabbingCsv}
+            className="h-9 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+            title='Clicks button[id$="billingtest-download-credits-csv"] via CDP (if enabled) and auto-ingests the latest Credits CSV from ~/Downloads or ~/Desktop'
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 shrink-0 ${
+                autoGrabbingCsv ? 'animate-spin' : ''
+              }`}
+            />
+            <span>
+              {autoGrabbingCsv
+                ? 'Auto-Grabbing CSV...'
+                : '⚡ Auto-Grab Downloaded CSV'}
+            </span>
+          </button>
+
+          <label className="h-9 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 border border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all">
             <Database className="w-3.5 h-3.5 shrink-0" />
             <span>Upload Remaining Bonus CSV</span>
             <input
@@ -1173,20 +1233,11 @@ ORDER BY
               <div className="text-xs font-mono font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2">
                 <CreditCard className="w-3.5 h-3.5 shrink-0" />
                 <span>
-                  Remaining Bonus CSV Upload (`Credit name,Status,Currency,Percent remaining,Remaining value,Original value,Start date,End date,Credit application type`)
+                  Automated & Manual Remaining Bonus CSV Sync (`button[id$=&quot;billingtest-download-credits-csv&quot;]`)
                 </span>
               </div>
               <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                Because Google’s real-time OAuth APIs do not expose unspent credit grant balances and multi-grant deduction is too complex to calculate automatically, <strong>Remaining Bonus</strong> displays the exact <code className="font-mono">Remaining value</code> from your uploaded CSV while calculating <strong>expiration dates & countdowns automatically</strong>. Please download and <strong>upload your Credits <code className="font-mono">.csv</code> file frequently</strong> from your{' '}
-                <a
-                  href={consoleCreditsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono font-bold underline text-blue-600 dark:text-blue-400"
-                >
-                  GCP Console Billing Credits page
-                </a>{' '}
-                (click <strong>Download CSV</strong>) to keep your Remaining Bonus up to date:
+                Click <strong>⚡ Auto-Grab Downloaded CSV</strong> to automatically trigger <code className="font-mono">button[id$=&quot;billingtest-download-credits-csv&quot;]</code> (<code className="font-mono">cfctooltip=&quot;Download CSV&quot;</code>) via Chrome CDP or automatically ingest the latest Google Cloud Console Credits <code className="font-mono">.csv</code> file from <code className="font-mono">~/Downloads</code> or <code className="font-mono">~/Desktop</code>. You can also copy the 1-line DOM auto-clicker below or upload the file manually:
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -1198,9 +1249,45 @@ ORDER BY
               >
                 1. Open {billingInfo.billingAccountId || 'Billing'} Credits ↗
               </a>
-              <label className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer">
+              <button
+                type="button"
+                onClick={handleAutoGrabCreditsCsv}
+                disabled={autoGrabbingCsv}
+                className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 shrink-0 ${
+                    autoGrabbingCsv ? 'animate-spin' : ''
+                  }`}
+                />
+                <span>
+                  {autoGrabbingCsv
+                    ? 'Auto-Grabbing...'
+                    : '2a. ⚡ Auto-Grab Latest CSV'}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  handleCopyText(
+                    'dom-auto-click-csv',
+                    consoleDomAutoClickSnippet,
+                    'Console Download CSV Auto-Clicker JS'
+                  )
+                }
+                className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                title="Copies JS snippet targeting button[id$='billingtest-download-credits-csv']"
+              >
+                {copiedId === 'dom-auto-click-csv' ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 shrink-0" />
+                )}
+                <span>2b. Copy Console Auto-Click JS</span>
+              </button>
+              <label className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer">
                 <Database className="w-3.5 h-3.5 shrink-0" />
-                <span>2a. Upload Remaining Bonus .CSV</span>
+                <span>2c. Upload .CSV</span>
                 <input
                   type="file"
                   accept=".csv,text/csv,text/plain"
