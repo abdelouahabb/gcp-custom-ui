@@ -1407,31 +1407,6 @@ function CloudPulseCockpit() {
                 <span>Health &amp; Drift Scan</span>
               </button>
 
-              {/* Deploy to Cloud Run Modal Button */}
-              <button
-                type="button"
-                onClick={() => setCloudRunModalOpen(true)}
-                title="Deploy this CloudPulse 2026 cockpit as a serverless container on Google Cloud Run"
-                className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
-              >
-                <Rocket className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                <span className="hidden lg:inline">Cloud Run</span>
-              </button>
-
-              {/* Phone / Desktop Viewport Mode Switcher */}
-              <button
-                type="button"
-                onClick={() => setMobilePreview((m) => !m)}
-                title="Toggle Android 2026 Mobile Phone Frame vs Full Widescreen Cockpit"
-                className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-medium transition-colors shadow-sm"
-              >
-                {mobilePreview ? (
-                  <Monitor className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                ) : (
-                  <Smartphone className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                )}
-              </button>
-
               {/* Refresh Button */}
               <button
                 type="button"
