@@ -430,9 +430,30 @@ function formatCloudRunService(s, projectId, extra = {}) {
   const portObj = container.ports?.[0] || {};
   const timeoutRaw = s.template?.timeout || '300s';
   const timeoutSeconds = parseInt(String(timeoutRaw).replace('s', ''), 10) || 300;
-  const envVars = (container.env || [])
+  const sensitiveKeyPattern =
+    /(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|AUTH_KEY|CLIENT_SECRET|DB_PASS|DATABASE_URL|REDIS_URL|STRIPE_KEY|OPENAI_API_KEY|GEMINI_API_KEY|JWT)/i;
+  const rawEnvList = container.env || [];
+  const envVars = rawEnvList
     .filter((e) => e.name && e.value !== undefined)
-    .map((e) => ({ name: e.name, value: e.value }));
+    .map((e) => ({
+      name: e.name,
+      value: e.value,
+      isPlaintextSecret:
+        sensitiveKeyPattern.test(e.name) ||
+        /^(?:AIzaSy|sk-[a-zA-Z0-9]{16,}|ghp_[a-zA-Z0-9]{16,}|postgres(?:ql)?:\/\/[^:]+:[^@]+@)/i.test(
+          String(e.value || '')
+        ),
+    }));
+  const secretEnvRefs = rawEnvList
+    .filter((e) => e.name && e.valueSource?.secretKeyRef)
+    .map((e) => ({
+      name: e.name,
+      secret: e.valueSource.secretKeyRef.secret,
+      version: e.valueSource.secretKeyRef.version || 'latest',
+    }));
+  const plaintextSecretCount = envVars.filter(
+    (e) => e.isPlaintextSecret
+  ).length;
 
   const gpuCount = Number(limits['nvidia.com/gpu'] || 0);
   const gpuType =
@@ -554,6 +575,8 @@ function formatCloudRunService(s, projectId, extra = {}) {
     volumes,
     volumeMounts,
     envVars,
+    secretEnvRefs,
+    plaintextSecretCount,
     latestReadyRevision:
       s.latestReadyRevision?.split('/').pop() ||
       s.latestCreatedRevision?.split('/').pop() ||
@@ -4521,10 +4544,20 @@ app.patch(
             existing.template?.executionEnvironment ||
             'EXECUTION_ENVIRONMENT_GEN2';
 
-      const envList =
+      const existingSecretEnvs = (currentContainer.env || []).filter(
+        (e) => e && e.name && e.valueSource?.secretKeyRef
+      );
+      const parsedPlaintextEnvs =
         config.envVars !== undefined
           ? parseEnvVarsInput(config.envVars)
-          : currentContainer.env || [];
+          : (currentContainer.env || []).filter(
+              (e) => e && e.name && !e.valueSource?.secretKeyRef
+            );
+      const plaintextNames = new Set(parsedPlaintextEnvs.map((e) => e.name));
+      const envList = [
+        ...existingSecretEnvs.filter((e) => !plaintextNames.has(e.name)),
+        ...parsedPlaintextEnvs,
+      ];
 
       if (
         executionEnvironment === 'EXECUTION_ENVIRONMENT_GEN2' &&
@@ -4792,6 +4825,277 @@ app.post(
           err.response?.data?.error?.message ||
           err.message ||
           `Failed to update traffic routing on ${serviceName}`,
+      });
+    }
+  }
+);
+
+// 10i. POST /api/project/:projectId/cloudrun/:region/:serviceName/seal-secrets -> Secret Manager & Env-Var Plaintext Leak Surgeon
+// Automatically seals plaintext Cloud Run env vars into Google Cloud Secret Manager (`secretmanager.googleapis.com/v1`),
+// binds `roles/secretmanager.secretAccessor` to the runtime Service Account, and patches the Cloud Run revision to mount `valueSource.secretKeyRef`.
+app.post(
+  '/api/project/:projectId/cloudrun/:region/:serviceName/seal-secrets',
+  async (req, res) => {
+    const { projectId, region, serviceName } = req.params;
+    const { envNames = [], inlineEnvVars } = req.body || {};
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      // 1. Ensure secretmanager.googleapis.com is enabled
+      await gcpFetch(
+        `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/services/secretmanager.googleapis.com:enable`,
+        token,
+        projectId,
+        { method: 'POST', timeout: 8000 }
+      ).catch(() => null);
+
+      // 2. Fetch existing Cloud Run v2 service
+      const serviceUrl = `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(region)}/services/${encodeURIComponent(
+        serviceName
+      )}`;
+      const existing = await gcpFetch(serviceUrl, token, projectId, {
+        timeout: 8000,
+      });
+
+      const container = existing.template?.containers?.[0] || {};
+      const existingEnv = Array.isArray(container.env) ? container.env : [];
+      const inlineParsed =
+        inlineEnvVars !== undefined ? parseEnvVarsInput(inlineEnvVars) : [];
+      const inlineMap = new Map(inlineParsed.map((e) => [e.name, e.value]));
+      const mergedMap = new Map();
+      for (const item of existingEnv) {
+        if (item && item.name) mergedMap.set(item.name, item);
+      }
+      for (const [k, v] of inlineMap.entries()) {
+        mergedMap.set(k, { name: k, value: v });
+      }
+      const currentEnv = Array.from(mergedMap.values());
+
+      const sensitivePattern =
+        /(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|AUTH_KEY|CLIENT_SECRET|DB_PASS|DATABASE_URL|REDIS_URL|STRIPE_KEY|OPENAI_API_KEY|GEMINI_API_KEY|JWT)/i;
+
+      const targetNamesSet = new Set(
+        Array.isArray(envNames) && envNames.length > 0
+          ? envNames.map((n) => String(n).trim())
+          : currentEnv
+              .filter(
+                (e) =>
+                  e.name &&
+                  e.value !== undefined &&
+                  (sensitivePattern.test(e.name) ||
+                    /^(?:AIzaSy|sk-[a-zA-Z0-9]{16,}|ghp_[a-zA-Z0-9]{16,}|postgres(?:ql)?:\/\/[^:]+:[^@]+@)/i.test(
+                      String(e.value || '')
+                    ))
+              )
+              .map((e) => e.name)
+      );
+
+      if (targetNamesSet.size === 0) {
+        return res.status(400).json({
+          error:
+            'No plaintext secret environment variables were selected or detected on this Cloud Run service.',
+        });
+      }
+
+      // 3. Resolve runtime service account email (or default compute SA via projectNumber)
+      let runtimeSaEmail = existing.template?.serviceAccount || '';
+      if (!runtimeSaEmail) {
+        try {
+          const projMeta = await gcpFetch(
+            `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}`,
+            token,
+            projectId,
+            { timeout: 5000 }
+          );
+          if (projMeta?.projectNumber) {
+            runtimeSaEmail = `${projMeta.projectNumber}-compute@developer.gserviceaccount.com`;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const sealedSecrets = [];
+      const updatedEnv = [];
+
+      for (const envItem of currentEnv) {
+        if (
+          !envItem.name ||
+          envItem.value === undefined ||
+          !targetNamesSet.has(envItem.name)
+        ) {
+          updatedEnv.push(envItem);
+          continue;
+        }
+
+        const rawSecretId = `${serviceName}-${envItem.name}`
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 240);
+
+        const secretBaseUrl = `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/secrets`;
+
+        // 3a. Create the Secret resource if it doesn't exist
+        await gcpFetch(
+          `${secretBaseUrl}?secretId=${encodeURIComponent(rawSecretId)}`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              replication: { automatic: {} },
+              labels: {
+                'managed-by': 'cloudpulse-2026',
+                'cloudrun-service': String(serviceName)
+                  .toLowerCase()
+                  .replace(/[^a-z0-9_-]/g, '-'),
+              },
+            },
+            timeout: 8000,
+          }
+        ).catch(() => null);
+
+        // 3b. Add a new SecretVersion containing the base64-encoded plaintext value
+        const base64Payload = Buffer.from(
+          String(envItem.value),
+          'utf8'
+        ).toString('base64');
+        await gcpFetch(
+          `${secretBaseUrl}/${encodeURIComponent(rawSecretId)}:addVersion`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              payload: { data: base64Payload },
+            },
+            timeout: 8000,
+          }
+        );
+
+        // 3c. Grant roles/secretmanager.secretAccessor to the Cloud Run runtime Service Account
+        if (runtimeSaEmail) {
+          try {
+            const secretResourceUrl = `${secretBaseUrl}/${encodeURIComponent(
+              rawSecretId
+            )}`;
+            const curPol = await gcpFetch(
+              `${secretResourceUrl}:getIamPolicy`,
+              token,
+              projectId,
+              { timeout: 5000 }
+            ).catch(() => ({ bindings: [] }));
+            const bindings = Array.isArray(curPol.bindings)
+              ? [...curPol.bindings]
+              : [];
+            const memberStr = `serviceAccount:${runtimeSaEmail}`;
+            const roleBinding = bindings.find(
+              (b) => b.role === 'roles/secretmanager.secretAccessor'
+            );
+            if (roleBinding) {
+              if (!roleBinding.members.includes(memberStr)) {
+                roleBinding.members.push(memberStr);
+              }
+            } else {
+              bindings.push({
+                role: 'roles/secretmanager.secretAccessor',
+                members: [memberStr],
+              });
+            }
+            await gcpFetch(
+              `${secretResourceUrl}:setIamPolicy`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: { policy: { ...curPol, bindings } },
+                timeout: 6000,
+              }
+            );
+          } catch {
+            // ignore IAM binding non-fatal warning
+          }
+        }
+
+        // 3d. Replace plaintext `value` with `valueSource.secretKeyRef`
+        updatedEnv.push({
+          name: envItem.name,
+          valueSource: {
+            secretKeyRef: {
+              secret: rawSecretId,
+              version: 'latest',
+            },
+          },
+        });
+
+        sealedSecrets.push({
+          envName: envItem.name,
+          secretId: rawSecretId,
+          version: 'latest',
+          runtimeServiceAccount: runtimeSaEmail || 'default',
+        });
+      }
+
+      // 4. Patch the Cloud Run v2 Service template with the new `valueSource.secretKeyRef` mounts
+      const updatedContainers = [...(existing.template?.containers || [])];
+      updatedContainers[0] = {
+        ...container,
+        env: updatedEnv,
+      };
+
+      const patchBody = {
+        ...existing,
+        template: {
+          ...existing.template,
+          containers: updatedContainers,
+        },
+      };
+      delete patchBody.template.revision;
+
+      const op = await gcpFetch(
+        `${serviceUrl}?updateMask=template.containers`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: patchBody,
+          timeout: 12000,
+        }
+      );
+
+      return res.json({
+        ok: true,
+        serviceName,
+        region,
+        sealedCount: sealedSecrets.length,
+        sealedSecrets,
+        operation: op,
+        message: `Sealed ${sealedSecrets.length} plaintext env var(s) (${sealedSecrets
+          .map((s) => `${s.envName} → secrets/${s.secretId}`)
+          .join(', ')}) into Google Cloud Secret Manager and patched Cloud Run revision!`,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to seal plaintext secrets into Secret Manager for ${serviceName}`,
       });
     }
   }

@@ -20,6 +20,8 @@ import {
   Rocket,
   Network,
   HardDrive,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
 
@@ -765,6 +767,69 @@ spec:
           return next;
         });
       }, 2500);
+    }
+  };
+
+  const handleSealSecretsInSecretManager = async (srv, envNames = []) => {
+    setBusyMap((prev) => ({ ...prev, [srv.id]: 'SEALING_SECRETS' }));
+    try {
+      const currentForm = editForms[srv.id];
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloudrun/${encodeURIComponent(srv.region)}/${encodeURIComponent(
+          srv.name
+        )}/seal-secrets`,
+        {
+          envNames: Array.isArray(envNames) ? envNames : [],
+          ...(currentForm?.envVarsText !== undefined
+            ? { inlineEnvVars: currentForm.envVarsText }
+            : {}),
+        }
+      );
+      const sealedSet = new Set(
+        (res.data?.sealedSecrets || []).map((s) => s.envName)
+      );
+      if (currentForm && sealedSet.size > 0) {
+        const remainingLines = String(currentForm.envVarsText || '')
+          .split(/[\n,]/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .filter((pair) => {
+            const eqIdx = pair.indexOf('=');
+            const k = eqIdx > 0 ? pair.slice(0, eqIdx).trim() : pair;
+            return !sealedSet.has(k);
+          });
+        setEditForms((prev) => ({
+          ...prev,
+          [srv.id]: {
+            ...prev[srv.id],
+            envVarsText: remainingLines.join('\n'),
+          },
+        }));
+      }
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Sealed plaintext env var(s) into Secret Manager on ${srv.name}!`
+        );
+      }
+      await fetchCloudRunFleet(true);
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to seal plaintext secrets into Secret Manager for ${srv.name}`
+        );
+      }
+    } finally {
+      setBusyMap((prev) => {
+        const next = { ...prev };
+        delete next[srv.id];
+        return next;
+      });
     }
   };
 
@@ -1543,6 +1608,40 @@ spec:
                             </span>
                           </span>
                         )}
+
+                      {/* Secret Manager Mounted Secrets Badge */}
+                      {(srv.secretEnvRefs || []).length > 0 && (
+                        <span
+                          title={`Mounted Secret Manager references: ${(srv.secretEnvRefs || [])
+                            .map((s) => `${s.name} → ${s.secretName}:${s.version}`)
+                            .join(', ')}`}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+                        >
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>
+                            {srv.secretEnvRefs.length} Secret Manager Ref
+                            {srv.secretEnvRefs.length === 1 ? '' : 's'}
+                          </span>
+                        </span>
+                      )}
+
+                      {/* Plaintext Secret Leak Surgeon 1-Click Badge */}
+                      {Number(srv.plaintextSecretCount || 0) > 0 && (
+                        <button
+                          type="button"
+                          disabled={Boolean(busyState)}
+                          onClick={() => handleSealSecretsInSecretManager(srv)}
+                          title="Plaintext secret/key detected in container.env! Click to migrate to Google Cloud Secret Manager (secretmanager.googleapis.com/v1), bind roles/secretmanager.secretAccessor, and replace with secretKeyRef in 1 click."
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-300 border border-red-500/40 transition-colors cursor-pointer"
+                        >
+                          <KeyRound className="w-3 h-3" />
+                          <span>
+                            {busyState === 'SEALING_SECRETS'
+                              ? 'Sealing in Secret Manager...'
+                              : `⚠️ ${srv.plaintextSecretCount} Plaintext Secret(s) · 1-Click Seal 🔒`}
+                          </span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Live HTTPS URL */}
@@ -2248,11 +2347,164 @@ spec:
                               },
                             }))
                           }
-                          placeholder="NODE_ENV=production, PORT_MODE=fast"
+                          placeholder="NODE_ENV=production, OPENAI_API_KEY=sk-..."
                           className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
                     </div>
+
+                    {/* Secret Manager (secretmanager.googleapis.com/v1) & Plaintext Env-Var Leak Surgeon */}
+                    {(() => {
+                      const sensitiveRe =
+                        /(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|AUTH_KEY|CLIENT_SECRET|DB_PASS|DATABASE_URL|REDIS_URL|STRIPE_KEY|OPENAI_API_KEY|GEMINI_API_KEY|JWT)/i;
+                      const valueSecretRe =
+                        /^(?:AIzaSy|sk-[a-zA-Z0-9]{16,}|ghp_[a-zA-Z0-9]{16,}|postgres(?:ql)?:\/\/[^:]+:[^@]+@)/i;
+                      const livePairs = String(form.envVarsText || '')
+                        .split(/[\n,]/)
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .map((pair) => {
+                          const eqIdx = pair.indexOf('=');
+                          if (eqIdx <= 0) return null;
+                          const name = pair.slice(0, eqIdx).trim();
+                          const value = pair.slice(eqIdx + 1).trim();
+                          const isSensitive =
+                            sensitiveRe.test(name) || valueSecretRe.test(value);
+                          return { name, value, isSensitive };
+                        })
+                        .filter(Boolean);
+                      const sensitivePairs = livePairs.filter(
+                        (p) => p.isSensitive
+                      );
+                      const mountedRefs = srv.secretEnvRefs || [];
+
+                      if (livePairs.length === 0 && mountedRefs.length === 0) {
+                        return null;
+                      }
+
+                      return (
+                        <div
+                          className={`p-3 rounded-xl border space-y-2 ${
+                            sensitivePairs.length > 0
+                              ? 'bg-red-500/[0.06] border-red-500/35'
+                              : 'bg-emerald-500/[0.05] border-emerald-500/30'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold font-mono uppercase tracking-wider text-zinc-800 dark:text-zinc-100">
+                              <KeyRound
+                                className={`w-3.5 h-3.5 shrink-0 ${
+                                  sensitivePairs.length > 0
+                                    ? 'text-red-500'
+                                    : 'text-emerald-500'
+                                }`}
+                              />
+                              <span>
+                                Secret Manager Plaintext Leak Surgeon (
+                                `secretmanager.googleapis.com/v1`)
+                              </span>
+                            </div>
+
+                            {livePairs.length > 0 && (
+                              <button
+                                type="button"
+                                disabled={Boolean(busyState)}
+                                onClick={() =>
+                                  handleSealSecretsInSecretManager(
+                                    srv,
+                                    sensitivePairs.length > 0
+                                      ? sensitivePairs.map((p) => p.name)
+                                      : livePairs.map((p) => p.name)
+                                  )
+                                }
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm transition-colors cursor-pointer"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>
+                                  {busyState === 'SEALING_SECRETS'
+                                    ? 'Sealing in Secret Manager & Binding IAM...'
+                                    : sensitivePairs.length > 0
+                                    ? `🔒 1-Click Seal ${sensitivePairs.length} Detected Secret(s) in Secret Manager`
+                                    : `🔒 Seal All ${livePairs.length} Env Var(s) in Secret Manager`}
+                                </span>
+                              </button>
+                            )}
+                          </div>
+
+                          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                            {sensitivePairs.length > 0 ? (
+                              <>
+                                ⚠️ Detected{' '}
+                                <strong className="text-red-600 dark:text-red-400 font-mono">
+                                  {sensitivePairs.map((p) => p.name).join(', ')}
+                                </strong>{' '}
+                                as plaintext environment variable(s). Click to
+                                create encrypted Secret Manager secrets, grant{' '}
+                                <code className="font-mono">
+                                  roles/secretmanager.secretAccessor
+                                </code>{' '}
+                                to the runtime Service Account, and replace
+                                plaintext values with{' '}
+                                <code className="font-mono">
+                                  valueSource.secretKeyRef
+                                </code>
+                                .
+                              </>
+                            ) : (
+                              <>
+                                All sensitive secrets are sealed via{' '}
+                                <code className="font-mono">
+                                  valueSource.secretKeyRef
+                                </code>
+                                . Click any plaintext variable pill below to
+                                migrate it into Secret Manager individually.
+                              </>
+                            )}
+                          </p>
+
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            {mountedRefs.map((ref) => (
+                              <span
+                                key={`mounted-${ref.name}`}
+                                title={`Mounted from Secret Manager: ${ref.secret} (version: ${ref.version})`}
+                                className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                              >
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>
+                                  {ref.name} → secretKeyRef:{ref.secretName}:
+                                  {ref.version}
+                                </span>
+                              </span>
+                            ))}
+
+                            {livePairs.map((p) => (
+                              <button
+                                key={`plain-${p.name}`}
+                                type="button"
+                                disabled={Boolean(busyState)}
+                                onClick={() =>
+                                  handleSealSecretsInSecretManager(srv, [
+                                    p.name,
+                                  ])
+                                }
+                                title={`Click to seal ${p.name} into Google Cloud Secret Manager (${srv.name}-${p.name.toLowerCase().replace(/[^a-z0-9-_]/g, '-')})`}
+                                className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                                  p.isSensitive
+                                    ? 'bg-red-500/15 hover:bg-red-500/25 text-red-700 dark:text-red-300 border-red-500/40'
+                                    : 'bg-white dark:bg-zinc-900 hover:border-emerald-500/50 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                                }`}
+                              >
+                                <KeyRound className="w-2.5 h-2.5" />
+                                <span>
+                                  {p.isSensitive ? '⚠️ ' : ''}
+                                  {p.name} · Seal 🔒
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* 2026 Direct VPC Egress & Attached Storage Volumes inside Scale & Tune */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
