@@ -97,8 +97,10 @@ export default function CloudRunFleetManager({
   const [selectedQuickSa, setSelectedQuickSa] = useState('');
   const [defaultComputeSaMissing, setDefaultComputeSaMissing] = useState(false);
   const [showGlobalGkeTranspiler, setShowGlobalGkeTranspiler] = useState(false);
-  // Per-service transitional busy state: { [serviceId]: 'UPDATING' | 'DELETING' | 'IAM' | 'TRAFFIC' | 'GRADUATING_GKE' }
+  // Per-service transitional busy state: { [serviceId]: 'UPDATING' | 'DELETING' | 'IAM' | 'TRAFFIC' | 'GRADUATING_GKE' | 'TIME_MACHINE' }
   const [busyMap, setBusyMap] = useState({});
+  // Per-service Revision Time-Machine & Crash-Loop Autopsy state: { [serviceId]: { loading, selectedRevision, report, error } }
+  const [revisionAutopsyMap, setRevisionAutopsyMap] = useState({});
   // 2-step delete confirmation
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
@@ -628,6 +630,17 @@ spec:
           canaryPercent: 0,
         },
       }));
+      const crashedRev = (srv.revisions || []).find(
+        (r) => r.healthStatus === 'CRASHED'
+      );
+      const defaultRev =
+        crashedRev?.shortName ||
+        srv.revisions?.[0]?.shortName ||
+        srv.latestCreatedRevision ||
+        srv.latestReadyRevision;
+      if (defaultRev) {
+        handleFetchRevisionAutopsy(srv, defaultRev);
+      }
     } else if (mode === 'CONVERT_GKE') {
       const defaultCluster = gkeClusters[0]?.name || '';
       const defaultLoc = gkeClusters[0]?.location || srv.region || 'us-central1';
@@ -647,6 +660,98 @@ spec:
           manifestViewMode: 'K8S_BUNDLE', // K8S_BUNDLE | KNATIVE_CONSOLE
         },
       }));
+    }
+  };
+
+  const handleFetchRevisionAutopsy = async (srv, revisionName) => {
+    if (!projectId || !srv || !revisionName) return;
+    setRevisionAutopsyMap((prev) => ({
+      ...prev,
+      [srv.id]: {
+        ...(prev[srv.id] || {}),
+        loading: true,
+        selectedRevision: revisionName,
+        error: null,
+      },
+    }));
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloudrun/${encodeURIComponent(
+          srv.region || 'us-central1'
+        )}/${encodeURIComponent(srv.name)}/revisions/${encodeURIComponent(
+          revisionName
+        )}/autopsy`
+      );
+      setRevisionAutopsyMap((prev) => ({
+        ...prev,
+        [srv.id]: {
+          loading: false,
+          selectedRevision: revisionName,
+          report: res.data,
+          error: null,
+        },
+      }));
+    } catch (err) {
+      setRevisionAutopsyMap((prev) => ({
+        ...prev,
+        [srv.id]: {
+          ...(prev[srv.id] || {}),
+          loading: false,
+          selectedRevision: revisionName,
+          error:
+            err.response?.data?.error ||
+            err.message ||
+            `Failed to load autopsy for ${revisionName}`,
+        },
+      }));
+    }
+  };
+
+  const handleTimeMachineRestore = async (
+    srv,
+    { targetRevision, mode = 'INSTANT_TRAFFIC_PIN', fixPayload = {} }
+  ) => {
+    setBusyMap((prev) => ({ ...prev, [srv.id]: 'TIME_MACHINE' }));
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloudrun/${encodeURIComponent(
+          srv.region || 'us-central1'
+        )}/${encodeURIComponent(srv.name)}/time-machine-restore`,
+        {
+          targetRevision,
+          mode,
+          fixPayload,
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Executed Time-Machine restore (${mode}) on ${srv.name}!`
+        );
+      }
+      await fetchCloudRunFleet(true);
+      if (onRefreshOverview) onRefreshOverview();
+      if (targetRevision) {
+        handleFetchRevisionAutopsy(srv, targetRevision);
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Time-Machine restore failed on ${srv.name}`
+        );
+      }
+    } finally {
+      setBusyMap((prev) => {
+        const next = { ...prev };
+        delete next[srv.id];
+        return next;
+      });
     }
   };
 
@@ -1744,6 +1849,25 @@ spec:
                           </span>
                         </button>
                       )}
+
+                      {/* Crash-Loop / Failed Revision Alert Badge */}
+                      {srv.hasCrashedRevision && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (openDrawer[srv.id] !== 'TRAFFIC') {
+                              toggleServiceDrawer(srv, 'TRAFFIC');
+                            }
+                          }}
+                          title="One or more revisions on this Cloud Run service failed readiness checks! Click to open the Crash-Loop Autopsy & 1-Click Time-Machine Rollback."
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-red-600 text-white border border-red-500 shadow-sm animate-pulse cursor-pointer"
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>
+                            🚨 Crash-Loop Detected ({srv.crashedRevisionsCount || 1}) · 1-Click Autopsy & Rollback
+                          </span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Live HTTPS URL */}
@@ -1809,15 +1933,18 @@ spec:
                     <button
                       type="button"
                       onClick={() => toggleServiceDrawer(srv, 'TRAFFIC')}
+                      title="Open Cloud Run Revision Time-Machine, Crash-Loop Log Autopsy, Revision-to-Revision Diff & 1-Click Rollback"
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
                         activeDrawer === 'TRAFFIC'
                           ? 'bg-blue-600 text-white border-blue-600'
+                          : srv.hasCrashedRevision
+                          ? 'bg-red-500/15 text-red-600 dark:text-red-300 border-red-500/40 hover:bg-red-500/25 font-bold'
                           : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                       }`}
                     >
                       <GitBranch className="w-3.5 h-3.5" />
                       <span>
-                        Revisions & Traffic ({srv.revisions?.length || 1})
+                        ⏪ Time-Machine & Autopsy ({srv.revisions?.length || 1})
                       </span>
                     </button>
 
@@ -3164,157 +3291,591 @@ spec:
                   </div>
                 )}
 
-                {/* DRAWER 2: REVISIONS & TRAFFIC SPLITTING / ROLLBACK */}
-                {activeDrawer === 'TRAFFIC' && (
-                  <div className="mt-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4 bg-white dark:bg-zinc-950 p-4 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold uppercase tracking-wider font-mono text-blue-500 flex items-center gap-1.5">
-                        <GitBranch className="w-3.5 h-3.5" />
-                        <span>
-                          Revisions, Traffic Splitting & 1-Tap Rollback —{' '}
-                          {srv.name}
-                        </span>
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOpenDrawer((prev) => ({ ...prev, [srv.id]: null }))
-                        }
-                        className="text-xs text-zinc-400 hover:text-zinc-200"
-                      >
-                        Close
-                      </button>
-                    </div>
+                {/* DRAWER 2: CLOUD RUN REVISION TIME-MACHINE, CRASH-LOOP AUTOPSY & 1-CLICK INSTANT ROLLBACK */}
+                {activeDrawer === 'TRAFFIC' && (() => {
+                  const autopsyState = revisionAutopsyMap[srv.id] || {};
+                  const report = autopsyState.report || null;
+                  const diagnosis = report?.diagnosis || null;
+                  const diff = report?.diffFromBaseline || null;
+                  const revLogs = report?.logs || [];
+                  const isTimeMachineBusy =
+                    busyState === 'TIME_MACHINE' || busyState === 'TRAFFIC';
 
-                    {/* Current Traffic Allocation Bar */}
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-mono text-zinc-500">
-                        Active HTTPS Traffic Routing:
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {(srv.traffic || []).map((t, idx) => (
-                          <span
-                            key={idx}
-                            className="text-xs font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 px-2.5 py-1 rounded-md"
-                          >
-                            <strong>{t.percent}%</strong> →{' '}
-                            {t.revision === 'LATEST'
-                              ? `LATEST (${srv.latestReadyRevision})`
-                              : t.revision}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Revisions List with 1-Tap Rollback */}
-                    {srv.revisions && srv.revisions.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-[11px] font-mono text-zinc-500">
-                          Deployed Revisions ({srv.revisions.length}):
+                  return (
+                    <div className="mt-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4 bg-white dark:bg-zinc-950 p-4 rounded-xl">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-[10px] font-mono font-bold mb-1">
+                            <span>
+                              ⏪ CLOUD RUN REVISION TIME-MACHINE · CRASH-LOOP AUTOPSY · CONFIG & SECRET DIFF
+                            </span>
+                          </div>
+                          <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                            <GitBranch className="w-3.5 h-3.5 text-blue-500" />
+                            <span>
+                              Revision Time-Machine, Crash-Loop Autopsy & Canary Splitter — {srv.name} ({srv.region})
+                            </span>
+                          </h4>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {srv.revisions.map((rev) => {
-                            const isLatest =
-                              rev.shortName === srv.latestReadyRevision;
-                            return (
-                              <div
-                                key={rev.shortName}
-                                className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between gap-2"
-                              >
-                                <div className="min-w-0">
-                                  <div className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                                    <span className="truncate">
-                                      {rev.shortName}
+                        <div className="flex items-center gap-2">
+                          {srv.lastHealthyRevision && (
+                            <button
+                              type="button"
+                              disabled={isTimeMachineBusy}
+                              onClick={() =>
+                                handleTimeMachineRestore(srv, {
+                                  targetRevision: srv.lastHealthyRevision,
+                                  mode: 'INSTANT_TRAFFIC_PIN',
+                                })
+                              }
+                              title={`Shift 100% of live traffic on ${srv.name} to known-healthy revision ${srv.lastHealthyRevision} in <2 seconds`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm cursor-pointer"
+                            >
+                              <Zap className="w-3 h-3" />
+                              <span>
+                                ⏪ 1-Click Rollback 100% Traffic → {srv.lastHealthyRevision} (&lt;2s)
+                              </span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenDrawer((prev) => ({
+                                ...prev,
+                                [srv.id]: null,
+                              }))
+                            }
+                            className="text-xs text-zinc-400 hover:text-zinc-200 px-2 py-1"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Current Traffic Allocation Bar */}
+                      <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[11px] font-mono font-bold text-zinc-500 uppercase">
+                            Active HTTPS Traffic Routing:
+                          </span>
+                          {(srv.traffic || []).map((t, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-md font-bold"
+                            >
+                              <strong>{t.percent}%</strong> →{' '}
+                              {t.revision === 'LATEST'
+                                ? `LATEST (${srv.latestReadyRevision})`
+                                : t.revision}
+                            </span>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isTimeMachineBusy}
+                          onClick={() => handleApplyTraffic(srv, 'LATEST')}
+                          className="text-[10.5px] font-mono font-semibold px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                        >
+                          Route 100% to Latest Ready ({srv.latestReadyRevision})
+                        </button>
+                      </div>
+
+                      {/* Deployed Revisions Timeline with Health Badges, 1-Click Autopsy, Instant Traffic Pin & Spec Clone */}
+                      {srv.revisions && srv.revisions.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono font-bold uppercase text-zinc-500">
+                              Revision Timeline ({srv.revisions.length} Revisions) — Click Any Revision to Inspect Diff & Container Logs:
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                            {srv.revisions.map((rev) => {
+                              const isLatestReady =
+                                rev.shortName === srv.latestReadyRevision;
+                              const isCrashed = rev.healthStatus === 'CRASHED';
+                              const isReconciling =
+                                rev.healthStatus === 'RECONCILING';
+                              const isSelectedForAutopsy =
+                                autopsyState.selectedRevision === rev.shortName;
+                              const trafficPct = Number(rev.trafficPercent || 0);
+
+                              return (
+                                <div
+                                  key={rev.shortName}
+                                  className={`p-3 rounded-xl border transition-all space-y-2 ${
+                                    isSelectedForAutopsy
+                                      ? isCrashed
+                                        ? 'border-red-500 bg-red-500/[0.07] shadow-sm'
+                                        : 'border-blue-500 bg-blue-500/[0.06] shadow-sm'
+                                      : isCrashed
+                                      ? 'border-red-500/40 bg-red-500/[0.03]'
+                                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70'
+                                  }`}
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                      <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                                        {rev.shortName}
+                                      </span>
+                                      {isCrashed ? (
+                                        <span className="text-[9.5px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40 px-1.5 py-0.5 rounded">
+                                          🚨 CRASHED ({rev.failureReason || 'FAILED'})
+                                        </span>
+                                      ) : isReconciling ? (
+                                        <span className="text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                                          ⏳ DEPLOYING
+                                        </span>
+                                      ) : (
+                                        <span className="text-[9.5px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                                          ✓ HEALTHY
+                                        </span>
+                                      )}
+                                      {isLatestReady && (
+                                        <span className="text-[9.5px] font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded">
+                                          LATEST READY
+                                        </span>
+                                      )}
+                                      {trafficPct > 0 && (
+                                        <span className="text-[9.5px] font-mono font-extrabold bg-emerald-600 text-white px-1.5 py-0.5 rounded">
+                                          {trafficPct}% LIVE TRAFFIC
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] font-mono text-zinc-400">
+                                      {rev.createTime
+                                        ? new Date(rev.createTime).toLocaleString()
+                                        : ''}
                                     </span>
-                                    {isLatest && (
-                                      <span className="text-[9px] bg-emerald-500/15 text-emerald-500 px-1.5 py-0.5 rounded">
-                                        LATEST
+                                  </div>
+
+                                  <div className="text-[10.5px] font-mono text-zinc-600 dark:text-zinc-400 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                    <span>
+                                      {rev.cpu} vCPU · {rev.memory}
+                                    </span>
+                                    <span>· Port :{rev.containerPort || 8080}</span>
+                                    <span>
+                                      · Scale {rev.minInstances}→{rev.maxInstances}
+                                    </span>
+                                    {(rev.secretRefs || []).length > 0 && (
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                                        · {rev.secretRefs.length} Secret Ref(s)
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-[10px] font-mono text-zinc-500 truncate">
-                                    {rev.cpu} vCPU · {rev.memory} · scale{' '}
-                                    {rev.minInstances}→{rev.maxInstances}
+
+                                  {rev.failureMessage && (
+                                    <div className="p-2 rounded bg-red-500/10 border border-red-500/25 text-[10px] font-mono text-red-700 dark:text-red-300 leading-relaxed">
+                                      ⚠️ {rev.failureMessage}
+                                    </div>
+                                  )}
+
+                                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleFetchRevisionAutopsy(
+                                          srv,
+                                          rev.shortName
+                                        )
+                                      }
+                                      className={`text-[10.5px] font-mono font-bold px-2.5 py-1 rounded border transition-colors cursor-pointer ${
+                                        isSelectedForAutopsy
+                                          ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                                          : 'bg-white dark:bg-zinc-950 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                                      }`}
+                                    >
+                                      🩺 {isSelectedForAutopsy ? 'Inspecting Autopsy & Diff' : 'Run Autopsy & Diff'}
+                                    </button>
+
+                                    {!isCrashed && (
+                                      <button
+                                        type="button"
+                                        disabled={isTimeMachineBusy}
+                                        onClick={() =>
+                                          handleTimeMachineRestore(srv, {
+                                            targetRevision: rev.shortName,
+                                            mode: 'INSTANT_TRAFFIC_PIN',
+                                          })
+                                        }
+                                        title="Route 100% of live HTTPS traffic to this revision immediately (<2s) without rebuilding"
+                                        className="text-[10.5px] font-mono font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-2.5 py-1 rounded cursor-pointer"
+                                      >
+                                        ⏪ Route 100% Here (&lt;2s)
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      disabled={isTimeMachineBusy}
+                                      onClick={() =>
+                                        handleTimeMachineRestore(srv, {
+                                          targetRevision: rev.shortName,
+                                          mode: 'CLONE_REVISION_SPEC',
+                                        })
+                                      }
+                                      title="Clone this revision's exact Container Image, CPU/RAM, Port, SA, and Secret Refs into a brand-new LATEST revision"
+                                      className="text-[10.5px] font-mono font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded cursor-pointer"
+                                    >
+                                      🧬 Clone Spec → New LATEST
+                                    </button>
                                   </div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleApplyTraffic(srv, rev.shortName)
-                                  }
-                                  className="text-[11px] font-mono bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded shrink-0 cursor-pointer"
-                                >
-                                  Route 100% Here
-                                </button>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Canary Traffic Splitter */}
-                    {srv.revisions && srv.revisions.length > 1 && (
-                      <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                        <div>
-                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                            Canary Revision
-                          </label>
-                          <select
-                            value={tf.canaryRevision || ''}
-                            onChange={(e) =>
-                              setTrafficForms((prev) => ({
-                                ...prev,
-                                [srv.id]: {
-                                  ...tf,
-                                  canaryRevision: e.target.value,
-                                },
-                              }))
-                            }
-                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      {/* LIVE CRASH-LOOP AUTOPSY, ROOT-CAUSE CLASSIFIER, CONFIG DIFF & CONTAINER LOG STREAM */}
+                      <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/90 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                              🩺 Revision Autopsy & Config Diff Inspector
+                              {autopsyState.selectedRevision
+                                ? ` — ${autopsyState.selectedRevision}`
+                                : ''}
+                            </span>
+                            {autopsyState.loading && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-500">
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                <span>Scanning Cloud Logging & Revision Spec...</span>
+                              </span>
+                            )}
+                          </div>
+                          {autopsyState.selectedRevision && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleFetchRevisionAutopsy(
+                                  srv,
+                                  autopsyState.selectedRevision
+                                )
+                              }
+                              className="text-[10px] font-mono text-blue-500 hover:underline cursor-pointer"
+                            >
+                              ↻ Refresh Autopsy & Logs
+                            </button>
+                          )}
+                        </div>
+
+                        {autopsyState.error && (
+                          <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-600 dark:text-red-300">
+                            {autopsyState.error}
+                          </div>
+                        )}
+
+                        {diagnosis && (
+                          <div
+                            className={`p-3 rounded-xl border space-y-2 ${
+                              diagnosis.severity === 'CRITICAL'
+                                ? 'bg-red-500/[0.08] border-red-500/40'
+                                : 'bg-emerald-500/[0.06] border-emerald-500/30'
+                            }`}
                           >
-                            {srv.revisions.map((r) => (
-                              <option key={r.shortName} value={r.shortName}>
-                                {r.shortName}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500">
+                                  Automated Root-Cause Classification: {diagnosis.category}
+                                </div>
+                                <div
+                                  className={`text-xs sm:text-sm font-mono font-extrabold mt-0.5 ${
+                                    diagnosis.severity === 'CRITICAL'
+                                      ? 'text-red-600 dark:text-red-300'
+                                      : 'text-emerald-700 dark:text-emerald-300'
+                                  }`}
+                                >
+                                  {diagnosis.headline}
+                                </div>
+                              </div>
 
-                        <div>
-                          <label className="block text-[11px] font-medium text-zinc-500 mb-1">
-                            Canary Traffic % (0–90%)
-                          </label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={90}
-                            step={5}
-                            value={tf.canaryPercent ?? 0}
-                            onChange={(e) =>
-                              setTrafficForms((prev) => ({
-                                ...prev,
-                                [srv.id]: {
-                                  ...tf,
-                                  canaryPercent: Number(e.target.value),
-                                },
-                              }))
-                            }
-                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                          />
-                        </div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {diagnosis.recommendedActionType ===
+                                  'AUTO_FIX_CRASH' && (
+                                  <button
+                                    type="button"
+                                    disabled={isTimeMachineBusy}
+                                    onClick={() =>
+                                      handleTimeMachineRestore(srv, {
+                                        targetRevision:
+                                          autopsyState.selectedRevision,
+                                        mode: 'AUTO_FIX_CRASH',
+                                        fixPayload: diagnosis.fixPayload || {},
+                                      })
+                                    }
+                                    className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                                  >
+                                    {diagnosis.recommendedActionLabel}
+                                  </button>
+                                )}
 
-                        <button
-                          type="button"
-                          onClick={() => handleApplyTraffic(srv)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
-                        >
-                          Apply Canary Split
-                        </button>
+                                {diagnosis.recommendedActionType ===
+                                  'OPEN_SECRET_STUDIO' &&
+                                  onOpenSecretManagerStudio && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onOpenSecretManagerStudio()}
+                                      className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-extrabold bg-amber-600 hover:bg-amber-500 text-white shadow-sm cursor-pointer"
+                                    >
+                                      {diagnosis.recommendedActionLabel}
+                                    </button>
+                                  )}
+
+                                {report?.baselineRevision?.shortName && (
+                                  <button
+                                    type="button"
+                                    disabled={isTimeMachineBusy}
+                                    onClick={() =>
+                                      handleTimeMachineRestore(srv, {
+                                        targetRevision:
+                                          report.baselineRevision.shortName,
+                                        mode: 'INSTANT_TRAFFIC_PIN',
+                                      })
+                                    }
+                                    className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                                  >
+                                    ⏪ Rollback 100% Traffic to {report.baselineRevision.shortName}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            <p className="text-[11px] font-mono text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                              {diagnosis.explanation}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Side-by-Side Revision-to-Revision Config & Secret Diff */}
+                        {diff && (
+                          <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-1">
+                              <span className="text-[10.5px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400">
+                                🔍 Revision Config & Secret Diff: {diff.baselineRevision} (Previous) → {report?.revisionName} (Selected)
+                              </span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/25 font-bold">
+                                {diff.totalChangesCount} Spec Change(s) Detected
+                              </span>
+                            </div>
+
+                            {diff.totalChangesCount === 0 ? (
+                              <div className="text-[11px] font-mono text-zinc-500">
+                                No container image, CPU/memory, port, Service Account, or environment/secret key changes between {diff.baselineRevision} and {report?.revisionName}.
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10.5px] font-mono">
+                                {diff.imageChanged?.changed && (
+                                  <div className="p-2 rounded bg-amber-500/10 border border-amber-500/25">
+                                    <div className="font-bold text-amber-600 dark:text-amber-300">
+                                      Container Image Changed:
+                                    </div>
+                                    <div className="text-zinc-500 truncate">
+                                      - {diff.imageChanged.from}
+                                    </div>
+                                    <div className="text-emerald-600 dark:text-emerald-400 truncate font-bold">
+                                      + {diff.imageChanged.to}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {diff.resourcesChanged?.changed && (
+                                  <div className="p-2 rounded bg-blue-500/10 border border-blue-500/25">
+                                    <div className="font-bold text-blue-600 dark:text-blue-300">
+                                      CPU / Memory Changed:
+                                    </div>
+                                    <div className="text-zinc-500">
+                                      {diff.resourcesChanged.from} →{' '}
+                                      <strong className="text-zinc-900 dark:text-zinc-100">
+                                        {diff.resourcesChanged.to}
+                                      </strong>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {diff.portChanged?.changed && (
+                                  <div className="p-2 rounded bg-red-500/10 border border-red-500/25">
+                                    <div className="font-bold text-red-600 dark:text-red-300">
+                                      Container Port Changed:
+                                    </div>
+                                    <div>
+                                      TCP :{diff.portChanged.from} →{' '}
+                                      <strong>TCP :{diff.portChanged.to}</strong>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {diff.serviceAccountChanged?.changed && (
+                                  <div className="p-2 rounded bg-indigo-500/10 border border-indigo-500/25">
+                                    <div className="font-bold text-indigo-600 dark:text-indigo-300">
+                                      Runtime Service Account Changed:
+                                    </div>
+                                    <div className="truncate">
+                                      {diff.serviceAccountChanged.from} →{' '}
+                                      <strong>{diff.serviceAccountChanged.to}</strong>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {(diff.addedEnvKeys?.length > 0 ||
+                                  diff.removedEnvKeys?.length > 0 ||
+                                  diff.modifiedEnvKeys?.length > 0) && (
+                                  <div className="p-2 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                                    <div className="font-bold text-zinc-700 dark:text-zinc-200">
+                                      Environment Variables Diff:
+                                    </div>
+                                    {diff.addedEnvKeys?.length > 0 && (
+                                      <div className="text-emerald-600 dark:text-emerald-400">
+                                        + Added: {diff.addedEnvKeys.join(', ')}
+                                      </div>
+                                    )}
+                                    {diff.modifiedEnvKeys?.length > 0 && (
+                                      <div className="text-amber-600 dark:text-amber-400">
+                                        ~ Modified: {diff.modifiedEnvKeys.join(', ')}
+                                      </div>
+                                    )}
+                                    {diff.removedEnvKeys?.length > 0 && (
+                                      <div className="text-red-600 dark:text-red-400">
+                                        - Removed: {diff.removedEnvKeys.join(', ')}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {(diff.secretRefDiffs || []).length > 0 && (
+                                  <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/25">
+                                    <div className="font-bold text-emerald-700 dark:text-emerald-300">
+                                      Secret Manager `secretKeyRef` Diff:
+                                    </div>
+                                    {diff.secretRefDiffs.map((sd) => (
+                                      <div key={sd.envKey} className="truncate">
+                                        {sd.envKey}: {sd.from} →{' '}
+                                        <strong>{sd.to}</strong>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Live Cloud Logging Container Stderr/Stdout Stream for Selected Revision */}
+                        <div className="space-y-1.5">
+                          <div className="text-[10.5px] font-mono font-bold uppercase text-zinc-500">
+                            Live Cloud Logging Stream (`logging.googleapis.com/v2` · {revLogs.length} Recent Entries for {autopsyState.selectedRevision || srv.latestReadyRevision}):
+                          </div>
+                          {revLogs.length === 0 && !autopsyState.loading ? (
+                            <div className="p-2.5 rounded-lg bg-zinc-950 text-zinc-400 font-mono text-[10.5px]">
+                              No recent container stderr/stdout or startup error logs recorded for this revision.
+                            </div>
+                          ) : (
+                            <div className="max-h-48 overflow-y-auto rounded-lg bg-zinc-950 border border-zinc-800 p-2.5 space-y-1 font-mono text-[10.5px]">
+                              {revLogs.map((l) => {
+                                const isErr =
+                                  l.severity === 'ERROR' ||
+                                  l.severity === 'CRITICAL' ||
+                                  l.stream === 'stderr';
+                                const isWarn = l.severity === 'WARNING';
+                                return (
+                                  <div
+                                    key={l.id}
+                                    className={`flex items-start gap-2 leading-relaxed ${
+                                      isErr
+                                        ? 'text-red-400'
+                                        : isWarn
+                                        ? 'text-amber-300'
+                                        : 'text-zinc-300'
+                                    }`}
+                                  >
+                                    <span className="text-zinc-500 shrink-0">
+                                      {l.timestamp
+                                        ? new Date(l.timestamp).toLocaleTimeString()
+                                        : ''}
+                                    </span>
+                                    <span
+                                      className={`px-1 rounded text-[9px] uppercase font-bold shrink-0 ${
+                                        isErr
+                                          ? 'bg-red-500/20 text-red-300'
+                                          : isWarn
+                                          ? 'bg-amber-500/20 text-amber-300'
+                                          : 'bg-zinc-800 text-zinc-400'
+                                      }`}
+                                    >
+                                      {l.stream}:{l.severity}
+                                    </span>
+                                    <span className="break-all">{l.message}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {/* Canary Traffic Splitter */}
+                      {srv.revisions && srv.revisions.length > 1 && (
+                        <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                          <div>
+                            <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                              Canary Revision
+                            </label>
+                            <select
+                              value={tf.canaryRevision || ''}
+                              onChange={(e) =>
+                                setTrafficForms((prev) => ({
+                                  ...prev,
+                                  [srv.id]: {
+                                    ...tf,
+                                    canaryRevision: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                            >
+                              {srv.revisions.map((r) => (
+                                <option key={r.shortName} value={r.shortName}>
+                                  {r.shortName} ({r.healthStatus || 'HEALTHY'})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-zinc-500 mb-1">
+                              Canary Traffic % (0–90%)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={90}
+                              step={5}
+                              value={tf.canaryPercent ?? 0}
+                              onChange={(e) =>
+                                setTrafficForms((prev) => ({
+                                  ...prev,
+                                  [srv.id]: {
+                                    ...tf,
+                                    canaryPercent: Number(e.target.value),
+                                  },
+                                }))
+                              }
+                              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={isTimeMachineBusy}
+                            onClick={() => handleApplyTraffic(srv)}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+                          >
+                            Apply Canary Split
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* DRAWER 3: GRADUATE CLOUD RUN SERVICE TO GKE KUBERNETES */}
                 {activeDrawer === 'CONVERT_GKE' && (() => {

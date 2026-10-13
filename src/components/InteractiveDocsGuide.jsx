@@ -249,28 +249,30 @@ const DOC_SECTIONS = [
   },
   {
     id: 'cloud-run-2026-vpc-storage-gke-migrator',
-    wave: 'CLOUD RUN 2026 · CONTAINER SSH, DIRECT VPC, STORAGE VOLUMES & GKE MIGRATOR',
+    wave: 'CLOUD RUN 2026 · REVISION TIME-MACHINE & CRASH-LOOP AUTOPSY, CONTAINER SSH, DIRECT VPC, STORAGE VOLUMES & GKE MIGRATOR',
     title:
-      'Cloud Run 2026 Container SSH (@xterm/xterm + gcloud beta run services ssh), Direct VPC Egress, Storage Volumes & 1-Click GKE Migrator',
+      'Cloud Run 2026 Revision Time-Machine & Crash-Loop Autopsy, Container SSH (@xterm/xterm), Direct VPC Egress, Storage Volumes & 1-Click GKE Migrator',
     badge: 'CLOUD RUN TAB + PROVISION MODAL',
     badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: Rocket,
     targetTab: 'CLOUD_RUN',
     problemSolved:
-      'Debugging live Cloud Run containers, configuring Direct VPC Egress or Stateful Storage Volume Mounts, toggling Public vs. Private IAM access safely, or migrating a Cloud Run service to Kubernetes normally requires scattered CLI flags and manual YAML editing.',
+      'Debugging crashed Cloud Run revisions, comparing what changed between a broken deploy and the last healthy revision, rolling back traffic in <2 seconds, opening a live container shell, configuring Direct VPC Egress or Stateful Storage Volume Mounts, or migrating to Kubernetes normally requires scattered CLI flags and manual YAML editing.',
     howItWorks: [
+      '⏪ Cloud Run Revision Time-Machine, Crash-Loop Autopsy & 1-Click Instant Rollback: Automatically detects crashed revisions (`HEALTHY` vs `CRASHED` / `ContainerMissing` / `HealthCheckContainerError`), runs a live Crash-Loop Autopsy via `logging.googleapis.com/v2` + side-by-side Config/Env/Secret Diff against the last healthy revision, classifies root causes (`PORT_LISTEN_TIMEOUT`, `SECRET_MANAGER_REF_ERROR`, `OUT_OF_MEMORY_OOM`, `APPLICATION_STARTUP_CRASH`), and offers 3 1-click actions: (1) `<2s` Instant 100% Traffic Pin Rollback (`INSTANT_TRAFFIC_PIN`), (2) Clone Historical Revision Spec as New LATEST (`CLONE_REVISION_SPEC`), or (3) 1-Click Auto-Fix OOM / Startup Crash (`AUTO_FIX_CRASH`: upgrades RAM tier + enables `startupCpuBoost`).',
       'Interactive Cloud Run Container SSH (@xterm/xterm + gcloud beta run services ssh): Click "SSH / Container Shell" on any Cloud Run service card (default OFF; toggle off with "SSH Active (Turn Off)") to open a real browser PTY shell inside the running container (~ #). Automatically enables --ssh and --execution-environment=gen2 (>=512Mi) if missing, warms up the active revision, and also supports gcloud beta run services proxy.',
       'Accurate Public (allUsers / invokerIamDisabled) vs. Private (IAM Auth) State & Gatekeeper: Detects both IAM allUsers bindings and Cloud Run v2 invokerIamDisabled state, displays "PUBLIC (Unauthenticated) · Switch to Private" vs. "PRIVATE (IAM Auth) · Switch to Public", and requires explicit confirmation before switching access modes.',
       '2026 Direct VPC Egress Network (template.vpcAccess) & Beta Storage Volume Mounts (GCS FUSE / RAM Disk / Filestore NFS): Attach revisions directly to any VPC/Subnet ($0 Serverless VPC Connector tax) and mount stateful or RAM-disk volumes.',
       '1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator: Converts any running Cloud Run service into a 6-resource production Kubernetes bundle and deploys it directly to your live GKE cluster in 1 click.',
     ],
     apisUsed: [
+      'GET /api/project/:id/cloudrun/:region/:name/revisions/:rev/autopsy & POST /api/project/:id/cloudrun/:region/:name/time-machine-restore',
       'WS /api/ws/ssh?targetType=cloudrun → gcloud beta run services ssh / proxy PTY',
       'POST /api/project/:id/provision (serviceType: "CLOUD_RUN") & PATCH /api/project/:id/cloudrun/:region/:name',
       'POST /api/project/:id/cloudrun/:region/:name/iam & POST /api/project/:id/cloudrun/convert-to-gke',
     ],
     billingImpact:
-      'Direct VPC Egress eliminates ~$14.60/mo Serverless VPC Connector instance charges; migrating warm Cloud Run services to GKE Spot VMs/GPUs cuts compute spend by up to 68%.',
+      'Revision Time-Machine & Autopsy are 100% free control-plane operations; Direct VPC Egress eliminates ~$14.60/mo Serverless VPC Connector instance charges; migrating warm Cloud Run services to GKE Spot VMs/GPUs cuts compute spend by up to 68%.',
   },
   {
     id: 'xterm-web-ssh-and-mandatory-delete-gatekeeper',

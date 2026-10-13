@@ -582,6 +582,16 @@ function formatCloudRunService(s, projectId, extra = {}) {
       s.latestReadyRevision?.split('/').pop() ||
       s.latestCreatedRevision?.split('/').pop() ||
       `${shortName}-00001`,
+    latestCreatedRevision:
+      s.latestCreatedRevision?.split('/').pop() ||
+      s.latestReadyRevision?.split('/').pop() ||
+      `${shortName}-00001`,
+    terminalState: s.terminalCondition?.state || 'CONDITION_SUCCEEDED',
+    terminalReason:
+      s.terminalCondition?.revisionReason ||
+      s.terminalCondition?.reason ||
+      '',
+    terminalMessage: s.terminalCondition?.message || '',
     reconciling: Boolean(s.reconciling),
     status: s.reconciling ? 'DEPLOYING' : 'READY',
     creator: s.creator || '',
@@ -597,7 +607,55 @@ function formatCloudRunService(s, projectId, extra = {}) {
               percent: 100,
             },
           ],
-    revisions: extra.revisions || [],
+    revisions: (() => {
+      const latestReadyShort =
+        s.latestReadyRevision?.split('/').pop() ||
+        s.latestCreatedRevision?.split('/').pop() ||
+        '';
+      const normalizedTraffic =
+        traffic.length > 0
+          ? traffic
+          : [
+              {
+                type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST',
+                revision: 'LATEST',
+                percent: 100,
+              },
+            ];
+      return (extra.revisions || []).map((r) => {
+        const pct = normalizedTraffic.reduce((sum, t) => {
+          const isLatestTarget =
+            t.revision === 'LATEST' ||
+            t.type === 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST';
+          if (isLatestTarget && r.shortName === latestReadyShort) {
+            return sum + Number(t.percent || 0);
+          }
+          if (t.revision === r.shortName) {
+            return sum + Number(t.percent || 0);
+          }
+          return sum;
+        }, 0);
+        return {
+          ...r,
+          trafficPercent: pct,
+          isLatestReady: r.shortName === latestReadyShort,
+          isLatestCreated:
+            r.shortName === (s.latestCreatedRevision?.split('/').pop() || ''),
+        };
+      });
+    })(),
+    hasCrashedRevision: Boolean(
+      (extra.revisions || []).some((r) => r.healthStatus === 'CRASHED') ||
+        s.terminalCondition?.state === 'CONDITION_FAILED'
+    ),
+    crashedRevisionsCount: (extra.revisions || []).filter(
+      (r) => r.healthStatus === 'CRASHED'
+    ).length,
+    lastHealthyRevision:
+      (extra.revisions || []).find((r) => r.healthStatus === 'HEALTHY')
+        ?.shortName ||
+      s.latestReadyRevision?.split('/').pop() ||
+      '',
   };
 }
 
@@ -4606,16 +4664,58 @@ app.get('/api/project/:projectId/cloudrun', async (req, res) => {
           revisions = (revRes.value?.revisions || []).map((r) => {
             const c = r.containers?.[0] || {};
             const lim = c.resources?.limits || {};
+            const readyCond =
+              r.terminalCondition ||
+              (r.conditions || []).find((cd) => cd.type === 'Ready') ||
+              {};
+            const condState = String(readyCond.state || '');
+            const healthStatus =
+              condState === 'CONDITION_FAILED'
+                ? 'CRASHED'
+                : condState === 'CONDITION_RECONCILING' || r.reconciling
+                ? 'RECONCILING'
+                : 'HEALTHY';
+            const failureReason =
+              readyCond.revisionReason ||
+              readyCond.executionReason ||
+              readyCond.reason ||
+              '';
+            const failureMessage = readyCond.message || '';
+            const rawEnv = Array.isArray(c.env) ? c.env : [];
             return {
               name: r.name,
               shortName: r.name?.split('/').pop() || '',
               createTime: r.createTime || new Date().toISOString(),
               containerImage: c.image || '',
+              containerPort: Number(c.ports?.[0]?.containerPort || 8080),
               cpu: lim.cpu || '1',
               memory: lim.memory || '512Mi',
+              cpuIdle: c.resources?.cpuIdle !== false,
+              startupCpuBoost: Boolean(c.resources?.startupCpuBoost),
               minInstances: Number(r.scaling?.minInstanceCount || 0),
               maxInstances: Number(r.scaling?.maxInstanceCount || 10),
               concurrency: Number(r.maxInstanceRequestConcurrency || 80),
+              serviceAccount: r.serviceAccount || '',
+              executionEnvironment:
+                r.executionEnvironment || 'EXECUTION_ENVIRONMENT_GEN2',
+              healthStatus,
+              failureReason,
+              failureMessage,
+              logUri: r.logUri || '',
+              envVarKeys: rawEnv
+                .filter((e) => e && e.name && !e.valueSource?.secretKeyRef)
+                .map((e) => e.name),
+              secretRefs: rawEnv
+                .filter((e) => e && e.name && e.valueSource?.secretKeyRef)
+                .map((e) => ({
+                  name: e.name,
+                  secretName: String(
+                    e.valueSource.secretKeyRef.secret || ''
+                  )
+                    .split('/')
+                    .pop(),
+                  version: e.valueSource.secretKeyRef.version || 'latest',
+                })),
             };
           });
         }
@@ -5033,6 +5133,7 @@ app.post(
         });
       }
 
+      const sanitizedForTraffic = sanitizeCloudRunV2ServiceForPatch(existing);
       const op = await gcpFetch(
         `${serviceUrl}?updateMask=traffic`,
         token,
@@ -5041,7 +5142,7 @@ app.post(
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: {
-            ...existing,
+            ...sanitizedForTraffic,
             traffic,
           },
           timeout: 10000,
@@ -5277,16 +5378,17 @@ app.post(
       }
 
       // 4. Patch the Cloud Run v2 Service template with the new `valueSource.secretKeyRef` mounts
-      const updatedContainers = [...(existing.template?.containers || [])];
+      const sanitizedExisting = sanitizeCloudRunV2ServiceForPatch(existing);
+      const updatedContainers = [...(sanitizedExisting.template?.containers || [])];
       updatedContainers[0] = {
         ...container,
         env: updatedEnv,
       };
 
       const patchBody = {
-        ...existing,
+        ...sanitizedExisting,
         template: {
-          ...existing.template,
+          ...sanitizedExisting.template,
           containers: updatedContainers,
         },
       };
@@ -5321,6 +5423,589 @@ app.post(
           err.response?.data?.error?.message ||
           err.message ||
           `Failed to seal plaintext secrets into Secret Manager for ${serviceName}`,
+      });
+    }
+  }
+);
+
+// 10j. GET /api/project/:projectId/cloudrun/:region/:serviceName/revisions/:revisionName/autopsy
+// Cloud Run Revision Time-Machine & Crash-Loop Autopsy:
+// Compares the selected revision against the previous healthy revision (Image, CPU/Memory, Port, SA, Env & Secret Refs),
+// fetches live container stderr/stdout & system audit logs from Cloud Logging (`logging.googleapis.com/v2`),
+// and classifies the root cause with a 1-click remediation action.
+app.get(
+  '/api/project/:projectId/cloudrun/:region/:serviceName/revisions/:revisionName/autopsy',
+  async (req, res) => {
+    const { projectId, region, serviceName, revisionName } = req.params;
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      const baseUrl = `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(region)}/services/${encodeURIComponent(
+        serviceName
+      )}`;
+
+      const [revsRes, logsRes] = await Promise.allSettled([
+        gcpFetch(`${baseUrl}/revisions?pageSize=15`, token, projectId, {
+          timeout: 7000,
+        }),
+        gcpFetch(
+          `https://logging.googleapis.com/v2/entries:list`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              resourceNames: [`projects/${projectId}`],
+              filter: `resource.type="cloud_run_revision" AND resource.labels.service_name="${serviceName}" AND resource.labels.revision_name="${revisionName}"`,
+              orderBy: 'timestamp desc',
+              pageSize: 35,
+            },
+            timeout: 7000,
+          }
+        ),
+      ]);
+
+      const rawRevisions =
+        revsRes.status === 'fulfilled' ? revsRes.value?.revisions || [] : [];
+      const targetRev =
+        rawRevisions.find(
+          (r) =>
+            r.name?.split('/').pop() === revisionName || r.name === revisionName
+        ) || rawRevisions[0];
+
+      if (!targetRev) {
+        return res.status(404).json({
+          error: `Revision "${revisionName}" not found on Cloud Run service "${serviceName}".`,
+        });
+      }
+
+      const targetShort = targetRev.name?.split('/').pop() || revisionName;
+      const targetIdx = rawRevisions.findIndex(
+        (r) => (r.name?.split('/').pop() || '') === targetShort
+      );
+
+      // Baseline revision for diff: either the next older revision in the list, or the newest healthy revision that isn't targetShort
+      const baselineRev =
+        rawRevisions.find((r, idx) => {
+          const short = r.name?.split('/').pop() || '';
+          if (short === targetShort) return false;
+          const cond =
+            r.terminalCondition ||
+            (r.conditions || []).find((c) => c.type === 'Ready');
+          return idx > targetIdx || cond?.state === 'CONDITION_SUCCEEDED';
+        }) || null;
+
+      const extractRevSpec = (r) => {
+        if (!r) return null;
+        const c = r.containers?.[0] || {};
+        const lim = c.resources?.limits || {};
+        const env = Array.isArray(c.env) ? c.env : [];
+        const plainMap = {};
+        const secretMap = {};
+        for (const e of env) {
+          if (!e?.name) continue;
+          if (e.valueSource?.secretKeyRef) {
+            const sec = String(e.valueSource.secretKeyRef.secret || '')
+              .split('/')
+              .pop();
+            secretMap[e.name] = `${sec}@${
+              e.valueSource.secretKeyRef.version || 'latest'
+            }`;
+          } else {
+            plainMap[e.name] = String(e.value ?? '');
+          }
+        }
+        const readyCond =
+          r.terminalCondition ||
+          (r.conditions || []).find((cd) => cd.type === 'Ready') ||
+          {};
+        return {
+          shortName: r.name?.split('/').pop() || '',
+          createTime: r.createTime || '',
+          image: c.image || '',
+          port: Number(c.ports?.[0]?.containerPort || 8080),
+          cpu: String(lim.cpu || '1'),
+          memory: String(lim.memory || '512Mi'),
+          startupCpuBoost: Boolean(c.resources?.startupCpuBoost),
+          cpuIdle: c.resources?.cpuIdle !== false,
+          minInstances: Number(r.scaling?.minInstanceCount || 0),
+          maxInstances: Number(r.scaling?.maxInstanceCount || 10),
+          concurrency: Number(r.maxInstanceRequestConcurrency || 80),
+          serviceAccount: r.serviceAccount || 'Default Compute SA',
+          healthState: readyCond.state || 'CONDITION_SUCCEEDED',
+          reason:
+            readyCond.revisionReason ||
+            readyCond.executionReason ||
+            readyCond.reason ||
+            '',
+          message: readyCond.message || '',
+          plainMap,
+          secretMap,
+        };
+      };
+
+      const targetSpec = extractRevSpec(targetRev);
+      const baseSpec = extractRevSpec(baselineRev);
+
+      // Compute Revision-to-Revision Configuration & Secret Diff
+      let diffFromBaseline = null;
+      if (baseSpec) {
+        const targetEnvKeys = Object.keys(targetSpec.plainMap);
+        const baseEnvKeys = Object.keys(baseSpec.plainMap);
+        const addedEnvKeys = targetEnvKeys.filter(
+          (k) => !baseEnvKeys.includes(k)
+        );
+        const removedEnvKeys = baseEnvKeys.filter(
+          (k) => !targetEnvKeys.includes(k)
+        );
+        const modifiedEnvKeys = targetEnvKeys.filter(
+          (k) =>
+            baseEnvKeys.includes(k) &&
+            targetSpec.plainMap[k] !== baseSpec.plainMap[k]
+        );
+
+        const allSecretKeys = Array.from(
+          new Set([
+            ...Object.keys(targetSpec.secretMap),
+            ...Object.keys(baseSpec.secretMap),
+          ])
+        );
+        const secretRefDiffs = allSecretKeys
+          .filter((k) => targetSpec.secretMap[k] !== baseSpec.secretMap[k])
+          .map((k) => ({
+            envKey: k,
+            from: baseSpec.secretMap[k] || 'Not Mounted',
+            to: targetSpec.secretMap[k] || 'Unbound',
+          }));
+
+        diffFromBaseline = {
+          baselineRevision: baseSpec.shortName,
+          baselineCreateTime: baseSpec.createTime,
+          imageChanged: {
+            changed: targetSpec.image !== baseSpec.image,
+            from: baseSpec.image,
+            to: targetSpec.image,
+          },
+          resourcesChanged: {
+            changed:
+              targetSpec.cpu !== baseSpec.cpu ||
+              targetSpec.memory !== baseSpec.memory,
+            from: `${baseSpec.cpu} vCPU · ${baseSpec.memory}`,
+            to: `${targetSpec.cpu} vCPU · ${targetSpec.memory}`,
+          },
+          portChanged: {
+            changed: targetSpec.port !== baseSpec.port,
+            from: baseSpec.port,
+            to: targetSpec.port,
+          },
+          serviceAccountChanged: {
+            changed: targetSpec.serviceAccount !== baseSpec.serviceAccount,
+            from: baseSpec.serviceAccount,
+            to: targetSpec.serviceAccount,
+          },
+          addedEnvKeys,
+          removedEnvKeys,
+          modifiedEnvKeys,
+          secretRefDiffs,
+          totalChangesCount:
+            (targetSpec.image !== baseSpec.image ? 1 : 0) +
+            (targetSpec.cpu !== baseSpec.cpu ||
+            targetSpec.memory !== baseSpec.memory
+              ? 1
+              : 0) +
+            (targetSpec.port !== baseSpec.port ? 1 : 0) +
+            (targetSpec.serviceAccount !== baseSpec.serviceAccount ? 1 : 0) +
+            addedEnvKeys.length +
+            removedEnvKeys.length +
+            modifiedEnvKeys.length +
+            secretRefDiffs.length,
+        };
+      }
+
+      // Format Cloud Logging entries for this revision
+      const rawLogEntries =
+        logsRes.status === 'fulfilled' ? logsRes.value?.entries || [] : [];
+      const formattedLogs = rawLogEntries.map((entry, idx) => {
+        const logNameShort = String(entry.logName || '').split('/').pop();
+        const stream = logNameShort.includes('stderr')
+          ? 'stderr'
+          : logNameShort.includes('stdout')
+          ? 'stdout'
+          : logNameShort.includes('requests')
+          ? 'http'
+          : 'system';
+        const text =
+          entry.textPayload ||
+          entry.jsonPayload?.message ||
+          entry.jsonPayload?.error ||
+          entry.protoPayload?.status?.message ||
+          (entry.httpRequest
+            ? `${entry.httpRequest.requestMethod || 'GET'} ${
+                entry.httpRequest.status || 200
+              } ${entry.httpRequest.requestUrl || '/'}`
+            : JSON.stringify(entry.jsonPayload || {}));
+        return {
+          id: entry.insertId || `rev-log-${idx}`,
+          timestamp: entry.timestamp || new Date().toISOString(),
+          severity: entry.severity || 'INFO',
+          stream,
+          message: String(text || '').slice(0, 600),
+        };
+      });
+
+      // Classify Root-Cause Diagnosis & 1-Click Fix
+      const combinedEvidence = [
+        targetSpec.reason,
+        targetSpec.message,
+        ...formattedLogs
+          .filter(
+            (l) =>
+              l.severity === 'ERROR' ||
+              l.severity === 'CRITICAL' ||
+              l.severity === 'WARNING' ||
+              l.stream === 'stderr'
+          )
+          .map((l) => l.message),
+      ]
+        .filter(Boolean)
+        .join(' \n ');
+
+      const isCrashed = targetSpec.healthState === 'CONDITION_FAILED';
+      let diagnosis = {
+        category: isCrashed ? 'APPLICATION_STARTUP_CRASH' : 'REVISION_HEALTHY',
+        severity: isCrashed ? 'CRITICAL' : 'OK',
+        headline: isCrashed
+          ? `Revision ${targetShort} Failed Startup Readiness Check`
+          : `Revision ${targetShort} Passed Readiness Probe & Is Healthy`,
+        explanation:
+          targetSpec.message ||
+          (isCrashed
+            ? 'The container exited or failed to bind to the configured port before the startup deadline.'
+            : `Container is listening on TCP :${targetSpec.port} (${targetSpec.cpu} vCPU · ${targetSpec.memory}).`),
+        recommendedActionType: isCrashed
+          ? 'INSTANT_TRAFFIC_PIN'
+          : 'NONE',
+        recommendedActionLabel: isCrashed
+          ? baseSpec
+            ? `⏪ 1-Click Instant Rollback to ${baseSpec.shortName}`
+            : '⚡ Enable Startup CPU Boost & Bump Memory'
+          : '✓ Revision Ready',
+        fixPayload: {},
+      };
+
+      if (/listen on the port|PORT=|HealthCheckContainerError/i.test(combinedEvidence)) {
+        diagnosis = {
+          category: 'PORT_LISTEN_TIMEOUT',
+          severity: 'CRITICAL',
+          headline: `Port Binding / Startup Timeout on TCP :${targetSpec.port} (${targetSpec.reason || 'HealthCheckContainerError'})`,
+          explanation:
+            targetSpec.message ||
+            `Container did not listen on PORT=${targetSpec.port} within the startup timeout window.`,
+          recommendedActionType: 'AUTO_FIX_CRASH',
+          recommendedActionLabel: `⚡ 1-Click Enable Startup CPU Boost & Verify Port :${targetSpec.port}`,
+          fixPayload: {
+            fixType: 'BUMP_MEMORY_AND_CPU_BOOST',
+            port: targetSpec.port,
+          },
+        };
+      } else if (
+        /secretmanager|Secret .* not found|is in state DESTROYED|is in state DISABLED|Permission .*secretAccessor/i.test(
+          combinedEvidence
+        )
+      ) {
+        diagnosis = {
+          category: 'SECRET_MANAGER_REF_ERROR',
+          severity: 'CRITICAL',
+          headline: `Broken or Unauthorized Secret Manager Reference (${targetSpec.reason || 'SecretError'})`,
+          explanation:
+            targetSpec.message ||
+            'This revision references a Secret Manager version that is disabled, destroyed, deleted, or missing roles/secretmanager.secretAccessor.',
+          recommendedActionType: 'OPEN_SECRET_STUDIO',
+          recommendedActionLabel:
+            '🩺 Open Secret Dependency Healer (Re-Pin to Latest Enabled)',
+          fixPayload: {},
+        };
+      } else if (
+        /Memory limit|Out of memory|OOM|exit_code.*137|Killed/i.test(
+          combinedEvidence
+        )
+      ) {
+        diagnosis = {
+          category: 'OUT_OF_MEMORY_OOM',
+          severity: 'CRITICAL',
+          headline: `Container Out-Of-Memory (OOMKilled at ${targetSpec.memory})`,
+          explanation:
+            targetSpec.message ||
+            `The container exceeded its ${targetSpec.memory} memory limit during startup or request execution (Linux exit 137 / SIGKILL).`,
+          recommendedActionType: 'AUTO_FIX_CRASH',
+          recommendedActionLabel: `🚀 1-Click Double Memory Limit & Enable Startup CPU Boost`,
+          fixPayload: {
+            fixType: 'BUMP_MEMORY_AND_CPU_BOOST',
+          },
+        };
+      }
+
+      return res.json({
+        ok: true,
+        projectId,
+        region,
+        serviceName,
+        revisionName: targetShort,
+        targetRevision: targetSpec,
+        baselineRevision: baseSpec,
+        diffFromBaseline,
+        diagnosis,
+        logs: formattedLogs,
+        scannedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to run autopsy on revision ${revisionName}`,
+      });
+    }
+  }
+);
+
+// 10k. POST /api/project/:projectId/cloudrun/:region/:serviceName/time-machine-restore
+// Executes 1-Click Time-Machine Instant Traffic Rollback, Historical Revision Spec Clone, or Automated OOM/CPU-Boost Crash Remediation.
+app.post(
+  '/api/project/:projectId/cloudrun/:region/:serviceName/time-machine-restore',
+  async (req, res) => {
+    const { projectId, region, serviceName } = req.params;
+    const {
+      targetRevision,
+      mode = 'INSTANT_TRAFFIC_PIN', // 'INSTANT_TRAFFIC_PIN' | 'CLONE_REVISION_SPEC' | 'AUTO_FIX_CRASH'
+      fixPayload = {},
+    } = req.body || {};
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      const serviceUrl = `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(region)}/services/${encodeURIComponent(
+        serviceName
+      )}`;
+      const existing = await gcpFetch(serviceUrl, token, projectId, {
+        timeout: 8000,
+      });
+      const sanitized = sanitizeCloudRunV2ServiceForPatch(existing);
+
+      if (mode === 'INSTANT_TRAFFIC_PIN') {
+        if (!targetRevision) {
+          return res.status(400).json({
+            error: 'targetRevision is required for INSTANT_TRAFFIC_PIN.',
+          });
+        }
+        const traffic = [
+          {
+            type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION',
+            revision: targetRevision,
+            percent: 100,
+          },
+        ];
+        const op = await gcpFetch(
+          `${serviceUrl}?updateMask=traffic`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              ...sanitized,
+              traffic,
+            },
+            timeout: 10000,
+          }
+        );
+        recordFlightEvent(projectId, {
+          action: 'CLOUDRUN_TIME_MACHINE_ROLLBACK',
+          resourceType: 'CLOUD_RUN_SERVICE',
+          resourceName: serviceName,
+          region,
+          summary: `Instant Time-Machine Rollback: Routed 100% of live traffic on "${serviceName}" to healthy revision "${targetRevision}"`,
+        });
+        return res.json({
+          ok: true,
+          mode,
+          targetRevision,
+          operation: op,
+          message: `⏪ Instant Rollback Complete: Routed 100% of live HTTPS traffic on "${serviceName}" back to revision "${targetRevision}"!`,
+        });
+      }
+
+      if (mode === 'CLONE_REVISION_SPEC') {
+        if (!targetRevision) {
+          return res.status(400).json({
+            error: 'targetRevision is required for CLONE_REVISION_SPEC.',
+          });
+        }
+        const revObj = await gcpFetch(
+          `${serviceUrl}/revisions/${encodeURIComponent(targetRevision)}`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        );
+        const revContainers = (revObj.containers || []).map((c) => {
+          const cleanC = { ...c };
+          delete cleanC.livenessProbe;
+          delete cleanC.startupProbe;
+          return cleanC;
+        });
+
+        const clonedTemplate = {
+          ...sanitized.template,
+          containers:
+            revContainers.length > 0
+              ? revContainers
+              : sanitized.template?.containers,
+          ...(revObj.scaling ? { scaling: revObj.scaling } : {}),
+          ...(revObj.serviceAccount
+            ? { serviceAccount: revObj.serviceAccount }
+            : {}),
+          ...(revObj.maxInstanceRequestConcurrency
+            ? {
+                maxInstanceRequestConcurrency:
+                  revObj.maxInstanceRequestConcurrency,
+              }
+            : {}),
+          ...(revObj.timeout ? { timeout: revObj.timeout } : {}),
+          ...(revObj.executionEnvironment
+            ? { executionEnvironment: revObj.executionEnvironment }
+            : {}),
+          ...(revObj.volumes ? { volumes: revObj.volumes } : {}),
+          ...(revObj.vpcAccess ? { vpcAccess: revObj.vpcAccess } : {}),
+          annotations: {
+            ...(sanitized.template?.annotations || {}),
+            'cloudpulse.google.com/cloned-from-revision': targetRevision,
+            'cloudpulse.google.com/restored-at': new Date().toISOString(),
+          },
+        };
+        delete clonedTemplate.revision;
+
+        const traffic = [
+          {
+            type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST',
+            percent: 100,
+          },
+        ];
+
+        const op = await gcpFetch(
+          `${serviceUrl}?updateMask=template,traffic`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              ...sanitized,
+              template: clonedTemplate,
+              traffic,
+            },
+            timeout: 12000,
+          }
+        );
+
+        recordFlightEvent(projectId, {
+          action: 'CLOUDRUN_TIME_MACHINE_CLONE',
+          resourceType: 'CLOUD_RUN_SERVICE',
+          resourceName: serviceName,
+          region,
+          summary: `Cloned historical revision "${targetRevision}" into a new LATEST revision on "${serviceName}"`,
+        });
+
+        return res.json({
+          ok: true,
+          mode,
+          targetRevision,
+          operation: op,
+          message: `🧬 Time-Machine Spec Restore Complete: Cloned "${targetRevision}" configuration into a brand-new LATEST revision on "${serviceName}"!`,
+        });
+      }
+
+      if (mode === 'AUTO_FIX_CRASH') {
+        const container = { ...(sanitized.template?.containers?.[0] || {}) };
+        const curLimits = { ...(container.resources?.limits || {}) };
+        const curMem = String(curLimits.memory || '512Mi');
+        const memLadder = ['256Mi', '512Mi', '1Gi', '2Gi', '4Gi', '8Gi'];
+        const curIdx = memLadder.indexOf(curMem);
+        const nextMem =
+          curIdx >= 0 && curIdx < memLadder.length - 1
+            ? memLadder[curIdx + 1]
+            : curMem === '128Mi'
+            ? '512Mi'
+            : '1Gi';
+
+        curLimits.memory = nextMem;
+        container.resources = {
+          ...(container.resources || {}),
+          limits: curLimits,
+          startupCpuBoost: true,
+        };
+        if (fixPayload?.port) {
+          container.ports = [
+            { name: 'http1', containerPort: Number(fixPayload.port) || 8080 },
+          ];
+        }
+
+        const nextTemplate = {
+          ...sanitized.template,
+          containers: [container],
+          annotations: {
+            ...(sanitized.template?.annotations || {}),
+            'cloudpulse.google.com/crash-auto-fix-at': new Date().toISOString(),
+          },
+        };
+        delete nextTemplate.revision;
+
+        const op = await gcpFetch(
+          `${serviceUrl}?updateMask=template`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              ...sanitized,
+              template: nextTemplate,
+            },
+            timeout: 12000,
+          }
+        );
+
+        recordFlightEvent(projectId, {
+          action: 'CLOUDRUN_CRASH_AUTO_FIX',
+          resourceType: 'CLOUD_RUN_SERVICE',
+          resourceName: serviceName,
+          region,
+          summary: `Applied 1-Click Crash Auto-Fix on "${serviceName}": Upgraded memory (${curMem} → ${nextMem}) & enabled Startup CPU Boost`,
+        });
+
+        return res.json({
+          ok: true,
+          mode,
+          previousMemory: curMem,
+          newMemory: nextMem,
+          operation: op,
+          message: `🚀 Applied 1-Click Crash Auto-Fix on "${serviceName}": Upgraded memory (${curMem} → ${nextMem}) and enabled Startup CPU Boost!`,
+        });
+      }
+
+      return res.status(400).json({ error: `Unsupported mode: ${mode}` });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to execute Time-Machine restore on ${serviceName}`,
       });
     }
   }
