@@ -105,8 +105,8 @@ function classifyDestructiveAxiosConfig(config) {
   // 1. All HTTP DELETE requests
   if (method === 'delete') {
     // Generic resource delete (/api/project/:id/resource)
-    if (rawUrl.endsWith('/resource')) {
-      const rType = body.resourceType || 'Google Cloud Resource';
+    if (rawUrl.endsWith('/resource') && !rawUrl.includes('/data-engineer/resource')) {
+      const rType = body.resourceType || body.type || 'Google Cloud Resource';
       const rName = body.name || 'selected-resource';
       const rRegion = body.region || 'global';
       return {
@@ -175,8 +175,8 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // Cloud SQL instance delete (/cloudsql/instances/:name)
-    const sqlMatch = rawUrl.match(/\/cloudsql\/instances\/([^/?]+)/);
+    // Cloud SQL instance delete (/cloud-sql/instances/:name or /cloudsql/instances/:name)
+    const sqlMatch = rawUrl.match(/\/cloud-?sql\/instances\/([^/?]+)/);
     if (sqlMatch) {
       const instanceName = decodeURIComponent(sqlMatch[1]);
       return {
@@ -205,6 +205,25 @@ function classifyDestructiveAxiosConfig(config) {
         method: 'DELETE',
         endpoint: rawUrl,
         impactWarning: `This will force-delete AlloyDB cluster "${clusterId}" in ${region}, tearing down its primary instance, read pool nodes, and cluster storage volume.`,
+      };
+    }
+
+    // Artifact Registry repository delete (/wave9/supply-chain/repositories/:location/:repositoryId)
+    const arRepoMatch = rawUrl.match(
+      /\/wave9\/supply-chain\/repositories\/([^/]+)\/([^/?]+)/
+    );
+    if (arRepoMatch) {
+      const location = decodeURIComponent(arRepoMatch[1]);
+      const repoId = decodeURIComponent(arRepoMatch[2]);
+      return {
+        title: 'Permanently Delete Artifact Registry Repository & All Images',
+        resourceKind: 'Artifact Registry Repository',
+        targetName: repoId,
+        location,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete Artifact Registry repository "${repoId}" in ${location} (${projectId}) and destroy all container images, tags, and SBOM artifacts stored inside it.`,
       };
     }
 
@@ -259,9 +278,9 @@ function classifyDestructiveAxiosConfig(config) {
 
     // Data Engineering Studio resource delete (/data-engineer/resource)
     if (rawUrl.includes('/data-engineer/resource')) {
-      const kind = body.resourceKind || 'Data Engineering Resource';
-      const target = body.id || 'selected-pipeline';
-      const region = body.region || 'us-central1';
+      const kind = body.resourceKind || params.resourceKind || 'Data Engineering Resource';
+      const target = body.id || params.id || 'selected-pipeline';
+      const region = body.region || params.region || 'us-central1';
       return {
         title: `Permanently Delete ${kind}`,
         resourceKind: kind,
@@ -277,7 +296,7 @@ function classifyDestructiveAxiosConfig(config) {
     // Fallback for any other HTTP DELETE endpoint
     return {
       title: 'Confirm Permanent Resource Deletion',
-      resourceKind: body.resourceType || 'Cloud Resource',
+      resourceKind: body.resourceType || body.type || 'Cloud Resource',
       targetName: body.name || body.id || rawUrl.split('/').pop() || rawUrl,
       location: body.region || body.zone || body.location || 'GCP',
       projectId,
@@ -341,7 +360,7 @@ function classifyDestructiveAxiosConfig(config) {
 
     // Artifact Registry Supply-Chain Delete Image / Sweep Orphans
     if (rawUrl.includes('/wave9/supply-chain/delete-image')) {
-      const img = body.image || 'container-image';
+      const img = body.uri || body.name || body.image || 'container-image';
       return {
         title: 'Permanently Delete Artifact Registry Container Image',
         resourceKind: 'Artifact Registry Image',
@@ -355,7 +374,11 @@ function classifyDestructiveAxiosConfig(config) {
     }
 
     if (rawUrl.includes('/wave9/supply-chain/sweep-orphans')) {
-      const count = Array.isArray(body.images) ? body.images.length : 'all untagged';
+      const count = Array.isArray(body.orphans)
+        ? body.orphans.length
+        : Array.isArray(body.images)
+        ? body.images.length
+        : 'all untagged';
       return {
         title: 'Sweep & Delete Orphaned Container Images',
         resourceKind: 'Artifact Registry Orphan Sweep',
@@ -368,27 +391,98 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // Sovereign IAM Service Account Key Deletion / Emergency Revocation
-    if (rawUrl.includes('/sovereign-iam/credentials/action')) {
-      const act = String(body.actionType || '').toUpperCase();
-      if (
-        act === 'DELETE_SA_KEY' ||
-        act === 'EMERGENCY_REVOKE_ALL_SA_KEYS' ||
-        act === 'REVOKE_ACTIVE_OAUTH_TOKEN'
-      ) {
+    // Sovereign IAM Service Account Key Deletion / Token Revocation / Account Freeze
+    if (
+      rawUrl.includes('/sovereign/iam-surgeon/remediate') ||
+      rawUrl.includes('/sovereign-iam/credentials/action')
+    ) {
+      const act = String(body.action || body.actionType || '').toUpperCase();
+      if (act === 'DELETE_SA_KEY' || act === 'EMERGENCY_REVOKE_ALL_SA_KEYS') {
         const target =
-          body.keyId || body.targetSa || body.principal || 'IAM Credential';
+          body.keyName || body.keyId || body.serviceAccountEmail || 'IAM SA Key';
         return {
-          title: `Confirm Destructive IAM Credential Action (${act})`,
-          resourceKind: 'IAM Service Account Key / Token',
+          title: 'Permanently Revoke & Delete Service Account JSON Key?',
+          resourceKind: 'IAM Service Account Key (iam.googleapis.com)',
           targetName: target,
           location: 'Global IAM',
           projectId,
-          method: `POST (${act})`,
+          method: 'DELETE SA KEY',
           endpoint: rawUrl,
-          impactWarning: `This will immediately and permanently delete or revoke "${target}" in Google Cloud IAM. Any workload authenticating with this key will lose access immediately.`,
+          impactWarning: `This will immediately and permanently delete Service Account key "${target}" in Google Cloud IAM. Any workload or CI/CD pipeline authenticating with this .json key file will lose access immediately and the private key cannot be recovered.`,
         };
       }
+      if (act === 'REVOKE_SA_TOKEN' || act === 'REVOKE_ACTIVE_OAUTH_TOKEN') {
+        const target =
+          body.tokenId || body.serviceAccountEmail || 'OAuth2 Access Token';
+        return {
+          title: 'Immediately Revoke Active OAuth2 Access Token?',
+          resourceKind: 'Short-Lived OAuth2 Bearer Token',
+          targetName: target,
+          location: 'Global IAM',
+          projectId,
+          method: 'REVOKE TOKEN',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Revoke OAuth2 Token',
+          cancelToast: 'Action cancelled — OAuth2 token kept active.',
+          impactWarning: `This will immediately revoke token "${target}" so it can no longer authenticate against Google Cloud APIs.`,
+        };
+      }
+      if (act === 'TOGGLE_SA_DISABLED' && Boolean(body.disable)) {
+        const target = body.serviceAccountEmail || 'Service Account';
+        return {
+          title: `Freeze & Disable Service Account "${target}"?`,
+          resourceKind: 'IAM Service Account (Emergency Kill-Switch)',
+          targetName: target,
+          location: 'Global IAM',
+          projectId,
+          method: 'DISABLE SA',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Freeze Service Account',
+          cancelToast: `Action cancelled — "${target}" remains enabled.`,
+          impactWarning: `EMERGENCY KILL-SWITCH WARNING: Disabling Service Account "${target}" immediately blocks ALL JSON keys, OAuth tokens, and workloads running as this identity until you re-enable it.`,
+        };
+      }
+    }
+
+    // Emergency Billing Kill-Switch (Unlink Cloud Billing Account)
+    if (
+      rawUrl.includes('/billing/kill-switch') &&
+      String(body.action || '').toUpperCase() === 'DISABLE'
+    ) {
+      return {
+        title: `Unlink Cloud Billing Account from "${projectId}"?`,
+        headerBadge: 'CloudPulse 2026 Emergency Billing Kill-Switch Gatekeeper',
+        targetLabel: 'Target GCP Project to Detach from Billing',
+        resourceKind: 'Cloud Billing Account Link (cloudbilling.googleapis.com)',
+        targetName: `${projectId}${body.stopAllVms ? ' (+ Stop All Running VMs)' : ''}`,
+        location: 'Global Billing',
+        projectId,
+        method: 'UNLINK BILLING',
+        endpoint: rawUrl,
+        confirmLabel: 'Confirm & Unlink Cloud Billing',
+        cancelToast: 'Action cancelled — Cloud Billing remains linked.',
+        impactWarning: `EXTREME IMPACT WARNING: Unlinking the Cloud Billing Account from "${projectId}" will immediately stop all billable Google Cloud resources and disable paid API usage across the project until billing is re-linked.`,
+      };
+    }
+
+    // Service Usage API Disable (/apis/toggle with action: DISABLE)
+    if (
+      rawUrl.includes('/apis/toggle') &&
+      String(body.action || '').toUpperCase() === 'DISABLE'
+    ) {
+      const svc = body.serviceName || 'googleapis.com';
+      return {
+        title: `Disable Google Cloud API "${svc}"?`,
+        resourceKind: 'Service Usage API (serviceusage.googleapis.com)',
+        targetName: svc,
+        location: 'Global Project API',
+        projectId,
+        method: 'DISABLE API',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Disable ${svc}`,
+        cancelToast: `Action cancelled — "${svc}" remains enabled.`,
+        impactWarning: `Disabling "${svc}" (with disableDependentServices=true) on project "${projectId}" will immediately stop any workloads or SDK calls that depend on this service API.`,
+      };
     }
 
     // Secret Manager Secret Deletion & Permanent Version Destruction
@@ -433,6 +527,7 @@ function classifyDestructiveAxiosConfig(config) {
     ) {
       const target =
         body.serviceName ||
+        body.payload?.envId ||
         (body.prNumber ? `PR #${body.prNumber} Shadow Env` : 'Ephemeral PR Env');
       return {
         title: 'Tear Down & Delete Ephemeral PR Shadow Environment',
@@ -514,7 +609,10 @@ function CloudPulseCockpit() {
   const setErrorBanner = useCallback((msg) => {
     if (
       typeof msg === 'string' &&
-      (msg.includes('') || msg.includes('__cancelledByUser'))
+      (msg.includes('Deletion cancelled') ||
+        msg.includes('Access change cancelled') ||
+        msg.includes('Action cancelled') ||
+        msg.includes('__cancelledByUser'))
     ) {
       return;
     }
@@ -1738,6 +1836,10 @@ function CloudPulseCockpit() {
                       setActiveTab('BIGQUERY_STUDIO');
                     }}
                     onOpenProvision={handleOpenProvision}
+                    onOpenSecretManagerStudio={() => {
+                      setSovereignSubTab('SECRETS_KMS_WAF');
+                      setActiveTab('SOVEREIGN_STUDIO');
+                    }}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onGrantsSummaryChange={setGdeSummary}

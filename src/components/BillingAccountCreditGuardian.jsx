@@ -640,6 +640,7 @@ export default function BillingAccountCreditGuardian({
   liveBurn,
   onOpenBigQuerySql,
   onOpenProvision,
+  onOpenSecretManagerStudio,
   onRunInShell,
   onShowToast,
   onGrantsSummaryChange,
@@ -2802,7 +2803,17 @@ ORDER BY
                       </button>
                     )}
 
-                    {onOpenProvision &&
+                    {item.provisionServiceType === 'SECRET_MANAGER' &&
+                    onOpenSecretManagerStudio ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenSecretManagerStudio()}
+                        className="h-7 px-2.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                      >
+                        Open Secret Studio →
+                      </button>
+                    ) : (
+                      onOpenProvision &&
                       item.provisionServiceType &&
                       item.provisionServiceType !== 'SECRET_MANAGER' && (
                         <button
@@ -2814,7 +2825,8 @@ ORDER BY
                         >
                           Open Studio →
                         </button>
-                      )}
+                      )
+                    )}
                   </div>
                 </div>
               );

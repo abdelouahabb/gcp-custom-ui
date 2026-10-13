@@ -29,6 +29,52 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'always-free-tier-auditor-and-zero-dollar-architect',
+    wave: 'FINOPS & FREE TIER · GOOGLE CLOUD "ALWAYS FREE" AUDITOR & $0.00/MO ARCHITECT',
+    title:
+      'Google Cloud "Always Free" Tier Eligibility Auditor, Overage Trap Detector & 1-Click $0.00/Mo Provisioning Guardrail',
+    badge: 'FINOPS TAB + PROVISION MODAL',
+    badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+    icon: DollarSign,
+    targetTab: 'FINOPS',
+    problemSolved:
+      'Google Cloud offers generous monthly "Always Free" usage limits across 25+ products, but a single wrong flag—such as picking Balanced SSD (pd-balanced) instead of Standard Persistent Disk (pd-standard) on an e2-micro VM, deploying a bucket in NAM4 dual-region instead of us-central1, or leaving old Secret Manager versions ENABLED—silently pushes you out of the $0.00/mo Free Tier.',
+    howItWorks: [
+      'Live 15-Product Always Free Eligibility & Overage Auditor: Cross-references your live Compute VMs, Cloud Run services, Cloud Storage buckets, BigQuery datasets, Secret Manager versions, Artifact Registry repos, and GKE clusters against official Google Cloud Free Tier limits, classifying each service as FREE_ELIGIBLE ($0/mo), READY_TO_USE ($0/mo), or OVERAGE_TRAP_DETECTED.',
+      '1-Click "🎁 Lock to Always Free Tier ($0.00/mo)" Guardrail in Provision Modal: Automatically configures Compute VMs (e2-micro + us-central1-a + 30 GB pd-standard), Cloud Storage (us-central1 Regional STANDARD), Cloud Run (cpuIdle: true, minInstances: 0, 1 vCPU, 512Mi, no GPU), and BigQuery (US multi-region) to stay 100% inside the monthly Always Free allowance.',
+      'Product-Specific Free Trials Strip: Highlights separate 30-to-90 day trials (AlloyDB 30d, Cloud Spanner 90d, Cloud SQL 30d, Looker 30d) that do not consume your $300 Welcome Credit.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/finops/always-free-auditor (live cross-service inspection against official GCP Free Tier limits)',
+      'POST /api/project/:id/provision (with 1-Click Always Free Guardrail presets)',
+    ],
+    billingImpact:
+      'Guarantees $0.00/mo infrastructure architecture across Compute Engine, Cloud Run, Cloud Storage, BigQuery, and Secret Manager by eliminating hidden SKU overage traps before deployment.',
+  },
+  {
+    id: 'secret-manager-lifecycle-rotation-studio-and-plaintext-warning',
+    wave: 'SECRET MANAGER STUDIO · FREE TIER METER, 1-CLICK ROTATION & NO-PLAINTEXT-FALLBACK SAFEGUARD',
+    title:
+      'Dedicated Secret Manager Lifecycle & Rotation Studio — 6 Free Active Versions/Mo Meter, 1-Click Rotation & Why Delete/Destroy Never Reverts to Plaintext',
+    badge: 'SOVEREIGN & IAM TAB + CLOUD RUN',
+    badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+    icon: ShieldAlert,
+    targetTab: 'SOVEREIGN_STUDIO',
+    problemSolved:
+      'When engineers seal plaintext Cloud Run environment variables into Secret Manager, they often wonder: (1) how many secrets are free before Google charges, (2) how to rotate secrets without paying $0.06/mo for every historical version, and (3) whether clicking Destroy or Delete "un-seals" the secret back into plaintext inside Cloud Run or erases it forever.',
+    howItWorks: [
+      'Monthly Free Tier vs. Paid Tier Quota Meter: Tracks your live active secret versions against Google Cloud’s monthly Free Tier (First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month; $0.06/active-version/mo beyond 6; $0.00/mo for DISABLED and DESTROYED versions).',
+      'CRITICAL 3-State Lifecycle & No-Plaintext-Fallback Warning: Explains clearly that sealing an env var removes the plaintext from Cloud Run and replaces it with a secretKeyRef pointer—so clicking Destroy Version or Delete Secret NEVER reverts it back to plaintext; it disappears forever! Guides engineers to use "⏸ Disable ($0.00/mo · Reversible)" to pause billing while keeping the encrypted payload recoverable.',
+      '1-Click Secret Rotation with Auto-Disable of Old Versions: Mints a new secret version (vN+1) and automatically disables prior ENABLED versions so your active version count stays inside the 6-version Free Tier.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/sovereign/secrets-kms → secretmanager.googleapis.com/v1/projects/:id/secrets & /versions',
+      'POST /api/project/:id/sovereign/secrets-kms/action (ROTATE_SECRET, TOGGLE_VERSION_STATE, GRANT_SECRET_ACCESSOR, DELETE_SECRET)',
+    ],
+    billingImpact:
+      'Keeps secret rotation at $0.00/mo by automatically transitioning superseded versions to DISABLED ($0.00/mo) and prevents irreversible production secret loss.',
+  },
+  {
     id: 'quantum-nexus-2026-lab-star',
     wave: 'FLAGSHIP STAR · 2026 QUANTUM NEXUS (5 WORLD-FIRST BREAKTHROUGHS)',
     title:
