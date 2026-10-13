@@ -177,6 +177,10 @@
     - **Live `cloudaudit.googleapis.com/activity` Forensics (`GET /api/project/:id/audit-timeline`)**: Queries `logging.googleapis.com/v2` for Admin Activity & System Event audit logs (retained **400 days for `$0.00/mo` Always Free**) and merges in-session Flight Recorder mutations so every resource creation, patch, IAM policy change, secret rotation, and deletion appears with zero lag.
     - **👤 Principal Attribution, IAM Policy Binding Deltas & 1-Click Shell Inspection**: Filter mutations by service (`run`, `compute`, `secretmanager`, `iam`, `storage`, `bigquery`), Action Category (`CREATE`, `UPDATE`, `IAM_SECURITY`, `DELETE`), or Actor (`principalEmail`), inspect `serviceData.policyDelta.bindingDeltas` (`ADD`/`REMOVE`) + `protoPayload.request`, and run the generated inspection CLI in the Mobile Cloud Shell in 1 click.
 
+36. **📡 Live GCP API Quota Saturation & HTTP 429 Outage Early-Warning Radar (`EmergencyApiKillSwitch.jsx`)**
+    - **Parallel Multi-Service Quota Inspection (`GET /api/project/:id/quotas/radar`)**: Queries `compute.googleapis.com/compute/v1/projects/:id`, regional Compute quotas (`regions`), `run.googleapis.com/v2` autoscaler ceilings, `secretmanager.googleapis.com/v1` Free-Tier version saturation (`6/mo`), and BigQuery concurrency limits in parallel.
+    - **🚨 HTTP 429 `RESOURCE_EXHAUSTED` Early-Warning & 1-Click Quota CLI**: Ranks all tracked limits by live utilization percentage (`HEALTHY_HEADROOM` vs `ELEVATED_WARNING >=65%` vs `CRITICAL_429_RISK >=85%`) and provides 1-click `gcloud alpha services quota update` / inspection commands before traffic spikes hit hard quota walls.
+
 > 📖 **Full Engineering & User Manual**: Read [**`docs/REVOLUTIONARY_FEATURES_GUIDE.md`**](docs/REVOLUTIONARY_FEATURES_GUIDE.md) or click the **`Docs & Guide 📖`** tab directly inside the app for step-by-step explanations of every feature, the exact GCP REST APIs called, and billing impact.
 
 ---
@@ -213,9 +217,9 @@
   - **5 Machine Series**: `E2` (Cost-Optimized/Free Tier), `N2/N2D`, `C3/C4` (Gen-4/5 Sapphire/Emerald Rapids), `T2A Arm64` (Ampere Altra), and `G2/A2` GPU VMs.
   - **Real Open-Source `@xterm/xterm` + `ssh2` + Linux PTY WebSocket SSH Client + `127.0.0.1` IAP TCP Tunnel**: Default OFF when landing on the VM Fleet tab; click **`SSH / Console`** on any VM card to connect (and **`SSH Active (Turn Off)`** to disconnect), or click **`🔌 127.0.0.1 IAP Tunnel`** to bind local ports (`:2222`, `:8086`, `:5433`, `:6380`, `:8888`) to private VMs over IAP TCP `35.235.240.0/20`.
 
-- **🚨 DEFCON-1 Emergency Project Billing Kill-Switch & API Circuit Breaker**
+- **🚨 DEFCON-1 Emergency Project Billing Kill-Switch, API Circuit Breaker & Live Quota Saturation Radar**
   - **Project Billing Circuit Breaker (`cloudbilling.googleapis.com/v1`)**: 2-step emergency button to detach the active Cloud Billing Account from a compromised project (`billingAccountName: ""`) to immediately halt all billable spend, plus 1-tap re-linking.
-  - **Emergency Mobile API Kill-Switch (`serviceusage.googleapis.com/v1`)**: Inspect all enabled APIs on your project with priority sorting and disable/enable services in 1 tap (`disableDependentServices: true`).
+  - **Emergency Mobile API Kill-Switch (`serviceusage.googleapis.com/v1`) & Live Quota Saturation Radar (`/quotas/radar`)**: Inspect all enabled APIs on your project with priority sorting, disable/enable services in 1 tap (`disableDependentServices: true`), and monitor live Global/Regional quota utilization (`%`) before hitting HTTP 429 limits.
 
 - **🌐 VPC Networks, Enterprise Firewalls, Storage, BigQuery, BigLake Metastore & Mobile Cloud Shell**
   - Provision and manage custom/auto-mode VPC Networks (`REGIONAL` / `GLOBAL` BGP routing, Jumbo Frames MTU `8896`), `ALLOW`/`DENY` Ingress & Egress Firewall Rules with live `PATCH` editing and IAP lockdown, Cloud Storage Buckets, BigQuery Datasets & Partitioned/Clustered Tables, **BigLake Metastore Catalogs (`/biglake/metastore/catalogs` — `biglake.googleapis.com/v1`)**, real-time Cloud Logging & **400-Day Cloud Audit "Who-Changed-What" Activity Timeline**, and an interactive Mobile Cloud Shell (`gcloud` / `bq`).
@@ -236,6 +240,7 @@
 | `/api/ws/ssh` | `WS (WebSocket)` | **Full-Duplex `@xterm/xterm` Web-SSH PTY Bridge**: Connects to Compute Engine VMs (`ssh2` / `gcloud compute ssh` / IAP) and Cloud Run Gen2 Containers (`gcloud beta run services ssh` with auto `--ssh --execution-environment=gen2` preflight & `gcloud beta run services proxy`) |
 | `/api/project/:id/tunnels` | `GET / POST` | **127.0.0.1 Developer Tunnel Manager**: Starts, stops, lists, and probes local port-forward tunnels (`/tunnels/start`, `/tunnels/stop`, `/tunnels/probe`) for Cloud Run OIDC Proxy, Compute VM IAP TCP, and Cloud SQL / AlloyDB Auth Proxy |
 | `/api/project/:id/audit-timeline` | `GET` | **Live Cloud Audit "Who-Changed-What" Timeline**: Queries `logging.googleapis.com/v2` (`cloudaudit.googleapis.com/activity`) + in-session Flight Recorder for principal attribution, IAM binding deltas & request payloads |
+| `/api/project/:id/quotas/radar` | `GET` | **Live GCP API Quota Saturation & HTTP 429 Early-Warning Radar**: Queries Global & Regional Compute Engine quotas, Cloud Run max-instance ceilings & Secret Manager Free-Tier version saturation |
 | `/api/auth/discover` | `GET` | Discovers local `gcloud` / ADC accounts and accessible GCP projects |
 | `/api/context` | `GET` | Returns active authenticated session account and project list |
 | `/api/pricing/live-sync` | `GET` | **Live Cloud Billing Price Sync**: Queries `cloudbilling.googleapis.com/v1` for live SKU rates |

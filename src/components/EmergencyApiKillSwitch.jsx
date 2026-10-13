@@ -96,12 +96,33 @@ export default function EmergencyApiKillSwitch({
   const [enabling, setEnabling] = useState(false);
   const [showAllApis, setShowAllApis] = useState(false);
 
+  // 3) Innovation #4: Live GCP API Quota Saturation & HTTP 429 Outage Early-Warning Radar
+  const [quotaRadar, setQuotaRadar] = useState(null);
+  const [loadingQuotas, setLoadingQuotas] = useState(false);
+  const [copiedQuotaId, setCopiedQuotaId] = useState(null);
+  const [showAllQuotas, setShowAllQuotas] = useState(false);
+
   // Sync when parent overview updates enabledApis
   useEffect(() => {
     if (Array.isArray(enabledApis) && enabledApis.length > 0) {
       setLocalApis(enabledApis);
     }
   }, [enabledApis]);
+
+  const fetchQuotaRadar = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingQuotas(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/quotas/radar`
+      );
+      setQuotaRadar(res.data);
+    } catch {
+      // ignore silent errors
+    } finally {
+      setLoadingQuotas(false);
+    }
+  }, [projectId]);
 
   const fetchBillingStatus = useCallback(async () => {
     if (!projectId) return;
@@ -145,15 +166,16 @@ export default function EmergencyApiKillSwitch({
     [projectId]
   );
 
-  // Load live Billing Account status & Enabled APIs on mount or project change
+  // Load live Billing Account status, Quota Radar & Enabled APIs on mount or project change
   useEffect(() => {
     if (projectId) {
       fetchBillingStatus();
+      fetchQuotaRadar();
       if (!enabledApis || enabledApis.length === 0) {
         fetchLiveApis(false);
       }
     }
-  }, [projectId, enabledApis, fetchBillingStatus, fetchLiveApis]);
+  }, [projectId, enabledApis, fetchBillingStatus, fetchQuotaRadar, fetchLiveApis]);
 
   const handleBillingKillSwitch = async (action) => {
     setTogglingBilling(true);
@@ -777,6 +799,143 @@ export default function EmergencyApiKillSwitch({
             <span>Enable New API</span>
           </button>
         </form>
+      </div>
+
+      {/* ===================================================================== */}
+      {/* LEVEL 3: LIVE GCP API QUOTA SATURATION & HTTP 429 OUTAGE RADAR        */}
+      {/* ===================================================================== */}
+      <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#131314] space-y-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10.5px] font-mono font-extrabold">
+                📡 LIVE API QUOTA SATURATION & HTTP 429 EARLY-WARNING RADAR
+              </span>
+              {quotaRadar?.criticalCount > 0 ? (
+                <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
+                  🚨 {quotaRadar.criticalCount} Quota(s) Near HTTP 429 Exhaustion (&ge;85%)
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                  ✓ 0 HTTP 429 Quota Bottlenecks ({quotaRadar?.totalQuotasTracked || 0} Limits Monitored)
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Continuously inspects live Compute Engine Global & Regional quotas (`CPUS`, `IN_USE_ADDRESSES`, `DISKS_TOTAL_GB`, `NVIDIA_L4_GPUS`), Cloud Run Autoscaler max-instance ceilings, Secret Manager Free-Tier version saturation (`6/mo`), and BigQuery concurrency limits before your workloads hit `HTTP 429 RESOURCE_EXHAUSTED`.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={loadingQuotas}
+            onClick={fetchQuotaRadar}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold cursor-pointer"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${loadingQuotas ? 'animate-spin' : ''}`}
+            />
+            <span>{loadingQuotas ? 'Scanning Quotas...' : 'Scan Live Quotas'}</span>
+          </button>
+        </div>
+
+        {Array.isArray(quotaRadar?.quotas) && quotaRadar.quotas.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {(showAllQuotas
+                ? quotaRadar.quotas
+                : quotaRadar.quotas.slice(0, 9)
+              ).map((q) => {
+                const isCrit = q.status === 'CRITICAL_429_RISK';
+                const isWarn = q.status === 'ELEVATED_WARNING';
+                return (
+                  <div
+                    key={q.id}
+                    className={`p-3 rounded-lg border space-y-2 ${
+                      isCrit
+                        ? 'bg-red-500/10 border-red-500/40'
+                        : isWarn
+                        ? 'bg-amber-500/10 border-amber-500/40'
+                        : 'bg-white dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-mono font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                          {q.metric}
+                        </div>
+                        <div className="text-[10px] font-mono text-zinc-500 truncate">
+                          {q.serviceLabel}
+                        </div>
+                      </div>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
+                          isCrit
+                            ? 'bg-red-600 text-white'
+                            : isWarn
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                            : 'bg-emerald-500/15 text-emerald-500'
+                        }`}
+                      >
+                        {q.utilizationPct}%
+                      </span>
+                    </div>
+
+                    {/* Utilization Bar */}
+                    <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                      <div
+                        className={`h-full transition-all ${
+                          isCrit
+                            ? 'bg-red-500'
+                            : isWarn
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        }`}
+                        style={{
+                          width: `${Math.max(3, Math.min(100, q.utilizationPct))}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                      <span>
+                        Usage: <strong>{q.usage}</strong> / {q.limit} {q.unit}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(q.cliIncreaseCmd);
+                          setCopiedQuotaId(q.id);
+                          if (onShowToast) {
+                            onShowToast(`Copied Quota CLI for ${q.metric}`);
+                          }
+                          setTimeout(() => setCopiedQuotaId(null), 1800);
+                        }}
+                        className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                      >
+                        {copiedQuotaId === q.id ? '✓ Copied CLI' : 'Quota CLI'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {quotaRadar.quotas.length > 9 && (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowAllQuotas((p) => !p)}
+                  className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  {showAllQuotas
+                    ? 'Show Top 9 Quotas'
+                    : `Show All ${quotaRadar.quotas.length} Monitored Project & Regional Quotas`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

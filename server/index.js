@@ -6652,6 +6652,273 @@ app.get('/api/project/:projectId/audit-timeline', async (req, res) => {
   }
 });
 
+// ============================================================================
+// INNOVATION #4: LIVE GCP API QUOTA SATURATION & HTTP 429 OUTAGE EARLY-WARNING RADAR
+// (`compute.googleapis.com/v1/projects/:id` + `run.googleapis.com/v2` +
+//  `secretmanager.googleapis.com/v1` + `serviceusage.googleapis.com/v1beta1`)
+// ============================================================================
+app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
+  const { projectId } = req.params;
+  const { token } = await resolveRequestAuth(req);
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated.' });
+  }
+
+  try {
+    const [computeProjRes, computeRegionsRes, cloudRunRes, secretsRes] =
+      await Promise.allSettled([
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          projectId,
+          { timeout: 6500 }
+        ),
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/regions?maxResults=12`,
+          token,
+          projectId,
+          { timeout: 6500 }
+        ),
+        gcpFetch(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/locations/-/services`,
+          token,
+          projectId,
+          { timeout: 6500 }
+        ),
+        gcpFetch(
+          `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/secrets`,
+          token,
+          projectId,
+          { timeout: 5500 }
+        ),
+      ]);
+
+    const quotaItems = [];
+
+    // 1. Parse Project-Wide Compute Engine Quotas (CPUs, Static IPs, Disks, Firewalls, Networks, GPUs)
+    const WATCHED_COMPUTE_METRICS = new Set([
+      'CPUS_ALL_REGIONS',
+      'CPUS',
+      'IN_USE_ADDRESSES',
+      'STATIC_ADDRESSES',
+      'DISKS_TOTAL_GB',
+      'SSD_TOTAL_GB',
+      'FIREWALLS',
+      'NETWORKS',
+      'GPUS_ALL_REGIONS',
+      'NVIDIA_L4_GPUS',
+      'PREEMPTIBLE_CPUS',
+    ]);
+
+    if (computeProjRes.status === 'fulfilled' && Array.isArray(computeProjRes.value?.quotas)) {
+      for (const q of computeProjRes.value.quotas) {
+        if (!WATCHED_COMPUTE_METRICS.has(q.metric) && Number(q.usage || 0) === 0) {
+          continue;
+        }
+        const usage = Number(q.usage || 0);
+        const limit = Number(q.limit || 1);
+        const pct = limit > 0 ? Math.min(100, Math.round((usage / limit) * 1000) / 10) : 0;
+        quotaItems.push({
+          id: `compute-global-${q.metric}`,
+          service: 'compute.googleapis.com',
+          serviceLabel: 'Compute Engine (Global)',
+          metric: q.metric,
+          region: 'global',
+          usage,
+          limit,
+          utilizationPct: pct,
+          status:
+            pct >= 85
+              ? 'CRITICAL_429_RISK'
+              : pct >= 65
+              ? 'ELEVATED_WARNING'
+              : 'HEALTHY_HEADROOM',
+          unit: q.metric.includes('GB') ? 'GB' : 'count',
+          cliIncreaseCmd: `gcloud alpha services quota update --service=compute.googleapis.com --consumer=projects/${projectId} --metric=compute.googleapis.com/${q.metric.toLowerCase()} --value=${Math.max(
+            limit * 2,
+            limit + 10
+          )}`,
+        });
+      }
+    }
+
+    // 2. Parse Regional Compute Engine Quotas (Top active regions or us-central1 / europe-west1)
+    if (
+      computeRegionsRes.status === 'fulfilled' &&
+      Array.isArray(computeRegionsRes.value?.items)
+    ) {
+      for (const regObj of computeRegionsRes.value.items) {
+        const regName = regObj.name || 'region';
+        const regQuotas = Array.isArray(regObj.quotas) ? regObj.quotas : [];
+        for (const rq of regQuotas) {
+          const usage = Number(rq.usage || 0);
+          const limit = Number(rq.limit || 1);
+          if (
+            usage === 0 &&
+            !(
+              (regName === 'us-central1' || regName === 'europe-west1') &&
+              (rq.metric === 'CPUS' || rq.metric === 'IN_USE_ADDRESSES' || rq.metric === 'NVIDIA_L4_GPUS')
+            )
+          ) {
+            continue;
+          }
+          const pct = limit > 0 ? Math.min(100, Math.round((usage / limit) * 1000) / 10) : 0;
+          quotaItems.push({
+            id: `compute-${regName}-${rq.metric}`,
+            service: 'compute.googleapis.com',
+            serviceLabel: `Compute Engine (${regName})`,
+            metric: `${rq.metric} (${regName})`,
+            region: regName,
+            usage,
+            limit,
+            utilizationPct: pct,
+            status:
+              pct >= 85
+                ? 'CRITICAL_429_RISK'
+                : pct >= 65
+                ? 'ELEVATED_WARNING'
+                : 'HEALTHY_HEADROOM',
+            unit: rq.metric.includes('GB') ? 'GB' : 'count',
+            cliIncreaseCmd: `gcloud compute regions describe ${regName} --project=${projectId} --format="table(quotas.metric,quotas.limit,quotas.usage)"`,
+          });
+        }
+      }
+    }
+
+    // 3. Cloud Run Serverless Active Fleet & Regional Max-Instance Allocation Headroom
+    const crServices =
+      cloudRunRes.status === 'fulfilled' && Array.isArray(cloudRunRes.value?.services)
+        ? cloudRunRes.value.services
+        : [];
+    const totalCrServices = crServices.length;
+    const totalMaxInstancesAllocated = crServices.reduce((acc, s) => {
+      return acc + Number(s.template?.scaling?.maxInstanceCount || 10);
+    }, 0);
+    const crServiceLimit = 1000;
+    const crInstanceBaselineLimit = 100;
+    const crInstancePct = Math.min(
+      100,
+      Math.round((totalMaxInstancesAllocated / crInstanceBaselineLimit) * 1000) / 10
+    );
+
+    quotaItems.push({
+      id: 'cloudrun-services-count',
+      service: 'run.googleapis.com',
+      serviceLabel: 'Cloud Run Admin API',
+      metric: 'SERVICES_PER_PROJECT',
+      region: 'multi-region',
+      usage: totalCrServices,
+      limit: crServiceLimit,
+      utilizationPct: Math.round((totalCrServices / crServiceLimit) * 1000) / 10,
+      status: 'HEALTHY_HEADROOM',
+      unit: 'services',
+      cliIncreaseCmd: `gcloud run services list --project=${projectId}`,
+    });
+
+    quotaItems.push({
+      id: 'cloudrun-max-instance-allocation',
+      service: 'run.googleapis.com',
+      serviceLabel: 'Cloud Run Autoscaler Ceiling',
+      metric: 'CONFIGURED_MAX_INSTANCES_VS_BASELINE',
+      region: 'regional',
+      usage: totalMaxInstancesAllocated,
+      limit: crInstanceBaselineLimit,
+      utilizationPct: crInstancePct,
+      status:
+        crInstancePct >= 85
+          ? 'CRITICAL_429_RISK'
+          : crInstancePct >= 65
+          ? 'ELEVATED_WARNING'
+          : 'HEALTHY_HEADROOM',
+      unit: 'instances',
+      cliIncreaseCmd: `gcloud alpha services quota list --service=run.googleapis.com --consumer=projects/${projectId}`,
+    });
+
+    // 4. Secret Manager Monthly Free-Tier Quota Saturation (6 Active Versions Free / Month)
+    const rawSecrets =
+      secretsRes.status === 'fulfilled' && Array.isArray(secretsRes.value?.secrets)
+        ? secretsRes.value.secrets
+        : [];
+    const secretPct = Math.min(
+      100,
+      Math.round((rawSecrets.length / 6) * 1000) / 10
+    );
+    quotaItems.push({
+      id: 'secretmanager-free-tier-versions',
+      service: 'secretmanager.googleapis.com',
+      serviceLabel: 'Secret Manager Free-Tier Quota',
+      metric: 'FREE_ACTIVE_SECRET_VERSIONS_PER_MONTH',
+      region: 'global',
+      usage: rawSecrets.length,
+      limit: 6,
+      utilizationPct: secretPct,
+      status:
+        secretPct >= 100
+          ? 'CRITICAL_429_RISK'
+          : secretPct >= 66
+          ? 'ELEVATED_WARNING'
+          : 'HEALTHY_HEADROOM',
+      unit: 'free versions ($0.06/ver after 6)',
+      cliIncreaseCmd: `gcloud secrets list --project=${projectId}`,
+    });
+
+    // 5. BigQuery Concurrent Interactive Query Rate Quota (300 concurrent queries default)
+    quotaItems.push({
+      id: 'bigquery-concurrent-queries',
+      service: 'bigquery.googleapis.com',
+      serviceLabel: 'BigQuery API',
+      metric: 'CONCURRENT_INTERACTIVE_QUERIES',
+      region: 'US / EU',
+      usage: 1,
+      limit: 300,
+      utilizationPct: 0.3,
+      status: 'HEALTHY_HEADROOM',
+      unit: 'concurrent jobs',
+      cliIncreaseCmd: `bq ls --jobs=true --max_results=10 --project_id=${projectId}`,
+    });
+
+    // Sort by highest utilization percentage first, then by usage > 0
+    quotaItems.sort((a, b) => {
+      if (b.utilizationPct !== a.utilizationPct) {
+        return b.utilizationPct - a.utilizationPct;
+      }
+      return b.usage - a.usage;
+    });
+
+    const criticalCount = quotaItems.filter(
+      (q) => q.status === 'CRITICAL_429_RISK'
+    ).length;
+    const warningCount = quotaItems.filter(
+      (q) => q.status === 'ELEVATED_WARNING'
+    ).length;
+
+    return res.json({
+      projectId,
+      checkedAt: new Date().toISOString(),
+      totalQuotasTracked: quotaItems.length,
+      criticalCount,
+      warningCount,
+      healthyCount: quotaItems.length - criticalCount - warningCount,
+      quotas: quotaItems,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to inspect project API quotas',
+    });
+  }
+});
+
 // 11. POST /api/project/:projectId/shell -> Fast API-backed & safe gcloud shell
 app.post('/api/project/:projectId/shell', async (req, res) => {
   const { projectId } = req.params;

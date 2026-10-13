@@ -275,6 +275,28 @@ const DOC_SECTIONS = [
       'Revision Time-Machine & Autopsy are 100% free control-plane operations; Direct VPC Egress eliminates ~$14.60/mo Serverless VPC Connector instance charges; migrating warm Cloud Run services to GKE Spot VMs/GPUs cuts compute spend by up to 68%.',
   },
   {
+    id: 'live-gcp-api-quota-saturation-and-429-radar',
+    wave: 'API QUOTA RADAR · LIVE QUOTA SATURATION & HTTP 429 OUTAGE EARLY-WARNING ENGINE',
+    title:
+      'Live GCP API Quota Saturation & HTTP 429 RESOURCE_EXHAUSTED Outage Early-Warning Radar',
+    badge: '2026 SRE OVERVIEW · API & QUOTA CIRCUIT BREAKER',
+    badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
+    icon: Zap,
+    targetTab: 'OVERVIEW',
+    problemSolved:
+      'Production cloud outages frequently happen not because a service is down, but because a project silently hits a regional vCPU, Static External IP, Persistent Disk GB, NVIDIA L4 GPU, or Cloud Run Max-Instance quota limit and starts failing with HTTP 429 RESOURCE_EXHAUSTED.',
+    howItWorks: [
+      'Parallel Project & Regional Quota Discovery (`GET /api/project/:id/quotas/radar`): Queries `compute.googleapis.com/compute/v1/projects/:id`, `regions?maxResults=12`, `run.googleapis.com/v2`, and `secretmanager.googleapis.com/v1` in parallel.',
+      'Real-Time Utilization Bars & HTTP 429 Risk Classification: Computes `usage / limit` utilization percentages across Global & Regional vCPUs (`CPUS`, `CPUS_ALL_REGIONS`), Static & In-Use IPv4s, Disks (`DISKS_TOTAL_GB`), GPUs (`NVIDIA_L4_GPUS`), Cloud Run Autoscaler ceilings, and Secret Manager Free-Tier versions (`6/mo`).',
+      '1-Click Quota Increase CLI: Generates copy-ready `gcloud alpha services quota update` and `gcloud compute regions describe` commands for any bottlenecked metric.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/quotas/radar → compute.googleapis.com/v1 + run.googleapis.com/v2 + secretmanager.googleapis.com/v1',
+    ],
+    billingImpact:
+      '100% free control-plane inspection ($0.00/mo). Prevents surprise HTTP 429 autoscaling failures and highlights Free-Tier quota saturation.',
+  },
+  {
     id: 'cloud-audit-who-changed-what-timeline',
     wave: 'CLOUD AUDIT LOGS · LIVE "WHO-CHANGED-WHAT" ACTIVITY TIMELINE & 1-CLICK CHANGE INSPECTOR',
     title:
