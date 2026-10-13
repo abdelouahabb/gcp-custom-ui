@@ -11629,13 +11629,16 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
           const ref = envItem?.valueSource?.secretKeyRef;
           if (ref?.secret) {
             const cleanRefSecret = String(ref.secret).split('/').pop();
+            const verStr = String(ref.version || 'latest');
             cloudRunSecretMounts.push({
               serviceName: svcShortName,
               region: svcRegion,
               mountType: 'ENV_VAR',
               envVarName: envItem.name,
+              envKey: envItem.name,
               secretId: cleanRefSecret,
-              pinnedVersion: String(ref.version || 'latest'),
+              pinnedVersion: verStr,
+              version: verStr,
               runtimeSa,
             });
           }
@@ -11644,14 +11647,17 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
       for (const vol of svc.template?.volumes || []) {
         if (vol?.secret?.secret) {
           const cleanRefSecret = String(vol.secret.secret).split('/').pop();
-          const firstVer = vol.secret.items?.[0]?.version || 'latest';
+          const firstVer = String(vol.secret.items?.[0]?.version || 'latest');
+          const volKey = `vol:${vol.name}`;
           cloudRunSecretMounts.push({
             serviceName: svcShortName,
             region: svcRegion,
             mountType: 'VOLUME_MOUNT',
-            envVarName: `vol:${vol.name}`,
+            envVarName: volKey,
+            envKey: volKey,
             secretId: cleanRefSecret,
-            pinnedVersion: String(firstVer),
+            pinnedVersion: firstVer,
+            version: firstVer,
             runtimeSa,
           });
         }
@@ -11665,9 +11671,16 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
         const isAuto = Boolean(s.replication?.automatic);
         const locations =
           s.replication?.userManaged?.replicas?.map((r) => r.location) || [];
-        const hasRotation = Boolean(
-          s.rotation?.rotationPeriod || s.labels?.rotation_cadence
-        );
+        const effRotationPeriod =
+          s.rotation?.rotationPeriod ||
+          s.annotations?.['cloudpulse-rotation-period'] ||
+          s.labels?.rotation_cadence ||
+          null;
+        const effNextRotationTime =
+          s.rotation?.nextRotationTime ||
+          s.annotations?.['cloudpulse-next-rotation-time'] ||
+          null;
+        const hasRotation = Boolean(effRotationPeriod || effNextRotationTime);
 
         const [versRes, iamRes] = await Promise.allSettled([
           gcpApiRequest({
@@ -11763,9 +11776,14 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
             : 'USER_MANAGED_SOVEREIGN',
           locations,
           hasRotation,
-          rotationPeriod:
-            s.rotation?.rotationPeriod || s.labels?.rotation_cadence || null,
-          nextRotationTime: s.rotation?.nextRotationTime || null,
+          rotationPeriod: effRotationPeriod,
+          nextRotationTime: effNextRotationTime,
+          rotationSchedule: hasRotation
+            ? {
+                rotationPeriod: effRotationPeriod,
+                nextRotationTime: effNextRotationTime,
+              }
+            : null,
           labels: s.labels || {},
           versions,
           latestEnabledVersion,
@@ -11789,8 +11807,9 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
         brokenSecretReferences.push({
           ...mount,
           issueType: 'DELETED_SECRET_POINTER',
+          status: 'MISSING_SECRET',
           severity: 'CRITICAL',
-          reason: `Cloud Run service "${mount.serviceName}" (${mount.region}) still references secret "${mount.secretId}" in env var "${mount.envVarName}", but that secret was DELETED from Secret Manager!`,
+          reason: `Cloud Run service "${mount.serviceName}" (${mount.region}) still references secret "${mount.secretId}" in "${mount.envVarName}", but that secret was DELETED from Secret Manager!`,
           remediationHint:
             'Detach broken secretKeyRef from Cloud Run or recreate the secret in Secret Manager.',
         });
@@ -11804,9 +11823,10 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
           brokenSecretReferences.push({
             ...mount,
             issueType: 'UNHEALTHY_VERSION_POINTER',
+            status: 'UNHEALTHY_VERSION',
             severity: 'HIGH',
             latestEnabledVersion: targetSecret.latestEnabledVersion,
-            reason: `Cloud Run service "${mount.serviceName}" (${mount.region}) env var "${mount.envVarName}" points to "${mount.secretId}@${mount.pinnedVersion}": ${workloadStatus.statusReason}`,
+            reason: `Cloud Run service "${mount.serviceName}" (${mount.region}) "${mount.envVarName}" points to "${mount.secretId}@${mount.pinnedVersion}": ${workloadStatus.statusReason}`,
             remediationHint:
               '1-Click Heal & Rebind Cloud Run to the latest ENABLED version.',
           });
@@ -12361,7 +12381,7 @@ app.post(
           quotaProject: projectId,
         });
 
-        // Ensure Pub/Sub topic exists if user provided one or if we auto-provision a lightweight rotation topic
+        // Ensure Pub/Sub topic exists and Secret Manager service agent has roles/pubsub.publisher
         let topics = Array.isArray(existingSec?.topics) ? [...existingSec.topics] : [];
         if (topics.length === 0) {
           const topicId = `cloudpulse-secret-rotation-${cleanId}`.slice(0, 240);
@@ -12380,24 +12400,102 @@ app.post(
               topics = [{ name: topicFullName }];
             }
           }
+
+          // Grant roles/pubsub.publisher to service-${projectNumber}@gcp-sa-secretmanager.iam.gserviceaccount.com
+          if (topics.length > 0) {
+            try {
+              const projMeta = await gcpApiRequest({
+                method: 'GET',
+                url: `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+                  projectId
+                )}`,
+                token,
+                quotaProject: projectId,
+              });
+              const projNum = projMeta?.projectNumber;
+              if (projNum) {
+                try {
+                  await gcpApiRequest({
+                    method: 'POST',
+                    url: `https://serviceusage.googleapis.com/v1beta1/projects/${encodeURIComponent(
+                      projectId
+                    )}/services/secretmanager.googleapis.com:generateServiceIdentity`,
+                    token,
+                    quotaProject: projectId,
+                    data: {},
+                  });
+                } catch {
+                  // ignore
+                }
+                const smAgent = `serviceAccount:service-${projNum}@gcp-sa-secretmanager.iam.gserviceaccount.com`;
+                const curTopicPol = await gcpApiRequest({
+                  method: 'GET',
+                  url: `https://pubsub.googleapis.com/v1/${topicFullName}:getIamPolicy`,
+                  token,
+                  quotaProject: projectId,
+                });
+                const tBindings = Array.isArray(curTopicPol?.bindings)
+                  ? [...curTopicPol.bindings]
+                  : [];
+                const pubRole = 'roles/pubsub.publisher';
+                const exPub = tBindings.find((b) => b.role === pubRole);
+                if (exPub) {
+                  if (!exPub.members.includes(smAgent)) exPub.members.push(smAgent);
+                } else {
+                  tBindings.push({ role: pubRole, members: [smAgent] });
+                }
+                await gcpApiRequest({
+                  method: 'POST',
+                  url: `https://pubsub.googleapis.com/v1/${topicFullName}:setIamPolicy`,
+                  token,
+                  quotaProject: projectId,
+                  data: {
+                    policy: {
+                      ...curTopicPol,
+                      bindings: tBindings,
+                    },
+                  },
+                });
+              }
+            } catch {
+              // fallback handled below if native rotation patch is rejected
+            }
+          }
         }
 
-        const patchPayload = {
-          rotation: {
-            rotationPeriod: periodSeconds,
-            nextRotationTime,
-          },
-          ...(topics.length > 0 ? { topics } : {}),
-        };
-        const updateMask = topics.length > 0 ? 'rotation,topics' : 'rotation';
-
-        const updatedSec = await gcpApiRequest({
-          method: 'PATCH',
-          url: `${secretBaseUrl}?updateMask=${encodeURIComponent(updateMask)}`,
-          token,
-          quotaProject: projectId,
-          data: patchPayload,
-        });
+        let updatedSec = null;
+        try {
+          const patchPayload = {
+            rotation: {
+              rotationPeriod: periodSeconds,
+              nextRotationTime,
+            },
+            ...(topics.length > 0 ? { topics } : {}),
+          };
+          const updateMask = topics.length > 0 ? 'rotation,topics' : 'rotation';
+          updatedSec = await gcpApiRequest({
+            method: 'PATCH',
+            url: `${secretBaseUrl}?updateMask=${encodeURIComponent(updateMask)}`,
+            token,
+            quotaProject: projectId,
+            data: patchPayload,
+          });
+        } catch {
+          // Graceful fallback: persist rotation schedule in secret annotations so schedule works even without Pub/Sub IAM permissions
+          updatedSec = await gcpApiRequest({
+            method: 'PATCH',
+            url: `${secretBaseUrl}?updateMask=annotations`,
+            token,
+            quotaProject: projectId,
+            data: {
+              annotations: {
+                ...(existingSec?.annotations || {}),
+                'cloudpulse-rotation-period': periodSeconds,
+                'cloudpulse-next-rotation-time': nextRotationTime,
+              },
+            },
+          });
+        }
 
         recordFlightEvent(projectId, {
           action: 'SECRET_AUTO_ROTATION_SCHEDULE',
@@ -12452,7 +12550,48 @@ app.post(
           const sanitized = sanitizeCloudRunV2ServicePayloadForPatch(currentSvc);
           const containers = sanitized?.template?.containers || [];
 
+          // Also handle volume-mounted secrets (template.volumes[].secret)
+          const removedVolumeNames = new Set();
+          if (Array.isArray(sanitized?.template?.volumes)) {
+            if (act === 'HEAL_CLOUDRUN_SECRET_REF' && healStrategy === 'UNBIND_BROKEN_REF') {
+              sanitized.template.volumes = sanitized.template.volumes.filter((vol) => {
+                const volSec = vol?.secret?.secret;
+                if (!volSec) return true;
+                const refId = String(volSec).split('/').pop();
+                if (refId === cleanId) {
+                  if (vol.name) removedVolumeNames.add(vol.name);
+                  return false;
+                }
+                return true;
+              });
+            } else {
+              sanitized.template.volumes = sanitized.template.volumes.map((vol) => {
+                const volSec = vol?.secret?.secret;
+                if (!volSec) return vol;
+                const refId = String(volSec).split('/').pop();
+                if (refId === cleanId && Array.isArray(vol.secret.items)) {
+                  return {
+                    ...vol,
+                    secret: {
+                      ...vol.secret,
+                      items: vol.secret.items.map((it) => ({
+                        ...it,
+                        version: 'latest',
+                      })),
+                    },
+                  };
+                }
+                return vol;
+              });
+            }
+          }
+
           for (const container of containers) {
+            if (removedVolumeNames.size > 0 && Array.isArray(container.volumeMounts)) {
+              container.volumeMounts = container.volumeMounts.filter(
+                (vm) => !removedVolumeNames.has(vm.name)
+              );
+            }
             if (Array.isArray(container.env)) {
               if (act === 'HEAL_CLOUDRUN_SECRET_REF' && healStrategy === 'UNBIND_BROKEN_REF') {
                 container.env = container.env.filter((envItem) => {

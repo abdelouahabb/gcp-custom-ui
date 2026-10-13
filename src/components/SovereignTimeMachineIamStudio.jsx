@@ -2064,22 +2064,50 @@ export default function SovereignTimeMachineIamStudio({
                     <span className="font-extrabold text-emerald-300">
                       ✓ Keyless OIDC Provider Ready for `{wifResult.githubRepo}` → `{wifResult.serviceAccountEmail}`
                     </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopy(
-                          wifResult.githubActionsYaml,
-                          'GitHub Actions OIDC YAML snippet'
-                        )
-                      }
-                      className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer"
-                    >
-                      Copy GitHub Actions `.yml` Snippet
-                    </button>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {wifResult.gcloudCliScript && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(
+                              wifResult.gcloudCliScript,
+                              'gcloud OIDC Pool & Provider CLI'
+                            )
+                          }
+                          className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[10.5px] font-bold cursor-pointer"
+                        >
+                          Copy `gcloud` OIDC CLI
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(
+                            wifResult.githubActionsYaml,
+                            'GitHub Actions OIDC YAML snippet'
+                          )
+                        }
+                        className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer"
+                      >
+                        Copy GitHub Actions `.yml` Snippet
+                      </button>
+                    </div>
                   </div>
                   <div className="text-[10.5px] text-zinc-300 break-all">
                     Provider Resource: <code className="text-blue-300">{wifResult.providerResourceName}</code>
                   </div>
+                  {(wifResult.stepsCompleted || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {wifResult.stepsCompleted.map((st, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px]"
+                        >
+                          ✓ {st}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <pre className="p-2.5 rounded-lg bg-black/90 border border-zinc-800 text-[10.5px] text-emerald-200 overflow-x-auto">
                     {wifResult.githubActionsYaml}
                   </pre>

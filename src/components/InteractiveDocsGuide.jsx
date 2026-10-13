@@ -30,49 +30,51 @@ import {
 const DOC_SECTIONS = [
   {
     id: 'always-free-tier-auditor-and-zero-dollar-architect',
-    wave: 'FINOPS & FREE TIER · GOOGLE CLOUD "ALWAYS FREE" AUDITOR & $0.00/MO ARCHITECT',
+    wave: 'FINOPS & FREE TIER · GOOGLE CLOUD "ALWAYS FREE" AUDITOR, $0.00/MO ARCHITECT & MICRO-CHARGE KILLER',
     title:
-      'Google Cloud "Always Free" Tier Eligibility Auditor, Overage Trap Detector & 1-Click $0.00/Mo Provisioning Guardrail',
+      'Google Cloud "Always Free" Tier Eligibility Auditor, 1-Click Micro-Charge Killer & $0.00/Mo Provisioning Guardrail',
     badge: 'FINOPS TAB + PROVISION MODAL',
     badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
     icon: DollarSign,
     targetTab: 'FINOPS',
     problemSolved:
-      'Google Cloud offers generous monthly "Always Free" usage limits across 25+ products, but a single wrong flag—such as picking Balanced SSD (pd-balanced) instead of Standard Persistent Disk (pd-standard) on an e2-micro VM, deploying a bucket in NAM4 dual-region instead of us-central1, or leaving old Secret Manager versions ENABLED—silently pushes you out of the $0.00/mo Free Tier.',
+      'Google Cloud offers generous monthly "Always Free" usage limits across 25+ products, but a single wrong flag—such as picking Balanced SSD (pd-balanced) instead of Standard Persistent Disk (pd-standard) on an e2-micro VM, leaving old container images in Artifact Registry (>0.5 GB), ingesting noisy /healthz logs in Cloud Logging (>50 GiB/mo), or leaving old Secret Manager versions ENABLED (>6 versions)—silently pushes you out of the $0.00/mo Free Tier.',
     howItWorks: [
       'Live 15-Product Always Free Eligibility & Overage Auditor: Cross-references your live Compute VMs, Cloud Run services, Cloud Storage buckets, BigQuery datasets, Secret Manager versions, Artifact Registry repos, and GKE clusters against official Google Cloud Free Tier limits, classifying each service as FREE_ELIGIBLE ($0/mo), READY_TO_USE ($0/mo), or OVERAGE_TRAP_DETECTED.',
+      '🛡️ 1-Click "$0.00 Free-Tier Micro-Charge Killer" Enforcers (POST /api/project/:id/finops/always-free-enforcer): (1) Attaches live Artifact Registry cleanupPolicies (keepCount=2 + delete untagged >7d) to stay under 0.5 GB, (2) installs a noisy HTTP 200 /healthz & kube-probe exclusion filter on the _Default Cloud Logging sink to protect the 50 GiB/mo free tier, and (3) auto-disables redundant ENABLED Secret Manager versions so active versions stay within the 6 Free Versions/mo quota.',
       '1-Click "🎁 Lock to Always Free Tier ($0.00/mo)" Guardrail in Provision Modal: Automatically configures Compute VMs (e2-micro + us-central1-a + 30 GB pd-standard), Cloud Storage (us-central1 Regional STANDARD), Cloud Run (cpuIdle: true, minInstances: 0, 1 vCPU, 512Mi, no GPU), and BigQuery (US multi-region) to stay 100% inside the monthly Always Free allowance.',
       'Product-Specific Free Trials Strip: Highlights separate 30-to-90 day trials (AlloyDB 30d, Cloud Spanner 90d, Cloud SQL 30d, Looker 30d) that do not consume your $300 Welcome Credit.',
     ],
     apisUsed: [
-      'GET /api/project/:id/finops/always-free-auditor (live cross-service inspection against official GCP Free Tier limits)',
+      'GET /api/project/:id/finops/always-free-auditor & POST /api/project/:id/finops/always-free-enforcer',
       'POST /api/project/:id/provision (with 1-Click Always Free Guardrail presets)',
     ],
     billingImpact:
-      'Guarantees $0.00/mo infrastructure architecture across Compute Engine, Cloud Run, Cloud Storage, BigQuery, and Secret Manager by eliminating hidden SKU overage traps before deployment.',
+      'Guarantees $0.00/mo infrastructure architecture across Compute Engine, Cloud Run, Cloud Storage, BigQuery, Artifact Registry, Cloud Logging, and Secret Manager by eliminating silent micro-charges.',
   },
   {
     id: 'secret-manager-lifecycle-rotation-studio-and-plaintext-warning',
-    wave: 'SECRET MANAGER STUDIO · FREE TIER METER, 1-CLICK ROTATION & NO-PLAINTEXT-FALLBACK SAFEGUARD',
+    wave: 'SECRET MANAGER STUDIO · FREE TIER METER, LIVE CLOUD RUN DEPENDENCY RADAR, HEALER & NO-PLAINTEXT-FALLBACK SAFEGUARD',
     title:
-      'Dedicated Secret Manager Lifecycle & Rotation Studio — 6 Free Active Versions/Mo Meter, 1-Click Rotation & Why Delete/Destroy Never Reverts to Plaintext',
+      'Dedicated Secret Manager Lifecycle Studio — 6 Free Versions/Mo Meter, Live Cloud Run secretKeyRef Dependency Radar & Healer, $0/Mo Auto-Rotation & No-Plaintext-Fallback Safeguard',
     badge: 'SOVEREIGN & IAM TAB + CLOUD RUN',
     badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
     icon: ShieldAlert,
     targetTab: 'SOVEREIGN_STUDIO',
     problemSolved:
-      'When engineers seal plaintext Cloud Run environment variables into Secret Manager, they often wonder: (1) how many secrets are free before Google charges, (2) how to rotate secrets without paying $0.06/mo for every historical version, and (3) whether clicking Destroy or Delete "un-seals" the secret back into plaintext inside Cloud Run or erases it forever.',
+      'When engineers seal plaintext Cloud Run environment variables into Secret Manager, they need to know: (1) how many secrets are free before Google charges, (2) how to rotate secrets without paying $0.06/mo for old versions, (3) whether clicking Destroy or Delete reverts the secret back into plaintext or erases it forever, and (4) which live Cloud Run services will crash on cold-start if a referenced secret version is disabled, destroyed, or deleted.',
     howItWorks: [
       'Monthly Free Tier vs. Paid Tier Quota Meter: Tracks your live active secret versions against Google Cloud’s monthly Free Tier (First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month; $0.06/active-version/mo beyond 6; $0.00/mo for DISABLED and DESTROYED versions).',
+      '🚨 Live Cloud Run secretKeyRef Dependency Radar & 1-Click Broken Reference Healer: Scans all live Cloud Run v2 services in parallel to map every container env var and volume mount referencing a secret. Flags broken pointers (deleted secrets or DISABLED/DESTROYED versions) and heals them in 1 click ("🩹 Heal: Point to latest" or "🧹 Unbind Dead secretKeyRef"), plus "🚀 1-Click Hot-Reload Mounted Cloud Run Services" after rotation.',
+      '⏱️ Autonomous $0.00/Mo 30-Day Rotation Schedule: Provisions a Pub/Sub rotation topic, grants roles/pubsub.publisher to the Secret Manager service agent, and configures a 30-day rotationSchedule within Google Cloud’s 3 Free Rotations/month quota.',
       'CRITICAL 3-State Lifecycle & No-Plaintext-Fallback Warning: Explains clearly that sealing an env var removes the plaintext from Cloud Run and replaces it with a secretKeyRef pointer—so clicking Destroy Version or Delete Secret NEVER reverts it back to plaintext; it disappears forever! Guides engineers to use "⏸ Disable ($0.00/mo · Reversible)" to pause billing while keeping the encrypted payload recoverable.',
-      '1-Click Secret Rotation with Auto-Disable of Old Versions: Mints a new secret version (vN+1) and automatically disables prior ENABLED versions so your active version count stays inside the 6-version Free Tier.',
     ],
     apisUsed: [
-      'GET /api/project/:id/sovereign/secrets-kms → secretmanager.googleapis.com/v1/projects/:id/secrets & /versions',
-      'POST /api/project/:id/sovereign/secrets-kms/action (ROTATE_SECRET, TOGGLE_VERSION_STATE, GRANT_SECRET_ACCESSOR, DELETE_SECRET)',
+      'GET /api/project/:id/sovereign/secrets-kms → secretmanager.googleapis.com/v1 + run.googleapis.com/v2',
+      'POST /api/project/:id/sovereign/secrets-kms/action (ROTATE_SECRET, TOGGLE_VERSION_STATE, GRANT_SECRET_ACCESSOR, DELETE_SECRET, CONFIGURE_AUTO_ROTATION_SCHEDULE, RELOAD_MOUNTED_WORKLOADS, HEAL_CLOUDRUN_SECRET_REF)',
     ],
     billingImpact:
-      'Keeps secret rotation at $0.00/mo by automatically transitioning superseded versions to DISABLED ($0.00/mo) and prevents irreversible production secret loss.',
+      'Keeps secret rotation and scheduling at $0.00/mo while preventing Cloud Run cold-start crashes and irreversible secret loss.',
   },
   {
     id: 'quantum-nexus-2026-lab-star',
@@ -150,26 +152,26 @@ const DOC_SECTIONS = [
   },
   {
     id: 'sovereign-iam-owner-guard-and-sa-key-killswitch',
-    wave: 'SOVEREIGN IAM · OWNER SELF-PROTECTION & STOLEN KEY KILL-SWITCH VAULT',
+    wave: 'SOVEREIGN IAM · OWNER SELF-PROTECTION, KEYLESS GITHUB OIDC WIF & STOLEN KEY KILL-SWITCH VAULT',
     title:
-      'Sovereign IAM Owner Self-Protection, Human Approval Gate & Service Account .json Key / OAuth2 Token Kill-Switch Vault',
+      'Sovereign IAM Owner Self-Protection, Keyless GitHub Actions OIDC Architect & Service Account .json Key Kill-Switch Vault',
     badge: 'SOVEREIGN & IAM TAB',
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     icon: ShieldAlert,
     targetTab: 'SOVEREIGN_STUDIO',
     problemSolved:
-      'Standard IAM recommenders naively flag the authenticated project owner (roles/owner) as "excessive privilege" and can lock you out if clicked accidentally—and if a Service Account .json key or OAuth token is stolen, engineers need one place to inspect, create, download, disable, or permanently revoke keys in seconds.',
+      'Standard IAM recommenders naively flag the authenticated project owner (roles/owner) as "excessive privilege" and can lock you out if clicked accidentally—while long-lived Service Account .json keys exported for GitHub Actions CI/CD are the #1 vector for cloud crypto-mining breaches.',
     howItWorks: [
       'Active Session Owner Self-Protection (PROTECTED OWNER badge): Cross-references every IAM binding against your active authenticated account so your own roles/owner binding is protected and never auto-targeted for downgrade.',
-      'Mandatory Human-in-the-Loop Approval Modal: Every IAM privilege reduction requires reviewing the exact gcloud iam command, typing or confirming impact, and clicking Approve & Execute.',
-      'Service Account .json Key & OAuth2 Token Kill-Switch Vault: Dedicated top sub-tab switcher + compact collapsible IAM roles list so you can immediately access all Service Accounts, create & download a new .json key, disable/re-enable a key to test breakage, permanently delete a leaked key, or run the 1-Click Emergency Key Purge + Active OAuth Token Revocation.',
+      '1-Click Keyless GitHub Actions OIDC Workload Identity Federation Architect (PROVISION_GITHUB_OIDC_WIF): Enter your GitHub owner/repository (e.g. org/repo) and target Service Account to automatically provision a Workload Identity Pool, configure the https://token.actions.githubusercontent.com OIDC Provider with attribute.repository condition locking, bind roles/iam.workloadIdentityUser, and output a copy-ready GitHub Actions .yml snippet using google-github-actions/auth@v2 with zero .json keys ever created.',
+      'Service Account .json Key & OAuth2 Token Kill-Switch Vault: Inspect all Service Accounts, create & download a new .json key, disable/re-enable a key to test breakage, permanently delete a leaked key, or run the 1-Click Emergency Key Purge + Active OAuth Token Revocation.',
     ],
     apisUsed: [
       'GET /api/project/:id/sovereign-iam/credentials → iam.googleapis.com/v1/projects/:id/serviceAccounts/:email/keys',
-      'POST /api/project/:id/sovereign-iam/credentials/action (CREATE_SA_KEY, DISABLE_SA_KEY, ENABLE_SA_KEY, DELETE_SA_KEY, EMERGENCY_REVOKE_ALL_SA_KEYS, REVOKE_ACTIVE_OAUTH_TOKEN)',
+      'POST /api/project/:id/sovereign-iam/credentials/action (PROVISION_GITHUB_OIDC_WIF, CREATE_SA_KEY, DISABLE_SA_KEY, ENABLE_SA_KEY, DELETE_SA_KEY, EMERGENCY_REVOKE_ALL_SA_KEYS, REVOKE_ACTIVE_OAUTH_TOKEN)',
     ],
     billingImpact:
-      '100% free IAM control plane; neutralizes stolen Service Account .json keys before attackers can spin up rogue GPU/crypto miners.',
+      '100% free IAM & Workload Identity Federation control plane ($0.00/mo); permanently eliminates stolen Service Account .json key breaches.',
   },
   {
     id: 'wave3-engineer-moonshots-x1-x6',
@@ -272,26 +274,26 @@ const DOC_SECTIONS = [
   },
   {
     id: 'xterm-web-ssh-and-mandatory-delete-gatekeeper',
-    wave: 'OPEN-SOURCE @XTERM/XTERM WEB-SSH & ZERO-TRUST SAFETY GATEKEEPER',
+    wave: 'OPEN-SOURCE @XTERM/XTERM WEB-SSH & LIVE BLAST-RADIUS SAFETY GATEKEEPER',
     title:
-      'Real Open-Source Browser SSH (@xterm/xterm + ssh2 + Linux PTY) & Global Mandatory Delete / IAM Exposure Gatekeeper',
-    badge: 'VM FLEET + CLOUD RUN + ALL 16 STUDIOS',
+      'Real Open-Source Browser SSH (@xterm/xterm + ssh2 + Linux PTY) & Global Mandatory Delete / Live Dependency Blast-Radius Gatekeeper',
+    badge: 'VM FLEET + CLOUD RUN + ALL 18 STUDIOS',
     badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
     icon: Terminal,
     targetTab: 'VM_SSH',
     problemSolved:
-      'One-shot command emulators truncate multi-line streaming commands like "apt update" or interactive tools like htop/vim, while auto-connecting SSH on tab load wastes sessions and unconfirmed delete or IAM exposure buttons risk accidental production outages.',
+      'One-shot command emulators truncate multi-line streaming commands like "apt update" or interactive tools like htop/vim, while auto-connecting SSH on tab load wastes sessions and unconfirmed delete actions risk breaking live Cloud Run services or workloads.',
     howItWorks: [
       'Real Full-Duplex @xterm/xterm + ssh2 + Python PTY WebSocket Terminal (/api/ws/ssh): Streams 100% of live stdout/stderr bytes in real time for "apt update", htop, vim, top, tmux, and interactive prompts across Compute Engine VMs and Cloud Run Gen2 containers.',
       'Default-OFF Explicit Toggle ("SSH / Console" → "SSH Active (Turn Off)"): Never auto-connects when landing on the VM Fleet or Cloud Run tab; connects only when you click the SSH button on a specific VM or Cloud Run card and disconnects cleanly when toggled off.',
-      'Global Mandatory Delete & IAM Security Gatekeeper (src/App.jsx): Intercepts 100% of HTTP DELETE requests, destructive POST teardowns (VM delete, Bucket empty-and-delete, Zombie extermination, Artifact Registry image deletion, SA key revocation), and Cloud Run Public/Private IAM toggles with a high-visibility confirmation modal.',
+      'Global Mandatory Delete & IAM Security Gatekeeper with Live Blast-Radius Pre-Flight Scan (src/App.jsx): Intercepts 100% of HTTP DELETE requests and destructive POST teardowns across all 18 studios, and automatically runs a live dependency scan (GET /api/project/:id/sovereign/secrets-kms) when deleting a Secret Manager secret or destroying a version to warn you of exact Cloud Run services that will fail to start if you proceed.',
     ],
     apisUsed: [
       'WS /api/ws/ssh (Engines: Auto, Direct SSH2 :22, gcloud compute ssh PTY, IAP Tunnel, Cloud Run SSH PTY)',
-      'Global Axios Request Interceptor: classifyDestructiveAxiosConfig() + <MandatoryDeleteConfirmationModal />',
+      'Global Axios Request Interceptor: classifyDestructiveAxiosConfig() + <MandatoryDeleteConfirmationModal /> + Live Blast-Radius Pre-Flight Scan',
     ],
     billingImpact:
-      '100% free open-source browser terminal (@xterm/xterm + ssh2) and zero-cost safety gatekeeper that prevents accidental resource deletion or unintended public exposure.',
+      '100% free open-source browser terminal (@xterm/xterm + ssh2) and zero-cost safety gatekeeper that prevents accidental resource deletion, broken Cloud Run secret mounts, or unintended public exposure.',
   },
   {
     id: 'cloud-functions-eventarc-demystified-studio',

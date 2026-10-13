@@ -518,6 +518,26 @@ function classifyDestructiveAxiosConfig(config) {
           impactWarning: `⚠️ NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Destroying version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently shredded and does NOT return to plaintext in Cloud Run. Tip: If you only want $0.00/mo billing or might need to roll back later, click Cancel and use "⏸ Disable ($0/mo)" instead—disabled versions also cost $0.00/mo and can be re-enabled anytime!`,
         };
       }
+      if (
+        act === 'HEAL_CLOUDRUN_SECRET_REF' &&
+        String(body.healStrategy || '').toUpperCase() === 'UNBIND_BROKEN_REF'
+      ) {
+        const sid = body.secretId || 'Secret';
+        const svc = body.serviceName || 'Cloud Run Service';
+        const reg = body.region || 'gcp-region';
+        return {
+          title: `Unbind Broken Secret "${sid}" from Cloud Run "${svc}"?`,
+          resourceKind: 'Cloud Run Secret Reference (run.googleapis.com/v2)',
+          targetName: `${svc} → ${body.envKey || sid}`,
+          location: reg,
+          projectId,
+          method: 'UNBIND SECRET REF',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Unbind Dead Secret Ref',
+          cancelToast: `Action cancelled — "${svc}" was not modified.`,
+          impactWarning: `This will remove the broken secretKeyRef binding ("${sid}") from Cloud Run service "${svc}" (${reg}) and roll a new revision so the service can boot cleanly without crashing on startup.`,
+        };
+      }
     }
 
     // 2026 Quantum Nexus Ephemeral PR Shadow Environment Teardown
