@@ -639,6 +639,7 @@ export default function BillingAccountCreditGuardian({
   projectId,
   liveBurn,
   onOpenBigQuerySql,
+  onOpenProvision,
   onRunInShell,
   onShowToast,
   onGrantsSummaryChange,
@@ -1733,9 +1734,9 @@ ORDER BY
               </div>
             </div>
 
-            {/* "Use-It-Or-Lose-It" Expiring Credit Harvester & Pre-Expiry Auto-Shutdown Guardrail */}
-            {summary.nearestExpiryGrant.metrics.strandedMoneyUsd > 10 && (
-              <div className="pt-3 border-t border-amber-500/25 grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            {/* "Use-It-Or-Lose-It" Expiring Credit Harvester, Shutdown Time Matrix & Hidden Egress Cost Advisory */}
+            {summary.nearestExpiryGrant.metrics.strandedMoneyUsd > 5 && (
+              <div className="pt-3 border-t border-amber-500/25 space-y-3">
                 {(() => {
                   const stranded =
                     summary.nearestExpiryGrant.metrics.strandedMoneyUsd;
@@ -1743,122 +1744,309 @@ ORDER BY
                     1,
                     summary.nearestExpiryGrant.metrics.daysLeft || 1
                   );
-                  const l4Hours = Math.floor(stranded / 0.72);
-                  const bqTib = Math.floor(stranded / 6.25);
+                  const dailyHarvestBudget = stranded / days;
                   const expIso =
                     summary.nearestExpiryGrant.expirationDate || '2026-12-31';
+
+                  // Dynamic capacity math based on actual stranded USD
+                  const spotVmHours = Math.floor(stranded / 0.041); // c3-standard-4 Spot ~$0.041/hr
+                  const l4GpuVmHours = Math.floor(stranded / 0.28); // g2-standard-4 Spot L4 GPU ~$0.28/hr
+                  const gcsStandardTbMonths = Math.max(
+                    1,
+                    Math.floor(stranded / 20.48)
+                  ); // $0.020/GB-mo = $20.48/TB-mo
+                  const gkeAutopilotPodHours = Math.floor(stranded / 0.052); // 1 vCPU + 2GB Autopilot pod ~$0.052/hr
+                  const l4RunBatchHours = Math.floor(stranded / 0.72); // Cloud Run L4 GPU ~$0.72/hr
+                  const bqTibScans = Math.floor(stranded / 6.25); // $6.25/TiB
+                  const cloudSqlHours = Math.floor(stranded / 0.19); // db-custom-2-7680 ~$0.19/hr
+
+                  const vmCreateCmd = `gcloud compute instances create bonus-harvester-vm --project=${
+                    projectId || 'my-gcp-project'
+                  } --zone=us-central1-a --machine-type=c3-standard-4 --provisioning-model=SPOT --instance-termination-action=STOP --max-run-duration=${days}d`;
+                  const gcsCreateCmd = `gcloud storage buckets create gs://${
+                    projectId || 'my-gcp'
+                  }-bonus-harvester-lake --location=us-central1 --default-storage-class=STANDARD --uniform-bucket-level-access --public-access-prevention`;
+                  const gkeCreateCmd = `gcloud container clusters create-auto bonus-harvester-gke --region=us-central1 --project=${
+                    projectId || 'my-gcp-project'
+                  }`;
+                  const l4BatchCmd = `gcloud run jobs create bonus-credit-l4-harvester --image=us-docker.pkg.dev/cloudrun/container/job:latest --region=us-central1 --cpu=4 --memory=16Gi --gpu=1 --gpu-type=nvidia-l4 --no-gpu-zonal-redundancy --max-retries=0 --project=${
+                    projectId || 'my-gcp-project'
+                  }`;
+                  const bqMaterializeSql = `-- Harvest expiring credits before ${expIso}: Pre-compute & cluster high-value Gold BI tables (~${bqTibScans} TiB scan budget)\nCREATE OR REPLACE TABLE \`${
+                    projectId || 'my-gcp-project'
+                  }.analytics_gold.precomputed_feature_store\`\nPARTITION BY DATE(event_timestamp)\nCLUSTER BY entity_id AS\nSELECT CURRENT_TIMESTAMP() AS event_timestamp, 'entity-1' AS entity_id;`;
                   const safeCutoffCmd = `gcloud scheduler jobs create http credit-expiry-cutoff-${
                     projectId || 'gcp'
                   } --location=us-central1 --schedule="0 12 * * *" --uri="https://cloudbilling.googleapis.com/v1/projects/${
                     projectId || 'my-gcp-project'
-                  }/billingInfo" --http-method=PUT --Description="Auto-stop warm GPU/VM spend 12h before ${expIso} credit expiry"`;
-                  const l4BatchCmd = `gcloud run jobs create bonus-credit-l4-harvester --image=us-docker.pkg.dev/cloudrun/container/job:latest --region=us-central1 --cpu=4 --memory=16Gi --gpu=1 --gpu-type=nvidia-l4 --no-gpu-zonal-redundancy --max-retries=0 --project=${
-                    projectId || 'my-gcp-project'
-                  }`;
-                  const bqMaterializeSql = `-- Harvest expiring credits before ${expIso}: Pre-compute & cluster high-value Gold BI tables (~${bqTib} TiB scan budget)\nCREATE OR REPLACE TABLE \`${
-                    projectId || 'my-gcp-project'
-                  }.analytics_gold.precomputed_feature_store\`\nPARTITION BY DATE(event_timestamp)\nCLUSTER BY entity_id AS\nSELECT CURRENT_TIMESTAMP() AS event_timestamp, 'entity-1' AS entity_id;`;
+                  }/billingInfo" --http-method=PUT --description="Auto-stop warm VM/GKE/SQL spend 12h before ${expIso} credit expiry"`;
+
+                  const harvestBlueprints = [
+                    {
+                      id: 'COMPUTE_VM',
+                      badge: 'Compute Engine VM / Spot GPU',
+                      title: '1. Compute Engine Spot VM or L4 GPU Workstation',
+                      capacityLabel: `~${spotVmHours.toLocaleString()} Spot VM hrs (or ~${l4GpuVmHours.toLocaleString()} L4 GPU hrs)`,
+                      shutdownTime: '⏱ Shutdown / Stop Time: ~25–45 seconds',
+                      shutdownNote:
+                        'Notice: Stopping a VM halts vCPU/GPU billing in ~30s, but attached Persistent Disk (`pd-balanced` / `pd-ssd`) and static External IP STILL bill until the VM & disk are deleted (`--max-run-duration` auto-terminates).',
+                      hiddenCostWarning:
+                        '⚠️ Hidden Cost Trap: Internet Egress ($0.085–$0.12/GB), Cross-Zone/Region traffic ($0.01–$0.02/GB), and unattached Boot Disks after `STOP`.',
+                      desc: `Launch a high-IPC C3/C4 Spot VM or g2-standard-4 L4 GPU VM for CI builds, model fine-tuning, or load testing (~$${dailyHarvestBudget.toFixed(
+                        2
+                      )}/day harvest budget).`,
+                      cliId: 'harvester-vm',
+                      cliCmd: vmCreateCmd,
+                      cliLabel: 'Spot VM CLI with Auto-Stop',
+                      provisionType: 'COMPUTE_VM',
+                      provisionBtnLabel: '+ Provision VM',
+                    },
+                    {
+                      id: 'GCS_BUCKET',
+                      badge: 'Cloud Storage (GCS)',
+                      title: '2. Cloud Storage Staging Lake & Snapshots',
+                      capacityLabel: `~${gcsStandardTbMonths.toLocaleString()} TB-Months Standard Storage`,
+                      shutdownTime: '⏱ Empty & Delete Time: ~5s (<1k objects) to 1–24h (Lifecycle)',
+                      shutdownNote:
+                        'Notice: Deleting a bucket requires deleting all objects & noncurrent versions first. Set an Object Lifecycle `Delete` rule before credit expiry for zero-touch cleanup.',
+                      hiddenCostWarning:
+                        '⚠️ Hidden Cost Trap: Internet Download Egress ($0.12/GB), Cross-Region Replication/Reads ($0.02/GB), Class A/B Operations, and Nearline/Coldline early-deletion penalties (30–90 day minimum storage duration!).',
+                      desc: 'Stage large ML datasets, container artifacts, or database backups in a single-region Standard bucket (avoid Nearline/Archive if deleting in <30 days).',
+                      cliId: 'harvester-gcs',
+                      cliCmd: gcsCreateCmd,
+                      cliLabel: 'GCS Bucket CLI',
+                      provisionType: 'GCS_BUCKET',
+                      provisionBtnLabel: '+ Provision Bucket',
+                    },
+                    {
+                      id: 'GKE_CLUSTER',
+                      badge: 'Kubernetes (GKE)',
+                      title: '3. GKE Autopilot or GPU Burst Cluster',
+                      capacityLabel: `~${gkeAutopilotPodHours.toLocaleString()} Pod-Hours (1 vCPU · 2 GB)`,
+                      shutdownTime: '⏱ Cluster Drain & Delete Time: ~5–12 minutes',
+                      shutdownNote:
+                        'Notice: GKE cannot simply be "paused"—even with 0 nodes, the GKE Control Plane bills $0.10/hr ($73/mo) after the first free zonal/Autopilot cluster, and LoadBalancers + PersistentVolumeClaims keep billing until the cluster is deleted!',
+                      hiddenCostWarning:
+                        '⚠️ Hidden Cost Trap: Cloud NAT Gateway ($0.045/GB + hourly per-VM fee), Multi-Zone Pod-to-Pod Egress ($0.01/GB), and orphaned `LoadBalancer` forwarding rules ($18/mo).',
+                      desc: 'Spin up a GKE Autopilot cluster for multi-service Kubernetes staging, service-mesh chaos testing, or distributed Ray/vLLM workloads.',
+                      cliId: 'harvester-gke',
+                      cliCmd: gkeCreateCmd,
+                      cliLabel: 'GKE Autopilot CLI',
+                      provisionType: 'GKE_CLUSTER',
+                      provisionBtnLabel: '+ Provision GKE',
+                    },
+                    {
+                      id: 'CLOUD_RUN',
+                      badge: 'Cloud Run Serverless L4 GPU',
+                      title: '4. Cloud Run Serverless L4 GPU Jobs & Microservices',
+                      capacityLabel: `~${l4RunBatchHours.toLocaleString()} L4 GPU-Hours`,
+                      shutdownTime: '⏱ Scale-to-Zero / Delete Time: Instant (~0–5 seconds)',
+                      shutdownNote:
+                        'Notice: Setting `min-instances=0` drops compute & GPU billing to $0.00 the exact second a request or batch job finishes.',
+                      hiddenCostWarning:
+                        '⚠️ Hidden Cost Trap: Keeping `min-instances >= 1` warm 24/7, Artifact Registry image storage over 0.5 GB, and VPC Serverless Connector / outbound Internet Egress ($0.12/GB).',
+                      desc: 'Run batch embeddings, LLM evaluations, or high-concurrency HTTP services with `--no-gpu-zonal-redundancy` ($0.72/hr) and $0 idle cost.',
+                      cliId: 'harvester-l4',
+                      cliCmd: l4BatchCmd,
+                      cliLabel: 'Cloud Run L4 Job CLI',
+                      provisionType: 'CLOUD_RUN',
+                      provisionBtnLabel: '+ Provision Cloud Run',
+                    },
+                    {
+                      id: 'CLOUD_SQL',
+                      badge: 'Cloud SQL / AlloyDB',
+                      title: '5. Cloud SQL (Postgres 16 / MySQL 8.4) Read-Replica Lab',
+                      capacityLabel: `~${cloudSqlHours.toLocaleString()} DB Instance-Hours`,
+                      shutdownTime: '⏱ Stop / Delete Time: ~2–6 minutes',
+                      shutdownNote:
+                        'Notice: Stopping a Cloud SQL instance halts vCPU/RAM charges in ~3 mins, but SSD storage ($0.17/GB-mo), automated backups, and Public IPv4 idle reservation ($0.01/hr while stopped!) continue billing until deleted.',
+                      hiddenCostWarning:
+                        '⚠️ Hidden Cost Trap: Idle Public IPv4 charge while instance is STOPPED, HA Regional standby (2× cost), Point-in-Time Recovery (PITR) transaction logs, and cross-region replica egress.',
+                      desc: 'Benchmark Postgres 16 `pgvector` indexes, test schema migrations, or run load tests against a disposable Cloud SQL instance before credit expiry.',
+                      cliId: 'harvester-sql',
+                      cliCmd: `gcloud sql instances create bonus-harvester-pg16 --database-version=POSTGRES_16 --cpu=2 --memory=7680MB --region=us-central1 --deletion-protection=false --project=${
+                        projectId || 'my-gcp-project'
+                      }`,
+                      cliLabel: 'Cloud SQL CLI',
+                      provisionType: 'CLOUD_SQL',
+                      provisionBtnLabel: '+ Provision Cloud SQL',
+                    },
+                    {
+                      id: 'BIGQUERY_DATASET',
+                      badge: 'BigQuery Lakehouse & BQML',
+                      title: '6. BigQuery Gold Table Pre-Compute & BQML Training',
+                      capacityLabel: `~${bqTibScans.toLocaleString()} TiB On-Demand Scans`,
+                      shutdownTime: '⏱ Query Cancel / Drop Time: Instant (<2 seconds)',
+                      shutdownNote:
+                        'Notice: Queries bill only while running, but materialized tables bill Active Storage ($0.02/GB-mo after 10 GB free). Set a Dataset Default Table Expiration so tables auto-drop before credit expiry.',
+                      hiddenCostWarning:
+                        '⚠️ Hidden Cost Trap: Missing `--maximum_bytes_billed` guard on `SELECT *` queries, BigQuery BI Engine reservation hours, and cross-region dataset copy egress.',
+                      desc: 'Materialize partitioned & clustered Gold BI tables, backfills, or BigQuery ML models now while covered by your expiring grant ($6.25/TiB).',
+                      cliId: 'harvester-bq',
+                      cliCmd: bqMaterializeSql,
+                      cliLabel: 'BigQuery Materialize SQL',
+                      provisionType: 'BIGQUERY_DATASET',
+                      provisionBtnLabel: '+ Provision BQ Dataset',
+                      isSql: true,
+                    },
+                  ];
 
                   return (
                     <>
-                      <div className="p-3 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 space-y-1.5">
-                        <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
-                          <span>1. Serverless L4 GPU Batch Harvester</span>
-                          <span className="text-emerald-600 dark:text-emerald-400">
-                            ~{l4Hours.toLocaleString()} GPU-hrs Free
+                      {/* FinOps Hidden Cost & Egress Traffic Advisory Banner */}
+                      <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/35 text-zinc-900 dark:text-zinc-100 space-y-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-xs font-mono font-extrabold text-red-700 dark:text-red-300">
+                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                            <span>
+                              FINOPS HIDDEN COST & NETWORK EGRESS WARNING (READ BEFORE HARVESTING CREDITS)
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-800 dark:text-red-200 text-[10px] font-mono font-bold">
+                            Shut Off All Resources ≥12h Before {expIso}
                           </span>
                         </div>
-                        <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                          Spend up to{' '}
+                        <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                          While Compute, Storage, and GKE base rates are covered by your{' '}
                           <strong className="font-mono">
-                            ${(stranded / days).toFixed(2)}/day
+                            ${stranded.toFixed(2)}
                           </strong>{' '}
-                          on Cloud Run L4 GPU batch embeddings/evals (`$0.72/hr`
-                          no-zonal-redundancy) with `$0` idle cost.
+                          expiring bonus, watch out for **3 hidden billing traps** that drain credits 5× faster or keep billing after you click &ldquo;Stop&rdquo;:
+                          {' '}
+                          <strong className="font-mono text-red-700 dark:text-red-300">
+                            (1) Network Egress Traffic:
+                          </strong>{' '}
+                          Outbound Internet Egress bills{' '}
+                          <code className="font-mono">$0.085–$0.12/GB</code>, Cross-Region traffic bills{' '}
+                          <code className="font-mono">$0.02/GB</code>, and Cross-Zone VM/GKE pod traffic bills{' '}
+                          <code className="font-mono">$0.01/GB</code> — keep VMs, GKE, GCS buckets, and BigQuery in the **exact same region & zone** (`us-central1-a`).
+                          {' '}
+                          <strong className="font-mono text-red-700 dark:text-red-300">
+                            (2) &ldquo;Stopped&rdquo; Resource Leftovers:
+                          </strong>{' '}
+                          Stopping a VM or Cloud SQL instance does **not** stop billing for Persistent Disks (`$0.10–$0.17/GB-mo`), reserved Static IPs (`$0.01/hr`), or GKE LoadBalancers (`$18/mo`) — you must **Delete** them before{' '}
+                          <strong className="font-mono">{expIso}</strong>.
+                          {' '}
+                          <strong className="font-mono text-red-700 dark:text-red-300">
+                            (3) GCS Early-Deletion Penalties:
+                          </strong>{' '}
+                          Never use `NEARLINE` (30d min), `COLDLINE` (90d min), or `ARCHIVE` (365d min) for short-term credit harvesting — deleting objects early triggers full remaining-duration penalty charges. Always use `STANDARD`.
                         </p>
-                        <div className="flex items-center gap-1.5 pt-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopyText(
-                                'harvester-l4',
-                                l4BatchCmd,
-                                'L4 GPU Batch Job CLI'
-                              )
-                            }
-                            className="h-7 px-2.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
-                          >
-                            {copiedId === 'harvester-l4'
-                              ? 'Copied CLI'
-                              : 'Copy L4 Job CLI'}
-                          </button>
-                          {onRunInShell && (
-                            <button
-                              type="button"
-                              onClick={() => onRunInShell(l4BatchCmd)}
-                              className="h-7 px-2.5 rounded bg-emerald-600 text-white text-[10px] font-mono font-bold cursor-pointer"
-                            >
-                              Run in Shell
-                            </button>
-                          )}
-                        </div>
                       </div>
 
-                      <div className="p-3 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 space-y-1.5">
-                        <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
-                          <span>2. BigQuery Gold Lakehouse Pre-Compute</span>
-                          <span className="text-blue-600 dark:text-blue-400">
-                            ~{bqTib.toLocaleString()} TiB Scans Free
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                          Materialize partitioned & clustered Gold BI tables or
-                          BigQuery ML models now while covered by your expiring
-                          grant (`$6.25/TiB`).
-                        </p>
-                        <div className="flex items-center gap-1.5 pt-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopyText(
-                                'harvester-bq',
-                                bqMaterializeSql,
-                                'BigQuery Materialization SQL'
-                              )
-                            }
-                            className="h-7 px-2.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                      {/* 6 Resource Harvester Blueprints Grid (VM, GCS, GKE, Cloud Run GPU, Cloud SQL, BigQuery) */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                        {harvestBlueprints.map((bp) => (
+                          <div
+                            key={bp.id}
+                            className="p-3 rounded-xl bg-white/90 dark:bg-zinc-900/95 border border-amber-500/35 flex flex-col justify-between space-y-2"
                           >
-                            {copiedId === 'harvester-bq'
-                              ? 'Copied SQL'
-                              : 'Copy SQL'}
-                          </button>
-                          {onOpenBigQuerySql && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onOpenBigQuerySql(bqMaterializeSql)
-                              }
-                              className="h-7 px-2.5 rounded bg-blue-600 text-white text-[10px] font-mono font-bold cursor-pointer"
-                            >
-                              Open in BigQuery
-                            </button>
-                          )}
-                        </div>
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+                                  {bp.badge}
+                                </span>
+                                <span className="text-[10.5px] font-mono font-extrabold text-emerald-700 dark:text-emerald-400">
+                                  {bp.capacityLabel}
+                                </span>
+                              </div>
+
+                              <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                                {bp.title}
+                              </div>
+
+                              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-snug">
+                                {bp.desc}
+                              </p>
+
+                              {/* Shutdown Time Badge & Decommission Behavior */}
+                              <div className="p-2 rounded-lg bg-zinc-100/90 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                                <div className="text-[10.5px] font-mono font-bold text-blue-700 dark:text-blue-300">
+                                  {bp.shutdownTime}
+                                </div>
+                                <div className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-tight">
+                                  {bp.shutdownNote}
+                                </div>
+                              </div>
+
+                              {/* Resource-Specific Hidden Cost / Egress Reminder */}
+                              <div className="p-2 rounded-lg bg-red-500/5 border border-red-500/20 text-[10px] font-mono text-red-700 dark:text-red-300 leading-tight">
+                                {bp.hiddenCostWarning}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                              {onOpenProvision && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onOpenProvision(
+                                      bp.provisionType,
+                                      'us-central1'
+                                    )
+                                  }
+                                  className="h-7 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-mono font-extrabold cursor-pointer transition-all"
+                                >
+                                  {bp.provisionBtnLabel}
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCopyText(
+                                    bp.cliId,
+                                    bp.cliCmd,
+                                    bp.cliLabel
+                                  )
+                                }
+                                className="h-7 px-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                              >
+                                {copiedId === bp.cliId
+                                  ? 'Copied!'
+                                  : bp.isSql
+                                  ? 'Copy SQL'
+                                  : 'Copy CLI'}
+                              </button>
+
+                              {bp.isSql && onOpenBigQuerySql ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenBigQuerySql(bp.cliCmd)}
+                                  className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                                >
+                                  Open in BigQuery
+                                </button>
+                              ) : (
+                                onRunInShell && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onRunInShell(bp.cliCmd)}
+                                    className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                                  >
+                                    Run in Shell
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
 
-                      <div className="p-3 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 space-y-1.5">
-                        <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
-                          <span>3. Pre-Expiry Auto-Shutdown Guard</span>
-                          <span className="text-amber-600 dark:text-amber-400">
-                            Cutoff: {expIso}
-                          </span>
+                      {/* Pre-Expiry Auto-Shutdown Guardrail Bar */}
+                      <div className="p-3 rounded-xl bg-white/90 dark:bg-zinc-900/95 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                            <span>
+                              🛡️ Pre-Expiry Auto-Shutdown Guardrail (Cutoff: 12h before {expIso})
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                            Remember: GKE takes <strong>~5–12 mins</strong> to drain & delete, Cloud SQL takes <strong>~2–6 mins</strong>, and VMs take <strong>~45s</strong>. Schedule this automated Cloud Scheduler cutoff 12 hours before{' '}
+                            <strong className="font-mono">{expIso}</strong> so no resource spills into paid billing after your credit expires.
+                          </p>
                         </div>
-                        <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                          Schedules an automatic FinOps cutoff 12 hours before{' '}
-                          <strong className="font-mono">{expIso}</strong> so
-                          harvesting workloads never spill into paid billing.
-                        </p>
-                        <div className="flex items-center gap-1.5 pt-1">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
                             onClick={() =>
@@ -1868,7 +2056,7 @@ ORDER BY
                                 'Pre-Expiry Auto-Shutdown CLI'
                               )
                             }
-                            className="h-7 px-2.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                            className="h-8 px-3 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold cursor-pointer"
                           >
                             {copiedId === 'harvester-cutoff'
                               ? 'Copied Guard CLI'
@@ -1878,9 +2066,9 @@ ORDER BY
                             <button
                               type="button"
                               onClick={() => onRunInShell(safeCutoffCmd)}
-                              className="h-7 px-2.5 rounded bg-amber-600 text-white text-[10px] font-mono font-bold cursor-pointer"
+                              className="h-8 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10.5px] font-mono font-bold cursor-pointer"
                             >
-                              Arm Guardrail
+                              Arm 12h Cutoff Guard
                             </button>
                           )}
                         </div>

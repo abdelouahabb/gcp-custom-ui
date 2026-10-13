@@ -1696,6 +1696,7 @@ function CloudPulseCockpit() {
                       if (sqlText) setBigQueryInitialSql(sqlText);
                       setActiveTab('BIGQUERY_STUDIO');
                     }}
+                    onOpenProvision={handleOpenProvision}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onGrantsSummaryChange={setGdeSummary}
