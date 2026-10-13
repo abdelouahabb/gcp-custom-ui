@@ -11302,7 +11302,7 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
         .json({ error: 'Not authenticated with Google Cloud.' });
     }
 
-    const [secretsRes, kmsGlobalRes, kmsUsRes, armorRes] =
+    const [secretsRes, kmsGlobalRes, kmsUsRes, armorRes, saListRes] =
       await Promise.allSettled([
         gcpApiRequest({
           method: 'GET',
@@ -11328,28 +11328,144 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
           token,
           quotaProject: projectId,
         }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`,
+          token,
+          quotaProject: projectId,
+        }),
       ]);
 
     const rawSecrets =
       secretsRes.status === 'fulfilled' ? secretsRes.value?.secrets || [] : [];
-    const secrets = rawSecrets.map((s) => {
-      const shortName = (s.name || '').split('/').pop();
-      const isAuto = Boolean(s.replication?.automatic);
-      const locations =
-        s.replication?.userManaged?.replicas?.map((r) => r.location) || [];
-      const hasRotation = Boolean(s.rotation?.rotationPeriod);
-      return {
-        name: s.name,
-        secretId: shortName,
-        createTime: s.createTime,
-        replicationMode: isAuto ? 'AUTOMATIC_GLOBAL' : 'USER_MANAGED_SOVEREIGN',
-        locations,
-        hasRotation,
-        rotationPeriod: s.rotation?.rotationPeriod || null,
-        nextRotationTime: s.rotation?.nextRotationTime || null,
-        labels: s.labels || {},
-      };
-    });
+
+    // Fetch live versions & IAM policy for each secret concurrently so we can calculate exact Free Tier usage & rotation state
+    const enrichedSecrets = await Promise.all(
+      rawSecrets.map(async (s) => {
+        const shortName = (s.name || '').split('/').pop();
+        const isAuto = Boolean(s.replication?.automatic);
+        const locations =
+          s.replication?.userManaged?.replicas?.map((r) => r.location) || [];
+        const hasRotation = Boolean(s.rotation?.rotationPeriod);
+
+        const [versRes, iamRes] = await Promise.allSettled([
+          gcpApiRequest({
+            method: 'GET',
+            url: `https://secretmanager.googleapis.com/v1/${s.name}/versions?pageSize=25`,
+            token,
+            quotaProject: projectId,
+          }),
+          gcpApiRequest({
+            method: 'POST',
+            url: `https://secretmanager.googleapis.com/v1/${s.name}:getIamPolicy`,
+            token,
+            quotaProject: projectId,
+            data: {},
+          }),
+        ]);
+
+        const rawVersions =
+          versRes.status === 'fulfilled' ? versRes.value?.versions || [] : [];
+        const versions = rawVersions.map((v) => {
+          const verNum = (v.name || '').split('/').pop();
+          const state = String(v.state || 'STATE_UNSPECIFIED').toUpperCase();
+          return {
+            name: v.name,
+            version: verNum,
+            state, // ENABLED | DISABLED | DESTROYED
+            createTime: v.createTime || null,
+            destroyTime: v.destroyTime || null,
+            billsActiveVersionQuota: state === 'ENABLED',
+          };
+        });
+
+        const enabledVersionsCount = versions.filter(
+          (v) => v.state === 'ENABLED'
+        ).length;
+        const disabledVersionsCount = versions.filter(
+          (v) => v.state === 'DISABLED'
+        ).length;
+        const destroyedVersionsCount = versions.filter(
+          (v) => v.state === 'DESTROYED'
+        ).length;
+        const latestEnabledVersion =
+          versions.find((v) => v.state === 'ENABLED')?.version ||
+          versions[0]?.version ||
+          '1';
+
+        const bindings =
+          iamRes.status === 'fulfilled' ? iamRes.value?.bindings || [] : [];
+        const accessorMembers =
+          bindings.find((b) => b.role === 'roles/secretmanager.secretAccessor')
+            ?.members || [];
+
+        return {
+          name: s.name,
+          secretId: shortName,
+          createTime: s.createTime,
+          replicationMode: isAuto
+            ? 'AUTOMATIC_GLOBAL'
+            : 'USER_MANAGED_SOVEREIGN',
+          locations,
+          hasRotation,
+          rotationPeriod: s.rotation?.rotationPeriod || null,
+          nextRotationTime: s.rotation?.nextRotationTime || null,
+          labels: s.labels || {},
+          versions,
+          latestEnabledVersion,
+          enabledVersionsCount,
+          disabledVersionsCount,
+          destroyedVersionsCount,
+          accessorMembers,
+        };
+      })
+    );
+
+    const totalEnabledVersions = enrichedSecrets.reduce(
+      (acc, s) => acc + (s.enabledVersionsCount || 0),
+      0
+    );
+    const totalDisabledOrDestroyedVersions = enrichedSecrets.reduce(
+      (acc, s) =>
+        acc + (s.disabledVersionsCount || 0) + (s.destroyedVersionsCount || 0),
+      0
+    );
+    const freeTierActiveVersionsLimit = 6;
+    const billableActiveVersions = Math.max(
+      0,
+      totalEnabledVersions - freeTierActiveVersionsLimit
+    );
+    const estimatedMonthlyUsd = Number(
+      (billableActiveVersions * 0.06).toFixed(2)
+    );
+
+    const finopsSummary = {
+      freeTierActiveVersionsLimit,
+      freeTierAccessOpsLimit: 10000,
+      freeTierRotationsLimit: 3,
+      totalSecrets: enrichedSecrets.length,
+      totalEnabledVersions,
+      totalDisabledOrDestroyedVersions,
+      freeVersionsRemaining: Math.max(
+        0,
+        freeTierActiveVersionsLimit - totalEnabledVersions
+      ),
+      billableActiveVersions,
+      estimatedMonthlyUsd,
+      pricePerActiveVersionMonthUsd: 0.06,
+      pricePer10kAccessOpsUsd: 0.03,
+      pricePerRotationNotificationUsd: 0.05,
+      withinFreeTier: totalEnabledVersions <= freeTierActiveVersionsLimit,
+    };
+
+    const serviceAccounts =
+      saListRes.status === 'fulfilled'
+        ? (saListRes.value?.accounts || []).map((a) => ({
+            email: a.email,
+            displayName: a.displayName || a.email,
+            disabled: Boolean(a.disabled),
+          }))
+        : [];
 
     const keyRings = [
       ...(kmsGlobalRes.status === 'fulfilled'
@@ -11388,7 +11504,9 @@ app.get('/api/project/:projectId/sovereign/secrets-kms', async (req, res) => {
 
     res.json({
       projectId,
-      secrets,
+      secrets: enrichedSecrets,
+      finopsSummary,
+      serviceAccounts,
       keyRings,
       armorPolicies,
       apiNotices: {
@@ -11419,6 +11537,7 @@ app.post(
       replicationMode = 'AUTOMATIC',
       region = 'europe-west1',
       rotationDays = 90,
+      serviceAccountEmail = '',
     } = req.body || {};
 
     try {
@@ -11494,18 +11613,70 @@ app.post(
         });
       }
 
+      // Optionally grant roles/secretmanager.secretAccessor to a chosen runtime Service Account
+      let grantedAccessorTo = null;
+      if (serviceAccountEmail && String(serviceAccountEmail).includes('@')) {
+        try {
+          const cleanSa = String(serviceAccountEmail).trim();
+          const member = cleanSa.startsWith('serviceAccount:')
+            ? cleanSa
+            : `serviceAccount:${cleanSa}`;
+          const currentPolicy = await gcpApiRequest({
+            method: 'POST',
+            url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${encodeURIComponent(
+              cleanId
+            )}:getIamPolicy`,
+            token,
+            quotaProject: projectId,
+            data: {},
+          });
+          const bindings = Array.isArray(currentPolicy?.bindings)
+            ? [...currentPolicy.bindings]
+            : [];
+          const roleName = 'roles/secretmanager.secretAccessor';
+          const existing = bindings.find((b) => b.role === roleName);
+          if (existing) {
+            if (!existing.members.includes(member)) {
+              existing.members.push(member);
+            }
+          } else {
+            bindings.push({ role: roleName, members: [member] });
+          }
+          await gcpApiRequest({
+            method: 'POST',
+            url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${encodeURIComponent(
+              cleanId
+            )}:setIamPolicy`,
+            token,
+            quotaProject: projectId,
+            data: {
+              policy: {
+                ...currentPolicy,
+                bindings,
+              },
+            },
+          });
+          grantedAccessorTo = cleanSa;
+        } catch {
+          // non-fatal if caller lacks setIamPolicy on secret
+        }
+      }
+
       recordFlightEvent(projectId, {
         action: 'SECRET_MANAGER_CREATE',
         resourceType: 'SECRET_MANAGER_SECRET',
         resourceName: cleanId,
         region: replicationMode === 'SOVEREIGN_REGION' ? region : 'global',
-        summary: `Created encrypted secret "${cleanId}" (${replicationMode}) in Secret Manager`,
+        summary: `Created encrypted secret "${cleanId}" (${replicationMode}) in Secret Manager${
+          grantedAccessorTo ? ` & bound ${grantedAccessorTo}` : ''
+        }`,
       });
 
       res.json({
         ok: true,
         secret: createdSecret,
         version: versionCreated,
+        grantedAccessorTo,
       });
     } catch (err) {
       res.status(400).json({
@@ -11513,6 +11684,280 @@ app.post(
           err.response?.data?.error?.message ||
           err.message ||
           'Failed to create Secret Manager secret.',
+      });
+    }
+  }
+);
+
+// 7. POST /api/project/:projectId/sovereign/secrets-kms/action
+//    Full Secret Manager Lifecycle Surgeon:
+//    - ROTATE_SECRET: Adds a new version (:addVersion) and optionally disables previous ENABLED versions (:disable) so old versions cost $0.00/mo and preserve the 6-Free-Versions/month quota
+//    - TOGGLE_VERSION_STATE: ENABLE | DISABLE ($0.00/mo) | DESTROY ($0.00/mo irreversible)
+//    - GRANT_SECRET_ACCESSOR: Binds roles/secretmanager.secretAccessor on a secret to a runtime Service Account
+//    - DELETE_SECRET: Deletes the secret container and all versions
+app.post(
+  '/api/project/:projectId/sovereign/secrets-kms/action',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      action,
+      secretId,
+      newSecretValue,
+      disablePreviousVersions = true,
+      version,
+      targetState,
+      serviceAccountEmail,
+    } = req.body || {};
+
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const cleanId = String(secretId || '')
+        .trim()
+        .split('/')
+        .pop();
+      if (!cleanId) {
+        return res.status(400).json({ error: 'secretId is required.' });
+      }
+      const secretBaseUrl = `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${encodeURIComponent(
+        cleanId
+      )}`;
+      const act = String(action || '').toUpperCase();
+
+      if (act === 'ROTATE_SECRET') {
+        if (!newSecretValue || !String(newSecretValue).trim()) {
+          return res.status(400).json({
+            error: 'newSecretValue is required to rotate and mint a new secret version.',
+          });
+        }
+
+        // Fetch existing ENABLED versions before adding the new version
+        let priorEnabledNumbers = [];
+        if (disablePreviousVersions) {
+          try {
+            const listVers = await gcpApiRequest({
+              method: 'GET',
+              url: `${secretBaseUrl}/versions?pageSize=25`,
+              token,
+              quotaProject: projectId,
+            });
+            priorEnabledNumbers = (listVers?.versions || [])
+              .filter((v) => String(v.state || '').toUpperCase() === 'ENABLED')
+              .map((v) => (v.name || '').split('/').pop())
+              .filter(Boolean);
+          } catch {
+            // ignore
+          }
+        }
+
+        const base64Data = Buffer.from(String(newSecretValue), 'utf8').toString(
+          'base64'
+        );
+        const createdVer = await gcpApiRequest({
+          method: 'POST',
+          url: `${secretBaseUrl}:addVersion`,
+          token,
+          quotaProject: projectId,
+          data: {
+            payload: { data: base64Data },
+          },
+        });
+        const newVerNum = (createdVer?.name || '').split('/').pop();
+
+        const disabledOldVersions = [];
+        if (disablePreviousVersions && priorEnabledNumbers.length > 0) {
+          for (const oldVer of priorEnabledNumbers) {
+            if (oldVer === newVerNum) continue;
+            try {
+              await gcpApiRequest({
+                method: 'POST',
+                url: `${secretBaseUrl}/versions/${encodeURIComponent(
+                  oldVer
+                )}:disable`,
+                token,
+                quotaProject: projectId,
+                data: {},
+              });
+              disabledOldVersions.push(oldVer);
+            } catch {
+              // ignore individual disable failure
+            }
+          }
+        }
+
+        recordFlightEvent(projectId, {
+          action: 'SECRET_MANAGER_ROTATE',
+          resourceType: 'SECRET_MANAGER_SECRET',
+          resourceName: `${cleanId} (v${newVerNum})`,
+          region: 'global',
+          summary: `Rotated secret "${cleanId}" → minted Version ${newVerNum}${
+            disabledOldVersions.length > 0
+              ? ` & auto-disabled old version(s) [${disabledOldVersions
+                  .map((v) => `v${v}`)
+                  .join(', ')}] ($0.00/mo FinOps hygiene)`
+              : ''
+          }`,
+        });
+
+        return res.json({
+          ok: true,
+          action: 'ROTATE_SECRET',
+          secretId: cleanId,
+          newVersion: newVerNum,
+          disabledOldVersions,
+          message: `Rotated "${cleanId}" → Version ${newVerNum} is now ENABLED${
+            disabledOldVersions.length > 0
+              ? ` and prior version(s) ${disabledOldVersions
+                  .map((v) => `v${v}`)
+                  .join(', ')} were disabled ($0.00/mo — does not consume your 6 Free Active Versions quota)`
+              : ''
+          }.`,
+        });
+      }
+
+      if (act === 'TOGGLE_VERSION_STATE') {
+        const cleanVer = String(version || '').trim();
+        const desired = String(targetState || '').toUpperCase(); // ENABLE | DISABLE | DESTROY
+        if (!cleanVer || !['ENABLE', 'DISABLE', 'DESTROY'].includes(desired)) {
+          return res.status(400).json({
+            error:
+              'version and targetState (ENABLE, DISABLE, or DESTROY) are required.',
+          });
+        }
+        const verb = desired.toLowerCase();
+        const updatedVer = await gcpApiRequest({
+          method: 'POST',
+          url: `${secretBaseUrl}/versions/${encodeURIComponent(
+            cleanVer
+          )}:${verb}`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        });
+
+        recordFlightEvent(projectId, {
+          action: `SECRET_VERSION_${desired}`,
+          resourceType: 'SECRET_MANAGER_VERSION',
+          resourceName: `${cleanId}/versions/${cleanVer}`,
+          region: 'global',
+          summary: `${desired}D secret version ${cleanId}@v${cleanVer}`,
+        });
+
+        return res.json({
+          ok: true,
+          action: 'TOGGLE_VERSION_STATE',
+          secretId: cleanId,
+          version: cleanVer,
+          newState: updatedVer?.state || `${desired}D`,
+          message:
+            desired === 'DISABLE'
+              ? `Disabled ${cleanId} v${cleanVer} — disabled versions cost $0.00/mo and free up your 6 Free Active Versions/mo quota.`
+              : desired === 'DESTROY'
+              ? `Permanently destroyed cryptographic payload for ${cleanId} v${cleanVer} ($0.00/mo).`
+              : `Re-enabled ${cleanId} v${cleanVer}.`,
+        });
+      }
+
+      if (act === 'GRANT_SECRET_ACCESSOR') {
+        const cleanSa = String(serviceAccountEmail || '').trim();
+        if (!cleanSa) {
+          return res.status(400).json({
+            error: 'serviceAccountEmail is required to grant secretAccessor.',
+          });
+        }
+        const member =
+          cleanSa.startsWith('serviceAccount:') || cleanSa.startsWith('user:')
+            ? cleanSa
+            : `serviceAccount:${cleanSa}`;
+
+        const currentPolicy = await gcpApiRequest({
+          method: 'POST',
+          url: `${secretBaseUrl}:getIamPolicy`,
+          token,
+          quotaProject: projectId,
+          data: {},
+        });
+        const bindings = Array.isArray(currentPolicy?.bindings)
+          ? [...currentPolicy.bindings]
+          : [];
+        const roleName = 'roles/secretmanager.secretAccessor';
+        const existing = bindings.find((b) => b.role === roleName);
+        if (existing) {
+          if (!existing.members.includes(member)) {
+            existing.members.push(member);
+          }
+        } else {
+          bindings.push({ role: roleName, members: [member] });
+        }
+
+        await gcpApiRequest({
+          method: 'POST',
+          url: `${secretBaseUrl}:setIamPolicy`,
+          token,
+          quotaProject: projectId,
+          data: {
+            policy: {
+              ...currentPolicy,
+              bindings,
+            },
+          },
+        });
+
+        recordFlightEvent(projectId, {
+          action: 'SECRET_GRANT_ACCESSOR',
+          resourceType: 'SECRET_MANAGER_IAM',
+          resourceName: cleanId,
+          region: 'global',
+          summary: `Granted roles/secretmanager.secretAccessor on "${cleanId}" to ${member}`,
+        });
+
+        return res.json({
+          ok: true,
+          action: 'GRANT_SECRET_ACCESSOR',
+          secretId: cleanId,
+          member,
+          message: `Granted roles/secretmanager.secretAccessor on "${cleanId}" to ${member}.`,
+        });
+      }
+
+      if (act === 'DELETE_SECRET') {
+        await gcpApiRequest({
+          method: 'DELETE',
+          url: secretBaseUrl,
+          token,
+          quotaProject: projectId,
+        });
+
+        recordFlightEvent(projectId, {
+          action: 'SECRET_MANAGER_DELETE',
+          resourceType: 'SECRET_MANAGER_SECRET',
+          resourceName: cleanId,
+          region: 'global',
+          summary: `Deleted Secret Manager secret "${cleanId}" and all versions`,
+        });
+
+        return res.json({
+          ok: true,
+          action: 'DELETE_SECRET',
+          secretId: cleanId,
+          message: `Deleted secret "${cleanId}" and all its versions from Secret Manager.`,
+        });
+      }
+
+      return res
+        .status(400)
+        .json({ error: `Unsupported Secret Manager action: ${act}` });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Secret Manager lifecycle action failed.',
       });
     }
   }

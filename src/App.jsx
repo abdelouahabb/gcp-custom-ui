@@ -391,6 +391,41 @@ function classifyDestructiveAxiosConfig(config) {
       }
     }
 
+    // Secret Manager Secret Deletion & Permanent Version Destruction
+    if (rawUrl.includes('/sovereign/secrets-kms/action')) {
+      const act = String(body.action || '').toUpperCase();
+      if (act === 'DELETE_SECRET') {
+        const sid = body.secretId || 'Secret';
+        return {
+          title: `Delete Secret Manager Secret "${sid}" & All Versions?`,
+          resourceKind: 'Secret Manager Secret (secretmanager.googleapis.com)',
+          targetName: sid,
+          location: 'Secret Manager',
+          projectId,
+          method: 'DELETE SECRET',
+          endpoint: rawUrl,
+          impactWarning: `This will permanently delete Secret Manager secret "${sid}" and all of its cryptographic versions. Any Cloud Run service or VM mounting this secret via secretKeyRef will fail to start new instances if the secret is missing.`,
+        };
+      }
+      if (
+        act === 'TOGGLE_VERSION_STATE' &&
+        String(body.targetState || '').toUpperCase() === 'DESTROY'
+      ) {
+        const sid = body.secretId || 'Secret';
+        const ver = body.version || '1';
+        return {
+          title: `Permanently Destroy Secret Version "${sid} @ v${ver}"?`,
+          resourceKind: 'Secret Manager Version Payload',
+          targetName: `${sid} (Version ${ver})`,
+          location: 'Secret Manager',
+          projectId,
+          method: 'DESTROY VERSION',
+          endpoint: rawUrl,
+          impactWarning: `Destroying secret version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently erased (costing $0.00/mo). Tip: If you might need to roll back later, use "Disable ($0/mo)" instead—disabled versions also cost $0.00/mo!`,
+        };
+      }
+    }
+
     // 2026 Quantum Nexus Ephemeral PR Shadow Environment Teardown
     if (
       rawUrl.includes('/quantum-nexus/action') &&
@@ -488,6 +523,7 @@ function CloudPulseCockpit() {
 
   const [activeTab, setActiveTab] = useState('OVERVIEW');
   const [innovationSubTab, setInnovationSubTab] = useState('TOPOLOGY');
+  const [sovereignSubTab, setSovereignSubTab] = useState('IAM_SURGEON');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
@@ -1607,6 +1643,7 @@ function CloudPulseCockpit() {
               {activeTab === 'SOVEREIGN_STUDIO' && (
                 <SovereignTimeMachineIamStudio
                   projectId={selectedProjectId}
+                  initialSubTab={sovereignSubTab}
                   onTriggerToast={showToast}
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
@@ -1631,6 +1668,10 @@ function CloudPulseCockpit() {
                   onOpenProvisionCloudRun={() =>
                     handleOpenProvision('CLOUD_RUN')
                   }
+                  onOpenSecretManagerStudio={() => {
+                    setSovereignSubTab('SECRETS_KMS_WAF');
+                    setActiveTab('SOVEREIGN_STUDIO');
+                  }}
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }

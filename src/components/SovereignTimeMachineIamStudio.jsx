@@ -27,11 +27,20 @@ import {
 
 export default function SovereignTimeMachineIamStudio({
   projectId,
+  initialSubTab = 'IAM_SURGEON',
   onTriggerToast,
   onRefreshOverview,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('IAM_SURGEON');
+  const [activeSubTab, setActiveSubTab] = useState(
+    initialSubTab || 'IAM_SURGEON'
+  );
   const [copiedText, setCopiedText] = useState('');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   // --- Tab 1: IAM Least-Privilege Surgeon State ---
   const [iamData, setIamData] = useState(null);
@@ -75,7 +84,13 @@ export default function SovereignTimeMachineIamStudio({
     useState('SOVEREIGN_REGION');
   const [secretRegion, setSecretRegion] = useState('europe-west1');
   const [secretRotationDays, setSecretRotationDays] = useState(30);
+  const [secretBindSaEmail, setSecretBindSaEmail] = useState('');
   const [creatingSecret, setCreatingSecret] = useState(false);
+  const [expandedSecretId, setExpandedSecretId] = useState(null);
+  const [rotateValues, setRotateValues] = useState({});
+  const [rotateDisableOld, setRotateDisableOld] = useState(true);
+  const [grantSaBySecret, setGrantSaBySecret] = useState({});
+  const [secretActionBusy, setSecretActionBusy] = useState(null);
 
   const handleCopy = (text, label = 'CLI command') => {
     navigator.clipboard.writeText(text);
@@ -475,7 +490,7 @@ export default function SovereignTimeMachineIamStudio({
     if (!secretId.trim()) return;
     setCreatingSecret(true);
     try {
-      await axios.post(
+      const res = await axios.post(
         `/api/project/${encodeURIComponent(
           projectId
         )}/sovereign/secrets-kms/create-secret`,
@@ -485,13 +500,19 @@ export default function SovereignTimeMachineIamStudio({
           replicationMode: secretReplicationMode,
           region: secretRegion,
           rotationDays: secretRotationDays,
+          serviceAccountEmail: secretBindSaEmail,
         }
       );
       if (onTriggerToast) {
         onTriggerToast(
-          `Sealed secret "${secretId.trim()}" in Secret Manager (${secretReplicationMode})`
+          `Sealed secret "${secretId.trim()}" in Secret Manager (${secretReplicationMode})${
+            res.data?.grantedAccessorTo
+              ? ` & granted secretAccessor to ${res.data.grantedAccessorTo}`
+              : ''
+          }`
         );
       }
+      setExpandedSecretId(secretId.trim());
       setSecretId('');
       setSecretValue('');
       await fetchVaultStudio();
@@ -503,6 +524,146 @@ export default function SovereignTimeMachineIamStudio({
       }
     } finally {
       setCreatingSecret(false);
+    }
+  };
+
+  const handleRotateSecret = async (targetSecretId) => {
+    const newVal = (rotateValues[targetSecretId] || '').trim();
+    if (!newVal) {
+      if (onTriggerToast) {
+        onTriggerToast('Enter a new secret value before rotating');
+      }
+      return;
+    }
+    setSecretActionBusy(`ROTATE:${targetSecretId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/secrets-kms/action`,
+        {
+          action: 'ROTATE_SECRET',
+          secretId: targetSecretId,
+          newSecretValue: newVal,
+          disablePreviousVersions: rotateDisableOld,
+        }
+      );
+      setRotateValues((prev) => ({ ...prev, [targetSecretId]: '' }));
+      if (onTriggerToast) {
+        onTriggerToast(res.data?.message || `Rotated ${targetSecretId}`);
+      }
+      await fetchVaultStudio();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || `Failed to rotate ${targetSecretId}`
+        );
+      }
+    } finally {
+      setSecretActionBusy(null);
+    }
+  };
+
+  const handleToggleSecretVersionState = async (
+    targetSecretId,
+    version,
+    targetState
+  ) => {
+    setSecretActionBusy(`VER:${targetSecretId}:${version}:${targetState}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/secrets-kms/action`,
+        {
+          action: 'TOGGLE_VERSION_STATE',
+          secretId: targetSecretId,
+          version,
+          targetState,
+        }
+      );
+      if (onTriggerToast) {
+        onTriggerToast(res.data?.message || `Updated version v${version}`);
+      }
+      await fetchVaultStudio();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error ||
+            `Failed to ${targetState.toLowerCase()} version v${version}`
+        );
+      }
+    } finally {
+      setSecretActionBusy(null);
+    }
+  };
+
+  const handleGrantSecretAccessor = async (targetSecretId) => {
+    const saEmail =
+      grantSaBySecret[targetSecretId] ||
+      vaultData?.serviceAccounts?.[0]?.email ||
+      '';
+    if (!saEmail) {
+      if (onTriggerToast) {
+        onTriggerToast('Select or enter a Service Account email first');
+      }
+      return;
+    }
+    setSecretActionBusy(`GRANT:${targetSecretId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/secrets-kms/action`,
+        {
+          action: 'GRANT_SECRET_ACCESSOR',
+          secretId: targetSecretId,
+          serviceAccountEmail: saEmail,
+        }
+      );
+      if (onTriggerToast) {
+        onTriggerToast(
+          res.data?.message ||
+            `Granted secretAccessor on ${targetSecretId} to ${saEmail}`
+        );
+      }
+      await fetchVaultStudio();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || 'Failed to grant secretAccessor role'
+        );
+      }
+    } finally {
+      setSecretActionBusy(null);
+    }
+  };
+
+  const handleDeleteSecret = async (targetSecretId) => {
+    setSecretActionBusy(`DELETE:${targetSecretId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/sovereign/secrets-kms/action`,
+        {
+          action: 'DELETE_SECRET',
+          secretId: targetSecretId,
+        }
+      );
+      if (onTriggerToast) {
+        onTriggerToast(res.data?.message || `Deleted secret ${targetSecretId}`);
+      }
+      if (expandedSecretId === targetSecretId) setExpandedSecretId(null);
+      await fetchVaultStudio();
+    } catch (err) {
+      if (onTriggerToast) {
+        onTriggerToast(
+          err.response?.data?.error || `Failed to delete ${targetSecretId}`
+        );
+      }
+    } finally {
+      setSecretActionBusy(null);
     }
   };
 
@@ -2127,253 +2288,734 @@ export default function SovereignTimeMachineIamStudio({
           TAB 3: SOVEREIGN SECRET MANAGER, KMS & CLOUD ARMOR WAF STUDIO
          ===================================================================== */}
       {activeSubTab === 'SECRETS_KMS_WAF' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Left Column: Sovereign Secret Manager Provisioner with Strict Compliance Locks */}
-          <form
-            onSubmit={handleCreateSecret}
-            className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5"
-          >
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <span>Provision Sovereign Secret (`secretmanager.googleapis.com`)</span>
-              </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                 Strict Compliance Locks Active
-              </span>
-            </div>
+        <div className="space-y-4">
+          {/* Top FinOps Free-Tier & Pricing Transparency Banner for Secret Manager */}
+          {(() => {
+            const fin = vaultData?.finopsSummary || {
+              freeTierActiveVersionsLimit: 6,
+              freeTierAccessOpsLimit: 10000,
+              freeTierRotationsLimit: 3,
+              totalSecrets: vaultData?.secrets?.length || 0,
+              totalEnabledVersions: 0,
+              totalDisabledOrDestroyedVersions: 0,
+              freeVersionsRemaining: 6,
+              billableActiveVersions: 0,
+              estimatedMonthlyUsd: 0,
+              withinFreeTier: true,
+            };
+            const pctUsed = Math.min(
+              100,
+              Math.round(
+                ((fin.totalEnabledVersions || 0) /
+                  (fin.freeTierActiveVersionsLimit || 6)) *
+                  100
+              )
+            );
 
-            {/* Regulatory Blueprint Selector */}
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-mono text-zinc-500">
-                1. Choose Secret Regulatory & Residency Blueprint
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  {
-                    id: 'gdpr-sovereign',
-                    label: 'GDPR EU Sovereign Lock',
-                    desc: 'Locks userManaged EU replication + ≤30d rotation',
-                  },
-                  {
-                    id: 'sec-finra-us',
-                    label: 'SEC / FINRA US Vault',
-                    desc: 'Locks US regional residency + 30d rotation',
-                  },
-                  {
-                    id: 'hipaa-vault',
-                    label: 'HIPAA Clinical Secret',
-                    desc: 'Locks US BAA regional residency + ≤60d rotation',
-                  },
-                  {
-                    id: 'custom',
-                    label: 'Custom GCP Standard',
-                    desc: 'Unlocks global automatic replication',
-                  },
-                ].map((bp) => (
-                  <button
-                    key={bp.id}
-                    type="button"
-                    onClick={() => applySecretBlueprint(bp.id)}
-                    className={`p-2.5 rounded-[8px] border text-left cursor-pointer transition-all ${
-                      secretBlueprint === bp.id
-                        ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
-                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{bp.label}</div>
-                    <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                      {bp.desc}
+            return (
+              <div
+                className={`p-4 rounded-[10px] border space-y-3 ${
+                  fin.withinFreeTier
+                    ? 'bg-emerald-500/[0.06] border-emerald-500/35'
+                    : 'bg-amber-500/[0.08] border-amber-500/40'
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <KeyRound
+                      className={`w-4 h-4 ${
+                        fin.withinFreeTier
+                          ? 'text-emerald-500'
+                          : 'text-amber-500'
+                      }`}
+                    />
+                    <span className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Secret Manager FinOps Free-Tier Meter & Lifecycle Surgeon (
+                      `secretmanager.googleapis.com/v1`)
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-extrabold border ${
+                        fin.withinFreeTier
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
+                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                      }`}
+                    >
+                      {fin.withinFreeTier
+                        ? `🎁 100% INSIDE FREE TIER (${fin.totalEnabledVersions} / ${fin.freeTierActiveVersionsLimit} Free Active Versions Used · $0.00/mo)`
+                        : `💳 PAID TIER ACTIVE (${fin.totalEnabledVersions} Active Versions · ${fin.billableActiveVersions} Billable @ $0.06 = ~$${Number(
+                            fin.estimatedMonthlyUsd || 0
+                          ).toFixed(2)}/mo)`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quota Progress Bar */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[10.5px] font-mono text-zinc-600 dark:text-zinc-300">
+                    <span>
+                      Active (`ENABLED`) Secret Versions:{' '}
+                      <strong>{fin.totalEnabledVersions}</strong> of{' '}
+                      <strong>{fin.freeTierActiveVersionsLimit} FREE/mo</strong>{' '}
+                      ({fin.freeVersionsRemaining} free slot(s) remaining)
+                    </span>
+                    <span>
+                      Disabled / Destroyed Versions:{' '}
+                      <strong className="text-emerald-600 dark:text-emerald-400">
+                        {fin.totalDisabledOrDestroyedVersions} ($0.00/mo)
+                      </strong>
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                    <div
+                      style={{ width: `${pctUsed}%` }}
+                      className={`h-full transition-all duration-300 ${
+                        fin.withinFreeTier ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* 4-Pillar FinOps Pricing Breakdown */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 text-[10.5px] font-mono">
+                  <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
+                    <div className="text-[9.5px] uppercase text-emerald-600 dark:text-emerald-400 font-bold">
+                      1. Monthly Free Tier (Always $0)
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      6 Active Versions FREE / mo
+                    </div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5">
+                      + 10,000 Access Ops FREE + 3 Rotations FREE per billing account.
+                    </div>
+                  </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
+                    <div className="text-[9.5px] uppercase text-amber-600 dark:text-amber-400 font-bold">
+                      2. Paid Rate Beyond 6 Free
+                    </div>
+                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      $0.06 / Active Version / Mo
+                    </div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5">
+                      +$0.03 per 10,000 access ops & $0.05 per rotation notification.
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
+                    <div className="text-[9.5px] uppercase text-blue-600 dark:text-blue-400 font-bold">
+                      3. Disabled & Destroyed = $0.00
+                    </div>
+                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      $0.00 / mo When Disabled
+                    </div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5">
+                      When rotating (v1 → v2), auto-disable v1 so it costs $0.00 and frees your quota!
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-[8px] bg-white/85 dark:bg-zinc-950/75 border border-zinc-200/80 dark:border-zinc-800">
+                    <div className="text-[9.5px] uppercase text-purple-600 dark:text-purple-400 font-bold">
+                      4. Replication Cost Multiplier
+                    </div>
+                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                      Pin Single Region = 1× Cost
+                    </div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5">
+                      Multi-region replicas bill per replica location; single-region `userManaged` bills 1×.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Left Column (5 cols): Sovereign Secret Manager Provisioner with Strict Compliance Locks */}
+            <form
+              onSubmit={handleCreateSecret}
+              className="lg:col-span-5 p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3.5 h-fit"
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  <span>
+                    Provision New Secret (`secretmanager.googleapis.com`)
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                  Strict Compliance Locks
+                </span>
+              </div>
+
+              {/* Regulatory Blueprint Selector */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-mono text-zinc-500">
+                  1. Choose Secret Regulatory & Residency Blueprint
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      id: 'gdpr-sovereign',
+                      label: 'GDPR EU Sovereign Lock',
+                      desc: 'Locks userManaged EU replication (1× version cost) + ≤30d rotation',
+                    },
+                    {
+                      id: 'sec-finra-us',
+                      label: 'SEC / FINRA US Vault',
+                      desc: 'Locks US regional residency (1× version cost) + 30d rotation',
+                    },
+                    {
+                      id: 'hipaa-vault',
+                      label: 'HIPAA Clinical Secret',
+                      desc: 'Locks US BAA regional residency + ≤60d rotation',
+                    },
+                    {
+                      id: 'custom',
+                      label: 'Custom GCP Standard',
+                      desc: 'Unlocks global automatic or custom region replication',
+                    },
+                  ].map((bp) => (
+                    <button
+                      key={bp.id}
+                      type="button"
+                      onClick={() => applySecretBlueprint(bp.id)}
+                      className={`p-2.5 rounded-[8px] border text-left cursor-pointer transition-all ${
+                        secretBlueprint === bp.id
+                          ? 'bg-blue-600/15 border-blue-500 text-zinc-900 dark:text-zinc-100'
+                          : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{bp.label}</div>
+                      <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                        {bp.desc}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Secret ID (`projects/{projectId}/secrets/...`)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={secretId}
+                    onChange={(e) => setSecretId(e.target.value)}
+                    placeholder="prod-stripe-webhook-signing-key"
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Replication Policy {!isSecretCustom ? '[LOCKED]' : ''}
+                  </label>
+                  <select
+                    value={secretReplicationMode}
+                    disabled={!isSecretCustom}
+                    onChange={(e) => setSecretReplicationMode(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <option value="SOVEREIGN_REGION">
+                      Sovereign Regional Pinning (userManaged · 1× Quota)
+                    </option>
+                    <option value="AUTOMATIC" disabled={!isSecretCustom}>
+                      Global Automatic Multi-Continent (Forbidden by Sovereign Blueprint)
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Pinned Sovereign Region {!isSecretCustom ? '[LOCKED]' : ''}
+                  </label>
+                  <select
+                    value={secretRegion}
+                    disabled={secretReplicationMode === 'AUTOMATIC'}
+                    onChange={(e) => setSecretRegion(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option
+                      value="europe-west1"
+                      disabled={isSecretSec || isSecretHipaa}
+                    >
+                      {isSecretSec || isSecretHipaa ? '[LOCKED] ' : ''}europe-west1 (Belgium — EU GDPR)
+                    </option>
+                    <option
+                      value="europe-west3"
+                      disabled={isSecretSec || isSecretHipaa}
+                    >
+                      {isSecretSec || isSecretHipaa ? '[LOCKED] ' : ''}europe-west3 (Frankfurt — EU GDPR)
+                    </option>
+                    <option value="us-central1" disabled={isSecretGdpr}>
+                      {isSecretGdpr ? '[LOCKED] ' : ''}us-central1 (Iowa — US SEC/HIPAA)
+                    </option>
+                    <option value="us-east4" disabled={isSecretGdpr}>
+                      {isSecretGdpr ? '[LOCKED] ' : ''}us-east4 (N. Virginia — US SEC/HIPAA)
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-500 mb-1">
+                    Max Rotation Interval (Days) {!isSecretCustom ? '[LOCKED]' : ''}
+                  </label>
+                  <select
+                    value={secretRotationDays}
+                    onChange={(e) =>
+                      setSecretRotationDays(Number(e.target.value))
+                    }
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value={30}>30 Days (Strict Zero-Trust)</option>
+                    <option value={60} disabled={isSecretGdpr || isSecretSec}>
+                      {isSecretGdpr || isSecretSec ? '[LOCKED] ' : ''}60 Days (HIPAA Standard)
+                    </option>
+                    <option value={90} disabled={!isSecretCustom}>
+                      {!isSecretCustom ? '[LOCKED] ' : ''}90 Days (CIS Max)
+                    </option>
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Secret ID (`projects/{projectId}/secrets/...`)
+                  Initial Secret Payload (`Version 1` — Base64 TLS Sealed)
                 </label>
                 <input
-                  type="text"
-                  required
-                  value={secretId}
-                  onChange={(e) => setSecretId(e.target.value)}
-                  placeholder="prod-stripe-webhook-signing-key"
+                  type="password"
+                  value={secretValue}
+                  onChange={(e) => setSecretValue(e.target.value)}
+                  placeholder="whsec_... or database connection URI"
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Replication Policy {!isSecretCustom ? '[LOCKED]' : ''}
+                  Optional: Auto-Grant `roles/secretmanager.secretAccessor` to Runtime SA
                 </label>
                 <select
-                  value={secretReplicationMode}
-                  disabled={!isSecretCustom}
-                  onChange={(e) => setSecretReplicationMode(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  <option value="SOVEREIGN_REGION">
-                    Sovereign Regional Pinning (userManaged)
-                  </option>
-                  <option value="AUTOMATIC" disabled={!isSecretCustom}>
-                    Global Automatic Multi-Continent (Forbidden by Sovereign Blueprint)
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Pinned Sovereign Region {!isSecretCustom ? '[LOCKED]' : ''}
-                </label>
-                <select
-                  value={secretRegion}
-                  disabled={secretReplicationMode === 'AUTOMATIC'}
-                  onChange={(e) => setSecretRegion(e.target.value)}
+                  value={secretBindSaEmail}
+                  onChange={(e) => setSecretBindSaEmail(e.target.value)}
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 >
-                  <option
-                    value="europe-west1"
-                    disabled={isSecretSec || isSecretHipaa}
-                  >
-                    {isSecretSec || isSecretHipaa ? '[LOCKED] ' : ''}europe-west1 (Belgium — EU GDPR)
+                  <option value="">
+                    — Do not bind a Service Account yet (bind later in Studio) —
                   </option>
-                  <option
-                    value="europe-west3"
-                    disabled={isSecretSec || isSecretHipaa}
-                  >
-                    {isSecretSec || isSecretHipaa ? '[LOCKED] ' : ''}europe-west3 (Frankfurt — EU GDPR)
-                  </option>
-                  <option value="us-central1" disabled={isSecretGdpr}>
-                    {isSecretGdpr ? '[LOCKED] ' : ''}us-central1 (Iowa — US SEC/HIPAA)
-                  </option>
-                  <option value="us-east4" disabled={isSecretGdpr}>
-                    {isSecretGdpr ? '[LOCKED] ' : ''}us-east4 (N. Virginia — US SEC/HIPAA)
-                  </option>
+                  {(vaultData?.serviceAccounts || []).map((sa) => (
+                    <option key={sa.email} value={sa.email}>
+                      {sa.email} ({sa.displayName})
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                  Max Rotation Interval (Days) {!isSecretCustom ? '[LOCKED]' : ''}
-                </label>
-                <select
-                  value={secretRotationDays}
-                  onChange={(e) => setSecretRotationDays(Number(e.target.value))}
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                >
-                  <option value={30}>30 Days (Strict Zero-Trust)</option>
-                  <option value={60} disabled={isSecretGdpr || isSecretSec}>
-                    {isSecretGdpr || isSecretSec ? '[LOCKED] ' : ''}60 Days (HIPAA Standard)
-                  </option>
-                  <option value={90} disabled={!isSecretCustom}>
-                    {!isSecretCustom ? '[LOCKED] ' : ''}90 Days (CIS Max)
-                  </option>
-                </select>
-              </div>
-            </div>
+              <button
+                type="submit"
+                disabled={creatingSecret || !secretId.trim()}
+                className="w-full py-2 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+              >
+                {creatingSecret
+                  ? 'Sealing in Secret Manager...'
+                  : 'Create & Seal Sovereign Secret Version 1'}
+              </button>
+            </form>
 
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-500 mb-1">
-                Initial Secret Payload (`Version 1` — Base64 TLS Sealed)
-              </label>
-              <input
-                type="password"
-                value={secretValue}
-                onChange={(e) => setSecretValue(e.target.value)}
-                placeholder="whsec_... or database connection URI"
-                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={creatingSecret || !secretId.trim()}
-              className="w-full py-2 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
-            >
-              {creatingSecret
-                ? 'Sealing in Secret Manager...'
-                : 'Create & Seal Sovereign Secret Version 1'}
-            </button>
-          </form>
-
-          {/* Right Column: Live Secrets Inventory + Cloud Armor WAF Synthesizer */}
-          <div className="space-y-4">
-            <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2.5">
-              <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
-                <span>
-                  Live Secret Manager Inventory ({vaultData?.secrets?.length || 0})
-                </span>
-                <span className="text-[10px] font-mono text-zinc-500">
-                  KMS KeyRings: {vaultData?.keyRings?.length || 0}
-                </span>
-              </div>
-
-              {vaultData?.secrets?.length > 0 ? (
-                <div className="space-y-2 max-h-52 overflow-y-auto">
-                  {vaultData.secrets.map((s) => (
-                    <div
-                      key={s.name}
-                      className="p-2.5 rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 flex items-center justify-between gap-2 text-xs font-mono"
-                    >
-                      <div>
-                        <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                          {s.secretId}
-                        </div>
-                        <div className="text-[10px] text-zinc-500">
-                          {s.replicationMode}{' '}
-                          {s.locations?.length > 0
-                            ? `(${s.locations.join(', ')})`
-                            : ''}
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px]">
-                        ENCRYPTED
+            {/* Right Column (7 cols): Dedicated Secret Manager Rotation, Version Control & IAM Studio + Cloud Armor */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-emerald-500" />
+                      <span>
+                        Dedicated Secret Manager Lifecycle & Rotation Studio (
+                        {vaultData?.secrets?.length || 0} Secrets)
                       </span>
                     </div>
-                  ))}
+                    <p className="text-[10.5px] text-zinc-500 mt-0.5">
+                      Click any secret below to rotate payload versions (`:addVersion`), disable or destroy old versions so they cost **$0.00/mo**, or bind `roles/secretmanager.secretAccessor` to a Cloud Run / VM Service Account.
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    KMS KeyRings: {vaultData?.keyRings?.length || 0}
+                  </span>
                 </div>
-              ) : (
-                <div className="text-xs text-zinc-500 font-mono py-3">
-                  No secrets provisioned yet in `{projectId}`. Use the Sovereign Secret Provisioner on the left to create one.
-                </div>
-              )}
-            </div>
 
-            {/* Cloud Armor OWASP Top-10 & Adaptive DDoS Rate-Limit Synthesizer */}
-            <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                  Cloud Armor Edge WAF & Layer-7 DDoS Rate-Limit Synthesizer
-                </div>
-                <span className="text-[10px] font-mono text-emerald-400">
-                  OWASP Top-10 ModSecurity CRS 3.3
-                </span>
+                {vaultData?.secrets?.length > 0 ? (
+                  <div className="space-y-2.5 max-h-[540px] overflow-y-auto pr-1">
+                    {vaultData.secrets.map((s) => {
+                      const isExpanded = expandedSecretId === s.secretId;
+                      const rotateBusy =
+                        secretActionBusy === `ROTATE:${s.secretId}`;
+                      const grantBusy =
+                        secretActionBusy === `GRANT:${s.secretId}`;
+                      const deleteBusy =
+                        secretActionBusy === `DELETE:${s.secretId}`;
+
+                      return (
+                        <div
+                          key={s.name}
+                          className={`rounded-[10px] border transition-all ${
+                            isExpanded
+                              ? 'border-blue-500/60 bg-zinc-50/90 dark:bg-zinc-900/90 shadow-md'
+                              : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60'
+                          }`}
+                        >
+                          {/* Secret Summary Row */}
+                          <div className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-extrabold text-zinc-900 dark:text-zinc-100 break-all">
+                                  {s.secretId}
+                                </span>
+                                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                                  v{s.latestEnabledVersion || '1'} ACTIVE
+                                </span>
+                                <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px]">
+                                  {s.enabledVersionsCount || 0} Enabled ·{' '}
+                                  {(s.disabledVersionsCount || 0) +
+                                    (s.destroyedVersionsCount || 0)}{' '}
+                                  Disabled/Destroyed ($0)
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-zinc-500 mt-1 flex flex-wrap items-center gap-2">
+                                <span>
+                                  {s.replicationMode}{' '}
+                                  {s.locations?.length > 0
+                                    ? `(${s.locations.join(', ')})`
+                                    : '(global)'}
+                                </span>
+                                {s.accessorMembers?.length > 0 && (
+                                  <span className="text-emerald-600 dark:text-emerald-400">
+                                    · IAM Accessors: {s.accessorMembers.length}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedSecretId(
+                                    isExpanded ? null : s.secretId
+                                  )
+                                }
+                                className={`px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
+                                  isExpanded
+                                    ? 'bg-blue-600 text-white border-blue-500'
+                                    : 'bg-white dark:bg-zinc-950 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                                }`}
+                              >
+                                {isExpanded
+                                  ? 'Hide Lifecycle Controls ▲'
+                                  : '🔄 Rotate / Versions / IAM ▼'}
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={deleteBusy}
+                                onClick={() => handleDeleteSecret(s.secretId)}
+                                title={`Delete secret "${s.secretId}" and all its versions from Secret Manager`}
+                                className="p-1.5 rounded-[7px] bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 cursor-pointer disabled:opacity-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Expanded Secret Lifecycle Drawer: Rotate, Version Control & IAM Binding */}
+                          {isExpanded && (
+                            <div className="p-3.5 pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-3.5 text-xs">
+                              {/* 1. Rotate Secret Payload Box */}
+                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-blue-500/30 space-y-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span className="text-[11px] font-mono font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                    <span>
+                                      1. Rotate Secret Payload (Mint New Version)
+                                    </span>
+                                  </span>
+                                  <label className="inline-flex items-center gap-1.5 text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={rotateDisableOld}
+                                      onChange={(e) =>
+                                        setRotateDisableOld(e.target.checked)
+                                      }
+                                      className="rounded accent-emerald-500"
+                                    />
+                                    <span>
+                                      Auto-disable old versions ($0.00/mo — keeps Free Tier!)
+                                    </span>
+                                  </label>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <input
+                                    type="password"
+                                    value={rotateValues[s.secretId] || ''}
+                                    onChange={(e) =>
+                                      setRotateValues((prev) => ({
+                                        ...prev,
+                                        [s.secretId]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder={`Enter new rotated secret payload for ${s.secretId}...`}
+                                    className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[7px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      rotateBusy ||
+                                      !(rotateValues[s.secretId] || '').trim()
+                                    }
+                                    onClick={() =>
+                                      handleRotateSecret(s.secretId)
+                                    }
+                                    className="px-3 py-1.5 rounded-[7px] bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer shrink-0"
+                                  >
+                                    {rotateBusy
+                                      ? 'Rotating...'
+                                      : '🔄 Rotate & Mint New Version'}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* 2. Version History & FinOps State Surgeon */}
+                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                                <div className="flex items-center justify-between text-[11px] font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                                  <span>
+                                    2. Secret Versions ({s.versions?.length || 0}) — FinOps State Control
+                                  </span>
+                                  <span className="text-[10px] text-zinc-500">
+                                    ENABLED = counts toward 6 free ($0.06 after) · DISABLED/DESTROYED = $0.00
+                                  </span>
+                                </div>
+
+                                {s.versions?.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    {s.versions.map((v) => {
+                                      const isEnabled = v.state === 'ENABLED';
+                                      const isDisabled = v.state === 'DISABLED';
+                                      const isDestroyed =
+                                        v.state === 'DESTROYED';
+                                      return (
+                                        <div
+                                          key={v.name}
+                                          className="p-2 rounded-[7px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono"
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                                              Version {v.version}
+                                            </span>
+                                            <span
+                                              className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold border ${
+                                                isEnabled
+                                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                                  : isDisabled
+                                                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
+                                                  : 'bg-zinc-500/15 text-zinc-500 border-zinc-500/30 line-through'
+                                              }`}
+                                            >
+                                              {v.state}{' '}
+                                              {isEnabled
+                                                ? '(Active Quota)'
+                                                : '($0.00/mo)'}
+                                            </span>
+                                            {v.createTime && (
+                                              <span className="text-[10px] text-zinc-500">
+                                                {new Date(
+                                                  v.createTime
+                                                ).toLocaleDateString()}
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          {!isDestroyed && (
+                                            <div className="flex items-center gap-1.5">
+                                              {isEnabled ? (
+                                                <button
+                                                  type="button"
+                                                  disabled={Boolean(
+                                                    secretActionBusy
+                                                  )}
+                                                  onClick={() =>
+                                                    handleToggleSecretVersionState(
+                                                      s.secretId,
+                                                      v.version,
+                                                      'DISABLE'
+                                                    )
+                                                  }
+                                                  title={`Disable version ${v.version} so it costs $0.00/mo and frees up an active version slot`}
+                                                  className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
+                                                >
+                                                  ⏸ Disable ($0/mo)
+                                                </button>
+                                              ) : (
+                                                <button
+                                                  type="button"
+                                                  disabled={Boolean(
+                                                    secretActionBusy
+                                                  )}
+                                                  onClick={() =>
+                                                    handleToggleSecretVersionState(
+                                                      s.secretId,
+                                                      v.version,
+                                                      'ENABLE'
+                                                    )
+                                                  }
+                                                  title={`Re-enable version ${v.version} for live workload access`}
+                                                  className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
+                                                >
+                                                  ▶ Enable
+                                                </button>
+                                              )}
+
+                                              <button
+                                                type="button"
+                                                disabled={Boolean(
+                                                  secretActionBusy
+                                                )}
+                                                onClick={() =>
+                                                  handleToggleSecretVersionState(
+                                                    s.secretId,
+                                                    v.version,
+                                                    'DESTROY'
+                                                  )
+                                                }
+                                                title={`Permanently destroy version ${v.version} cryptographic payload ($0.00/mo)`}
+                                                className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
+                                              >
+                                                🔥 Destroy
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div className="text-[11px] font-mono text-zinc-500">
+                                    No versions minted yet. Use Rotate above to mint Version 1.
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* 3. Resource-Scoped IAM Secret Accessor Binding */}
+                              <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-emerald-500/30 space-y-2">
+                                <div className="text-[11px] font-mono font-extrabold text-emerald-700 dark:text-emerald-400 flex items-center justify-between gap-2">
+                                  <span>
+                                    3. Least-Privilege Secret IAM (`roles/secretmanager.secretAccessor`)
+                                  </span>
+                                  <span className="text-[10px] text-zinc-500">
+                                    Scoped to `{s.secretId}` only
+                                  </span>
+                                </div>
+
+                                {s.accessorMembers?.length > 0 && (
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {s.accessorMembers.map((mem) => (
+                                      <span
+                                        key={mem}
+                                        className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono"
+                                      >
+                                        ✓ {mem}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <select
+                                    value={
+                                      grantSaBySecret[s.secretId] ||
+                                      vaultData?.serviceAccounts?.[0]?.email ||
+                                      ''
+                                    }
+                                    onChange={(e) =>
+                                      setGrantSaBySecret((prev) => ({
+                                        ...prev,
+                                        [s.secretId]: e.target.value,
+                                      }))
+                                    }
+                                    className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[7px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                                  >
+                                    {(vaultData?.serviceAccounts || []).map(
+                                      (sa) => (
+                                        <option key={sa.email} value={sa.email}>
+                                          {sa.email} ({sa.displayName})
+                                        </option>
+                                      )
+                                    )}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    disabled={grantBusy}
+                                    onClick={() =>
+                                      handleGrantSecretAccessor(s.secretId)
+                                    }
+                                    className="px-3 py-1.5 rounded-[7px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer shrink-0"
+                                  >
+                                    {grantBusy
+                                      ? 'Binding IAM...'
+                                      : '🔑 Grant secretAccessor'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-xs text-zinc-500 font-mono py-4">
+                    No secrets provisioned yet in `{projectId}`. Use the Sovereign Secret Provisioner on the left (or the 1-Click Leak Surgeon in Cloud Run) to seal up to **6 Active Secret Versions for $0.00/mo**!
+                  </div>
+                )}
               </div>
-              <p className="text-[11px] text-zinc-500">
-                Synthesizes a complete Google Cloud Armor edge security policy blocking SQLi (`sqli-v33-stable`), XSS (`xss-v33-stable`), LFI/RCE scanners, and throttling abusive IPs at `100 req/min` (`429 Too Many Requests`).
-              </p>
-              <div className="p-2.5 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto">
-                {`gcloud compute security-policies create cloudpulse-zero-trust-waf --project=${projectId} && \\
+
+              {/* Cloud Armor OWASP Top-10 & Adaptive DDoS Rate-Limit Synthesizer */}
+              <div className="p-4 rounded-[10px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Cloud Armor Edge WAF & Layer-7 DDoS Rate-Limit Synthesizer
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-400">
+                    OWASP Top-10 ModSecurity CRS 3.3
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  Synthesizes a complete Google Cloud Armor edge security policy blocking SQLi (`sqli-v33-stable`), XSS (`xss-v33-stable`), LFI/RCE scanners, and throttling abusive IPs at `100 req/min` (`429 Too Many Requests`).
+                </p>
+                <div className="p-2.5 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto">
+                  {`gcloud compute security-policies create cloudpulse-zero-trust-waf --project=${projectId} && \\
 gcloud compute security-policies rules create 1000 --security-policy=cloudpulse-zero-trust-waf --expression="evaluatePreconfiguredWaf('sqli-v33-stable') || evaluatePreconfiguredWaf('xss-v33-stable')" --action=deny-403 --project=${projectId} && \\
 gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-zero-trust-waf --src-ip-ranges="*" --action=throttle --rate-limit-threshold-count=100 --rate-limit-threshold-interval-sec=60 --conform-action=allow --exceed-action=deny-429 --enforce-on-key=IP --project=${projectId}`}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(
+                      `gcloud compute security-policies create cloudpulse-zero-trust-waf --project=${projectId} && gcloud compute security-policies rules create 1000 --security-policy=cloudpulse-zero-trust-waf --expression="evaluatePreconfiguredWaf('sqli-v33-stable') || evaluatePreconfiguredWaf('xss-v33-stable')" --action=deny-403 --project=${projectId} && gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-zero-trust-waf --src-ip-ranges="*" --action=throttle --rate-limit-threshold-count=100 --rate-limit-threshold-interval-sec=60 --conform-action=allow --exceed-action=deny-429 --enforce-on-key=IP --project=${projectId}`,
+                      'Cloud Armor WAF policy CLI'
+                    )
+                  }
+                  className="w-full py-1.5 rounded-[8px] border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-mono font-bold cursor-pointer"
+                >
+                  Copy 1-Tap Cloud Armor OWASP + Rate-Limit Deployment CLI
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  handleCopy(
-                    `gcloud compute security-policies create cloudpulse-zero-trust-waf --project=${projectId} && gcloud compute security-policies rules create 1000 --security-policy=cloudpulse-zero-trust-waf --expression="evaluatePreconfiguredWaf('sqli-v33-stable') || evaluatePreconfiguredWaf('xss-v33-stable')" --action=deny-403 --project=${projectId} && gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-zero-trust-waf --src-ip-ranges="*" --action=throttle --rate-limit-threshold-count=100 --rate-limit-threshold-interval-sec=60 --conform-action=allow --exceed-action=deny-429 --enforce-on-key=IP --project=${projectId}`,
-                    'Cloud Armor WAF policy CLI'
-                  )
-                }
-                className="w-full py-1.5 rounded-[8px] border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-mono font-bold cursor-pointer"
-              >
-                Copy 1-Tap Cloud Armor OWASP + Rate-Limit Deployment CLI
-              </button>
             </div>
           </div>
         </div>

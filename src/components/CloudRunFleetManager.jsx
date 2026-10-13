@@ -71,6 +71,7 @@ export default function CloudRunFleetManager({
   projectId,
   initialServices = [],
   onOpenProvisionCloudRun,
+  onOpenSecretManagerStudio,
   onRefreshOverview,
   onRunInShell,
   onShowToast,
@@ -2534,7 +2535,7 @@ spec:
 
                       return (
                         <div
-                          className={`p-3 rounded-xl border space-y-2 ${
+                          className={`p-3 rounded-xl border space-y-2.5 ${
                             sensitivePairs.length > 0
                               ? 'bg-red-500/[0.06] border-red-500/35'
                               : 'bg-emerald-500/[0.05] border-emerald-500/30'
@@ -2555,30 +2556,82 @@ spec:
                               </span>
                             </div>
 
-                            {livePairs.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {onOpenSecretManagerStudio && (
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenSecretManagerStudio()}
+                                  title="Open Dedicated Secret Manager Lifecycle Studio to rotate versions, disable old versions ($0/mo), manage IAM secretAccessor bindings, and track your 6 Free Active Versions quota"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-100 border border-zinc-700 transition-colors cursor-pointer"
+                                >
+                                  <KeyRound className="w-3 h-3 text-amber-400" />
+                                  <span>
+                                    🔑 Open Secret Manager Studio (Rotate & Versions) →
+                                  </span>
+                                </button>
+                              )}
+
+                              {livePairs.length > 0 && (
+                                <button
+                                  type="button"
+                                  disabled={Boolean(busyState)}
+                                  onClick={() =>
+                                    handleSealSecretsInSecretManager(
+                                      srv,
+                                      sensitivePairs.length > 0
+                                        ? sensitivePairs.map((p) => p.name)
+                                        : livePairs.map((p) => p.name)
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm transition-colors cursor-pointer"
+                                >
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  <span>
+                                    {busyState === 'SEALING_SECRETS'
+                                      ? 'Sealing in Secret Manager & Binding IAM...'
+                                      : sensitivePairs.length > 0
+                                      ? `🔒 1-Click Seal ${sensitivePairs.length} Detected Secret(s) in Secret Manager`
+                                      : `🔒 Seal All ${livePairs.length} Env Var(s) in Secret Manager`}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* FinOps Free Tier vs Paid Tier Transparency Box */}
+                          <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/70 border border-emerald-500/25 text-[10.5px] leading-relaxed text-zinc-700 dark:text-zinc-300 space-y-1">
+                            <div className="flex flex-wrap items-center justify-between gap-1.5">
+                              <span className="font-mono font-extrabold text-emerald-700 dark:text-emerald-400">
+                                🎁 Monthly Free Tier: First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-mono font-bold text-[9.5px]">
+                                Beyond 6 Free: $0.06 / active version / mo · $0.03 / 10k access ops
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                              💡 <strong>FinOps Rotation Tip:</strong> Only{' '}
+                              <code className="text-emerald-600 dark:text-emerald-400 font-bold">
+                                ENABLED
+                              </code>{' '}
+                              versions count toward your 6 free versions or the $0.06/mo fee.{' '}
+                              <code className="font-bold">DISABLED</code> and{' '}
+                              <code className="font-bold">DESTROYED</code> versions cost{' '}
+                              <strong className="text-emerald-600 dark:text-emerald-400">
+                                $0.00/mo
+                              </strong>
+                              ! Use the{' '}
                               <button
                                 type="button"
-                                disabled={Boolean(busyState)}
                                 onClick={() =>
-                                  handleSealSecretsInSecretManager(
-                                    srv,
-                                    sensitivePairs.length > 0
-                                      ? sensitivePairs.map((p) => p.name)
-                                      : livePairs.map((p) => p.name)
-                                  )
+                                  onOpenSecretManagerStudio &&
+                                  onOpenSecretManagerStudio()
                                 }
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm transition-colors cursor-pointer"
+                                className="underline font-bold text-blue-600 dark:text-blue-400 hover:text-blue-500 cursor-pointer"
                               >
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                <span>
-                                  {busyState === 'SEALING_SECRETS'
-                                    ? 'Sealing in Secret Manager & Binding IAM...'
-                                    : sensitivePairs.length > 0
-                                    ? `🔒 1-Click Seal ${sensitivePairs.length} Detected Secret(s) in Secret Manager`
-                                    : `🔒 Seal All ${livePairs.length} Env Var(s) in Secret Manager`}
-                                </span>
-                              </button>
-                            )}
+                                Dedicated Secret Manager Studio
+                              </button>{' '}
+                              to rotate secrets and auto-disable old versions so you stay inside the Free Tier.
+                            </div>
                           </div>
 
                           <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
