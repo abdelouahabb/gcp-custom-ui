@@ -1795,6 +1795,96 @@ export default function ResourceProvisionModal({
             })}
           </div>
 
+          {/* Google Cloud "Always Free" ($0.00/mo) Guardrail Preset Bar (https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits) */}
+          <div className="p-3 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/35 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="space-y-0.5 text-xs">
+              <div className="font-mono font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 flex-wrap">
+                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>
+                  🎁 Google Cloud &ldquo;Always Free&rdquo; Tier Guardrail (`$0.00/mo` Spec)
+                </span>
+                <a
+                  href="https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] underline text-blue-600 dark:text-blue-400"
+                >
+                  Official Free Tier Limits ↗
+                </a>
+              </div>
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                {serviceType === 'COMPUTE_VM' &&
+                  'Always Free VM Rule: 1 non-preemptible e2-micro in us-west1, us-central1, or us-east1 + up to 30 GB Standard Persistent Disk (pd-standard, NOT pd-balanced) + 1 GB North America egress/mo.'}
+                {serviceType === 'CLOUD_RUN' &&
+                  'Always Free Cloud Run Rule: Request-based billing (--cpu-throttling) with minInstances=0, no GPU → 2M requests + 180,000 vCPU-sec + 360,000 GB-sec FREE every month.'}
+                {serviceType === 'GCS_BUCKET' &&
+                  'Always Free Cloud Storage Rule: 5 GB-months Regional STANDARD storage in us-east1, us-west1, or us-central1 ONLY (Multi-region US/EU is NOT free) + 5k Class A & 50k Class B ops/mo.'}
+                {serviceType === 'BIGQUERY_DATASET' &&
+                  'Always Free BigQuery Rule: 1 TiB SQL querying/mo + 10 GiB storage/mo FREE across all datasets.'}
+                {serviceType === 'GKE_CLUSTER' &&
+                  '⚠️ GKE Free Tier Trap: 1 Autopilot or Zonal Standard cluster waives the $74.40/mo cluster management fee, Ready-to-run, but worker nodes, pods, disks & LoadBalancers STILL BILL compute/network!'}
+                {serviceType === 'CLOUD_SQL' &&
+                  '⚠️ Cloud SQL / AlloyDB has NO Always-Free tier, but Google Cloud offers a 30-Day Free Trial instance for Cloud SQL and AlloyDB (8 vCPU + 1 TB for 30 days).'}
+                {(serviceType === 'VPC_NETWORK' ||
+                  serviceType === 'VPC_FIREWALL') &&
+                  'VPC Networks and Firewall Rules have $0.00 control-plane cost (only Cloud NAT, VPN, or cross-region/internet egress incur charges).'}
+              </p>
+            </div>
+
+            {['COMPUTE_VM', 'CLOUD_RUN', 'GCS_BUCKET', 'BIGQUERY_DATASET', 'GKE_CLUSTER'].includes(
+              serviceType
+            ) && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (serviceType === 'COMPUTE_VM') {
+                    setVmRegion('us-central1');
+                    setZone('us-central1-a');
+                    setMachineFamily('E2');
+                    setMachineType('e2-micro');
+                    setDiskType('pd-standard');
+                    setDiskSizeGb(30);
+                    setSpotInstance(false);
+                    setVmGpuType('NONE');
+                  } else if (serviceType === 'CLOUD_RUN') {
+                    setRegion('us-central1');
+                    setRunBillingMode('REQUEST_BASED');
+                    setRunMinInstances(0);
+                    setRunMaxInstances(3);
+                    setRunCpu('1');
+                    setRunMemory('512Mi');
+                    setRunGpuAccelerator('NONE');
+                  } else if (serviceType === 'GCS_BUCKET') {
+                    setGcsComplianceRegime('custom');
+                    setGcsLocationType('REGIONAL');
+                    setRegion('us-central1');
+                    setStorageClass('STANDARD');
+                    setGcsAutoclass(false);
+                    setGcsHierarchicalNamespace(false);
+                  } else if (serviceType === 'BIGQUERY_DATASET') {
+                    applyBqCompliancePreset('standard');
+                  } else if (serviceType === 'GKE_CLUSTER') {
+                    setGkeComplianceRegime('custom');
+                    setGkeMode('AUTOPILOT');
+                    setGkeLocation('us-central1');
+                    setGkeGpuAcceleratorType('NONE');
+                  }
+                }}
+                className="shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold shadow-sm cursor-pointer transition-colors"
+              >
+                {serviceType === 'COMPUTE_VM'
+                  ? '🔒 Lock Always Free VM (e2-micro + 30GB pd-standard)'
+                  : serviceType === 'CLOUD_RUN'
+                  ? '🔒 Lock Always Free Cloud Run ($0 Idle · 2M req/mo)'
+                  : serviceType === 'GCS_BUCKET'
+                  ? '🔒 Lock Always Free Bucket (us-central1 STANDARD)'
+                  : serviceType === 'GKE_CLUSTER'
+                  ? '🔒 Use Free Cluster Mgmt Fee (Autopilot)'
+                  : '🔒 Lock Always Free BigQuery Spec'}
+              </button>
+            )}
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

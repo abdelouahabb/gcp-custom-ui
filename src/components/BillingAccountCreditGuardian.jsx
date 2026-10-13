@@ -801,6 +801,9 @@ export default function BillingAccountCreditGuardian({
   const [egressRadar, setEgressRadar] = useState(null);
   const [loadingEgressRadar, setLoadingEgressRadar] = useState(false);
   const [harvestRegion, setHarvestRegion] = useState('');
+  const [alwaysFreeAudit, setAlwaysFreeAudit] = useState(null);
+  const [loadingAlwaysFree, setLoadingAlwaysFree] = useState(false);
+  const [alwaysFreeFilter, setAlwaysFreeFilter] = useState('ALL');
 
   const scanEgressAndLeftovers = useCallback(async () => {
     if (!projectId) return;
@@ -824,14 +827,34 @@ export default function BillingAccountCreditGuardian({
     }
   }, [projectId]);
 
+  const scanAlwaysFreeAuditor = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingAlwaysFree(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/finops/always-free-auditor`
+      );
+      if (res.data?.ok) {
+        setAlwaysFreeAudit(res.data);
+      }
+    } catch {
+      // ignore if offline
+    } finally {
+      setLoadingAlwaysFree(false);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     loadBillingGuardian(false);
     scanEgressAndLeftovers();
+    scanAlwaysFreeAuditor();
     const intervalId = setInterval(() => {
       loadBillingGuardian(true);
     }, 2 * 60 * 1000);
     return () => clearInterval(intervalId);
-  }, [loadBillingGuardian, scanEgressAndLeftovers]);
+  }, [loadBillingGuardian, scanEgressAndLeftovers, scanAlwaysFreeAuditor]);
 
   const handleSyncConsoleCredits = async (overrideRawText) => {
     const rawToParse =
@@ -2612,6 +2635,223 @@ ORDER BY
               ))}
             </div>
           )}
+      </div>
+
+      {/* =====================================================================
+          GOOGLE CLOUD "ALWAYS FREE" TIER AUDITOR & $0/MO ARCHITECT
+          Official Spec: https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits
+         ===================================================================== */}
+      <div className="p-4 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/35 space-y-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-xs sm:text-sm font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                🎁 Google Cloud &ldquo;Always Free&rdquo; Tier Auditor & $0.00/Mo Architect
+              </span>
+              {alwaysFreeAudit?.summary && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  {alwaysFreeAudit.summary.withinFreeCount} /{' '}
+                  {alwaysFreeAudit.summary.totalCategories} Services Inside Free Tier
+                </span>
+              )}
+              <a
+                href="https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10.5px] font-mono underline text-blue-600 dark:text-blue-400"
+              >
+                Official Free Tier Usage Limits Docs ↗
+              </a>
+            </div>
+            <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+              Even when your promotional credits expire (or on any Paid Billing Account), Google Cloud provides a permanent monthly **Always Free Tier** (`$0.00/mo`, non-rolling monthly limits). Below is your live project audit against the official Free Tier rules, hidden gotchas (`pd-balanced` vs `pd-standard`, US-only regions, GKE node charges), and 1-click `$0.00/mo` deployment commands.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {[
+              { id: 'ALL', label: 'All Free Tier Services (9)' },
+              {
+                id: 'ATTENTION',
+                label: `Exceeding / Paid SKU (${
+                  alwaysFreeAudit?.summary?.attentionCount || 0
+                })`,
+              },
+              {
+                id: 'WITHIN_FREE',
+                label: `100% Free ($0/mo) (${
+                  alwaysFreeAudit?.summary?.withinFreeCount || 0
+                })`,
+              },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setAlwaysFreeFilter(f.id)}
+                className={`h-7 px-2.5 rounded-lg text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
+                  alwaysFreeFilter === f.id
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={scanAlwaysFreeAuditor}
+              disabled={loadingAlwaysFree}
+              className="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw
+                className={`w-3 h-3 ${loadingAlwaysFree ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {loadingAlwaysFree ? 'Auditing...' : 'Audit Always Free'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* 9 Always Free Product Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {(alwaysFreeAudit?.servicesCatalog || [])
+            .filter((item) => {
+              if (alwaysFreeFilter === 'ATTENTION') {
+                return item.liveStatus !== 'WITHIN_FREE_TIER';
+              }
+              if (alwaysFreeFilter === 'WITHIN_FREE') {
+                return item.liveStatus === 'WITHIN_FREE_TIER';
+              }
+              return true;
+            })
+            .map((item) => {
+              const isFree = item.liveStatus === 'WITHIN_FREE_TIER';
+              return (
+                <div
+                  key={item.id}
+                  className={`p-3 rounded-xl border flex flex-col justify-between gap-2.5 ${
+                    isFree
+                      ? 'bg-white/90 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800'
+                      : 'bg-amber-500/[0.06] border-amber-500/40'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <a
+                        href={item.docAnchor}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 hover:underline"
+                      >
+                        {item.product} ↗
+                      </a>
+                      <span
+                        className={`shrink-0 px-2 py-0.5 rounded text-[9.5px] font-mono font-extrabold border ${
+                          isFree
+                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40'
+                        }`}
+                      >
+                        {isFree ? '$0.00 FREE TIER' : 'PAID SKU ACTIVE'}
+                      </span>
+                    </div>
+
+                    <div className="p-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/20 text-[10.5px] font-mono text-zinc-800 dark:text-zinc-200">
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                        Monthly Free Limit:{' '}
+                      </span>
+                      {item.freeAllowance}
+                    </div>
+
+                    <div className="text-[10.5px] font-mono text-blue-700 dark:text-blue-300">
+                      <strong>Live Project Status:</strong> {item.liveUsageLabel}
+                    </div>
+
+                    <div className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                      {item.gotchaWarning}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-zinc-200/70 dark:border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopyText(
+                          `free-cli-${item.id}`,
+                          item.zeroDollarCli,
+                          `${item.product} $0/mo CLI`
+                        )
+                      }
+                      className="h-7 px-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                    >
+                      {copiedId === `free-cli-${item.id}`
+                        ? '✓ Copied $0 CLI'
+                        : 'Copy $0/mo CLI'}
+                    </button>
+
+                    {onRunInShell && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInShell(item.zeroDollarCli)}
+                        className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold cursor-pointer"
+                      >
+                        Run $0 Spec in Shell
+                      </button>
+                    )}
+
+                    {onOpenProvision &&
+                      item.provisionServiceType &&
+                      item.provisionServiceType !== 'SECRET_MANAGER' && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenProvision(item.provisionServiceType)
+                          }
+                          className="h-7 px-2.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                        >
+                          Open Studio →
+                        </button>
+                      )}
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+
+        {/* Product-Specific Free Trials Strip (AlloyDB 30d, Spanner 90d, Cloud SQL 30d, Looker 30d) */}
+        {alwaysFreeAudit?.productFreeTrials?.length > 0 && (
+          <div className="p-3 rounded-xl bg-white/80 dark:bg-[#131314] border border-blue-500/30 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-mono font-extrabold text-blue-700 dark:text-blue-300">
+                🚀 Bonus: Product-Specific Free Trials (Separate from Always Free & $300 Welcome Credit)
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">
+                Requires an active Google Cloud Billing Account · Unused Free Tier limits do not roll over month-to-month
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {alwaysFreeAudit.productFreeTrials.map((trial) => (
+                <a
+                  key={trial.id}
+                  href={trial.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:border-blue-500 border border-zinc-200 dark:border-zinc-800 transition-colors block"
+                >
+                  <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                    {trial.name} ↗
+                  </div>
+                  <div className="text-[10px] text-zinc-500 mt-0.5">
+                    {trial.allowance}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Automation Strip: BigQuery Billing Export SQL + Cloud Billing Budget CLI */}

@@ -19065,6 +19065,522 @@ app.get(
   }
 );
 
+// ============================================================================
+// GOOGLE CLOUD "ALWAYS FREE" TIER AUDITOR & $0/MO ARCHITECT
+// Official Spec: https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits
+// ============================================================================
+app.get(
+  '/api/project/:projectId/finops/always-free-auditor',
+  async (req, res) => {
+    const { projectId } = req.params;
+    try {
+      const token = await resolveRequestToken(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const [
+        instancesAggRes,
+        disksAggRes,
+        bucketsRes,
+        runRes,
+        gkeRes,
+        secretsRes,
+        bqDatasetsRes,
+        pubsubRes,
+        artifactReposRes,
+        kmsGlobalRes,
+      ] = await Promise.allSettled([
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://compute.googleapis.com/compute/v1/projects/${projectId}/aggregated/instances`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://compute.googleapis.com/compute/v1/projects/${projectId}/aggregated/disks`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://run.googleapis.com/v2/projects/${projectId}/locations/-/services`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://container.googleapis.com/v1/projects/${projectId}/locations/-/clusters`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://pubsub.googleapis.com/v1/projects/${projectId}/topics`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://artifactregistry.googleapis.com/v1/projects/${projectId}/locations/-/repositories`,
+          token,
+          quotaProject: projectId,
+        }),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/global/keyRings`,
+          token,
+          quotaProject: projectId,
+        }),
+      ]);
+
+      // 1. Compute Engine Always Free Audit:
+      //    - 1 non-preemptible e2-micro in us-west1, us-central1, or us-east1 (up to total hours in month)
+      //    - 30 GB-months of Standard Persistent Disk (pd-standard)
+      //    - 1 GB outbound data transfer from North America
+      const eligibleFreeVmRegions = ['us-west1', 'us-central1', 'us-east1'];
+      const allVms = [];
+      if (instancesAggRes.status === 'fulfilled') {
+        for (const [scopeKey, scopeVal] of Object.entries(
+          instancesAggRes.value?.items || {}
+        )) {
+          for (const vm of scopeVal?.instances || []) {
+            const zone = scopeKey.replace('zones/', '');
+            const region = zone.split('-').slice(0, 2).join('-');
+            const mType = (vm.machineType || '').split('/').pop();
+            const isSpot =
+              vm.scheduling?.provisioningModel === 'SPOT' ||
+              Boolean(vm.scheduling?.preemptible);
+            const hasGpu = (vm.guestAccelerators || []).length > 0;
+            const isEligibleFreeVm =
+              mType === 'e2-micro' &&
+              !isSpot &&
+              !hasGpu &&
+              eligibleFreeVmRegions.includes(region);
+            allVms.push({
+              name: vm.name,
+              zone,
+              region,
+              status: vm.status,
+              machineType: mType,
+              isSpot,
+              hasGpu,
+              isEligibleFreeVm,
+            });
+          }
+        }
+      }
+
+      let standardPdGb = 0;
+      let nonFreePdGb = 0;
+      if (disksAggRes.status === 'fulfilled') {
+        for (const [, scopeVal] of Object.entries(
+          disksAggRes.value?.items || {}
+        )) {
+          for (const d of scopeVal?.disks || []) {
+            const sizeGb = Number(d.sizeGb || 10);
+            const dType = (d.type || '').split('/').pop();
+            if (dType === 'pd-standard') {
+              standardPdGb += sizeGb;
+            } else {
+              nonFreePdGb += sizeGb;
+            }
+          }
+        }
+      }
+      const eligibleE2MicroRunning = allVms.filter(
+        (v) => v.isEligibleFreeVm && v.status === 'RUNNING'
+      );
+      const nonFreeVms = allVms.filter((v) => !v.isEligibleFreeVm);
+
+      // 2. Cloud Storage Always Free Audit:
+      //    - 5 GB-months of regional Standard storage in us-east1, us-west1, or us-central1
+      //    - 5,000 Class A Ops + 50,000 Class B Ops + 100 GB North America outbound transfer
+      const eligibleFreeGcsRegions = ['us-east1', 'us-west1', 'us-central1'];
+      const rawBuckets =
+        bucketsRes.status === 'fulfilled' ? bucketsRes.value?.items || [] : [];
+      const freeTierBuckets = [];
+      const paidRegionOrClassBuckets = [];
+      for (const b of rawBuckets) {
+        const loc = String(b.location || '').toLowerCase();
+        const sClass = String(b.storageClass || 'STANDARD').toUpperCase();
+        if (eligibleFreeGcsRegions.includes(loc) && sClass === 'STANDARD') {
+          freeTierBuckets.push({
+            name: b.name,
+            location: loc,
+            storageClass: sClass,
+          });
+        } else {
+          paidRegionOrClassBuckets.push({
+            name: b.name,
+            location: loc,
+            storageClass: sClass,
+            reason: !eligibleFreeGcsRegions.includes(loc)
+              ? `Region ${loc.toUpperCase()} is outside the US Free Tier regions (us-east1, us-west1, us-central1)`
+              : `Storage class ${sClass} is not covered by the Regional Standard Free Tier`,
+          });
+        }
+      }
+
+      // 3. Cloud Run Always Free Audit:
+      //    - Request-based billing: 2M requests/mo, 180,000 vCPU-sec, 360,000 GB-sec, 1 GB North America egress
+      const rawRun =
+        runRes.status === 'fulfilled' ? runRes.value?.services || [] : [];
+      const freeRequestBasedRun = [];
+      const alwaysOnPaidRun = [];
+      for (const svc of rawRun) {
+        const shortName = (svc.name || '').split('/').pop();
+        const minInst = Number(svc.template?.scaling?.minInstanceCount || 0);
+        const cpuIdle = Boolean(
+          svc.template?.containers?.[0]?.resources?.cpuIdle ?? true
+        );
+        const hasGpu =
+          (svc.template?.containers?.[0]?.resources?.limits?.['nvidia.com/gpu'] ||
+            0) > 0;
+        if (minInst === 0 && cpuIdle && !hasGpu) {
+          freeRequestBasedRun.push(shortName);
+        } else {
+          alwaysOnPaidRun.push({
+            name: shortName,
+            reason:
+              minInst > 0
+                ? `minInstances=${minInst} keeps instances warm 24/7`
+                : hasGpu
+                ? 'GPU attached (excluded from Free Tier)'
+                : 'Instance-based billing (cpuIdle=false)',
+          });
+        }
+      }
+
+      // 4. Google Kubernetes Engine (GKE) Always Free Audit:
+      //    - 1 free Autopilot or Zonal Standard cluster management fee ($74.40/mo credit) per billing account
+      //    - Note: Worker nodes, pods, and LoadBalancers still bill compute/network!
+      const rawClusters =
+        gkeRes.status === 'fulfilled' ? gkeRes.value?.clusters || [] : [];
+      const freeMgmtEligibleClusters = [];
+      const regionalStandardPaidClusters = [];
+      for (const c of rawClusters) {
+        const isAutopilot = Boolean(c.autopilot?.enabled);
+        const isZonal = String(c.location || '').split('-').length === 3;
+        if (isAutopilot || isZonal) {
+          freeMgmtEligibleClusters.push({
+            name: c.name,
+            location: c.location,
+            mode: isAutopilot ? 'Autopilot' : 'Zonal Standard',
+          });
+        } else {
+          regionalStandardPaidClusters.push({
+            name: c.name,
+            location: c.location,
+            mode: 'Regional Standard ($0.10/hr cluster fee beyond 1st cluster)',
+          });
+        }
+      }
+
+      // 5. Secret Manager Always Free Audit:
+      //    - 6 active secret versions/mo + 10,000 access ops/mo + 3 rotation notifications/mo
+      const rawSecrets =
+        secretsRes.status === 'fulfilled'
+          ? secretsRes.value?.secrets || []
+          : [];
+      let enabledSecretVersionsCount = 0;
+      let disabledSecretVersionsCount = 0;
+      await Promise.all(
+        rawSecrets.slice(0, 15).map(async (s) => {
+          try {
+            const vRes = await gcpApiRequest({
+              method: 'GET',
+              url: `https://secretmanager.googleapis.com/v1/${s.name}/versions?pageSize=20`,
+              token,
+              quotaProject: projectId,
+            });
+            for (const v of vRes?.versions || []) {
+              const st = String(v.state || '').toUpperCase();
+              if (st === 'ENABLED') enabledSecretVersionsCount += 1;
+              else disabledSecretVersionsCount += 1;
+            }
+          } catch {
+            // ignore
+          }
+        })
+      );
+
+      // 6. BigQuery, Pub/Sub, Artifact Registry & Cloud KMS counts
+      const bqDatasetsCount =
+        bqDatasetsRes.status === 'fulfilled'
+          ? (bqDatasetsRes.value?.datasets || []).length
+          : 0;
+      const pubsubTopicsCount =
+        pubsubRes.status === 'fulfilled'
+          ? (pubsubRes.value?.topics || []).length
+          : 0;
+      const artifactReposCount =
+        artifactReposRes.status === 'fulfilled'
+          ? (artifactReposRes.value?.repositories || []).length
+          : 0;
+      const kmsKeyRingsCount =
+        kmsGlobalRes.status === 'fulfilled'
+          ? (kmsGlobalRes.value?.keyRings || []).length
+          : 0;
+
+      const servicesCatalog = [
+        {
+          id: 'COMPUTE_ENGINE',
+          product: 'Compute Engine (e2-micro + 30 GB pd-standard)',
+          category: 'COMPUTE',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#compute',
+          freeAllowance:
+            '1 non-preemptible e2-micro VM/mo (in us-west1, us-central1, or us-east1) + 30 GB-months Standard Persistent Disk (pd-standard) + 1 GB North America outbound transfer/mo',
+          gotchaWarning:
+            '⚠️ Default VM boot disks often default to pd-balanced ($0.10/GB-mo)! You MUST explicitly choose --boot-disk-type=pd-standard (≤30 GB) and a US Free Tier region (us-east1, us-central1, us-west1). GPUs, TPUs, and Spot VMs are excluded.',
+          liveStatus:
+            nonFreeVms.length === 0 &&
+            nonFreePdGb === 0 &&
+            eligibleE2MicroRunning.length <= 1 &&
+            standardPdGb <= 30
+              ? 'WITHIN_FREE_TIER'
+              : 'EXCEEDS_OR_PAID_SKU',
+          liveUsageLabel: `${eligibleE2MicroRunning.length}/1 Free e2-micro running · ${standardPdGb}/30 GB pd-standard${
+            nonFreeVms.length > 0
+              ? ` · ⚠️ ${nonFreeVms.length} non-free VM(s)`
+              : ''
+          }${
+            nonFreePdGb > 0
+              ? ` · ⚠️ ${nonFreePdGb} GB paid pd-balanced/ssd disk`
+              : ''
+          }`,
+          provisionServiceType: 'COMPUTE_VM',
+          zeroDollarCli: `gcloud compute instances create always-free-e2-micro --project=${projectId} --zone=us-central1-a --machine-type=e2-micro --boot-disk-type=pd-standard --boot-disk-size=30GB --image-family=debian-12 --image-project=debian-cloud`,
+        },
+        {
+          id: 'CLOUD_RUN',
+          product: 'Cloud Run & Cloud Run Functions',
+          category: 'SERVERLESS',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#cloud-run',
+          freeAllowance:
+            '2,000,000 requests/mo + 180,000 vCPU-seconds + 360,000 GB-seconds memory + 1 GB North America egress/mo (Cloud Run Functions adds 2M invocations & 400k GB-sec)',
+          gotchaWarning:
+            '⚠️ Only Request-Based Billing (cpuIdle=true) with minInstances=0 qualifies for $0 idle cost. Setting minInstances ≥ 1 or attaching GPUs bills continuously.',
+          liveStatus:
+            alwaysOnPaidRun.length === 0
+              ? 'WITHIN_FREE_TIER'
+              : 'EXCEEDS_OR_PAID_SKU',
+          liveUsageLabel: `${freeRequestBasedRun.length} $0-idle service(s) · ${
+            alwaysOnPaidRun.length > 0
+              ? `⚠️ ${alwaysOnPaidRun.length} warm/GPU service(s) billing`
+              : '0 warm/paid services'
+          }`,
+          provisionServiceType: 'CLOUD_RUN',
+          zeroDollarCli: `gcloud run deploy always-free-api --project=${projectId} --region=us-central1 --image=us-docker.pkg.dev/cloudrun/container/hello --min-instances=0 --max-instances=3 --cpu=1 --memory=512Mi --cpu-throttling --allow-unauthenticated`,
+        },
+        {
+          id: 'CLOUD_STORAGE',
+          product: 'Cloud Storage (5 GB US Regional Standard)',
+          category: 'STORAGE',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#storage',
+          freeAllowance:
+            '5 GB-months of Regional STANDARD storage (combined across us-east1, us-west1, us-central1 ONLY) + 5,000 Class A Ops + 50,000 Class B Ops + 100 GB North America outbound transfer/mo',
+          gotchaWarning:
+            '⚠️ Multi-region "US" or "EU" buckets and Nearline/Coldline/Archive classes are NOT free! Bucket must be single-region us-east1, us-west1, or us-central1 with STANDARD class.',
+          liveStatus:
+            paidRegionOrClassBuckets.length === 0
+              ? 'WITHIN_FREE_TIER'
+              : 'EXCEEDS_OR_PAID_SKU',
+          liveUsageLabel: `${freeTierBuckets.length} eligible US-regional bucket(s)${
+            paidRegionOrClassBuckets.length > 0
+              ? ` · ⚠️ ${paidRegionOrClassBuckets.length} non-free region/class bucket(s)`
+              : ''
+          }`,
+          provisionServiceType: 'GCS_BUCKET',
+          zeroDollarCli: `gcloud storage buckets create gs://${projectId}-always-free-us --project=${projectId} --location=us-central1 --default-storage-class=STANDARD --uniform-bucket-level-access`,
+        },
+        {
+          id: 'BIGQUERY',
+          product: 'BigQuery (1 TiB Querying + 10 GiB Storage)',
+          category: 'DATA_AI',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#bigquery',
+          freeAllowance:
+            '1 TiB (1,024 GiB) of on-demand SQL querying per month + 10 GiB of active logical storage per month',
+          gotchaWarning:
+            '⚠️ Beyond 1 TiB/mo, on-demand queries cost $6.25/TiB. Always attach --maximum_bytes_billed=10737418240 (10 GB cap) to prevent runaway full-table scans!',
+          liveStatus: 'WITHIN_FREE_TIER',
+          liveUsageLabel: `${bqDatasetsCount} dataset(s) active · First 1 TiB queries/mo & 10 GiB storage = $0.00`,
+          provisionServiceType: 'BIGQUERY_DATASET',
+          zeroDollarCli: `bq --location=US mk --dataset ${projectId}:always_free_analytics`,
+        },
+        {
+          id: 'SECRET_MANAGER',
+          product: 'Secret Manager (6 Active Versions + 10k Access Ops)',
+          category: 'SECURITY',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#secret-manager',
+          freeAllowance:
+            '6 active (ENABLED) secret versions per month + 10,000 access operations/mo + 3 rotation notifications/mo',
+          gotchaWarning:
+            '⚠️ Only ENABLED versions count toward the 6 free slots ($0.06/version-mo beyond 6). DISABLED and DESTROYED versions cost $0.00/mo—always disable old versions when rotating!',
+          liveStatus:
+            enabledSecretVersionsCount <= 6
+              ? 'WITHIN_FREE_TIER'
+              : 'EXCEEDS_OR_PAID_SKU',
+          liveUsageLabel: `${enabledSecretVersionsCount}/6 Free Active Versions used · ${disabledSecretVersionsCount} Disabled/Destroyed ($0.00/mo)`,
+          provisionServiceType: 'SECRET_MANAGER',
+          zeroDollarCli: `printf "my-zero-cost-secret" | gcloud secrets create always-free-secret --project=${projectId} --replication-policy="user-managed" --locations="us-central1" --data-file=-`,
+        },
+        {
+          id: 'GKE_CLUSTER',
+          product: 'Google Kubernetes Engine (1 Free Autopilot / Zonal Cluster Fee)',
+          category: 'COMPUTE',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#kubernetes-engine',
+          freeAllowance:
+            'One free Autopilot or Zonal Standard cluster management fee ($74.40/mo value) per billing account per month',
+          gotchaWarning:
+            '⚠️ TRAP ALERT: The Free Tier credit ONLY waives the $0.10/hr ($74.40/mo) cluster management fee for 1 cluster! You are STILL charged for every worker node VM, Autopilot pod vCPU/RAM, Persistent Disk, and LoadBalancer IP!',
+          liveStatus:
+            regionalStandardPaidClusters.length === 0 &&
+            freeMgmtEligibleClusters.length <= 1
+              ? 'WITHIN_FREE_TIER'
+              : 'EXCEEDS_OR_PAID_SKU',
+          liveUsageLabel: `${freeMgmtEligibleClusters.length}/1 Free Cluster Mgmt Fee used${
+            regionalStandardPaidClusters.length > 0
+              ? ` · ⚠️ ${regionalStandardPaidClusters.length} Regional cluster(s) billing $0.10/hr`
+              : ''
+          }`,
+          provisionServiceType: 'GKE_CLUSTER',
+          zeroDollarCli: `gcloud container clusters create-auto always-free-mgmt-autopilot --project=${projectId} --region=us-central1`,
+        },
+        {
+          id: 'OBSERVABILITY_LOGGING',
+          product: 'Cloud Logging & Monitoring (50 GiB Logs/Mo)',
+          category: 'OPERATIONS',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#logging-monitoring',
+          freeAllowance:
+            'First 50 GiB of log ingestion per project per month (retained for 30-day default retention at $0) + 1M Monitoring API read time-series/mo',
+          gotchaWarning:
+            '⚠️ High-volume VPC Flow Logs, Data Access audit logs, or verbose container stdout beyond 50 GiB/mo bill $0.50/GiB.',
+          liveStatus: 'WITHIN_FREE_TIER',
+          liveUsageLabel: '50 GiB/project/mo free log ingestion + 30-day retention included',
+          provisionServiceType: null,
+          zeroDollarCli: `gcloud logging buckets describe _Default --location=global --project=${projectId}`,
+        },
+        {
+          id: 'CLOUD_BUILD_ARTIFACT',
+          product: 'Cloud Build (2,500 Min/Mo) & Artifact Registry (0.5 GB)',
+          category: 'DEVOPS',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#cloud-build',
+          freeAllowance:
+            '2,500 Cloud Build minutes/month on e2-standard-2 + 0.5 GB Artifact Registry storage/month + 1 active Cloud Deploy delivery pipeline',
+          gotchaWarning:
+            '⚠️ Container images quickly exceed 0.5 GB in Artifact Registry ($0.10/GB-mo after 0.5 GB). Sweep untagged/orphaned digests regularly!',
+          liveStatus: 'WITHIN_FREE_TIER',
+          liveUsageLabel: `${artifactReposCount} Artifact Registry repo(s) · 0.5 GB storage + 2,500 build-mins/mo free`,
+          provisionServiceType: null,
+          zeroDollarCli: `gcloud artifacts repositories list --project=${projectId}`,
+        },
+        {
+          id: 'PUBSUB_WORKFLOWS_FIRESTORE',
+          product: 'Pub/Sub (10 GiB), Firestore (1 GiB) & Workflows (5k Steps)',
+          category: 'DATA_AI',
+          docAnchor: 'https://docs.cloud.google.com/free/docs/free-cloud-features#pub-sub',
+          freeAllowance:
+            '10 GiB Pub/Sub messages/mo + 1 GiB Firestore storage (50k reads, 20k writes, 20k deletes/day) + 5,000 Workflows internal steps & 2,000 HTTP calls/mo + 100 KMS Autokey versions/mo',
+          gotchaWarning:
+            '⚠️ Free Tier limits never roll over to the next month. KMS 100 free key versions apply specifically to keys created via Cloud KMS Autokey.',
+          liveStatus: 'WITHIN_FREE_TIER',
+          liveUsageLabel: `${pubsubTopicsCount} Pub/Sub topic(s) · ${kmsKeyRingsCount} KMS KeyRing(s)`,
+          provisionServiceType: null,
+          zeroDollarCli: `gcloud pubsub topics create always-free-events --project=${projectId}`,
+        },
+      ];
+
+      // Product-Specific Free Trials (from https://docs.cloud.google.com/free/docs/free-cloud-features#product-free-trials)
+      const productFreeTrials = [
+        {
+          id: 'TRIAL_ALLOYDB',
+          name: 'AlloyDB for PostgreSQL (30-Day Free Trial)',
+          allowance: '8 vCPU basic instance + 1 TB storage capacity for 30 days at $0',
+          url: 'https://console.cloud.google.com/freetrial?redirectPath=alloydb/create-trial-cluster',
+        },
+        {
+          id: 'TRIAL_SPANNER',
+          name: 'Cloud Spanner (90-Day Free Trial Instance)',
+          allowance: '10 GB storage Spanner trial instance for 90 days at $0',
+          url: 'https://console.cloud.google.com/freetrial?redirectPath=%2Fspanner',
+        },
+        {
+          id: 'TRIAL_CLOUD_SQL',
+          name: 'Cloud SQL (30-Day Free Trial Instance)',
+          allowance: '30-day Cloud SQL trial instance at no cost',
+          url: 'https://docs.cloud.google.com/sql/docs/mysql/free-trial-instance',
+        },
+        {
+          id: 'TRIAL_LOOKER',
+          name: 'Looker (30-Day Trial Instance)',
+          allowance: '30-day Looker trial instance with standard features at $0',
+          url: 'https://cloud.google.com/resources/looker-free-trial-offer',
+        },
+      ];
+
+      const withinFreeCount = servicesCatalog.filter(
+        (s) => s.liveStatus === 'WITHIN_FREE_TIER'
+      ).length;
+      const attentionCount = servicesCatalog.length - withinFreeCount;
+
+      return res.json({
+        ok: true,
+        projectId,
+        scannedAt: new Date().toISOString(),
+        docUrl:
+          'https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits',
+        summary: {
+          totalCategories: servicesCatalog.length,
+          withinFreeCount,
+          attentionCount,
+          eligibleE2MicroRunningCount: eligibleE2MicroRunning.length,
+          nonFreeVmsCount: nonFreeVms.length,
+          standardPdGb,
+          nonFreePdGb,
+          freeTierBucketsCount: freeTierBuckets.length,
+          paidRegionOrClassBucketsCount: paidRegionOrClassBuckets.length,
+          enabledSecretVersionsCount,
+        },
+        servicesCatalog,
+        productFreeTrials,
+        paidRegionOrClassBuckets,
+        nonFreeVms,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to audit Always Free tier usage limits.',
+      });
+    }
+  }
+);
+
 // Serve static production frontend (dist/) when deployed on Cloud Run!
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
