@@ -72,6 +72,10 @@ import BillingAccountCreditGuardian, {
   summarizeCreditLedger,
   syncAndAggregateBillingIndexedDb,
 } from './components/BillingAccountCreditGuardian';
+import GdeStreamerPrivacyShield, {
+  loadGdePrivacyConfig,
+  redactTextForGdeMode,
+} from './components/GdeStreamerPrivacyShield';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -702,6 +706,9 @@ function CloudPulseCockpit() {
   const [provisionInitialLocation, setProvisionInitialLocation] = useState(null);
   const [vmRefreshTrigger, setVmRefreshTrigger] = useState(0);
   const [cloudRunModalOpen, setCloudRunModalOpen] = useState(false);
+  const [gdePrivacyConfig, setGdePrivacyConfig] = useState(() =>
+    loadGdePrivacyConfig()
+  );
 
   // Global Cmd+K / Ctrl+K shortcut for 2026 Command & Voice Palette
   useEffect(() => {
@@ -1208,9 +1215,28 @@ function CloudPulseCockpit() {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     REAL PROJECT MODE
                   </span>
+                  {gdePrivacyConfig.enabled && (
+                    <span
+                      title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G) — Emails, Cloud Billing IDs, Project Numbers & Public IPs are masked on screen"
+                      className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/40 px-2 py-0.5 rounded-full"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                      🎥 GDE TUTORIAL SHIELD ON
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono truncate max-w-[230px] sm:max-w-none">
-                  {contextData.account} · {format(new Date(), 'MMM dd, yyyy')}
+                  {gdePrivacyConfig.enabled
+                    ? redactTextForGdeMode(
+                        contextData.account,
+                        gdePrivacyConfig,
+                        {
+                          accountEmail: contextData.account,
+                          projects: contextData.projects,
+                        }
+                      )
+                    : contextData.account}{' '}
+                  · {format(new Date(), 'MMM dd, yyyy')}
                 </p>
               </div>
             </div>
@@ -1284,6 +1310,15 @@ function CloudPulseCockpit() {
                   </span>
                 ) : null}
               </button>
+
+              {/* 🎥 GDE Streamer & Tutorial Privacy Shield */}
+              <GdeStreamerPrivacyShield
+                config={gdePrivacyConfig}
+                onChangeConfig={setGdePrivacyConfig}
+                accountEmail={contextData.account}
+                projects={contextData.projects}
+                selectedProjectId={selectedProjectId}
+              />
 
               {/* ⌘K Global Command & Voice Action Bar */}
               <button
@@ -2010,6 +2045,25 @@ function CloudPulseCockpit() {
         }}
         onOpenKillSwitch={() => setActiveTab('OVERVIEW')}
         onOpenCopilot={() => handleOpenCopilotWithPrompt('')}
+        onToggleGdeMode={() => {
+          setGdePrivacyConfig((prev) => {
+            const next = { ...prev, enabled: !prev.enabled };
+            try {
+              localStorage.setItem(
+                'cloudpulse_gde_tutorial_mode_v1',
+                JSON.stringify(next)
+              );
+            } catch {
+              // ignore
+            }
+            showToast(
+              next.enabled
+                ? '🎥 GDE Tutorial Privacy Shield ENABLED — Emails, Billing IDs & Public IPs are now masked for screen recording!'
+                : 'GDE Tutorial Privacy Shield disabled.'
+            );
+            return next;
+          });
+        }}
         onRefreshAll={() => {
           fetchProjectOverview(selectedProjectId);
           setVmRefreshTrigger((c) => c + 1);

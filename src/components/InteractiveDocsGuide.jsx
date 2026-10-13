@@ -505,6 +505,29 @@ const DOC_SECTIONS = [
       'Prevents losing unused GDE promotional credit balances on expiration cliff dates and prevents surprise credit-card spillover.',
   },
   {
+    id: 'gde-streamer-tutorial-privacy-shield',
+    wave: 'GDE TUTORIAL MODE · SCREEN-SHARE & VIDEO PRIVACY SHIELD',
+    title:
+      'GDE Streamer & Video Tutorial Privacy Shield (1-Click Email, Billing ID, Project # & Public IP Redactor)',
+    badge: 'TOP HEADER GDE MODE + ALT+G',
+    badgeColor: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    icon: ShieldCheck,
+    targetTab: 'OVERVIEW',
+    problemSolved:
+      'When Google Developer Experts (GDEs), educators, and engineers record YouTube tutorials, workshops, or live screen-shares, the UI normally exposes personal email addresses, Cloud Billing Account IDs (01XXXX-XXXXXX-XXXXXX), 12-digit GCP project numbers, and public VM/LB IPv4 addresses—forcing painful video blurring in post-production.',
+    howItWorks: [
+      '1-Click Top-Bar Toggle (`GDE Mode`) & Global `Alt+G` Shortcut: Instantly masks your authenticated email (`gde-instructor@google-cloud-demo.dev`), Cloud Billing Account IDs (`01GDE•-••••••-TUTOR1`), GCP Project Numbers (`#9900••••••01`), and Public IPv4 addresses (`34.•••.•••.88`) across all 20 tabs, modals, and hover tooltips.',
+      'Zero API Breakage (`MutationObserver` + `WeakMap` Cache): Keeps React state (`selectedProjectId`, `account`, `billingAccountName`) 100% intact for live Google Cloud REST API calls while redacting rendered DOM text nodes and tooltips in real time—and restores the exact original values the instant you toggle GDE Mode off.',
+      'Granular Shield Popover (`⚙️`) & Refresh Persistence: Customize your on-screen demo email alias and toggle 6 individual privacy shields (Emails, Billing IDs, Project Numbers, Public IPs, Project IDs, and Dollar Balances), persisted in `localStorage` so page refreshes during a live stream never leak PII.',
+    ],
+    apisUsed: [
+      'Client-side Real-Time DOM & Tooltip Redaction Engine (`GdeStreamerPrivacyShield.jsx`)',
+      'Persisted in `localStorage` (`cloudpulse_gde_tutorial_mode_v1`) with `Alt+G` / `⌘K` toggle',
+    ],
+    billingImpact:
+      '100% client-side zero-latency privacy shield ($0 cost). Eliminates post-production video blurring for GDE tutorials and live streams.',
+  },
+  {
     id: 'live-cloud-billing-pricing-sync',
     wave: 'VARIABLE PRICING ENGINE · ZERO STALE RATES',
     title:

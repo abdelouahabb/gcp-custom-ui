@@ -16,6 +16,7 @@ export default function CommandPaletteModal({
   onOpenCreateModal,
   onOpenKillSwitch,
   onOpenCopilot,
+  onToggleGdeMode,
   onRefreshAll
 }) {
   const [query, setQuery] = useState('');
@@ -629,6 +630,20 @@ export default function CommandPaletteModal({
         run: () => {
           onClose();
           onOpenCreateModal('API');
+        }
+      },
+      {
+        id: 'toggle-gde-tutorial-mode',
+        category: '2026 SRE & Developer Velocity',
+        title: 'Toggle GDE Streamer & Video Tutorial Privacy Shield (Alt+G)',
+        subtitle: 'Masks personal emails, Cloud Billing Account IDs, GCP project numbers & public IPv4s across all 20 tabs for safe screen sharing',
+        keywords: 'gde mode streamer tutorial privacy shield hide email billing account id screen share video recording mask pii',
+        badge: '🎥 GDE SHIELD',
+        badgeColor: 'text-rose-300 bg-rose-500/15 border-rose-500/30',
+        icon: Sparkles,
+        run: () => {
+          onClose();
+          if (onToggleGdeMode) onToggleGdeMode();
         }
       },
       {
