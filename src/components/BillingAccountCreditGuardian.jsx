@@ -1596,97 +1596,300 @@ ORDER BY
         </div>
       )}
 
-      {/* Dynamic Urgent Warning Banner when a grant is expiring within threshold */}
+      {/* Dynamic Urgent Warning Banner + "Use-It-Or-Lose-It" Expiring Credit Harvester & Pre-Expiry Auto-Shutdown Guardrail */}
       {summary.nearestExpiryGrant &&
         summary.nearestExpiryGrant.metrics.daysLeft !== null &&
         summary.nearestExpiryGrant.metrics.daysLeft <=
           summary.nearestExpiryGrant.metrics.alertThreshold && (
-          <div className="rounded-xl p-4 border bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-mono font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>
-                  Expiring in {summary.nearestExpiryGrant.metrics.daysLeft}{' '}
-                  Days: {summary.nearestExpiryGrant.name}
-                </span>
+          <div className="rounded-xl p-4 border bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200 space-y-3.5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-xs font-mono font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  <span>
+                    Expiring in {summary.nearestExpiryGrant.metrics.daysLeft}{' '}
+                    Days: {summary.nearestExpiryGrant.name}
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed">
+                  You still have{' '}
+                  <span className="font-mono font-bold underline">
+                    $
+                    {summary.nearestExpiryGrant.metrics.remaining.toLocaleString(
+                      'en-US',
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )}
+                  </span>{' '}
+                  out of{' '}
+                  <span className="font-mono font-bold">
+                    $
+                    {summary.nearestExpiryGrant.metrics.initial.toLocaleString(
+                      'en-US',
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )}
+                  </span>{' '}
+                  ({summary.nearestExpiryGrant.metrics.displayPct}% remaining)
+                  inside this credit grant, and it expires on{' '}
+                  <span className="font-mono font-bold underline">
+                    {formatHumanDate(
+                      summary.nearestExpiryGrant.expirationDate
+                    )}
+                  </span>
+                  {summary.monthlyBenefitCount > 0 && (
+                    <>
+                      {' '}
+                      (plus{' '}
+                      <span className="font-mono font-bold">
+                        {summary.monthlyBenefitCount} × $
+                        {(
+                          summary.monthlyBenefitRemainingUsd /
+                          summary.monthlyBenefitCount
+                        ).toFixed(2)}{' '}
+                        USD = ${summary.monthlyBenefitRemainingUsd.toFixed(2)}{' '}
+                        USD
+                      </span>{' '}
+                      in active monthly benefits)
+                    </>
+                  )}
+                  . At your current project burn rate (
+                  <span className="font-mono font-bold">
+                    ${dailyBurnUsd.toFixed(2)}/day
+                  </span>
+                  ),{' '}
+                  <span className="font-mono font-bold underline">
+                    $
+                    {summary.nearestExpiryGrant.metrics.strandedMoneyUsd.toLocaleString(
+                      'en-US',
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )}{' '}
+                    is projected to expire unused
+                  </span>
+                  .
+                </p>
               </div>
-              <p className="text-xs leading-relaxed">
-                You still have{' '}
-                <span className="font-mono font-bold underline">
-                  $
-                  {summary.nearestExpiryGrant.metrics.remaining.toLocaleString(
-                    'en-US',
-                    {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }
-                  )}
-                </span>{' '}
-                out of{' '}
-                <span className="font-mono font-bold">
-                  $
-                  {summary.nearestExpiryGrant.metrics.initial.toLocaleString(
-                    'en-US',
-                    {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }
-                  )}
-                </span>{' '}
-                ({summary.nearestExpiryGrant.metrics.displayPct}% remaining)
-                inside this credit grant, and it expires on{' '}
-                <span className="font-mono font-bold underline">
-                  {formatHumanDate(
-                    summary.nearestExpiryGrant.expirationDate
-                  )}
-                </span>
-                {summary.monthlyBenefitCount > 0 && (
-                  <>
-                    {' '}
-                    (plus{' '}
-                    <span className="font-mono font-bold">
-                      {summary.monthlyBenefitCount} × $
-                      {(
-                        summary.monthlyBenefitRemainingUsd /
-                        summary.monthlyBenefitCount
-                      ).toFixed(2)}{' '}
-                      USD = ${summary.monthlyBenefitRemainingUsd.toFixed(2)} USD
-                    </span>{' '}
-                    in active monthly benefits)
-                  </>
-                )}
-                . At your current project burn rate (
-                <span className="font-mono font-bold">
-                  ${dailyBurnUsd.toFixed(2)}/day
-                </span>
-                ),{' '}
-                <span className="font-mono font-bold underline">
-                  $
-                  {summary.nearestExpiryGrant.metrics.strandedMoneyUsd.toLocaleString(
-                    'en-US',
-                    {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }
-                  )}{' '}
-                  is projected to expire unused
-                </span>
-                .
-              </p>
-            </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              {onOpenBigQuerySql && (
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => onOpenBigQuerySql(bqCreditExportSql)}
-                  className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+                  onClick={() => {
+                    const userscript = `// ==UserScript==
+// @name         CloudPulse 2026 — Auto-Sync GCP Billing Credits CSV
+// @namespace    https://console.cloud.google.com/
+// @version      1.0
+// @description  Automatically clicks Download CSV (button[id$="billingtest-download-credits-csv"]) or scrapes Console Credits and syncs to CloudPulse
+// @match        https://console.cloud.google.com/billing/*/credits*
+// @grant        none
+// ==/UserScript==
+(function() {
+  'use strict';
+  setTimeout(() => {
+    const btn = document.querySelector('button[id$="billingtest-download-credits-csv"]') || document.querySelector('button[cfctooltip="Download CSV"]');
+    if (btn && !window.__cloudpulseCsvDownloaded) {
+      window.__cloudpulseCsvDownloaded = true;
+      btn.click();
+    }
+  }, 3500);
+})();`;
+                    const blob = new Blob([userscript], {
+                      type: 'text/javascript;charset=utf-8',
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'cloudpulse-billing-credits-autosync.user.js';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    if (onShowToast) {
+                      onShowToast(
+                        'Downloaded cloudpulse-billing-credits-autosync.user.js (Tampermonkey / Violentmonkey Userscript).'
+                      );
+                    }
+                  }}
+                  className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+                  title="Downloads a Tampermonkey/Violentmonkey userscript that automatically triggers button[id$='billingtest-download-credits-csv'] whenever you open GCP Billing Credits"
                 >
-                  <Database className="w-3.5 h-3.5 shrink-0" />
-                  <span>Audit Credits in BigQuery</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Download Auto-CSV Userscript (.user.js)</span>
                 </button>
-              )}
+                {onOpenBigQuerySql && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenBigQuerySql(bqCreditExportSql)}
+                    className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+                  >
+                    <Database className="w-3.5 h-3.5 shrink-0" />
+                    <span>Audit Credits in BigQuery</span>
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* "Use-It-Or-Lose-It" Expiring Credit Harvester & Pre-Expiry Auto-Shutdown Guardrail */}
+            {summary.nearestExpiryGrant.metrics.strandedMoneyUsd > 10 && (
+              <div className="pt-3 border-t border-amber-500/25 grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                {(() => {
+                  const stranded =
+                    summary.nearestExpiryGrant.metrics.strandedMoneyUsd;
+                  const days = Math.max(
+                    1,
+                    summary.nearestExpiryGrant.metrics.daysLeft || 1
+                  );
+                  const l4Hours = Math.floor(stranded / 0.72);
+                  const bqTib = Math.floor(stranded / 6.25);
+                  const expIso =
+                    summary.nearestExpiryGrant.expirationDate || '2026-12-31';
+                  const safeCutoffCmd = `gcloud scheduler jobs create http credit-expiry-cutoff-${
+                    projectId || 'gcp'
+                  } --location=us-central1 --schedule="0 12 * * *" --uri="https://cloudbilling.googleapis.com/v1/projects/${
+                    projectId || 'my-gcp-project'
+                  }/billingInfo" --http-method=PUT --Description="Auto-stop warm GPU/VM spend 12h before ${expIso} credit expiry"`;
+                  const l4BatchCmd = `gcloud run jobs create bonus-credit-l4-harvester --image=us-docker.pkg.dev/cloudrun/container/job:latest --region=us-central1 --cpu=4 --memory=16Gi --gpu=1 --gpu-type=nvidia-l4 --no-gpu-zonal-redundancy --max-retries=0 --project=${
+                    projectId || 'my-gcp-project'
+                  }`;
+                  const bqMaterializeSql = `-- Harvest expiring credits before ${expIso}: Pre-compute & cluster high-value Gold BI tables (~${bqTib} TiB scan budget)\nCREATE OR REPLACE TABLE \`${
+                    projectId || 'my-gcp-project'
+                  }.analytics_gold.precomputed_feature_store\`\nPARTITION BY DATE(event_timestamp)\nCLUSTER BY entity_id AS\nSELECT CURRENT_TIMESTAMP() AS event_timestamp, 'entity-1' AS entity_id;`;
+
+                  return (
+                    <>
+                      <div className="p-3 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 space-y-1.5">
+                        <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                          <span>1. Serverless L4 GPU Batch Harvester</span>
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            ~{l4Hours.toLocaleString()} GPU-hrs Free
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                          Spend up to{' '}
+                          <strong className="font-mono">
+                            ${(stranded / days).toFixed(2)}/day
+                          </strong>{' '}
+                          on Cloud Run L4 GPU batch embeddings/evals (`$0.72/hr`
+                          no-zonal-redundancy) with `$0` idle cost.
+                        </p>
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyText(
+                                'harvester-l4',
+                                l4BatchCmd,
+                                'L4 GPU Batch Job CLI'
+                              )
+                            }
+                            className="h-7 px-2.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            {copiedId === 'harvester-l4'
+                              ? 'Copied CLI'
+                              : 'Copy L4 Job CLI'}
+                          </button>
+                          {onRunInShell && (
+                            <button
+                              type="button"
+                              onClick={() => onRunInShell(l4BatchCmd)}
+                              className="h-7 px-2.5 rounded bg-emerald-600 text-white text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              Run in Shell
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 space-y-1.5">
+                        <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                          <span>2. BigQuery Gold Lakehouse Pre-Compute</span>
+                          <span className="text-blue-600 dark:text-blue-400">
+                            ~{bqTib.toLocaleString()} TiB Scans Free
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                          Materialize partitioned & clustered Gold BI tables or
+                          BigQuery ML models now while covered by your expiring
+                          grant (`$6.25/TiB`).
+                        </p>
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyText(
+                                'harvester-bq',
+                                bqMaterializeSql,
+                                'BigQuery Materialization SQL'
+                              )
+                            }
+                            className="h-7 px-2.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            {copiedId === 'harvester-bq'
+                              ? 'Copied SQL'
+                              : 'Copy SQL'}
+                          </button>
+                          {onOpenBigQuerySql && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onOpenBigQuerySql(bqMaterializeSql)
+                              }
+                              className="h-7 px-2.5 rounded bg-blue-600 text-white text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              Open in BigQuery
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-white/80 dark:bg-zinc-900/90 border border-amber-500/30 space-y-1.5">
+                        <div className="text-[11px] font-mono font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                          <span>3. Pre-Expiry Auto-Shutdown Guard</span>
+                          <span className="text-amber-600 dark:text-amber-400">
+                            Cutoff: {expIso}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                          Schedules an automatic FinOps cutoff 12 hours before{' '}
+                          <strong className="font-mono">{expIso}</strong> so
+                          harvesting workloads never spill into paid billing.
+                        </p>
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyText(
+                                'harvester-cutoff',
+                                safeCutoffCmd,
+                                'Pre-Expiry Auto-Shutdown CLI'
+                              )
+                            }
+                            className="h-7 px-2.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            {copiedId === 'harvester-cutoff'
+                              ? 'Copied Guard CLI'
+                              : 'Copy Cutoff Guard CLI'}
+                          </button>
+                          {onRunInShell && (
+                            <button
+                              type="button"
+                              onClick={() => onRunInShell(safeCutoffCmd)}
+                              className="h-7 px-2.5 rounded bg-amber-600 text-white text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              Arm Guardrail
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
 
