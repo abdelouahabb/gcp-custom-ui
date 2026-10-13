@@ -243,3 +243,65 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
 - **How it Works**:
   - **Automatic Plaintext Secret & Key Detection**: Inspects `container.env` for plaintext secrets matching sensitive names (`SECRET`, `TOKEN`, `PASSWORD`, `API_KEY`, `PRIVATE_KEY`, `DATABASE_URL`, `REDIS_URL`, `STRIPE_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `JWT`) or secret value signatures (`AIzaSy...`, `sk-...`, `ghp_...`, `postgres://user:pass@...`), while also displaying already-mounted `valueSource.secretKeyRef` secrets (`🔒 N Secret Manager Ref(s)`).
   - **1-Click Secret Creation, IAM Binding & Revision Patch (`POST /api/project/:id/cloudrun/:region/:serviceName/seal-secrets`)**: Clicking **`🔒 1-Click Seal Plaintext Secret(s) in Secret Manager`** (or clicking any individual variable pill) automatically enables `secretmanager.googleapis.com`, creates the secret (`${serviceName}-${envName}`) and uploads a base64-encoded `SecretVersion`, grants `roles/secretmanager.secretAccessor` to the Cloud Run runtime Service Account (`template.serviceAccount` or `${projectNumber}-compute@developer.gserviceaccount.com`), and patches the Cloud Run v2 service (`?updateMask=template.containers`) to replace the plaintext `value` with `valueSource.secretKeyRef: { secret, version: 'latest' }`.
+
+### 31. 🛡️ Pre-Provision Dry-Run IAM (`testIamPermissions`), `actAs` & Egress Preflight Simulator (`ResourceProvisionModal.jsx`)
+- **Where to find it**: Click **`+ Create Resource`** in the top header (or inside any fleet manager) $\rightarrow$ click **`🛡️ Run Pre-Deploy Dry-Run Check`** in the modal footer before deploying.
+- **How it Works**:
+  - **1. Live `cloudresourcemanager:testIamPermissions` Verification**: Tests your exact required IAM permissions (`compute.instances.create`, `run.services.create`, `storage.buckets.create`, `bigquery.datasets.create`, `container.clusters.create`, `sql.instances.create`, `alloydb.clusters.create`) against the active GCP project before a single resource is created.
+  - **2. Runtime Service Account `iam.serviceAccounts.actAs` Check**: Prevents mid-deployment `403 Permission iam.serviceAccounts.actAs denied` failures when attaching Compute Engine or Cloud Run workloads to a Service Account.
+  - **3. Service Usage API Enablement Probe**: Verifies that the target Google Cloud API (`compute.googleapis.com`, `run.googleapis.com`, `sqladmin.googleapis.com`, etc.) is `ENABLED`.
+  - **4. VPC Subnet & Private Google Access Egress Probe**: Verifies that internal-only / zero-external-IP deployments will not hang during container image pulls or package installation.
+
+### 32. 🗝️ Dedicated Secret Manager Lifecycle, Cryptographic Erasure Guide & Live Cloud Run Dependency Healer (`SovereignTimeMachineIamStudio.jsx` Tab 3)
+- **Where to find it**: Top navigation tab **`Sovereign & IAM 🔑` $\rightarrow$ Tab 3 (`🗝️ Secret Manager & KMS Studio`)** (or click any **`🔒 Secret Manager Ref`** badge on a Cloud Run card).
+- **How it Works**:
+  - **⚠️ Crucial Security Truth — Does `Destroy` or `Delete` Revert Cloud Run Back to Plaintext? NO!**: Prominent visual architecture guide + global confirmation gatekeeper explaining that once the Leak Surgeon seals a plaintext env var, Cloud Run only stores a pointer (`valueSource.secretKeyRef`). Destroying a version or deleting a secret permanently shreds the ciphertext in Google Secret Manager (`$0.00/mo`) and **never** puts plaintext back into Cloud Run.
+  - **🚨 Live Cloud Run Broken `secretKeyRef` Dependency Alert & 1-Click Healer**: Cross-references every live Cloud Run service's `valueSource.secretKeyRef` mounts against Secret Manager version states (`ENABLED`, `DISABLED`, `DESTROYED`, `MISSING_SECRET`) and offers **3 instant 1-click heals** (`POST /api/project/:id/sovereign/secrets-kms/action` with `action: 'HEAL_CLOUDRUN_SECRET_REF'`):
+    1. **🔄 1-Click Re-Enable Disabled Version** (`REENABLE_VERSION`)
+    2. **➕ Mint New `latest` Version + Restart Cloud Run** (`MINT_VERSION_AND_RELOAD`)
+    3. **🧹 Unbind Dead `secretKeyRef` from Cloud Run** (`UNBIND_BROKEN_REF`)
+  - **⏱️ `$0.00/mo` Auto-Rotation Schedule & Old-Version Auto-Disable**: Configures `rotation.rotationPeriod` (`30d`, `60d`, `90d`) on Secret Manager and optionally disables superseded versions automatically so every rotated secret costs only `$0.06/mo` (`1 active version`).
+
+### 33. 🎁 Google Cloud "Always Free" Tier Auditor, 1-Click `$0.00` Micro-Charge Killer & Free-Tier Provisioning Guardrail (`BillingAccountCreditGuardian.jsx` & `ResourceProvisionModal.jsx`)
+- **Where to find it**: Top navigation tab **`Billing & APIs 💳`** (**Always Free Tier Auditor** panel) + inside **`+ Create Resource`** (`🎁 Load $0.00 Always-Free Preset`).
+- **How it Works**:
+  - **Live 7-Service Google Cloud "Always Free" Eligibility Matrix (`GET /api/project/:id/billing-guardian/always-free-audit`)**: Audits live Compute Engine (`1x e2-micro` in `us-east1` / `us-west1` / `us-central1` + `30 GB pd-standard`), Cloud Run (`2M reqs/mo` + `180k vCPU-sec` + `360k GiB-sec` with `minInstances=0`), Cloud Storage (`5 GB Standard` in `US-EAST1` / `US-WEST1` / `US-CENTRAL1`), BigQuery (`10 GiB storage` + `1 TiB/mo query`), Secret Manager (`6 active secret versions/mo` + `10k access ops`), Cloud Build (`120 build-min/day`), and Public IPv4 (`1 in-use IP` on free `e2-micro` only).
+  - **⚡ 1-Click Fix to `$0.00/mo` Free Tier (`POST /api/project/:id/billing-guardian/always-free-fix`)**: Executes real live remediations when a "free" resource silently bills you:
+    - **`CLOUD_RUN_ZERO_MIN`** — Patches warm Cloud Run services back to `minInstanceCount=0` + `cpuIdle=true`.
+    - **`SECRET_DISABLE_SUPERSEDED`** — Disables older enabled Secret Manager versions so only the `latest` version per secret counts toward the 6-version free quota.
+    - **`RELEASE_STATIC_IP`** — Releases unattached reserved static IPv4 addresses (`$7.30/mo` waste).
+  - **🎁 1-Click `$0.00/mo` Always-Free Provisioning Presets**: Inside **`+ Create Resource`**, locks Compute Engine VMs (`e2-micro` + `us-east1-b` + `30 GB pd-standard`), Cloud Run (`minInstances=0`, `REQUEST_BASED`), and Cloud Storage (`US-EAST1`, `STANDARD`) to Google Cloud's exact `$0.00/mo` Always Free specification.
+
+### 34. ⏪ Cloud Run Revision Time-Machine, Crash-Loop Autopsy, Visual Config Diff & 1-Click Instant Rollback (`CloudRunFleetManager.jsx`)
+- **Where to find it**: Top navigation tab **`Cloud Run ★`** $\rightarrow$ click **`⏪ Time-Machine & Autopsy`** on any Cloud Run service card.
+- **How it Works**:
+  - **🩺 Automated Crash-Loop & Startup Failure Autopsy (`GET /api/project/:id/cloudrun/:region/:serviceName/revisions/:revisionName/autopsy`)**: Inspects revision conditions (`ContainerMissing`, `HealthCheckContainerError`, `ResourcesAvailable`), container limits, `valueSource.secretKeyRef` mounts, and Cloud Logging entries to diagnose:
+    - **`OOMKilled` (`Exit Code 137`)**: Memory limit exceeded during startup or request spikes $\rightarrow$ **1-Click Upgrade Memory to `1Gi` / `2Gi`**.
+    - **`PORT` Binding Mismatch (`HealthCheckContainerError`)**: Container failed to listen on `$PORT` within the startup timeout $\rightarrow$ **1-Click Patch Container Port & `300s` Timeout**.
+    - **Broken / Destroyed Secret Manager Reference**: Revision references a `DESTROYED` or `DISABLED` Secret Manager version $\rightarrow$ deep-links to the Secret Dependency Healer.
+  - **🔍 Side-by-Side Revision Spec Diff Engine**: Compares any two revisions across Container Image Tag/Digest, `vCPU` & `Memory`, Scaling (`min`/`max`), Concurrency, Timeout, Runtime Service Account, and Added/Modified/Removed Env Vars & Secret Manager refs.
+  - **⏪ 1-Click Instant Traffic Rollback (`POST /api/project/:id/cloudrun/:region/:serviceName/time-machine-restore`)**: Shifts **100% of live production HTTPS traffic** back to any healthy historical revision in under 2 seconds (`INSTANT_TRAFFIC_PIN`), or clones a historical revision's exact spec into a brand-new revision (`CLONE_REVISION_SPEC`) with full confirmation gatekeeper protection.
+
+### 35. 🚇 `127.0.0.1` Zero-Public-IP Developer Port-Forward & IAP Tunnel Manager (`LocalDevTunnelBar.jsx`)
+- **Where to find it**: Embedded directly at the top of **`Compute & Web SSH`** (`VmFleetAndSsh.jsx`), **`Cloud SQL & AlloyDB`** (`CloudSqlAlloyDbStudio.jsx`), and **`Cloud Run ★`** (`CloudRunFleetManager.jsx`).
+- **How it Works**:
+  - **FinOps + Zero-Trust Breakthrough (Saves `$7.30/mo` per Private Resource)**: Lets you delete public IPv4 addresses (`0.0.0.0/0`) on VMs and databases while keeping 1-click localhost access from your laptop or IDE (`VS Code`, `Cursor`, `TablePlus`, `DBeaver`, `pgAdmin`, `curl`).
+  - **4 Tunnel Modes (`POST /api/project/:id/tunnels/start`)**:
+    1. **`VM_IAP`** — Identity-Aware Proxy TCP tunnel (`gcloud compute start-iap-tunnel`) to private Compute Engine VMs (`SSH :22`, `PostgreSQL :5432`, `Redis :6379`, `HTTP :8080`).
+    2. **`CLOUD_SQL_PROXY`** — Cloud SQL Auth Proxy v2 (`--auto-iam-authn`) binding private PostgreSQL (`127.0.0.1:5432`) or MySQL (`127.0.0.1:3306`).
+    3. **`ALLOYDB_PROXY`** — AlloyDB Auth Proxy binding private AlloyDB clusters to `127.0.0.1:5433`.
+    4. **`CLOUD_RUN_PROXY`** — Authenticated Cloud Run developer proxy (`gcloud run services proxy`) that automatically injects `Authorization: Bearer $(gcloud auth print-identity-token)` for `Private (IAM Auth)` Cloud Run services on `127.0.0.1:8080`.
+  - **🩺 Live `127.0.0.1` TCP Socket & HTTP Health Probe (`POST /api/project/:id/tunnels/probe`)**: Measures real millisecond TCP handshake latency on `127.0.0.1:<port>` and generates copy-ready connection strings (`psql`, `mysql`, `ssh`, `curl`).
+
+### 36. 🕵️‍♂️ Live Cloud Audit "Who-Changed-What" Activity Timeline (`LogStreamerAndShell.jsx`) & 🚨 Live GCP API Quota Saturation / HTTP 429 Radar (`EmergencyApiKillSwitch.jsx`)
+- **Where to find it**:
+  - **Cloud Audit "Who-Changed-What" Timeline**: Top navigation tab **`Cloud Shell & Logs`** $\rightarrow$ click **`🕵️‍♂️ Who-Changed-What Audit`** in the top-right mode switcher.
+  - **GCP API Quota Saturation & HTTP 429 Radar**: Top header **`APIs`** button (or **`Billing & APIs 💳`**) $\rightarrow$ inside the API & Quota Manager modal, switch to **`🚨 Quota & 429 Radar`**.
+- **How it Works**:
+  - **🕵️‍♂️ Live Cloud Audit "Who-Changed-What" Activity Timeline (`GET /api/project/:id/audit-timeline`)**:
+    - Queries live Google Cloud Audit Logs (`cloudaudit.googleapis.com/activity` and `cloudaudit.googleapis.com/policy`) and cross-correlates active project mutations across **Cloud Run**, **Compute Engine**, **IAM & Security**, **Secret Manager**, **VPC & Firewall**, and **Data & Storage**.
+    - Displays the **Actor Principal Email** (`user:...` or `serviceAccount:...`), **Caller IP Address**, **User-Agent** (`gcloud CLI`, `Terraform`, `Cloud Console UI`, or `CloudPulse Cockpit`), **Risk Badge** (`CRITICAL`, `HIGH`, `NORMAL`), and an expandable **JSON Payload Diff & 1-Click Verify / Rollback CLI Drawer**.
+  - **🚨 Live GCP API Quota Saturation & HTTP 429 Outage Early-Warning Radar (`GET /api/project/:id/quotas/radar`)**:
+    - Combines live regional Compute Engine quota pools (`compute.googleapis.com/projects/:id/regions`) with live fleet consumption across **CPUs**, **Static External IPs**, **In-Use IPv4 Addresses**, **Persistent Disk SSD GB**, **NVIDIA L4 / A100 / H100 GPUs**, **Cloud Run Regional Instances**, **Secret Manager Active Versions**, and **Vertex AI Gemini RPM**, plus scans Cloud Logging for `RESOURCE_EXHAUSTED` / `RATE_LIMIT_EXCEEDED` (`HTTP 429`) bursts in the last 24 hours.
+    - Clicking **`📋 Copy Quota Increase CLI`** on any saturated metric copies the exact `gcloud alpha services quota update` command and links directly to the Google Cloud Console Quotas page.
+

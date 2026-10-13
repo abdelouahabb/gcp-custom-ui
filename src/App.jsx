@@ -600,6 +600,40 @@ function classifyDestructiveAxiosConfig(config) {
         impactWarning: `AUTHENTICATION LOCKDOWN WARNING: This removes "allUsers" (roles/run.invoker) from Cloud Run service "${serviceName}" (${region}). Unauthenticated browsers, webhooks, or external clients calling this URL without a valid Google IAM Bearer token will immediately receive HTTP 403 Forbidden.`,
       };
     }
+
+    // Cloud Run Revision Time-Machine Rollback / Spec Redeploy
+    const timeMachineMatch = rawUrl.match(
+      /\/cloudrun\/([^/]+)\/([^/]+)\/time-machine-restore(?:\?|$)/
+    );
+    if (timeMachineMatch) {
+      const region = decodeURIComponent(timeMachineMatch[1]);
+      const serviceName = decodeURIComponent(timeMachineMatch[2]);
+      const mode = String(body.mode || body.restoreMode || 'INSTANT_TRAFFIC_PIN').toUpperCase();
+      const targetRev = body.targetRevision || `${serviceName}-prev`;
+      if (mode === 'INSTANT_TRAFFIC_PIN' || mode === 'CLONE_REVISION_SPEC') {
+        const isClone = mode === 'CLONE_REVISION_SPEC';
+        return {
+          title: isClone
+            ? `Clone & Redeploy Spec from "${targetRev}" to "${serviceName}"?`
+            : `Roll Back 100% Production Traffic to "${targetRev}"?`,
+          headerBadge: 'CloudPulse 2026 Cloud Run Revision Time-Machine Gatekeeper',
+          targetLabel: 'Target Cloud Run Service & Historical Revision',
+          resourceKind: 'Cloud Run Revision Traffic / Spec (run.googleapis.com/v2)',
+          targetName: `${serviceName} → ${targetRev}`,
+          location: region,
+          projectId,
+          method: isClone ? 'CLONE SPEC' : '100% ROLLBACK',
+          endpoint: rawUrl,
+          confirmLabel: isClone
+            ? `Confirm & Redeploy Spec from ${targetRev}`
+            : `Confirm & Shift 100% Traffic to ${targetRev}`,
+          cancelToast: `Action cancelled — "${serviceName}" traffic and revision state unchanged.`,
+          impactWarning: isClone
+            ? `This will clone the container image, vCPU/Memory limits, and environment spec from historical revision "${targetRev}" and roll a brand-new revision on Cloud Run service "${serviceName}" (${region}).`
+            : `INSTANT TRAFFIC ROLLBACK: This immediately pins 100% of live HTTPS traffic on Cloud Run service "${serviceName}" (${region}) to revision "${targetRev}", bypassing the latest revision without rebuilding the container image.`,
+        };
+      }
+    }
   }
 
   return null;

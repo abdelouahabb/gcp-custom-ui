@@ -548,6 +548,62 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-cloudrun-time-machine',
+        category: '2026 SRE & Developer Velocity',
+        title: 'Open Cloud Run Revision Time-Machine, Crash-Loop Autopsy & 1-Click Rollback',
+        subtitle: 'Diagnose OOMKilled (Exit 137), PORT mismatch & broken Secret refs, diff revisions side-by-side & shift 100% traffic in 1 click',
+        keywords: 'cloud run revision time machine rollback crash loop autopsy exit 137 oomkilled port diff traffic pin',
+        badge: 'TIME-MACHINE',
+        badgeColor: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
+        icon: Rocket,
+        run: () => {
+          onSelectTab('CLOUD_RUN');
+          onClose();
+        }
+      },
+      {
+        id: 'open-local-iap-tunnel-bridge',
+        category: '2026 SRE & Developer Velocity',
+        title: 'Open 127.0.0.1 Zero-Public-IP Developer Port-Forward & IAP Tunnel Manager',
+        subtitle: 'Bind private VMs, Cloud SQL / AlloyDB & IAM-locked Cloud Run to localhost without paying $7.30/mo for public IPv4',
+        keywords: '127.0.0.1 localhost tunnel iap port forward private vm cloud sql alloydb proxy zero public ip',
+        badge: '127.0.0.1 TUNNEL',
+        badgeColor: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+        icon: Network,
+        run: () => {
+          onSelectTab('VM_SSH');
+          onClose();
+        }
+      },
+      {
+        id: 'open-audit-who-changed-what',
+        category: '2026 SRE & Developer Velocity',
+        title: 'Open Live Cloud Audit "Who-Changed-What" Activity Timeline & Change Inspector',
+        subtitle: 'Chronological feed of IAM, Cloud Run, Secret Manager, VM & Firewall mutations with principal email, caller IP & payload diff',
+        keywords: 'audit timeline who changed what cloudaudit activity log principal email ip mutation history',
+        badge: 'AUDIT TIMELINE',
+        badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
+        icon: Terminal,
+        run: () => {
+          onSelectTab('LOGS_SHELL');
+          onClose();
+        }
+      },
+      {
+        id: 'open-quota-429-radar',
+        category: 'Emergency & Governance',
+        title: 'Open Live GCP API Quota Saturation & HTTP 429 Outage Early-Warning Radar',
+        subtitle: 'Inspect regional CPU, GPU (L4/A100/H100), Static IP, Cloud Run & Vertex AI RPM quota saturation + 1-click quota increase CLI',
+        keywords: 'quota saturation radar http 429 rate limit exhausted gpu cpu static ip vertex ai increase',
+        badge: '429 QUOTA RADAR',
+        badgeColor: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
+        icon: ShieldAlert,
+        run: () => {
+          onClose();
+          onOpenCreateModal('API');
+        }
+      },
+      {
         id: 'manage-apis',
         category: 'Emergency & Governance',
         title: 'Open Emergency Mobile API Kill-Switch & Service Manager',
