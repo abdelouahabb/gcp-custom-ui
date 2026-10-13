@@ -128,11 +128,18 @@ export default function CloudRunFleetManager({
             )
             .catch(() => ({ data: { serviceAccounts: [] } })),
         ]);
-        if (Array.isArray(saRes.data?.serviceAccounts)) {
-          setServiceAccounts(saRes.data.serviceAccounts);
-          setDefaultComputeSaMissing(Boolean(saRes.data.defaultComputeSaMissing));
-          if (saRes.data.recommendedServiceAccount) {
+        const saList =
+          saRes.data?.serviceAccounts || saRes.data?.accounts || [];
+        if (Array.isArray(saList)) {
+          setServiceAccounts(saList);
+          setDefaultComputeSaMissing(Boolean(saRes.data?.defaultComputeSaMissing));
+          if (saRes.data?.recommendedServiceAccount) {
             setSelectedQuickSa((prev) => prev || saRes.data.recommendedServiceAccount);
+          } else if (saList.length > 0) {
+            const firstActive = saList.find((sa) => !sa.disabled) || saList[0];
+            if (firstActive?.email) {
+              setSelectedQuickSa((prev) => prev || firstActive.email);
+            }
           }
         }
         if (Array.isArray(gkeRes.data?.clusters)) {
@@ -169,6 +176,23 @@ export default function CloudRunFleetManager({
     },
     [projectId]
   );
+
+  const refreshServiceAccountsOnly = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const saRes = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/service-accounts?refresh=true`
+      );
+      const saList = saRes.data?.serviceAccounts || saRes.data?.accounts || [];
+      setServiceAccounts(saList);
+      setDefaultComputeSaMissing(Boolean(saRes.data?.defaultComputeSaMissing));
+      if (saRes.data?.recommendedServiceAccount) {
+        setSelectedQuickSa((prev) => prev || saRes.data.recommendedServiceAccount);
+      }
+    } catch {
+      // ignore
+    }
+  }, [projectId]);
 
   useEffect(() => {
     fetchCloudRunFleet(false);
@@ -1448,8 +1472,18 @@ spec:
           </div>
           <select
             value={selectedQuickSa}
+            onMouseDown={() => {
+              if (serviceAccounts.length === 0) {
+                refreshServiceAccountsOnly();
+              }
+            }}
+            onFocus={() => {
+              if (serviceAccounts.length === 0) {
+                refreshServiceAccountsOnly();
+              }
+            }}
             onChange={(e) => setSelectedQuickSa(e.target.value)}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100 max-w-full sm:max-w-md"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100 max-w-full sm:max-w-md cursor-pointer"
           >
             {serviceAccounts.filter((sa) => !sa.disabled).length === 0 && (
               <option value="">
@@ -1462,6 +1496,7 @@ spec:
                 <option key={sa.email} value={sa.email}>
                   {sa.isCustom ? '★ [CUSTOM SA] ' : '[DEFAULT SA] '}
                   {sa.email}
+                  {sa.displayName ? ` — ${sa.displayName}` : ''}
                 </option>
               ))}
           </select>
@@ -2380,6 +2415,16 @@ spec:
                         </label>
                         <select
                           value={form.serviceAccount || ''}
+                          onMouseDown={() => {
+                            if (serviceAccounts.length === 0) {
+                              refreshServiceAccountsOnly();
+                            }
+                          }}
+                          onFocus={() => {
+                            if (serviceAccounts.length === 0) {
+                              refreshServiceAccountsOnly();
+                            }
+                          }}
                           onChange={(e) =>
                             setEditForms((prev) => ({
                               ...prev,
@@ -2389,7 +2434,7 @@ spec:
                               },
                             }))
                           }
-                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 cursor-pointer"
                         >
                           {serviceAccounts.filter((sa) => !sa.disabled).length ===
                             0 && (
@@ -2404,6 +2449,7 @@ spec:
                               <option key={sa.email} value={sa.email}>
                                 {sa.isCustom ? '★ [CUSTOM SA] ' : '[DEFAULT SA] '}
                                 {sa.email}
+                                {sa.displayName ? ` — ${sa.displayName}` : ''}
                               </option>
                             ))}
                         </select>

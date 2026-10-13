@@ -617,6 +617,7 @@ async function discoverProjectServiceAccounts(
   if (!projectId || !token) {
     return {
       projectId,
+      serviceAccounts: [],
       accounts: [],
       recommendedServiceAccount: '',
       defaultComputeSaMissing: false,
@@ -628,30 +629,51 @@ async function discoverProjectServiceAccounts(
   }
 
   try {
-    const iamRes = await gcpFetch(
-      `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
-        projectId
-      )}/serviceAccounts?pageSize=100`,
-      token,
-      projectId,
-      { timeout: 6000 }
-    );
-    const rawList = Array.isArray(iamRes?.accounts) ? iamRes.accounts : [];
+    let rawList = [];
+    try {
+      const iamRes = await gcpFetch(
+        `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/serviceAccounts?pageSize=100`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      );
+      rawList = Array.isArray(iamRes?.accounts) ? iamRes.accounts : [];
+    } catch {
+      // Fallback to gcloud CLI if iam.googleapis.com REST call fails or is not yet enabled
+      try {
+        const { stdout } = await execAsync(
+          `gcloud iam service-accounts list --project=${projectId} --format=json`,
+          { timeout: 7000 }
+        );
+        const parsed = JSON.parse(stdout || '[]');
+        if (Array.isArray(parsed)) rawList = parsed;
+      } catch {
+        rawList = [];
+      }
+    }
+
     const accounts = rawList
       .filter((a) => a && a.email)
       .map((a) => {
         const email = String(a.email).trim();
+        const lower = email.toLowerCase();
         const isDefaultCompute =
           /^\d+-compute@developer\.gserviceaccount\.com$/i.test(email);
         const isDefaultAppEngine =
-          email.toLowerCase() ===
-          `${String(projectId).toLowerCase()}@appspot.gserviceaccount.com`;
+          lower === `${String(projectId).toLowerCase()}@appspot.gserviceaccount.com`;
+        const isGoogleServiceAgent =
+          lower.includes('@gcp-sa-') ||
+          lower.endsWith('@cloudservices.gserviceaccount.com') ||
+          lower.endsWith('@gs-project-accounts.iam.gserviceaccount.com') ||
+          lower.endsWith('@serverless-robot-prod.iam.gserviceaccount.com') ||
+          lower.endsWith('@cloudbuild.gserviceaccount.com');
         const isCustom =
-          email
-            .toLowerCase()
-            .endsWith(`@${String(projectId).toLowerCase()}.iam.gserviceaccount.com`) &&
+          lower.endsWith('.iam.gserviceaccount.com') &&
           !isDefaultCompute &&
-          !isDefaultAppEngine;
+          !isDefaultAppEngine &&
+          !isGoogleServiceAgent;
         return {
           email,
           name: a.name || `projects/${projectId}/serviceAccounts/${email}`,
@@ -691,6 +713,7 @@ async function discoverProjectServiceAccounts(
 
     const result = {
       projectId,
+      serviceAccounts: accounts,
       accounts,
       activeCount: activeAccounts.length,
       customCount: activeAccounts.filter((a) => a.isCustom).length,
@@ -705,6 +728,7 @@ async function discoverProjectServiceAccounts(
   } catch {
     return {
       projectId,
+      serviceAccounts: [],
       accounts: [],
       activeCount: 0,
       customCount: 0,

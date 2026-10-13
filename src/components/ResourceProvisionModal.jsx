@@ -772,7 +772,7 @@ export default function ResourceProvisionModal({
           forceRefresh ? '?refresh=true' : ''
         }`
       );
-      const list = res.data?.serviceAccounts || [];
+      const list = res.data?.serviceAccounts || res.data?.accounts || [];
       setServiceAccounts(list);
       setDefaultComputeSaMissing(Boolean(res.data?.defaultComputeSaMissing));
       if (res.data?.recommendedServiceAccount) {
@@ -782,6 +782,11 @@ export default function ResourceProvisionModal({
           }
           return res.data.recommendedServiceAccount;
         });
+      } else if (list.length > 0) {
+        const firstActive = list.find((sa) => !sa.disabled) || list[0];
+        if (firstActive?.email) {
+          setSelectedServiceAccount((prev) => prev || firstActive.email);
+        }
       }
     } catch {
       // ignore if offline
@@ -2017,12 +2022,24 @@ export default function ResourceProvisionModal({
                 <div className="sm:col-span-2">
                   <select
                     value={selectedServiceAccount}
+                    onMouseDown={() => {
+                      if (serviceAccounts.length === 0 && !loadingSa) {
+                        fetchServiceAccounts(true);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (serviceAccounts.length === 0 && !loadingSa) {
+                        fetchServiceAccounts(true);
+                      }
+                    }}
                     onChange={(e) => setSelectedServiceAccount(e.target.value)}
-                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 shadow-sm"
+                    className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-3 py-2 text-xs font-mono text-zinc-950 dark:text-zinc-100 shadow-sm cursor-pointer"
                   >
                     {serviceAccounts.filter((sa) => !sa.disabled).length === 0 && (
                       <option value="">
-                        Auto-Discover / Auto-Create Custom Service Account ({projectId})
+                        {loadingSa
+                          ? `Loading Service Accounts from ${projectId}...`
+                          : `Auto-Discover / Auto-Create Custom Service Account (${projectId})`}
                       </option>
                     )}
                     {serviceAccounts
