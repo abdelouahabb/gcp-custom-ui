@@ -23,7 +23,7 @@ const __dirname = path.dirname(__filename);
 const execAsync = promisify(exec);
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.BACKEND_PORT || process.env.PORT || 4000);
 
 const ipv4HttpsAgent = new https.Agent({
   family: 4,

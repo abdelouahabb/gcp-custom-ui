@@ -345,18 +345,41 @@ gcloud components install beta
 
 ---
 
-## 🚀 Quick Start (Local Development vs Single-Port Production)
+## 🚀 Quick Start — How to Run Properly (Dev, Custom Ports & Production)
 
+### 1. Install Dependencies & (Optional) Configure `.env`
+All ports, hosts, and proxy targets are environment-driven (see [`.env.example`](.env.example)—nothing is hardcoded):
 ```bash
-# 1. Install dependencies
 npm install
 
-# Option A — Local Development (Hot-Reload Vite + Express Bridge)
-node server/index.js &
-npx vite --port 5173 --host 0.0.0.0
+# Optional: copy .env.example to .env to customize ports/hosts
+cp .env.example .env
+```
 
-# Option B — Single-Port Production Mode (Builds dist/ & serves UI + /api/* on Port 4000)
-npm run prod
+| Environment Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `BACKEND_HOST` | `127.0.0.1` | Host interface where the Express API & WebSocket bridge (`server/index.js`) listens |
+| `BACKEND_PORT` / `PORT` | `4000` | Port for the Express API & WebSocket bridge (`server/index.js`) |
+| `VITE_HOST` | `0.0.0.0` | Host interface for the Vite frontend dev server (`vite.config.js`) |
+| `VITE_PORT` | `5173` | Port for the Vite frontend dev server |
+| `VITE_API_PROXY_TARGET` | `http://${BACKEND_HOST}:${BACKEND_PORT}` | Explicit `/api` proxy target override for Vite |
+| `VITE_AUTO_START_BACKEND` | `true` | When `true`, `npm run dev` automatically starts and watches `server/index.js` if `BACKEND_PORT` is down (preventing `ECONNREFUSED` proxy errors) |
+
+### 2. Three Ways to Run CloudPulse 2026
+
+```bash
+# Option A — 1-Command Auto-Healing Dev Mode (Recommended)
+# Starts Vite AND automatically spawns/watches server/index.js on BACKEND_PORT:
+npm run dev
+
+# Option B — Two-Terminal Explicit Dev Mode (Separate Backend & Frontend Terminals)
+# Terminal 1 (Express API + WebSocket Bridge):
+BACKEND_PORT=4000 npm run server
+# Terminal 2 (Vite Hot-Reload UI pointing to Terminal 1):
+BACKEND_PORT=4000 VITE_PORT=5173 VITE_AUTO_START_BACKEND=false npm run dev
+
+# Option C — Single-Port Production Mode (Builds dist/ & serves UI + /api/* on PORT)
+PORT=4000 npm run prod
 ```
 
 ---
