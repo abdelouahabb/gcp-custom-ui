@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Server,
 } from 'lucide-react';
+import AwsAzureEnvySuiteStudio from './AwsAzureEnvySuiteStudio';
 
 export default function SreWarRoomPerimeterStudio({
   projectId,
@@ -328,6 +329,12 @@ export default function SreWarRoomPerimeterStudio({
                 ? `${pubsubData.summary?.topicsCount || 0} Topics`
                 : 'Event Mesh',
               tip: 'Inspect and provision resilient Pub/Sub topics with mandatory Dead-Letter Queue (-dlq) topics and Exactly-Once delivery',
+            },
+            {
+              id: 'AWS_AZURE_PARITY',
+              label: 'AWS & Azure Parity',
+              badge: '16-in-1 Bridge',
+              tip: 'AWS & Azure Enterprise Parity Suite: Azure Resource Groups + RBAC + 1-Click Teardown, Hard-Spend Fuse, Global HTTPS LB, CloudFormation/ARM Drift, SSM Fleet, GuardDuty/Sentinel SOAR & 16 Multi-Cloud Bridges',
             },
           ].map((tab) => {
             const active = activeSubTab === tab.id;
@@ -954,6 +961,14 @@ export default function SreWarRoomPerimeterStudio({
             )}
           </div>
         </div>
+      )}
+
+      {activeSubTab === 'AWS_AZURE_PARITY' && (
+        <AwsAzureEnvySuiteStudio
+          projectId={projectId}
+          initialTab="RESOURCE_GROUPS"
+          onShowToast={onTriggerToast}
+        />
       )}
     </div>
   );

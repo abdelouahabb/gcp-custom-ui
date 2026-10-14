@@ -39,10 +39,13 @@ import {
 
 export default function AwsAzureEnvySuiteStudio({
   projectId,
+  initialTab = 'RESOURCE_GROUPS',
   onShowToast,
   onShowError,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('RESOURCE_GROUPS');
+  const [activeSubTab, setActiveSubTab] = useState(
+    initialTab || 'RESOURCE_GROUPS'
+  );
   const [loading, setLoading] = useState(false);
   const [actionBusy, setActionBusy] = useState('');
   const [data, setData] = useState(null);

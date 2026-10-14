@@ -1116,14 +1116,6 @@ function CloudPulseCockpit() {
       tip: 'Interactive 40-Region & 121-Zone Global Subsea Cable, Carbon Intensity & Chaos Failover Map with click-to-deploy',
       icon: Globe,
     },
-    {
-      id: 'AWS_AZURE_PARITY',
-      group: 'COMMAND',
-      label: 'AWS/Azure Parity',
-      isStar: true,
-      tip: 'AWS & Azure Dream Features for GCP: Azure-Style Resource Groups & 1-Click Teardown, Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator & Switch Role, 1-Click SAS/Presigned URLs, and 1-Screen Global HTTPS Load Balancer Wizard',
-      icon: Layers,
-    },
 
     // II. Core Infrastructure, Compute & Serverless
     {
@@ -1715,6 +1707,7 @@ function CloudPulseCockpit() {
                           items: [
                             { id: 'SOVEREIGN_STUDIO', label: 'IAM', meta: 'SA Key Kill-Switch, JIT & Drift' },
                             { id: 'SRE_WAR_ROOM', label: 'SRE War-room', meta: '14.4x SLO Burn & VPC-SC Perimeter' },
+                            { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: '16-in-1 Multi-Cloud Bridge & OAuth' },
                           ],
                         },
                         {
