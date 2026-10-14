@@ -86,7 +86,12 @@ import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
  */
 function classifyDestructiveAxiosConfig(config) {
   if (!config || !config.url) return null;
-  if (config.headers && config.headers['x-confirmed-delete'] === 'true') {
+  if (
+    config.headers &&
+    (config.headers['x-confirmed-delete'] === 'true' ||
+      (typeof config.headers.get === 'function' &&
+        config.headers.get('x-confirmed-delete') === 'true'))
+  ) {
     return null;
   }
 
@@ -101,6 +106,9 @@ function classifyDestructiveAxiosConfig(config) {
     }
   }
   body = body || {};
+  if (body.confirmedByModal === true) {
+    return null;
+  }
   const params = config.params || {};
 
   // Decode project from URL if present
@@ -526,6 +534,43 @@ function classifyDestructiveAxiosConfig(config) {
               : `This will scale warm Cloud Run services to minInstances=0 and cap maxInstances=3 across "${projectId}".`,
         };
       }
+      if (act === 'DISABLE_PARITY_FEATURE_MODULE') {
+        const modId = body.moduleId || 'Multi-Cloud Parity Module';
+        return {
+          title: `Disable & Teardown Feature "${modId}" ($0.00/hr)?`,
+          resourceKind: 'Multi-Cloud Parity Bridge Resources',
+          targetName: `${modId} (${body.alsoDisableGcpApis ? 'Feature Resources + Underlying GCP APIs' : 'Feature Resources Only · Keep GCP APIs Enabled'})`,
+          location: 'Global Project Bridge',
+          projectId,
+          method: 'DISABLE & TEARDOWN FEATURE',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm Disable & Teardown ($0.00/hr)',
+          cancelToast: `Teardown of "${modId}" cancelled.`,
+          impactWarning: `This will tear down all active resources configured under "${modId}" on project "${projectId}" so hourly cost drops to $0.00/hr.`,
+        };
+      }
+      if (
+        act === 'DELETE_PARITY_MODULE_ITEM' ||
+        act === 'DELETE_OAUTH_BRAND_PROFILE' ||
+        act === 'REVOKE_RAM_LIGHTHOUSE_SHARE' ||
+        act === 'DELETE_EVENT_PIPE'
+      ) {
+        const itemTarget =
+          body.itemId || body.brandId || body.shareId || body.pipeId || 'Resource';
+        const modId = body.moduleId || act;
+        return {
+          title: `Disable & Remove Resource "${itemTarget}"?`,
+          resourceKind: `Multi-Cloud Parity Resource (${modId})`,
+          targetName: itemTarget,
+          location: projectId,
+          projectId,
+          method: 'DELETE RESOURCE',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm Delete "${itemTarget}" ($0.00/hr)`,
+          cancelToast: `Deletion of "${itemTarget}" cancelled.`,
+          impactWarning: `This will immediately remove "${itemTarget}" from "${modId}" on project "${projectId}" ($0.00/hr) while keeping shared project GCP APIs enabled.`,
+        };
+      }
     }
 
     // Emergency Billing Kill-Switch (Unlink Cloud Billing Account)
@@ -808,10 +853,14 @@ function CloudPulseCockpit() {
               id: `${Date.now()}-${Math.random()}`,
               descriptor,
               onConfirm: () => {
-                config.headers = {
-                  ...(config.headers || {}),
-                  'x-confirmed-delete': 'true',
-                };
+                if (config.headers && typeof config.headers.set === 'function') {
+                  config.headers.set('x-confirmed-delete', 'true');
+                } else {
+                  config.headers = {
+                    ...(config.headers || {}),
+                    'x-confirmed-delete': 'true',
+                  };
+                }
                 resolve(config);
               },
               onCancel: () => {
@@ -866,10 +915,30 @@ function CloudPulseCockpit() {
       .get('/api/context')
       .then((res) => {
         if (res.data.authenticated) {
+          if (
+            res.data.accessToken &&
+            !axios.defaults.headers.common['x-gcp-access-token']
+          ) {
+            axios.defaults.headers.common['x-gcp-access-token'] =
+              res.data.accessToken;
+          }
           setContextData(res.data);
           const storedProj = sessionStorage.getItem('cloudpulse_project');
+          const explicitProjChoice =
+            sessionStorage.getItem('cloudpulse_project_explicit') === 'true';
+          const validProjectIds = new Set(
+            (res.data.projects || []).map((p) => p.projectId)
+          );
+          const canUseStored =
+            Boolean(storedProj) &&
+            (validProjectIds.size === 0 || validProjectIds.has(storedProj)) &&
+            (explicitProjChoice ||
+              !res.data.defaultProject ||
+              storedProj === res.data.defaultProject ||
+              storedProj !== res.data.projects?.[0]?.projectId);
+
           const projToUse =
-            storedProj ||
+            (canUseStored ? storedProj : '') ||
             res.data.defaultProject ||
             res.data.projects?.[0]?.projectId ||
             '';
@@ -891,15 +960,45 @@ function CloudPulseCockpit() {
     if (!projId) return;
     setLoadingOverview(true);
     setErrorBanner(null);
+    const requestUrl = `/api/project/${encodeURIComponent(projId)}/overview`;
     try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projId)}/overview`
-      );
+      let res;
+      try {
+        res = await axios.get(requestUrl, { timeout: 15000 });
+      } catch (firstErr) {
+        if (firstErr.response?.status === 401) throw firstErr;
+        await new Promise((r) => setTimeout(r, 650));
+        res = await axios.get(requestUrl, { timeout: 15000 });
+      }
       setOverview(res.data);
     } catch (err) {
       if (err.response?.status === 401) {
         setIsAuthenticated(false);
       } else {
+        setOverview((prev) =>
+          prev || {
+            projectId: projId,
+            fetchLatencyMs: 0,
+            summary: {
+              totalResources: 0,
+              totalVms: 0,
+              runningVms: 0,
+              cloudRunServices: 0,
+              storageBuckets: 0,
+              bigqueryDatasets: 0,
+              gkeClusters: 0,
+              vpcNetworks: 0,
+              firewallRules: 0,
+              enabledApisCount: 0,
+            },
+            resources: [],
+            vpcs: [],
+            firewalls: [],
+            cloudRunServices: [],
+            enabledApis: [],
+            logs: [],
+          }
+        );
         setErrorBanner(
           err.response?.data?.error ||
             `Failed to fetch live telemetry for project ${projId}`
@@ -956,6 +1055,7 @@ function CloudPulseCockpit() {
     sessionStorage.removeItem('cloudpulse_access_token');
     sessionStorage.removeItem('cloudpulse_account');
     sessionStorage.removeItem('cloudpulse_project');
+    sessionStorage.removeItem('cloudpulse_project_explicit');
     delete axios.defaults.headers.common['x-gcp-access-token'];
     delete axios.defaults.headers.common['x-gcp-account'];
     try {
@@ -1283,13 +1383,14 @@ function CloudPulseCockpit() {
 
         {/* Header Row */}
         <header className="relative z-30 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#202124]/90 backdrop-blur-md px-4 sm:px-6 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center shadow-sm">
+          {/* Top Row: CloudPulse 2026 Brand (Left) + Primary Provision Resource CTA (Top Right) */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center shadow-sm shrink-0">
                 <Cloud className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50">
                     CloudPulse <span className="text-zinc-500 dark:text-zinc-400">2026</span>
                   </h1>
@@ -1299,7 +1400,7 @@ function CloudPulseCockpit() {
                   </span>
                   {gdePrivacyConfig.enabled && (
                     <span
-                      title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G) — Emails, Cloud Billing IDs, Project Numbers & Public IPs are masked on screen"
+                      title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G) — Emails, Cloud Billing IDs, Project Numbers, Public IPs & Credit Balances are masked on screen"
                       className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/40 px-2 py-0.5 rounded-full"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
@@ -1326,6 +1427,22 @@ function CloudPulseCockpit() {
               </div>
             </div>
 
+            {/* Primary CTA Pinned to Top-Right on the Exact Same Row as CloudPulse 2026 */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleOpenProvision('GCS_BUCKET')}
+                title="Provision a live GCP resource (Cloud Storage Bucket, Cloud Run Service, Compute Engine VM, VPC Network, Firewall Rule, BigQuery Dataset, or Enable API)"
+                className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-md cursor-pointer whitespace-nowrap"
+              >
+                <PlusCircle className="w-4 h-4 shrink-0" />
+                <span>Provision Resource</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Secondary Telemetry & Cockpit Controls Bar */}
+          <div className="flex items-center justify-between gap-2 flex-wrap mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
             <div className="flex items-center gap-2 flex-wrap">
               {/* Live Burn-Rate Radar Ticker Pill */}
               <button
@@ -1369,29 +1486,33 @@ function CloudPulseCockpit() {
                   <CreditCard className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 )}
                 <span>
-                  {gdeSummary.hasImportedCredits
-                    ? `Remaining Bonus: $${gdeSummary.totalRemainingUsd.toLocaleString(
-                        'en-US',
-                        {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }
-                      )}`
-                    : 'Remaining Bonus: $0.00 (Upload CSV)'}
+                  {gdePrivacyConfig.enabled &&
+                  gdePrivacyConfig.hideCreditBalances !== false
+                    ? 'Remaining Bonus: $•••.••'
+                    : gdeSummary.hasImportedCredits
+                      ? `Remaining Bonus: $${gdeSummary.totalRemainingUsd.toLocaleString(
+                          'en-US',
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}`
+                      : 'Remaining Bonus: $0.00 (Upload CSV)'}
                 </span>
                 {gdeSummary.hasImportedCredits &&
                 gdeSummary.expiringSoonRemainingUsd > 0 &&
                 gdeSummary.nearestExpiryDays !== null ? (
                   <span className="hidden sm:inline text-[10px] opacity-90">
-                    · $
-                    {gdeSummary.expiringSoonRemainingUsd.toLocaleString(
-                      'en-US',
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }
-                    )}{' '}
-                    expiring in {gdeSummary.nearestExpiryDays}d
+                    {gdePrivacyConfig.enabled &&
+                    gdePrivacyConfig.hideCreditBalances !== false
+                      ? `· $•••.•• expiring in ${gdeSummary.nearestExpiryDays}d`
+                      : `· $${gdeSummary.expiringSoonRemainingUsd.toLocaleString(
+                          'en-US',
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )} expiring in ${gdeSummary.nearestExpiryDays}d`}
                   </span>
                 ) : null}
               </button>
@@ -1415,7 +1536,9 @@ function CloudPulseCockpit() {
                 <Command className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 <span>⌘K Ops</span>
               </button>
+            </div>
 
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Live GCP Project Dropdown */}
               <div className="relative z-40">
                 <button
@@ -1439,6 +1562,10 @@ function CloudPulseCockpit() {
                         key={proj.projectId}
                         type="button"
                         onClick={() => {
+                          sessionStorage.setItem(
+                            'cloudpulse_project_explicit',
+                            'true'
+                          );
                           setSelectedProjectId(proj.projectId);
                           setProjectMenuOpen(false);
                           showToast(
@@ -1466,17 +1593,6 @@ function CloudPulseCockpit() {
                   </div>
                 )}
               </div>
-
-              {/* + Provision Resource Button */}
-              <button
-                type="button"
-                onClick={() => handleOpenProvision('GCS_BUCKET')}
-                title="Provision a live GCP resource (Cloud Storage Bucket, Cloud Run Service, Compute Engine VM, VPC Network, Firewall Rule, BigQuery Dataset, or Enable API)"
-                className="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>Provision Resource</span>
-              </button>
 
               {/* 1-Tap Project Health, Drift & FinOps Scanner Button */}
               <button
@@ -1594,16 +1710,60 @@ function CloudPulseCockpit() {
           )}
 
           {errorBanner && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-800 dark:text-red-300 rounded-lg p-4 flex items-center justify-between gap-3 text-xs">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-800 dark:text-red-300 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
               <span>{errorBanner}</span>
-              <button
-                type="button"
-                onClick={() => fetchProjectOverview(selectedProjectId)}
-                title="Retry fetching live GCP telemetry"
-                className="underline font-semibold"
-              >
-                Retry
-              </button>
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const primaryProj =
+                    (contextData?.defaultProject &&
+                    contextData.defaultProject !== selectedProjectId
+                      ? contextData.defaultProject
+                      : '') ||
+                    contextData?.projects?.find(
+                      (p) => p.projectId !== selectedProjectId
+                    )?.projectId ||
+                    '';
+                  if (primaryProj && primaryProj !== selectedProjectId) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sessionStorage.setItem(
+                            'cloudpulse_project_explicit',
+                            'true'
+                          );
+                          setErrorBanner(null);
+                          setSelectedProjectId(primaryProj);
+                          showToast(
+                            `Switched active project to ${primaryProj}`
+                          );
+                        }}
+                        title={`Switch active GCP project to ${primaryProj}`}
+                        className="px-2.5 py-1 rounded bg-red-800 text-white dark:bg-red-200 dark:text-red-950 font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                      >
+                        Switch to {primaryProj}
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
+                <button
+                  type="button"
+                  onClick={() => fetchProjectOverview(selectedProjectId)}
+                  title="Retry fetching live GCP telemetry"
+                  className="underline font-semibold cursor-pointer"
+                >
+                  Retry
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setErrorBanner(null)}
+                  title="Dismiss banner"
+                  className="opacity-75 hover:opacity-100 cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           )}
 
@@ -1998,6 +2158,7 @@ function CloudPulseCockpit() {
                   <BillingAccountCreditGuardian
                     projectId={selectedProjectId}
                     liveBurn={liveBurn}
+                    gdePrivacyConfig={gdePrivacyConfig}
                     onOpenBigQuerySql={(sqlText) => {
                       if (sqlText) setBigQueryInitialSql(sqlText);
                       setActiveTab('BIGQUERY_STUDIO');

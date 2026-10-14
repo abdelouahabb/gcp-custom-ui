@@ -937,48 +937,73 @@ const DOC_SECTIONS = [
     id: 'gde-streamer-privacy-shield',
     wave: 'WAVE 12 STREAMER & INSTRUCTOR PRIVACY',
     title:
-      '38. GDE Streamer & Video Tutorial Privacy Shield (Alt+G Live DOM Redactor)',
+      '38. GDE Streamer & Video Tutorial Privacy Shield (Alt+G Live DOM & Credit Balance Redactor)',
     badge: 'Top Header -> GDE Mode (Alt+G)',
     badgeColor:
       'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
     icon: ShieldCheck,
     targetTab: 'CLOUD_RUN',
     problemSolved:
-      'When Google Developer Experts (GDEs), DevRel engineers, and instructors record video tutorials or share screens live, Google Cloud Console exposes sensitive identifiers—personal/IAM emails, Cloud Billing Account IDs (01XXXX-XXXXXX-XXXXXX), 12-digit Project Numbers, and Public IPv4 addresses.',
+      'When Google Developer Experts (GDEs), DevRel engineers, and instructors record video tutorials or share screens live, Google Cloud Console exposes sensitive identifiers—personal/IAM emails, Cloud Billing Account IDs (01XXXX-XXXXXX-XXXXXX), 12-digit Project Numbers, Public IPv4 addresses, and Remaining Promotional Credit / Bonus dollar balances.',
     howItWorks: [
       '1-Click Toggle (Alt+G or Top Header "GDE Mode" Button): Activates real-time DOM text-node and attribute redaction across all 20 tabs, modals, and tooltips using a WeakMap original-text cache.',
+      'Automatic Remaining Credit & Bonus Balance Masking (Default ON): Immediately masks the top header Promotional Credits pill ("Credits: $•••.••"), hover tooltips ("$•••.•• / $•••.••"), and all 15+ credit KPI cards, progress bars, tables, and inputs inside Billing & Credit Guardian.',
       'Granular Privacy Filters: Customize masking for Emails, Cloud Billing Account IDs, 12-digit Project Numbers, Public IPv4 addresses, Project IDs, and Dollar Balances without breaking live GCP API calls.',
     ],
     apisUsed: [
-      'Client-Side MutationObserver + WeakMap reversible text/attribute redaction engine (Zero API latency)',
+      'Client-Side MutationObserver + WeakMap reversible text/attribute redaction engine + redactTextForGdeMode() (Zero API latency)',
     ],
     billingImpact:
-      'Zero billing cost ($0.00/mo); prevents accidental credential or billing account ID exposure on YouTube, Twitch, and conference stages.',
+      'Zero billing cost ($0.00/mo); prevents accidental credential, credit balance, or billing account ID exposure on YouTube, Twitch, and conference stages.',
   },
   {
     id: 'aws-azure-enterprise-parity-super-studio',
     wave: 'WAVE 12 AWS & AZURE PARITY SUITE',
     title:
-      '39–46. 20-in-1 AWS & Azure Moonshot Parity Super-Studio for Google Cloud',
-    badge: 'Top Header -> AWS & Azure Parity',
+      '39. 20-in-1 AWS & Azure Moonshot Parity Super-Studio (Uniform 4-Column Bento Grid & 2-Mode Teardown)',
+    badge: 'Top Header -> AWS & Azure Parity ★',
     badgeColor:
       'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30',
     icon: Layers,
     targetTab: 'AWS_AZURE_PARITY',
     problemSolved:
-      'Engineers migrating from AWS or Azure miss 20 iconic enterprise workflows that Google Cloud Console either scatters across 6+ pages or lacks natively: Azure Resource Groups (with live/accrued spend, RG-scoped RBAC & 1-click teardown), Automated Spend Stop-Loss Fuses, AWS IAM Policy Simulator & Switch-Role, 1-Click S3/SAS Presigned URLs, 1-Screen Global HTTPS LB + WAF, CloudFormation/ARM Stack Drift & Rollback, Cost Explorer + CUD Savings Plans, AWS SSM Fleet Run Command, EventBridge Pipes with DLQ, Key Vault Auto-Rotation + Cross-Env Sync, Trusted Advisor 5-Pillar Scorer, Transit Gateway / Virtual WAN VPC Mesh, ECS/ACA Multi-Container Sidecar Compose, GuardDuty / Sentinel SOAR Playbooks, Step Functions / Durable Saga Studio, Multi-Brand OAuth Sign-In Studio in a single project, Route 53 Traffic Flow / Azure Front Door DNS Routing, CloudTrail Lake / Activity Log SQL Detective, AWS RAM / Azure Lighthouse Cross-Project Sharing, and Bedrock Guardrails / Azure AI Foundry Multi-Model Gateway.',
+      'Engineers migrating from AWS or Azure miss 20 iconic enterprise workflows that Google Cloud Console either scatters across 6+ pages or lacks natively—and need a clean, uniform navigation grid plus a safe way to tear down a single feature without accidentally disabling shared Google Cloud APIs (like run.googleapis.com or workflows.googleapis.com) used by the rest of the project.',
     howItWorks: [
-      'Modules 1-5 & 16 (Wave 1 Foundation + Azure Architect Wishlist): (1) Azure-Style Resource Groups (labels.resource_group) with live $/hr + $/mo + accrued session spend, RG-scoped RBAC role assignment (Reader/Contributor/Owner + GCP IAM CEL Condition), 1-click group hibernate & cascade teardown, (2) AWS Budgets Actions / Azure Auto-Shutdown Hard-Spend Stop-Loss Fuse, (3) AWS IAM Policy Simulator & Switch-Role Preview with 1-click least-privilege role grant, (4) Azure SAS / S3 1-Click Presigned URLs & Browser Upload Studio, (5) 1-Screen Global HTTPS Load Balancer + Managed SSL + Cloud Armor WAF Wizard, and (16) Multi-Brand OAuth Sign-In Studio (multiple distinct OAuth brandings inside 1 "prod" GCP project via Identity Platform Multi-Tenancy + Custom Auth Domains).',
-      'Modules 6-10 (Wave 2 Enterprise Scale): (6) CloudFormation / Azure ARM Stack Snapshot, Live Console Drift Detector, 1-Click Rollback & Terraform HCL / Pulumi TS Exporter, (7) AWS Cost Explorer / Azure Cost Analysis 14-Day Daily Burn Attribution & 1-Click Cloud Billing CUD / Spot Arbitrage Plans, (8) AWS Systems Manager (SSM) Fleet Run Command & Zero-SSH Patch Manager across VMs and Cloud Run, (9) AWS EventBridge Pipes / Azure Logic Apps Visual Event Router with automatic Dead-Letter Queue (-dlq) Pub/Sub provisioning, and (10) AWS Secrets Manager / Azure Key Vault 1-Click Secret Rotation & Dev/Staging/Prod Cross-Env Sync.',
-      'Modules 11-15 (Wave 3 Hyper-Scale & Architecture Parity): (11) AWS Trusted Advisor / Azure Advisor 5-Pillar Well-Architected Live Scorer & 1-Click Auto-Fixer, (12) AWS Transit Gateway / Azure Virtual WAN Hub-and-Spoke VPC Peering & Cloud NAT Mesh Builder, (13) AWS ECS Task Definitions / Azure Container Apps Multi-Container Gen2 Sidecar & Compose Deployer, (14) AWS GuardDuty / Microsoft Sentinel Live Threat Hunting & 1-Click SOAR Quarantine Playbooks, and (15) AWS Step Functions / Azure Durable Functions Visual Saga State-Machine & Cloud Workflows YAML Compiler.',
-      'Modules 17-20 (Wave 4 Moonshot Parity): (17) AWS Route 53 Traffic Flow / Azure Front Door Weighted, Geo-Proximity & Health-Check Failover DNS Studio, (18) AWS CloudTrail Lake & Azure Activity Log Who-Did-What SQL Time-Detective with Undo CLI generator, (19) AWS RAM & Azure Lighthouse Cross-Project Resource Sharing Hub (Shared VPC Subnets, BigQuery Analytics Hub & KMS Delegation), and (20) AWS Bedrock Guardrails & Azure AI Foundry Multi-Model Vertex AI Router (Gemini 2.5 Pro -> Flash -> Claude 3.7 Sonnet), Cloud DLP PII Redaction Shield & Per-Team Daily Token Spend Fuse.',
+      'Uniform 4-Column Bento Grid (5 Rows × 4 Columns) & Two-Mode Safe Feature Teardown: Every feature is aligned in an equal-width/height (h-11) card with 01–20 badges and a live Cost & API Control Bar. Clicking "Disable & Teardown Feature" opens a mandatory Two-Mode Confirmation Modal: Mode 1 (FEATURE_ONLY — resets only that feature while keeping shared project APIs enabled) vs Mode 2 (PURGE_AND_DISABLE_APIS — purges feature state AND runs gcloud services disable --force on the underlying GCP APIs).',
+      'Modules 01-05 & 16 (Wave 1 Foundation + Azure Architect Wishlist): (01) Azure-Style Resource Groups (labels.resource_group) with live $/hr + $/mo + accrued session spend, RG-scoped RBAC role assignment (Reader/Contributor/Owner + GCP IAM CEL Condition), 1-click group hibernate & cascade teardown, (02) Hard-Spend Stop-Loss Fuse, (03) AWS IAM Policy Simulator & Switch-Role Preview, (04) Azure SAS / S3 1-Click Presigned URLs & Browser Upload Studio, (05) 1-Screen Global HTTPS Load Balancer + WAF Wizard, and (16) Multi-Brand OAuth Sign-In Studio (multiple distinct OAuth brandings inside 1 "prod" GCP project).',
+      'Modules 06-10 (Wave 2 Enterprise Scale): (06) CloudFormation / Azure ARM Stack Snapshot, Drift Detector, Rollback & Terraform/Pulumi Exporter, (07) Cost Explorer 14-Day Burn Attribution & CUD Savings Plans, (08) AWS SSM Fleet Run Command & Zero-SSH Patch Manager, (09) EventBridge Pipes / Logic Apps Visual Event Router with automatic -dlq Pub/Sub provisioning, and (10) Key Vault 1-Click Secret Rotation & Dev/Staging/Prod Sync.',
+      'Modules 11-15 & 17-20 (Wave 3 & 4 Hyper-Scale + Moonshot Parity): (11) Trusted Advisor 5-Pillar Scorer & Auto-Fixer, (12) Transit Gateway / Virtual WAN VPC Mesh, (13) ECS/ACA Multi-Container Gen2 Sidecar Compose, (14) GuardDuty / Sentinel SOAR Playbooks, (15) Step Functions / Durable Saga Studio, (17) Route 53 / Front Door DNS Routing, (18) CloudTrail / Activity Log SQL Time-Detective, (19) AWS RAM / Azure Lighthouse Cross-Project Sharing, and (20) Bedrock Guardrails / Azure AI Foundry Multi-Model Vertex AI Router.',
     ],
     apisUsed: [
       'GET /api/project/:id/aws-azure-parity/overview (12-way parallel discovery with 3.5s fast timeout guard)',
-      'POST /api/project/:id/aws-azure-parity/action (UPSERT_RESOURCE_GROUP, ASSIGN_RG_IAM_ROLE, HIBERNATE_RESOURCE_GROUP, DELETE_RESOURCE_GROUP, SAVE_SPEND_FUSE_CONFIG, EXECUTE_SPEND_FUSE, SIMULATE_IAM_POLICY, GRANT_SIMULATOR_ROLE, UPLOAD_BUCKET_OBJECT, GENERATE_PRESIGNED_URL, PROVISION_GLOBAL_LB_STACK, SNAPSHOT_ARM_STACK, DETECT_STACK_DRIFT, ROLLBACK_ARM_STACK, APPLY_FINOPS_ARBITRAGE, EXECUTE_SSM_FLEET_COMMAND, PROVISION_EVENT_PIPE, TEST_EVENT_PIPE, ROTATE_SECRET_NOW, SYNC_SECRET_ACROSS_ENV, REMEDIATE_ADVISOR_FINDING, PROVISION_TRANSIT_HUB_MESH, DEPLOY_MULTICONTAINER_APP, EXECUTE_SOAR_PLAYBOOK, DEPLOY_STEP_FUNCTION_WORKFLOW, CREATE_OAUTH_BRAND_PROFILE, DELETE_OAUTH_BRAND_PROFILE, PROVISION_DNS_ROUTING_POLICY, SIMULATE_DNS_FAILOVER, QUERY_CLOUDTRAIL_AUDIT_LAKE, CREATE_RAM_LIGHTHOUSE_SHARE, REVOKE_RAM_LIGHTHOUSE_SHARE, PROVISION_AI_GATEWAY_ROUTE, TEST_AI_GATEWAY_PROMPT)',
+      'POST /api/project/:id/aws-azure-parity/action (ENABLE_PARITY_FEATURE_APIS, TEARDOWN_PARITY_FEATURE [FEATURE_ONLY | PURGE_AND_DISABLE_APIS], plus all 20 AWS/Azure bridge actions)',
     ],
     billingImpact:
-      'Prevents runaway cloud bills via automated Hard-Spend Stop-Loss Fuses and AI Gateway Daily Token Caps, enforces Well-Architected cost/security guardrails, and unlocks up to 55%-68% compute savings via 1-Click CUD and Scale-to-Zero arbitrage.',
+      'Prevents runaway cloud bills via automated Hard-Spend Stop-Loss Fuses, protects shared project APIs during feature teardown, and unlocks up to 55%-68% compute savings via 1-Click CUD and Scale-to-Zero arbitrage.',
+  },
+  {
+    id: 'alibaba-huawei-hyperscale-parity-super-studio',
+    wave: 'WAVE 12 ALIBABA & HUAWEI PARITY SUITE',
+    title:
+      '40. 8-in-1 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity Super-Studio',
+    badge: 'Top Header -> Alibaba & Huawei 🐉',
+    badgeColor:
+      'bg-orange-500/15 text-orange-600 dark:text-orange-300 border-orange-500/30',
+    icon: Rocket,
+    targetTab: 'ALIBABA_HUAWEI_PARITY',
+    problemSolved:
+      'Alibaba Cloud (Aliyun) and Huawei Cloud pioneered 8 battle-tested hyperscale architectures for 11.11 Singles’ Day flash sales, cross-region QoS bandwidth slicing, 1.6s zero-copy HTAP database cloning, fractional vGPU gang-scheduling, 2-phase transactional delay queues, sub-80ms hot config mesh, hybrid row-column sub-second OLAP, and executive NOC command walls that require complex multi-service wiring on Google Cloud.',
+    howItWorks: [
+      'Uniform 4-Column Bento Grid (2 Rows × 4 Columns) & Two-Mode Safe Feature Teardown: Displays all 8 bridges in an equal-width/height 2×4 grid with 01–08 badges, Under-the-Hood GCP Architecture X-Ray, 1-Click Enable APIs, and Two-Mode Teardown (FEATURE_ONLY vs PURGE_AND_DISABLE_APIS).',
+      'Bridges 01–04 (Flash-Sale Surge, Global QoS, HTAP & AI vGPU): (01) Alibaba PTS + MSE Sentinel 11.11 Flash-Sale Pre-Warm (minInstanceCount warm pool) & QPS Token-Bucket Shedder, (02) Alibaba CEN & Global Accelerator Cross-Region QoS Bandwidth Slicer (Gold/Silver/Bronze lanes), (03) PolarDB / Huawei GaussDB Serverless HTAP Read-Pool & 1.6s Zero-Copy Clone, and (04) Huawei CCE Volcano Gang-Scheduler + ModelArts / PAI Fractional vGPU Pool (0.125x/0.25x/0.50x GPU slices).',
+      'Bridges 05–08 (Transactional Messaging, Wasm Mesh, Sub-s OLAP & Executive NOC): (05) Alibaba RocketMQ 5.0 2-Phase Transactional Half-Messages & Exact-Second Delay Queue (Cloud Tasks + Pub/Sub), (06) Alibaba Nacos + Higress Zero-Restart <80ms Hot Config & AI Wasm Gateway, (07) Alibaba Hologres + MaxCompute Sub-Second Hybrid Row-Column OLAP (BigQuery BI Engine + Bigtable), and (08) DataV / Huawei Astro Executive Digital-Twin NOC & War-Room Command Wall.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/aws-azure-parity/overview',
+      'POST /api/project/:id/aws-azure-parity/action (ARM_ALIYUN_FLASH_SALE_SURGE, TRIGGER_PTS_SURGE_DRILL, CREATE_CEN_QOS_BANDWIDTH_SLICE, PROVISION_HTAP_POOL_OR_CLONE, ALLOCATE_FRACTIONAL_VGPU_POOL, PUBLISH_ROCKETMQ_2PC_DELAY_MSG, COMMIT_OR_ROLLBACK_ROCKETMQ_2PC, PUSH_NACOS_HOT_CONFIG, CREATE_HOLOGRES_HYBRID_TABLE, RUN_HOLOGRES_SUBSECOND_QUERY, SIMULATE_DATAV_NOC_SURGE)',
+    ],
+    billingImpact:
+      'Cuts GPU cluster waste by up to 75% via fractional vGPU time-slicing, eliminates duplicate database storage costs via zero-copy HTAP clones, and protects backends during 100x traffic surges.',
   },
 ];
 

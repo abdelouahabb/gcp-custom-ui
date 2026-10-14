@@ -10,7 +10,8 @@ const DEFAULT_CONFIG = {
   hideProjectNumbers: true,
   hideProjectIds: false,
   hidePublicIps: true,
-  hideCreditBalances: false,
+  hideCreditBalances: true,
+  creditShieldMigratedV2: true,
   instructorAlias: 'gde-instructor@google-cloud-demo.dev',
   projectAliasPrefix: 'gde-demo-project',
 };
@@ -20,7 +21,17 @@ export function loadGdePrivacyConfig() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_CONFIG;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_CONFIG, ...parsed };
+    const merged = { ...DEFAULT_CONFIG, ...parsed };
+    if (!parsed.creditShieldMigratedV2) {
+      merged.hideCreditBalances = true;
+      merged.creditShieldMigratedV2 = true;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      } catch {
+        // ignore
+      }
+    }
+    return merged;
   } catch {
     return DEFAULT_CONFIG;
   }
@@ -53,7 +64,7 @@ function isTeachingOrPrivateIp(ip) {
 /**
  * Pure string redactor for GDE Tutorial / Screen-Share Mode.
  * Replaces personal emails, service account project numbers, Cloud Billing Account IDs,
- * GCP project numbers, public IPs, and optionally project IDs or wallet balances.
+ * GCP project numbers, public IPs, and remaining credit / bonus dollar balances.
  */
 export function redactTextForGdeMode(text, cfg, context = {}) {
   if (!cfg?.enabled || !text || typeof text !== 'string') return text;
@@ -136,9 +147,16 @@ export function redactTextForGdeMode(text, cfg, context = {}) {
     );
   }
 
-  // 7. Optional: Hide exact credit / dollar balances during public streams
-  if (cfg.hideCreditBalances) {
-    out = out.replace(/\$\d{1,3}(?:,\d{3})+(?:\.\d{2,4})?/g, '$•,•••.••');
+  // 7. Hide remaining credit / bonus / dollar balances during public streams
+  if (cfg.hideCreditBalances !== false) {
+    out = out.replace(
+      /Remaining Bonus:\s*\$[0-9,.]+/gi,
+      'Remaining Bonus: $•••.••'
+    );
+    out = out.replace(
+      /-?\$(?!0(?:\.0+)?(?![0-9]))\d[\d,]*(?:\.\d+)?/g,
+      (match) => (match.startsWith('-') ? '-$•••.••' : '$•••.••')
+    );
   }
 
   return out;
@@ -271,7 +289,7 @@ export default function GdeStreamerPrivacyShield({
       }
 
       const currentVal = node.nodeValue || '';
-      if (!currentVal || currentVal.length < 3) return;
+      if (!currentVal || currentVal.length < 2) return;
 
       let entry = cache.get(node);
       if (!entry) {
@@ -281,11 +299,26 @@ export default function GdeStreamerPrivacyShield({
         entry.originalText = currentVal;
       }
 
-      const masked = redactTextForGdeMode(
+      let masked = redactTextForGdeMode(
         entry.originalText,
         config,
         contextObj
       );
+      if (
+        config.hideCreditBalances !== false &&
+        masked === entry.originalText &&
+        node.previousSibling &&
+        node.previousSibling.nodeType === Node.TEXT_NODE &&
+        /\$\s*$/.test(node.previousSibling.nodeValue || '')
+      ) {
+        const trimmed = entry.originalText.trim();
+        if (/^(?!0(?:\.0+)?$)\d[\d,]*(?:\.\d+)?/.test(trimmed)) {
+          masked = entry.originalText.replace(
+            /\d[\d,]*(?:\.\d+)?/,
+            '•••.••'
+          );
+        }
+      }
       if (masked !== currentVal) {
         entry.lastMaskedText = masked;
         node.nodeValue = masked;

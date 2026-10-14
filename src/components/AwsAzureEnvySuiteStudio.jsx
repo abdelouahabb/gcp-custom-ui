@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   FolderKanban,
@@ -1770,8 +1771,27 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
-  // Universal Disable / Teardown / Restore handlers for any of the 28 Parity Modules
-  const handleDisableParityModule = async (moduleId) => {
+  // Universal Disable / Teardown / Restore state & handlers for the 28 Parity Modules
+  const [confirmTeardownModal, setConfirmTeardownModal] = useState(null);
+  const [teardownReceiptBanner, setTeardownReceiptBanner] = useState(null);
+
+  // Modules that are 100% Read-Only / Diagnostic / Local Signers ($0.00/hr always — no background resources to disable)
+  const READ_ONLY_DIAGNOSTIC_MODULES = new Set([
+    'IAM_SIMULATOR',
+    'SAS_PRESIGNED',
+    'COST_EXPLORER_CUD',
+    'SSM_FLEET_COMMAND',
+    'TRUSTED_ADVISOR',
+    'CLOUDTRAIL_ACTIVITY_TIME_DETECTIVE',
+    'HUAWEI_DATAV_NOC_COMMAND_WALL',
+  ]);
+
+  const executeConfirmedDisableParityModule = async (
+    moduleId,
+    sourceFeature = '',
+    alsoDisableGcpApis = false,
+    apisToDisable = []
+  ) => {
     setActionBusy(`DISABLE_MOD_${moduleId}`);
     try {
       const res = await axios.post(
@@ -1779,12 +1799,32 @@ export default function AwsAzureEnvySuiteStudio({
         {
           action: 'DISABLE_PARITY_FEATURE_MODULE',
           moduleId,
+          alsoDisableGcpApis,
+          apisToDisable,
+          confirmedByModal: true,
+        },
+        {
+          headers: { 'x-confirmed-delete': 'true' },
         }
       );
-      onShowToast?.(
+      const msg =
         res.data?.message ||
-          `Disabled ${moduleId} ($0.00/hr — zero active resources or charges).`
-      );
+        `Disabled ${moduleId} ($0.00/hr — zero active resources or charges).`;
+      setTeardownReceiptBanner({
+        timestamp: new Date().toLocaleTimeString(),
+        title: alsoDisableGcpApis
+          ? `Disabled Feature Resources + Underlying GCP APIs: ${sourceFeature || moduleId}`
+          : `Disabled Feature Resources Only (Kept GCP APIs Enabled): ${sourceFeature || moduleId}`,
+        message: msg,
+        tornDownItems: res.data?.tornDownItems || [],
+        teardownScope:
+          res.data?.teardownScope ||
+          (alsoDisableGcpApis ? 'FEATURE_AND_APIS' : 'FEATURE_RESOURCES_ONLY'),
+        disabledApis: res.data?.disabledApis || (alsoDisableGcpApis ? apisToDisable : []),
+        isRestore: false,
+      });
+      setConfirmTeardownModal(null);
+      onShowToast?.(msg);
       await fetchOverview();
     } catch (err) {
       onShowError?.(
@@ -1797,7 +1837,7 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
-  const handleRestoreParityModule = async (moduleId) => {
+  const handleRestoreParityModule = async (moduleId, sourceFeature = '') => {
     setActionBusy(`RESTORE_MOD_${moduleId}`);
     try {
       const res = await axios.post(
@@ -1807,7 +1847,17 @@ export default function AwsAzureEnvySuiteStudio({
           moduleId,
         }
       );
-      onShowToast?.(res.data?.message || `Re-enabled ${moduleId}.`);
+      const msg = res.data?.message || `Re-enabled ${moduleId}.`;
+      setTeardownReceiptBanner({
+        timestamp: new Date().toLocaleTimeString(),
+        title: `Re-Enabled Feature & APIs: ${sourceFeature || moduleId}`,
+        message: msg,
+        tornDownItems: [],
+        teardownScope: 'RESTORED',
+        disabledApis: [],
+        isRestore: true,
+      });
+      onShowToast?.(msg);
       await fetchOverview();
     } catch (err) {
       onShowError?.(
@@ -1820,7 +1870,7 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
-  const handleDeleteParityItem = async (moduleId, itemId) => {
+  const executeConfirmedDeleteParityItem = async (moduleId, itemId) => {
     setActionBusy(`DEL_ITEM_${moduleId}_${itemId}`);
     try {
       const res = await axios.post(
@@ -1829,11 +1879,25 @@ export default function AwsAzureEnvySuiteStudio({
           action: 'DELETE_PARITY_MODULE_ITEM',
           moduleId,
           itemId,
+          confirmedByModal: true,
+        },
+        {
+          headers: { 'x-confirmed-delete': 'true' },
         }
       );
-      onShowToast?.(
-        res.data?.message || `Disabled and removed ${itemId} ($0.00/hr).`
-      );
+      const msg =
+        res.data?.message || `Disabled and removed "${itemId}" ($0.00/hr).`;
+      setTeardownReceiptBanner({
+        timestamp: new Date().toLocaleTimeString(),
+        title: `Removed Resource "${itemId}" from ${moduleId} (Kept Project GCP APIs Enabled)`,
+        message: msg,
+        tornDownItems: [itemId],
+        teardownScope: 'FEATURE_RESOURCES_ONLY',
+        disabledApis: [],
+        isRestore: false,
+      });
+      setConfirmTeardownModal(null);
+      onShowToast?.(msg);
       await fetchOverview();
     } catch (err) {
       onShowError?.(
@@ -1846,12 +1910,21 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
+  const handleDeleteParityItem = (moduleId, itemId) => {
+    setConfirmTeardownModal({
+      mode: 'ITEM',
+      moduleId,
+      itemId,
+    });
+  };
+
   const copyText = (txt, label = 'Copied to clipboard.') => {
     navigator.clipboard?.writeText(txt);
     onShowToast?.(label);
   };
 
   const disabledModules = data?.disabledModules || [];
+  const disabledModuleApis = data?.disabledModuleApis || {};
   const unifiedResources = data?.unifiedResources || [];
   const resourceGroups = data?.resourceGroups || [];
   const spendFuse = data?.spendFuse || {};
@@ -2011,13 +2084,13 @@ export default function AwsAzureEnvySuiteStudio({
     {
       id: 'STEP_FUNCTIONS',
       label: '15. Step Functions Saga Studio',
-      badge: `${stepFunctions.workflows?.length || 0} State Machines`,
+      badge: `${stepFunctions.workflows?.length || 0} Sagas`,
       icon: Workflow,
     },
     {
       id: 'MULTI_BRAND_OAUTH',
       label: '16. Multi-Brand OAuth Studio',
-      badge: `${multiBrandOAuth.brands?.length || 0} Brands in 1 Project`,
+      badge: `${multiBrandOAuth.brands?.length || 0} Brands`,
       icon: UserCheck,
     },
     {
@@ -2029,19 +2102,19 @@ export default function AwsAzureEnvySuiteStudio({
     {
       id: 'CLOUDTRAIL_ACTIVITY_TIME_DETECTIVE',
       label: '18. CloudTrail / Activity Detective',
-      badge: `${cloudTrailEvents.length} Audit Events`,
+      badge: `${cloudTrailEvents.length} Events`,
       icon: Search,
     },
     {
       id: 'RAM_LIGHTHOUSE_ORG_SHARING',
       label: '19. AWS RAM / Azure Lighthouse',
-      badge: `${ramShares.length} Cross-Shares`,
+      badge: `${ramShares.length} Shares`,
       icon: Share2,
     },
     {
       id: 'BEDROCK_FOUNDRY_AI_GATEWAY',
       label: '20. Bedrock / AI Foundry Gateway',
-      badge: `${bedrockGateway.routes?.length || 0} AI Gateways`,
+      badge: `${bedrockGateway.routes?.length || 0} Gateways`,
       icon: Sparkles,
     },
   ];
@@ -2062,13 +2135,13 @@ export default function AwsAzureEnvySuiteStudio({
     {
       id: 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL',
       label: '3. PolarDB / GaussDB HTAP & Clone',
-      badge: `${polarGaussClusters.length} HTAP Pools`,
+      badge: `${polarGaussClusters.length} Pools`,
       icon: Layers,
     },
     {
       id: 'HUAWEI_CCE_MODELARTS_AI_POOL',
       label: '4. Huawei Volcano / PAI vGPU Pool',
-      badge: `${huaweiVgpuPools.length} vGPU Pools`,
+      badge: `${huaweiVgpuPools.length} Pools`,
       icon: Boxes,
     },
     {
@@ -2080,13 +2153,13 @@ export default function AwsAzureEnvySuiteStudio({
     {
       id: 'ALIYUN_NACOS_HIGRESS_CONFIG_MESH',
       label: '6. Nacos + Higress Config & Wasm',
-      badge: `${aliyunNacosConfigs.length} Hot Configs`,
+      badge: `${aliyunNacosConfigs.length} Configs`,
       icon: GitBranch,
     },
     {
       id: 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP',
       label: '7. Hologres + MaxCompute Sub-s OLAP',
-      badge: `${aliyunHologresTables.length} Hybrid Tables`,
+      badge: `${aliyunHologresTables.length} Tables`,
       icon: Sparkles,
     },
     {
@@ -2153,40 +2226,18 @@ export default function AwsAzureEnvySuiteStudio({
               <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
                 8 battle-tested hyperscale cloud architectures pioneered by{' '}
                 <strong>Alibaba Cloud (Aliyun)</strong> and{' '}
-                <strong>Huawei Cloud</strong> brought natively to Google Cloud:{' '}
-                <strong>1. Alibaba PTS + MSE Sentinel 11.11 Singles&apos; Day Flash-Sale Pre-Warm &amp; QPS Shedder</strong>,{' '}
-                <strong>2. Alibaba CEN &amp; Global Accelerator Cross-Region QoS Bandwidth Slicer</strong>,{' '}
-                <strong>3. PolarDB / Huawei GaussDB Serverless HTAP &amp; 1.6s Zero-Copy Clone</strong>,{' '}
-                <strong>4. Huawei CCE Volcano Gang-Scheduler + ModelArts / Alibaba PAI Fractional vGPU Pool</strong>,{' '}
-                <strong>5. Alibaba RocketMQ 5.0 2-Phase Transactional Half-Messages &amp; Exact-Second Delay Queue</strong>,{' '}
-                <strong>6. Alibaba Nacos + Higress Zero-Restart Dynamic Config &amp; AI Wasm Gateway</strong>,{' '}
-                <strong>7. Alibaba Hologres + MaxCompute Sub-Second Hybrid Row-Column OLAP Serving</strong>, and{' '}
-                <strong>8. DataV / Huawei Astro Executive Digital-Twin NOC &amp; War-Room Command Wall</strong>.
+                <strong>Huawei Cloud</strong> — mapped natively onto Google Cloud for
+                11.11 flash-sale surge shedding, cross-region QoS bandwidth slicing,
+                1.6s zero-copy HTAP cloning, fractional vGPU gang-scheduling, 2PC
+                delay queues, dynamic Wasm config mesh, sub-second OLAP &amp; executive NOC telemetry.
               </p>
             ) : (
               <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
                 All 20 iconic enterprise cloud workflows engineers rely on in{' '}
-                <strong>Microsoft Azure</strong> and <strong>Amazon Web Services</strong>{' '}
-                brought natively to Google Cloud: <strong>Azure Resource Groups (Spend + RG-Scoped RBAC + 1-Click Teardown)</strong>,{' '}
-                <strong>Hard-Spend Stop-Loss Fuses</strong>,{' '}
-                <strong>AWS IAM Policy Simulator &amp; Switch-Role</strong>,{' '}
-                <strong>Azure SAS / S3 Presigned Studio</strong>,{' '}
-                <strong>1-Screen Global HTTPS LB + WAF</strong>,{' '}
-                <strong>CloudFormation/ARM Stack Drift &amp; Rollback</strong>,{' '}
-                <strong>Cost Explorer + CUD Savings Plans</strong>,{' '}
-                <strong>AWS SSM Fleet Run Command</strong>,{' '}
-                <strong>EventBridge Pipes / Logic Apps Router</strong>,{' '}
-                <strong>Key Vault Auto-Rotation &amp; Sync</strong>,{' '}
-                <strong>Trusted Advisor 5-Pillar Scorer</strong>,{' '}
-                <strong>Transit Gateway / Virtual WAN VPC Mesh</strong>,{' '}
-                <strong>ECS/ACA Multi-Container Sidecar Compose</strong>,{' '}
-                <strong>GuardDuty / Sentinel SOAR Playbooks</strong>,{' '}
-                <strong>Step Functions / Durable Saga Studio</strong>,{' '}
-                <strong>Multi-Brand OAuth Sign-In Studio</strong>,{' '}
-                <strong>Route 53 / Front Door DNS Routing</strong>,{' '}
-                <strong>CloudTrail Lake / Activity Log SQL Time-Detective</strong>,{' '}
-                <strong>AWS RAM / Azure Lighthouse Cross-Project Sharing</strong>, and{' '}
-                <strong>Bedrock / AI Foundry Gateway</strong>.
+                <strong>Amazon Web Services</strong> and <strong>Microsoft Azure</strong>{' '}
+                — mapped natively onto real Google Cloud APIs across Governance &amp;
+                FinOps, Global Networking &amp; DNS, Compute &amp; Serverless Sagas,
+                and Zero-Trust Security &amp; AI Gateways.
               </p>
             )}
           </div>
@@ -2233,29 +2284,47 @@ export default function AwsAzureEnvySuiteStudio({
           </div>
         </div>
 
-        {/* Sub-Studio Navigation Pills (20 in AWS/Azure mode, 8 in Alibaba/Huawei mode) */}
-        <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-          {visibleSubTabs.map((tab) => {
+        {/* Sub-Studio Uniform 4-Column Bento Grid (5x4 = 20 in AWS/Azure mode, 2x4 = 8 in Alibaba/Huawei mode) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+          {visibleSubTabs.map((tab, idx) => {
             const Icon = tab.icon;
             const active = activeSubTab === tab.id;
+            const stepNum = String(idx + 1).padStart(2, '0');
+            const cleanTitle = tab.label.replace(/^\d+\.\s*/, '');
             return (
               <button
                 key={tab.id}
                 type="button"
+                title={`${stepNum}. ${cleanTitle} (${tab.badge})`}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+                className={`w-full h-11 flex items-center justify-between gap-2 px-3 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
                   active
-                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 border-zinc-900 dark:border-zinc-100 shadow-sm'
-                    : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/70 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                    ? isChinaSuite
+                      ? 'bg-orange-600 text-white border-orange-600 shadow-sm ring-2 ring-orange-500/25'
+                      : 'bg-indigo-600 text-white border-indigo-600 shadow-sm ring-2 ring-indigo-500/25'
+                    : 'bg-zinc-50/90 hover:bg-zinc-100 dark:bg-zinc-900/70 dark:hover:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 border-zinc-200/90 dark:border-zinc-800'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`w-5 h-5 shrink-0 inline-flex items-center justify-center rounded-md text-[10px] font-mono font-extrabold ${
+                      active
+                        ? 'bg-white/20 text-white'
+                        : isChinaSuite
+                          ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
+                          : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                    }`}
+                  >
+                    {stepNum}
+                  </span>
+                  <Icon className="w-3.5 h-3.5 shrink-0 opacity-90" />
+                  <span className="truncate text-left">{cleanTitle}</span>
+                </div>
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-md ${
+                  className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-md whitespace-nowrap ${
                     active
-                      ? 'bg-white/20 text-white dark:bg-zinc-900/20 dark:text-zinc-900'
-                      : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-zinc-200/75 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                   }`}
                 >
                   {tab.badge}
@@ -2814,187 +2883,725 @@ export default function AwsAzureEnvySuiteStudio({
           GCP_UNDER_THE_HOOD_BLUEPRINTS[activeSubTab] ||
           GCP_UNDER_THE_HOOD_BLUEPRINTS.RESOURCE_GROUPS;
         const enableApisCmd = `gcloud services enable ${(bp.apisEnabled || []).join(' ')} --project=${pid}`;
-        const isModuleDisabled = disabledModules.includes(activeSubTab);
+        const isReadOnlyModule = READ_ONLY_DIAGNOSTIC_MODULES.has(activeSubTab);
+        const isModuleDisabled =
+          !isReadOnlyModule && disabledModules.includes(activeSubTab);
+
+        const getActiveItemsForModule = (modId) => {
+          switch (modId) {
+            case 'RESOURCE_GROUPS':
+              return resourceGroups.map(
+                (g) => `${g.displayName || g.slug} (${g.environment || 'prod'})`
+              );
+            case 'SPEND_FUSE':
+              return spendFuse.enabled !== false
+                ? [
+                    `Hard-Spend Stop-Loss Fuse ($${spendFuse.monthlyBudgetUsd || 50}/mo cap · ${spendFuse.pubsubTopic || `projects/${pid}/topics/cloudpulse-hard-spend-fuse`})`,
+                  ]
+                : [];
+            case 'GLOBAL_LB_WIZARD':
+              return lbReceipt
+                ? [`${lbStackName} (${lbDomainName})`]
+                : [`${lbStackName} (${lbDomainName} blueprint)`];
+            case 'CFN_ARM_STACKS':
+              return armStacks.map(
+                (s) => `${s.stackName} (${s.version || 'v1'})`
+              );
+            case 'EVENTBRIDGE_PIPES':
+              return eventPipes.map(
+                (p) => `${p.pipeId} (${p.sourceType} -> ${p.targetResource})`
+              );
+            case 'KEYVAULT_ROTATION':
+              return keyVaultSecrets.map(
+                (s) => `${s.name} (Rotation: ${s.rotationDays || 30}d)`
+              );
+            case 'TRANSIT_GATEWAY':
+              return (transitGateway.spokes || []).map(
+                (m) => `${m.hubVpc} <-> ${m.spokeVpc} (${m.region})`
+              );
+            case 'CONTAINER_COMPOSE':
+              return (containerCompose.apps || []).map(
+                (a) => `${a.appName} (${(a.containers || []).length} containers)`
+              );
+            case 'GUARDDUTY_SOAR':
+              return (guardDutySoar.findings || []).map(
+                (f) => `${f.detector}: ${f.title}`
+              );
+            case 'STEP_FUNCTIONS':
+              return (stepFunctions.workflows || []).map(
+                (w) =>
+                  `${w.workflowName} (${w.region} · ${(w.steps || []).length} Saga steps)`
+              );
+            case 'MULTI_BRAND_OAUTH':
+              return (multiBrandOAuth.brands || []).map(
+                (b) =>
+                  `${b.brandDisplayName} (Domain: ${b.customAuthDomain} · Tenant: ${b.identityPlatformTenantId})`
+              );
+            case 'ROUTE53_FRONTDOOR_TRAFFIC':
+              return route53Policies.map(
+                (p) => `${p.recordName} (${p.routingStrategy})`
+              );
+            case 'RAM_LIGHTHOUSE_ORG_SHARING':
+              return ramShares.map(
+                (s) => `${s.shareName} -> ${s.targetProjectOrPrincipal}`
+              );
+            case 'BEDROCK_FOUNDRY_AI_GATEWAY':
+              return (bedrockGateway.routes || []).map(
+                (r) =>
+                  `${r.routeName} (${r.primaryModel} -> ${r.fallbackModel} · $${r.dailySpendCapUsd}/day cap)`
+              );
+            case 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE':
+              return (aliyunFlashSale.campaigns || []).map(
+                (c) =>
+                  `${c.campaignName} (${c.preWarmedMinInstances} min instances · ${c.targetService})`
+              );
+            case 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE':
+              return aliyunCenPackages.map(
+                (p) => `${p.packageName} (${p.totalBandwidthMbps} Mbps)`
+              );
+            case 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL':
+              return polarGaussClusters.map(
+                (c) => `${c.clusterName} (${c.primaryRegion})`
+              );
+            case 'HUAWEI_CCE_MODELARTS_AI_POOL':
+              return huaweiVgpuPools.map(
+                (p) =>
+                  `${p.poolName} (${p.physicalGpusAllocated} GPUs -> ${p.virtualGpuPodsScheduled} vGPU Pods)`
+              );
+            case 'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY':
+              return aliyunRocketMqMessages.map(
+                (m) => `${m.topicName} (${m.payloadSummary})`
+              );
+            case 'ALIYUN_NACOS_HIGRESS_CONFIG_MESH':
+              return aliyunNacosConfigs.map(
+                (c) => `${c.dataId} (${c.namespace})`
+              );
+            case 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP':
+              return aliyunHologresTables.map(
+                (t) =>
+                  `${t.sourceMaxComputeDataset} (${t.biEngineRamGb} GB BI Engine)`
+              );
+            default:
+              return [];
+          }
+        };
+
+        const activeModuleItems = getActiveItemsForModule(activeSubTab);
+        const moduleDisabledApis = disabledModuleApis[activeSubTab] || [];
+        const disableApisCmd = `gcloud services disable ${(bp.apisEnabled || []).join(' ')} --project=${pid}`;
+
+        const openConfirmDisableModuleModal = () => {
+          setConfirmTeardownModal({
+            mode: 'MODULE',
+            moduleId: activeSubTab,
+            sourceFeature: bp.sourceFeature,
+            activeItems: activeModuleItems,
+            apisEnabled: bp.apisEnabled || [],
+            teardownScope: 'FEATURE_RESOURCES_ONLY',
+            whatGcpCreatesOrMutates: bp.whatGcpCreatesOrMutates,
+            manualVerifyCli: bp.manualVerifyCli,
+          });
+        };
 
         return (
-          <div
-            className={`rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 border transition-colors ${
-              isModuleDisabled
-                ? 'bg-emerald-500/5 border-emerald-500/40'
-                : 'bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-emerald-500/10 border-blue-500/30'
-            }`}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                    <Terminal className="w-3.5 h-3.5" />
-                    <span>
-                      ZERO-BLACKBOX GOOGLE CLOUD X-RAY · EXACT GCP SERVICES, APIS &amp; MANUAL VERIFICATION
-                    </span>
+          <>
+            <div
+              className={`rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 border transition-colors ${
+                isModuleDisabled
+                  ? 'bg-emerald-500/5 border-emerald-500/40'
+                  : 'bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-emerald-500/10 border-blue-500/30'
+              }`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                      <Terminal className="w-3.5 h-3.5" />
+                      <span>
+                        ZERO-BLACKBOX GOOGLE CLOUD X-RAY · EXACT GCP SERVICES, APIS &amp; MANUAL VERIFICATION
+                      </span>
+                    </div>
+                    {isReadOnlyModule ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>READ-ONLY DIAGNOSTIC TOOL · $0.00/HR</span>
+                      </span>
+                    ) : isModuleDisabled ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>
+                          {moduleDisabledApis.length > 0
+                            ? 'FEATURE + INCLUDED GCP APIS DISABLED · $0.00/HR'
+                            : 'FEATURE RESOURCES TORN DOWN ($0.00/HR) · GCP APIS KEPT ENABLED'}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                        <span>
+                          FEATURE ACTIVE ({activeModuleItems.length} Active Resource
+                          {activeModuleItems.length === 1 ? '' : 's'})
+                        </span>
+                      </span>
+                    )}
                   </div>
-                  {isModuleDisabled ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>FEATURE DISABLED · $0.00/HR</span>
+                  <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
+                    Under the Hood on Google Cloud: {bp.sourceFeature}
+                  </h3>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                  <button
+                    type="button"
+                    onClick={() => copyText(enableApisCmd, 'Copied gcloud services enable command.')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Enable APIs CLI</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyText(disableApisCmd, 'Copied gcloud services disable command.')}
+                    title="Copy gcloud command to disable the underlying Google Cloud APIs project-wide"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Disable APIs CLI</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyText(bp.manualVerifyCli, 'Copied manual GCP verification CLI.')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Verify CLI</span>
+                  </button>
+                  {onRunInShell && (
+                    <button
+                      type="button"
+                      onClick={() => onRunInShell(bp.manualVerifyCli)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer"
+                    >
+                      <Play className="w-3 h-3" />
+                      <span>Verify Manually in Cloud Shell</span>
+                    </button>
+                  )}
+                  {isReadOnlyModule ? (
+                    <span
+                      title="This module is a read-only auditor/simulator and never creates background billable infrastructure."
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Zero Background Resources ($0.00/hr)</span>
                     </span>
+                  ) : isModuleDisabled ? (
+                    <button
+                      type="button"
+                      disabled={actionBusy === `RESTORE_MOD_${activeSubTab}`}
+                      onClick={() =>
+                        handleRestoreParityModule(activeSubTab, bp.sourceFeature)
+                      }
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>
+                        {actionBusy === `RESTORE_MOD_${activeSubTab}`
+                          ? 'Re-Enabling...'
+                          : 'Re-Enable Feature'}
+                      </span>
+                    </button>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
-                      <span>FEATURE ACTIVE</span>
-                    </span>
+                    <button
+                      type="button"
+                      disabled={actionBusy === `DISABLE_MOD_${activeSubTab}`}
+                      onClick={openConfirmDisableModuleModal}
+                      title="Opens confirmation modal where you can choose to tear down only this feature's resources ($0.00/hr) OR also disable the included Google Cloud APIs."
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>
+                        {actionBusy === `DISABLE_MOD_${activeSubTab}`
+                          ? 'Disabling & Tearing Down...'
+                          : 'Disable Feature / Teardown ($0.00/hr)...'}
+                      </span>
+                    </button>
                   )}
                 </div>
-                <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
-                  Under the Hood on Google Cloud: {bp.sourceFeature}
-                </h3>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
-                <button
-                  type="button"
-                  onClick={() => copyText(enableApisCmd, 'Copied gcloud services enable command.')}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>Copy Enable APIs CLI</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => copyText(bp.manualVerifyCli, 'Copied manual GCP verification CLI.')}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>Copy Verify CLI</span>
-                </button>
-                {onRunInShell && (
+              {confirmTeardownModal && (
+                <div className="p-4 rounded-2xl border-2 border-rose-500 bg-rose-500/10 space-y-3 text-xs font-mono shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-extrabold">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>
+                        DANGEROUS ACTION CONFIRMATION REQUIRED —{' '}
+                        {confirmTeardownModal.mode === 'ITEM'
+                          ? `Delete Resource "${confirmTeardownModal.itemId}"?`
+                          : `Disable & Teardown: ${confirmTeardownModal.sourceFeature}?`}
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px] font-extrabold">
+                      CHOOSE SCOPE &amp; CONFIRM BELOW
+                    </span>
+                  </div>
+
+                  {confirmTeardownModal.mode === 'MODULE' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      <div
+                        onClick={() =>
+                          setConfirmTeardownModal((prev) => ({
+                            ...prev,
+                            teardownScope: 'FEATURE_RESOURCES_ONLY',
+                          }))
+                        }
+                        className={`p-3 rounded-xl border-2 cursor-pointer transition-all space-y-1 ${
+                          confirmTeardownModal.teardownScope !== 'FEATURE_AND_APIS'
+                            ? 'border-emerald-500 bg-emerald-500/15'
+                            : 'border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80'
+                        }`}
+                      >
+                        <div className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                          1. [Recommended] Feature Resources Only ($0.00/hr) · Keep GCP APIs Enabled
+                        </div>
+                        <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                          Tears down only this feature&apos;s resources ({confirmTeardownModal.activeItems?.length || 0} active). Keeps project-wide APIs (<code>{(confirmTeardownModal.apisEnabled || []).join(', ')}</code>) enabled so other workloads in <code>{pid}</code> do not break.
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() =>
+                          setConfirmTeardownModal((prev) => ({
+                            ...prev,
+                            teardownScope: 'FEATURE_AND_APIS',
+                          }))
+                        }
+                        className={`p-3 rounded-xl border-2 cursor-pointer transition-all space-y-1 ${
+                          confirmTeardownModal.teardownScope === 'FEATURE_AND_APIS'
+                            ? 'border-rose-500 bg-rose-500/20'
+                            : 'border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80'
+                        }`}
+                      >
+                        <div className="font-extrabold text-rose-700 dark:text-rose-300">
+                          2. [Project-Wide] Feature Resources + ALSO Disable All Included GCP APIs
+                        </div>
+                        <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                          Tears down resources AND disables <code>{(confirmTeardownModal.apisEnabled || []).join(', ')}</code> across project <code>{pid}</code>. Warning: other workloads using these APIs will stop working.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmTeardownModal(null)}
+                      className="px-3.5 py-1.5 rounded-xl font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                    >
+                      Cancel (Keep Active)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirmTeardownModal.mode === 'ITEM') {
+                          executeConfirmedDeleteParityItem(
+                            confirmTeardownModal.moduleId,
+                            confirmTeardownModal.itemId
+                          );
+                        } else {
+                          const alsoDisableApis =
+                            confirmTeardownModal.teardownScope === 'FEATURE_AND_APIS';
+                          executeConfirmedDisableParityModule(
+                            confirmTeardownModal.moduleId,
+                            confirmTeardownModal.sourceFeature,
+                            alsoDisableApis,
+                            confirmTeardownModal.apisEnabled || []
+                          );
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>
+                        {confirmTeardownModal.mode === 'ITEM'
+                          ? 'Confirm Delete Resource ($0.00/hr)'
+                          : confirmTeardownModal.teardownScope === 'FEATURE_AND_APIS'
+                            ? `Confirm: Teardown Resources + Disable ${(confirmTeardownModal.apisEnabled || []).length} GCP APIs`
+                            : 'Confirm: Teardown Feature Resources Only ($0.00/hr)'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isModuleDisabled && (
+                <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                  <div className="flex items-start gap-2.5 text-emerald-900 dark:text-emerald-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-extrabold">
+                        {moduleDisabledApis.length > 0
+                          ? `Feature Resources Torn Down + ${moduleDisabledApis.length} Underlying GCP API(s) Disabled on '${pid}' — $0.00/hr`
+                          : `Feature Resources Torn Down Only on '${pid}' ($0.00/hr) — Shared Project GCP APIs Kept Enabled`}
+                      </div>
+                      <div className="text-[11px] opacity-90 mt-0.5">
+                        {moduleDisabledApis.length > 0 ? (
+                          <>
+                            All active resources in this module were deleted <strong>AND</strong> underlying Google Cloud APIs (
+                            <code>{moduleDisabledApis.join(', ')}</code>) were marked disabled.
+                          </>
+                        ) : (
+                          <>
+                            All active resources created by this feature have been removed (0 active resources = <strong>$0.00/hr</strong>). Underlying Google Cloud Service APIs (
+                            <code>{(bp.apisEnabled || []).join(', ')}</code>) remain enabled so other workloads in project <code>{pid}</code> are not disrupted (enabled APIs alone cost $0.00/hr).
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => onRunInShell(bp.manualVerifyCli)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer"
-                  >
-                    <Play className="w-3 h-3" />
-                    <span>Verify Manually in Cloud Shell</span>
-                  </button>
-                )}
-                {isModuleDisabled ? (
-                  <button
-                    type="button"
-                    disabled={actionBusy === `RESTORE_MOD_${activeSubTab}`}
-                    onClick={() => handleRestoreParityModule(activeSubTab)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                    onClick={() =>
+                      handleRestoreParityModule(activeSubTab, bp.sourceFeature)
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    <span>
-                      {actionBusy === `RESTORE_MOD_${activeSubTab}`
-                        ? 'Re-Enabling...'
-                        : 'Re-Enable Feature'}
-                    </span>
+                    <span>Restore Default Configuration</span>
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={actionBusy === `DISABLE_MOD_${activeSubTab}`}
-                    onClick={() => handleDisableParityModule(activeSubTab)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    <span>
-                      {actionBusy === `DISABLE_MOD_${activeSubTab}`
-                        ? 'Disabling & Tearing Down...'
-                        : 'Disable & Teardown Feature ($0.00/hr)'}
+                </div>
+              )}
+
+              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                <strong className="text-zinc-950 dark:text-white">
+                  What Google Cloud Creates / Modifies:
+                </strong>{' '}
+                {bp.whatGcpCreatesOrMutates}
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 pt-1 text-xs font-mono">
+                <div className="lg:col-span-5 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
+                  <div className="text-[11px] font-extrabold text-zinc-500 uppercase">
+                    Google Cloud Services Involved (Click to Inspect in App)
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(bp.gcpServicesInvolved || []).map((svc) => (
+                      <button
+                        key={svc.name}
+                        type="button"
+                        onClick={() => onNavigateToGcpTab?.(svc.tab)}
+                        title={`Jump to ${svc.name} studio in CloudPulse to inspect manually`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
+                      >
+                        <span>{svc.name}</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-3 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[11px] font-extrabold text-zinc-500 uppercase">
+                      Included GCP Service APIs
                     </span>
-                  </button>
-                )}
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                      API Toggle = $0.00/hr
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(bp.apisEnabled || []).map((api) => {
+                      const isApiDisabled = moduleDisabledApis.includes(api);
+                      return (
+                        <span
+                          key={api}
+                          className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                            isApiDisabled
+                              ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30 line-through'
+                              : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                          }`}
+                        >
+                          {api} {isApiDisabled ? '(DISABLED)' : '(ENABLED)'}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 leading-snug">
+                    <strong>Distinction:</strong> Disabling a feature tears down its <em>resources</em> ($0.00/hr) while keeping shared project APIs enabled unless you explicitly opt to disable the APIs too.
+                  </div>
+                </div>
+
+                <div className="lg:col-span-4 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
+                  <div className="text-[11px] font-extrabold text-zinc-500 uppercase">
+                    Where to Check Manually in GCP Console &amp; CLI
+                  </div>
+                  <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                    <strong>Console:</strong> {bp.consolePath}
+                  </div>
+                  <div className="p-1.5 rounded bg-zinc-950 text-emerald-300 text-[10px] overflow-x-auto whitespace-nowrap">
+                    $ {bp.manualVerifyCli}
+                  </div>
+                  <div className="text-[10px] text-zinc-500">
+                    <strong>GCP Cost Impact:</strong>{' '}
+                    {isModuleDisabled
+                      ? '$0.00/hr — Feature resources currently disabled & torn down.'
+                      : bp.billingNote}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {isModuleDisabled && (
-              <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-                <div className="flex items-start gap-2.5 text-emerald-900 dark:text-emerald-200">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-extrabold">
-                      Feature Disabled &amp; Torn Down on Project &apos;{pid}&apos; — Confirmed $0.00/hr Active Cost
-                    </div>
-                    <div className="text-[11px] opacity-90 mt-0.5">
-                      All active routes, rules, pre-warmed instances, and background allocations for this bridge have been cleared. You will not be billed for any resources under this module.
-                    </div>
+            {/* In-Studio Teardown / Restore Execution Audit Receipt Banner */}
+            {teardownReceiptBanner && (
+              <div
+                className={`p-4 rounded-2xl border shadow-sm flex flex-wrap items-start justify-between gap-3 text-xs font-mono ${
+                  teardownReceiptBanner.isRestore
+                    ? 'bg-blue-500/10 border-blue-500/40 text-blue-900 dark:text-blue-200'
+                    : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-900 dark:text-emerald-200'
+                }`}
+              >
+                <div className="space-y-1.5 max-w-4xl">
+                  <div className="flex flex-wrap items-center gap-2 font-extrabold">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>
+                      [{teardownReceiptBanner.timestamp}] {teardownReceiptBanner.title}
+                    </span>
+                    {!teardownReceiptBanner.isRestore && (
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          teardownReceiptBanner.teardownScope === 'FEATURE_AND_APIS'
+                            ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/40'
+                            : 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40'
+                        }`}
+                      >
+                        {teardownReceiptBanner.teardownScope === 'FEATURE_AND_APIS'
+                          ? 'SCOPE: FEATURE RESOURCES + UNDERLYING GCP APIS DISABLED'
+                          : 'SCOPE: FEATURE RESOURCES ONLY ($0.00/HR) · GCP APIS KEPT ENABLED'}
+                      </span>
+                    )}
                   </div>
+                  <div className="text-[11px] leading-relaxed">
+                    {teardownReceiptBanner.message}
+                  </div>
+                  {teardownReceiptBanner.tornDownItems?.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] uppercase font-bold opacity-75">
+                        Torn-Down Feature Resources:
+                      </span>
+                      {teardownReceiptBanner.tornDownItems.map((it) => (
+                        <span
+                          key={it}
+                          className="px-2 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[10px] font-bold"
+                        >
+                          {it}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {teardownReceiptBanner.disabledApis?.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] uppercase font-bold text-rose-600 dark:text-rose-400">
+                        Disabled Project-Wide GCP APIs:
+                      </span>
+                      {teardownReceiptBanner.disabledApis.map((api) => (
+                        <span
+                          key={api}
+                          className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-[10px] font-bold"
+                        >
+                          {api}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRestoreParityModule(activeSubTab)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0"
+                  onClick={() => setTeardownReceiptBanner(null)}
+                  className="px-2.5 py-1 rounded-lg bg-black/10 dark:bg-white/10 hover:bg-black/20 text-[11px] font-bold cursor-pointer"
                 >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Restore Default Configuration</span>
+                  Dismiss Receipt
                 </button>
               </div>
             )}
 
-            <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              <strong className="text-zinc-950 dark:text-white">
-                What Google Cloud Creates / Modifies:
-              </strong>{' '}
-              {bp.whatGcpCreatesOrMutates}
-            </p>
+            {/* Dangerous Action Confirmation Modal for Feature Disable & Resource Teardown (Mounted via Portal on document.body so parent CSS transforms never clip it) */}
+            {confirmTeardownModal &&
+              typeof document !== 'undefined' &&
+              createPortal(
+                <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="bg-white dark:bg-zinc-900 border-2 border-rose-500/80 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 font-mono text-xs max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2.5 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 shrink-0">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                          DANGEROUS ACTION CONFIRMATION · CHOOSE TEARDOWN SCOPE
+                        </div>
+                        <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
+                          {confirmTeardownModal.mode === 'ITEM'
+                            ? `Delete Resource "${confirmTeardownModal.itemId}"?`
+                            : `Disable & Teardown: ${confirmTeardownModal.sourceFeature}?`}
+                        </h3>
+                      </div>
+                    </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 pt-1 text-xs font-mono">
-              <div className="lg:col-span-5 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
-                <div className="text-[11px] font-extrabold text-zinc-500 uppercase">
-                  Google Cloud Services Involved (Click to Inspect in App)
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(bp.gcpServicesInvolved || []).map((svc) => (
-                    <button
-                      key={svc.name}
-                      type="button"
-                      onClick={() => onNavigateToGcpTab?.(svc.tab)}
-                      title={`Jump to ${svc.name} studio in CloudPulse to inspect manually`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
-                    >
-                      <span>{svc.name}</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  ))}
-                </div>
-              </div>
+                    <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-2 text-zinc-800 dark:text-zinc-200">
+                      <div className="font-extrabold text-rose-700 dark:text-rose-300">
+                        1. Feature Resources That Will Be Torn Down ($0.00/hr):
+                      </div>
+                      {confirmTeardownModal.mode === 'ITEM' ? (
+                        <p className="text-[11px] leading-relaxed">
+                          Resource <strong>{confirmTeardownModal.itemId}</strong> in module{' '}
+                          <strong>{confirmTeardownModal.moduleId}</strong> on project{' '}
+                          <strong>{pid}</strong> will be immediately disabled and removed so it incurs{' '}
+                          <strong>$0.00/hr</strong> active cost. Underlying Google Cloud APIs on project{' '}
+                          <strong>{pid}</strong> will remain enabled so other workloads are unaffected.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-[11px] leading-relaxed">
+                            This will tear down all{' '}
+                            <strong>{confirmTeardownModal.activeItems?.length || 0}</strong> active resource(s) created by{' '}
+                            <strong>{confirmTeardownModal.sourceFeature}</strong> on project{' '}
+                            <strong>{pid}</strong>:
+                          </p>
+                          {(confirmTeardownModal.activeItems || []).length > 0 ? (
+                            <ul className="list-disc list-inside space-y-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-white/60 dark:bg-zinc-950/60 p-2.5 rounded-lg">
+                              {confirmTeardownModal.activeItems.map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div className="text-[11px] text-zinc-500">
+                              No active billable items currently provisioned — confirming will lock this module in Disabled ($0.00/hr) state.
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
 
-              <div className="lg:col-span-3 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
-                <div className="text-[11px] font-extrabold text-zinc-500 uppercase">
-                  Required GCP Service APIs Enabled
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(bp.apisEnabled || []).map((api) => (
-                    <span
-                      key={api}
-                      className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold"
-                    >
-                      {api}
-                    </span>
-                  ))}
-                </div>
-              </div>
+                    {/* Crucial Distinction Selector: Feature Resources Only vs. Feature Resources + All Included GCP APIs */}
+                    {confirmTeardownModal.mode === 'MODULE' && (
+                      <div className="space-y-2.5">
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                          2. Important Distinction — What Should Happen to the Included Google Cloud APIs?
+                        </div>
 
-              <div className="lg:col-span-4 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
-                <div className="text-[11px] font-extrabold text-zinc-500 uppercase">
-                  Where to Check Manually in GCP Console &amp; CLI
-                </div>
-                <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
-                  <strong>Console:</strong> {bp.consolePath}
-                </div>
-                <div className="p-1.5 rounded bg-zinc-950 text-emerald-300 text-[10px] overflow-x-auto whitespace-nowrap">
-                  $ {bp.manualVerifyCli}
-                </div>
-                <div className="text-[10px] text-zinc-500">
-                  <strong>GCP Cost Impact:</strong>{' '}
-                  {isModuleDisabled
-                    ? '$0.00/hr — Feature currently disabled & torn down.'
-                    : bp.billingNote}
-                </div>
-              </div>
-            </div>
-          </div>
+                        <div
+                          onClick={() =>
+                            setConfirmTeardownModal((prev) => ({
+                              ...prev,
+                              teardownScope: 'FEATURE_RESOURCES_ONLY',
+                            }))
+                          }
+                          className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all space-y-1 ${
+                            confirmTeardownModal.teardownScope !== 'FEATURE_AND_APIS'
+                              ? 'border-emerald-500 bg-emerald-500/10'
+                              : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 hover:border-zinc-400'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                              [Recommended] Disable Feature Resources Only ($0.00/hr) · Keep GCP APIs Enabled
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold">
+                              SAFE FOR OTHER WORKLOADS
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                            Deletes/stops <strong>only the resources created by this feature</strong> so your hourly cost drops to <strong>$0.00/hr</strong>. Leaves shared project APIs (
+                            <code>{(confirmTeardownModal.apisEnabled || []).join(', ')}</code>) enabled on project <code>{pid}</code> so you do not break other Cloud Run services, VMs, or databases in your project. <em>(Having a GCP API enabled with 0 resources costs $0.00/hr.)</em>
+                          </p>
+                        </div>
+
+                        <div
+                          onClick={() =>
+                            setConfirmTeardownModal((prev) => ({
+                              ...prev,
+                              teardownScope: 'FEATURE_AND_APIS',
+                            }))
+                          }
+                          className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all space-y-1.5 ${
+                            confirmTeardownModal.teardownScope === 'FEATURE_AND_APIS'
+                              ? 'border-rose-500 bg-rose-500/10'
+                              : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 hover:border-zinc-400'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-extrabold text-rose-700 dark:text-rose-300">
+                              [Nuclear] Disable Feature Resources + ALSO Disable All Included GCP APIs
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[10px] font-extrabold">
+                              PROJECT-WIDE IMPACT
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                            Tears down this feature&apos;s resources <strong>AND</strong> disables all{' '}
+                            <strong>{(confirmTeardownModal.apisEnabled || []).length}</strong> underlying Google Cloud APIs (
+                            <code>{(confirmTeardownModal.apisEnabled || []).join(', ')}</code>) across project <code>{pid}</code>. Warning: any other workloads in <code>{pid}</code> that depend on these APIs will also stop working!
+                          </p>
+                          <div className="p-2 rounded bg-zinc-950 text-rose-300 text-[10px] overflow-x-auto whitespace-nowrap">
+                            $ gcloud services disable {(confirmTeardownModal.apisEnabled || []).join(' ')} --project={pid}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {confirmTeardownModal.manualVerifyCli && (
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold text-zinc-500 uppercase">
+                          Google Cloud CLI Verification Command:
+                        </div>
+                        <div className="p-2 rounded-lg bg-zinc-950 text-emerald-300 text-[10px] overflow-x-auto whitespace-nowrap">
+                          $ {confirmTeardownModal.manualVerifyCli}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmTeardownModal(null)}
+                        className="px-4 py-2 rounded-xl font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                      >
+                        Cancel (Keep Active)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirmTeardownModal.mode === 'ITEM') {
+                            executeConfirmedDeleteParityItem(
+                              confirmTeardownModal.moduleId,
+                              confirmTeardownModal.itemId
+                            );
+                          } else {
+                            const alsoDisableApis =
+                              confirmTeardownModal.teardownScope === 'FEATURE_AND_APIS';
+                            executeConfirmedDisableParityModule(
+                              confirmTeardownModal.moduleId,
+                              confirmTeardownModal.sourceFeature,
+                              alsoDisableApis,
+                              confirmTeardownModal.apisEnabled || []
+                            );
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>
+                          {confirmTeardownModal.mode === 'ITEM'
+                            ? 'Confirm Delete Resource ($0.00/hr)'
+                            : confirmTeardownModal.teardownScope === 'FEATURE_AND_APIS'
+                              ? `Confirm: Teardown Resources + Disable ${(confirmTeardownModal.apisEnabled || []).length} GCP APIs`
+                              : 'Confirm: Teardown Feature Resources Only ($0.00/hr)'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>,
+                document.body
+              )}
+          </>
         );
       })()}
 
@@ -5876,6 +6483,21 @@ export default function AwsAzureEnvySuiteStudio({
               </h3>
 
               <div className="space-y-3">
+                {(stepFunctions.workflows || []).length === 0 && (
+                  <div className="p-4 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/5 text-xs font-mono text-emerald-700 dark:text-emerald-300 flex items-center justify-between gap-3">
+                    <span>
+                      0 Active Cloud Workflows Saga State Machines — Feature
+                      Disabled &amp; Torn Down ($0.00/hr).
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRestoreParityModule('STEP_FUNCTIONS')}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-extrabold cursor-pointer"
+                    >
+                      Restore Demo Workflows
+                    </button>
+                  </div>
+                )}
                 {(stepFunctions.workflows || []).map((wf) => (
                   <div
                     key={wf.workflowName}
@@ -5885,10 +6507,25 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-950 dark:text-zinc-100">
                         {wf.workflowName} ({wf.region})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                        Max Retries: {wf.maxRetries}x · Compensation:{' '}
-                        {wf.compensationStep}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                          Max Retries: {wf.maxRetries}x · Compensation:{' '}
+                          {wf.compensationStep}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem(
+                              'STEP_FUNCTIONS',
+                              wf.workflowName
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[10px] font-extrabold cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                       {(wf.steps || []).map((st, idx) => (
@@ -6125,6 +6762,24 @@ export default function AwsAzureEnvySuiteStudio({
                   </span>
                 </h4>
 
+                {(multiBrandOAuth.brands || []).length === 0 && (
+                  <div className="p-4 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/5 text-xs font-mono text-emerald-700 dark:text-emerald-300 flex items-center justify-between gap-3">
+                    <span>
+                      0 Active OAuth Brand Identity Tenants — Feature Disabled
+                      &amp; Torn Down ($0.00/hr).
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRestoreParityModule('MULTI_BRAND_OAUTH')
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-extrabold cursor-pointer"
+                    >
+                      Restore Demo OAuth Brands
+                    </button>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(multiBrandOAuth.brands || []).map((b) => {
                     const isSelected =
@@ -6147,11 +6802,15 @@ export default function AwsAzureEnvySuiteStudio({
                             type="button"
                             onClick={(ev) => {
                               ev.stopPropagation();
-                              handleDeleteOAuthBrandProfile(b.brandId);
+                              handleDeleteParityItem(
+                                'MULTI_BRAND_OAUTH',
+                                b.brandId
+                              );
                             }}
-                            className="text-zinc-400 hover:text-rose-500 cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[10px] font-extrabold cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3 h-3" />
+                            <span>Disable / Delete</span>
                           </button>
                         </div>
                         <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">

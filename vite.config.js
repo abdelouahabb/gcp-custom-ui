@@ -1,12 +1,46 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import net from 'node:net';
-import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import { spawn, execSync } from 'node:child_process';
 import path from 'node:path';
 
 function cloudpulseBackendWatchdogPlugin({ backendHost, backendPort, enabled }) {
   let backendProc = null;
   let checking = false;
+  const serverScript = path.resolve(process.cwd(), 'server/index.js');
+
+  const startBackendProcess = () => {
+    if (backendProc && backendProc.exitCode === null) return;
+    console.log(
+      `⚡ [CloudPulse Auto-Heal] Starting server/index.js on ${backendHost}:${backendPort}...`
+    );
+    backendProc = spawn(process.execPath, [serverScript], {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        PORT: String(backendPort),
+        BACKEND_HOST: String(backendHost),
+      },
+    });
+    backendProc.on('exit', () => {
+      backendProc = null;
+    });
+  };
+
+  const restartBackendProcess = () => {
+    try {
+      if (backendProc && backendProc.exitCode === null) {
+        backendProc.kill('SIGTERM');
+        backendProc = null;
+      }
+      execSync('pkill -f "node .*/server/index.js" || true', { stdio: 'ignore' });
+    } catch {
+      // ignore
+    }
+    setTimeout(startBackendProcess, 350);
+  };
 
   const ensureBackendRunning = () => {
     if (!enabled || checking) return;
@@ -20,23 +54,7 @@ function cloudpulseBackendWatchdogPlugin({ backendHost, backendPort, enabled }) 
     const spawnIfDown = () => {
       socket.destroy();
       checking = false;
-      if (backendProc && backendProc.exitCode === null) return;
-      const serverScript = path.resolve(process.cwd(), 'server/index.js');
-      console.log(
-        `⚡ [CloudPulse Auto-Heal] Backend ${backendHost}:${backendPort} not running — auto-starting server/index.js...`
-      );
-      backendProc = spawn(process.execPath, [serverScript], {
-        cwd: process.cwd(),
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          PORT: String(backendPort),
-          BACKEND_HOST: String(backendHost),
-        },
-      });
-      backendProc.on('exit', () => {
-        backendProc = null;
-      });
+      startBackendProcess();
     };
     socket.once('error', spawnIfDown);
     socket.once('timeout', spawnIfDown);
@@ -47,10 +65,22 @@ function cloudpulseBackendWatchdogPlugin({ backendHost, backendPort, enabled }) 
     name: 'cloudpulse-backend-watchdog',
     configureServer(server) {
       if (!enabled) return;
-      ensureBackendRunning();
+      try {
+        const staleDist = path.resolve(process.cwd(), 'dist');
+        if (fs.existsSync(staleDist)) {
+          fs.rmSync(staleDist, { recursive: true, force: true });
+        }
+      } catch {
+        // ignore
+      }
+      restartBackendProcess();
       const timer = setInterval(ensureBackendRunning, 4000);
+      fs.watchFile(serverScript, { interval: 1500 }, () => {
+        restartBackendProcess();
+      });
       server.httpServer?.once('close', () => {
         clearInterval(timer);
+        fs.unwatchFile(serverScript);
         if (backendProc && backendProc.exitCode === null) {
           backendProc.kill();
         }

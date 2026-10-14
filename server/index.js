@@ -62,6 +62,11 @@ let localSessionConnected = true;
 let localCachedToken = null;
 let localTokenExpiry = 0;
 let localSelectedAccount = null;
+let localMetadataProjectId =
+  process.env.GOOGLE_CLOUD_PROJECT ||
+  process.env.GCLOUD_PROJECT ||
+  process.env.GCP_PROJECT ||
+  '';
 
 // In-memory cache of enabled APIs per project so UI never shows 0 on cold/parallel timeouts
 const projectEnabledApisCache = new Map();
@@ -179,12 +184,16 @@ async function fetchProjectEnabledApis(projectId, token) {
     projectId
   )}/services?filter=state:ENABLED&pageSize=200`;
   try {
-    const data = await gcpFetch(url, token, projectId, { timeout: 14000 });
-    return data.services || [];
+    const data = await gcpFetch(url, token, projectId, { timeout: 3500 });
+    return data?.services || [];
   } catch {
-    // Fallback without x-goog-user-project in case quota project header is rejected
-    const data = await gcpFetch(url, token, null, { timeout: 14000 });
-    return data.services || [];
+    try {
+      // Fallback without x-goog-user-project in case quota project header is rejected
+      const data = await gcpFetch(url, token, null, { timeout: 3000 });
+      return data?.services || [];
+    } catch {
+      return projectEnabledApisCache.get(projectId) || [];
+    }
   }
 }
 
@@ -853,8 +862,13 @@ function discoverLocalGcloudAccounts() {
     });
   }
 
-  // Read active project from ~/.config/gcloud/configurations/config_default
-  let defaultProject = process.env.GOOGLE_CLOUD_PROJECT || '';
+  // Read active project from ~/.config/gcloud/configurations/config_default or Cloud Run metadata
+  let defaultProject =
+    process.env.GOOGLE_CLOUD_PROJECT ||
+    process.env.GCLOUD_PROJECT ||
+    process.env.GCP_PROJECT ||
+    localMetadataProjectId ||
+    '';
   let activeAccount = accounts[0]?.email || '';
   try {
     const activeConfigPath = path.join(homedir, '.config/gcloud/active_config');
@@ -877,6 +891,28 @@ function discoverLocalGcloudAccounts() {
   }
 
   return { accounts, activeAccount, defaultProject };
+}
+
+let metadataProjectProbeDone = false;
+async function resolveHostDefaultProject() {
+  const { defaultProject } = discoverLocalGcloudAccounts();
+  if (defaultProject) return defaultProject;
+  if (!metadataProjectProbeDone) {
+    metadataProjectProbeDone = true;
+    try {
+      const projRes = await gcpHttp.get(
+        'http://metadata.google.internal/computeMetadata/v1/project/project-id',
+        { headers: { 'Metadata-Flavor': 'Google' }, timeout: 900 }
+      );
+      if (projRes.data) {
+        localMetadataProjectId = String(projRes.data).trim();
+        return localMetadataProjectId;
+      }
+    } catch {
+      // Not running on GCE / Cloud Run metadata server
+    }
+  }
+  return localMetadataProjectId || '';
 }
 
 // Fast 240ms IPv4 token exchange using ADC refresh_token or Cloud Run Metadata Server
@@ -930,11 +966,24 @@ async function getLocalOrMetadataAccessToken(preferredEmail) {
     if (metaRes.data?.access_token) {
       let email = 'cloud-run-service-account@gcp';
       try {
-        const emailRes = await gcpHttp.get(
-          'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email',
-          { headers: { 'Metadata-Flavor': 'Google' }, timeout: 1000 }
-        );
-        if (emailRes.data) email = String(emailRes.data).trim();
+        const [emailRes, projRes] = await Promise.allSettled([
+          gcpHttp.get(
+            'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email',
+            { headers: { 'Metadata-Flavor': 'Google' }, timeout: 1000 }
+          ),
+          !localMetadataProjectId
+            ? gcpHttp.get(
+                'http://metadata.google.internal/computeMetadata/v1/project/project-id',
+                { headers: { 'Metadata-Flavor': 'Google' }, timeout: 1000 }
+              )
+            : Promise.resolve({ data: localMetadataProjectId }),
+        ]);
+        if (emailRes.status === 'fulfilled' && emailRes.value?.data) {
+          email = String(emailRes.value.data).trim();
+        }
+        if (projRes.status === 'fulfilled' && projRes.value?.data) {
+          localMetadataProjectId = String(projRes.value.data).trim();
+        }
       } catch {
         // ignore
       }
@@ -977,22 +1026,46 @@ async function resolveRequestAuth(req) {
 }
 
 async function gcpFetch(url, token, projectId, options = {}) {
+  const parsedData =
+    typeof options.body === 'string'
+      ? JSON.parse(options.body)
+      : options.body;
+  const reqTimeout = options.timeout || 4500;
   const headers = {
     Authorization: `Bearer ${token}`,
     ...(projectId ? { 'x-goog-user-project': projectId } : {}),
     ...(options.headers || {}),
   };
-  const response = await gcpHttp.request({
-    url,
-    method: options.method || 'GET',
-    headers,
-    data:
-      typeof options.body === 'string'
-        ? JSON.parse(options.body)
-        : options.body,
-    timeout: options.timeout || 4500,
-  });
-  return response.data;
+  try {
+    const response = await gcpHttp.request({
+      url,
+      method: options.method || 'GET',
+      headers,
+      data: parsedData,
+      timeout: reqTimeout,
+    });
+    return response.data;
+  } catch (err) {
+    const status = err.response?.status;
+    // If target project rejects x-goog-user-project quota header (403 USER_PROJECT_DENIED or 400),
+    // automatically retry once without x-goog-user-project so cross-project telemetry works on Cloud Run
+    if (projectId && (status === 403 || status === 400)) {
+      const fallbackHeaders = {
+        Authorization: `Bearer ${token}`,
+        ...(options.headers || {}),
+      };
+      delete fallbackHeaders['x-goog-user-project'];
+      const retryRes = await gcpHttp.request({
+        url,
+        method: options.method || 'GET',
+        headers: fallbackHeaders,
+        data: parsedData,
+        timeout: reqTimeout,
+      });
+      return retryRes.data;
+    }
+    throw err;
+  }
 }
 
 // ============================================================================
@@ -1007,8 +1080,8 @@ const DEFAULT_GCLOUD_OAUTH_CLIENT_SECRET =
 
 // 1. GET /api/auth/discover -> Returns available local accounts & current connection state
 app.get('/api/auth/discover', async (req, res) => {
-  const { accounts, activeAccount, defaultProject } =
-    discoverLocalGcloudAccounts();
+  const { accounts, activeAccount } = discoverLocalGcloudAccounts();
+  const defaultProject = await resolveHostDefaultProject();
   res.json({
     localSessionConnected,
     detectedAccounts: accounts.map((a) => ({
@@ -1102,7 +1175,7 @@ app.post('/api/auth/connect', async (req, res) => {
         freshToken,
         null
       );
-      const projects = (projData.projects || [])
+      const projects = (projData?.projects || [])
         .filter((p) => p.lifecycleState === 'ACTIVE')
         .map((p) => ({
           projectId: p.projectId,
@@ -1112,13 +1185,20 @@ app.post('/api/auth/connect', async (req, res) => {
           labels: p.labels || {},
         }));
 
+      const envDefaultProj = await resolveHostDefaultProject();
+      const matchedDefault =
+        projects.find((p) => p.projectId === envDefaultProj)?.projectId ||
+        projects[0]?.projectId ||
+        envDefaultProj ||
+        '';
+
       return res.json({
         ok: true,
         authMode: 'GMAIL_OAUTH',
         account: resolvedEmail,
         accessToken: freshToken,
         projects,
-        defaultProject: projects[0]?.projectId || '',
+        defaultProject: matchedDefault,
       });
     }
 
@@ -1149,7 +1229,7 @@ app.post('/api/auth/connect', async (req, res) => {
         cleanToken,
         null
       );
-      const projects = (projData.projects || [])
+      const projects = (projData?.projects || [])
         .filter((p) => p.lifecycleState === 'ACTIVE')
         .map((p) => ({
           projectId: p.projectId,
@@ -1159,13 +1239,20 @@ app.post('/api/auth/connect', async (req, res) => {
           labels: p.labels || {},
         }));
 
+      const envDefaultProj = await resolveHostDefaultProject();
+      const matchedDefault =
+        projects.find((p) => p.projectId === envDefaultProj)?.projectId ||
+        projects[0]?.projectId ||
+        envDefaultProj ||
+        '';
+
       return res.json({
         ok: true,
         authMode: 'BROWSER_TOKEN',
         account: resolvedEmail,
         accessToken: cleanToken,
         projects,
-        defaultProject: projects[0]?.projectId || '',
+        defaultProject: matchedDefault,
       });
     }
 
@@ -1210,7 +1297,7 @@ app.post('/api/auth/connect', async (req, res) => {
         freshToken,
         null
       );
-      const projects = (projData.projects || [])
+      const projects = (projData?.projects || [])
         .filter((p) => p.lifecycleState === 'ACTIVE')
         .map((p) => ({
           projectId: p.projectId,
@@ -1220,13 +1307,21 @@ app.post('/api/auth/connect', async (req, res) => {
           labels: p.labels || {},
         }));
 
+      const envDefaultProj = await resolveHostDefaultProject();
+      const matchedDefault =
+        projects.find((p) => p.projectId === parsed.quota_project_id)?.projectId ||
+        projects.find((p) => p.projectId === envDefaultProj)?.projectId ||
+        parsed.quota_project_id ||
+        projects[0]?.projectId ||
+        '';
+
       return res.json({
         ok: true,
         authMode: 'BROWSER_TOKEN',
         account: resolvedEmail,
         accessToken: freshToken,
         projects,
-        defaultProject: parsed.quota_project_id || projects[0]?.projectId || '',
+        defaultProject: matchedDefault,
       });
     }
 
@@ -1242,24 +1337,40 @@ app.post('/api/auth/connect', async (req, res) => {
       });
     }
 
-    const { defaultProject } = discoverLocalGcloudAccounts();
-    const projData = await gcpFetch(
-      'https://cloudresourcemanager.googleapis.com/v1/projects?pageSize=50',
-      token,
-      null
-    );
-    const projects = (projData.projects || [])
-      .filter((p) => p.lifecycleState === 'ACTIVE')
-      .map((p) => ({
-        projectId: p.projectId,
-        name: p.name || p.projectId,
-        projectNumber: p.projectNumber,
-        createTime: p.createTime,
-        labels: p.labels || {},
-      }));
+    const defaultProject = await resolveHostDefaultProject();
+    let projects = [];
+    try {
+      const projData = await gcpFetch(
+        'https://cloudresourcemanager.googleapis.com/v1/projects?pageSize=50',
+        token,
+        null
+      );
+      projects = (projData?.projects || [])
+        .filter((p) => p.lifecycleState === 'ACTIVE')
+        .map((p) => ({
+          projectId: p.projectId,
+          name: p.name || p.projectId,
+          projectNumber: p.projectNumber,
+          createTime: p.createTime,
+          labels: p.labels || {},
+        }));
+    } catch {
+      if (defaultProject) {
+        projects = [
+          {
+            projectId: defaultProject,
+            name: defaultProject,
+            projectNumber: '',
+            createTime: new Date().toISOString(),
+            labels: {},
+          },
+        ];
+      }
+    }
 
     const matchedDefault =
       projects.find((p) => p.projectId === defaultProject)?.projectId ||
+      defaultProject ||
       projects[0]?.projectId ||
       '';
 
@@ -1267,6 +1378,7 @@ app.post('/api/auth/connect', async (req, res) => {
       ok: true,
       authMode: 'LOCAL_ADC_OR_CLOUD_RUN',
       account,
+      accessToken: token,
       projects,
       defaultProject: matchedDefault,
     });
@@ -1286,8 +1398,8 @@ app.get('/api/context', async (req, res) => {
   try {
     const { token, account, authMode } = await resolveRequestAuth(req);
     if (!token) {
-      const { accounts, activeAccount, defaultProject } =
-        discoverLocalGcloudAccounts();
+      const { accounts, activeAccount } = discoverLocalGcloudAccounts();
+      const defaultProject = await resolveHostDefaultProject();
       return res.json({
         authenticated: false,
         authMode: 'DISCONNECTED',
@@ -1317,25 +1429,42 @@ app.get('/api/context', async (req, res) => {
       }
     }
 
-    const data = await gcpFetch(
-      'https://cloudresourcemanager.googleapis.com/v1/projects?pageSize=50',
-      token,
-      null
-    );
-    const projects = (data.projects || [])
-      .filter((p) => p.lifecycleState === 'ACTIVE')
-      .map((p) => ({
-        projectId: p.projectId,
-        name: p.name || p.projectId,
-        projectNumber: p.projectNumber,
-        createTime: p.createTime,
-        labels: p.labels || {},
-        lifecycleState: p.lifecycleState,
-      }));
+    const defaultProject = await resolveHostDefaultProject();
+    let projects = [];
+    try {
+      const data = await gcpFetch(
+        'https://cloudresourcemanager.googleapis.com/v1/projects?pageSize=50',
+        token,
+        null
+      );
+      projects = (data?.projects || [])
+        .filter((p) => p.lifecycleState === 'ACTIVE')
+        .map((p) => ({
+          projectId: p.projectId,
+          name: p.name || p.projectId,
+          projectNumber: p.projectNumber,
+          createTime: p.createTime,
+          labels: p.labels || {},
+          lifecycleState: p.lifecycleState,
+        }));
+    } catch {
+      if (defaultProject) {
+        projects = [
+          {
+            projectId: defaultProject,
+            name: defaultProject,
+            projectNumber: '',
+            createTime: new Date().toISOString(),
+            labels: {},
+            lifecycleState: 'ACTIVE',
+          },
+        ];
+      }
+    }
 
-    const { defaultProject } = discoverLocalGcloudAccounts();
     const initialProject =
       projects.find((p) => p.projectId === defaultProject)?.projectId ||
+      defaultProject ||
       projects[0]?.projectId ||
       '';
 
@@ -1343,6 +1472,7 @@ app.get('/api/context', async (req, res) => {
       authenticated: true,
       authMode,
       account: resolvedAccount,
+      accessToken: token,
       defaultProject: initialProject,
       projects,
     });
@@ -1442,30 +1572,30 @@ app.get('/api/project/:projectId/overview', async (req, res) => {
     ]);
 
     const liveBuckets =
-      bucketsRes.status === 'fulfilled' ? bucketsRes.value.items || [] : [];
+      bucketsRes.status === 'fulfilled' ? bucketsRes.value?.items || [] : [];
     const liveDatasets =
       datasetsRes.status === 'fulfilled'
-        ? datasetsRes.value.datasets || []
+        ? datasetsRes.value?.datasets || []
         : [];
     const liveRunServices =
-      runRes.status === 'fulfilled' ? runRes.value.services || [] : [];
+      runRes.status === 'fulfilled' ? runRes.value?.services || [] : [];
     const liveVmsRaw =
       vmsRes.status === 'fulfilled'
-        ? Object.entries(vmsRes.value.items || {}).flatMap(([zoneKey, val]) =>
-            (val.instances || []).map((inst) => ({
+        ? Object.entries(vmsRes.value?.items || {}).flatMap(([zoneKey, val]) =>
+            (val?.instances || []).map((inst) => ({
               ...inst,
               _zone: zoneKey.replace('zones/', ''),
             }))
           )
         : [];
     const liveClusters =
-      gkeRes.status === 'fulfilled' ? gkeRes.value.clusters || [] : [];
+      gkeRes.status === 'fulfilled' ? gkeRes.value?.clusters || [] : [];
     const liveVpcs =
-      vpcsRes.status === 'fulfilled' ? vpcsRes.value.items || [] : [];
+      vpcsRes.status === 'fulfilled' ? vpcsRes.value?.items || [] : [];
     const liveFirewalls =
-      firewallsRes.status === 'fulfilled' ? firewallsRes.value.items || [] : [];
+      firewallsRes.status === 'fulfilled' ? firewallsRes.value?.items || [] : [];
     const liveLogEntries =
-      logsRes.status === 'fulfilled' ? logsRes.value.entries || [] : [];
+      logsRes.status === 'fulfilled' ? logsRes.value?.entries || [] : [];
 
     // Infer definitely-enabled APIs from the live GCP APIs that responded with 200 OK
     const inferredApis = [];
@@ -23444,6 +23574,14 @@ function getOrInitDisabledParityModules(projectId) {
   return disabledParityModulesStore.get(projectId);
 }
 
+const disabledParityModuleApisStore = new Map();
+function getOrInitDisabledParityModuleApis(projectId) {
+  if (!disabledParityModuleApisStore.has(projectId)) {
+    disabledParityModuleApisStore.set(projectId, {});
+  }
+  return disabledParityModuleApisStore.get(projectId);
+}
+
 // Role -> Permission knowledge base for AWS-style IAM Policy Simulator
 const GCP_ROLE_PERMISSION_CATALOG = [
   {
@@ -24539,6 +24677,7 @@ app.get(
         disabledModules: Array.from(
           getOrInitDisabledParityModules(projectId)
         ),
+        disabledModuleApis: getOrInitDisabledParityModuleApis(projectId),
       });
     } catch (err) {
       return res.status(400).json({
@@ -27544,6 +27683,51 @@ app.post(
         if (moduleId === 'BEDROCK_FOUNDRY_AI_GATEWAY') {
           const gw = getOrInitBedrockFoundryGateway(projectId);
           gw.routes = (gw.routes || []).filter((r) => r.routeId !== itemId);
+        } else if (moduleId === 'STEP_FUNCTIONS_SAGA' || moduleId === 'STEP_FUNCTIONS') {
+          const list = getOrInitStepFunctions(projectId);
+          stepFunctionsStore.set(
+            projectId,
+            list.filter((w) => w.workflowName !== itemId)
+          );
+        } else if (
+          moduleId === 'MULTI_BRAND_OAUTH_ROUTER' ||
+          moduleId === 'MULTI_BRAND_OAUTH'
+        ) {
+          const list = getOrInitOAuthBrandProfiles(projectId);
+          oauthBrandProfilesStore.set(
+            projectId,
+            list.filter((b) => b.brandId !== itemId && b.appSlug !== itemId)
+          );
+        } else if (moduleId === 'ROUTE53_FRONTDOOR_TRAFFIC') {
+          const list = getOrInitRoute53Policies(projectId);
+          route53PoliciesStore.set(
+            projectId,
+            list.filter((p) => p.policyId !== itemId && p.recordName !== itemId)
+          );
+        } else if (moduleId === 'RAM_LIGHTHOUSE_ORG_SHARING') {
+          const list = getOrInitRamLighthouseShares(projectId);
+          ramLighthouseSharesStore.set(
+            projectId,
+            list.filter((s) => s.shareId !== itemId && s.shareName !== itemId)
+          );
+        } else if (moduleId === 'ECS_ACA_COMPOSE' || moduleId === 'CONTAINER_COMPOSE') {
+          const list = getOrInitMultiContainerApps(projectId);
+          multiContainerAppsStore.set(
+            projectId,
+            list.filter((a) => a.appName !== itemId && a.serviceName !== itemId)
+          );
+        } else if (moduleId === 'TRANSIT_GATEWAY_HUB' || moduleId === 'TRANSIT_GATEWAY') {
+          const list = getOrInitTransitHubMesh(projectId);
+          transitHubMeshStore.set(
+            projectId,
+            list.filter((m) => m.id !== itemId && m.meshId !== itemId)
+          );
+        } else if (moduleId === 'EVENTBRIDGE_PIPES') {
+          const map = getOrInitEventPipes(projectId);
+          map.delete(itemId);
+        } else if (moduleId === 'CFN_ARM_STACKS') {
+          const map = getOrInitArmStacks(projectId);
+          map.delete(itemId);
         } else if (moduleId === 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE') {
           const fs = getOrInitAliyunFlashSale(projectId);
           fs.campaigns = (fs.campaigns || []).filter(
@@ -27590,7 +27774,7 @@ app.post(
           ok: true,
           moduleId,
           itemId,
-          message: `Disabled and removed "${itemId}" from ${moduleId} ($0.00/hr active cost).`,
+          message: `Confirmed teardown: removed "${itemId}" from ${moduleId} on project "${projectId}" ($0.00/hr active cost).`,
         });
       }
 
@@ -27599,55 +27783,147 @@ app.post(
         const disabledSet = getOrInitDisabledParityModules(projectId);
         disabledSet.add(moduleId);
 
-        // Clear active items for that module so zero active routes/pools/campaigns remain
+        let tornDownItems = [];
+
         if (moduleId === 'BEDROCK_FOUNDRY_AI_GATEWAY') {
+          const prev = getOrInitBedrockFoundryGateway(projectId);
+          tornDownItems = (prev.routes || []).map((r) => r.routeName || r.routeId);
           bedrockFoundryGatewayStore.set(projectId, {
             routes: [],
             recentEvaluations: [],
           });
+        } else if (
+          moduleId === 'STEP_FUNCTIONS_SAGA' ||
+          moduleId === 'STEP_FUNCTIONS'
+        ) {
+          const prev = getOrInitStepFunctions(projectId);
+          tornDownItems = prev.map((w) => w.workflowName);
+          stepFunctionsStore.set(projectId, []);
+        } else if (
+          moduleId === 'MULTI_BRAND_OAUTH_ROUTER' ||
+          moduleId === 'MULTI_BRAND_OAUTH'
+        ) {
+          const prev = getOrInitOAuthBrandProfiles(projectId);
+          tornDownItems = prev.map(
+            (b) => `${b.brandDisplayName} (${b.identityPlatformTenantId})`
+          );
+          oauthBrandProfilesStore.set(projectId, []);
+        } else if (moduleId === 'ROUTE53_FRONTDOOR_TRAFFIC') {
+          const prev = getOrInitRoute53Policies(projectId);
+          tornDownItems = prev.map((p) => p.recordName || p.policyId);
+          route53PoliciesStore.set(projectId, []);
+        } else if (moduleId === 'RAM_LIGHTHOUSE_ORG_SHARING') {
+          const prev = getOrInitRamLighthouseShares(projectId);
+          tornDownItems = prev.map((s) => s.shareName || s.shareId);
+          ramLighthouseSharesStore.set(projectId, []);
+        } else if (
+          moduleId === 'ECS_ACA_COMPOSE' ||
+          moduleId === 'CONTAINER_COMPOSE'
+        ) {
+          const prev = getOrInitMultiContainerApps(projectId);
+          tornDownItems = prev.map((a) => a.appName || a.serviceName);
+          multiContainerAppsStore.set(projectId, []);
+        } else if (
+          moduleId === 'TRANSIT_GATEWAY_HUB' ||
+          moduleId === 'TRANSIT_GATEWAY'
+        ) {
+          const prev = getOrInitTransitHubMesh(projectId);
+          tornDownItems = prev.map((m) => `${m.hubVpc} <-> ${m.spokeVpc}`);
+          transitHubMeshStore.set(projectId, []);
+        } else if (moduleId === 'GUARDDUTY_SENTINEL') {
+          const prev = getOrInitGuardDutySoar(projectId);
+          tornDownItems = prev.map((i) => i.detector || i.id);
+          guardDutySoarStore.set(projectId, []);
+        } else if (moduleId === 'EVENTBRIDGE_PIPES') {
+          const prev = getOrInitEventPipes(projectId);
+          tornDownItems = Array.from(prev.keys());
+          eventBridgePipesStore.set(projectId, new Map());
+        } else if (moduleId === 'CFN_ARM_STACKS') {
+          const prev = getOrInitArmStacks(projectId);
+          tornDownItems = Array.from(prev.keys());
+          armStacksStore.set(projectId, new Map());
+        } else if (moduleId === 'SECRETS_KEYVAULT') {
+          const prev = getOrInitKeyVaultPolicies(projectId);
+          tornDownItems = Array.from(prev.keys());
+          keyVaultRotationStore.set(projectId, new Map());
+        } else if (moduleId === 'RESOURCE_GROUPS') {
+          const prev = getOrInitResourceGroupsForProject(projectId);
+          tornDownItems = Array.from(prev.keys());
+          azureStyleResourceGroupsStore.set(projectId, new Map());
+          rgIamBindingsStore.set(projectId, new Map());
+        } else if (moduleId === 'SPEND_FUSE') {
+          const fuse = getOrInitSpendFuseConfig(projectId);
+          fuse.enabled = false;
+          tornDownItems = [`Budget Fuse (${fuse.pubsubTopic})`];
+        } else if (moduleId === 'ALB_FRONT_DOOR') {
+          tornDownItems = ['Global HTTPS Load Balancer & Cloud Armor WAF Policy'];
         } else if (moduleId === 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE') {
+          const prev = getOrInitAliyunFlashSale(projectId);
+          tornDownItems = (prev.campaigns || []).map((c) => c.campaignName);
           aliyunFlashSaleStore.set(projectId, {
             campaigns: [],
             surgeDrills: [],
           });
         } else if (moduleId === 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE') {
+          const prev = getOrInitAliyunCenPackages(projectId);
+          tornDownItems = prev.map((p) => p.packageName);
           aliyunCenPackagesStore.set(projectId, []);
         } else if (moduleId === 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL') {
+          const prev = getOrInitPolarGaussHtap(projectId);
+          tornDownItems = prev.map((c) => c.clusterName);
           polarGaussHtapStore.set(projectId, []);
         } else if (moduleId === 'HUAWEI_CCE_MODELARTS_AI_POOL') {
+          const prev = getOrInitHuaweiModelArtsPool(projectId);
+          tornDownItems = prev.map((p) => p.poolName);
           huaweiModelArtsPoolStore.set(projectId, []);
         } else if (moduleId === 'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY') {
+          const prev = getOrInitAliyunRocketMq(projectId);
+          tornDownItems = prev.map((m) => m.topicName || m.messageId);
           aliyunRocketMqStore.set(projectId, []);
         } else if (moduleId === 'ALIYUN_NACOS_HIGRESS_CONFIG_MESH') {
+          const prev = getOrInitAliyunNacosHigress(projectId);
+          tornDownItems = prev.map((c) => c.dataId);
           aliyunNacosHigressStore.set(projectId, []);
         } else if (moduleId === 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP') {
+          const prev = getOrInitAliyunHologresOlap(projectId);
+          tornDownItems = prev.map((t) => t.sourceMaxComputeDataset);
           aliyunHologresOlapStore.set(projectId, []);
-        } else if (moduleId === 'ROUTE53_FRONTDOOR_TRAFFIC') {
-          route53FrontDoorPoliciesStore.set(projectId, []);
-        } else if (moduleId === 'RAM_LIGHTHOUSE_ORG_SHARING') {
-          ramLighthouseSharesStore.set(projectId, []);
-        } else if (moduleId === 'MULTI_BRAND_OAUTH') {
-          multiBrandOAuthStore.set(projectId, []);
-        } else if (moduleId === 'STEP_FUNCTIONS') {
-          stepFunctionsWorkflowsStore.set(projectId, []);
-        } else if (moduleId === 'CONTAINER_COMPOSE') {
-          containerComposeAppsStore.set(projectId, []);
-        } else if (moduleId === 'TRANSIT_GATEWAY') {
-          transitGatewaySpokesStore.set(projectId, []);
-        } else if (moduleId === 'EVENTBRIDGE_PIPES') {
-          eventBridgePipesStore.set(projectId, []);
-        } else if (moduleId === 'CFN_ARM_STACKS') {
-          cfnArmStacksStore.set(projectId, []);
-        } else if (moduleId === 'SPEND_FUSE') {
-          const fuse = getOrInitSpendFuse(projectId);
-          fuse.armed = false;
         }
+
+        const alsoDisableGcpApis = Boolean(req.body?.alsoDisableGcpApis);
+        const apisToDisable = Array.isArray(req.body?.apisToDisable)
+          ? req.body.apisToDisable.map((a) => String(a).trim()).filter(Boolean)
+          : [];
+        const disabledApisMap = getOrInitDisabledParityModuleApis(projectId);
+        if (alsoDisableGcpApis && apisToDisable.length > 0) {
+          disabledApisMap[moduleId] = apisToDisable;
+        } else {
+          delete disabledApisMap[moduleId];
+        }
+
+        const itemsDetail =
+          tornDownItems.length > 0
+            ? `Tore down ${tornDownItems.length} feature resource(s): ${tornDownItems.join(', ')}.`
+            : 'All active feature allocations for this bridge have been cleared.';
+
+        const apiScopeDetail =
+          alsoDisableGcpApis && apisToDisable.length > 0
+            ? `ALSO disabled ${apisToDisable.length} underlying GCP Service API(s) (${apisToDisable.join(', ')}) on project "${projectId}".`
+            : `Kept project-wide Google Cloud Service APIs enabled so other workloads in "${projectId}" are unaffected (enabled APIs alone cost $0.00/hr).`;
 
         return res.json({
           ok: true,
           moduleId,
+          tornDownItems,
+          teardownScope:
+            alsoDisableGcpApis && apisToDisable.length > 0
+              ? 'FEATURE_AND_APIS'
+              : 'FEATURE_RESOURCES_ONLY',
+          disabledApis:
+            alsoDisableGcpApis && apisToDisable.length > 0 ? apisToDisable : [],
           disabledModules: Array.from(disabledSet),
-          message: `Disabled feature "${moduleId}" on project "${projectId}". All active routes/pools/policies for this feature have been torn down ($0.00/hr — zero active charges).`,
+          disabledModuleApis: disabledApisMap,
+          message: `Disabled "${moduleId}" on project "${projectId}". ${itemsDetail} ${apiScopeDetail} Confirmed $0.00/hr active cost.`,
         });
       }
 
@@ -27655,10 +27931,49 @@ app.post(
         const moduleId = String(req.body?.moduleId || '').trim();
         const disabledSet = getOrInitDisabledParityModules(projectId);
         disabledSet.delete(moduleId);
+        const disabledApisMap = getOrInitDisabledParityModuleApis(projectId);
+        delete disabledApisMap[moduleId];
 
-        // Delete empty store entry so getOrInit* re-populates the default sample blueprint
         if (moduleId === 'BEDROCK_FOUNDRY_AI_GATEWAY') {
           bedrockFoundryGatewayStore.delete(projectId);
+        } else if (
+          moduleId === 'STEP_FUNCTIONS_SAGA' ||
+          moduleId === 'STEP_FUNCTIONS'
+        ) {
+          stepFunctionsStore.delete(projectId);
+        } else if (
+          moduleId === 'MULTI_BRAND_OAUTH_ROUTER' ||
+          moduleId === 'MULTI_BRAND_OAUTH'
+        ) {
+          oauthBrandProfilesStore.delete(projectId);
+        } else if (moduleId === 'ROUTE53_FRONTDOOR_TRAFFIC') {
+          route53PoliciesStore.delete(projectId);
+        } else if (moduleId === 'RAM_LIGHTHOUSE_ORG_SHARING') {
+          ramLighthouseSharesStore.delete(projectId);
+        } else if (
+          moduleId === 'ECS_ACA_COMPOSE' ||
+          moduleId === 'CONTAINER_COMPOSE'
+        ) {
+          multiContainerAppsStore.delete(projectId);
+        } else if (
+          moduleId === 'TRANSIT_GATEWAY_HUB' ||
+          moduleId === 'TRANSIT_GATEWAY'
+        ) {
+          transitHubMeshStore.delete(projectId);
+        } else if (moduleId === 'GUARDDUTY_SENTINEL') {
+          guardDutySoarStore.delete(projectId);
+        } else if (moduleId === 'EVENTBRIDGE_PIPES') {
+          eventBridgePipesStore.delete(projectId);
+        } else if (moduleId === 'CFN_ARM_STACKS') {
+          armStacksStore.delete(projectId);
+        } else if (moduleId === 'SECRETS_KEYVAULT') {
+          keyVaultRotationStore.delete(projectId);
+        } else if (moduleId === 'RESOURCE_GROUPS') {
+          azureStyleResourceGroupsStore.delete(projectId);
+          rgIamBindingsStore.delete(projectId);
+        } else if (moduleId === 'SPEND_FUSE') {
+          const fuse = getOrInitSpendFuseConfig(projectId);
+          fuse.enabled = true;
         } else if (moduleId === 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE') {
           aliyunFlashSaleStore.delete(projectId);
         } else if (moduleId === 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE') {
@@ -27673,32 +27988,13 @@ app.post(
           aliyunNacosHigressStore.delete(projectId);
         } else if (moduleId === 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP') {
           aliyunHologresOlapStore.delete(projectId);
-        } else if (moduleId === 'ROUTE53_FRONTDOOR_TRAFFIC') {
-          route53FrontDoorPoliciesStore.delete(projectId);
-        } else if (moduleId === 'RAM_LIGHTHOUSE_ORG_SHARING') {
-          ramLighthouseSharesStore.delete(projectId);
-        } else if (moduleId === 'MULTI_BRAND_OAUTH') {
-          multiBrandOAuthStore.delete(projectId);
-        } else if (moduleId === 'STEP_FUNCTIONS') {
-          stepFunctionsWorkflowsStore.delete(projectId);
-        } else if (moduleId === 'CONTAINER_COMPOSE') {
-          containerComposeAppsStore.delete(projectId);
-        } else if (moduleId === 'TRANSIT_GATEWAY') {
-          transitGatewaySpokesStore.delete(projectId);
-        } else if (moduleId === 'EVENTBRIDGE_PIPES') {
-          eventBridgePipesStore.delete(projectId);
-        } else if (moduleId === 'CFN_ARM_STACKS') {
-          cfnArmStacksStore.delete(projectId);
-        } else if (moduleId === 'SPEND_FUSE') {
-          const fuse = getOrInitSpendFuse(projectId);
-          fuse.armed = true;
         }
 
         return res.json({
           ok: true,
           moduleId,
           disabledModules: Array.from(disabledSet),
-          message: `Re-enabled feature "${moduleId}" on project "${projectId}".`,
+          message: `Re-enabled feature "${moduleId}" and restored default blueprint on project "${projectId}".`,
         });
       }
 
@@ -27716,12 +28012,54 @@ app.post(
   }
 );
 
-// Serve static production frontend (dist/) when deployed on Cloud Run!
+// Serve live Vite dev server in local dev, or static production frontend (dist/) on Cloud Run!
 const distPath = path.join(__dirname, '../dist');
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+if (!process.env.K_SERVICE) {
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    const viteReq = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: Number(process.env.VITE_PORT || 5173),
+        path: req.originalUrl || req.url,
+        method: req.method,
+        headers: {
+          ...req.headers,
+          host: `127.0.0.1:${process.env.VITE_PORT || 5173}`,
+        },
+      },
+      (viteRes) => {
+        res.status(viteRes.statusCode || 200);
+        Object.entries(viteRes.headers || {}).forEach(([k, v]) => {
+          if (v !== undefined) res.setHeader(k, v);
+        });
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        viteRes.pipe(res);
+      }
+    );
+    viteReq.on('error', () => {
+      if (fs.existsSync(distPath)) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.sendFile(path.join(distPath, 'index.html'));
+      } else {
+        next();
+      }
+    });
+    req.pipe(viteReq);
+  });
+} else if (fs.existsSync(distPath)) {
+  app.use(
+    express.static(distPath, {
+      etag: false,
+      lastModified: false,
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      },
+    })
+  );
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api/')) return next();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }

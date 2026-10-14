@@ -638,6 +638,7 @@ export async function syncAndAggregateBillingIndexedDb({
 export default function BillingAccountCreditGuardian({
   projectId,
   liveBurn,
+  gdePrivacyConfig,
   onOpenBigQuerySql,
   onOpenProvision,
   onOpenSecretManagerStudio,
@@ -645,6 +646,19 @@ export default function BillingAccountCreditGuardian({
   onShowToast,
   onGrantsSummaryChange,
 }) {
+  const hideCreditsInGde = Boolean(
+    gdePrivacyConfig?.enabled && gdePrivacyConfig?.hideCreditBalances !== false
+  );
+  const fmtCreditUsd = useCallback(
+    (amount) => {
+      if (hideCreditsInGde) return '$•••.••';
+      return `$${Number(amount || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    },
+    [hideCreditsInGde]
+  );
   const [billingInfo, setBillingInfo] = useState({
     billingAccountName: null,
     billingAccountId: null,
@@ -1482,25 +1496,17 @@ ORDER BY
           {summary.totalInitialUsd > 0 ? (
             <>
               <div className="text-xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                $
-                {summary.totalRemainingUsd.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {fmtCreditUsd(summary.totalRemainingUsd)}
                 <span className="text-xs font-normal text-zinc-500 ml-1.5">
-                  / $
-                  {summary.totalInitialUsd.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  / {fmtCreditUsd(summary.totalInitialUsd)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap">
                 <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
                   {summary.activeCount} active grant(s)
                   {summary.monthlyBenefitCount > 0
-                    ? ` · incl. ${summary.monthlyBenefitCount}× monthly ($${summary.monthlyBenefitRemainingUsd.toFixed(
-                        2
+                    ? ` · incl. ${summary.monthlyBenefitCount}× monthly (${fmtCreditUsd(
+                        summary.monthlyBenefitRemainingUsd
                       )})`
                     : ''}
                 </span>
@@ -1524,7 +1530,9 @@ ORDER BY
                 </div>
               </div>
               <div className="text-[10px] font-mono text-amber-700 dark:text-amber-400 pt-0.5">
-                Upload fresh Credits CSV frequently to update balance · Expiry dates auto-calculated
+                {hideCreditsInGde
+                  ? 'GDE Mode Active: Remaining credit balances are masked on screen'
+                  : 'Upload fresh Credits CSV frequently to update balance · Expiry dates auto-calculated'}
               </div>
             </>
           ) : (
@@ -1551,14 +1559,7 @@ ORDER BY
           {summary.nearestExpiryGrant ? (
             <>
               <div className="text-xl font-mono font-extrabold text-amber-600 dark:text-amber-400">
-                $
-                {summary.nearestExpiryGrant.metrics.remaining.toLocaleString(
-                  'en-US',
-                  {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }
-                )}
+                {fmtCreditUsd(summary.nearestExpiryGrant.metrics.remaining)}
                 <span className="text-xs font-normal text-zinc-500 ml-1.5">
                   ({summary.nearestExpiryDays}d left)
                 </span>
@@ -1588,13 +1589,13 @@ ORDER BY
           <div className="text-xl font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
             {summary.monthlyBenefitCount > 0 ? (
               <>
-                {summary.monthlyBenefitCount} × $
-                {(
+                {summary.monthlyBenefitCount} ×{' '}
+                {fmtCreditUsd(
                   summary.monthlyBenefitRemainingUsd /
-                  summary.monthlyBenefitCount
-                ).toFixed(2)}
+                    summary.monthlyBenefitCount
+                )}
                 <span className="text-xs font-normal text-zinc-500 ml-1.5">
-                  (${summary.monthlyBenefitRemainingUsd.toFixed(2)} USD)
+                  ({fmtCreditUsd(summary.monthlyBenefitRemainingUsd)} USD)
                 </span>
               </>
             ) : (
@@ -1609,8 +1610,8 @@ ORDER BY
           </div>
           <div className="text-[11px] font-mono text-zinc-500 truncate">
             {summary.expiredCount > 0
-              ? `${summary.expiredCount} expired grant(s) ($${summary.expiredUnusedUsd.toFixed(
-                  2
+              ? `${summary.expiredCount} expired grant(s) (${fmtCreditUsd(
+                  summary.expiredUnusedUsd
                 )} unused)`
               : `${liveCostMetrics.billingBudgets.length} live budget rule(s) active`}
           </div>
@@ -1622,12 +1623,11 @@ ORDER BY
             <TrendingDown className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="text-xl font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
-            $
             {summary.nearestExpiryGrant
-              ? summary.nearestExpiryGrant.metrics.requiredDailyBurnToUseAll.toFixed(
-                  2
+              ? fmtCreditUsd(
+                  summary.nearestExpiryGrant.metrics.requiredDailyBurnToUseAll
                 )
-              : '0.00'}
+              : '$0.00'}
             /day
             <span className="text-xs font-normal text-zinc-500 ml-1.5">
               (now ${dailyBurnUsd.toFixed(2)}/d)
@@ -1658,7 +1658,7 @@ ORDER BY
               >
                 <div className="min-w-0">
                   <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                    {b.displayName} — ${b.amountUsd.toFixed(2)} {b.currencyCode}/
+                    {b.displayName} — {fmtCreditUsd(b.amountUsd)} {b.currencyCode}/
                     {b.calendarPeriod}
                   </div>
                   <div className="text-[10px] text-zinc-500 truncate">
@@ -1695,27 +1695,13 @@ ORDER BY
                 <p className="text-xs leading-relaxed">
                   You still have{' '}
                   <span className="font-mono font-bold underline">
-                    $
-                    {summary.nearestExpiryGrant.metrics.remaining.toLocaleString(
-                      'en-US',
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }
-                    )}
+                    {fmtCreditUsd(summary.nearestExpiryGrant.metrics.remaining)}
                   </span>{' '}
                   out of{' '}
                   <span className="font-mono font-bold">
-                    $
-                    {summary.nearestExpiryGrant.metrics.initial.toLocaleString(
-                      'en-US',
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }
-                    )}
+                    {fmtCreditUsd(summary.nearestExpiryGrant.metrics.initial)}
                   </span>{' '}
-                  ({summary.nearestExpiryGrant.metrics.displayPct}% remaining)
+                  ({hideCreditsInGde ? '••' : summary.nearestExpiryGrant.metrics.displayPct}% remaining)
                   inside this credit grant, and it expires on{' '}
                   <span className="font-mono font-bold underline">
                     {formatHumanDate(
@@ -1727,12 +1713,12 @@ ORDER BY
                       {' '}
                       (plus{' '}
                       <span className="font-mono font-bold">
-                        {summary.monthlyBenefitCount} × $
-                        {(
+                        {summary.monthlyBenefitCount} ×{' '}
+                        {fmtCreditUsd(
                           summary.monthlyBenefitRemainingUsd /
-                          summary.monthlyBenefitCount
-                        ).toFixed(2)}{' '}
-                        USD = ${summary.monthlyBenefitRemainingUsd.toFixed(2)}{' '}
+                            summary.monthlyBenefitCount
+                        )}{' '}
+                        USD = {fmtCreditUsd(summary.monthlyBenefitRemainingUsd)}{' '}
                         USD
                       </span>{' '}
                       in active monthly benefits)
@@ -1744,13 +1730,8 @@ ORDER BY
                   </span>
                   ),{' '}
                   <span className="font-mono font-bold underline">
-                    $
-                    {summary.nearestExpiryGrant.metrics.strandedMoneyUsd.toLocaleString(
-                      'en-US',
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }
+                    {fmtCreditUsd(
+                      summary.nearestExpiryGrant.metrics.strandedMoneyUsd
                     )}{' '}
                     is projected to expire unused
                   </span>
@@ -2299,11 +2280,7 @@ ORDER BY
                         <div className="font-semibold">{grant.name}</div>
                         {isUrgent && (
                           <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400 mt-0.5">
-                            Stranded forecast: $
-                            {m.strandedMoneyUsd.toLocaleString('en-US', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}{' '}
+                            Stranded forecast: {fmtCreditUsd(m.strandedMoneyUsd)}{' '}
                             will expire unused at ${dailyBurnUsd.toFixed(2)}/day
                           </div>
                         )}
@@ -2346,7 +2323,7 @@ ORDER BY
                               ))}
                             </div>
                             <span className="font-mono text-zinc-700 dark:text-zinc-300">
-                              {m.displayPct}%
+                              {hideCreditsInGde ? '••%' : `${m.displayPct}%`}
                             </span>
                           </div>
                         )}
@@ -2361,19 +2338,11 @@ ORDER BY
                             : 'font-semibold text-zinc-900 dark:text-zinc-100'
                         }`}
                       >
-                        $
-                        {m.remaining.toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {fmtCreditUsd(m.remaining)}
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
-                        $
-                        {m.initial.toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {fmtCreditUsd(m.initial)}
                       </td>
 
                       <td className="py-3 px-3 text-zinc-700 dark:text-zinc-300 whitespace-nowrap">

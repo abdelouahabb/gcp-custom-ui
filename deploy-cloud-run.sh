@@ -220,8 +220,10 @@ DEPLOY_ARGS=(
   --platform managed
   --execution-environment gen2
   --cpu-boost
+  --session-affinity
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
   --port 8080
-  --memory 512Mi
+  --memory 1Gi
   --cpu 1
   --min-instances 0
   --max-instances 5

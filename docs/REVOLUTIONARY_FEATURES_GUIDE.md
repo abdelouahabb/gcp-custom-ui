@@ -329,22 +329,52 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     2. **Hide Cloud Billing Account IDs**: Masks `01XXXX-XXXXXX-XXXXXX` and `billingAccounts/01XXXX-...` into `01GDE•-••••••-TUTOR1`.
     3. **Hide GCP Project Numbers**: Masks 10–14 digit project numbers (`#9900••••••01`).
     4. **Hide External / Public IPv4s**: Masks public IPv4 addresses (`34.•••.•••.88`) while keeping RFC1918 private IPs (`10.x.x.x`, `127.0.0.1`) and Google Cloud IAP (`35.235.240.0/20`) readable for teaching networking.
-    5. **Optional Project ID & Credit Balance Masking**: Toggleable switches in the `⚙️` popover to replace live Project IDs with `gde-demo-project` and mask large dollar balances (`$•,•••.••`).
-  - **Persistent Across Browser Refreshes (`localStorage`)**: Saves your shield state in `cloudpulse_gde_tutorial_mode_v1` so refreshing the page during a live stream never flashes your email or billing account ID.
+    5. **Automatic Promotional Credit & Bonus Balance Masking (`maskDollarAmounts: true` by Default)**: Turning on **GDE Mode ON** automatically masks all remaining credit/bonus dollar balances (`Credits: $•••.••` and `$•••.•• / $•••.••`) in the top header pill, hover tooltips, and all 15+ KPI cards, progress bars, tables, and inputs inside **Billing & Credit Guardian**.
+  - **Persistent Across Browser Refreshes (`localStorage`)**: Saves your shield state in `cloudpulse_gde_tutorial_mode_v1` so refreshing the page during a live stream never flashes your email, credit balance, or billing account ID.
 
-### 39. 🌉 AWS & Azure Parity Super-Studio for Google Cloud (`AwsAzureEnvySuiteStudio.jsx`)
-- **Where to find it**: Top navigation tab **`AWS/Azure Parity ★`** (or via **`⌘K`** $\rightarrow$ *"Open AWS & Azure Parity Super-Studio"*).
+### 39. 🌉 20-in-1 AWS & Microsoft Azure Enterprise Parity Super-Studio (`AwsAzureEnvySuiteStudio.jsx`)
+- **Where to find it**: Top navigation tab **`AWS & Azure Parity ★`** (or via **`⌘K`** $\rightarrow$ *"Open AWS & Azure Parity Super-Studio"*).
 - **How it Works**:
-  - **📦 1. Azure-Style "Resource Groups" & Bulk Label Tagger (`UPSERT_RESOURCE_GROUP`, `HIBERNATE_RESOURCE_GROUP`, `DELETE_RESOURCE_GROUP`)**:
-    - Groups any combination of Compute Engine VMs, Cloud Run services, Cloud Storage buckets, BigQuery datasets, and Secret Manager secrets into logical folders (syncing `labels.resource_group` on GCP resources), displays live per-group `$/mo` burn, and enables **1-Click Hibernate Group** or **1-Click Cascade Teardown Group** (protected by the Mandatory Delete Confirmation Modal and grayed-out `line-through` `⏳ DELETING...` visual feedback).
-  - **🛑 2. AWS Budgets Actions / Azure Auto-Shutdown "Hard-Spend Stop-Loss Fuse" (`SAVE_SPEND_FUSE_CONFIG`, `EXECUTE_SPEND_FUSE`)**:
-    - Arms 3 automated stop-loss thresholds (`80%` Soft Brake capping Cloud Run `maxInstances=3` & `minInstances=0`, `95%` Compute Park stopping all `RUNNING` Compute VMs, and `100%` native Pub/Sub `projects/:id/topics/cloudpulse-hard-spend-fuse` wire).
-  - **🕵️‍♂️ 3. AWS-Style "IAM Policy Simulator" & "Switch Role" Service Account Impersonator (`SIMULATE_IAM_POLICY`, `GRANT_SIMULATOR_ROLE`)**:
-    - Evaluates 16 core GCP permissions (`ALLOW` vs `DENY`) for any Service Account or user principal via live `getIamPolicy` + `testIamPermissions`, activates a top-level **🎭 Switch Role Preview** banner, and binds missing least-privilege roles in 1 click.
-  - **🔗 4. Azure SAS / AWS S3 "1-Click Presigned URL & Browser Upload Studio" (`UPLOAD_BUCKET_OBJECT`, `GENERATE_PRESIGNED_URL`)**:
-    - Uploads files directly from the browser (`storage.googleapis.com/upload/storage/v1`) and generates expiring (`15m`, `1h`, `24h`, `7d`) Zero-SA-Key SAS Bridge URLs (`/api/project/:id/aws-azure-parity/presigned-bridge/:sasToken`) plus `gcloud storage sign-url` V4 commands.
-  - **🌐 5. 1-Screen Global HTTPS Load Balancer + Custom Domain + Cloud Armor WAF Wizard (`PROVISION_GLOBAL_LB_STACK`)**:
-    - Collapses GCP's 7-object Global Load Balancer setup (`Global Static IP` ➔ `Serverless NEG` ➔ `Cloud Armor WAF` ➔ `Backend Service` ➔ `URL Map` ➔ `Google-Managed SSL Cert` ➔ `Global Forwarding Rule`) into a single 1-click workflow.
+  - **📐 Uniform 4-Column Bento Grid (`5 rows × 4 columns`)**: All 20 enterprise bridges are organized in equal-width, equal-height (`h-11`) cards with fixed `01`–`20` badges, single-line truncated titles, and right-aligned live metric pills.
+  - **🛡️ Per-Feature 1-Click Enable (`ENABLE_PARITY_FEATURE_APIS`) & Two-Mode Safe Teardown Gatekeeper (`TEARDOWN_PARITY_FEATURE`)**:
+    - Every feature displays a live **Feature Status & Cost Control Bar** listing its underlying Google Cloud APIs (`serviceusage.googleapis.com`), active resource count, and hourly burn (`$/hr`).
+    - Clicking **Disable & Teardown Feature** opens a mandatory **Two-Mode Teardown Confirmation Modal**:
+      1. **Mode 1 — `FEATURE_ONLY` (Recommended Safe Default)**: Purges only that feature's studio state (`workflows`, `brands`, `routes`, `pipes`, `shares`, etc.) while keeping shared Google Cloud APIs (`run.googleapis.com`, `workflows.googleapis.com`, `iap.googleapis.com`, etc.) enabled so other workloads in the project are unaffected.
+      2. **Mode 2 — `PURGE_AND_DISABLE_APIS` (Full Infrastructure Teardown)**: Purges the feature's state AND runs `gcloud services disable <api> --force` across all mapped Google Cloud APIs for that feature, clearly warning which shared project APIs will be disabled.
+  - **Modules 01–05 & 16 (Wave 1 Foundation + Azure Architect Wishlist)**:
+    - **`01` Azure Resource Groups + RBAC (`UPSERT_RESOURCE_GROUP`, `ASSIGN_RG_IAM_ROLE`, `HIBERNATE_RESOURCE_GROUP`, `DELETE_RESOURCE_GROUP`)**: Groups VMs, Cloud Run, GCS, BigQuery, and Secrets via `labels.resource_group`, tracks live `$/hr` + `$/mo` + accrued session spend, assigns RG-scoped RBAC (`Reader`/`Contributor`/`Owner` + CEL IAM condition), and supports 1-click group hibernate or cascade teardown.
+    - **`02` Hard-Spend Stop-Loss Fuse (`SAVE_SPEND_FUSE_CONFIG`, `EXECUTE_SPEND_FUSE`)**: Arms `80%` Soft Brake, `95%` Compute Park, and `100%` Pub/Sub circuit-breaker fuses.
+    - **`03` IAM Simulator & Switch Role (`SIMULATE_IAM_POLICY`, `GRANT_SIMULATOR_ROLE`)**: Tests 16 core GCP permissions via `testIamPermissions`, activates a live **Switch-Role Preview Banner**, and grants least-privilege roles in 1 click.
+    - **`04` S3/SAS Presigned URLs (`UPLOAD_BUCKET_OBJECT`, `GENERATE_PRESIGNED_URL`)**: Direct browser object upload + expiring (`15m`–`7d`) Zero-SA-Key SAS Bridge URLs and V4 signed URL CLI.
+    - **`05` 1-Screen Global LB & WAF (`PROVISION_GLOBAL_LB_STACK`)**: 7-in-1 Global HTTPS Load Balancer + Managed SSL + Cloud Armor WAF provisioner.
+    - **`16` Multi-Brand OAuth Studio (`CREATE_OAUTH_BRAND_PROFILE`, `DELETE_OAUTH_BRAND_PROFILE`)**: Azure Entra App Registrations parity—hosts multiple distinct customer-facing OAuth brandings inside 1 `'prod'` GCP project via Identity Platform Multi-Tenancy + Custom Auth Domains.
+  - **Modules 06–10 (Wave 2 Enterprise Scale)**:
+    - **`06` CloudFormation/ARM Drift & Rollback (`SNAPSHOT_ARM_STACK`, `DETECT_STACK_DRIFT`, `ROLLBACK_ARM_STACK`)**: Captures immutable stack snapshots, detects out-of-band console drift, rolls back drifted properties, and exports Terraform HCL / Pulumi TypeScript.
+    - **`07` Cost Explorer & CUD Savings Plans (`APPLY_FINOPS_ARBITRAGE`)**: 14-day daily burn attribution + 1-click Cloud Billing CUD / Spot / Scale-to-Zero arbitrage (`up to -68%`).
+    - **`08` AWS SSM Fleet Run Command (`EXECUTE_SSM_FLEET_COMMAND`)**: Executes fleet-wide shell commands across Compute Engine VMs and Cloud Run revisions with zero SSH keys.
+    - **`09` EventBridge Pipes & DLQ Router (`PROVISION_EVENT_PIPE`, `TEST_EVENT_PIPE`)**: Visual Source $\rightarrow$ Filter $\rightarrow$ Transform $\rightarrow$ Target router with automatic `-dlq` Dead-Letter Queue Pub/Sub provisioning.
+    - **`10` Key Vault Auto-Rotation & Sync (`ROTATE_SECRET_NOW`, `SYNC_SECRET_ACROSS_ENV`)**: 1-click Secret Manager rotation + cross-environment (`dev` $\rightarrow$ `staging` $\rightarrow$ `prod`) secret synchronization.
+  - **Modules 11–15 (Wave 3 Hyper-Scale & Architecture Parity)**:
+    - **`11` Trusted Advisor 5-Pillar (`REMEDIATE_ADVISOR_FINDING`)**: Live 5-Pillar Well-Architected scorer (`Cost`, `Security`, `Fault Tolerance`, `Performance`, `Service Quotas`) with 1-click auto-remediation.
+    - **`12` Transit Gateway VPC Mesh (`PROVISION_TRANSIT_HUB_MESH`)**: Hub-and-Spoke VPC Peering, Cloud Router BGP, and Cloud NAT mesh builder.
+    - **`13` ECS/ACA Sidecar Compose (`DEPLOY_MULTICONTAINER_APP`)**: Multi-container Cloud Run Gen2 sidecar composer (`Ingress` + `OpenTelemetry` + `Redis Sidecar` sharing `/var/run/shared` RAM volume).
+    - **`14` GuardDuty/Sentinel SOAR (`EXECUTE_SOAR_PLAYBOOK`)**: Live threat hunting + 1-click SOAR quarantine playbooks (`ISOLATE_VM_FIREWALL`, `FREEZE_SA_AND_REVOKE_KEYS`, `BLOCK_ATTACKER_IP_CLOUD_ARMOR`).
+    - **`15` Step Functions Saga Studio (`DEPLOY_STEP_FUNCTION_WORKFLOW`, `EXECUTE_STEP_FUNCTION_SAGA`)**: Visual state-machine choreographer + Google Cloud Workflows YAML compiler with automatic compensation rollback states.
+  - **Modules 17–20 (Wave 4 Moonshot Parity)**:
+    - **`17` Route 53 / Front Door DNS (`PROVISION_DNS_ROUTING_POLICY`, `SIMULATE_DNS_FAILOVER`)**: Weighted, geo-proximity, and 10s health-check failover DNS routing policies (`dns.googleapis.com/dns/v1`).
+    - **`18` CloudTrail / Activity Detective (`QUERY_CLOUDTRAIL_AUDIT_LAKE`)**: "Who-Did-What" SQL audit time-detective with Before/After diff and 1-click Undo CLI generation.
+    - **`19` AWS RAM / Azure Lighthouse (`CREATE_RAM_LIGHTHOUSE_SHARE`, `REVOKE_RAM_LIGHTHOUSE_SHARE`)**: Cross-project resource sharing hub (Shared VPC Subnets, BigQuery Analytics Hub & KMS Delegation with zero JSON keys).
+    - **`20` Bedrock / AI Foundry Gateway (`PROVISION_AI_GATEWAY_ROUTE`, `TEST_AI_GATEWAY_PROMPT`)**: Multi-model Vertex AI router (`Gemini 2.5 Pro -> Flash -> Claude 3.7 Sonnet`), Cloud DLP PII redaction shield, and per-team daily token spend fuse.
 
-
-
+### 40. 🐉 8-in-1 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity Super-Studio (`AwsAzureEnvySuiteStudio.jsx`)
+- **Where to find it**: Top navigation tab **`Alibaba & Huawei 🐉`** (or toggle **`Alibaba / Huawei (8)`** inside the Multi-Cloud Parity header).
+- **How it Works**:
+  - **📐 Uniform 4-Column Bento Grid (`2 rows × 4 columns`) & Two-Mode Safe Feature Teardown**: All 8 hyperscale bridges are displayed in an even `2×4` Bento Grid with `01`–`08` badges and full **Mode 1 (`FEATURE_ONLY`)** vs **Mode 2 (`PURGE_AND_DISABLE_APIS`)** teardown protection:
+    1. **`01` Alibaba PTS + MSE 11.11 Surge (`ARM_ALIYUN_FLASH_SALE_SURGE`, `TRIGGER_PTS_SURGE_DRILL`)**: Singles' Day flash-sale pre-warm (`minInstanceCount` warm pool) + MSE Sentinel QPS token-bucket circuit-breaker and waiting-room JSON degradation.
+    2. **`02` Alibaba CEN & GA QoS Slicer (`CREATE_CEN_QOS_BANDWIDTH_SLICE`)**: Cloud Enterprise Network cross-region QoS bandwidth slicer (`Gold` / `Silver` / `Bronze` traffic classes across APAC, EU & Americas).
+    3. **`03` PolarDB / GaussDB HTAP & Clone (`PROVISION_HTAP_POOL_OR_CLONE`)**: Serverless HTAP columnar read-pool + `1.6s` zero-copy point-in-time snapshot clone (`$0` duplicate storage).
+    4. **`04` Huawei Volcano / PAI vGPU Pool (`ALLOCATE_FRACTIONAL_VGPU_POOL`)**: CNCF Volcano gang-scheduler + fractional vGPU time-slicing (`0.125x` / `0.25x` / `0.50x` GPU slices on a single NVIDIA L4 / H100).
+    5. **`05` RocketMQ 5.0 2PC & Delay Queue (`PUBLISH_ROCKETMQ_2PC_DELAY_MSG`, `COMMIT_OR_ROLLBACK_ROCKETMQ_2PC`)**: 2-phase transactional half-messages with automatic crash-recovery checker + exact-second scheduled delivery (`Cloud Tasks` + `Pub/Sub` bridge).
+    6. **`06` Nacos + Higress Config & Wasm (`PUSH_NACOS_HOT_CONFIG`)**: Zero-restart `<80ms` dynamic configuration hot-push (`Secret Manager` + `Pub/Sub`) + AI Wasm gateway plugins without container restarts.
+    7. **`07` Hologres + MaxCompute Sub-s OLAP (`CREATE_HOLOGRES_HYBRID_TABLE`, `RUN_HOLOGRES_SUBSECOND_QUERY`)**: Sub-second hybrid row-column OLAP serving (`BigQuery BI Engine RAM Pinning` + `Bigtable` point-lookup federation).
+    8. **`08` DataV / Huawei Astro NOC Wall (`SIMULATE_DATAV_NOC_SURGE`)**: Executive Digital-Twin NOC & 11.11 War-Room Command Wall with global QPS telemetry, P99 latency, and active region status.
