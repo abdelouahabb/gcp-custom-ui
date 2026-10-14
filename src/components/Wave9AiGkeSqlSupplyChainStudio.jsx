@@ -1266,7 +1266,7 @@ options:
                               </span>
                               {isDeletingRepo ? (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40">
-                                  ⏳ DELETING REPO...
+                                  DELETING REPO...
                                 </span>
                               ) : (
                                 <span
@@ -1292,7 +1292,7 @@ options:
                           <div className="flex items-center gap-1.5 shrink-0">
                             {isDeletingRepo ? (
                               <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
-                                ⏳ Deleting in GCP...
+                                Deleting in GCP...
                               </span>
                             ) : confirmRepoName === repo.name ? (
                               <>
@@ -1437,7 +1437,7 @@ options:
                           </span>
                           {isDeletingThis && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40">
-                              ⏳ DELETING CONTAINER...
+                              DELETING CONTAINER...
                             </span>
                           )}
                         </div>
@@ -1466,7 +1466,7 @@ options:
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isDeletingThis ? (
                           <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
-                            ⏳ Deleting in GCP...
+                            Deleting in GCP...
                           </span>
                         ) : (
                           <>

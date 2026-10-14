@@ -582,7 +582,7 @@ function classifyDestructiveAxiosConfig(config) {
           projectId,
           method: 'DELETE SECRET',
           endpoint: rawUrl,
-          impactWarning: `⚠️ NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Deleting "${sid}" permanently erases the secret and all of its versions. It does NOT revert Cloud Run environment variables back into plaintext! Because the Leak Surgeon removed the plaintext value from Cloud Run and replaced it with a secretKeyRef pointer, any Cloud Run service still referencing "${sid}" will fail to start new instances until that reference is updated or removed.`,
+          impactWarning: `NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Deleting "${sid}" permanently erases the secret and all of its versions. It does NOT revert Cloud Run environment variables back into plaintext! Because the Leak Surgeon removed the plaintext value from Cloud Run and replaced it with a secretKeyRef pointer, any Cloud Run service still referencing "${sid}" will fail to start new instances until that reference is updated or removed.`,
         };
       }
       if (
@@ -599,7 +599,7 @@ function classifyDestructiveAxiosConfig(config) {
           projectId,
           method: 'DESTROY VERSION',
           endpoint: rawUrl,
-          impactWarning: `⚠️ NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Destroying version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently shredded and does NOT return to plaintext in Cloud Run. Tip: If you only want $0.00/mo billing or might need to roll back later, click Cancel and use "⏸ Disable ($0/mo)" instead—disabled versions also cost $0.00/mo and can be re-enabled anytime!`,
+          impactWarning: `NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Destroying version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently shredded and does NOT return to plaintext in Cloud Run. Tip: If you only want $0.00/mo billing or might need to roll back later, click Cancel and use "⏸ Disable ($0/mo)" instead—disabled versions also cost $0.00/mo and can be re-enabled anytime!`,
         };
       }
       if (
@@ -1388,7 +1388,7 @@ function CloudPulseCockpit() {
                 ) : null}
               </button>
 
-              {/* 🎥 GDE Streamer & Tutorial Privacy Shield */}
+              {/* GDE Streamer & Tutorial Privacy Shield */}
               <GdeStreamerPrivacyShield
                 config={gdePrivacyConfig}
                 onChangeConfig={setGdePrivacyConfig}
@@ -2241,7 +2241,7 @@ function MandatoryDeleteConfirmationModal({
     );
     if (matchingRun.length > 0) {
       blastRadiusItems.push(
-        `🚨 ${matchingRun.length} Cloud Run service(s) (${matchingRun
+        `${matchingRun.length} Cloud Run service(s) (${matchingRun
           .map((s) => s.name)
           .join(', ')}) reference "${cleanTarget}" and will fail to start until healed!`
       );
@@ -2256,7 +2256,7 @@ function MandatoryDeleteConfirmationModal({
     );
     if (attachedVms.length > 0) {
       blastRadiusItems.push(
-        `🚨 ${attachedVms.length} live Compute VM(s) (${attachedVms
+        `${attachedVms.length} live Compute VM(s) (${attachedVms
           .map((v) => v.name)
           .join(', ')}) are attached to VPC "${cleanTarget}".`
       );
@@ -2356,7 +2356,7 @@ function MandatoryDeleteConfirmationModal({
           {blastRadiusItems.length > 0 && (
             <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 space-y-1">
               <div className="font-extrabold text-blue-600 dark:text-blue-400">
-                🧭 Live Dependency & Blast-Radius Pre-Flight Scan
+                Live Dependency & Blast-Radius Pre-Flight Scan
               </div>
               <ul className="list-disc pl-4 space-y-0.5">
                 {blastRadiusItems.map((msg, idx) => (

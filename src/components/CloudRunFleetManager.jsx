@@ -1444,7 +1444,7 @@ spec:
             }`}
           >
             <HardDrive className="w-3.5 h-3.5" />
-            <span>🧹 Search Dead Containers & GCS Artifacts</span>
+            <span>Search Dead Containers & GCS Artifacts</span>
             {artifactScanState.data?.summary && (
               <span className="px-1.5 py-0.2 rounded-full bg-zinc-900/80 text-amber-300 text-[10px] font-mono">
                 {artifactScanState.data.summary.deadContainerImagesCount} Dead ·{' '}
@@ -1552,8 +1552,9 @@ spec:
                     <HardDrive className="w-3 h-3" />
                     <span>ARTIFACT REGISTRY & CLOUD STORAGE HYGIENE SCANNER</span>
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
-                    🔒 Active Cloud Run Containers Protected from Deletion
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                    <Lock className="w-3 h-3" />
+                    <span>Active Cloud Run Containers Protected from Deletion</span>
                   </span>
                 </div>
                 <h4 className="text-sm sm:text-base font-extrabold text-white mt-1">
@@ -1650,9 +1651,10 @@ spec:
                       artifactActionBusy === 'SWEEP_ALL_CONTAINERS'
                     }
                     onClick={() => handleSweepAllDeadContainers(deadContainersList)}
-                    className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
                   >
-                    🧹 Sweep {deadContainersList.length} Dead Container(s)
+                    <Trash2 className="w-3 h-3" />
+                    <span>Sweep {deadContainersList.length} Dead Container(s)</span>
                   </button>
                   <button
                     type="button"
@@ -1661,9 +1663,10 @@ spec:
                       artifactActionBusy === 'PURGE_ALL_GCS'
                     }
                     onClick={() => handlePurgeGcsArtifacts(buildStagingObjectsList)}
-                    className="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
                   >
-                    🗑️ Purge {buildStagingObjectsList.length} Build Tarball(s)
+                    <Trash2 className="w-3 h-3" />
+                    <span>Purge {buildStagingObjectsList.length} Build Tarball(s)</span>
                   </button>
                 </div>
               </div>
@@ -1675,24 +1678,26 @@ spec:
                 <button
                   type="button"
                   onClick={() => setArtifactHunterTab('CONTAINERS')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
                     artifactHunterTab === 'CONTAINERS'
                       ? 'bg-amber-500 text-zinc-950'
                       : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
-                  📦 Artifact Registry Containers ({filteredContainers.length})
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Artifact Registry Containers ({filteredContainers.length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setArtifactHunterTab('STORAGE')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
                     artifactHunterTab === 'STORAGE'
                       ? 'bg-blue-500 text-white'
                       : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
-                  🗄️ Cloud Storage Artifacts ({filteredStorage.length})
+                  <HardDrive className="w-3.5 h-3.5" />
+                  <span>Cloud Storage Artifacts ({filteredStorage.length})</span>
                 </button>
               </div>
 
@@ -1768,10 +1773,10 @@ spec:
                               }`}
                             >
                               {isDeletingImg
-                                ? '⏳ DELETING CONTAINER...'
+                                ? 'DELETING CONTAINER...'
                                 : !img.isDead
-                                ? `🔒 ${img.statusLabel}`
-                                : `💀 ${img.statusLabel}`}
+                                ? `PROTECTED · ${img.statusLabel}`
+                                : `DEAD · ${img.statusLabel}`}
                             </span>
                             <span
                               className={`text-xs font-mono font-bold truncate ${
@@ -1826,7 +1831,7 @@ spec:
                         <div className="flex items-center gap-2 shrink-0">
                           {isDeletingImg ? (
                             <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-300">
-                              ⏳ Deleting in GCP...
+                              Deleting in GCP...
                             </span>
                           ) : img.isDead ? (
                             <button
@@ -1841,8 +1846,9 @@ spec:
                               </span>
                             </button>
                           ) : (
-                            <span className="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
-                              🔒 Protected (Serving Cloud Run)
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
+                              <Lock className="w-3 h-3" />
+                              <span>Protected (Serving Cloud Run)</span>
                             </span>
                           )}
                         </div>
@@ -1887,7 +1893,7 @@ spec:
                           </span>
                           {isDeletingBucket ? (
                             <span className="px-1.5 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
-                              ⏳ DELETING BUCKET...
+                              DELETING BUCKET...
                             </span>
                           ) : (
                             b.isBuildStagingBucket && (
@@ -1955,10 +1961,10 @@ spec:
                               }`}
                             >
                               {isDeletingObj
-                                ? '⏳ DELETING ARTIFACT...'
+                                ? 'DELETING ARTIFACT...'
                                 : obj.isBuildStagingArtifact
-                                ? '📦 BUILD / STAGING ARTIFACT'
-                                : '🗄️ GCS ARTIFACT OBJECT'}
+                                ? 'BUILD / STAGING ARTIFACT'
+                                : 'GCS ARTIFACT OBJECT'}
                             </span>
                             <span
                               className={`text-xs font-mono font-bold truncate ${
@@ -1991,7 +1997,7 @@ spec:
                         <div className="flex items-center gap-2 shrink-0">
                           {isDeletingObj ? (
                             <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-300">
-                              ⏳ Deleting in GCP...
+                              Deleting in GCP...
                             </span>
                           ) : (
                             <button
@@ -2699,7 +2705,7 @@ spec:
                           <span>
                             {busyState === 'SEALING_SECRETS'
                               ? 'Sealing in Secret Manager...'
-                              : `⚠️ ${srv.plaintextSecretCount} Plaintext Secret(s) · 1-Click Seal 🔒`}
+                              : `${srv.plaintextSecretCount} Plaintext Secret(s) · 1-Click Seal`}
                           </span>
                         </button>
                       )}
@@ -2718,7 +2724,7 @@ spec:
                         >
                           <AlertTriangle className="w-3 h-3" />
                           <span>
-                            🚨 Crash-Loop Detected ({srv.crashedRevisionsCount || 1}) · 1-Click Autopsy & Rollback
+                            Crash-Loop Detected ({srv.crashedRevisionsCount || 1}) · 1-Click Autopsy & Rollback
                           </span>
                         </button>
                       )}
@@ -2813,7 +2819,7 @@ spec:
                       }`}
                     >
                       <Network className="w-3.5 h-3.5" />
-                      <span>🔌 127.0.0.1 Proxy</span>
+                      <span>127.0.0.1 Proxy</span>
                     </button>
 
                     <button
@@ -3561,7 +3567,7 @@ spec:
                                 >
                                   <KeyRound className="w-3 h-3 text-amber-400" />
                                   <span>
-                                    🔑 Open Secret Manager Studio (Rotate & Versions) →
+                                    Open Secret Manager Studio (Rotate & Versions) →
                                   </span>
                                 </button>
                               )}
@@ -3585,8 +3591,8 @@ spec:
                                     {busyState === 'SEALING_SECRETS'
                                       ? 'Sealing in Secret Manager & Binding IAM...'
                                       : sensitivePairs.length > 0
-                                      ? `🔒 1-Click Seal ${sensitivePairs.length} Detected Secret(s) in Secret Manager`
-                                      : `🔒 Seal All ${livePairs.length} Env Var(s) in Secret Manager`}
+                                      ? `1-Click Seal ${sensitivePairs.length} Detected Secret(s) in Secret Manager`
+                                      : `Seal All ${livePairs.length} Env Var(s) in Secret Manager`}
                                   </span>
                                 </button>
                               )}
@@ -3597,14 +3603,14 @@ spec:
                           <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/70 border border-emerald-500/25 text-[10.5px] leading-relaxed text-zinc-700 dark:text-zinc-300 space-y-1">
                             <div className="flex flex-wrap items-center justify-between gap-1.5">
                               <span className="font-mono font-extrabold text-emerald-700 dark:text-emerald-400">
-                                🎁 Monthly Free Tier: First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month
+                                Monthly Free Tier: First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month
                               </span>
                               <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-mono font-bold text-[9.5px]">
                                 Beyond 6 Free: $0.06 / active version / mo · $0.03 / 10k access ops
                               </span>
                             </div>
                             <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-                              💡 <strong>FinOps Rotation Tip:</strong> Only{' '}
+                              <strong>FinOps Rotation Tip:</strong> Only{' '}
                               <code className="text-emerald-600 dark:text-emerald-400 font-bold">
                                 ENABLED
                               </code>{' '}
@@ -3628,14 +3634,14 @@ spec:
                               to rotate secrets and auto-disable old versions so you stay inside the Free Tier.
                             </div>
                             <div className="pt-1 border-t border-emerald-500/20 text-[10px] text-amber-800 dark:text-amber-300 font-mono">
-                              ⚠️ <strong>Important — Does Delete/Destroy Revert Back to Plaintext? NO!</strong> Sealing a variable removes the plaintext from Cloud Run and replaces it with a <code className="font-bold">secretKeyRef</code> pointer. If you later <strong>Destroy</strong> a version or <strong>Delete</strong> the secret in Secret Manager, it <strong>disappears forever</strong> (it never reverts to plaintext). Use <strong>⏸ Disable ($0/mo)</strong> to pause a version safely without losing its value!
+                              <strong>Important — Does Delete/Destroy Revert Back to Plaintext? NO!</strong> Sealing a variable removes the plaintext from Cloud Run and replaces it with a <code className="font-bold">secretKeyRef</code> pointer. If you later <strong>Destroy</strong> a version or <strong>Delete</strong> the secret in Secret Manager, it <strong>disappears forever</strong> (it never reverts to plaintext). Use <strong>⏸ Disable ($0/mo)</strong> to pause a version safely without losing its value!
                             </div>
                           </div>
 
                           <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
                             {sensitivePairs.length > 0 ? (
                               <>
-                                ⚠️ Detected{' '}
+                                Detected{' '}
                                 <strong className="text-red-600 dark:text-red-400 font-mono">
                                   {sensitivePairs.map((p) => p.name).join(', ')}
                                 </strong>{' '}
@@ -3697,9 +3703,8 @@ spec:
                               >
                                 <KeyRound className="w-2.5 h-2.5" />
                                 <span>
-                                  {p.isSensitive ? '⚠️ ' : ''}
-                                  {p.name} · Seal 🔒
-                                </span>
+                                  {p.isSensitive ? '' : ''}
+                                  {p.name} · Seal </span>
                               </button>
                             ))}
                           </div>
@@ -4287,7 +4292,7 @@ spec:
                                       </span>
                                       {isCrashed ? (
                                         <span className="text-[9.5px] font-mono font-extrabold bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40 px-1.5 py-0.5 rounded">
-                                          🚨 CRASHED ({rev.failureReason || 'FAILED'})
+                                          CRASHED ({rev.failureReason || 'FAILED'})
                                         </span>
                                       ) : isReconciling ? (
                                         <span className="text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">
@@ -4333,7 +4338,7 @@ spec:
 
                                   {rev.failureMessage && (
                                     <div className="p-2 rounded bg-red-500/10 border border-red-500/25 text-[10px] font-mono text-red-700 dark:text-red-300 leading-relaxed">
-                                      ⚠️ {rev.failureMessage}
+                                      {rev.failureMessage}
                                     </div>
                                   )}
 
@@ -4352,7 +4357,7 @@ spec:
                                           : 'bg-white dark:bg-zinc-950 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
                                       }`}
                                     >
-                                      🩺 {isSelectedForAutopsy ? 'Inspecting Autopsy & Diff' : 'Run Autopsy & Diff'}
+                                      {isSelectedForAutopsy ? 'Inspecting Autopsy & Diff' : 'Run Autopsy & Diff'}
                                     </button>
 
                                     {!isCrashed && (
@@ -4384,7 +4389,7 @@ spec:
                                       title="Clone this revision's exact Container Image, CPU/RAM, Port, SA, and Secret Refs into a brand-new LATEST revision"
                                       className="text-[10.5px] font-mono font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded cursor-pointer"
                                     >
-                                      🧬 Clone Spec → New LATEST
+                                      Clone Spec → New LATEST
                                     </button>
                                   </div>
                                 </div>
@@ -4399,7 +4404,7 @@ spec:
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
-                              🩺 Revision Autopsy & Config Diff Inspector
+                              Revision Autopsy & Config Diff Inspector
                               {autopsyState.selectedRevision
                                 ? ` — ${autopsyState.selectedRevision}`
                                 : ''}
@@ -4519,7 +4524,7 @@ spec:
                           <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
                             <div className="flex flex-wrap items-center justify-between gap-1">
                               <span className="text-[10.5px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400">
-                                🔍 Revision Config & Secret Diff: {diff.baselineRevision} (Previous) → {report?.revisionName} (Selected)
+                                Revision Config & Secret Diff: {diff.baselineRevision} (Previous) → {report?.revisionName} (Selected)
                               </span>
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/25 font-bold">
                                 {diff.totalChangesCount} Spec Change(s) Detected

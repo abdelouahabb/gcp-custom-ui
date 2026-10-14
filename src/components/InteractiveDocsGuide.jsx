@@ -43,8 +43,8 @@ const DOC_SECTIONS = [
       'Google Cloud offers generous monthly "Always Free" usage limits across 25+ products, but a single wrong flag—such as picking Balanced SSD (pd-balanced) instead of Standard Persistent Disk (pd-standard) on an e2-micro VM, leaving old container images in Artifact Registry (>0.5 GB), ingesting noisy /healthz logs in Cloud Logging (>50 GiB/mo), or leaving old Secret Manager versions ENABLED (>6 versions)—silently pushes you out of the $0.00/mo Free Tier.',
     howItWorks: [
       'Live 15-Product Always Free Eligibility & Overage Auditor: Cross-references your live Compute VMs, Cloud Run services, Cloud Storage buckets, BigQuery datasets, Secret Manager versions, Artifact Registry repos, and GKE clusters against official Google Cloud Free Tier limits, classifying each service as FREE_ELIGIBLE ($0/mo), READY_TO_USE ($0/mo), or OVERAGE_TRAP_DETECTED.',
-      '🛡️ 1-Click "$0.00 Free-Tier Micro-Charge Killer" Enforcers (POST /api/project/:id/finops/always-free-enforcer): (1) Attaches live Artifact Registry cleanupPolicies (keepCount=2 + delete untagged >7d) to stay under 0.5 GB, (2) installs a noisy HTTP 200 /healthz & kube-probe exclusion filter on the _Default Cloud Logging sink to protect the 50 GiB/mo free tier, and (3) auto-disables redundant ENABLED Secret Manager versions so active versions stay within the 6 Free Versions/mo quota.',
-      '1-Click "🎁 Lock to Always Free Tier ($0.00/mo)" Guardrail in Provision Modal: Automatically configures Compute VMs (e2-micro + us-central1-a + 30 GB pd-standard), Cloud Storage (us-central1 Regional STANDARD), Cloud Run (cpuIdle: true, minInstances: 0, 1 vCPU, 512Mi, no GPU), and BigQuery (US multi-region) to stay 100% inside the monthly Always Free allowance.',
+      '1-Click "$0.00 Free-Tier Micro-Charge Killer" Enforcers (POST /api/project/:id/finops/always-free-enforcer): (1) Attaches live Artifact Registry cleanupPolicies (keepCount=2 + delete untagged >7d) to stay under 0.5 GB, (2) installs a noisy HTTP 200 /healthz & kube-probe exclusion filter on the _Default Cloud Logging sink to protect the 50 GiB/mo free tier, and (3) auto-disables redundant ENABLED Secret Manager versions so active versions stay within the 6 Free Versions/mo quota.',
+      '1-Click "Lock to Always Free Tier ($0.00/mo)" Guardrail in Provision Modal: Automatically configures Compute VMs (e2-micro + us-central1-a + 30 GB pd-standard), Cloud Storage (us-central1 Regional STANDARD), Cloud Run (cpuIdle: true, minInstances: 0, 1 vCPU, 512Mi, no GPU), and BigQuery (US multi-region) to stay 100% inside the monthly Always Free allowance.',
       'Product-Specific Free Trials Strip: Highlights separate 30-to-90 day trials (AlloyDB 30d, Cloud Spanner 90d, Cloud SQL 30d, Looker 30d) that do not consume your $300 Welcome Credit.',
     ],
     apisUsed: [
@@ -67,7 +67,7 @@ const DOC_SECTIONS = [
       'When engineers seal plaintext Cloud Run environment variables into Secret Manager, they need to know: (1) how many secrets are free before Google charges, (2) how to rotate secrets without paying $0.06/mo for old versions, (3) whether clicking Destroy or Delete reverts the secret back into plaintext or erases it forever, and (4) which live Cloud Run services will crash on cold-start if a referenced secret version is disabled, destroyed, or deleted.',
     howItWorks: [
       'Monthly Free Tier vs. Paid Tier Quota Meter: Tracks your live active secret versions against Google Cloud’s monthly Free Tier (First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month; $0.06/active-version/mo beyond 6; $0.00/mo for DISABLED and DESTROYED versions).',
-      '🚨 Live Cloud Run secretKeyRef Dependency Radar & 1-Click Broken Reference Healer: Scans all live Cloud Run v2 services in parallel to map every container env var and volume mount referencing a secret. Flags broken pointers (deleted secrets or DISABLED/DESTROYED versions) and heals them in 1 click ("🩹 Heal: Point to latest" or "🧹 Unbind Dead secretKeyRef"), plus "🚀 1-Click Hot-Reload Mounted Cloud Run Services" after rotation.',
+      'Live Cloud Run secretKeyRef Dependency Radar & 1-Click Broken Reference Healer: Scans all live Cloud Run v2 services in parallel to map every container env var and volume mount referencing a secret. Flags broken pointers (deleted secrets or DISABLED/DESTROYED versions) and heals them in 1 click ("Heal: Point to latest" or "Unbind Dead secretKeyRef"), plus "1-Click Hot-Reload Mounted Cloud Run Services" after rotation.',
       '⏱️ Autonomous $0.00/Mo 30-Day Rotation Schedule: Provisions a Pub/Sub rotation topic, grants roles/pubsub.publisher to the Secret Manager service agent, and configures a 30-day rotationSchedule within Google Cloud’s 3 Free Rotations/month quota.',
       'CRITICAL 3-State Lifecycle & No-Plaintext-Fallback Warning: Explains clearly that sealing an env var removes the plaintext from Cloud Run and replaces it with a secretKeyRef pointer—so clicking Destroy Version or Delete Secret NEVER reverts it back to plaintext; it disappears forever! Guides engineers to use "⏸ Disable ($0.00/mo · Reversible)" to pause billing while keeping the encrypted payload recoverable.',
     ],
@@ -332,7 +332,7 @@ const DOC_SECTIONS = [
     problemSolved:
       'One-shot command emulators truncate multi-line streaming commands like "apt update" or interactive tools like htop/vim, connecting a local IDE/ORM to private Cloud Run services, private Compute VMs, or private Cloud SQL databases normally requires public IPv4 addresses ($7.30/mo) or manual CLI flags, and unconfirmed delete actions risk breaking live workloads.',
     howItWorks: [
-      '🔌 127.0.0.1 Zero-Public-IP Developer Port-Forward & IAP Tunnel Manager (`LocalDevTunnelBar.jsx`): Connects your local browser, IDE, Postman, or ORM (`Prisma`, `psql`, `mysql`, `curl`, `ssh`) to Private IAM-Locked Cloud Run services (`gcloud run services proxy` with automatic OIDC Bearer injection), Zero-External-IP Compute VMs (`gcloud compute start-iap-tunnel` over IAP TCP `35.235.240.0/20` on `:22`, `:8080`, `:5432`, `:6379`, `:8888`), and Private Cloud SQL / AlloyDB (`cloud-sql-proxy` / `alloydb-auth-proxy`)—with live `127.0.0.1:PORT` TCP/HTTP socket probing and `$7.30/mo` static IPv4 savings.',
+      '127.0.0.1 Zero-Public-IP Developer Port-Forward & IAP Tunnel Manager (`LocalDevTunnelBar.jsx`): Connects your local browser, IDE, Postman, or ORM (`Prisma`, `psql`, `mysql`, `curl`, `ssh`) to Private IAM-Locked Cloud Run services (`gcloud run services proxy` with automatic OIDC Bearer injection), Zero-External-IP Compute VMs (`gcloud compute start-iap-tunnel` over IAP TCP `35.235.240.0/20` on `:22`, `:8080`, `:5432`, `:6379`, `:8888`), and Private Cloud SQL / AlloyDB (`cloud-sql-proxy` / `alloydb-auth-proxy`)—with live `127.0.0.1:PORT` TCP/HTTP socket probing and `$7.30/mo` static IPv4 savings.',
       'Real Full-Duplex @xterm/xterm + ssh2 + Python PTY WebSocket Terminal (/api/ws/ssh): Streams 100% of live stdout/stderr bytes in real time for "apt update", htop, vim, top, tmux, and interactive prompts across Compute Engine VMs and Cloud Run Gen2 containers.',
       'Default-OFF Explicit Toggle ("SSH / Console" → "SSH Active (Turn Off)"): Never auto-connects when landing on the VM Fleet or Cloud Run tab; connects only when you click the SSH button on a specific VM or Cloud Run card and disconnects cleanly when toggled off.',
       'Global Mandatory Delete & IAM Security Gatekeeper with Live Blast-Radius Pre-Flight Scan (src/App.jsx): Intercepts 100% of HTTP DELETE requests and destructive POST teardowns across all 18 studios, and automatically runs a live dependency scan (GET /api/project/:id/sovereign/secrets-kms) when deleting a Secret Manager secret or destroying a version to warn you of exact Cloud Run services that will fail to start if you proceed.',
@@ -519,7 +519,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       '1-Click Top-Bar Toggle (`GDE Mode`) & Global `Alt+G` Shortcut: Instantly masks your authenticated email (`gde-instructor@google-cloud-demo.dev`), Cloud Billing Account IDs (`01GDE•-••••••-TUTOR1`), GCP Project Numbers (`#9900••••••01`), and Public IPv4 addresses (`34.•••.•••.88`) across all 20 tabs, modals, and hover tooltips.',
       'Zero API Breakage (`MutationObserver` + `WeakMap` Cache): Keeps React state (`selectedProjectId`, `account`, `billingAccountName`) 100% intact for live Google Cloud REST API calls while redacting rendered DOM text nodes and tooltips in real time—and restores the exact original values the instant you toggle GDE Mode off.',
-      'Granular Shield Popover (`⚙️`) & Refresh Persistence: Customize your on-screen demo email alias and toggle 6 individual privacy shields (Emails, Billing IDs, Project Numbers, Public IPs, Project IDs, and Dollar Balances), persisted in `localStorage` so page refreshes during a live stream never leak PII.',
+      'Granular Shield Popover (``) & Refresh Persistence: Customize your on-screen demo email alias and toggle 6 individual privacy shields (Emails, Billing IDs, Project Numbers, Public IPs, Project IDs, and Dollar Balances), persisted in `localStorage` so page refreshes during a live stream never leak PII.',
     ],
     apisUsed: [
       'Client-side Real-Time DOM & Tooltip Redaction Engine (`GdeStreamerPrivacyShield.jsx`)',
@@ -915,7 +915,7 @@ const DOC_SECTIONS = [
     wave: 'WAVE 11 SRE & FINOPS',
     title:
       '37. Cloud Run Dead Container (Artifact Registry) & Cloud Storage Build-Artifact Hunter',
-    badge: 'Cloud Run ★ → 🧹 Search Dead Containers & GCS Artifacts',
+    badge: 'Cloud Run ★ → Search Dead Containers & GCS Artifacts',
     badgeColor:
       'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30',
     icon: HardDrive,
@@ -923,8 +923,8 @@ const DOC_SECTIONS = [
     problemSolved:
       'Every time you deploy Cloud Run from source or run Cloud Build, Google Cloud leaves behind old container images and untagged digests in Artifact Registry ($0.10/GB/mo beyond 0.5 GB free tier) plus source tarballs (.tgz) in _cloudbuild, run-sources-*, and gcf-v2-* Cloud Storage buckets—even after you delete the Cloud Run service.',
     howItWorks: [
-      '1-Click Cross-Reference Hygiene Scan: Click "🧹 Search Dead Containers & GCS Artifacts" in the Cloud Run header. Queries run.googleapis.com/v2, artifactregistry.googleapis.com/v1, and storage.googleapis.com/v1 in parallel.',
-      'Active Container Protection + Dead Image Classification: Locks any container image actively serving a live Cloud Run service (🔒 Protected) while flagging Dead Containers from Deleted Services, Dead Untagged Digests (0 tags), and Unused/Superseded Images.',
+      '1-Click Cross-Reference Hygiene Scan: Click "Search Dead Containers & GCS Artifacts" in the Cloud Run header. Queries run.googleapis.com/v2, artifactregistry.googleapis.com/v1, and storage.googleapis.com/v1 in parallel.',
+      'Active Container Protection + Dead Image Classification: Locks any container image actively serving a live Cloud Run service (Protected) while flagging Dead Containers from Deleted Services, Dead Untagged Digests (0 tags), and Unused/Superseded Images.',
       '1-Click Sweep & Purge: Delete individual dead container images or sweep all dead containers in 1 click (automatically removing attached tags via REST before deleting the version digest), and purge leftover .tgz build staging tarballs or empty & delete staging buckets in Cloud Storage.',
     ],
     apisUsed: [
