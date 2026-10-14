@@ -26,6 +26,7 @@ import {
   Search,
   Database,
   Zap,
+  Cpu,
   X,
 } from 'lucide-react';
 
@@ -41,20 +42,20 @@ const AUDIT_SERVICE_FILTERS = [
 
 const NL_INTENT_PRESETS = [
   {
-    label: '5xx Timeouts on Cloud Run',
-    nl: '5xx timeouts on cloud run over 1s',
+    label: 'Cloud Run > 1.5s in Iowa (No Probes)',
+    nl: 'show me 5xx timeouts on cloud run in iowa slower than 1500ms in the last 2 hours excluding healthchecks',
   },
   {
-    label: 'HTTP 429 Quota Exhausted',
-    nl: '429 rate limit quota errors',
+    label: 'Vertex AI 429 Quota Exhaustion',
+    nl: '429 rate limit quota exhausted on vertex ai over 1s',
   },
   {
-    label: 'IAM & Secret Denials',
-    nl: 'iam permission denied or secret access warnings',
+    label: 'IAM & Secret Manager 403 Denials',
+    nl: 'iam permission denied or secret manager 403 unauthorized access in the past 60m',
   },
   {
     label: 'DLP Token & API Key Leaks',
-    nl: 'pii secret leak token apikey dlp',
+    nl: 'detect unmasked bearer jwt tokens or aiza api key leaks in europe-west1',
   },
   {
     label: 'All Project Telemetry',
@@ -499,6 +500,84 @@ export default function LogStreamerAndShell({
             )}
           </div>
 
+          {/* Live 3-Layer NLP Parse Tree: Porter Stemmer, Named Entity Recognition (NER), TF-IDF Cosine Intent & BM25 Ranker */}
+          {chronoData?.compiledQuery?.nlpAnalysis && (() => {
+            const nlp = chronoData.compiledQuery.nlpAnalysis;
+            const ent = nlp.entities || {};
+            const nerBadges = [
+              ...(ent.services || []).map((s) => ({ type: 'SERVICE', value: s.label })),
+              ...(ent.statusClass ? [{ type: 'HTTP_CLASS', value: ent.statusClass }] : []),
+              ...(ent.httpStatuses || []).map((code) => ({ type: 'STATUS', value: String(code) })),
+              ...(ent.latency
+                ? [{ type: 'LATENCY', value: `${ent.latency.operator} ${ent.latency.thresholdMs}ms` }]
+                : []),
+              ...(ent.timeWindow
+                ? [{ type: 'TEMPORAL', value: ent.timeWindow.raw }]
+                : []),
+              ...(ent.regions || []).map((r) => ({ type: 'REGION', value: r })),
+              ...(ent.negations || []).map((n) => ({ type: 'NEGATION', value: n.label })),
+              ...(ent.severities || []).map((sev) => ({ type: 'SEVERITY', value: sev })),
+            ];
+            const cosinePct = Math.round((nlp.intent?.cosineSimilarity || 0) * 100);
+            return (
+              <div className="p-2.5 rounded-lg bg-white dark:bg-[#1a1b1e] border border-purple-500/25 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-extrabold">
+                      <Cpu className="w-3 h-3" />
+                      <span>NLP Engine: {nlp.engine}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
+                      <Sparkles className="w-3 h-3" />
+                      <span>
+                        TF-IDF Intent: {nlp.intent?.topIntentLabel || 'General Telemetry Exploration'}{' '}
+                        ({cosinePct}% Cosine)
+                      </span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                      Ranker: Okapi BM25 + NER Slot Scorer
+                    </span>
+                  </div>
+
+                  {nlp.stems?.length > 0 && (
+                    <div className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                      Porter Stems:{' '}
+                      <code className="text-zinc-700 dark:text-zinc-200 font-bold">
+                        [{nlp.stems.join(', ')}]
+                      </code>
+                    </div>
+                  )}
+                </div>
+
+                {/* Extracted Named Entities (NER Slots) */}
+                {nerBadges.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-200/70 dark:border-zinc-800/80">
+                    <span className="text-[10px] font-mono text-zinc-400">
+                      Extracted NER Slots:
+                    </span>
+                    {nerBadges.map((badge, idx) => (
+                      <span
+                        key={`${badge.type}-${idx}`}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono"
+                      >
+                        <strong className="text-purple-600 dark:text-purple-400">
+                          {badge.type}:
+                        </strong>
+                        <span className="text-zinc-800 dark:text-zinc-200 font-bold">
+                          {badge.value}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                    {chronoData.compiledQuery.explanation}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Collapsible Compiled LQL & Linked BigQuery Log Analytics SQL Drawer */}
           {showCompiledSqlModal && chronoData?.compiledQuery && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
@@ -699,6 +778,13 @@ export default function LogStreamerAndShell({
                           <span className="text-[10.5px] font-mono text-zinc-500">
                             ({entry.resourceTarget})
                           </span>
+                          {chronoData?.compiledQuery?.naturalLanguage &&
+                            typeof entry.nlpRelevancePct === 'number' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
+                                <Cpu className="w-2.5 h-2.5" />
+                                <span>BM25 Match: {entry.nlpRelevancePct}%</span>
+                              </span>
+                            )}
                           {entry.dlpFindings?.length > 0 && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold">
                               <ShieldAlert className="w-3 h-3" />

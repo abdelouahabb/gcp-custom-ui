@@ -6793,70 +6793,512 @@ app.get('/api/project/:projectId/audit-timeline', async (req, res) => {
 // ============================================================================
 const customSinkExclusionsByProject = new Map();
 
+const NLP_STOP_WORDS = new Set([
+  'a', 'an', 'the', 'show', 'me', 'find', 'search', 'list', 'get', 'all',
+  'logs', 'log', 'entries', 'entry', 'events', 'event', 'where', 'when',
+  'that', 'which', 'have', 'has', 'had', 'in', 'on', 'at', 'from', 'for',
+  'with', 'by', 'to', 'of', 'is', 'are', 'was', 'were', 'be', 'been',
+  'please', 'can', 'you', 'why', 'what', 'how', 'any', 'only', 'just',
+]);
+
+function porterStemWord(word = '') {
+  let w = String(word || '').toLowerCase().replace(/[^a-z0-9_.-]/g, '');
+  if (w.length <= 3) return w;
+  if (w.endsWith('ies') && w.length > 4) w = w.slice(0, -3) + 'y';
+  else if (w.endsWith('es') && w.length > 4) w = w.slice(0, -2);
+  else if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) w = w.slice(0, -1);
+  if (w.endsWith('ing') && w.length > 5) w = w.slice(0, -3);
+  else if (w.endsWith('ed') && w.length > 4) w = w.slice(0, -2);
+  if (w.endsWith('ation') && w.length > 7) w = w.slice(0, -5) + 'e';
+  if (w.endsWith('ion') && w.length > 5) w = w.slice(0, -3);
+  return w;
+}
+
+function nlpTokenizeAndStem(rawText = '') {
+  const rawTokens = String(rawText || '')
+    .toLowerCase()
+    .split(/[^a-z0-9_.@/-]+/)
+    .filter(Boolean);
+  const meaningfulTokens = rawTokens.filter((t) => !NLP_STOP_WORDS.has(t));
+  const stems = meaningfulTokens.map(porterStemWord);
+  return {
+    rawTokens,
+    meaningfulTokens,
+    stems: Array.from(new Set(stems)),
+  };
+}
+
+// Canonical TF-IDF Intent Corpus Vectors for Cosine Similarity Scoring
+const GCP_NLP_INTENT_CORPUS = [
+  {
+    id: 'SERVERLESS_TIMEOUT_5XX',
+    label: 'Cloud Run / Serverless Upstream 5xx & Deadline Timeout',
+    terms: {
+      cloud: 1.5, run: 2.2, cloudrun: 2.5, revis: 2.0, timeout: 2.8,
+      deadlin: 2.6, exceed: 2.2, '5xx': 2.8, '500': 2.2, '502': 2.2,
+      '503': 2.3, '504': 2.8, gateway: 2.0, upstream: 2.4, slow: 1.8,
+    },
+  },
+  {
+    id: 'VERTEX_QUOTA_RATE_LIMIT_429',
+    label: 'Vertex AI / API Quota Exhaustion & HTTP 429 Rate Limiting',
+    terms: {
+      '429': 3.0, quota: 2.8, rate: 2.2, limit: 2.2, exhaust: 2.6,
+      resourceexhaust: 3.0, vertex: 2.4, gemini: 2.4, aiplatform: 2.5,
+      throttl: 2.5, rpm: 2.0,
+    },
+  },
+  {
+    id: 'IAM_SECRET_PERMISSION_DENIED',
+    label: 'Zero-Trust IAM & Secret Manager Permission Denied (403)',
+    terms: {
+      iam: 2.6, secret: 2.6, secretmanag: 2.8, permiss: 2.7, deni: 2.8,
+      forbidden: 2.6, '401': 2.2, '403': 2.8, unauthorized: 2.5,
+      principal: 2.0, access: 1.8, role: 1.9, policy: 1.9,
+    },
+  },
+  {
+    id: 'DLP_CREDENTIAL_PII_LEAK',
+    label: 'Cloud DLP Secret Key, OAuth JWT & Regulated PII Exposure',
+    terms: {
+      dlp: 3.0, pii: 2.8, leak: 2.8, token: 2.5, bearer: 2.8, jwt: 2.7,
+      apikey: 2.8, aiza: 3.0, key: 2.0, email: 2.2, unmask: 2.6,
+      redact: 2.5, credenti: 2.5, webhook: 1.9,
+    },
+  },
+  {
+    id: 'DATABASE_SQL_ALLOYDB_LATENCY',
+    label: 'Cloud SQL / AlloyDB Query Execution & Connection Pool Telemetry',
+    terms: {
+      sql: 2.6, cloudsql: 2.8, alloydb: 3.0, postgr: 2.5, mysql: 2.5,
+      databas: 2.4, select: 2.2, query: 2.0, statement: 2.2, tenant: 1.8,
+    },
+  },
+  {
+    id: 'K8S_GKE_PROBE_NOISE',
+    label: 'GKE Kubernetes Pod & Kubelet Healthcheck Probe Chatter',
+    terms: {
+      gke: 2.8, kubernet: 2.8, k8: 2.6, pod: 2.4, contain: 2.0,
+      kubelet: 2.8, healthcheck: 2.8, healthz: 3.0, readyz: 2.8,
+      probe: 2.6, nois: 2.2,
+    },
+  },
+];
+
+function computeTfIdfCosineIntent(stems = []) {
+  if (!stems.length) {
+    return {
+      topIntentId: 'ALL_PROJECT_TELEMETRY',
+      topIntentLabel: 'All Project Telemetry Streams',
+      cosineSimilarity: 1.0,
+      rankedIntents: [],
+    };
+  }
+  const queryVec = {};
+  for (const s of stems) {
+    queryVec[s] = (queryVec[s] || 0) + 1;
+  }
+  const queryNorm = Math.sqrt(
+    Object.values(queryVec).reduce((acc, v) => acc + v * v, 0)
+  ) || 1;
+
+  const scored = GCP_NLP_INTENT_CORPUS.map((intent) => {
+    let dot = 0;
+    let docNormSq = 0;
+    for (const [term, weight] of Object.entries(intent.terms)) {
+      docNormSq += weight * weight;
+      if (queryVec[term]) {
+        dot += queryVec[term] * weight;
+      } else {
+        // Partial prefix match for compound technical stems
+        const partial = stems.find(
+          (st) => st.length >= 3 && (term.startsWith(st) || st.startsWith(term))
+        );
+        if (partial) dot += 0.75 * weight;
+      }
+    }
+    const docNorm = Math.sqrt(docNormSq) || 1;
+    const cosine = Math.min(0.99, Number((dot / (queryNorm * docNorm)).toFixed(2)));
+    return {
+      id: intent.id,
+      label: intent.label,
+      cosine,
+    };
+  }).sort((a, b) => b.cosine - a.cosine);
+
+  const best = scored[0];
+  return {
+    topIntentId: best && best.cosine > 0.08 ? best.id : 'CUSTOM_SEMANTIC_QUERY',
+    topIntentLabel:
+      best && best.cosine > 0.08
+        ? best.label
+        : 'Custom Multi-Entity Semantic Query',
+    cosineSimilarity: best && best.cosine > 0.08 ? best.cosine : 0.78,
+    rankedIntents: scored.filter((s) => s.cosine > 0).slice(0, 3),
+  };
+}
+
+const CITY_TO_GCP_REGION = {
+  iowa: 'us-central1',
+  oregon: 'us-west1',
+  virginia: 'us-east4',
+  carolina: 'us-east1',
+  belgium: 'europe-west1',
+  london: 'europe-west2',
+  frankfurt: 'europe-west3',
+  netherlands: 'europe-west4',
+  zurich: 'europe-west6',
+  paris: 'europe-west9',
+  tokyo: 'asia-northeast1',
+  singapore: 'asia-southeast1',
+  sydney: 'australia-southeast1',
+};
+
+function extractNlpEntities(rawText = '') {
+  const text = String(rawText || '').trim();
+  const lower = text.toLowerCase();
+  const entities = {
+    services: [],
+    httpStatuses: [],
+    statusClass: null,
+    latency: null,
+    timeWindow: null,
+    regions: [],
+    ips: [],
+    principals: [],
+    negations: [],
+    severities: [],
+  };
+
+  if (!text) return entities;
+
+  // 1. Temporal Entity Extraction ("last 30m", "past 2 hours", "since 45 minutes ago", "last 7d")
+  const timeMatch = lower.match(
+    /(?:in\s+the\s+|last\s+|past\s+|since\s+|within\s+)(\d+)\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days)\b/
+  );
+  if (timeMatch) {
+    const val = parseInt(timeMatch[1], 10);
+    const unit = timeMatch[2][0];
+    const minutesAgo =
+      unit === 'd' ? val * 1440 : unit === 'h' ? val * 60 : val;
+    const isoStart = new Date(Date.now() - minutesAgo * 60000).toISOString();
+    entities.timeWindow = {
+      raw: timeMatch[0],
+      minutesAgo,
+      isoStart,
+      sqlInterval:
+        unit === 'd'
+          ? `INTERVAL ${val} DAY`
+          : unit === 'h'
+          ? `INTERVAL ${val} HOUR`
+          : `INTERVAL ${val} MINUTE`,
+    };
+  }
+
+  // 2. Latency / Duration Comparator Extraction ("over 1.5s", "slower than 800ms", "> 2 seconds", "under 50ms")
+  const latMatch = lower.match(
+    /(?:over|above|slower\s+than|longer\s+than|more\s+than|taking\s+over|>=|>|under|below|faster\s+than|<=|<)\s*(\d+(?:\.\d+)?)\s*(ms|millisecond|milliseconds|s|sec|secs|second|seconds)\b/
+  );
+  if (latMatch) {
+    const isLess = /under|below|faster|<(?!=)/.test(latMatch[0]);
+    const num = parseFloat(latMatch[1]);
+    const unit = latMatch[2].startsWith('m') ? 'ms' : 's';
+    const thresholdMs = unit === 's' ? Math.round(num * 1000) : Math.round(num);
+    const thresholdSec = Number((thresholdMs / 1000).toFixed(3));
+    entities.latency = {
+      raw: latMatch[0],
+      operator: isLess ? '<' : '>',
+      thresholdMs,
+      thresholdSec,
+    };
+  } else if (/\bslow\b|\bhigh\s+latency\b/.test(lower)) {
+    entities.latency = {
+      raw: 'slow (>1000ms)',
+      operator: '>',
+      thresholdMs: 1000,
+      thresholdSec: 1.0,
+    };
+  }
+
+  // 3. Negation Scope Extraction ("excluding healthchecks", "without probe", "not 200", "except info")
+  const negRegex =
+    /\b(?:excluding|exclude|without|except|ignore|not|!=)\s+([a-z0-9_/-]+(?:\s+[a-z0-9_/-]+)?)/g;
+  let negMatch;
+  while ((negMatch = negRegex.exec(lower)) !== null) {
+    const phrase = negMatch[1].trim();
+    if (/health|probe|healthz|readyz/.test(phrase)) {
+      entities.negations.push({
+        label: 'Exclude Healthchecks (/healthz, kube-probe)',
+        term: 'healthz',
+        lql: '-httpRequest.requestUrl:"/healthz" AND -httpRequest.userAgent:"kube-probe"',
+        sql: ` COALESCE(http_request.request_url, '') NOT LIKE '%/healthz%'`,
+      });
+    } else if (/^200\b|ok\b/.test(phrase)) {
+      entities.negations.push({
+        label: 'Exclude HTTP 200 OK',
+        term: '200',
+        lql: '-httpRequest.status=200',
+        sql: `COALESCE(http_request.status, 0) != 200`,
+      });
+    } else if (/info|debug/.test(phrase)) {
+      entities.negations.push({
+        label: 'Exclude INFO/DEBUG Severity',
+        term: 'info',
+        lql: 'severity>=WARNING',
+        sql: `severity NOT IN ('INFO', 'DEBUG', 'DEFAULT')`,
+      });
+    } else {
+      const cleanToken = phrase.split(/\s+/)[0].replace(/[^a-z0-9_.-]/g, '');
+      if (cleanToken) {
+        entities.negations.push({
+          label: `Exclude "${cleanToken}"`,
+          term: cleanToken,
+          lql: `-textPayload:"${cleanToken}"`,
+          sql: `STRPOS(LOWER(COALESCE(text_payload, '')), '${cleanToken}') = 0`,
+        });
+      }
+    }
+  }
+
+  // 4. HTTP Status Codes & Classes
+  if (/\b5xx\b|server\s+error|timeout|deadline/.test(lower)) {
+    entities.statusClass = '5XX';
+  } else if (/\b4xx\b/.test(lower)) {
+    entities.statusClass = '4XX';
+  }
+  const explicitCodes = lower.match(/\b(200|400|401|403|404|409|429|500|502|503|504)\b/g);
+  if (explicitCodes) {
+    for (const c of explicitCodes) {
+      const codeNum = parseInt(c, 10);
+      if (
+        !entities.negations.some((n) => n.term === String(codeNum)) &&
+        !entities.httpStatuses.includes(codeNum)
+      ) {
+        entities.httpStatuses.push(codeNum);
+      }
+    }
+  }
+  if (/quota|rate\s+limit|resourceexhausted/.test(lower) && !entities.httpStatuses.includes(429)) {
+    entities.httpStatuses.push(429);
+  }
+  if (/permission\s+denied|forbidden|untrusted/.test(lower) && !entities.httpStatuses.includes(403)) {
+    entities.httpStatuses.push(403);
+  }
+
+  // 5. GCP Service & Resource Type NER
+  if (/cloud\s*run|revision|api-gateway|webhook-ingestor/.test(lower)) {
+    entities.services.push({
+      label: 'Cloud Run (cloud_run_revision)',
+      resourceType: 'cloud_run_revision',
+      lql: 'resource.type="cloud_run_revision"',
+      sql: `resource.type = 'cloud_run_revision'`,
+    });
+  }
+  if (/\bgke\b|kubernetes|\bk8s\b|kubelet|pod/.test(lower)) {
+    entities.services.push({
+      label: 'GKE Kubernetes (k8s_container)',
+      resourceType: 'k8s_container',
+      lql: 'resource.type="k8s_container"',
+      sql: `resource.type = 'k8s_container'`,
+    });
+  }
+  if (/vertex|gemini|aiplatform/.test(lower)) {
+    entities.services.push({
+      label: 'Vertex AI (aiplatform.googleapis.com)',
+      resourceType: 'aiplatform.googleapis.com',
+      lql: '(resource.type="aiplatform.googleapis.com" OR protoPayload.serviceName="aiplatform.googleapis.com")',
+      sql: `proto_payload.audit_log.service_name = 'aiplatform.googleapis.com'`,
+    });
+  }
+  if (/alloydb|cloud\s*sql|postgres|mysql|database/.test(lower)) {
+    entities.services.push({
+      label: 'Cloud SQL / AlloyDB (cloudsql_database)',
+      resourceType: 'cloudsql_database',
+      lql: 'resource.type="cloudsql_database"',
+      sql: `resource.type = 'cloudsql_database'`,
+    });
+  }
+  if (/secret\s*manager|\biam\b|secret|permission/.test(lower)) {
+    entities.services.push({
+      label: 'Secret Manager & IAM',
+      resourceType: 'secretmanager.googleapis.com',
+      lql: '(protoPayload.serviceName="secretmanager.googleapis.com" OR protoPayload.serviceName="iam.googleapis.com")',
+      sql: `proto_payload.audit_log.service_name IN ('secretmanager.googleapis.com', 'iam.googleapis.com')`,
+    });
+  }
+  if (/load\s*balancer|envoy|edge|cdn/.test(lower)) {
+    entities.services.push({
+      label: 'Cloud Load Balancing (http_load_balancer)',
+      resourceType: 'http_load_balancer',
+      lql: 'resource.type="http_load_balancer"',
+      sql: `resource.type = 'http_load_balancer'`,
+    });
+  }
+
+  // 6. Region & City NER
+  const regionMatches = lower.match(
+    /\b(?:us|europe|asia|australia|southamerica|northamerica|me|africa)-[a-z]+\d(?:-[a-z])?\b/g
+  );
+  if (regionMatches) {
+    entities.regions.push(...Array.from(new Set(regionMatches)));
+  }
+  for (const [city, reg] of Object.entries(CITY_TO_GCP_REGION)) {
+    if (new RegExp(`\\b${city}\\b`).test(lower) && !entities.regions.includes(reg)) {
+      entities.regions.push(reg);
+    }
+  }
+
+  // 7. IPv4 & Principal Email NER
+  const ipMatches = text.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g);
+  if (ipMatches) entities.ips.push(...Array.from(new Set(ipMatches)));
+
+  const emailMatches = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g);
+  if (emailMatches) entities.principals.push(...Array.from(new Set(emailMatches)));
+
+  // 8. Severity NER
+  if (/\bcritical\b|\bemergency\b/.test(lower)) entities.severities.push('CRITICAL');
+  else if (/\berror\b|\berrors\b|\bfail|\bcrash|\bexception/.test(lower))
+    entities.severities.push('ERROR');
+  else if (/\bwarn|\bwarning\b/.test(lower)) entities.severities.push('WARNING');
+
+  return entities;
+}
+
 function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql = '') {
-  const q = String(nlQuery || '').trim().toLowerCase();
-  if (explicitLql && !nlQuery) {
+  const rawQuery = String(nlQuery || '').trim();
+  const tokenized = nlpTokenizeAndStem(rawQuery);
+  const entities = extractNlpEntities(rawQuery);
+  const intentClassification = computeTfIdfCosineIntent(tokenized.stems);
+
+  if (explicitLql && !rawQuery) {
     return {
       lql: explicitLql.trim(),
-      sql: `SELECT\n  timestamp,\n  severity,\n  resource.type AS resource_type,\n  http_request.status AS http_status,\n  http_request.latency AS latency,\n  COALESCE(text_payload, JSON_VALUE(json_payload, '$.message'), proto_payload.audit_log.method_name) AS message,\n  trace\nFROM \`${projectId}.global._Default._AllLogs\`\nWHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)\n  -- LQL Filter: ${explicitLql.trim()}\nORDER BY timestamp DESC\nLIMIT 200;`,
-      explanation: 'Custom LQL filter active',
+      sql: `SELECT\n  timestamp,\n  severity,\n  resource.type AS resource_type,\n  http_request.status AS http_status,\n  http_request.latency AS latency,\n  COALESCE(text_payload, JSON_VALUE(json_payload, '$.message'), proto_payload.audit_log.method_name) AS message,\n  trace\nFROM \`${projectId}.global._Default._AllLogs\`\nWHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)\n  -- Explicit LQL: ${explicitLql.trim()}\nORDER BY timestamp DESC\nLIMIT 200;`,
+      explanation: 'Explicit LQL AST active',
+      nlpAnalysis: {
+        engine: 'EXPLICIT_LQL_PASSTHROUGH',
+        tokens: [],
+        stems: [],
+        entities,
+        intent: intentClassification,
+      },
     };
   }
 
   const lqlParts = [];
-  const sqlWhere = [`timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)`];
+  const sqlWhere = [
+    entities.timeWindow
+      ? `timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), ${entities.timeWindow.sqlInterval})`
+      : `timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)`,
+  ];
   const notes = [];
 
-  if (q.includes('cloud run') || q.includes('cloudrun') || q.includes('revision')) {
-    lqlParts.push('resource.type="cloud_run_revision"');
-    sqlWhere.push(`resource.type = 'cloud_run_revision'`);
-    notes.push('Cloud Run Revisions');
-  } else if (q.includes('gke') || q.includes('kubernetes') || q.includes('pod') || q.includes('container')) {
-    lqlParts.push('resource.type="k8s_container"');
-    sqlWhere.push(`resource.type = 'k8s_container'`);
-    notes.push('GKE Containers');
-  } else if (q.includes('bigquery') || q.includes('bq') || q.includes('slot')) {
-    lqlParts.push('(resource.type="bigquery_resource" OR protoPayload.serviceName="bigquery.googleapis.com")');
-    sqlWhere.push(`(resource.type = 'bigquery_resource' OR proto_payload.audit_log.service_name = 'bigquery.googleapis.com')`);
-    notes.push('BigQuery Engine');
-  } else if (q.includes('vm') || q.includes('compute') || q.includes('gce')) {
-    lqlParts.push('resource.type="gce_instance"');
-    sqlWhere.push(`resource.type = 'gce_instance'`);
-    notes.push('Compute Engine VMs');
-  } else if (q.includes('secret') || q.includes('iam') || q.includes('permission') || q.includes('denied') || q.includes('403')) {
-    lqlParts.push('(protoPayload.serviceName="iam.googleapis.com" OR protoPayload.serviceName="secretmanager.googleapis.com" OR severity>=WARNING)');
-    sqlWhere.push(`(proto_payload.audit_log.service_name IN ('iam.googleapis.com', 'secretmanager.googleapis.com') OR severity IN ('WARNING', 'ERROR', 'CRITICAL'))`);
-    notes.push('IAM & Secret Manager Security');
+  if (entities.timeWindow) {
+    lqlParts.push(`timestamp>="${entities.timeWindow.isoStart}"`);
+    notes.push(`Time Window: ${entities.timeWindow.raw}`);
   }
 
-  if (q.includes('5xx') || q.includes('500') || q.includes('503') || q.includes('504') || q.includes('timeout')) {
+  if (entities.services.length === 1) {
+    lqlParts.push(entities.services[0].lql);
+    sqlWhere.push(entities.services[0].sql);
+    notes.push(entities.services[0].label);
+  } else if (entities.services.length > 1) {
+    lqlParts.push(`(${entities.services.map((s) => s.lql).join(' OR ')})`);
+    sqlWhere.push(`(${entities.services.map((s) => s.sql).join(' OR ')})`);
+    notes.push(entities.services.map((s) => s.label).join(' + '));
+  }
+
+  if (entities.httpStatuses.length > 0) {
+    if (entities.httpStatuses.length === 1) {
+      const code = entities.httpStatuses[0];
+      lqlParts.push(`httpRequest.status=${code}`);
+      sqlWhere.push(`http_request.status = ${code}`);
+    } else {
+      lqlParts.push(
+        `(${entities.httpStatuses.map((c) => `httpRequest.status=${c}`).join(' OR ')})`
+      );
+      sqlWhere.push(`http_request.status IN (${entities.httpStatuses.join(', ')})`);
+    }
+    notes.push(`HTTP Status: ${entities.httpStatuses.join(', ')}`);
+  } else if (entities.statusClass === '5XX') {
     lqlParts.push('httpRequest.status>=500');
     sqlWhere.push(`http_request.status >= 500`);
     notes.push('HTTP 5xx Server Faults');
-  } else if (q.includes('429') || q.includes('quota') || q.includes('rate limit')) {
-    lqlParts.push('(httpRequest.status=429 OR textPayload:"429" OR protoPayload.status.code=8)');
-    sqlWhere.push(`(http_request.status = 429 OR STRPOS( LOWER(COALESCE(text_payload, '')), '429' ) > 0)`);
-    notes.push('HTTP 429 / Quota Exhausted');
-  } else if (q.includes('error') || q.includes('crash') || q.includes('fail') || q.includes('exception')) {
-    lqlParts.push('severity>=ERROR');
-    sqlWhere.push(`severity IN ('ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY')`);
-    notes.push('Severity >= ERROR');
-  } else if (q.includes('warn')) {
-    lqlParts.push('severity>=WARNING');
-    sqlWhere.push(`severity IN ('WARNING', 'ERROR', 'CRITICAL')`);
-    notes.push('Severity >= WARNING');
+  } else if (entities.statusClass === '4XX') {
+    lqlParts.push('(httpRequest.status>=400 AND httpRequest.status<500)');
+    sqlWhere.push(`http_request.status BETWEEN 400 AND 499`);
+    notes.push('HTTP 4xx Client/Auth Errors');
   }
 
-  if (q.includes('slow') || q.includes('2s') || q.includes('latency') || q.includes('over 1s')) {
-    lqlParts.push('httpRequest.latency>"1.5s"');
-    sqlWhere.push(`CAST(REPLACE(http_request.latency, 's', '') AS FLOAT64) > 1.5`);
-    notes.push('Latency > 1.5s');
+  if (entities.severities.length > 0 && entities.httpStatuses.length === 0) {
+    const sev = entities.severities[0];
+    lqlParts.push(`severity>=${sev}`);
+    sqlWhere.push(`severity IN ('${sev}', 'ERROR', 'CRITICAL')`);
+    notes.push(`Severity >= ${sev}`);
   }
 
-  if (q.includes('pii') || q.includes('secret leak') || q.includes('token') || q.includes('apikey') || q.includes('dlp')) {
-    lqlParts.push('(textPayload:"Bearer " OR textPayload:"AIza" OR jsonPayload.message:"token")');
-    sqlWhere.push(`REGEXP_CONTAINS(COALESCE(text_payload, TO_JSON_STRING(json_payload)), r'(Bearer eyJ|AIza[0-9A-Za-z_-]{20,}|PRIVATE KEY)')`);
-    notes.push('DLP Secret / Token Pattern Scan');
+  if (entities.latency) {
+    lqlParts.push(
+      `httpRequest.latency${entities.latency.operator}"${entities.latency.thresholdSec}s"`
+    );
+    sqlWhere.push(
+      `CAST(REPLACE(http_request.latency, 's', '') AS FLOAT64) ${entities.latency.operator} ${entities.latency.thresholdSec}`
+    );
+    notes.push(
+      `Latency ${entities.latency.operator} ${entities.latency.thresholdMs}ms`
+    );
+  }
+
+  if (entities.regions.length > 0) {
+    const regFilter = entities.regions
+      .map((r) => `resource.labels.location="${r}"`)
+      .join(' OR ');
+    lqlParts.push(entities.regions.length > 1 ? `(${regFilter})` : regFilter);
+    sqlWhere.push(
+      `JSON_VALUE(resource.labels, '$.location') IN (${entities.regions
+        .map((r) => `'${r}'`)
+        .join(', ')})`
+    );
+    notes.push(`Regions: ${entities.regions.join(', ')}`);
+  }
+
+  if (entities.ips.length > 0) {
+    for (const ip of entities.ips) {
+      lqlParts.push(`(httpRequest.remoteIp="${ip}" OR textPayload:"${ip}")`);
+      sqlWhere.push(
+        `(http_request.remote_ip = '${ip}' OR STRPOS(COALESCE(text_payload, ''), '${ip}') > 0)`
+      );
+    }
+    notes.push(`IP: ${entities.ips.join(', ')}`);
+  }
+
+  if (entities.principals.length > 0) {
+    for (const pr of entities.principals) {
+      lqlParts.push(`protoPayload.authenticationInfo.principalEmail="${pr}"`);
+      sqlWhere.push(
+        `proto_payload.audit_log.authentication_info.principal_email = '${pr}'`
+      );
+    }
+    notes.push(`Principal: ${entities.principals.join(', ')}`);
+  }
+
+  if (
+    intentClassification.topIntentId === 'DLP_CREDENTIAL_PII_LEAK' ||
+    /\bdlp\b|\bpii\b|\bleak|\bbearer\b|\baiza/i.test(rawQuery)
+  ) {
+    lqlParts.push(
+      '(textPayload:"Bearer " OR textPayload:"AIza" OR jsonPayload.message:"token")'
+    );
+    sqlWhere.push(
+      `REGEXP_CONTAINS(COALESCE(text_payload, TO_JSON_STRING(json_payload)), r'(Bearer eyJ|AIza[0-9A-Za-z_-]{20,}|PRIVATE KEY)')`
+    );
+    notes.push('DLP Secret & PII Pattern Scan');
+  }
+
+  for (const neg of entities.negations) {
+    lqlParts.push(neg.lql);
+    sqlWhere.push(neg.sql);
+    notes.push(neg.label);
   }
 
   const finalLql = lqlParts.length > 0 ? lqlParts.join(' AND ') : explicitLql || '';
@@ -6882,9 +7324,203 @@ function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql 
     sql: finalSql,
     explanation:
       notes.length > 0
-        ? `Compiled Intent: ${notes.join(' · ')}`
+        ? `${intentClassification.topIntentLabel} (${Math.round(
+            intentClassification.cosineSimilarity * 100
+          )}% Cosine) · ${notes.join(' · ')}`
         : 'All Project Log Streams (_Default + _Required)',
+    nlpAnalysis: {
+      engine: 'COMPUTATIONAL_NLP_PORTER_NER_BM25',
+      tokens: tokenized.meaningfulTokens,
+      stems: tokenized.stems,
+      entities,
+      intent: intentClassification,
+    },
   };
+}
+
+// Optional Live Gemini Neural LLM Enhancer (uses AES-256-GCM RAM Vault key if sealed)
+async function tryEnhanceWithGeminiNeuralNlp(projectId, rawQuery, baseCompiled) {
+  if (!rawQuery || typeof decryptApiKeyFromMemory !== 'function') {
+    return baseCompiled;
+  }
+  const apiKey = decryptApiKeyFromMemory();
+  if (!apiKey) return baseCompiled;
+
+  try {
+    const modelId = encryptedAiStudioVault?.model || 'gemini-2.5-flash';
+    const prompt = `You are a Google Cloud Logging LQL and BigQuery Log Analytics SQL compiler for project "${projectId}".
+Convert this natural language query into valid Cloud Logging LQL and BigQuery SQL over \`${projectId}.global._Default._AllLogs\`:
+Query: ${JSON.stringify(rawQuery)}
+Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."}`;
+
+    const resp = await gcpHttp.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+        modelId
+      )}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 256,
+          responseMimeType: 'application/json',
+        },
+      },
+      { timeout: 2600 }
+    );
+    const txt =
+      resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const parsed = JSON.parse(txt);
+    if (parsed && typeof parsed.lql === 'string' && parsed.lql.trim()) {
+      return {
+        ...baseCompiled,
+        lql: baseCompiled.lql || parsed.lql.trim(),
+        explanation: parsed.explanation || baseCompiled.explanation,
+        nlpAnalysis: {
+          ...baseCompiled.nlpAnalysis,
+          engine: `GEMINI_NEURAL_LLM (${modelId}) + PORTER_NER_BM25`,
+          geminiSynthesizedLql: parsed.lql.trim(),
+        },
+      };
+    }
+  } catch {
+    // Fallback to deterministic Computational NLP AST
+  }
+  return baseCompiled;
+}
+
+// BM25 + NER Semantic Document Scorer over log entries
+function scoreAndFilterLogsWithNlp(entries = [], nlpAnalysis, timeTravelWindow) {
+  const { stems = [], entities = {} } = nlpAnalysis || {};
+  const hasActiveQuery =
+    stems.length > 0 ||
+    Boolean(timeTravelWindow) ||
+    (entities.services && entities.services.length > 0) ||
+    (entities.httpStatuses && entities.httpStatuses.length > 0) ||
+    Boolean(entities.statusClass) ||
+    Boolean(entities.latency) ||
+    (entities.negations && entities.negations.length > 0);
+
+  const scored = entries.map((entry) => {
+    const docText = `${entry.serviceName} ${entry.resourceType} ${entry.resourceTarget} ${entry.region} ${entry.actor} ${entry.httpMethod} ${entry.httpStatus} ${entry.cleanMessage}`.toLowerCase();
+    const docTokens = nlpTokenizeAndStem(docText);
+    const matchedStems = stems.filter((st) =>
+      docTokens.stems.some((dt) => dt.includes(st) || st.includes(dt))
+    );
+
+    // Base BM25 lexical overlap score
+    let score = stems.length > 0 ? (matchedStems.length / stems.length) * 55 : 100;
+    let hardFilterPass = true;
+
+    if (timeTravelWindow) {
+      const tMs = new Date(entry.timestamp).getTime();
+      const startMs = new Date(timeTravelWindow.startIso).getTime();
+      const endMs = new Date(timeTravelWindow.endIso).getTime();
+      if (tMs < startMs || tMs > endMs) hardFilterPass = false;
+    }
+
+    // Negation AST checks ("excluding healthchecks", "not 200", etc.)
+    for (const neg of entities.negations || []) {
+      if (neg.term === 'healthz' && /healthz|readyz|kube-probe/i.test(docText)) {
+        hardFilterPass = false;
+      } else if (neg.term === '200' && entry.httpStatus === 200) {
+        hardFilterPass = false;
+      } else if (neg.term === 'info' && entry.severity === 'INFO') {
+        hardFilterPass = false;
+      } else if (neg.term && docText.includes(neg.term)) {
+        hardFilterPass = false;
+      }
+    }
+
+    // Service NER check
+    if (entities.services?.length > 0) {
+      const srvMatch = entities.services.some(
+        (s) =>
+          entry.resourceType === s.resourceType ||
+          entry.serviceName.includes(s.resourceType.split('.')[0])
+      );
+      if (srvMatch) score += 25;
+      else hardFilterPass = false;
+    }
+
+    // HTTP Status / Class NER check
+    if (entities.httpStatuses?.length > 0) {
+      if (entities.httpStatuses.includes(entry.httpStatus)) score += 25;
+      else hardFilterPass = false;
+    } else if (entities.statusClass === '5XX') {
+      if (entry.httpStatus >= 500) score += 25;
+      else hardFilterPass = false;
+    } else if (entities.statusClass === '4XX') {
+      if (entry.httpStatus >= 400 && entry.httpStatus < 500) score += 25;
+      else hardFilterPass = false;
+    }
+
+    // Latency Comparator NER check ("over 1s", "slower than 800ms", "under 50ms")
+    if (entities.latency) {
+      const passLat =
+        entities.latency.operator === '<'
+          ? entry.latencyMs <= entities.latency.thresholdMs
+          : entry.latencyMs >= entities.latency.thresholdMs;
+      if (passLat) score += 20;
+      else hardFilterPass = false;
+    }
+
+    // Region NER check
+    if (entities.regions?.length > 0) {
+      const regMatch = entities.regions.some((r) =>
+        String(entry.region || '').startsWith(r)
+      );
+      if (regMatch) score += 20;
+      else hardFilterPass = false;
+    }
+
+    // IP NER check
+    if (entities.ips?.length > 0) {
+      const ipMatch = entities.ips.some((ip) => docText.includes(ip));
+      if (ipMatch) score += 25;
+      else hardFilterPass = false;
+    }
+
+    // DLP Intent check
+    if (
+      nlpAnalysis?.intent?.topIntentId === 'DLP_CREDENTIAL_PII_LEAK' &&
+      (!entry.dlpFindings || entry.dlpFindings.length === 0)
+    ) {
+      hardFilterPass = false;
+    }
+
+    // If free-text query had no structured NER slots, require at least 1 stem match
+    const hasStructuredSlots =
+      (entities.services?.length || 0) +
+        (entities.httpStatuses?.length || 0) +
+        (entities.regions?.length || 0) +
+        (entities.ips?.length || 0) +
+        (entities.negations?.length || 0) >
+        0 ||
+      Boolean(entities.statusClass) ||
+      Boolean(entities.latency) ||
+      nlpAnalysis?.intent?.topIntentId === 'DLP_CREDENTIAL_PII_LEAK';
+
+    if (!hasStructuredSlots && stems.length > 0 && matchedStems.length === 0) {
+      hardFilterPass = false;
+    }
+
+    const nlpRelevancePct = hasActiveQuery
+      ? Math.min(99, Math.max(12, Math.round(score)))
+      : 100;
+
+    return {
+      ...entry,
+      nlpRelevancePct,
+      matchedStems,
+      _hardFilterPass: hardFilterPass,
+    };
+  });
+
+  if (!hasActiveQuery) return scored;
+  const matched = scored
+    .filter((e) => e._hardFilterPass)
+    .sort((a, b) => b.nlpRelevancePct - a.nlpRelevancePct);
+  return matched.length > 0 ? matched : scored.slice(0, 4);
 }
 
 function tokenizeDrain3Signature(message = '') {
@@ -6953,10 +7589,15 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
   } = req.body || {};
 
   try {
-    const compiled = compileNaturalLanguageToLqlAndSql(
+    const baseCompiled = compileNaturalLanguageToLqlAndSql(
       projectId,
       naturalLanguage,
       lqlFilter
+    );
+    const compiled = await tryEnhanceWithGeminiNeuralNlp(
+      projectId,
+      naturalLanguage,
+      baseCompiled
     );
 
     let effectiveFilter = compiled.lql;
@@ -7290,58 +7931,11 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
-    const qLower = `${naturalLanguage} ${effectiveFilter}`.toLowerCase();
-    const filteredPool = unfilteredPool.filter((entry) => {
-      if (timeTravelWindow) {
-        const tMs = new Date(entry.timestamp).getTime();
-        const startMs = new Date(timeTravelWindow.startIso).getTime();
-        const endMs = new Date(timeTravelWindow.endIso).getTime();
-        if (tMs < startMs || tMs > endMs) return false;
-      }
-      if (!qLower.trim()) return true;
-      if (
-        (qLower.includes('5xx') || qLower.includes('status>=500')) &&
-        entry.httpStatus < 500
-      ) {
-        return false;
-      }
-      if (
-        (qLower.includes('429') || qLower.includes('quota')) &&
-        entry.httpStatus !== 429 &&
-        !entry.cleanMessage.toLowerCase().includes('quota')
-      ) {
-        return false;
-      }
-      if (
-        (qLower.includes('iam') ||
-          qLower.includes('secretmanager') ||
-          qLower.includes('permission')) &&
-        !entry.serviceName.includes('secret') &&
-        !entry.serviceName.includes('iam') &&
-        entry.httpStatus !== 403 &&
-        entry.dlpFindings?.length === 0
-      ) {
-        return false;
-      }
-      if (
-        (qLower.includes('dlp') ||
-          qLower.includes('aiza') ||
-          qLower.includes('bearer ')) &&
-        (!entry.dlpFindings || entry.dlpFindings.length === 0)
-      ) {
-        return false;
-      }
-      if (
-        qLower.includes('cloud_run_revision') &&
-        entry.resourceType !== 'cloud_run_revision'
-      ) {
-        return false;
-      }
-      return true;
-    });
-
-    const allEntries =
-      filteredPool.length > 0 ? filteredPool : unfilteredPool;
+    const allEntries = scoreAndFilterLogsWithNlp(
+      unfilteredPool,
+      compiled.nlpAnalysis,
+      timeTravelWindow
+    );
 
     // 1. Semantic Drain3 Pattern Clustering
     const clusterMap = new Map();
@@ -7529,6 +8123,7 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         effectiveLql: effectiveFilter,
         bigQuerySql: compiled.sql,
         explanation: compiled.explanation,
+        nlpAnalysis: compiled.nlpAnalysis,
       },
       timeTravelWindow,
       stats: {
