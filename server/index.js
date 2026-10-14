@@ -23237,6 +23237,128 @@ function getOrInitBedrockFoundryGateway(projectId) {
   return bedrockFoundryGatewayStore.get(projectId);
 }
 
+const aliyunFlashSaleStore = new Map();
+const aliyunCenPackagesStore = new Map();
+const polarGaussHtapStore = new Map();
+const huaweiModelArtsPoolStore = new Map();
+
+function getOrInitAliyunFlashSale(projectId) {
+  if (!aliyunFlashSaleStore.has(projectId)) {
+    aliyunFlashSaleStore.set(projectId, {
+      campaigns: [
+        {
+          campaignId: '11-11-singles-day-global-surge',
+          campaignName: "11.11 Singles' Day Global Checkout Surge",
+          targetService: 'checkout-gateway-prod',
+          region: 'asia-east1',
+          preWarmedMinInstances: 60,
+          maxBurstInstances: 500,
+          sentinelMaxQps: 25000,
+          degradeFallbackMode: 'STATIC_QUEUE_WAITING_ROOM_JSON',
+          warmUpRampSeconds: 180,
+          status: 'SENTINEL_ARMED_PREWARMED',
+          currentLiveQps: 18420,
+          rejectedShedQps: 0,
+          p99LatencyMs: 24,
+          updatedAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+        },
+      ],
+      surgeDrills: [
+        {
+          drillId: 'pts-drill-baseline-01',
+          campaignName: "11.11 Singles' Day Global Checkout Surge",
+          simulatedPeakQps: 32000,
+          sentinelThresholdQps: 25000,
+          passedQps: 25000,
+          shedBySentinelQps: 7000,
+          coldStartsObserved: 0,
+          p99LatencyMs: 29,
+          verdict: 'ZERO_COLD_START_GRACEFUL_SHEDDING',
+          executedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+        },
+      ],
+    });
+  }
+  return aliyunFlashSaleStore.get(projectId);
+}
+
+function getOrInitAliyunCenPackages(projectId) {
+  if (!aliyunCenPackagesStore.has(projectId)) {
+    aliyunCenPackagesStore.set(projectId, [
+      {
+        packageId: 'cen-ga-apac-eu-us-backbone',
+        packageName: 'APAC-to-Global Premium Anycast & CEN Hub',
+        hubSpokes: [
+          'asia-east1 (Taipei)',
+          'asia-southeast1 (Singapore)',
+          'europe-west1 (Belgium)',
+          'us-central1 (Iowa)',
+        ],
+        totalBandwidthMbps: 5000,
+        qosSlices: {
+          goldRealtimePaymentPct: 50,
+          silverInteractiveApiPct: 35,
+          bronzeBulkReplicationPct: 15,
+        },
+        anycastIp: '34.111.88.10',
+        crossRegionRttReductionPct: 44.2,
+        measuredRttMs: 78,
+        publicInternetBaselineRttMs: 140,
+        status: 'NCC_CEN_QOS_ENFORCED',
+        createdAt: new Date(Date.now() - 86400000 * 6).toISOString(),
+      },
+    ]);
+  }
+  return aliyunCenPackagesStore.get(projectId);
+}
+
+function getOrInitPolarGaussHtap(projectId) {
+  if (!polarGaussHtapStore.has(projectId)) {
+    polarGaussHtapStore.set(projectId, [
+      {
+        clusterId: 'polardb-gauss-htap-core-01',
+        clusterName: 'orders-ledger-htap-primary',
+        engineBridge: 'AlloyDB Omni Columnar + BigQuery Zero-ETL HTAP',
+        primaryRegion: 'asia-east1',
+        storageCapacityGb: 1280,
+        sharedStorageZeroCopySavingsPct: 72,
+        serverlessScuMin: 2,
+        serverlessScuMax: 32,
+        htapColumnarIsolationPct: 99.4,
+        latestSnapshotCloneName: 'orders-ledger-clone-t-minus-5m',
+        cloneProvisionTimeSec: 1.8,
+        cloneCostOverheadUsd: 0.0,
+        status: 'HTAP_COLUMNAR_AND_SNAPSHOT_READY',
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+      },
+    ]);
+  }
+  return polarGaussHtapStore.get(projectId);
+}
+
+function getOrInitHuaweiModelArtsPool(projectId) {
+  if (!huaweiModelArtsPoolStore.has(projectId)) {
+    huaweiModelArtsPoolStore.set(projectId, [
+      {
+        poolId: 'cce-volcano-vgpu-pool-01',
+        poolName: 'heterogeneous-llm-inference-volcano-pool',
+        schedulerType: 'Huawei Volcano Gang-Scheduler + GKE Time-Slicing',
+        acceleratorType: 'NVIDIA L4 24GB / A100 80GB Heterogeneous',
+        fractionalVgpuSlice: '0.25x GPU (6 GB VRAM Isolated Slice)',
+        physicalGpusAllocated: 4,
+        virtualGpuPodsScheduled: 16,
+        gangSchedulingEnabled: true,
+        spotFallbackEnabled: true,
+        gpuUtilizationPct: 89.5,
+        estimatedMonthlySavingsUsd: 1640,
+        status: 'VOLCANO_GANG_SCHEDULED',
+        createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+      },
+    ]);
+  }
+  return huaweiModelArtsPoolStore.get(projectId);
+}
+
 // Role -> Permission knowledge base for AWS-style IAM Policy Simulator
 const GCP_ROLE_PERMISSION_CATALOG = [
   {
@@ -24309,6 +24431,16 @@ app.get(
           shares: getOrInitRamLighthouseShares(projectId),
         },
         bedrockFoundryGateway: getOrInitBedrockFoundryGateway(projectId),
+        aliyunFlashSale: getOrInitAliyunFlashSale(projectId),
+        aliyunCenPackages: {
+          packages: getOrInitAliyunCenPackages(projectId),
+        },
+        polarGaussHtap: {
+          clusters: getOrInitPolarGaussHtap(projectId),
+        },
+        huaweiModelArtsPool: {
+          pools: getOrInitHuaweiModelArtsPool(projectId),
+        },
       });
     } catch (err) {
       return res.status(400).json({
@@ -26937,6 +27069,253 @@ app.post(
             : `Processed prompt via ${selectedModel} (DLP PII Redacted: ${
                 evalResult.piiRedacted ? 'YES' : 'NO'
               }, Failover: ${simulatePrimaryOutage ? 'YES' : 'NO'}).`,
+        });
+      }
+
+      if (action === 'ARM_FLASH_SALE_SENTINEL') {
+        const campaignName = String(
+          req.body?.campaignName || "11.11 Singles' Day Checkout Surge"
+        ).trim();
+        const targetService = String(
+          req.body?.targetService || 'checkout-gateway-prod'
+        ).trim();
+        const region = String(req.body?.region || 'asia-east1').trim();
+        const preWarmedMinInstances = Math.max(
+          5,
+          Math.min(1000, Number(req.body?.preWarmedMinInstances || 60))
+        );
+        const sentinelMaxQps = Math.max(
+          500,
+          Math.min(250000, Number(req.body?.sentinelMaxQps || 25000))
+        );
+        const degradeFallbackMode = String(
+          req.body?.degradeFallbackMode || 'STATIC_QUEUE_WAITING_ROOM_JSON'
+        );
+
+        const store = getOrInitAliyunFlashSale(projectId);
+        const campaignId = campaignName
+          .toLowerCase()
+          .replace(/[^a-z0-9-]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+
+        const record = {
+          campaignId: campaignId || `flash-sale-${Date.now().toString(36)}`,
+          campaignName,
+          targetService,
+          region,
+          preWarmedMinInstances,
+          maxBurstInstances: Math.max(preWarmedMinInstances * 6, 300),
+          sentinelMaxQps,
+          degradeFallbackMode,
+          warmUpRampSeconds: 180,
+          status: 'SENTINEL_ARMED_PREWARMED',
+          currentLiveQps: Math.round(sentinelMaxQps * 0.72),
+          rejectedShedQps: 0,
+          p99LatencyMs: 22,
+          updatedAt: new Date().toISOString(),
+        };
+
+        const idx = store.campaigns.findIndex(
+          (c) => c.campaignId === record.campaignId
+        );
+        if (idx >= 0) store.campaigns[idx] = record;
+        else store.campaigns.unshift(record);
+
+        return res.json({
+          ok: true,
+          campaign: record,
+          message: `Armed Alibaba MSE Sentinel & Pre-Warmed ${preWarmedMinInstances} Cloud Run v2 instances for "${campaignName}" (${sentinelMaxQps.toLocaleString()} QPS token-bucket ceiling).`,
+        });
+      }
+
+      if (action === 'RUN_PTS_SURGE_DRILL') {
+        const store = getOrInitAliyunFlashSale(projectId);
+        const activeCampaign = store.campaigns[0] || {
+          campaignName: "11.11 Singles' Day Global Checkout Surge",
+          sentinelMaxQps: 25000,
+          preWarmedMinInstances: 60,
+        };
+        const simulatedPeakQps = Math.max(
+          1000,
+          Number(
+            req.body?.simulatedPeakQps ||
+              Math.round(activeCampaign.sentinelMaxQps * 1.35)
+          )
+        );
+        const passedQps = Math.min(
+          simulatedPeakQps,
+          activeCampaign.sentinelMaxQps
+        );
+        const shedBySentinelQps = Math.max(
+          0,
+          simulatedPeakQps - activeCampaign.sentinelMaxQps
+        );
+
+        const drill = {
+          drillId: `pts-drill-${Date.now().toString(36).slice(-5)}`,
+          campaignName: activeCampaign.campaignName,
+          simulatedPeakQps,
+          sentinelThresholdQps: activeCampaign.sentinelMaxQps,
+          passedQps,
+          shedBySentinelQps,
+          coldStartsObserved: 0,
+          p99LatencyMs: shedBySentinelQps > 0 ? 28 : 21,
+          verdict:
+            shedBySentinelQps > 0
+              ? 'ZERO_COLD_START_GRACEFUL_SHEDDING'
+              : 'ABSORBED_100PCT_WITH_PREWARMED_POOL',
+          executedAt: new Date().toISOString(),
+        };
+
+        activeCampaign.currentLiveQps = passedQps;
+        activeCampaign.rejectedShedQps = shedBySentinelQps;
+        store.surgeDrills.unshift(drill);
+        store.surgeDrills = store.surgeDrills.slice(0, 8);
+
+        return res.json({
+          ok: true,
+          drill,
+          message: `Executed Alibaba PTS Surge Drill at ${simulatedPeakQps.toLocaleString()} QPS: ${passedQps.toLocaleString()} QPS served with 0 cold starts, ${shedBySentinelQps.toLocaleString()} QPS gracefully shed by MSE Sentinel.`,
+        });
+      }
+
+      if (action === 'PROVISION_CEN_QOS_PACKAGE') {
+        const packageName = String(
+          req.body?.packageName || 'APAC-EU-US Enterprise CEN QoS Bandwidth'
+        ).trim();
+        const totalBandwidthMbps = Math.max(
+          100,
+          Math.min(100000, Number(req.body?.totalBandwidthMbps || 5000))
+        );
+        const goldPct = Math.max(
+          10,
+          Math.min(80, Number(req.body?.goldRealtimePaymentPct || 50))
+        );
+        const silverPct = Math.max(
+          10,
+          Math.min(90 - goldPct, Number(req.body?.silverInteractiveApiPct || 35))
+        );
+        const bronzePct = Math.max(5, 100 - goldPct - silverPct);
+
+        const packages = getOrInitAliyunCenPackages(projectId);
+        const record = {
+          packageId: `cen-ga-${Date.now().toString(36).slice(-5)}`,
+          packageName,
+          hubSpokes: [
+            'asia-east1 (Taipei)',
+            'asia-southeast1 (Singapore)',
+            'europe-west1 (Belgium)',
+            'us-central1 (Iowa)',
+          ],
+          totalBandwidthMbps,
+          qosSlices: {
+            goldRealtimePaymentPct: goldPct,
+            silverInteractiveApiPct: silverPct,
+            bronzeBulkReplicationPct: bronzePct,
+          },
+          anycastIp: `34.111.${Math.floor(40 + Math.random() * 180)}.10`,
+          crossRegionRttReductionPct: 45.8,
+          measuredRttMs: 74,
+          publicInternetBaselineRttMs: 138,
+          status: 'NCC_CEN_QOS_ENFORCED',
+          createdAt: new Date().toISOString(),
+        };
+
+        packages.unshift(record);
+        return res.json({
+          ok: true,
+          cenPackage: record,
+          message: `Provisioned Alibaba CEN & Global Accelerator Bandwidth Package "${packageName}" (${totalBandwidthMbps} Mbps: Gold ${goldPct}% / Silver ${silverPct}% / Bronze ${bronzePct}%).`,
+        });
+      }
+
+      if (action === 'PROVISION_HTAP_POLAR_GAUSS_CLONE') {
+        const clusterName = String(
+          req.body?.clusterName || 'orders-ledger-htap-primary'
+        ).trim();
+        const primaryRegion = String(
+          req.body?.primaryRegion || 'asia-east1'
+        ).trim();
+        const serverlessScuMax = Math.max(
+          4,
+          Math.min(128, Number(req.body?.serverlessScuMax || 32))
+        );
+        const cloneLabel = String(
+          req.body?.cloneLabel || `${clusterName}-clone-instant`
+        ).trim();
+
+        const clusters = getOrInitPolarGaussHtap(projectId);
+        const record = {
+          clusterId: `polardb-gauss-${Date.now().toString(36).slice(-5)}`,
+          clusterName,
+          engineBridge: 'AlloyDB Omni Columnar + BigQuery Zero-ETL HTAP',
+          primaryRegion,
+          storageCapacityGb: 1280,
+          sharedStorageZeroCopySavingsPct: 74,
+          serverlessScuMin: 2,
+          serverlessScuMax,
+          htapColumnarIsolationPct: 99.6,
+          latestSnapshotCloneName: cloneLabel,
+          cloneProvisionTimeSec: 1.6,
+          cloneCostOverheadUsd: 0.0,
+          status: 'HTAP_COLUMNAR_AND_SNAPSHOT_READY',
+          createdAt: new Date().toISOString(),
+        };
+
+        clusters.unshift(record);
+        return res.json({
+          ok: true,
+          cluster: record,
+          message: `Provisioned PolarDB / GaussDB HTAP Read-Pool & Zero-Copy Snapshot Clone "${cloneLabel}" in 1.6s (2-${serverlessScuMax} SCU elastic scale).`,
+        });
+      }
+
+      if (action === 'PROVISION_HUAWEI_PAI_VGPU_POOL') {
+        const poolName = String(
+          req.body?.poolName || 'heterogeneous-llm-inference-volcano-pool'
+        ).trim();
+        const acceleratorType = String(
+          req.body?.acceleratorType || 'NVIDIA L4 24GB / A100 80GB Heterogeneous'
+        );
+        const fractionalVgpuSlice = String(
+          req.body?.fractionalVgpuSlice || '0.25x GPU (6 GB VRAM Isolated Slice)'
+        );
+        const physicalGpusAllocated = Math.max(
+          1,
+          Math.min(64, Number(req.body?.physicalGpusAllocated || 4))
+        );
+
+        const sliceDivisor = fractionalVgpuSlice.startsWith('0.125')
+          ? 8
+          : fractionalVgpuSlice.startsWith('0.25')
+          ? 4
+          : fractionalVgpuSlice.startsWith('0.5')
+          ? 2
+          : 1;
+        const virtualGpuPodsScheduled = physicalGpusAllocated * sliceDivisor;
+
+        const pools = getOrInitHuaweiModelArtsPool(projectId);
+        const record = {
+          poolId: `cce-volcano-${Date.now().toString(36).slice(-5)}`,
+          poolName,
+          schedulerType: 'Huawei Volcano Gang-Scheduler + GKE Time-Slicing',
+          acceleratorType,
+          fractionalVgpuSlice,
+          physicalGpusAllocated,
+          virtualGpuPodsScheduled,
+          gangSchedulingEnabled: true,
+          spotFallbackEnabled: true,
+          gpuUtilizationPct: 91.2,
+          estimatedMonthlySavingsUsd: physicalGpusAllocated * 410 * (sliceDivisor - 1),
+          status: 'VOLCANO_GANG_SCHEDULED',
+          createdAt: new Date().toISOString(),
+        };
+
+        pools.unshift(record);
+        return res.json({
+          ok: true,
+          pool: record,
+          message: `Provisioned Huawei CCE Volcano / Alibaba PAI Fractional vGPU Pool "${poolName}" (${virtualGpuPodsScheduled} vGPU pods across ${physicalGpusAllocated} physical GPUs at ${fractionalVgpuSlice}).`,
         });
       }
 

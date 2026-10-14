@@ -257,6 +257,51 @@ export default function AwsAzureEnvySuiteStudio({
   const [aiSimulateOutage, setAiSimulateOutage] = useState(false);
   const [aiLastEval, setAiLastEval] = useState(null);
 
+  // Module 21: Alibaba Cloud PTS + MSE Sentinel "11.11 Singles' Day Flash-Sale" Surge & QPS Shedder state
+  const [flashCampaignName, setFlashCampaignName] = useState(
+    "11.11 Singles' Day Global Checkout Surge"
+  );
+  const [flashTargetService, setFlashTargetService] = useState(
+    'checkout-gateway-prod'
+  );
+  const [flashRegion, setFlashRegion] = useState('asia-east1');
+  const [flashMinInstances, setFlashMinInstances] = useState(60);
+  const [flashSentinelQps, setFlashSentinelQps] = useState(25000);
+  const [flashDegradeMode, setFlashDegradeMode] = useState(
+    'STATIC_QUEUE_WAITING_ROOM_JSON'
+  );
+  const [flashDrillPeakQps, setFlashDrillPeakQps] = useState(34000);
+
+  // Module 22: Alibaba Cloud CEN (Cloud Enterprise Network) & Global Accelerator QoS Slicer state
+  const [cenPackageName, setCenPackageName] = useState(
+    'APAC-to-Global Premium Anycast & CEN Hub'
+  );
+  const [cenTotalBandwidthMbps, setCenTotalBandwidthMbps] = useState(5000);
+  const [cenGoldPct, setCenGoldPct] = useState(50);
+  const [cenSilverPct, setCenSilverPct] = useState(35);
+
+  // Module 23: Alibaba PolarDB & Huawei GaussDB Serverless HTAP & Second-Level Snapshot Clone state
+  const [htapClusterName, setHtapClusterName] = useState(
+    'orders-ledger-htap-primary'
+  );
+  const [htapRegion, setHtapRegion] = useState('asia-east1');
+  const [htapScuMax, setHtapScuMax] = useState(32);
+  const [htapCloneLabel, setHtapCloneLabel] = useState(
+    'orders-ledger-clone-t-minus-1m'
+  );
+
+  // Module 24: Huawei Cloud CCE Turbo (Volcano) + ModelArts / Alibaba PAI Fractional vGPU Pool state
+  const [vgpuPoolName, setVgpuPoolName] = useState(
+    'heterogeneous-llm-inference-volcano-pool'
+  );
+  const [vgpuAcceleratorType, setVgpuAcceleratorType] = useState(
+    'NVIDIA L4 24GB / A100 80GB Heterogeneous'
+  );
+  const [vgpuSliceRatio, setVgpuSliceRatio] = useState(
+    '0.25x GPU (6 GB VRAM Isolated Slice)'
+  );
+  const [vgpuPhysicalCount, setVgpuPhysicalCount] = useState(4);
+
   const fetchOverview = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
@@ -1412,6 +1457,158 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
+  // Module 21 handlers: Alibaba Cloud PTS + MSE Sentinel 11.11 Singles' Day Flash-Sale Surge
+  const handleArmFlashSaleSentinel = async (e) => {
+    e?.preventDefault();
+    setActionBusy('ALIYUN_SENTINEL_ARM');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'ARM_FLASH_SALE_SENTINEL',
+          campaignName: flashCampaignName,
+          targetService: flashTargetService,
+          region: flashRegion,
+          preWarmedMinInstances: Number(flashMinInstances || 60),
+          sentinelMaxQps: Number(flashSentinelQps || 25000),
+          degradeFallbackMode: flashDegradeMode,
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          'Armed Alibaba MSE Sentinel & Pre-Warmed Cloud Run pool.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to arm Flash-Sale Sentinel.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleRunPtsSurgeDrill = async (e) => {
+    e?.preventDefault();
+    setActionBusy('ALIYUN_PTS_DRILL');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'RUN_PTS_SURGE_DRILL',
+          simulatedPeakQps: Number(flashDrillPeakQps || 34000),
+        }
+      );
+      onShowToast?.(
+        res.data?.message || 'Executed Alibaba PTS Flash-Sale Surge Drill.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to run PTS surge drill.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 22 handler: Alibaba Cloud CEN & Global Accelerator Bandwidth Package & QoS Slicer
+  const handleProvisionCenPackage = async (e) => {
+    e?.preventDefault();
+    setActionBusy('ALIYUN_CEN_PROVISION');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'PROVISION_CEN_QOS_PACKAGE',
+          packageName: cenPackageName,
+          totalBandwidthMbps: Number(cenTotalBandwidthMbps || 5000),
+          goldRealtimePaymentPct: Number(cenGoldPct || 50),
+          silverInteractiveApiPct: Number(cenSilverPct || 35),
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          'Provisioned Alibaba CEN & Global Accelerator QoS Bandwidth Package.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to provision CEN QoS Bandwidth Package.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 23 handler: Alibaba PolarDB & Huawei GaussDB Serverless HTAP & Second-Level Snapshot Clone
+  const handleProvisionPolarGaussClone = async (e) => {
+    e?.preventDefault();
+    setActionBusy('POLAR_GAUSS_CLONE');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'PROVISION_HTAP_POLAR_GAUSS_CLONE',
+          clusterName: htapClusterName,
+          primaryRegion: htapRegion,
+          serverlessScuMax: Number(htapScuMax || 32),
+          cloneLabel: htapCloneLabel,
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          'Provisioned PolarDB / GaussDB HTAP Read-Pool & Zero-Copy Clone.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to provision PolarDB / GaussDB clone.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 24 handler: Huawei Cloud CCE Turbo (Volcano) + ModelArts / Alibaba PAI Fractional vGPU Pool
+  const handleProvisionHuaweiVgpuPool = async (e) => {
+    e?.preventDefault();
+    setActionBusy('HUAWEI_VGPU_POOL');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'PROVISION_HUAWEI_PAI_VGPU_POOL',
+          poolName: vgpuPoolName,
+          acceleratorType: vgpuAcceleratorType,
+          fractionalVgpuSlice: vgpuSliceRatio,
+          physicalGpusAllocated: Number(vgpuPhysicalCount || 4),
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          'Provisioned Huawei CCE Volcano / Alibaba PAI Fractional vGPU Pool.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to provision Fractional vGPU Pool.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
   const copyText = (txt, label = 'Copied to clipboard.') => {
     navigator.clipboard?.writeText(txt);
     onShowToast?.(label);
@@ -1457,6 +1654,13 @@ export default function AwsAzureEnvySuiteStudio({
     routes: [],
     recentEvaluations: [],
   };
+  const aliyunFlashSale = data?.aliyunFlashSale || {
+    campaigns: [],
+    surgeDrills: [],
+  };
+  const aliyunCenPackages = data?.aliyunCenPackages?.packages || [];
+  const polarGaussClusters = data?.polarGaussHtap?.clusters || [];
+  const huaweiVgpuPools = data?.huaweiModelArtsPool?.pools || [];
   const activePreviewBrand =
     (multiBrandOAuth.brands || []).find(
       (b) => b.brandId === selectedPreviewBrandId
@@ -1501,15 +1705,16 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
               <Sparkles className="w-3.5 h-3.5" />
               <span>
-                INNOVATION #39–#46 · 20-IN-1 AWS &amp; AZURE MOONSHOT PARITY SUITE FOR GOOGLE CLOUD
+                INNOVATION #39–#50 · 24-IN-1 AWS, AZURE, ALIBABA CLOUD &amp; HUAWEI CLOUD PARITY SUITE FOR GOOGLE CLOUD
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              AWS &amp; Azure Moonshot Parity Super-Studio for Google Cloud (20 Enterprise Bridges)
+              Global Multi-Cloud Parity Super-Studio for Google Cloud (24 AWS, Azure, Alibaba &amp; Huawei Bridges)
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              All 20 iconic enterprise cloud workflows engineers rely on in{' '}
-              <strong>Microsoft Azure</strong> and <strong>Amazon Web Services</strong>{' '}
+              All 24 iconic enterprise cloud workflows engineers rely on in{' '}
+              <strong>Microsoft Azure</strong>, <strong>Amazon Web Services</strong>,{' '}
+              <strong>Alibaba Cloud (Aliyun)</strong>, and <strong>Huawei Cloud</strong>{' '}
               brought natively to Google Cloud: <strong>Azure Resource Groups (Spend + RG-Scoped RBAC + 1-Click Teardown)</strong>,{' '}
               <strong>Hard-Spend Stop-Loss Fuses</strong>,{' '}
               <strong>AWS IAM Policy Simulator &amp; Switch-Role</strong>,{' '}
@@ -1525,11 +1730,15 @@ export default function AwsAzureEnvySuiteStudio({
               <strong>ECS/ACA Multi-Container Sidecar Compose</strong>,{' '}
               <strong>GuardDuty / Sentinel SOAR Playbooks</strong>,{' '}
               <strong>Step Functions / Durable Saga Studio</strong>,{' '}
-              <strong>Multi-Brand OAuth Sign-In Studio (Multiple Brandings in 1 GCP Project)</strong>,{' '}
-              <strong>Route 53 Traffic Flow / Azure Front Door DNS Routing</strong>,{' '}
+              <strong>Multi-Brand OAuth Sign-In Studio</strong>,{' '}
+              <strong>Route 53 / Front Door DNS Routing</strong>,{' '}
               <strong>CloudTrail Lake / Activity Log SQL Time-Detective</strong>,{' '}
-              <strong>AWS RAM / Azure Lighthouse Cross-Project Sharing</strong>, and{' '}
-              <strong>Bedrock Guardrails / Azure AI Foundry Multi-Model Gateway</strong>.
+              <strong>AWS RAM / Azure Lighthouse Cross-Project Sharing</strong>,{' '}
+              <strong>Bedrock / AI Foundry Gateway</strong>,{' '}
+              <strong>Alibaba PTS + MSE Sentinel 11.11 Flash-Sale Surge Engine</strong>,{' '}
+              <strong>Alibaba CEN &amp; Global Accelerator QoS Bandwidth Slicer</strong>,{' '}
+              <strong>PolarDB / Huawei GaussDB Serverless HTAP &amp; Second-Level Clone</strong>, and{' '}
+              <strong>Huawei CCE Volcano / ModelArts &amp; Alibaba PAI Fractional vGPU Pool</strong>.
             </p>
           </div>
 
@@ -1546,7 +1755,7 @@ export default function AwsAzureEnvySuiteStudio({
           </button>
         </div>
 
-        {/* 20 Sub-Studio Navigation Pills */}
+        {/* 24 Sub-Studio Navigation Pills */}
         <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
           {[
             {
@@ -1668,6 +1877,30 @@ export default function AwsAzureEnvySuiteStudio({
               label: '20. Bedrock / AI Foundry Gateway',
               badge: `${bedrockGateway.routes?.length || 0} AI Gateways`,
               icon: Sparkles,
+            },
+            {
+              id: 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE',
+              label: '21. Alibaba PTS + MSE 11.11 Surge',
+              badge: `${aliyunFlashSale.campaigns?.length || 0} Armed`,
+              icon: Rocket,
+            },
+            {
+              id: 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE',
+              label: '22. Alibaba CEN & GA QoS Slicer',
+              badge: `${aliyunCenPackages.length} Backbones`,
+              icon: Network,
+            },
+            {
+              id: 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL',
+              label: '23. PolarDB / GaussDB HTAP & Clone',
+              badge: `${polarGaussClusters.length} HTAP Pools`,
+              icon: Layers,
+            },
+            {
+              id: 'HUAWEI_CCE_MODELARTS_AI_POOL',
+              label: '24. Huawei Volcano / PAI vGPU Pool',
+              badge: `${huaweiVgpuPools.length} vGPU Pools`,
+              icon: Boxes,
             },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -5700,6 +5933,598 @@ export default function AwsAzureEnvySuiteStudio({
                     <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
                       {rt.status}
                     </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          21. ALIBABA CLOUD PTS + MSE SENTINEL 11.11 FLASH-SALE SURGE ENGINE
+         ===================================================================== */}
+      {activeSubTab === 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <form
+              onSubmit={handleArmFlashSaleSentinel}
+              className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Rocket className="w-4 h-4 text-orange-500" />
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Alibaba Cloud PTS + MSE Sentinel 11.11 Singles&apos; Day Flash-Sale Pre-Warm &amp; QPS Shedder
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Borrow Alibaba Cloud&apos;s battle-tested <strong>11.11 Singles&apos; Day</strong> architecture on Google Cloud: pre-warm Cloud Run Gen2 minimum instances ahead of a scheduled traffic spike and arm an <strong>MSE Sentinel Token-Bucket QPS Circuit-Breaker</strong> with graceful waiting-room JSON degradation.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Flash-Sale Campaign Name</span>
+                  <input
+                    type="text"
+                    value={flashCampaignName}
+                    onChange={(e) => setFlashCampaignName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Target Cloud Run Service</span>
+                  <input
+                    type="text"
+                    value={flashTargetService}
+                    onChange={(e) => setFlashTargetService(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Primary Region</span>
+                  <input
+                    type="text"
+                    value={flashRegion}
+                    onChange={(e) => setFlashRegion(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Pre-Warmed Min Instances</span>
+                  <input
+                    type="number"
+                    min="5"
+                    max="1000"
+                    value={flashMinInstances}
+                    onChange={(e) => setFlashMinInstances(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Sentinel Max QPS Ceiling</span>
+                  <input
+                    type="number"
+                    min="500"
+                    max="250000"
+                    value={flashSentinelQps}
+                    onChange={(e) => setFlashSentinelQps(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+              </div>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">MSE Sentinel Overflow Degrade Mode</span>
+                <select
+                  value={flashDegradeMode}
+                  onChange={(e) => setFlashDegradeMode(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                >
+                  <option value="STATIC_QUEUE_WAITING_ROOM_JSON">
+                    STATIC_QUEUE_WAITING_ROOM_JSON (Zero Backend DB Hit)
+                  </option>
+                  <option value="CLOUD_CDN_STALE_WHILE_REVALIDATE">
+                    CLOUD_CDN_STALE_WHILE_REVALIDATE (Serve Edge Cache)
+                  </option>
+                  <option value="TOKEN_BUCKET_SHED_HTTP_429">
+                    TOKEN_BUCKET_SHED_HTTP_429 (Strict Edge Rate-Limit)
+                  </option>
+                </select>
+              </label>
+
+              <button
+                type="submit"
+                disabled={actionBusy === 'ALIYUN_SENTINEL_ARM'}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-orange-600 hover:bg-orange-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {actionBusy === 'ALIYUN_SENTINEL_ARM'
+                  ? 'Pre-Warming Instances & Arming MSE Sentinel...'
+                  : '1-Click Pre-Warm Cloud Run & Arm MSE Sentinel QPS Gate'}
+              </button>
+            </form>
+
+            <div className="xl:col-span-7 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Alibaba PTS (Performance Testing Service) Surge Simulator &amp; Active Campaigns
+                </h3>
+                <form
+                  onSubmit={handleRunPtsSurgeDrill}
+                  className="inline-flex items-center gap-2 text-xs font-mono"
+                >
+                  <input
+                    type="number"
+                    min="1000"
+                    max="500000"
+                    value={flashDrillPeakQps}
+                    onChange={(e) => setFlashDrillPeakQps(e.target.value)}
+                    className="w-28 px-2.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                  <button
+                    type="submit"
+                    disabled={actionBusy === 'ALIYUN_PTS_DRILL'}
+                    className="px-3 py-1.5 rounded-xl font-extrabold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 cursor-pointer"
+                  >
+                    {actionBusy === 'ALIYUN_PTS_DRILL'
+                      ? 'Running PTS Surge...'
+                      : 'Run PTS Surge Drill'}
+                  </button>
+                </form>
+              </div>
+
+              <div className="space-y-3">
+                {(aliyunFlashSale.campaigns || []).map((c) => (
+                  <div
+                    key={c.campaignId}
+                    className="p-4 rounded-xl border border-orange-500/30 bg-orange-500/5 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {c.campaignName} ({c.targetService} · {c.region})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                        {c.status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Pre-Warmed Pool</div>
+                        <div className="font-extrabold text-orange-500">
+                          {c.preWarmedMinInstances} min / {c.maxBurstInstances} max
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Sentinel Ceiling</div>
+                        <div className="font-extrabold">
+                          {Number(c.sentinelMaxQps || 0).toLocaleString()} QPS
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Live Passed QPS</div>
+                        <div className="font-extrabold text-emerald-500">
+                          {Number(c.currentLiveQps || 0).toLocaleString()} QPS
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Shed by Sentinel</div>
+                        <div className="font-extrabold text-amber-500">
+                          {Number(c.rejectedShedQps || 0).toLocaleString()} QPS (p99 {c.p99LatencyMs}ms)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {(aliyunFlashSale.surgeDrills || []).map((d) => (
+                  <div
+                    key={d.drillId}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+                  >
+                    <div>
+                      <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                        PTS Drill {d.drillId}: Peak {Number(d.simulatedPeakQps).toLocaleString()} QPS &rarr; Passed {Number(d.passedQps).toLocaleString()} QPS / Shed {Number(d.shedBySentinelQps).toLocaleString()} QPS
+                      </div>
+                      <div className="text-[11px] text-zinc-500">
+                        Cold Starts: {d.coldStartsObserved} · p99 Latency: {d.p99LatencyMs}ms
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400 text-[10px] font-bold">
+                      {d.verdict}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          22. ALIBABA CLOUD CEN & GLOBAL ACCELERATOR QOS BANDWIDTH SLICER
+         ===================================================================== */}
+      {activeSubTab === 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <form
+              onSubmit={handleProvisionCenPackage}
+              className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Network className="w-4 h-4 text-cyan-500" />
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Alibaba Cloud CEN (Cloud Enterprise Network) &amp; Global Accelerator QoS Bandwidth Slicer
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Borrow Alibaba Cloud&apos;s <strong>CEN Cross-Region Bandwidth Package &amp; Global Accelerator</strong> workflow on Google Cloud Network Connectivity Center + Premium Tier Anycast: allocate committed cross-continental bandwidth and slice it into <strong>Gold (Payment/Realtime)</strong>, <strong>Silver (Interactive API)</strong>, and <strong>Bronze (Bulk Replication)</strong> QoS lanes.
+              </p>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">CEN Bandwidth Package Name</span>
+                <input
+                  type="text"
+                  value={cenPackageName}
+                  onChange={(e) => setCenPackageName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                />
+              </label>
+
+              <div className="grid grid-cols-3 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Total Bandwidth (Mbps)</span>
+                  <input
+                    type="number"
+                    min="100"
+                    max="100000"
+                    value={cenTotalBandwidthMbps}
+                    onChange={(e) => setCenTotalBandwidthMbps(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Gold Realtime (%)</span>
+                  <input
+                    type="number"
+                    min="10"
+                    max="80"
+                    value={cenGoldPct}
+                    onChange={(e) => setCenGoldPct(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Silver API (%)</span>
+                  <input
+                    type="number"
+                    min="10"
+                    max="80"
+                    value={cenSilverPct}
+                    onChange={(e) => setCenSilverPct(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={actionBusy === 'ALIYUN_CEN_PROVISION'}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {actionBusy === 'ALIYUN_CEN_PROVISION'
+                  ? 'Allocating CEN Backbone & QoS Lanes...'
+                  : '1-Click Provision CEN & Global Accelerator QoS Package'}
+              </button>
+            </form>
+
+            <div className="xl:col-span-7 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                Active Cross-Region CEN Backbones &amp; QoS Traffic Slices
+              </h3>
+              <div className="space-y-3">
+                {aliyunCenPackages.map((pkg) => (
+                  <div
+                    key={pkg.packageId}
+                    className="p-4 rounded-xl border border-cyan-500/30 bg-cyan-500/5 space-y-2.5 text-xs font-mono"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {pkg.packageName} ({pkg.totalBandwidthMbps} Mbps · Anycast {pkg.anycastIp})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                        {pkg.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Connected Spokes: {(pkg.hubSpokes || []).join(' · ')}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Gold Payment QoS</div>
+                        <div className="font-extrabold text-amber-500">
+                          {pkg.qosSlices?.goldRealtimePaymentPct}% ({Math.round((pkg.totalBandwidthMbps * (pkg.qosSlices?.goldRealtimePaymentPct || 50)) / 100)} Mbps)
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Silver API QoS</div>
+                        <div className="font-extrabold text-cyan-500">
+                          {pkg.qosSlices?.silverInteractiveApiPct}% ({Math.round((pkg.totalBandwidthMbps * (pkg.qosSlices?.silverInteractiveApiPct || 35)) / 100)} Mbps)
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Cross-Region RTT</div>
+                        <div className="font-extrabold text-emerald-500">
+                          {pkg.measuredRttMs}ms (-{pkg.crossRegionRttReductionPct}% vs {pkg.publicInternetBaselineRttMs}ms Internet)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          23. ALIBABA POLARDB & HUAWEI GAUSSDB SERVERLESS HTAP & SECOND-LEVEL CLONE
+         ===================================================================== */}
+      {activeSubTab === 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <form
+              onSubmit={handleProvisionPolarGaussClone}
+              className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Alibaba PolarDB &amp; Huawei GaussDB Serverless HTAP Read-Pool &amp; Zero-Copy Clone
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Borrow <strong>Alibaba PolarDB IMCI (In-Memory Column Index)</strong> and <strong>Huawei GaussDB / TaurusDB</strong> decoupled compute-storage architecture on Google Cloud (AlloyDB Columnar Engine + BigQuery Zero-ETL + Copy-on-Write Snapshot Clones in under 2 seconds with $0 duplicate storage cost).
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Primary HTAP Cluster Name</span>
+                  <input
+                    type="text"
+                    value={htapClusterName}
+                    onChange={(e) => setHtapClusterName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Primary Region</span>
+                  <input
+                    type="text"
+                    value={htapRegion}
+                    onChange={(e) => setHtapRegion(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Max Serverless SCU Ceiling</span>
+                  <input
+                    type="number"
+                    min="4"
+                    max="128"
+                    value={htapScuMax}
+                    onChange={(e) => setHtapScuMax(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Zero-Copy Clone Snapshot Label</span>
+                  <input
+                    type="text"
+                    value={htapCloneLabel}
+                    onChange={(e) => setHtapCloneLabel(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={actionBusy === 'POLAR_GAUSS_CLONE'}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {actionBusy === 'POLAR_GAUSS_CLONE'
+                  ? 'Creating Zero-Copy HTAP Clone...'
+                  : '1-Click Provision PolarDB / GaussDB HTAP Pool & Instant Clone'}
+              </button>
+            </form>
+
+            <div className="xl:col-span-7 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                Active PolarDB / GaussDB HTAP Clusters &amp; Copy-on-Write Clones
+              </h3>
+              <div className="space-y-3">
+                {polarGaussClusters.map((cl) => (
+                  <div
+                    key={cl.clusterId}
+                    className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {cl.clusterName} ({cl.primaryRegion})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                        {cl.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Bridge: {cl.engineBridge} · Zero-Copy Clone: <strong>{cl.latestSnapshotCloneName}</strong> ({cl.cloneProvisionTimeSec}s provision time, $0 extra storage)
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Elastic SCU Range</div>
+                        <div className="font-extrabold">
+                          {cl.serverlessScuMin} to {cl.serverlessScuMax} SCU
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">OLTP/OLAP Isolation</div>
+                        <div className="font-extrabold text-emerald-500">
+                          {cl.htapColumnarIsolationPct}%
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Shared Storage Savings</div>
+                        <div className="font-extrabold text-indigo-500">
+                          -{cl.sharedStorageZeroCopySavingsPct}% vs 3x Replicas
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          24. HUAWEI CCE VOLCANO / MODELARTS & ALIBABA PAI FRACTIONAL VGPU POOL
+         ===================================================================== */}
+      {activeSubTab === 'HUAWEI_CCE_MODELARTS_AI_POOL' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <form
+              onSubmit={handleProvisionHuaweiVgpuPool}
+              className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Boxes className="w-4 h-4 text-rose-500" />
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Huawei Cloud CCE Turbo (Volcano Scheduler) + ModelArts / Alibaba PAI Fractional vGPU Pool
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Borrow <strong>Huawei Cloud&apos;s CNCF Volcano Gang-Scheduler</strong> and <strong>Alibaba PAI Fractional vGPU Time-Slicing</strong> on GKE + Cloud Run GPU + Vertex AI: partition physical NVIDIA L4/A100 GPUs into isolated <code>0.125x</code>, <code>0.25x</code>, or <code>0.50x</code> vGPU slices with gang-scheduled topology awareness.
+              </p>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">Volcano vGPU Pool Name</span>
+                <input
+                  type="text"
+                  value={vgpuPoolName}
+                  onChange={(e) => setVgpuPoolName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                />
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Accelerator Topology</span>
+                  <select
+                    value={vgpuAcceleratorType}
+                    onChange={(e) => setVgpuAcceleratorType(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="NVIDIA L4 24GB / A100 80GB Heterogeneous">
+                      NVIDIA L4 24GB / A100 80GB Heterogeneous
+                    </option>
+                    <option value="NVIDIA H100 80GB + TPU v5e Hybrid Pool">
+                      NVIDIA H100 80GB + TPU v5e Hybrid Pool
+                    </option>
+                    <option value="Cloud Run Gen2 L4 Serverless GPU Pool">
+                      Cloud Run Gen2 L4 Serverless GPU Pool
+                    </option>
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Fractional vGPU Slice Ratio</span>
+                  <select
+                    value={vgpuSliceRatio}
+                    onChange={(e) => setVgpuSliceRatio(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="0.125x GPU (3 GB VRAM Isolated Slice)">
+                      0.125x GPU (8 Pods per Physical GPU)
+                    </option>
+                    <option value="0.25x GPU (6 GB VRAM Isolated Slice)">
+                      0.25x GPU (4 Pods per Physical GPU)
+                    </option>
+                    <option value="0.50x GPU (12 GB VRAM Isolated Slice)">
+                      0.50x GPU (2 Pods per Physical GPU)
+                    </option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">Physical GPUs Allocated to Pool</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="64"
+                  value={vgpuPhysicalCount}
+                  onChange={(e) => setVgpuPhysicalCount(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={actionBusy === 'HUAWEI_VGPU_POOL'}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {actionBusy === 'HUAWEI_VGPU_POOL'
+                  ? 'Scheduling Volcano vGPU Slices...'
+                  : '1-Click Provision Huawei Volcano / PAI Fractional vGPU Pool'}
+              </button>
+            </form>
+
+            <div className="xl:col-span-7 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                Active Volcano Gang-Scheduled &amp; Fractional vGPU Pools
+              </h3>
+              <div className="space-y-3">
+                {huaweiVgpuPools.map((pool) => (
+                  <div
+                    key={pool.poolId}
+                    className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {pool.poolName} ({pool.acceleratorType})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                        {pool.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Scheduler: {pool.schedulerType} · Slice: <strong>{pool.fractionalVgpuSlice}</strong>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Physical &rarr; vGPU Pods</div>
+                        <div className="font-extrabold text-rose-500">
+                          {pool.physicalGpusAllocated} GPUs &rarr; {pool.virtualGpuPodsScheduled} vGPU Pods
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">GPU Bin-Pack Utilization</div>
+                        <div className="font-extrabold text-emerald-500">
+                          {pool.gpuUtilizationPct}%
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
+                        <div className="text-zinc-500">Est. Monthly GPU Savings</div>
+                        <div className="font-extrabold text-indigo-500">
+                          ${Number(pool.estimatedMonthlySavingsUsd || 0).toLocaleString()}/mo
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

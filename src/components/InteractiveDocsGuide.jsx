@@ -68,8 +68,8 @@ const DOC_SECTIONS = [
     howItWorks: [
       'Monthly Free Tier vs. Paid Tier Quota Meter: Tracks your live active secret versions against Google Cloud’s monthly Free Tier (First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month; $0.06/active-version/mo beyond 6; $0.00/mo for DISABLED and DESTROYED versions).',
       'Live Cloud Run secretKeyRef Dependency Radar & 1-Click Broken Reference Healer: Scans all live Cloud Run v2 services in parallel to map every container env var and volume mount referencing a secret. Flags broken pointers (deleted secrets or DISABLED/DESTROYED versions) and heals them in 1 click ("Heal: Point to latest" or "Unbind Dead secretKeyRef"), plus "1-Click Hot-Reload Mounted Cloud Run Services" after rotation.',
-      '⏱️ Autonomous $0.00/Mo 30-Day Rotation Schedule: Provisions a Pub/Sub rotation topic, grants roles/pubsub.publisher to the Secret Manager service agent, and configures a 30-day rotationSchedule within Google Cloud’s 3 Free Rotations/month quota.',
-      'CRITICAL 3-State Lifecycle & No-Plaintext-Fallback Warning: Explains clearly that sealing an env var removes the plaintext from Cloud Run and replaces it with a secretKeyRef pointer—so clicking Destroy Version or Delete Secret NEVER reverts it back to plaintext; it disappears forever! Guides engineers to use "⏸ Disable ($0.00/mo · Reversible)" to pause billing while keeping the encrypted payload recoverable.',
+      '️ Autonomous $0.00/Mo 30-Day Rotation Schedule: Provisions a Pub/Sub rotation topic, grants roles/pubsub.publisher to the Secret Manager service agent, and configures a 30-day rotationSchedule within Google Cloud’s 3 Free Rotations/month quota.',
+      'CRITICAL 3-State Lifecycle & No-Plaintext-Fallback Warning: Explains clearly that sealing an env var removes the plaintext from Cloud Run and replaces it with a secretKeyRef pointer—so clicking Destroy Version or Delete Secret NEVER reverts it back to plaintext; it disappears forever! Guides engineers to use " Disable ($0.00/mo · Reversible)" to pause billing while keeping the encrypted payload recoverable.',
     ],
     apisUsed: [
       'GET /api/project/:id/sovereign/secrets-kms → secretmanager.googleapis.com/v1 + run.googleapis.com/v2',
@@ -261,7 +261,7 @@ const DOC_SECTIONS = [
     problemSolved:
       'Debugging crashed Cloud Run revisions, comparing what changed between a broken deploy and the last healthy revision, rolling back traffic in <2 seconds, opening a live container shell, configuring Direct VPC Egress or Stateful Storage Volume Mounts, or migrating to Kubernetes normally requires scattered CLI flags and manual YAML editing.',
     howItWorks: [
-      '⏪ Cloud Run Revision Time-Machine, Crash-Loop Autopsy & 1-Click Instant Rollback: Automatically detects crashed revisions (`HEALTHY` vs `CRASHED` / `ContainerMissing` / `HealthCheckContainerError`), runs a live Crash-Loop Autopsy via `logging.googleapis.com/v2` + side-by-side Config/Env/Secret Diff against the last healthy revision, classifies root causes (`PORT_LISTEN_TIMEOUT`, `SECRET_MANAGER_REF_ERROR`, `OUT_OF_MEMORY_OOM`, `APPLICATION_STARTUP_CRASH`), and offers 3 1-click actions: (1) `<2s` Instant 100% Traffic Pin Rollback (`INSTANT_TRAFFIC_PIN`), (2) Clone Historical Revision Spec as New LATEST (`CLONE_REVISION_SPEC`), or (3) 1-Click Auto-Fix OOM / Startup Crash (`AUTO_FIX_CRASH`: upgrades RAM tier + enables `startupCpuBoost`).',
+      ' Cloud Run Revision Time-Machine, Crash-Loop Autopsy & 1-Click Instant Rollback: Automatically detects crashed revisions (`HEALTHY` vs `CRASHED` / `ContainerMissing` / `HealthCheckContainerError`), runs a live Crash-Loop Autopsy via `logging.googleapis.com/v2` + side-by-side Config/Env/Secret Diff against the last healthy revision, classifies root causes (`PORT_LISTEN_TIMEOUT`, `SECRET_MANAGER_REF_ERROR`, `OUT_OF_MEMORY_OOM`, `APPLICATION_STARTUP_CRASH`), and offers 3 1-click actions: (1) `<2s` Instant 100% Traffic Pin Rollback (`INSTANT_TRAFFIC_PIN`), (2) Clone Historical Revision Spec as New LATEST (`CLONE_REVISION_SPEC`), or (3) 1-Click Auto-Fix OOM / Startup Crash (`AUTO_FIX_CRASH`: upgrades RAM tier + enables `startupCpuBoost`).',
       'Interactive Cloud Run Container SSH (@xterm/xterm + gcloud beta run services ssh): Click "SSH / Container Shell" on any Cloud Run service card (default OFF; toggle off with "SSH Active (Turn Off)") to open a real browser PTY shell inside the running container (~ #). Automatically enables --ssh and --execution-environment=gen2 (>=512Mi) if missing, warms up the active revision, and also supports gcloud beta run services proxy.',
       'Accurate Public (allUsers / invokerIamDisabled) vs. Private (IAM Auth) State & Gatekeeper: Detects both IAM allUsers bindings and Cloud Run v2 invokerIamDisabled state, displays "PUBLIC (Unauthenticated) · Switch to Private" vs. "PRIVATE (IAM Auth) · Switch to Public", and requires explicit confirmation before switching access modes.',
       '2026 Direct VPC Egress Network (template.vpcAccess) & Beta Storage Volume Mounts (GCS FUSE / RAM Disk / Filestore NFS): Attach revisions directly to any VPC/Subnet ($0 Serverless VPC Connector tax) and mount stateful or RAM-disk volumes.',
@@ -404,7 +404,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       'Strict Compliance Blueprints (SEC/FINRA, GDPR EU, HIPAA, AI Vector BigLake): Locks jurisdiction, Physical Capacitor compressed billing (-54%), and 48h–168h Time-Travel windows.',
       'Pre-Crime SQL Dry-Run X-Ray & Auto-SQL Partition/Cluster Optimizer: Estimates exact bytes billed and query cost before execution.',
-      '⏪ 168-Hour FOR SYSTEM_TIME AS OF Time-Machine & 1-Tap Storage Billing Model Switcher (LOGICAL ↔ PHYSICAL).',
+      ' 168-Hour FOR SYSTEM_TIME AS OF Time-Machine & 1-Tap Storage Billing Model Switcher (LOGICAL  PHYSICAL).',
     ],
     apisUsed: [
       'GET /api/project/:id/bigquery/datasets & POST /api/project/:id/provision (serviceType: "BIGQUERY_DATASET")',
@@ -530,28 +530,26 @@ const DOC_SECTIONS = [
   },
   {
     id: 'aws-azure-parity-super-studio',
-    wave: 'INNOVATION #39 · AWS & AZURE ENTERPRISE WORKFLOWS FOR GOOGLE CLOUD',
+    wave: 'INNOVATION #39–#50 · 24-IN-1 AWS, AZURE, ALIBABA CLOUD & HUAWEI CLOUD PARITY SUITE',
     title:
-      'AWS & Azure Parity Super-Studio (Azure Resource Groups, Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator, 1-Click SAS/Presigned URLs & 1-Screen Global Load Balancer)',
+      '24-in-1 Global Multi-Cloud Parity Super-Studio (AWS, Azure, Alibaba Cloud & Huawei Cloud Bridges for Google Cloud)',
     badge: 'AWS/AZURE PARITY TAB',
     badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
     icon: Layers,
     targetTab: 'AWS_AZURE_PARITY',
     problemSolved:
-      'Engineers migrating from AWS or Microsoft Azure miss 5 iconic cloud workflows that Google Cloud Console either lacks or fragments across 7+ screens: (1) Azure Resource Groups with 1-click group teardown, (2) AWS Budgets Actions / Azure Auto-Shutdown hard-spend stop-loss fuses (since GCP budgets only send emails by default), (3) AWS IAM Policy Simulator & Switch-Role preview, (4) 1-Click Azure SAS / S3 Presigned share links + browser upload without needing a Service Account JSON key, and (5) a 1-Screen Global HTTPS Load Balancer + SSL + Cloud Armor WAF wizard.',
+      'Engineers migrating from AWS, Microsoft Azure, Alibaba Cloud (Aliyun), or Huawei Cloud miss 24 iconic enterprise workflows—ranging from Azure Resource Groups, Multi-Brand OAuth in 1 Project, and Route 53 / CloudTrail / RAM / Bedrock Guardrails to Alibaba 11.11 Singles-Day PTS + MSE Sentinel Surge Protection, CEN Cross-Region QoS Slicing, PolarDB/GaussDB Zero-Copy HTAP Clones, and Huawei Volcano Fractional vGPU Pools.',
     howItWorks: [
-      '1. Azure-Style Resource Groups & Bulk Label Tagger: Group any mix of Compute VMs, Cloud Run services, GCS Buckets, BigQuery Datasets, and Secret Manager secrets into logical folders (syncing `labels.resource_group` on GCP), inspect per-group `$/mo` burn, and execute 1-Click Hibernate Group or 1-Click Cascade Delete Group (with grayed-out `line-through` `DELETING...` visual feedback).',
-      '2. Hard-Spend Stop-Loss Fuse (AWS Budgets Actions / Azure Auto-Shutdown): Arm 3 automated stop-loss stages (80% Soft Brake capping Cloud Run `maxInstances=3` & `minInstances=0`, 95% Compute Park stopping all RUNNING VMs, and 100% native Pub/Sub `cloudpulse-hard-spend-fuse` wire).',
-      '3. AWS IAM Policy Simulator & Switch-Role Impersonator: Test any Service Account or user principal against 16 core GCP permissions (`ALLOW` vs `DENY`), preview the cockpit as that role, and grant missing least-privilege roles in 1 click.',
-      '4. Azure SAS / AWS S3 1-Click Presigned URLs & Browser Upload: Upload files directly from your browser and generate expiring (`15m`, `1h`, `24h`, `7d`) Zero-Key SAS Bridge URLs + `gcloud storage sign-url` V4 commands.',
-      '5. 1-Screen Global HTTPS Load Balancer + Managed SSL + Cloud Armor WAF Wizard: Collapses GCP’s 7-step Load Balancer setup (`Global IP` + `Serverless NEG` + `Cloud Armor WAF` + `Backend Service` + `URL Map` + `Managed SSL Cert` + `Forwarding Rule`) into a single 1-click workflow.',
+      '1. Wave 1–3 AWS & Azure Enterprise Core (Modules 1–16): Azure Resource Groups (`labels.resource_group`, live `$/mo` + Accrued Spend, RG-Scoped RBAC & 1-Click Cascade Delete), Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator & Switch-Role, Azure SAS / S3 Presigned Studio, 1-Screen Global HTTPS LB + WAF, CloudFormation/ARM Drift & Rollback, Cost Explorer + CUD Savings Plans, AWS SSM Fleet Run Command, EventBridge Pipes, Key Vault Rotation, Trusted Advisor 5-Pillar Scorer, Transit Gateway VPC Mesh, ECS/ACA Sidecar Compose, GuardDuty/Sentinel SOAR, Step Functions Saga Studio, and Multi-Brand OAuth Sign-In Studio.',
+      '2. Wave 4 Moonshot AWS & Azure Parity (Modules 17–20): Route 53 Traffic Flow / Azure Front Door Weighted & Geo-Proximity DNS Studio, CloudTrail Lake / Activity Log SQL Time-Detective, AWS RAM / Azure Lighthouse Cross-Project Resource Sharing Hub, and Bedrock Guardrails / Azure AI Foundry Multi-Model Vertex AI Router with Cloud DLP PII Redaction.',
+      '3. Wave 5 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity (Modules 21–24): (21) Alibaba PTS + MSE Sentinel 11.11 Singles-Day Flash-Sale Pre-Warm & QPS Token-Bucket Shedder, (22) Alibaba CEN & Global Accelerator Cross-Region QoS Bandwidth Slicer (Gold/Silver/Bronze lanes), (23) Alibaba PolarDB & Huawei GaussDB Serverless HTAP Read-Pool & 1.6s Zero-Copy Snapshot Clone, and (24) Huawei CCE Volcano Gang-Scheduler + ModelArts / Alibaba PAI Fractional vGPU Pool (0.125x / 0.25x / 0.50x GPU slicing).',
     ],
     apisUsed: [
       'GET /api/project/:id/aws-azure-parity/overview & POST /api/project/:id/aws-azure-parity/action',
       'GET /api/project/:id/aws-azure-parity/presigned-bridge/:sasToken',
     ],
     billingImpact:
-      'Prevents runaway bills via automated compute stop-loss fuses and eliminates orphaned tutorial/workshop resources via 1-click Azure-style Resource Group teardown.',
+      'Prevents runaway bills via automated compute stop-loss fuses, eliminates cold-start checkout outages via MSE Sentinel token-bucket shedding, and cuts GPU cluster spend by up to 75% via Volcano fractional vGPU slicing.',
   },
   {
     id: 'live-cloud-billing-pricing-sync',
@@ -638,7 +636,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       'Live Orbital Telemetry Ribbon: Continuously measures your real REST API Round-Trip Time (ms), calculates your project-wide Carbon-Free Energy score (CFE%), grades your security posture (A+ to B), and counts active workloads across Americas, Europe, APAC, and MENA.',
       '1-Tap Stack Synthesizer: Lets you pick a complete architecture blueprint (AI RAG Inference Stack, Real-Time Lakehouse, or Zero-Trust Edge Stack) and provisions a Cloud Storage Bucket + BigQuery Dataset + Cloud Run Gen2 Service in parallel, automatically injecting GCS_BUCKET_URI and BIGQUERY_DATASET into the Cloud Run container environment variables.',
-      '⏱Cloud Flight Recorder & 1-Tap Undo: Records every stack deployment and cross-region service teleport in a chronological ledger with a "1-Tap Rewind / Delete" button to immediately roll back any newly created resource.',
+      'Cloud Flight Recorder & 1-Tap Undo: Records every stack deployment and cross-region service teleport in a chronological ledger with a "1-Tap Rewind / Delete" button to immediately roll back any newly created resource.',
     ],
     apisUsed: [
       'POST /api/project/:id/stack-deploy → storage.googleapis.com/storage/v1/b + bigquery.googleapis.com/v2 + run.googleapis.com/v2',
