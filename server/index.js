@@ -28012,9 +28012,27 @@ app.post(
   }
 );
 
-// Serve live Vite dev server in local dev, or static production frontend (dist/) on Cloud Run!
+// Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
-if (!process.env.K_SERVICE) {
+const staticDistMiddleware = express.static(distPath, {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  },
+});
+
+if (
+  (process.env.NODE_ENV === 'production' || process.env.K_SERVICE) &&
+  fs.existsSync(distPath)
+) {
+  app.use(staticDistMiddleware);
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+} else {
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) return next();
     const viteReq = http.request(
@@ -28039,28 +28057,15 @@ if (!process.env.K_SERVICE) {
     );
     viteReq.on('error', () => {
       if (fs.existsSync(distPath)) {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        res.sendFile(path.join(distPath, 'index.html'));
+        staticDistMiddleware(req, res, () => {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+          res.sendFile(path.join(distPath, 'index.html'));
+        });
       } else {
         next();
       }
     });
     req.pipe(viteReq);
-  });
-} else if (fs.existsSync(distPath)) {
-  app.use(
-    express.static(distPath, {
-      etag: false,
-      lastModified: false,
-      setHeaders: (res) => {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-      },
-    })
-  );
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/')) return next();
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 
