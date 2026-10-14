@@ -175,6 +175,34 @@ export default function AwsAzureEnvySuiteStudio({
   );
   const [sfnReceipt, setSfnReceipt] = useState(null);
 
+  // Module 1D: Azure Resource-Group-Scoped RBAC / IAM Access state
+  const [rgRbacPrincipal, setRgRbacPrincipal] = useState(
+    'user:dev-lead@example.com'
+  );
+  const [rgRbacRole, setRgRbacRole] = useState('RG_CONTRIBUTOR');
+
+  // Module 16: Multi-Brand OAuth & Identity Platform Studio (Single 'prod' Project)
+  const [oauthBrandName, setOauthBrandName] = useState('PulseDocs AI Copilot');
+  const [oauthTagline, setOauthTagline] = useState(
+    'Zero-Trust Contract & Legal Intelligence'
+  );
+  const [oauthDomain, setOauthDomain] = useState('auth.pulsedocs.ai');
+  const [oauthSupportEmail, setOauthSupportEmail] = useState(
+    'support@pulsedocs.ai'
+  );
+  const [oauthAccentColor, setOauthAccentColor] = useState('indigo');
+  const [oauthPrivacyUrl, setOauthPrivacyUrl] = useState(
+    'https://pulsedocs.ai/privacy'
+  );
+  const [oauthTermsUrl, setOauthTermsUrl] = useState(
+    'https://pulsedocs.ai/terms'
+  );
+  const [oauthRedirectUris, setOauthRedirectUris] = useState(
+    'https://app.pulsedocs.ai/api/auth/callback/google, http://localhost:3000/api/auth/callback/google'
+  );
+  const [selectedPreviewBrandId, setSelectedPreviewBrandId] = useState('');
+  const [oauthBrokerReceipt, setOauthBrokerReceipt] = useState(null);
+
   const fetchOverview = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
@@ -1033,6 +1061,99 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
+  // Module 1D handler: Azure Resource-Group-Scoped RBAC / IAM Access Assignment
+  const handleAssignRgIamRole = async (grp) => {
+    if (!rgRbacPrincipal.trim()) return;
+    setActionBusy(`RG_IAM_${grp.slug}`);
+    try {
+      const memberIds = (grp.members || []).map((m) => m.id);
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'ASSIGN_RG_IAM_ROLE',
+          slug: grp.slug,
+          principal: rgRbacPrincipal.trim(),
+          rgRole: rgRbacRole,
+          memberIds,
+        }
+      );
+      onShowToast?.(
+        res.data?.message || `Assigned RG-scoped access on ${grp.slug}.`
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to assign Resource Group RBAC role.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 16 handlers: Multi-Brand OAuth & Identity Platform Studio (Single 'prod' Project)
+  const handleCreateOAuthBrandProfile = async (e) => {
+    e?.preventDefault();
+    if (!oauthBrandName.trim()) return;
+    setActionBusy('OAUTH_BRAND_CREATE');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'CREATE_OAUTH_BRAND_PROFILE',
+          brandDisplayName: oauthBrandName.trim(),
+          tagline: oauthTagline.trim(),
+          customAuthDomain: oauthDomain.trim(),
+          supportEmail: oauthSupportEmail.trim(),
+          accentColor: oauthAccentColor,
+          privacyPolicyUrl: oauthPrivacyUrl.trim(),
+          termsOfServiceUrl: oauthTermsUrl.trim(),
+          authorizedRedirectUris: oauthRedirectUris.trim(),
+        }
+      );
+      setOauthBrokerReceipt(res.data);
+      if (res.data?.brand?.brandId) {
+        setSelectedPreviewBrandId(res.data.brand.brandId);
+      }
+      onShowToast?.(
+        res.data?.message || 'Registered Multi-Brand OAuth App Profile.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to create OAuth Brand profile.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleDeleteOAuthBrandProfile = async (brandId) => {
+    setActionBusy(`DEL_BRAND_${brandId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'DELETE_OAUTH_BRAND_PROFILE',
+          brandId,
+        }
+      );
+      onShowToast?.(res.data?.message || 'Removed OAuth Brand profile.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to delete OAuth Brand profile.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
   const copyText = (txt, label = 'Copied to clipboard.') => {
     navigator.clipboard?.writeText(txt);
     onShowToast?.(label);
@@ -1065,6 +1186,16 @@ export default function AwsAzureEnvySuiteStudio({
     findings: [],
   };
   const stepFunctions = data?.stepFunctions || { workflows: [] };
+  const multiBrandOAuth = data?.multiBrandOAuth || {
+    gcpProjectLimitationNote: '',
+    brands: [],
+  };
+  const activePreviewBrand =
+    (multiBrandOAuth.brands || []).find(
+      (b) => b.brandId === selectedPreviewBrandId
+    ) ||
+    (multiBrandOAuth.brands || [])[0] ||
+    null;
   const cloudRunServices = unifiedResources.filter(
     (r) => r.type === 'CLOUD_RUN'
   );
@@ -1103,16 +1234,16 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
               <Sparkles className="w-3.5 h-3.5" />
               <span>
-                INNOVATION #39 + #40 + #41 · 15-IN-1 AWS &amp; AZURE ENTERPRISE PARITY SUITE FOR GOOGLE CLOUD
+                INNOVATION #39 + #40 + #41 + #42 · 16-IN-1 AWS &amp; AZURE ENTERPRISE PARITY SUITE FOR GOOGLE CLOUD
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              AWS &amp; Azure Parity Super-Studio for Google Cloud (Wave 1, Wave 2 &amp; Wave 3 Full-Scale)
+              AWS &amp; Azure Parity Super-Studio for Google Cloud (Including Azure Architect Wishlist)
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              The 15 iconic enterprise cloud workflows engineers rely on in{' '}
+              The 16 iconic enterprise cloud workflows engineers rely on in{' '}
               <strong>Microsoft Azure</strong> and <strong>Amazon Web Services</strong>{' '}
-              brought natively to Google Cloud: <strong>Azure Resource Groups</strong>,{' '}
+              brought natively to Google Cloud: <strong>Azure Resource Groups (Spend + RG-Scoped RBAC + 1-Click Teardown)</strong>,{' '}
               <strong>Hard-Spend Stop-Loss Fuses</strong>,{' '}
               <strong>AWS IAM Policy Simulator &amp; Switch-Role</strong>,{' '}
               <strong>Azure SAS / S3 Presigned Studio</strong>,{' '}
@@ -1125,8 +1256,9 @@ export default function AwsAzureEnvySuiteStudio({
               <strong>Trusted Advisor 5-Pillar Scorer</strong>,{' '}
               <strong>Transit Gateway / Virtual WAN VPC Mesh</strong>,{' '}
               <strong>ECS/ACA Multi-Container Sidecar Compose</strong>,{' '}
-              <strong>GuardDuty / Sentinel SOAR Playbooks</strong>, and{' '}
-              <strong>Step Functions / Durable Saga Studio</strong>.
+              <strong>GuardDuty / Sentinel SOAR Playbooks</strong>,{' '}
+              <strong>Step Functions / Durable Saga Studio</strong>, and{' '}
+              <strong>Multi-Brand OAuth Sign-In Studio (Multiple Brandings in 1 GCP Project)</strong>.
             </p>
           </div>
 
@@ -1143,12 +1275,12 @@ export default function AwsAzureEnvySuiteStudio({
           </button>
         </div>
 
-        {/* 15 Sub-Studio Navigation Pills */}
+        {/* 16 Sub-Studio Navigation Pills */}
         <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
           {[
             {
               id: 'RESOURCE_GROUPS',
-              label: '1. Azure Resource Groups',
+              label: '1. Azure Resource Groups + RBAC',
               badge: `${resourceGroups.length} Groups`,
               icon: FolderKanban,
             },
@@ -1236,6 +1368,12 @@ export default function AwsAzureEnvySuiteStudio({
               badge: `${stepFunctions.workflows?.length || 0} State Machines`,
               icon: Workflow,
             },
+            {
+              id: 'MULTI_BRAND_OAUTH',
+              label: '16. Multi-Brand OAuth Studio',
+              badge: `${multiBrandOAuth.brands?.length || 0} Brands in 1 Project`,
+              icon: UserCheck,
+            },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeSubTab === tab.id;
@@ -1268,26 +1406,29 @@ export default function AwsAzureEnvySuiteStudio({
       </div>
 
       {/* =====================================================================
-          MODULE 1: AZURE-STYLE RESOURCE GROUPS & BULK LABEL TAGGER
+          MODULE 1: AZURE-STYLE RESOURCE GROUPS, SPEND TRACKER, RG-SCOPED RBAC & 1-CLICK TEARDOWN
          ===================================================================== */}
       {activeSubTab === 'RESOURCE_GROUPS' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Existing Resource Groups */}
           <div className="lg:col-span-7 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                     <FolderKanban className="w-4 h-4 text-emerald-500" />
                     <span>
                       Active Azure-Style Resource Groups (`labels.resource_group`)
+                      — Spend, RG-Scoped RBAC &amp; Teardown
                     </span>
                   </h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Group related VMs, Cloud Run services, GCS Buckets, BigQuery
-                    Datasets &amp; Secrets into a single folder with per-group{' '}
-                    <code>$/mo</code> burn, 1-click hibernation, and 1-click
-                    cascade teardown.
+                    Create an RG, load it with resources, track live{' '}
+                    <code>$/hr</code> + <code>$/mo</code> + accrued session
+                    spend, assign RG-scoped IAM access (
+                    <code>Reader</code> / <code>Contributor</code> /{' '}
+                    <code>Owner</code>), and delete the entire RG at once when
+                    done.
                   </p>
                 </div>
                 <label className="inline-flex items-center gap-1.5 text-[11px] font-mono text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg cursor-pointer">
@@ -1299,6 +1440,44 @@ export default function AwsAzureEnvySuiteStudio({
                   />
                   <span>Cascade-delete underlying GCP resources on teardown</span>
                 </label>
+              </div>
+
+              {/* RG-Scoped RBAC Quick Bar */}
+              <div className="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-2 text-xs font-mono">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>
+                      Azure-Style Resource-Group-Scoped Access (RBAC) — Pick a
+                      Principal &amp; Role, then click &quot;Assign RG Access&quot;
+                      on any Group below:
+                    </span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={rgRbacPrincipal}
+                    onChange={(e) => setRgRbacPrincipal(e.target.value)}
+                    placeholder="user:engineer@company.com or serviceAccount:..."
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                  <select
+                    value={rgRbacRole}
+                    onChange={(e) => setRgRbacRole(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="RG_READER">
+                      Azure RG Reader (View Only inside this RG)
+                    </option>
+                    <option value="RG_CONTRIBUTOR">
+                      Azure RG Contributor (Deploy &amp; Operate inside this RG)
+                    </option>
+                    <option value="RG_OWNER">
+                      Azure RG Owner (Full Admin inside this RG)
+                    </option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -1316,7 +1495,7 @@ export default function AwsAzureEnvySuiteStudio({
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <FolderKanban className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
                             <span
                               className={`font-mono text-sm font-extrabold text-zinc-900 dark:text-zinc-100 ${
@@ -1329,8 +1508,13 @@ export default function AwsAzureEnvySuiteStudio({
                               {grp.environment}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                              ${grp.totalMonthlyUsd.toFixed(2)}/mo ·{' '}
-                              {grp.memberCount} resource(s)
+                              ${grp.totalMonthlyUsd.toFixed(2)}/mo ($
+                              {Number(grp.totalHourlyUsd || 0).toFixed(3)}/hr) ·
+                              Accrued: $
+                              {Number(
+                                grp.accruedSpendSinceCreationUsd || 0
+                              ).toFixed(2)}{' '}
+                              · {grp.memberCount} resource(s)
                             </span>
                             {isDeleting && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse">
@@ -1348,7 +1532,23 @@ export default function AwsAzureEnvySuiteStudio({
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={
+                              isDeleting || actionBusy === `RG_IAM_${grp.slug}`
+                            }
+                            onClick={() => handleAssignRgIamRole(grp)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer"
+                          >
+                            <UserCheck className="w-3.5 h-3.5" />
+                            <span>
+                              {actionBusy === `RG_IAM_${grp.slug}`
+                                ? 'Assigning...'
+                                : 'Assign RG Access'}
+                            </span>
+                          </button>
+
                           <button
                             type="button"
                             disabled={isDeleting || isHibernating}
@@ -1408,6 +1608,43 @@ export default function AwsAzureEnvySuiteStudio({
                           </span>
                         )}
                       </div>
+
+                      {/* RG-Scoped RBAC Assignments */}
+                      {(grp.iamAssignments || []).length > 0 && (
+                        <div className="mt-2.5 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800/80 space-y-1.5">
+                          <div className="text-[10px] font-mono font-bold uppercase text-zinc-500">
+                            RG-Scoped IAM / RBAC Grants ({grp.iamAssignments.length}):
+                          </div>
+                          {grp.iamAssignments.map((asg) => (
+                            <div
+                              key={asg.id}
+                              className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono bg-white/80 dark:bg-zinc-950/70 px-2.5 py-1.5 rounded-lg border border-zinc-200/80 dark:border-zinc-800"
+                            >
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                  {asg.principal}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
+                                  {asg.rgRoleLabel}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  copyText(
+                                    asg.celCondition,
+                                    'Copied GCP IAM CEL Condition.'
+                                  )
+                                }
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
+                              >
+                                <Copy className="w-3 h-3" />
+                                <span>{asg.celCondition}</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -4102,6 +4339,338 @@ export default function AwsAzureEnvySuiteStudio({
                   </pre>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 16: MULTI-BRAND OAUTH SIGN-IN STUDIO (MULTIPLE BRANDINGS IN 1 'PROD' PROJECT)
+         ===================================================================== */}
+      {activeSubTab === 'MULTI_BRAND_OAUTH' && (
+        <div className="space-y-6">
+          {/* Architectural Banner Explaining the 1-Brand-Per-Project GCP Wall & Solution */}
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-indigo-500" />
+                  <span>
+                    Azure Entra App Registrations Parity — Multiple OAuth Sign-In
+                    Brandings Inside One &apos;prod&apos; GCP Project
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 max-w-4xl">
+                  <strong>Why GCP Frustrates Multi-Idea Builders:</strong>{' '}
+                  Google&apos;s standard OAuth Consent Screen API (
+                  <code>iap.googleapis.com/v1/projects/:id/brands</code>) hard-limits
+                  you to <strong>1 OAuth Brand Name &amp; Logo per GCP project</strong>,
+                  even though you can create many OAuth Client IDs.{' '}
+                  <strong>How CloudPulse Solves This Inside Your Single &apos;prod&apos; Project:</strong>{' '}
+                  We combine{' '}
+                  <strong>
+                    Google Cloud Identity Platform Multi-Tenancy (
+                    <code>identitytoolkit.googleapis.com/v2/projects/:id/tenants</code>
+                    )
+                  </strong>{' '}
+                  with per-app <strong>Verified Custom Auth Domains</strong> and a{' '}
+                  <strong>Multi-Brand OAuth2/OIDC Consent Broker</strong> so each idea
+                  in your single <code>{projectId}</code> project gets its own Brand
+                  Name, Tagline, Support Email, Privacy/Terms URLs, and isolated User
+                  Tenant!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Create New OAuth Brand Profile in 'prod' */}
+            <div className="lg:col-span-5 space-y-4">
+              <form
+                onSubmit={handleCreateOAuthBrandProfile}
+                className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3.5"
+              >
+                <h4 className="text-xs font-mono font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  <span>
+                    Register New OAuth Brand Identity in Project ({projectId})
+                  </span>
+                </h4>
+
+                <div className="space-y-3 text-xs font-mono">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                        App Brand Display Name
+                      </label>
+                      <input
+                        type="text"
+                        value={oauthBrandName}
+                        onChange={(e) => setOauthBrandName(e.target.value)}
+                        placeholder="PulseDocs AI Copilot"
+                        className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                        Custom Auth Domain (Shown on Google Sign-In)
+                      </label>
+                      <input
+                        type="text"
+                        value={oauthDomain}
+                        onChange={(e) => setOauthDomain(e.target.value)}
+                        placeholder="auth.pulsedocs.ai"
+                        className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Product Tagline / Consent Subtitle
+                    </label>
+                    <input
+                      type="text"
+                      value={oauthTagline}
+                      onChange={(e) => setOauthTagline(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                        User Support Email
+                      </label>
+                      <input
+                        type="text"
+                        value={oauthSupportEmail}
+                        onChange={(e) => setOauthSupportEmail(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                        Brand Accent Theme
+                      </label>
+                      <select
+                        value={oauthAccentColor}
+                        onChange={(e) => setOauthAccentColor(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                      >
+                        <option value="indigo">Indigo Enterprise</option>
+                        <option value="emerald">Emerald FinTech</option>
+                        <option value="sky">Sky Cloud Native</option>
+                        <option value="rose">Rose Consumer</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                        Privacy Policy URL
+                      </label>
+                      <input
+                        type="text"
+                        value={oauthPrivacyUrl}
+                        onChange={(e) => setOauthPrivacyUrl(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                        Terms of Service URL
+                      </label>
+                      <input
+                        type="text"
+                        value={oauthTermsUrl}
+                        onChange={(e) => setOauthTermsUrl(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Authorized OAuth Redirect URIs (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={oauthRedirectUris}
+                      onChange={(e) => setOauthRedirectUris(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={actionBusy === 'OAUTH_BRAND_CREATE'}
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>
+                      {actionBusy === 'OAUTH_BRAND_CREATE'
+                        ? 'Provisioning Identity Tenant & OAuth Brand...'
+                        : '1-Click Register New OAuth Brand in This Project'}
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Right: Active Multi-Brand OAuth Profiles + Live Consent Screen Preview */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+                <h4 className="text-xs font-mono font-extrabold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                  <span>
+                    Active Distinct OAuth Brandings in Project {projectId} (
+                    {(multiBrandOAuth.brands || []).length})
+                  </span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                    Click any brand to preview its OAuth Consent Screen
+                  </span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(multiBrandOAuth.brands || []).map((b) => {
+                    const isSelected =
+                      activePreviewBrand?.brandId === b.brandId;
+                    return (
+                      <div
+                        key={b.brandId}
+                        onClick={() => setSelectedPreviewBrandId(b.brandId)}
+                        className={`p-3.5 rounded-xl border text-xs font-mono cursor-pointer transition-all space-y-1.5 ${
+                          isSelected
+                            ? 'border-indigo-500 bg-indigo-500/10'
+                            : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 hover:border-zinc-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-extrabold text-zinc-950 dark:text-zinc-100">
+                            {b.brandDisplayName}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              handleDeleteOAuthBrandProfile(b.brandId);
+                            }}
+                            className="text-zinc-400 hover:text-rose-500 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                          Domain: {b.customAuthDomain}
+                        </div>
+                        <div className="text-[10px] text-zinc-500 truncate">
+                          Tenant ID: {b.identityPlatformTenantId}
+                        </div>
+                        <div className="text-[10px] text-zinc-500 truncate">
+                          Client ID: {b.oauthClientId}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Live Interactive OAuth Consent Screen Preview */}
+                {activePreviewBrand && (
+                  <div className="p-5 rounded-2xl border-2 border-indigo-500/30 bg-zinc-50 dark:bg-zinc-950 space-y-4">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                      <span>
+                        LIVE END-USER OAUTH CONSENT SCREEN PREVIEW (ISOLATED
+                        BRANDING)
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                        https://{activePreviewBrand.customAuthDomain}/oauth2/authorize
+                      </span>
+                    </div>
+
+                    <div className="max-w-md mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-md space-y-4 text-center font-sans">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600 text-white font-mono font-extrabold text-lg">
+                        {activePreviewBrand.brandDisplayName
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-base font-extrabold text-zinc-900 dark:text-zinc-100">
+                          Sign in to {activePreviewBrand.brandDisplayName}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          {activePreviewBrand.tagline}
+                        </div>
+                        <div className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 pt-1">
+                          Continue to{' '}
+                          <strong>{activePreviewBrand.customAuthDomain}</strong>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 text-left text-[11px] font-mono space-y-1 text-zinc-600 dark:text-zinc-300">
+                        <div>
+                          <strong>Isolated Identity Tenant:</strong>{' '}
+                          {activePreviewBrand.identityPlatformTenantId}
+                        </div>
+                        <div>
+                          <strong>OAuth Client ID:</strong>{' '}
+                          {activePreviewBrand.oauthClientId}
+                        </div>
+                        <div>
+                          <strong>Support Contact:</strong>{' '}
+                          {activePreviewBrand.supportEmail}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-500 pt-1">
+                        <a
+                          href={activePreviewBrand.privacyPolicyUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline hover:text-zinc-800 dark:hover:text-zinc-200"
+                        >
+                          Privacy Policy
+                        </a>
+                        <span>·</span>
+                        <a
+                          href={activePreviewBrand.termsOfServiceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline hover:text-zinc-800 dark:hover:text-zinc-200"
+                        >
+                          Terms of Service
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {oauthBrokerReceipt?.brokerSnippet && (
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="font-bold text-zinc-700 dark:text-zinc-300">
+                        Copy-Ready Multi-Brand OAuth Tenant SDK Snippet:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            oauthBrokerReceipt.brokerSnippet,
+                            'Copied Multi-Brand OAuth SDK snippet.'
+                          )
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-[11px] font-bold cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Code</span>
+                      </button>
+                    </div>
+                    <pre className="p-3 rounded-xl bg-zinc-950 text-indigo-300 text-[11px] font-mono overflow-x-auto">
+                      {oauthBrokerReceipt.brokerSnippet}
+                    </pre>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
