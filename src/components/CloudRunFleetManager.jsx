@@ -2804,7 +2804,7 @@ spec:
                     >
                       <GitBranch className="w-3.5 h-3.5" />
                       <span>
-                        ⏪ Time-Machine & Autopsy ({srv.revisions?.length || 1})
+                         Time-Machine & Autopsy ({srv.revisions?.length || 1})
                       </span>
                     </button>
 
@@ -4180,7 +4180,7 @@ spec:
                         <div>
                           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-[10px] font-mono font-bold mb-1">
                             <span>
-                              ⏪ CLOUD RUN REVISION TIME-MACHINE · CRASH-LOOP AUTOPSY · CONFIG & SECRET DIFF
+                               CLOUD RUN REVISION TIME-MACHINE · CRASH-LOOP AUTOPSY · CONFIG & SECRET DIFF
                             </span>
                           </div>
                           <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
@@ -4206,7 +4206,7 @@ spec:
                             >
                               <Zap className="w-3 h-3" />
                               <span>
-                                ⏪ 1-Click Rollback 100% Traffic → {srv.lastHealthyRevision} (&lt;2s)
+                                 1-Click Rollback 100% Traffic → {srv.lastHealthyRevision} (&lt;2s)
                               </span>
                             </button>
                           )}
@@ -4373,7 +4373,7 @@ spec:
                                         title="Route 100% of live HTTPS traffic to this revision immediately (<2s) without rebuilding"
                                         className="text-[10.5px] font-mono font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-2.5 py-1 rounded cursor-pointer"
                                       >
-                                        ⏪ Route 100% Here (&lt;2s)
+                                         Route 100% Here (&lt;2s)
                                       </button>
                                     )}
 
@@ -4507,7 +4507,7 @@ spec:
                                     }
                                     className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
                                   >
-                                    ⏪ Rollback 100% Traffic to {report.baselineRevision.shortName}
+                                     Rollback 100% Traffic to {report.baselineRevision.shortName}
                                   </button>
                                 )}
                               </div>

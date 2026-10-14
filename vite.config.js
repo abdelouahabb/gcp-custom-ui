@@ -13,7 +13,7 @@ function cloudpulseBackendWatchdogPlugin({ backendHost, backendPort, enabled }) 
   const startBackendProcess = () => {
     if (backendProc && backendProc.exitCode === null) return;
     console.log(
-      `⚡ [CloudPulse Auto-Heal] Starting server/index.js on ${backendHost}:${backendPort}...`
+      ` [CloudPulse Auto-Heal] Starting server/index.js on ${backendHost}:${backendPort}...`
     );
     backendProc = spawn(process.execPath, [serverScript], {
       cwd: process.cwd(),

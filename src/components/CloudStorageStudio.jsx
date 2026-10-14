@@ -1104,7 +1104,7 @@ export default function CloudStorageStudio({
                         }`}
                       >
                         {b.softDeleteDays > 0
-                          ? `⏪ ${b.softDeleteDays}d Soft-Delete`
+                          ? ` ${b.softDeleteDays}d Soft-Delete`
                           : 'No Soft-Delete'}
                       </span>
 

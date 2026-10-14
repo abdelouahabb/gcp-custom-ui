@@ -3967,7 +3967,7 @@ export default function GlobalNetworkWorldMap({
               >
                 {dvrScrubIndex === 0
                   ? '● LIVE STREAM'
-                  : `⏪ DVR REPLAY (-${dvrScrubIndex} ticks · ${
+                  : ` DVR REPLAY (-${dvrScrubIndex} ticks · ${
                       dvrSnapshots[dvrScrubIndex - 1]?.timestamp || ''
                     })`}
               </span>

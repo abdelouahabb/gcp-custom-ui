@@ -339,12 +339,14 @@ const DOC_SECTIONS = [
       'Live Cloud Audit Admin Activity Stream (`cloudaudit.googleapis.com/activity`): Queries `logging.googleapis.com/v2/entries:list` and merges real-time in-session Flight Recorder mutations so actions appear immediately.',
       'Actor Attribution & Action Classification: Groups every mutation by Principal (`principalEmail` user vs `.gserviceaccount.com`), Caller IP, and Action Category (`CREATE`, `UPDATE`, `IAM_SECURITY`, `DELETE`, `POWER`).',
       'IAM Policy Delta & Request Spec X-Ray: Expands any audit event to inspect `serviceData.policyDelta.bindingDeltas` (`ADD`/`REMOVE` role bindings), `protoPayload.request`, and a 1-click `$ Inspect in Shell` or `±30s Logs` time-travel command.',
+      'Hybrid Direct REST Bridge + Real Native `execFile` CLI Mobile Cloud Shell (`POST /api/project/:id/shell`): Executes 11 high-frequency fleet queries (`gcloud projects/storage/compute/run/iam/secrets/services`, `bq ls`) in sub-500ms directly via Google Cloud REST APIs (`DIRECT_REST_BRIDGE`), and automatically executes any other read-only `gcloud`, `bq`, `gsutil`, or `kubectl` command (`gcloud version`, `gcloud logging read`, `gcloud run services describe`, etc.) by spawning the real installed CLI binary via `execFile` (`NATIVE_CLI_EXEC`) behind a strict quote-aware tokenizer and destructive-verb guardrail (`GUARDRAIL_INTERCEPTOR`).',
     ],
     apisUsed: [
-      'GET /api/project/:id/audit-timeline → logging.googleapis.com/v2 (`cloudaudit.googleapis.com/activity`)',
+      'GET /api/project/:id/audit-timeline -> logging.googleapis.com/v2 (`cloudaudit.googleapis.com/activity`)',
+      'POST /api/project/:id/shell -> Hybrid Direct REST Bridge + Native `execFile` CLI (`gcloud`, `bq`, `gsutil`, `kubectl`)',
     ],
     billingImpact:
-      '100% Always Free ($0.00/mo). Google Cloud retains Admin Activity audit logs for 400 days free of charge and does not count them toward the 50 GiB/mo Cloud Logging limit.',
+      '100% Always Free ($0.00/mo). Google Cloud retains Admin Activity audit logs for 400 days free of charge, and the Hybrid Cloud Shell runs read-only inspection queries at $0.00 cost.',
   },
   {
     id: 'xterm-web-ssh-and-mandatory-delete-gatekeeper',

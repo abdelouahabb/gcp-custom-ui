@@ -5821,8 +5821,8 @@ app.get(
           : 'NONE',
         recommendedActionLabel: isCrashed
           ? baseSpec
-            ? `⏪ 1-Click Instant Rollback to ${baseSpec.shortName}`
-            : '⚡ Enable Startup CPU Boost & Bump Memory'
+            ? ` 1-Click Instant Rollback to ${baseSpec.shortName}`
+            : ' Enable Startup CPU Boost & Bump Memory'
           : '✓ Revision Ready',
         fixPayload: {},
       };
@@ -5836,7 +5836,7 @@ app.get(
             targetSpec.message ||
             `Container did not listen on PORT=${targetSpec.port} within the startup timeout window.`,
           recommendedActionType: 'AUTO_FIX_CRASH',
-          recommendedActionLabel: `⚡ 1-Click Enable Startup CPU Boost & Verify Port :${targetSpec.port}`,
+          recommendedActionLabel: ` 1-Click Enable Startup CPU Boost & Verify Port :${targetSpec.port}`,
           fixPayload: {
             fixType: 'BUMP_MEMORY_AND_CPU_BOOST',
             port: targetSpec.port,
@@ -5856,7 +5856,7 @@ app.get(
             'This revision references a Secret Manager version that is disabled, destroyed, deleted, or missing roles/secretmanager.secretAccessor.',
           recommendedActionType: 'OPEN_SECRET_STUDIO',
           recommendedActionLabel:
-            '🩺 Open Secret Dependency Healer (Re-Pin to Latest Enabled)',
+            ' Open Secret Dependency Healer (Re-Pin to Latest Enabled)',
           fixPayload: {},
         };
       } else if (
@@ -5872,7 +5872,7 @@ app.get(
             targetSpec.message ||
             `The container exceeded its ${targetSpec.memory} memory limit during startup or request execution (Linux exit 137 / SIGKILL).`,
           recommendedActionType: 'AUTO_FIX_CRASH',
-          recommendedActionLabel: `🚀 1-Click Double Memory Limit & Enable Startup CPU Boost`,
+          recommendedActionLabel: ` 1-Click Double Memory Limit & Enable Startup CPU Boost`,
           fixPayload: {
             fixType: 'BUMP_MEMORY_AND_CPU_BOOST',
           },
@@ -5968,7 +5968,7 @@ app.post(
           mode,
           targetRevision,
           operation: op,
-          message: `⏪ Instant Rollback Complete: Routed 100% of live HTTPS traffic on "${serviceName}" back to revision "${targetRevision}"!`,
+          message: ` Instant Rollback Complete: Routed 100% of live HTTPS traffic on "${serviceName}" back to revision "${targetRevision}"!`,
         });
       }
 
@@ -6057,7 +6057,7 @@ app.post(
           mode,
           targetRevision,
           operation: op,
-          message: `🧬 Time-Machine Spec Restore Complete: Cloned "${targetRevision}" configuration into a brand-new LATEST revision on "${serviceName}"!`,
+          message: ` Time-Machine Spec Restore Complete: Cloned "${targetRevision}" configuration into a brand-new LATEST revision on "${serviceName}"!`,
         });
       }
 
@@ -6125,7 +6125,7 @@ app.post(
           previousMemory: curMem,
           newMemory: nextMem,
           operation: op,
-          message: `🚀 Applied 1-Click Crash Auto-Fix on "${serviceName}": Upgraded memory (${curMem} → ${nextMem}) and enabled Startup CPU Boost!`,
+          message: ` Applied 1-Click Crash Auto-Fix on "${serviceName}": Upgraded memory (${curMem} → ${nextMem}) and enabled Startup CPU Boost!`,
         });
       }
 
@@ -6244,7 +6244,7 @@ app.post('/api/project/:projectId/tunnels/start', async (req, res) => {
         ok: true,
         reused: true,
         tunnel: serializeTunnelEntry(existing),
-        message: `⚡ Local tunnel to "${resourceName}" is already active on 127.0.0.1:${existing.localPort}!`,
+        message: ` Local tunnel to "${resourceName}" is already active on 127.0.0.1:${existing.localPort}!`,
       });
     }
   }
@@ -6443,7 +6443,7 @@ app.post('/api/project/:projectId/tunnels/start', async (req, res) => {
   return res.json({
     ok: true,
     tunnel: serializeTunnelEntry(tunnelEntry),
-    message: `🔌 Local Zero-Public-IP Tunnel active on 127.0.0.1:${localPort} → ${resourceName}:${cleanRemotePort} (Saves $7.30/mo vs Public IPv4)!`,
+    message: ` Local Zero-Public-IP Tunnel active on 127.0.0.1:${localPort} → ${resourceName}:${cleanRemotePort} (Saves $7.30/mo vs Public IPv4)!`,
   });
 });
 
@@ -6474,7 +6474,7 @@ app.post('/api/project/:projectId/tunnels/stop', async (req, res) => {
     ok: true,
     tunnelId,
     projectId,
-    message: `🛑 Closed local tunnel 127.0.0.1:${entry.localPort} (${entry.resourceName}).`,
+    message: ` Closed local tunnel 127.0.0.1:${entry.localPort} (${entry.resourceName}).`,
   });
 });
 
@@ -12050,7 +12050,7 @@ app.post(
         ok: true,
         redactedCount,
         object: uploadRes.data,
-        message: `🛡️ Sanitized gs://${bucketName}/${objectName} in-place (${redactedCount} secret/PII pattern(s) permanently masked)!`,
+        message: ` Sanitized gs://${bucketName}/${objectName} in-place (${redactedCount} secret/PII pattern(s) permanently masked)!`,
       });
     } catch (err) {
       res.status(500).json({
@@ -12162,23 +12162,23 @@ if (process.env.GEMINI_API_KEY) {
 const DEFAULT_2026_GEMINI_MODELS = [
   {
     id: 'gemini-3.8-flash',
-    label: '⚡ gemini-3.8-flash (2026 Ultra-Fast SRE & FinOps Engine)',
+    label: ' gemini-3.8-flash (2026 Ultra-Fast SRE & FinOps Engine)',
   },
   {
     id: 'gemini-3.1-pro',
-    label: '🧠 gemini-3.1-pro (2026 Deep Architecture & Security Reasoning)',
+    label: ' gemini-3.1-pro (2026 Deep Architecture & Security Reasoning)',
   },
   {
     id: 'gemini-3.1-flash-lite',
-    label: '🚀 gemini-3.1-flash-lite (Sub-Second Telemetry Triage)',
+    label: ' gemini-3.1-flash-lite (Sub-Second Telemetry Triage)',
   },
   {
     id: 'gemini-2.5-pro',
-    label: '🛡️ gemini-2.5-pro (Legacy Long-Context Fallback)',
+    label: ' gemini-2.5-pro (Legacy Long-Context Fallback)',
   },
   {
     id: 'gemini-2.5-flash',
-    label: '⚙️ gemini-2.5-flash (Legacy Fast Fallback)',
+    label: ' gemini-2.5-flash (Legacy Fast Fallback)',
   },
 ];
 
@@ -12226,7 +12226,7 @@ app.get('/api/ai-vault/models', async (req, res) => {
         const cleanId = String(m.name || '').replace(/^models\//, '');
         return {
           id: cleanId,
-          label: `🟢 ${cleanId} (${m.displayName || 'Live AI Studio Model'})`,
+          label: ` ${cleanId} (${m.displayName || 'Live AI Studio Model'})`,
         };
       });
 
@@ -12301,7 +12301,7 @@ app.post('/api/ai-vault/configure', (req, res) => {
     cipher:
       'RSA-OAEP-256 Wire Envelope + AES-256-GCM Ephemeral RAM Vault (Zero Plaintext Over HTTP)',
     updatedAt: encryptedAiStudioVault.updatedAt,
-    message: `🔐 Key encrypted in browser via ${AI_VAULT_RSA_FINGERPRINT} & sealed in AES-256-GCM RAM (Zero plaintext over HTTP!).`,
+    message: ` Key encrypted in browser via ${AI_VAULT_RSA_FINGERPRINT} & sealed in AES-256-GCM RAM (Zero plaintext over HTTP!).`,
   });
 });
 
@@ -12321,7 +12321,7 @@ app.delete('/api/ai-vault/clear', (req, res) => {
     configured: false,
     rsaPublicKeySpkiBase64: AI_VAULT_RSA_SPKI_BASE64,
     rsaKeyFingerprint: AI_VAULT_RSA_FINGERPRINT,
-    message: '🧹 Wiped encrypted AI Studio key from server RAM vault.',
+    message: ' Wiped encrypted AI Studio key from server RAM vault.',
   });
 });
 
@@ -12433,17 +12433,17 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
     .filter(Boolean);
   const sampleRun = realRunNames[0] || `${projectId}-api`;
 
-  const fallbackAnswer = `### 🔑 Action Required: No Google AI Studio API Key Sealed Yet (Target Engine: \`${primaryModel}\`)
+  const fallbackAnswer = `###  Action Required: No Google AI Studio API Key Sealed Yet (Target Engine: \`${primaryModel}\`)
 You clicked **Ask \`${primaryModel}\`** while the **AES-256-GCM RAM Vault** is empty, so CloudPulse ran the **Offline Deterministic Rule Engine** instead of calling Google AI Studio.
 
-#### ⚡ How to Activate Live \`${primaryModel}\` / \`gemini-3.1-pro\` in 15 Seconds:
+####  How to Activate Live \`${primaryModel}\` / \`gemini-3.1-pro\` in 15 Seconds:
 1. **Get or Copy a Key**: Open **[https://aistudio.google.com/apikey](https://aistudio.google.com/apikey)** and copy your \`AIzaSy...\` API key.
 2. **Paste into the Vault Input Above**: Paste the key into the password box labeled *"Paste Google AI Studio Key (AIzaSy...)"*.
-3. **Seal in RAM (or Just Click Ask)**: Click **\`🔐 Seal in RAM Vault\`** (or simply paste the key and click **\`Ask ${primaryModel}\`** — CloudPulse will auto-seal it in AES-256-GCM RAM and run your live query immediately!).
+3. **Seal in RAM (or Just Click Ask)**: Click **\` Seal in RAM Vault\`** (or simply paste the key and click **\`Ask ${primaryModel}\`** — CloudPulse will auto-seal it in AES-256-GCM RAM and run your live query immediately!).
 
 ---
 
-### 🛡️ Offline Deterministic SRE Audit Preview (Project: \`${projectId}\`)
+###  Offline Deterministic SRE Audit Preview (Project: \`${projectId}\`)
 1. **Live Footprint Snapshot**:
    - **Compute VMs**: \`${vms}\` · **Cloud Run Services**: \`${runs}\` · **Storage Buckets**: \`${buckets}\` (${realBucketNames.length > 0 ? realBucketNames.map((n) => `\`gs://${n}\``).join(', ') : 'none'})
    - **Live Hourly Burn**: \`$${burnHr}/hr\` (\`~$${(Number(burnHr) * 730).toFixed(2)}/mo\`)
@@ -13710,7 +13710,7 @@ app.get('/api/project/:projectId/sovereign/iam-surgeon', async (req, res) => {
         if (isAuthenticatedOwner) {
           severity = 'PROTECTED_OWNER';
           riskLabel =
-            '👑 Verified Sovereign Project Root Owner (Self-Lockout Guardrail Active)';
+            ' Verified Sovereign Project Root Owner (Self-Lockout Guardrail Active)';
           recommendedRole = 'roles/owner';
           recommendedAltRoles = [];
           blastRadiusScore = 0;
@@ -14337,7 +14337,7 @@ app.post(
           action,
           disabled: Boolean(disable),
           message: disable
-            ? `🛑 Froze Service Account ${serviceAccountEmail} — all stolen keys & tokens for this account are now blocked!`
+            ? ` Froze Service Account ${serviceAccountEmail} — all stolen keys & tokens for this account are now blocked!`
             : `✓ Re-enabled Service Account ${serviceAccountEmail}.`,
         });
       }
@@ -16563,9 +16563,9 @@ app.get('/api/project/:projectId/wave8/war-room', async (req, res) => {
       ((43.2 * budgetRemainingPct) / 100).toFixed(1)
     );
 
-    const postmortemMarkdown = `# 🛡️ Google SRE Blameless Postmortem — Project \`${projectId}\`
+    const postmortemMarkdown = `#  Google SRE Blameless Postmortem — Project \`${projectId}\`
 **Date:** ${new Date().toISOString().slice(0, 10)}
-**Incident Status:** ${drillActive ? '🔴 ACTIVE P1 PAGE (16.8x Fast Error-Budget Burn)' : '🟢 RESOLVED / NOMINAL'}
+**Incident Status:** ${drillActive ? ' ACTIVE P1 PAGE (16.8x Fast Error-Budget Burn)' : ' RESOLVED / NOMINAL'}
 **SLO Target:** \`99.9% Monthly Availability\` (\`43.2 mins/month\` budget · \`${budgetMinutesRemaining} mins\` remaining)
 
 ## 1. Executive Root-Cause Summary
@@ -18848,7 +18848,7 @@ kubectl get pods,svc,hpa -n "${namespace}" -l app="${name}"`,
 );
 
 // ============================================================================
-// ⚡ WAVE 10: CLOUD FUNCTIONS (1ST GEN vs 2ND GEN) & DEMYSTIFIED EVENTARC STUDIO
+//  WAVE 10: CLOUD FUNCTIONS (1ST GEN vs 2ND GEN) & DEMYSTIFIED EVENTARC STUDIO
 // ============================================================================
 app.get('/api/project/:projectId/functions/overview', async (req, res) => {
   const { projectId } = req.params;
@@ -20664,7 +20664,7 @@ app.post('/api/project/:projectId/quantum-nexus/action', async (req, res) => {
         ok: true,
         event,
         honeyToken: target,
-        message: `🚨 TRIPWIRE TRIGGERED on "${target.name}" from ${simulatedAttackerIp}! Automated Quarantine + VPC IP-Ban executed in 42ms.`,
+        message: ` TRIPWIRE TRIGGERED on "${target.name}" from ${simulatedAttackerIp}! Automated Quarantine + VPC IP-Ban executed in 42ms.`,
       });
     }
 
@@ -20675,7 +20675,7 @@ app.post('/api/project/:projectId/quantum-nexus/action', async (req, res) => {
 });
 
 // ============================================================================
-// 🌊 OFFICIAL GOOGLE CLOUD BIGLAKE METASTORE CATALOGS API
+//  OFFICIAL GOOGLE CLOUD BIGLAKE METASTORE CATALOGS API
 // Matches https://console.cloud.google.com/biglake/metastore/catalogs
 // Calls https://biglake.googleapis.com/v1/projects/{project}/locations/{loc}/catalogs
 // ============================================================================
@@ -20906,7 +20906,7 @@ app.delete(
 );
 
 // ============================================================================
-// 🧑‍🔬 2026 DATA ENGINEERING STUDIO ("ZERO-FRICTION GCP DATA MESH & MEDALLION ELT")
+// ‍ 2026 DATA ENGINEERING STUDIO ("ZERO-FRICTION GCP DATA MESH & MEDALLION ELT")
 // Integrates Google Cloud SDK 588.0.0 capabilities:
 //  1. Medallion Lakehouse Builder (Bronze Raw -> Silver Cleaned -> Gold Marts)
 //  2. Native Dataform & dbt SQLX Studio (`dataform.googleapis.com/v1beta1`)
@@ -24280,7 +24280,7 @@ app.get(
           freeAllowance:
             '1 non-preemptible e2-micro VM/mo (in us-west1, us-central1, or us-east1) + 30 GB-months Standard Persistent Disk (pd-standard) + 1 GB North America outbound transfer/mo',
           gotchaWarning:
-            '⚠️ Default VM boot disks often default to pd-balanced ($0.10/GB-mo)! You MUST explicitly choose --boot-disk-type=pd-standard (≤30 GB) and a US Free Tier region (us-east1, us-central1, us-west1). GPUs, TPUs, and Spot VMs are excluded.',
+            ' Default VM boot disks often default to pd-balanced ($0.10/GB-mo)! You MUST explicitly choose --boot-disk-type=pd-standard (≤30 GB) and a US Free Tier region (us-east1, us-central1, us-west1). GPUs, TPUs, and Spot VMs are excluded.',
           liveStatus:
             nonFreeVms.length === 0 &&
             nonFreePdGb === 0 &&
@@ -24290,11 +24290,11 @@ app.get(
               : 'EXCEEDS_OR_PAID_SKU',
           liveUsageLabel: `${eligibleE2MicroRunning.length}/1 Free e2-micro running · ${standardPdGb}/30 GB pd-standard${
             nonFreeVms.length > 0
-              ? ` · ⚠️ ${nonFreeVms.length} non-free VM(s)`
+              ? ` ·  ${nonFreeVms.length} non-free VM(s)`
               : ''
           }${
             nonFreePdGb > 0
-              ? ` · ⚠️ ${nonFreePdGb} GB paid pd-balanced/ssd disk`
+              ? ` ·  ${nonFreePdGb} GB paid pd-balanced/ssd disk`
               : ''
           }`,
           provisionServiceType: 'COMPUTE_VM',
@@ -24308,14 +24308,14 @@ app.get(
           freeAllowance:
             '2,000,000 requests/mo + 180,000 vCPU-seconds + 360,000 GB-seconds memory + 1 GB North America egress/mo (Cloud Run Functions adds 2M invocations & 400k GB-sec)',
           gotchaWarning:
-            '⚠️ Only Request-Based Billing (cpuIdle=true) with minInstances=0 qualifies for $0 idle cost. Setting minInstances ≥ 1 or attaching GPUs bills continuously.',
+            ' Only Request-Based Billing (cpuIdle=true) with minInstances=0 qualifies for $0 idle cost. Setting minInstances ≥ 1 or attaching GPUs bills continuously.',
           liveStatus:
             alwaysOnPaidRun.length === 0
               ? 'WITHIN_FREE_TIER'
               : 'EXCEEDS_OR_PAID_SKU',
           liveUsageLabel: `${freeRequestBasedRun.length} $0-idle service(s) · ${
             alwaysOnPaidRun.length > 0
-              ? `⚠️ ${alwaysOnPaidRun.length} warm/GPU service(s) billing`
+              ? ` ${alwaysOnPaidRun.length} warm/GPU service(s) billing`
               : '0 warm/paid services'
           }`,
           provisionServiceType: 'CLOUD_RUN',
@@ -24329,14 +24329,14 @@ app.get(
           freeAllowance:
             '5 GB-months of Regional STANDARD storage (combined across us-east1, us-west1, us-central1 ONLY) + 5,000 Class A Ops + 50,000 Class B Ops + 100 GB North America outbound transfer/mo',
           gotchaWarning:
-            '⚠️ Multi-region "US" or "EU" buckets and Nearline/Coldline/Archive classes are NOT free! Bucket must be single-region us-east1, us-west1, or us-central1 with STANDARD class.',
+            ' Multi-region "US" or "EU" buckets and Nearline/Coldline/Archive classes are NOT free! Bucket must be single-region us-east1, us-west1, or us-central1 with STANDARD class.',
           liveStatus:
             paidRegionOrClassBuckets.length === 0
               ? 'WITHIN_FREE_TIER'
               : 'EXCEEDS_OR_PAID_SKU',
           liveUsageLabel: `${freeTierBuckets.length} eligible US-regional bucket(s)${
             paidRegionOrClassBuckets.length > 0
-              ? ` · ⚠️ ${paidRegionOrClassBuckets.length} non-free region/class bucket(s)`
+              ? ` ·  ${paidRegionOrClassBuckets.length} non-free region/class bucket(s)`
               : ''
           }`,
           provisionServiceType: 'GCS_BUCKET',
@@ -24350,7 +24350,7 @@ app.get(
           freeAllowance:
             '1 TiB (1,024 GiB) of on-demand SQL querying per month + 10 GiB of active logical storage per month',
           gotchaWarning:
-            '⚠️ Beyond 1 TiB/mo, on-demand queries cost $6.25/TiB. Always attach --maximum_bytes_billed=10737418240 (10 GB cap) to prevent runaway full-table scans!',
+            ' Beyond 1 TiB/mo, on-demand queries cost $6.25/TiB. Always attach --maximum_bytes_billed=10737418240 (10 GB cap) to prevent runaway full-table scans!',
           liveStatus: 'WITHIN_FREE_TIER',
           liveUsageLabel: `${bqDatasetsCount} dataset(s) active · First 1 TiB queries/mo & 10 GiB storage = $0.00`,
           provisionServiceType: 'BIGQUERY_DATASET',
@@ -24364,7 +24364,7 @@ app.get(
           freeAllowance:
             '6 active (ENABLED) secret versions per month + 10,000 access operations/mo + 3 rotation notifications/mo',
           gotchaWarning:
-            '⚠️ Only ENABLED versions count toward the 6 free slots ($0.06/version-mo beyond 6). DISABLED and DESTROYED versions cost $0.00/mo—always disable old versions when rotating!',
+            ' Only ENABLED versions count toward the 6 free slots ($0.06/version-mo beyond 6). DISABLED and DESTROYED versions cost $0.00/mo—always disable old versions when rotating!',
           liveStatus:
             enabledSecretVersionsCount <= 6
               ? 'WITHIN_FREE_TIER'
@@ -24381,7 +24381,7 @@ app.get(
           freeAllowance:
             'One free Autopilot or Zonal Standard cluster management fee ($74.40/mo value) per billing account per month',
           gotchaWarning:
-            '⚠️ TRAP ALERT: The Free Tier credit ONLY waives the $0.10/hr ($74.40/mo) cluster management fee for 1 cluster! You are STILL charged for every worker node VM, Autopilot pod vCPU/RAM, Persistent Disk, and LoadBalancer IP!',
+            ' TRAP ALERT: The Free Tier credit ONLY waives the $0.10/hr ($74.40/mo) cluster management fee for 1 cluster! You are STILL charged for every worker node VM, Autopilot pod vCPU/RAM, Persistent Disk, and LoadBalancer IP!',
           liveStatus:
             regionalStandardPaidClusters.length === 0 &&
             freeMgmtEligibleClusters.length <= 1
@@ -24389,7 +24389,7 @@ app.get(
               : 'EXCEEDS_OR_PAID_SKU',
           liveUsageLabel: `${freeMgmtEligibleClusters.length}/1 Free Cluster Mgmt Fee used${
             regionalStandardPaidClusters.length > 0
-              ? ` · ⚠️ ${regionalStandardPaidClusters.length} Regional cluster(s) billing $0.10/hr`
+              ? ` ·  ${regionalStandardPaidClusters.length} Regional cluster(s) billing $0.10/hr`
               : ''
           }`,
           provisionServiceType: 'GKE_CLUSTER',
@@ -24403,7 +24403,7 @@ app.get(
           freeAllowance:
             'First 50 GiB of log ingestion per project per month (retained for 30-day default retention at $0) + 1M Monitoring API read time-series/mo',
           gotchaWarning:
-            '⚠️ High-volume VPC Flow Logs, Data Access audit logs, or verbose container stdout beyond 50 GiB/mo bill $0.50/GiB.',
+            ' High-volume VPC Flow Logs, Data Access audit logs, or verbose container stdout beyond 50 GiB/mo bill $0.50/GiB.',
           liveStatus: 'WITHIN_FREE_TIER',
           liveUsageLabel: '50 GiB/project/mo free log ingestion + 30-day retention included',
           provisionServiceType: null,
@@ -24417,7 +24417,7 @@ app.get(
           freeAllowance:
             '2,500 Cloud Build minutes/month on e2-standard-2 + 0.5 GB Artifact Registry storage/month + 1 active Cloud Deploy delivery pipeline',
           gotchaWarning:
-            '⚠️ Container images quickly exceed 0.5 GB in Artifact Registry ($0.10/GB-mo after 0.5 GB). Sweep untagged/orphaned digests regularly!',
+            ' Container images quickly exceed 0.5 GB in Artifact Registry ($0.10/GB-mo after 0.5 GB). Sweep untagged/orphaned digests regularly!',
           liveStatus: 'WITHIN_FREE_TIER',
           liveUsageLabel: `${artifactReposCount} Artifact Registry repo(s) · 0.5 GB storage + 2,500 build-mins/mo free`,
           provisionServiceType: null,
@@ -24431,7 +24431,7 @@ app.get(
           freeAllowance:
             '10 GiB Pub/Sub messages/mo + 1 GiB Firestore storage (50k reads, 20k writes, 20k deletes/day) + 5,000 Workflows internal steps & 2,000 HTTP calls/mo + 100 KMS Autokey versions/mo',
           gotchaWarning:
-            '⚠️ Free Tier limits never roll over to the next month. KMS 100 free key versions apply specifically to keys created via Cloud KMS Autokey.',
+            ' Free Tier limits never roll over to the next month. KMS 100 free key versions apply specifically to keys created via Cloud KMS Autokey.',
           liveStatus: 'WITHIN_FREE_TIER',
           liveUsageLabel: `${pubsubTopicsCount} Pub/Sub topic(s) · ${kmsKeyRingsCount} KMS KeyRing(s)`,
           provisionServiceType: null,
@@ -30115,7 +30115,7 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
     if (reasonBanner) {
       wsSend({
         type: 'output',
-        data: `\r\n\x1b[38;5;214m⚡ ${reasonBanner}\x1b[0m\r\n`,
+        data: `\r\n\x1b[38;5;214m ${reasonBanner}\x1b[0m\r\n`,
       });
     }
 
@@ -30270,7 +30270,7 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
     });
     wsSend({
       type: 'output',
-      data: `\x1b[38;5;48m⚡ [Open-Source SSH2 Engine] Connecting to ${sshUsername}@${host}:22 (VM: ${vmName} · Zone: ${zone})...\x1b[0m\r\n`,
+      data: `\x1b[38;5;48m [Open-Source SSH2 Engine] Connecting to ${sshUsername}@${host}:22 (VM: ${vmName} · Zone: ${zone})...\x1b[0m\r\n`,
     });
 
     const conn = new Ssh2Client();
@@ -30471,12 +30471,12 @@ if [ -z "$TARGET_URI" ] && [ -n "$DESC_URI" ]; then
   TARGET_URI="$DESC_URI"
 fi
 if [ "$READY_FLAG" = "0" ]; then
-  echo -e "\\033[1;36m⚙️  Auto-configuring Cloud Run service '$SERVICE_NAME' for Container SSH (--ssh --execution-environment=gen2 $MEM_FLAG)...\\033[0m"
+  echo -e "\\033[1;36m  Auto-configuring Cloud Run service '$SERVICE_NAME' for Container SSH (--ssh --execution-environment=gen2 $MEM_FLAG)...\\033[0m"
   gcloud alpha run services update "$SERVICE_NAME" --ssh --execution-environment=gen2 $MEM_FLAG --region="$REGION" --project="$PROJECT_ID" --quiet
   REV_FLAG=""
 fi
 if [ -n "$TARGET_URI" ]; then
-  echo -e "\\033[38;5;45m⚡ Warming up active Gen2 container instance at $TARGET_URI...\\033[0m"
+  echo -e "\\033[38;5;45m Warming up active Gen2 container instance at $TARGET_URI...\\033[0m"
   curl -s -o /dev/null -m 4 "$TARGET_URI" || true
 fi
 echo -e "\\033[1;32m➜ Launching Live Cloud Run Container SSH PTY:\\033[0m \\033[1;33m${baseSshCli}\${REV_FLAG}\\033[0m"

@@ -2793,7 +2793,7 @@ ORDER BY
               >
                 {enforcerBusy === 'TRIM_EXCESS_SECRET_VERSIONS'
                   ? 'Disabling Redundant Versions...'
-                  : '✂️ Auto-Disable Old Secret Versions ($0/mo)'}
+                  : ' Auto-Disable Old Secret Versions ($0/mo)'}
               </button>
             </div>
           </div>
