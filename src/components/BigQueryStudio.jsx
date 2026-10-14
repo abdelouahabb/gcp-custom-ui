@@ -657,7 +657,7 @@ export default function BigQueryStudio({
                               : 'LOGICAL UNCOMPRESSED BILLING'}
                           </span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
-                            ⏳ {ds.maxTimeTravelHours}h Time-Travel
+                            {ds.maxTimeTravelHours}h Time-Travel
                           </span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                             {ds.tableCount} Table(s)

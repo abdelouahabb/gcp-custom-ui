@@ -1195,7 +1195,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-lg shadow-blue-600/20 cursor-pointer disabled:opacity-50"
             >
               {busyAction === 'DEPLOY_MEDALLION'
-                ? '⏳ Provisioning Bronze → Silver → Gold Datasets & Running Initial Dedup MERGE...'
+                ? 'Provisioning Bronze → Silver → Gold Datasets & Running Initial Dedup MERGE...'
                 : `1-Click Provision "${pipelineName}" Bronze → Silver → Gold Medallion Lakehouse`}
             </button>
           </div>
@@ -1397,7 +1397,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
               >
                 {busyAction === 'RUN_SQL'
-                  ? '⏳ Running Auto-Clean & QUALIFY Deduplication on BigQuery...'
+                  ? 'Running Auto-Clean & QUALIFY Deduplication on BigQuery...'
                   : '▶Execute Auto-Clean & Deduplicate SQL Live on BigQuery'}
               </button>
             </div>
@@ -1579,7 +1579,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               {busyAction === 'CREATE_SCAN'
-                ? '⏳ Creating Dataplex Scan via dataplex.googleapis.com/v1...'
+                ? 'Creating Dataplex Scan via dataplex.googleapis.com/v1...'
                 : `1-Click Launch Dataplex ${scanType} Scan on ${scanDataset}.${scanTable}`}
             </button>
 
@@ -1669,7 +1669,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               {busyAction === 'CREATE_PRODUCT'
-                ? '⏳ Publishing Data Product & Syncing dbt Manifest...'
+                ? 'Publishing Data Product & Syncing dbt Manifest...'
                 : '1-Click Publish Dataplex Data Product & Sync dbt-core Lineage'}
             </button>
 
@@ -1894,7 +1894,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 >
                   <div>
                     <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
-                      ⏱{d.id} ({d.region})
+                      {d.id} ({d.region})
                     </div>
                     <div className="text-[10px] font-mono text-emerald-500">
                       State: {d.state} · Saving ~$348/mo vs. Cloud Composer

@@ -1801,7 +1801,7 @@ export default function ResourceProvisionModal({
               <div className="font-mono font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 flex-wrap">
                 <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>
-                  🎁 Google Cloud &ldquo;Always Free&rdquo; Tier Guardrail (`$0.00/mo` Spec)
+                  Google Cloud &ldquo;Always Free&rdquo; Tier Guardrail (`$0.00/mo` Spec)
                 </span>
                 <a
                   href="https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits"
@@ -1822,9 +1822,9 @@ export default function ResourceProvisionModal({
                 {serviceType === 'BIGQUERY_DATASET' &&
                   'Always Free BigQuery Rule: 1 TiB SQL querying/mo + 10 GiB storage/mo FREE across all datasets.'}
                 {serviceType === 'GKE_CLUSTER' &&
-                  '⚠️ GKE Free Tier Trap: 1 Autopilot or Zonal Standard cluster waives the $74.40/mo cluster management fee, Ready-to-run, but worker nodes, pods, disks & LoadBalancers STILL BILL compute/network!'}
+                  'GKE Free Tier Trap: 1 Autopilot or Zonal Standard cluster waives the $74.40/mo cluster management fee, Ready-to-run, but worker nodes, pods, disks & LoadBalancers STILL BILL compute/network!'}
                 {serviceType === 'CLOUD_SQL' &&
-                  '⚠️ Cloud SQL / AlloyDB has NO Always-Free tier, but Google Cloud offers a 30-Day Free Trial instance for Cloud SQL and AlloyDB (8 vCPU + 1 TB for 30 days).'}
+                  'Cloud SQL / AlloyDB has NO Always-Free tier, but Google Cloud offers a 30-Day Free Trial instance for Cloud SQL and AlloyDB (8 vCPU + 1 TB for 30 days).'}
                 {(serviceType === 'VPC_NETWORK' ||
                   serviceType === 'VPC_FIREWALL') &&
                   'VPC Networks and Firewall Rules have $0.00 control-plane cost (only Cloud NAT, VPN, or cross-region/internet egress incur charges).'}
@@ -1873,14 +1873,14 @@ export default function ResourceProvisionModal({
                 className="shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-extrabold shadow-sm cursor-pointer transition-colors"
               >
                 {serviceType === 'COMPUTE_VM'
-                  ? '🔒 Lock Always Free VM (e2-micro + 30GB pd-standard)'
+                  ? 'Lock Always Free VM (e2-micro + 30GB pd-standard)'
                   : serviceType === 'CLOUD_RUN'
-                  ? '🔒 Lock Always Free Cloud Run ($0 Idle · 2M req/mo)'
+                  ? 'Lock Always Free Cloud Run ($0 Idle · 2M req/mo)'
                   : serviceType === 'GCS_BUCKET'
-                  ? '🔒 Lock Always Free Bucket (us-central1 STANDARD)'
+                  ? 'Lock Always Free Bucket (us-central1 STANDARD)'
                   : serviceType === 'GKE_CLUSTER'
-                  ? '🔒 Use Free Cluster Mgmt Fee (Autopilot)'
-                  : '🔒 Lock Always Free BigQuery Spec'}
+                  ? 'Use Free Cluster Mgmt Fee (Autopilot)'
+                  : 'Lock Always Free BigQuery Spec'}
               </button>
             )}
           </div>
@@ -2133,7 +2133,7 @@ export default function ResourceProvisionModal({
                   >
                     {loadingPreflight
                       ? 'Simulating IAM & Egress...'
-                      : '🧪 Dry-Run IAM & Egress Preflight'}
+                      : 'Dry-Run IAM & Egress Preflight'}
                   </button>
                   <button
                     type="button"
@@ -2230,7 +2230,7 @@ export default function ResourceProvisionModal({
                       >
                         <div className="space-y-0.5 min-w-0">
                           <div className="font-bold truncate">
-                            {chk.passed ? '✓ ' : chk.isAdvisory ? '⚠️ ' : '✗ '}
+                            {chk.passed ? '✓ ' : chk.isAdvisory ? '' : '✗ '}
                             {chk.label}
                           </div>
                           <div className="text-[10px] opacity-85 leading-snug">

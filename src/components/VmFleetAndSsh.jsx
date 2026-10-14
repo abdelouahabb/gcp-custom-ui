@@ -761,7 +761,7 @@ export default function VmFleetAndSsh({
                         }`}
                       >
                         <Wifi className="w-3.5 h-3.5" />
-                        <span>🔌 127.0.0.1 IAP Tunnel</span>
+                        <span>127.0.0.1 IAP Tunnel</span>
                       </button>
 
                       <button

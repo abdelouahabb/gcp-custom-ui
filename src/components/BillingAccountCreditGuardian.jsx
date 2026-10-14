@@ -1254,7 +1254,7 @@ ORDER BY
             <span>
               {autoGrabbingCsv
                 ? 'Auto-Grabbing CSV...'
-                : '⚡ Auto-Grab Downloaded CSV'}
+                : 'Auto-Grab Downloaded CSV'}
             </span>
           </button>
 
@@ -1332,7 +1332,7 @@ ORDER BY
                 </span>
               </div>
               <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                Click <strong>⚡ Auto-Grab Downloaded CSV</strong> to automatically trigger <code className="font-mono">button[id$=&quot;billingtest-download-credits-csv&quot;]</code> (<code className="font-mono">cfctooltip=&quot;Download CSV&quot;</code>) via Chrome CDP or automatically ingest the latest Google Cloud Console Credits <code className="font-mono">.csv</code> file from <code className="font-mono">~/Downloads</code> or <code className="font-mono">~/Desktop</code>. You can also copy the 1-line DOM auto-clicker below or upload the file manually:
+                Click <strong>Auto-Grab Downloaded CSV</strong> to automatically trigger <code className="font-mono">button[id$=&quot;billingtest-download-credits-csv&quot;]</code> (<code className="font-mono">cfctooltip=&quot;Download CSV&quot;</code>) via Chrome CDP or automatically ingest the latest Google Cloud Console Credits <code className="font-mono">.csv</code> file from <code className="font-mono">~/Downloads</code> or <code className="font-mono">~/Desktop</code>. You can also copy the 1-line DOM auto-clicker below or upload the file manually:
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -1358,7 +1358,7 @@ ORDER BY
                 <span>
                   {autoGrabbingCsv
                     ? 'Auto-Grabbing...'
-                    : '2a. ⚡ Auto-Grab Latest CSV'}
+                    : '2a. Auto-Grab Latest CSV'}
                 </span>
               </button>
               <button
@@ -1856,11 +1856,11 @@ ORDER BY
                       badge: 'Compute Engine VM / Spot GPU',
                       title: '1. Compute Engine Spot VM or L4 GPU Workstation',
                       capacityLabel: `~${spotVmHours.toLocaleString()} Spot VM hrs (or ~${l4GpuVmHours.toLocaleString()} L4 GPU hrs)`,
-                      shutdownTime: '⏱ Shutdown / Stop Time: ~25–45 seconds',
+                      shutdownTime: 'Shutdown / Stop Time: ~25–45 seconds',
                       shutdownNote:
                         'Notice: Stopping a VM halts vCPU/GPU billing in ~30s, but attached Persistent Disk (`pd-balanced` / `pd-ssd`) and static External IP STILL bill until the VM & disk are deleted (`--max-run-duration` auto-terminates).',
                       hiddenCostWarning:
-                        '⚠️ Hidden Cost Trap: Internet Egress ($0.085–$0.12/GB), Cross-Zone/Region traffic ($0.01–$0.02/GB), and unattached Boot Disks after `STOP`.',
+                        'Hidden Cost Trap: Internet Egress ($0.085–$0.12/GB), Cross-Zone/Region traffic ($0.01–$0.02/GB), and unattached Boot Disks after `STOP`.',
                       desc: `Launch a high-IPC C3/C4 Spot VM or g2-standard-4 L4 GPU VM in ${targetHarvestZone} for CI builds, model fine-tuning, or load testing (~$${dailyHarvestBudget.toFixed(
                         2
                       )}/day harvest budget).`,
@@ -1875,11 +1875,11 @@ ORDER BY
                       badge: 'Cloud Storage (GCS)',
                       title: '2. Cloud Storage Staging Lake & Snapshots',
                       capacityLabel: `~${gcsStandardTbMonths.toLocaleString()} TB-Months Standard Storage`,
-                      shutdownTime: '⏱ Empty & Delete Time: ~5s (<1k objects) to 1–24h (Lifecycle)',
+                      shutdownTime: 'Empty & Delete Time: ~5s (<1k objects) to 1–24h (Lifecycle)',
                       shutdownNote:
                         'Notice: Deleting a bucket requires deleting all objects & noncurrent versions first. Set an Object Lifecycle `Delete` rule before credit expiry for zero-touch cleanup.',
                       hiddenCostWarning:
-                        '⚠️ Hidden Cost Trap: Internet Download Egress ($0.12/GB), Cross-Region Replication/Reads ($0.02/GB), Class A/B Operations, and Nearline/Coldline early-deletion penalties (30–90 day minimum storage duration!).',
+                        'Hidden Cost Trap: Internet Download Egress ($0.12/GB), Cross-Region Replication/Reads ($0.02/GB), Class A/B Operations, and Nearline/Coldline early-deletion penalties (30–90 day minimum storage duration!).',
                       desc: `Stage large ML datasets, container artifacts, or database backups in a single-region Standard bucket (${targetHarvestRegion}; avoid Nearline/Archive if deleting in <30 days).`,
                       cliId: 'harvester-gcs',
                       cliCmd: gcsCreateCmd,
@@ -1892,11 +1892,11 @@ ORDER BY
                       badge: 'Kubernetes (GKE)',
                       title: '3. GKE Autopilot or GPU Burst Cluster',
                       capacityLabel: `~${gkeAutopilotPodHours.toLocaleString()} Pod-Hours (1 vCPU · 2 GB)`,
-                      shutdownTime: '⏱ Cluster Drain & Delete Time: ~5–12 minutes',
+                      shutdownTime: 'Cluster Drain & Delete Time: ~5–12 minutes',
                       shutdownNote:
                         'Notice: GKE cannot simply be "paused"—even with 0 nodes, the GKE Control Plane bills $0.10/hr ($73/mo) after the first free zonal/Autopilot cluster, and LoadBalancers + PersistentVolumeClaims keep billing until the cluster is deleted!',
                       hiddenCostWarning:
-                        '⚠️ Hidden Cost Trap: Cloud NAT Gateway ($0.045/GB + hourly per-VM fee), Multi-Zone Pod-to-Pod Egress ($0.01/GB), and orphaned `LoadBalancer` forwarding rules ($18/mo).',
+                        'Hidden Cost Trap: Cloud NAT Gateway ($0.045/GB + hourly per-VM fee), Multi-Zone Pod-to-Pod Egress ($0.01/GB), and orphaned `LoadBalancer` forwarding rules ($18/mo).',
                       desc: `Spin up a GKE Autopilot cluster in ${targetHarvestRegion} for multi-service Kubernetes staging, service-mesh chaos testing, or distributed Ray/vLLM workloads.`,
                       cliId: 'harvester-gke',
                       cliCmd: gkeCreateCmd,
@@ -1909,11 +1909,11 @@ ORDER BY
                       badge: 'Cloud Run Serverless L4 GPU',
                       title: '4. Cloud Run Serverless L4 GPU Jobs & Microservices',
                       capacityLabel: `~${l4RunBatchHours.toLocaleString()} L4 GPU-Hours`,
-                      shutdownTime: '⏱ Scale-to-Zero / Delete Time: Instant (~0–5 seconds)',
+                      shutdownTime: 'Scale-to-Zero / Delete Time: Instant (~0–5 seconds)',
                       shutdownNote:
                         'Notice: Setting `min-instances=0` drops compute & GPU billing to $0.00 the exact second a request or batch job finishes.',
                       hiddenCostWarning:
-                        '⚠️ Hidden Cost Trap: Keeping `min-instances >= 1` warm 24/7, Artifact Registry image storage over 0.5 GB, and VPC Serverless Connector / outbound Internet Egress ($0.12/GB).',
+                        'Hidden Cost Trap: Keeping `min-instances >= 1` warm 24/7, Artifact Registry image storage over 0.5 GB, and VPC Serverless Connector / outbound Internet Egress ($0.12/GB).',
                       desc: `Run batch embeddings, LLM evaluations, or high-concurrency HTTP services in ${targetHarvestRegion} with --no-gpu-zonal-redundancy ($0.72/hr) and $0 idle cost.`,
                       cliId: 'harvester-l4',
                       cliCmd: l4BatchCmd,
@@ -1926,11 +1926,11 @@ ORDER BY
                       badge: 'Cloud SQL / AlloyDB',
                       title: '5. Cloud SQL (Postgres 16 / MySQL 8.4) Read-Replica Lab',
                       capacityLabel: `~${cloudSqlHours.toLocaleString()} DB Instance-Hours`,
-                      shutdownTime: '⏱ Stop / Delete Time: ~2–6 minutes',
+                      shutdownTime: 'Stop / Delete Time: ~2–6 minutes',
                       shutdownNote:
                         'Notice: Stopping a Cloud SQL instance halts vCPU/RAM charges in ~3 mins, but SSD storage ($0.17/GB-mo), automated backups, and Public IPv4 idle reservation ($0.01/hr while stopped!) continue billing until deleted.',
                       hiddenCostWarning:
-                        '⚠️ Hidden Cost Trap: Idle Public IPv4 charge while instance is STOPPED, HA Regional standby (2× cost), Point-in-Time Recovery (PITR) transaction logs, and cross-region replica egress.',
+                        'Hidden Cost Trap: Idle Public IPv4 charge while instance is STOPPED, HA Regional standby (2× cost), Point-in-Time Recovery (PITR) transaction logs, and cross-region replica egress.',
                       desc: `Benchmark Postgres 16 pgvector indexes, test schema migrations, or run load tests against a disposable Cloud SQL instance in ${targetHarvestRegion} before credit expiry.`,
                       cliId: 'harvester-sql',
                       cliCmd: `gcloud sql instances create bonus-harvester-pg16 --database-version=POSTGRES_16 --cpu=2 --memory=7680MB --region=${targetHarvestRegion} --deletion-protection=false --project=${
@@ -1945,11 +1945,11 @@ ORDER BY
                       badge: 'BigQuery Lakehouse & BQML',
                       title: '6. BigQuery Gold Table Pre-Compute & BQML Training',
                       capacityLabel: `~${bqTibScans.toLocaleString()} TiB On-Demand Scans`,
-                      shutdownTime: '⏱ Query Cancel / Drop Time: Instant (<2 seconds)',
+                      shutdownTime: 'Query Cancel / Drop Time: Instant (<2 seconds)',
                       shutdownNote:
                         'Notice: Queries bill only while running, but materialized tables bill Active Storage ($0.02/GB-mo after 10 GB free). Set a Dataset Default Table Expiration so tables auto-drop before credit expiry.',
                       hiddenCostWarning:
-                        '⚠️ Hidden Cost Trap: Missing `--maximum_bytes_billed` guard on `SELECT *` queries, BigQuery BI Engine reservation hours, and cross-region dataset copy egress.',
+                        'Hidden Cost Trap: Missing `--maximum_bytes_billed` guard on `SELECT *` queries, BigQuery BI Engine reservation hours, and cross-region dataset copy egress.',
                       desc: 'Materialize partitioned & clustered Gold BI tables, backfills, or BigQuery ML models now while covered by your expiring grant ($6.25/TiB).',
                       cliId: 'harvester-bq',
                       cliCmd: bqMaterializeSql,
@@ -2144,7 +2144,7 @@ ORDER BY
                         <div className="space-y-0.5">
                           <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                             <span>
-                              🛡️ Pre-Expiry Auto-Shutdown Guardrail (Cutoff: 12h before {expIso})
+                              Pre-Expiry Auto-Shutdown Guardrail (Cutoff: 12h before {expIso})
                             </span>
                           </div>
                           <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
@@ -2646,7 +2646,7 @@ ORDER BY
             <div className="flex items-center gap-2 flex-wrap">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="text-xs sm:text-sm font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
-                🎁 Google Cloud &ldquo;Always Free&rdquo; Tier Auditor & $0.00/Mo Architect
+                Google Cloud &ldquo;Always Free&rdquo; Tier Auditor & $0.00/Mo Architect
               </span>
               {alwaysFreeAudit?.summary && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -2718,7 +2718,7 @@ ORDER BY
         <div className="p-3 rounded-xl bg-white/90 dark:bg-[#131314] border border-emerald-500/40 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-mono font-extrabold text-emerald-700 dark:text-emerald-300">
-              🛡️ 1-Click &ldquo;$0.00 Free-Tier Micro-Charge Killer&rdquo; Enforcers (Prevent Silent $0.10–$2.50/mo Overages)
+              1-Click &ldquo;$0.00 Free-Tier Micro-Charge Killer&rdquo; Enforcers (Prevent Silent $0.10–$2.50/mo Overages)
             </span>
             <span className="text-[10px] font-mono text-zinc-500">
               Executes live REST API policies against Artifact Registry, Cloud Logging & Secret Manager
@@ -2745,7 +2745,7 @@ ORDER BY
               >
                 {enforcerBusy === 'ENFORCE_ARTIFACT_REGISTRY_CLEANUP'
                   ? 'Applying Cleanup Policy...'
-                  : '🧹 Enforce <0.5 GB Image Cleanup Policy'}
+                  : 'Enforce <0.5 GB Image Cleanup Policy'}
               </button>
             </div>
 
@@ -2770,7 +2770,7 @@ ORDER BY
               >
                 {enforcerBusy === 'ENFORCE_LOGGING_HEALTHCHECK_EXCLUSION'
                   ? 'Patching _Default Log Sink...'
-                  : '🛡️ Install 50 GiB/mo Health-Check Log Shield'}
+                  : 'Install 50 GiB/mo Health-Check Log Shield'}
               </button>
             </div>
 
@@ -2921,7 +2921,7 @@ ORDER BY
           <div className="p-3 rounded-xl bg-white/80 dark:bg-[#131314] border border-blue-500/30 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-mono font-extrabold text-blue-700 dark:text-blue-300">
-                🚀 Bonus: Product-Specific Free Trials (Separate from Always Free & $300 Welcome Credit)
+                Bonus: Product-Specific Free Trials (Separate from Always Free & $300 Welcome Credit)
               </span>
               <span className="text-[10px] font-mono text-zinc-500">
                 Requires an active Google Cloud Billing Account · Unused Free Tier limits do not roll over month-to-month

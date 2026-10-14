@@ -41,23 +41,23 @@ const AUDIT_SERVICE_FILTERS = [
 
 const NL_INTENT_PRESETS = [
   {
-    label: '🔥 5xx Timeouts on Cloud Run',
+    label: '5xx Timeouts on Cloud Run',
     nl: '5xx timeouts on cloud run over 1s',
   },
   {
-    label: '⚡ HTTP 429 Quota Exhausted',
+    label: 'HTTP 429 Quota Exhausted',
     nl: '429 rate limit quota errors',
   },
   {
-    label: '🔐 IAM & Secret Denials',
+    label: 'IAM & Secret Denials',
     nl: 'iam permission denied or secret access warnings',
   },
   {
-    label: '🛡️ DLP Token & API Key Leaks',
+    label: 'DLP Token & API Key Leaks',
     nl: 'pii secret leak token apikey dlp',
   },
   {
-    label: '🌐 All Project Telemetry',
+    label: 'All Project Telemetry',
     nl: '',
   },
 ];
@@ -372,15 +372,18 @@ export default function LogStreamerAndShell({
                 <span>2026 NEURAL CHRONO-LOG & TRACE STUDIO</span>
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
-                🧠 Drain3 Clustering: {chronoData?.stats?.deduplicationRatioPct || 68}% Noise Collapsed
+                <Layers className="w-3 h-3" />
+                <span>Drain3 Clustering: {chronoData?.stats?.deduplicationRatioPct || 68}% Noise Collapsed</span>
               </span>
               {chronoData?.stats?.dlpLeakCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-mono font-bold">
-                  🛡️ {chronoData.stats.dlpLeakCount} DLP Token/Key Leaks Detected
+                  <ShieldAlert className="w-3 h-3" />
+                  <span>{chronoData.stats.dlpLeakCount} DLP Token/Key Leaks Detected</span>
                 </span>
               )}
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-bold">
-                🕒 {activeTimeZone} ({utcOffsetLabel})
+                <Clock className="w-3 h-3" />
+                <span>{activeTimeZone} ({utcOffsetLabel})</span>
               </span>
             </div>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 mt-1">
@@ -697,8 +700,9 @@ export default function LogStreamerAndShell({
                             ({entry.resourceTarget})
                           </span>
                           {entry.dlpFindings?.length > 0 && (
-                            <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold">
-                              🛡️ DLP LEAK: {entry.dlpFindings[0].type}
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold">
+                              <ShieldAlert className="w-3 h-3" />
+                              <span>DLP LEAK: {entry.dlpFindings[0].type}</span>
                             </span>
                           )}
                         </div>
@@ -710,10 +714,14 @@ export default function LogStreamerAndShell({
 
                         {/* Actor + Timezone-Aware Timestamp + Trace ID */}
                         <div className="flex flex-wrap items-center gap-2 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
-                          <span>🕒 {formatLogDate(entry.timestamp)}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatLogDate(entry.timestamp)}</span>
+                          </span>
                           <span>·</span>
-                          <span className="text-emerald-600 dark:text-emerald-400">
-                            👤 {entry.actor}
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                            <UserCheck className="w-3 h-3" />
+                            <span>{entry.actor}</span>
                           </span>
                           <span>·</span>
                           <span>Trace: {entry.traceId?.slice(0, 12)}…</span>
@@ -730,9 +738,10 @@ export default function LogStreamerAndShell({
                         type="button"
                         onClick={() => triggerTimeTravelPeek(entry.timestamp)}
                         title="Fetch all project logs ±30 seconds around this event"
-                        className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-mono font-bold cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-mono font-bold cursor-pointer"
                       >
-                        ⏱ ±30s Peek
+                        <Clock className="w-3 h-3" />
+                        <span>±30s Peek</span>
                       </button>
                       <button
                         type="button"
@@ -864,14 +873,21 @@ export default function LogStreamerAndShell({
                     key={tw.traceId}
                     type="button"
                     onClick={() => setSelectedTraceId(tw.traceId)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
                       activeWaterfall?.traceId === tw.traceId
                         ? 'bg-purple-600 text-white border-purple-500'
                         : 'bg-zinc-100 dark:bg-[#131314] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
                     }`}
                   >
-                    {tw.hasError ? '🔴' : '🟢'} {tw.traceId.slice(0, 10)}… ({tw.spanCount} spans ·{' '}
-                    {tw.totalDurationMs}ms)
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        tw.hasError ? 'bg-red-500' : 'bg-emerald-500'
+                      }`}
+                    />
+                    <span>
+                      {tw.traceId.slice(0, 10)}… ({tw.spanCount} spans ·{' '}
+                      {tw.totalDurationMs}ms)
+                    </span>
                   </button>
                 ))}
               </div>
@@ -1043,8 +1059,9 @@ export default function LogStreamerAndShell({
                     className="p-3 rounded-lg bg-white dark:bg-[#202124] border border-red-500/30 space-y-1.5"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 text-[10.5px] font-mono font-extrabold">
-                        🛡️ {alert.type}: {alert.label}
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 text-[10.5px] font-mono font-extrabold">
+                        <ShieldAlert className="w-3 h-3" />
+                        <span>{alert.type}: {alert.label}</span>
                       </span>
                       <span className="text-[10.5px] font-mono text-zinc-500">
                         {alert.serviceName} · {formatLogDate(alert.timestamp)}
@@ -1088,10 +1105,11 @@ export default function LogStreamerAndShell({
                 <span>LIVE CLOUD AUDIT "WHO-CHANGED-WHAT" TIMELINE</span>
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
-                🎁 400-Day Admin Activity Retention · $0.00/mo Always Free
+                400-Day Admin Activity Retention · $0.00/mo Always Free
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-bold">
-                🕒 TZ: {activeTimeZone} ({utcOffsetLabel})
+                <Clock className="w-3 h-3" />
+                <span>TZ: {activeTimeZone} ({utcOffsetLabel})</span>
               </span>
             </div>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 mt-1">
@@ -1263,10 +1281,14 @@ export default function LogStreamerAndShell({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
-                          <span>🕒 {formatLogDate(ev.timestamp)}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatLogDate(ev.timestamp)}</span>
+                          </span>
                           <span>·</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                            👤 {ev.principalEmail}
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                            <UserCheck className="w-3 h-3" />
+                            <span>{ev.principalEmail}</span>
                           </span>
                           <span>·</span>
                           <span>IP: {ev.callerIp}</span>
@@ -1285,9 +1307,10 @@ export default function LogStreamerAndShell({
                       <button
                         type="button"
                         onClick={() => triggerTimeTravelPeek(ev.timestamp)}
-                        className="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold cursor-pointer"
                       >
-                        ⏱ ±30s Logs
+                        <Clock className="w-3 h-3" />
+                        <span>±30s Logs</span>
                       </button>
                       <button
                         type="button"

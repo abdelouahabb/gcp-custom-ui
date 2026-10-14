@@ -299,6 +299,31 @@ const DOC_SECTIONS = [
       '100% free control-plane inspection ($0.00/mo). Prevents surprise HTTP 429 autoscaling failures and highlights Free-Tier quota saturation.',
   },
   {
+    id: 'neural-chrono-log-and-trace-studio-2026',
+    wave: 'MOONSHOT 2026 · NEURAL CHRONO-LOG, DRAIN3 CLUSTERING, TRACE WATERFALL & LOG FINOPS STUDIO',
+    title:
+      '2026 Neural Chrono-Log & Trace Studio: Drain3 Pattern Clustering, Cross-Service `traceId` Waterfall, NL-to-LQL/BigQuery SQL, `±30s` Time-Travel, `_Default` Sink FinOps & DLP Leak Radar',
+    badge: 'LOGS & SHELL TAB · $0.50/GiB NOISE CUTTER',
+    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    icon: Zap,
+    targetTab: 'LOGS_SHELL',
+    problemSolved:
+      'Google Cloud Logs Explorer still behaves like a 2016 JSON tree-viewer: engineers must click 5 nested protoPayload levels to read one error, write LQL syntax by hand during outages, scroll through thousands of duplicate stack traces, and unknowingly pay $0.50/GiB for noisy /healthz probes or leak Bearer tokens in stdout.',
+    howItWorks: [
+      'Bi-Directional Natural Language <-> LQL + BigQuery Log Analytics SQL Compiler: Type plain English (e.g. "5xx timeouts on cloud run over 1s" or "429 quota errors") and compile simultaneously into native Cloud Logging LQL (`entries:list`) and linked BigQuery SQL (`SELECT ... FROM <project>.global._Default._AllLogs`).',
+      'Zero-JSON-Digging Flattened SRE Stream & `±30s` Time-Travel Peek: Hoists HTTP Method/Status, Latency (ms), Service/Revision, Actor/Principal, Trace ID, and DLP Leak badges to the top of every card, with a 1-click `±30s Peek` button that locks the query window around any failure.',
+      'Semantic Drain3 Pattern Clustering & Cross-Service `traceId` Waterfall: Tokenizes dynamic values (`<UUID>`, `<IP>`, `<METRIC>`, `<GCP_API_KEY>`, `<JWT_TOKEN>`) to collapse repetitive log noise into signatures, and stitches sibling spans across `http_load_balancer` -> `cloud_run_revision` -> `cloudsql_database` -> `aiplatform.googleapis.com` into a visual Gantt waterfall.',
+      'Log FinOps `_Default` Sink Exclusion Manager & Live DLP Secret Leak Radar: Inspects `logging.googleapis.com/v2/projects/:id/sinks/_Default` to apply 1-click LQL exclusion rules that drop noisy `/healthz` probes ($0.50/GiB saved) and continuously scans log payloads for unmasked `AIza...` keys, Bearer JWTs, and PII emails.',
+      'Global 430+ World IANA Timezone Engine (`TimezoneContext.jsx`): Supports all official `Intl.supportedValuesOf("timeZone")` zones across 8 continent filters with a minute-aligned `HH:mm` clock (zero per-second React re-render churn) and Dual (+UTC) mode.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/chrono-logs/query → logging.googleapis.com/v2/entries:list + logging.googleapis.com/v2/projects/:id/sinks/_Default',
+      'POST /api/project/:id/chrono-logs/exclusion → PATCH logging.googleapis.com/v2/projects/:id/sinks/_Default?updateMask=exclusions',
+    ],
+    billingImpact:
+      'Saves $40–$117+/mo per project by dropping high-volume HTTP 200 healthcheck probes and sampling verbose stdout before Cloud Logging charges $0.50/GiB (after the 50 GiB/mo free tier).',
+  },
+  {
     id: 'cloud-audit-who-changed-what-timeline',
     wave: 'CLOUD AUDIT LOGS · LIVE "WHO-CHANGED-WHAT" ACTIVITY TIMELINE & 1-CLICK CHANGE INSPECTOR',
     title:
@@ -312,7 +337,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       'Live Cloud Audit Admin Activity Stream (`cloudaudit.googleapis.com/activity`): Queries `logging.googleapis.com/v2/entries:list` and merges real-time in-session Flight Recorder mutations so actions appear immediately.',
       'Actor Attribution & Action Classification: Groups every mutation by Principal (`principalEmail` user vs `.gserviceaccount.com`), Caller IP, and Action Category (`CREATE`, `UPDATE`, `IAM_SECURITY`, `DELETE`, `POWER`).',
-      'IAM Policy Delta & Request Spec X-Ray: Expands any audit event to inspect `serviceData.policyDelta.bindingDeltas` (`ADD`/`REMOVE` role bindings), `protoPayload.request`, and a 1-click `$ Inspect in Shell` command.',
+      'IAM Policy Delta & Request Spec X-Ray: Expands any audit event to inspect `serviceData.policyDelta.bindingDeltas` (`ADD`/`REMOVE` role bindings), `protoPayload.request`, and a 1-click `$ Inspect in Shell` or `±30s Logs` time-travel command.',
     ],
     apisUsed: [
       'GET /api/project/:id/audit-timeline → logging.googleapis.com/v2 (`cloudaudit.googleapis.com/activity`)',
@@ -986,7 +1011,7 @@ const DOC_SECTIONS = [
     wave: 'WAVE 12 ALIBABA & HUAWEI PARITY SUITE',
     title:
       '40. 8-in-1 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity Super-Studio',
-    badge: 'Top Header -> Alibaba & Huawei 🐉',
+    badge: 'Top Header -> Alibaba & Huawei ',
     badgeColor:
       'bg-orange-500/15 text-orange-600 dark:text-orange-300 border-orange-500/30',
     icon: Rocket,

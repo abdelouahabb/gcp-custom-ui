@@ -809,11 +809,11 @@ export default function EmergencyApiKillSwitch({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10.5px] font-mono font-extrabold">
-                📡 LIVE API QUOTA SATURATION & HTTP 429 EARLY-WARNING RADAR
+                LIVE API QUOTA SATURATION & HTTP 429 EARLY-WARNING RADAR
               </span>
               {quotaRadar?.criticalCount > 0 ? (
                 <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
-                  🚨 {quotaRadar.criticalCount} Quota(s) Near HTTP 429 Exhaustion (&ge;85%)
+                  {quotaRadar.criticalCount} Quota(s) Near HTTP 429 Exhaustion (&ge;85%)
                 </span>
               ) : (
                 <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">

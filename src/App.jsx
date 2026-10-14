@@ -649,7 +649,7 @@ function classifyDestructiveAxiosConfig(config) {
           projectId,
           method: 'DESTROY VERSION',
           endpoint: rawUrl,
-          impactWarning: `NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Destroying version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently shredded and does NOT return to plaintext in Cloud Run. Tip: If you only want $0.00/mo billing or might need to roll back later, click Cancel and use "⏸ Disable ($0/mo)" instead—disabled versions also cost $0.00/mo and can be re-enabled anytime!`,
+          impactWarning: `NO PLAINTEXT FALLBACK — IT DISAPPEARS FOREVER: Destroying version v${ver} of "${sid}" is IRREVERSIBLE. The cryptographic payload is permanently shredded and does NOT return to plaintext in Cloud Run. Tip: If you only want $0.00/mo billing or might need to roll back later, click Cancel and use "Disable ($0/mo)" instead—disabled versions also cost $0.00/mo and can be re-enabled anytime!`,
         };
       }
       if (

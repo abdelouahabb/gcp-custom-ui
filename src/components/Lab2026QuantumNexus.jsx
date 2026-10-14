@@ -164,7 +164,7 @@ export default function Lab2026QuantumNexus({
       id: 'TIME_MACHINE',
       icon: History,
       badge: 'BREAKTHROUGH #2',
-      label: '⏳ Time-Machine Flight Recorder & 1-Click Rollback',
+      label: 'Time-Machine Flight Recorder & 1-Click Rollback',
     },
     {
       id: 'FINOPS_AUTOPILOT',

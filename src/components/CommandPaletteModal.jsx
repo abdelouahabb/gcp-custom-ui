@@ -652,7 +652,7 @@ export default function CommandPaletteModal({
         title: 'Toggle GDE Streamer & Video Tutorial Privacy Shield (Alt+G)',
         subtitle: 'Masks personal emails, Cloud Billing Account IDs, GCP project numbers & public IPv4s across all 20 tabs for safe screen sharing',
         keywords: 'gde mode streamer tutorial privacy shield hide email billing account id screen share video recording mask pii',
-        badge: '🎥 GDE SHIELD',
+        badge: 'GDE SHIELD',
         badgeColor: 'text-rose-300 bg-rose-500/15 border-rose-500/30',
         icon: Sparkles,
         run: () => {

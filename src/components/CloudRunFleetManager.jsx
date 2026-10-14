@@ -3634,7 +3634,7 @@ spec:
                               to rotate secrets and auto-disable old versions so you stay inside the Free Tier.
                             </div>
                             <div className="pt-1 border-t border-emerald-500/20 text-[10px] text-amber-800 dark:text-amber-300 font-mono">
-                              <strong>Important — Does Delete/Destroy Revert Back to Plaintext? NO!</strong> Sealing a variable removes the plaintext from Cloud Run and replaces it with a <code className="font-bold">secretKeyRef</code> pointer. If you later <strong>Destroy</strong> a version or <strong>Delete</strong> the secret in Secret Manager, it <strong>disappears forever</strong> (it never reverts to plaintext). Use <strong>⏸ Disable ($0/mo)</strong> to pause a version safely without losing its value!
+                              <strong>Important — Does Delete/Destroy Revert Back to Plaintext? NO!</strong> Sealing a variable removes the plaintext from Cloud Run and replaces it with a <code className="font-bold">secretKeyRef</code> pointer. If you later <strong>Destroy</strong> a version or <strong>Delete</strong> the secret in Secret Manager, it <strong>disappears forever</strong> (it never reverts to plaintext). Use <strong>Disable ($0/mo)</strong> to pause a version safely without losing its value!
                             </div>
                           </div>
 
@@ -4296,7 +4296,7 @@ spec:
                                         </span>
                                       ) : isReconciling ? (
                                         <span className="text-[9.5px] font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">
-                                          ⏳ DEPLOYING
+                                          DEPLOYING
                                         </span>
                                       ) : (
                                         <span className="text-[9.5px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded">

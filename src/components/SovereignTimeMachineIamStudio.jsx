@@ -1158,7 +1158,7 @@ export default function SovereignTimeMachineIamStudio({
                     },
                     {
                       id: 'JIT_ONLY',
-                      label: `⏱Active JIT Leases (${iamData?.summary?.jitProtectedCount || 0})`,
+                      label: `Active JIT Leases (${iamData?.summary?.jitProtectedCount || 0})`,
                     },
                   ].map((f) => (
                     <button
@@ -1264,7 +1264,7 @@ export default function SovereignTimeMachineIamStudio({
                             </span>
                             {item.condition && (
                               <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
-                                ⏱JIT Condition Active: {item.condition.title}
+                                JIT Condition Active: {item.condition.title}
                               </span>
                             )}
                           </div>
@@ -1747,7 +1747,7 @@ export default function SovereignTimeMachineIamStudio({
                   className="w-full h-[36px] px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1.5"
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  <span>⏱Mint & Download 1h Token</span>
+                  <span>Mint & Download 1h Token</span>
                 </button>
               </div>
             </div>
@@ -2053,7 +2053,7 @@ export default function SovereignTimeMachineIamStudio({
                   >
                     {wifBusy
                       ? 'Provisioning OIDC Pool...'
-                      : '🛡️ Provision Keyless GitHub OIDC'}
+                      : 'Provision Keyless GitHub OIDC'}
                   </button>
                 </div>
               </form>
@@ -2602,8 +2602,8 @@ export default function SovereignTimeMachineIamStudio({
                       }`}
                     >
                       {fin.withinFreeTier
-                        ? `🎁 100% INSIDE FREE TIER (${fin.totalEnabledVersions} / ${fin.freeTierActiveVersionsLimit} Free Active Versions Used · $0.00/mo)`
-                        : `💳 PAID TIER ACTIVE (${fin.totalEnabledVersions} Active Versions · ${fin.billableActiveVersions} Billable @ $0.06 = ~$${Number(
+                        ? `100% INSIDE FREE TIER (${fin.totalEnabledVersions} / ${fin.freeTierActiveVersionsLimit} Free Active Versions Used · $0.00/mo)`
+                        : `PAID TIER ACTIVE (${fin.totalEnabledVersions} Active Versions · ${fin.billableActiveVersions} Billable @ $0.06 = ~$${Number(
                             fin.estimatedMonthlyUsd || 0
                           ).toFixed(2)}/mo)`}
                     </span>
@@ -2914,7 +2914,7 @@ export default function SovereignTimeMachineIamStudio({
                   <div className="font-mono font-extrabold text-red-600 dark:text-red-400 flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>
-                      ⚠️ CRITICAL: Does Delete or Destroy Put a Secret Back into Plaintext? NO — It Disappears Forever!
+                      CRITICAL: Does Delete or Destroy Put a Secret Back into Plaintext? NO — It Disappears Forever!
                     </span>
                   </div>
                   <p className="text-zinc-700 dark:text-zinc-300 text-[10.5px]">
@@ -2923,7 +2923,7 @@ export default function SovereignTimeMachineIamStudio({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[10px] font-mono">
                     <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-amber-500/35">
                       <div className="font-extrabold text-amber-600 dark:text-amber-400">
-                        ⏸ 1. DISABLE Version ($0/mo · Reversible)
+                        1. DISABLE Version ($0/mo · Reversible)
                       </div>
                       <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
                         Encrypted bytes stay safely stored at <strong>$0.00/mo</strong>, but workloads cannot read it until you click <strong>▶ Enable</strong>. <em>Never reverts to plaintext.</em>
@@ -2931,7 +2931,7 @@ export default function SovereignTimeMachineIamStudio({
                     </div>
                     <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/35">
                       <div className="font-extrabold text-red-600 dark:text-red-400">
-                        🔥 2. DESTROY Version ($0/mo · Permanent)
+                        2. DESTROY Version ($0/mo · Permanent)
                       </div>
                       <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
                         Cryptographically shreds that version&apos;s payload <strong>forever</strong> (cannot be undone). <strong>It will NOT return to plaintext</strong>—the value is gone!
@@ -2939,7 +2939,7 @@ export default function SovereignTimeMachineIamStudio({
                     </div>
                     <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/45">
                       <div className="font-extrabold text-red-600 dark:text-red-400">
-                        🗑️ 3. DELETE Secret (Permanent)
+                        3. DELETE Secret (Permanent)
                       </div>
                       <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
                         Erases the entire secret &amp; all versions forever. Any Cloud Run service still referencing <code className="font-bold">secretKeyRef</code> will <strong>fail to start</strong> until you update or remove that env var!
@@ -2955,7 +2955,7 @@ export default function SovereignTimeMachineIamStudio({
                       <span className="font-extrabold text-red-400 flex items-center gap-1.5">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
                         <span>
-                          🚨 LIVE BROKEN `secretKeyRef` RADAR ({vaultData.brokenSecretReferences.length} Cloud Run Binding(s) at Crash Risk!)
+                          LIVE BROKEN `secretKeyRef` RADAR ({vaultData.brokenSecretReferences.length} Cloud Run Binding(s) at Crash Risk!)
                         </span>
                       </span>
                       <span className="text-[10px] text-red-300">
@@ -2986,7 +2986,7 @@ export default function SovereignTimeMachineIamStudio({
                                 }
                                 className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
                               >
-                                🩹 Heal: Point to `latest`
+                                Heal: Point to `latest`
                               </button>
                             )}
                             <button
@@ -2997,7 +2997,7 @@ export default function SovereignTimeMachineIamStudio({
                               }
                               className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer"
                             >
-                              🧹 Unbind Dead `secretKeyRef`
+                              Unbind Dead `secretKeyRef`
                             </button>
                           </div>
                         </div>
@@ -3049,12 +3049,12 @@ export default function SovereignTimeMachineIamStudio({
                                 </span>
                                 {mountedList.length > 0 && (
                                   <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold">
-                                    🚀 Mounted by {mountedList.length} Cloud Run Ref(s)
+                                    Mounted by {mountedList.length} Cloud Run Ref(s)
                                   </span>
                                 )}
                                 {s.rotationSchedule?.rotationPeriod && (
                                   <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold">
-                                    ⏱️ Auto-Rotate Active
+                                    Auto-Rotate Active
                                   </span>
                                 )}
                               </div>
@@ -3089,7 +3089,7 @@ export default function SovereignTimeMachineIamStudio({
                               >
                                 {isExpanded
                                   ? 'Hide Lifecycle Controls ▲'
-                                  : '🔄 Rotate / Versions / IAM ▼'}
+                                  : 'Rotate / Versions / IAM ▼'}
                               </button>
 
                               <button
@@ -3157,7 +3157,7 @@ export default function SovereignTimeMachineIamStudio({
                                   >
                                     {rotateBusy
                                       ? 'Rotating...'
-                                      : '🔄 Rotate & Mint New Version'}
+                                      : 'Rotate & Mint New Version'}
                                   </button>
                                 </div>
                               </div>
@@ -3232,7 +3232,7 @@ export default function SovereignTimeMachineIamStudio({
                                                   title={`Disable version ${v.version} ($0.00/mo). The encrypted secret is kept safe and can be re-enabled anytime; it does NOT revert to plaintext.`}
                                                   className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
                                                 >
-                                                  ⏸ Disable ($0/mo)
+                                                  Disable ($0/mo)
                                                 </button>
                                               ) : (
                                                 <button
@@ -3269,7 +3269,7 @@ export default function SovereignTimeMachineIamStudio({
                                                 title={`IRREVERSIBLE: Permanently shreds version ${v.version}'s cryptographic payload ($0.00/mo). It will disappear forever and will NOT revert back to plaintext!`}
                                                 className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
                                               >
-                                                🔥 Destroy (Disappears Forever)
+                                                Destroy (Disappears Forever)
                                               </button>
                                             </div>
                                           )}
@@ -3341,7 +3341,7 @@ export default function SovereignTimeMachineIamStudio({
                                   >
                                     {grantBusy
                                       ? 'Binding IAM...'
-                                      : '🔑 Grant secretAccessor'}
+                                      : 'Grant secretAccessor'}
                                   </button>
                                 </div>
                               </div>
@@ -3364,7 +3364,7 @@ export default function SovereignTimeMachineIamStudio({
                                     {schedBusy
                                       ? 'Scheduling...'
                                       : s.rotationSchedule?.rotationPeriod
-                                      ? `⏱️ Next Auto-Rotation: ${
+                                      ? `Next Auto-Rotation: ${
                                           s.rotationSchedule.nextRotationTime
                                             ? new Date(
                                                 s.rotationSchedule
@@ -3372,7 +3372,7 @@ export default function SovereignTimeMachineIamStudio({
                                               ).toLocaleDateString()
                                             : 'Active'
                                         } (Re-Sync 30d)`
-                                      : '⏱️ Enable $0/mo 30-Day Auto-Rotation'}
+                                      : 'Enable $0/mo 30-Day Auto-Rotation'}
                                   </button>
                                 </div>
 
@@ -3384,7 +3384,7 @@ export default function SovereignTimeMachineIamStudio({
                                           key={`${mw.serviceName}-${mw.envKey}-${mIdx}`}
                                           className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-200 border border-purple-500/30 text-[10px] font-mono"
                                         >
-                                          🚀 {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
+                                          {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
                                         </span>
                                       ))}
                                     </div>
@@ -3401,7 +3401,7 @@ export default function SovereignTimeMachineIamStudio({
                                     >
                                       {reloadBusy
                                         ? 'Rolling Fresh Cloud Run Revision(s)...'
-                                        : `🚀 1-Click Hot-Reload ${mountedList.length} Mounted Cloud Run Service(s) to "${s.secretId}@latest"`}
+                                        : `1-Click Hot-Reload ${mountedList.length} Mounted Cloud Run Service(s) to "${s.secretId}@latest"`}
                                     </button>
                                   </div>
                                 ) : (
