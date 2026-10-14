@@ -935,6 +935,51 @@ const DOC_SECTIONS = [
     billingImpact:
       'Reclaims $0.10/GB/mo in Artifact Registry storage and $0.02/GB/mo in Cloud Storage by eliminating orphaned container digests from deleted Cloud Run services and leftover Cloud Build .tgz source archives.',
   },
+  {
+    id: 'gde-streamer-privacy-shield',
+    wave: 'WAVE 12 STREAMER & INSTRUCTOR PRIVACY',
+    title:
+      '38. GDE Streamer & Video Tutorial Privacy Shield (Alt+G Live DOM Redactor)',
+    badge: 'Top Header -> GDE Mode (Alt+G)',
+    badgeColor:
+      'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
+    icon: ShieldCheck,
+    targetTab: 'CLOUD_RUN',
+    problemSolved:
+      'When Google Developer Experts (GDEs), DevRel engineers, and instructors record video tutorials or share screens live, Google Cloud Console exposes sensitive identifiers—personal/IAM emails, Cloud Billing Account IDs (01XXXX-XXXXXX-XXXXXX), 12-digit Project Numbers, and Public IPv4 addresses.',
+    howItWorks: [
+      '1-Click Toggle (Alt+G or Top Header "GDE Mode" Button): Activates real-time DOM text-node and attribute redaction across all 20 tabs, modals, and tooltips using a WeakMap original-text cache.',
+      'Granular Privacy Filters: Customize masking for Emails, Cloud Billing Account IDs, 12-digit Project Numbers, Public IPv4 addresses, Project IDs, and Dollar Balances without breaking live GCP API calls.',
+    ],
+    apisUsed: [
+      'Client-Side MutationObserver + WeakMap reversible text/attribute redaction engine (Zero API latency)',
+    ],
+    billingImpact:
+      'Zero billing cost ($0.00/mo); prevents accidental credential or billing account ID exposure on YouTube, Twitch, and conference stages.',
+  },
+  {
+    id: 'aws-azure-enterprise-parity-super-studio',
+    wave: 'WAVE 12 AWS & AZURE PARITY SUITE',
+    title:
+      '39 & 40. 10-in-1 AWS & Azure Enterprise Parity Super-Studio for Google Cloud (Wave 1 & Wave 2 Scale)',
+    badge: 'Top Header -> AWS/Azure Parity',
+    badgeColor:
+      'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30',
+    icon: Layers,
+    targetTab: 'AWS_AZURE_PARITY',
+    problemSolved:
+      'Engineers migrating from AWS or Azure miss 10 iconic enterprise workflows that Google Cloud Console either scatters across 6+ pages or lacks natively: Azure Resource Groups, Automated Spend Stop-Loss Fuses, AWS IAM Policy Simulator & Switch-Role, 1-Click S3/SAS Presigned URLs, 1-Screen Global HTTPS LB + WAF, CloudFormation/ARM Stack Drift & Rollback, Cost Explorer + CUD Savings Plans, AWS SSM Fleet Run Command, EventBridge Pipes with DLQ, and Key Vault Auto-Rotation + Cross-Env Sync.',
+    howItWorks: [
+      'Modules 1-5 (Wave 1 Foundation): (1) Azure-Style Resource Groups (labels.resource_group) with 1-click group hibernate & cascade teardown, (2) AWS Budgets Actions / Azure Auto-Shutdown Hard-Spend Stop-Loss Fuse, (3) AWS IAM Policy Simulator & Switch-Role Preview with 1-click least-privilege role grant, (4) Azure SAS / S3 1-Click Presigned URLs & Browser Upload Studio, and (5) 1-Screen Global HTTPS Load Balancer + Managed SSL + Cloud Armor WAF Wizard.',
+      'Modules 6-10 (Wave 2 Enterprise Scale): (6) CloudFormation / Azure ARM Stack Snapshot, Live Console Drift Detector, 1-Click Rollback & Terraform HCL / Pulumi TS Exporter, (7) AWS Cost Explorer / Azure Cost Analysis 14-Day Daily Burn Attribution & 1-Click Cloud Billing CUD / Spot Arbitrage Plans, (8) AWS Systems Manager (SSM) Fleet Run Command & Zero-SSH Patch Manager across VMs and Cloud Run, (9) AWS EventBridge Pipes / Azure Logic Apps Visual Event Router with automatic Dead-Letter Queue (-dlq) Pub/Sub provisioning, and (10) AWS Secrets Manager / Azure Key Vault 1-Click Secret Rotation & Dev/Staging/Prod Cross-Env Sync.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/aws-azure-parity/overview (12-way parallel discovery with 3.5s fast timeout guard)',
+      'POST /api/project/:id/aws-azure-parity/action (UPSERT_RESOURCE_GROUP, HIBERNATE_RESOURCE_GROUP, DELETE_RESOURCE_GROUP, SAVE_SPEND_FUSE_CONFIG, EXECUTE_SPEND_FUSE, SIMULATE_IAM_POLICY, GRANT_SIMULATOR_ROLE, UPLOAD_BUCKET_OBJECT, GENERATE_PRESIGNED_URL, PROVISION_GLOBAL_LB_STACK, SNAPSHOT_ARM_STACK, DETECT_STACK_DRIFT, ROLLBACK_ARM_STACK, APPLY_FINOPS_ARBITRAGE, EXECUTE_SSM_FLEET_COMMAND, PROVISION_EVENT_PIPE, TEST_EVENT_PIPE, ROTATE_SECRET_NOW, SYNC_SECRET_ACROSS_ENV)',
+    ],
+    billingImpact:
+      'Prevents runaway cloud bills via automated Hard-Spend Stop-Loss Fuses and unlocks up to 55%-68% compute savings via 1-Click CUD and Scale-to-Zero arbitrage.',
+  },
 ];
 
 export default function InteractiveDocsGuide({

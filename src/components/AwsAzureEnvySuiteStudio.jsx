@@ -24,6 +24,12 @@ import {
   Rocket,
   FileText,
   Clock,
+  Layers,
+  TrendingDown,
+  GitBranch,
+  KeyRound,
+  Code2,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function AwsAzureEnvySuiteStudio({
@@ -84,6 +90,46 @@ export default function AwsAzureEnvySuiteStudio({
   const [lbRateLimitRpm, setLbRateLimitRpm] = useState(600);
   const [lbReceipt, setLbReceipt] = useState(null);
 
+  // Module 6: CloudFormation / Azure ARM Stacks & Drift Remediator state
+  const [newStackName, setNewStackName] = useState('stack-checkout-v2');
+  const [newStackRg, setNewStackRg] = useState('rg-production-core');
+  const [newStackVersion, setNewStackVersion] = useState('v2.0.0');
+  const [newStackDesc, setNewStackDesc] = useState('');
+  const [selectedIacFormat, setSelectedIacFormat] = useState('TERRAFORM');
+
+  // Module 7: Cost Explorer & CUD Arbitrage receipt state
+  const [finopsReceipt, setFinopsReceipt] = useState(null);
+
+  // Module 8: AWS Systems Manager (SSM) Fleet Run Command state
+  const [selectedSsmDocId, setSelectedSsmDocId] = useState(
+    'GCP-RunRollingRestart'
+  );
+  const [ssmCustomCommand, setSsmCustomCommand] = useState(
+    'df -h && free -m && uname -a'
+  );
+  const [selectedSsmTargets, setSelectedSsmTargets] = useState([]);
+
+  // Module 9: AWS EventBridge Pipes / Azure Logic Apps Event Router state
+  const [newPipeId, setNewPipeId] = useState('pipe-audit-to-cloudrun');
+  const [newPipeSourceType, setNewPipeSourceType] = useState(
+    'GCS_BUCKET_FINALIZE'
+  );
+  const [newPipeSourceRes, setNewPipeSourceRes] = useState('');
+  const [newPipeFilter, setNewPipeFilter] = useState(
+    '{"contentType":["application/json","text/csv"]}'
+  );
+  const [newPipeTransform, setNewPipeTransform] = useState(
+    '{"eventId":"$.id","bucket":"$.bucket","object":"$.name"}'
+  );
+  const [newPipeTargetType, setNewPipeTargetType] =
+    useState('CLOUD_RUN_SERVICE');
+  const [newPipeTargetRes, setNewPipeTargetRes] = useState('');
+
+  // Module 10: AWS Secrets Manager / Azure Key Vault Auto-Rotation state
+  const [rotateSecretName, setRotateSecretName] = useState('PROD_DATABASE_URL');
+  const [rotateDays, setRotateDays] = useState(30);
+  const [rotateCustomPayload, setRotateCustomPayload] = useState('');
+
   const fetchOverview = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
@@ -112,6 +158,9 @@ export default function AwsAzureEnvySuiteStudio({
       if (buckets.length > 0 && !selectedBucket) {
         setSelectedBucket(buckets[0].name);
       }
+      if (buckets.length > 0 && !newPipeSourceRes) {
+        setNewPipeSourceRes(`gs://${buckets[0].name}`);
+      }
 
       const runServices = (payload?.unifiedResources || []).filter(
         (r) => r.type === 'CLOUD_RUN'
@@ -119,6 +168,14 @@ export default function AwsAzureEnvySuiteStudio({
       if (runServices.length > 0 && !lbTargetRunService) {
         setLbTargetRunService(runServices[0].name);
         setLbTargetRegion(runServices[0].location || 'us-central1');
+      }
+      if (runServices.length > 0 && !newPipeTargetRes) {
+        setNewPipeTargetRes(runServices[0].name);
+      }
+
+      const fleetTargets = payload?.ssmFleet?.targets || [];
+      if (fleetTargets.length > 0 && selectedSsmTargets.length === 0) {
+        setSelectedSsmTargets(fleetTargets.slice(0, 2).map((t) => t.id));
       }
     } catch (err) {
       onShowError?.(
@@ -134,6 +191,9 @@ export default function AwsAzureEnvySuiteStudio({
     selectedPrincipalKey,
     selectedBucket,
     lbTargetRunService,
+    newPipeSourceRes,
+    newPipeTargetRes,
+    selectedSsmTargets.length,
     onShowError,
   ]);
 
@@ -476,6 +536,267 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
+  // Module 6 handlers: CloudFormation / Azure ARM Stacks & Drift
+  const handleSnapshotArmStack = async (e) => {
+    e?.preventDefault();
+    if (!newStackName.trim()) return;
+    setActionBusy('SNAPSHOT_STACK');
+    try {
+      const rg = (data?.resourceGroups || []).find(
+        (g) => g.slug === newStackRg
+      );
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'SNAPSHOT_ARM_STACK',
+          stackName: newStackName.trim(),
+          resourceGroup: newStackRg,
+          version: newStackVersion.trim() || 'v1.0.0',
+          description: newStackDesc.trim(),
+          snapshotResources: rg?.members || (data?.unifiedResources || []).slice(0, 6),
+        }
+      );
+      onShowToast?.(res.data?.message || 'Stack snapshot created.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error || err.message || 'Failed to snapshot stack.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleDetectStackDrift = async (stackName) => {
+    setActionBusy(`DRIFT_${stackName}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'DETECT_STACK_DRIFT',
+          stackName,
+        }
+      );
+      onShowToast?.(res.data?.message || 'Drift detection complete.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error || err.message || 'Drift scan failed.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleRollbackArmStack = async (stackName) => {
+    setActionBusy(`ROLLBACK_${stackName}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'ROLLBACK_ARM_STACK',
+          stackName,
+        }
+      );
+      onShowToast?.(res.data?.message || 'Rolled back stack to baseline.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error || err.message || 'Stack rollback failed.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 7 handlers: Cost Explorer & CUD Arbitrage
+  const handleApplyFinopsArbitrage = async (planId) => {
+    setActionBusy(`FINOPS_${planId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'APPLY_FINOPS_ARBITRAGE',
+          planId,
+        }
+      );
+      setFinopsReceipt(res.data);
+      onShowToast?.(res.data?.message || 'Applied FinOps Savings Plan.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to apply FinOps Savings Plan.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 8 handlers: AWS Systems Manager (SSM) Fleet Run Command
+  const toggleSsmTarget = (tId) => {
+    setSelectedSsmTargets((prev) =>
+      prev.includes(tId) ? prev.filter((x) => x !== tId) : [...prev, tId]
+    );
+  };
+
+  const handleExecuteSsmCommand = async (e) => {
+    e?.preventDefault();
+    if (selectedSsmTargets.length === 0) return;
+    setActionBusy('SSM_EXEC');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'EXECUTE_SSM_FLEET_COMMAND',
+          documentId: selectedSsmDocId,
+          customCommand: ssmCustomCommand,
+          targetIds: selectedSsmTargets,
+        }
+      );
+      onShowToast?.(res.data?.message || 'Executed SSM Fleet Run Command.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to execute SSM Fleet Command.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 9 handlers: AWS EventBridge Pipes / Azure Logic Apps
+  const handleProvisionEventPipe = async (e) => {
+    e?.preventDefault();
+    if (!newPipeId.trim()) return;
+    setActionBusy('PIPE_CREATE');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'PROVISION_EVENT_PIPE',
+          pipeId: newPipeId.trim(),
+          sourceType: newPipeSourceType,
+          sourceResource: newPipeSourceRes || `gs://${projectId}-ingest`,
+          filterPattern: newPipeFilter,
+          transformTemplate: newPipeTransform,
+          targetType: newPipeTargetType,
+          targetResource: newPipeTargetRes || 'cloudpulse-worker',
+        }
+      );
+      onShowToast?.(res.data?.message || 'Provisioned EventBridge Pipe.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to provision EventBridge Pipe.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleTestEventPipe = async (pipeId) => {
+    setActionBusy(`TEST_PIPE_${pipeId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'TEST_EVENT_PIPE',
+          pipeId,
+        }
+      );
+      onShowToast?.(res.data?.message || 'Published test event through pipe.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error || err.message || 'Failed to test Event Pipe.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleDeleteEventPipe = async (pipeId) => {
+    setActionBusy(`DEL_PIPE_${pipeId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'DELETE_EVENT_PIPE',
+          pipeId,
+        }
+      );
+      onShowToast?.(res.data?.message || 'Removed EventBridge Pipe.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to delete EventBridge Pipe.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 10 handlers: AWS Secrets Manager / Azure Key Vault Auto-Rotation
+  const handleRotateSecretNow = async (secretNameOverride) => {
+    const targetSecret = (secretNameOverride || rotateSecretName || '').trim();
+    if (!targetSecret) return;
+    setActionBusy(`ROTATE_${targetSecret}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'ROTATE_SECRET_NOW',
+          secretName: targetSecret,
+          rotationPeriodDays: Number(rotateDays || 30),
+          newSecretValue: rotateCustomPayload.trim() || undefined,
+        }
+      );
+      onShowToast?.(res.data?.message || `Rotated secret ${targetSecret}.`);
+      setRotateCustomPayload('');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error || err.message || 'Failed to rotate secret.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleSyncSecretEnvs = async (secretName) => {
+    setActionBusy(`SYNC_${secretName}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'SYNC_SECRET_ACROSS_ENV',
+          secretName,
+          targetEnvs: ['dev', 'staging', 'prod'],
+        }
+      );
+      onShowToast?.(
+        res.data?.message || `Synchronized ${secretName} across environments.`
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to synchronize secret across environments.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
   const copyText = (txt, label = 'Copied to clipboard.') => {
     navigator.clipboard?.writeText(txt);
     onShowToast?.(label);
@@ -486,6 +807,11 @@ export default function AwsAzureEnvySuiteStudio({
   const spendFuse = data?.spendFuse || {};
   const principals = data?.iamSimulator?.principals || [];
   const buckets = data?.storageStudio?.buckets || [];
+  const armStacks = data?.armStacks || [];
+  const costExplorer = data?.costExplorer || {};
+  const ssmFleet = data?.ssmFleet || { targets: [], documents: [], recentExecutions: [] };
+  const eventPipes = data?.eventPipes || [];
+  const keyVaultSecrets = data?.keyVaultStudio?.secrets || [];
   const cloudRunServices = unifiedResources.filter(
     (r) => r.type === 'CLOUD_RUN'
   );
@@ -524,21 +850,25 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
               <Sparkles className="w-3.5 h-3.5" />
               <span>
-                INNOVATION #39 · AWS &amp; AZURE ENTERPRISE WORKFLOWS FOR GOOGLE CLOUD
+                INNOVATION #39 + #40 · 10-IN-1 AWS &amp; AZURE ENTERPRISE PARITY SUITE FOR GOOGLE CLOUD
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              AWS &amp; Azure Parity Super-Studio for Google Cloud
+              AWS &amp; Azure Parity Super-Studio for Google Cloud (Wave 1 &amp; Wave 2 Scale)
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              The 5 iconic cloud workflows engineers rely on in{' '}
+              The 10 iconic enterprise cloud workflows engineers rely on in{' '}
               <strong>Microsoft Azure</strong> and <strong>Amazon Web Services</strong>{' '}
-              that standard Google Cloud Console lacks: logical{' '}
-              <strong>Azure Resource Groups</strong> with 1-click group teardown,{' '}
-              <strong>Automated Hard-Spend Stop-Loss Fuses</strong>, an interactive{' '}
-              <strong>AWS IAM Policy Simulator &amp; Switch-Role Preview</strong>,{' '}
-              <strong>1-Click Azure SAS / S3 Presigned Share Links</strong>, and a{' '}
-              <strong>1-Screen Global HTTPS Load Balancer + Cloud Armor Wizard</strong>.
+              brought natively to Google Cloud: <strong>Azure Resource Groups</strong>,{' '}
+              <strong>Hard-Spend Stop-Loss Fuses</strong>,{' '}
+              <strong>AWS IAM Policy Simulator &amp; Switch-Role</strong>,{' '}
+              <strong>Azure SAS / S3 Presigned Studio</strong>,{' '}
+              <strong>1-Screen Global HTTPS LB + WAF</strong>,{' '}
+              <strong>CloudFormation/ARM Stack Drift &amp; Rollback</strong>,{' '}
+              <strong>Cost Explorer + CUD Savings Plans</strong>,{' '}
+              <strong>AWS SSM Fleet Run Command</strong>,{' '}
+              <strong>EventBridge Pipes / Logic Apps Router</strong>, and{' '}
+              <strong>Key Vault / Secrets Auto-Rotation &amp; Cross-Env Sync</strong>.
             </p>
           </div>
 
@@ -555,38 +885,68 @@ export default function AwsAzureEnvySuiteStudio({
           </button>
         </div>
 
-        {/* 5 Sub-Studio Navigation Pills */}
+        {/* 10 Sub-Studio Navigation Pills */}
         <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
           {[
             {
               id: 'RESOURCE_GROUPS',
-              label: '1. Azure Resource Groups & Bulk Tagger',
+              label: '1. Azure Resource Groups',
               badge: `${resourceGroups.length} Groups`,
               icon: FolderKanban,
             },
             {
               id: 'SPEND_FUSE',
-              label: '2. Hard-Spend Stop-Loss Fuse',
+              label: '2. Hard-Spend Fuse',
               badge: `$${spendFuse.monthlyBudgetUsd || 50}/mo Cap`,
               icon: Flame,
             },
             {
               id: 'IAM_SIMULATOR',
-              label: '3. AWS IAM Policy Simulator & Switch Role',
+              label: '3. IAM Simulator & Switch Role',
               badge: `${principals.length} Identities`,
               icon: ShieldCheck,
             },
             {
               id: 'SAS_PRESIGNED',
-              label: '4. Azure SAS / S3 Presigned URLs & Upload',
+              label: '4. S3/SAS Presigned URLs',
               badge: `${buckets.length} Buckets`,
               icon: Link2,
             },
             {
               id: 'GLOBAL_LB_WIZARD',
-              label: '5. 1-Screen Global Load Balancer & WAF',
+              label: '5. 1-Screen Global LB & WAF',
               badge: '7-in-1 Wizard',
               icon: Globe,
+            },
+            {
+              id: 'CFN_ARM_STACKS',
+              label: '6. CloudFormation/ARM Drift & Rollback',
+              badge: `${armStacks.length} Stacks`,
+              icon: Layers,
+            },
+            {
+              id: 'COST_EXPLORER_CUD',
+              label: '7. Cost Explorer & CUD Savings Plans',
+              badge: 'Up to -68%',
+              icon: TrendingDown,
+            },
+            {
+              id: 'SSM_FLEET_COMMAND',
+              label: '8. AWS SSM Fleet Run Command',
+              badge: `${ssmFleet.targets?.length || 0} Targets`,
+              icon: Terminal,
+            },
+            {
+              id: 'EVENTBRIDGE_PIPES',
+              label: '9. EventBridge Pipes & DLQ Router',
+              badge: `${eventPipes.length} Pipes`,
+              icon: GitBranch,
+            },
+            {
+              id: 'KEYVAULT_ROTATION',
+              label: '10. Key Vault Auto-Rotation & Sync',
+              badge: `${keyVaultSecrets.length} Secrets`,
+              icon: KeyRound,
             },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -596,7 +956,7 @@ export default function AwsAzureEnvySuiteStudio({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
                   active
                     ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 border-zinc-900 dark:border-zinc-100 shadow-sm'
                     : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/70 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
@@ -1702,6 +2062,951 @@ export default function AwsAzureEnvySuiteStudio({
                     <strong>Active Cloud Armor Security Policies:</strong>{' '}
                     {data?.globalLoadBalancers?.armorPolicies?.length || 0}
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 6: AWS CLOUDFORMATION / AZURE ARM STACK DRIFT & ROLLBACK
+         ===================================================================== */}
+      {activeSubTab === 'CFN_ARM_STACKS' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-indigo-500" />
+                    <span>
+                      CloudFormation / Azure ARM Stacks &amp; Live Drift
+                      Remediator
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Snapshot any Resource Group into a versioned infrastructure
+                    stack, detect out-of-band console drift, rollback in 1
+                    click, or export to Terraform HCL / Pulumi TypeScript.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                  {['TERRAFORM', 'PULUMI'].map((fmt) => (
+                    <button
+                      key={fmt}
+                      type="button"
+                      onClick={() => setSelectedIacFormat(fmt)}
+                      className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
+                        selectedIacFormat === fmt
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                      }`}
+                    >
+                      {fmt === 'TERRAFORM' ? 'Terraform HCL' : 'Pulumi TS'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {armStacks.map((st) => {
+                  const isDrifted = st.driftStatus === 'DRIFTED';
+                  const iacCode =
+                    selectedIacFormat === 'TERRAFORM'
+                      ? st.terraformHcl
+                      : st.pulumiTs;
+                  return (
+                    <div
+                      key={st.stackName}
+                      className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-extrabold text-sm text-zinc-950 dark:text-zinc-50">
+                            {st.stackName}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30">
+                            {st.version} · {st.resourceGroup}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                              isDrifted
+                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40'
+                                : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                            }`}
+                          >
+                            {isDrifted ? 'DRIFTED' : 'IN_SYNC'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={actionBusy === `DRIFT_${st.stackName}`}
+                            onClick={() => handleDetectStackDrift(st.stackName)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                          >
+                            <Search className="w-3 h-3" />
+                            <span>
+                              {actionBusy === `DRIFT_${st.stackName}`
+                                ? 'Scanning...'
+                                : 'Detect Drift'}
+                            </span>
+                          </button>
+
+                          {isDrifted && (
+                            <button
+                              type="button"
+                              disabled={
+                                actionBusy === `ROLLBACK_${st.stackName}`
+                              }
+                              onClick={() =>
+                                handleRollbackArmStack(st.stackName)
+                              }
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-amber-600 hover:bg-amber-500 text-white cursor-pointer"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>1-Click Rollback Drift</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              copyText(
+                                iacCode,
+                                `Copied ${selectedIacFormat} code for ${st.stackName}.`
+                              )
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer"
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>Copy IaC</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {isDrifted && (st.driftedItems || []).length > 0 && (
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-1.5 text-xs font-mono">
+                          <div className="font-bold text-amber-600 dark:text-amber-300 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>
+                              Out-of-Band Console Drift Detected (
+                              {st.driftedItems.length} item(s)):
+                            </span>
+                          </div>
+                          {st.driftedItems.map((d, idx) => (
+                            <div
+                              key={idx}
+                              className="text-[11px] text-zinc-700 dark:text-zinc-300"
+                            >
+                              <strong>{d.resource}</strong> ({d.property}):
+                              Expected{' '}
+                              <code className="text-emerald-500">
+                                {d.expected}
+                              </code>{' '}
+                              · Actual{' '}
+                              <code className="text-amber-500">{d.actual}</code>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-400 text-[10.5px] font-mono overflow-x-auto max-h-40">
+                        {iacCode}
+                      </pre>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 space-y-4">
+            <form
+              onSubmit={handleSnapshotArmStack}
+              className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
+            >
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <Code2 className="w-4 h-4 text-indigo-500" />
+                <span>Snapshot Resource Group as Versioned Stack</span>
+              </h3>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    Stack Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newStackName}
+                    onChange={(e) => setNewStackName(e.target.value)}
+                    placeholder="stack-checkout-v2"
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                      Source Resource Group
+                    </label>
+                    <select
+                      value={newStackRg}
+                      onChange={(e) => setNewStackRg(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    >
+                      {resourceGroups.map((g) => (
+                        <option key={g.slug} value={g.slug}>
+                          {g.slug} ({g.members?.length || 0} res)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                      Semantic Version
+                    </label>
+                    <input
+                      type="text"
+                      value={newStackVersion}
+                      onChange={(e) => setNewStackVersion(e.target.value)}
+                      placeholder="v2.0.0"
+                      className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    Baseline Description
+                  </label>
+                  <input
+                    type="text"
+                    value={newStackDesc}
+                    onChange={(e) => setNewStackDesc(e.target.value)}
+                    placeholder="Immutable release snapshot prior to traffic migration"
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={
+                    actionBusy === 'SNAPSHOT_STACK' || !newStackName.trim()
+                  }
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'SNAPSHOT_STACK'
+                      ? 'Capturing Stack Snapshot...'
+                      : 'Capture CloudFormation / ARM Stack Baseline'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 7: AWS COST EXPLORER / AZURE COST ANALYSIS & CUD SAVINGS PLANS
+         ===================================================================== */}
+      {activeSubTab === 'COST_EXPLORER_CUD' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-6 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                    <TrendingDown className="w-4 h-4 text-emerald-500" />
+                    <span>
+                      Granular Daily Burn &amp; Per-Service Attribution
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Real-time AWS Cost Explorer / Azure Cost Analysis view
+                    across Cloud Run, Compute Engine, Cloud Storage, BigQuery
+                    &amp; Secret Manager.
+                  </p>
+                </div>
+                <div className="text-right font-mono">
+                  <div className="text-xs text-zinc-400">Projected Monthly</div>
+                  <div className="text-base font-extrabold text-emerald-500">
+                    ${costExplorer.monthlyProjectedUsd || 0}/mo
+                  </div>
+                </div>
+              </div>
+
+              {/* Per-Service Breakdown Bars */}
+              <div className="space-y-2">
+                {(costExplorer.serviceBreakdown || []).map((item) => {
+                  const pct = Math.min(
+                    100,
+                    Math.round(
+                      ((item.monthlyUsd || 0) /
+                        Math.max(1, costExplorer.monthlyProjectedUsd || 1)) *
+                        100
+                    )
+                  );
+                  return (
+                    <div
+                      key={item.service}
+                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                          {item.service}
+                        </span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                          ${item.monthlyUsd}/mo ({pct}%)
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full"
+                          style={{ width: `${Math.max(4, pct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 14-Day Daily Burn Spark Table */}
+              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                <div className="text-[11px] font-mono font-bold text-zinc-500 mb-2">
+                  14-Day Daily Cost Velocity (Avg $
+                  {costExplorer.dailyAverageUsd || 0}/day)
+                </div>
+                <div className="grid grid-cols-7 gap-1.5 text-center font-mono text-[10px]">
+                  {(costExplorer.dailyBurnSeries || [])
+                    .slice(-7)
+                    .map((day) => (
+                      <div
+                        key={day.date}
+                        className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                      >
+                        <div className="text-zinc-400">{day.date}</div>
+                        <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                          ${day.totalUsd}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-6 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-500" />
+                <span>
+                  1-Click Cloud Billing CUD &amp; Spot Arbitrage Savings Plans
+                </span>
+              </h3>
+
+              <div className="space-y-3">
+                {(costExplorer.savingsPlans || []).map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-2"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {plan.title}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold">
+                        -{plan.discountPct}% · Save ${plan.estMonthlySavingsUsd}
+                        /mo (${plan.annualSavingsUsd}/yr)
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500">
+                      {plan.recommendation}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={actionBusy === `FINOPS_${plan.id}`}
+                      onClick={() => handleApplyFinopsArbitrage(plan.id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                    >
+                      <Play className="w-3 h-3" />
+                      <span>
+                        {actionBusy === `FINOPS_${plan.id}`
+                          ? 'Applying Savings Plan...'
+                          : '1-Click Apply FinOps Plan'}
+                      </span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {finopsReceipt?.gcloudCudCli && (
+                <div className="p-3 rounded-xl bg-zinc-950 text-emerald-400 text-[11px] font-mono space-y-1.5">
+                  <div className="text-zinc-400 font-bold">
+                    Reproducible CUD / Budget CLI:
+                  </div>
+                  <div className="break-all">{finopsReceipt.gcloudCudCli}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 8: AWS SYSTEMS MANAGER (SSM) FLEET RUN COMMAND & PATCH MANAGER
+         ===================================================================== */}
+      {activeSubTab === 'SSM_FLEET_COMMAND' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-6 space-y-4">
+            <form
+              onSubmit={handleExecuteSsmCommand}
+              className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
+            >
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-blue-500" />
+                  <span>
+                    AWS Systems Manager (SSM) Fleet Run Command &amp; Patch
+                    Manager
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Execute simultaneous rolling restarts, OS CVE security
+                  patches, or health diagnostics across multiple Compute VMs and
+                  Cloud Run services without opening individual SSH sessions.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    SSM Automation Document Preset
+                  </label>
+                  <select
+                    value={selectedSsmDocId}
+                    onChange={(e) => {
+                      const docId = e.target.value;
+                      setSelectedSsmDocId(docId);
+                      const found = (ssmFleet.documents || []).find(
+                        (d) => d.id === docId
+                      );
+                      if (found) setSsmCustomCommand(found.command);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    {(ssmFleet.documents || []).map((doc) => (
+                      <option key={doc.id} value={doc.id}>
+                        {doc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    Fleet Shell Payload / Rolling Annotation Command
+                  </label>
+                  <input
+                    type="text"
+                    value={ssmCustomCommand}
+                    onChange={(e) => setSsmCustomCommand(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <div>
+                  <div className="text-[11px] font-mono font-bold text-zinc-500 mb-1.5">
+                    Select Target Compute VMs &amp; Cloud Run Services (
+                    {selectedSsmTargets.length} selected)
+                  </div>
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    {(ssmFleet.targets || []).length === 0 ? (
+                      <div className="text-xs font-mono text-zinc-500 p-2">
+                        No Compute VMs or Cloud Run services found in project.
+                      </div>
+                    ) : (
+                      (ssmFleet.targets || []).map((t) => {
+                        const checked = selectedSsmTargets.includes(t.id);
+                        return (
+                          <label
+                            key={t.id}
+                            className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800/70 text-xs font-mono cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSsmTarget(t.id)}
+                              />
+                              <span className="font-bold">{t.name}</span>
+                              <span className="text-[10px] text-zinc-500">
+                                ({t.type} · {t.location})
+                              </span>
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500">
+                              {t.status}
+                            </span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={
+                    actionBusy === 'SSM_EXEC' ||
+                    selectedSsmTargets.length === 0
+                  }
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'SSM_EXEC'
+                      ? 'Dispatching Fleet Run Command...'
+                      : `Execute SSM Document Across ${selectedSsmTargets.length} Target(s)`}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="lg:col-span-6 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-500" />
+                <span>Fleet Execution Telemetry &amp; Exit-Code Receipts</span>
+              </h3>
+
+              {(ssmFleet.recentExecutions || []).length === 0 ? (
+                <div className="p-6 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500 text-center">
+                  No SSM Fleet executions recorded yet in this session. Select
+                  targets on the left and click Execute.
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                  {(ssmFleet.recentExecutions || []).map((exec) => (
+                    <div
+                      key={exec.executionId}
+                      className="p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 font-mono text-xs space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-blue-400">
+                          {exec.documentId} ({exec.executionId})
+                        </span>
+                        <span className="text-[10px] text-zinc-400">
+                          {exec.targetCount} target(s)
+                        </span>
+                      </div>
+                      {(exec.results || []).map((r, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 rounded bg-zinc-900 border border-zinc-800 space-y-1 text-[11px]"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-emerald-400">
+                              {r.targetName}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">
+                              {r.status} (exit={r.exitCode})
+                            </span>
+                          </div>
+                          <div className="text-zinc-300 break-all">
+                            {r.stdout}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 9: AWS EVENTBRIDGE PIPES / AZURE LOGIC APPS EVENT ROUTER
+         ===================================================================== */}
+      {activeSubTab === 'EVENTBRIDGE_PIPES' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-5 space-y-4">
+            <form
+              onSubmit={handleProvisionEventPipe}
+              className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
+            >
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <GitBranch className="w-4 h-4 text-amber-500" />
+                  <span>
+                    Create AWS EventBridge Pipe + Dead-Letter Queue (DLQ)
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Connect GCS Bucket events, Pub/Sub topics, or BigQuery inserts
+                  directly to Cloud Run with JSON filtering, payload
+                  transformation, and automatic `-dlq` Pub/Sub provisioning.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    Pipe Identifier
+                  </label>
+                  <input
+                    type="text"
+                    value={newPipeId}
+                    onChange={(e) => setNewPipeId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                      1. Source Trigger Type
+                    </label>
+                    <select
+                      value={newPipeSourceType}
+                      onChange={(e) => setNewPipeSourceType(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    >
+                      <option value="GCS_BUCKET_FINALIZE">
+                        GCS Object Finalize
+                      </option>
+                      <option value="PUBSUB_TOPIC_STREAM">
+                        Cloud Pub/Sub Topic
+                      </option>
+                      <option value="BIGQUERY_TABLE_INSERT">
+                        BigQuery Table Insert
+                      </option>
+                      <option value="CLOUD_AUDIT_LOG">
+                        Cloud Audit Log Event
+                      </option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                      Source Resource URI
+                    </label>
+                    <input
+                      type="text"
+                      value={newPipeSourceRes}
+                      onChange={(e) => setNewPipeSourceRes(e.target.value)}
+                      placeholder={`gs://${projectId}-ingest`}
+                      className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    2. Event Filter Rule (JSON Pattern)
+                  </label>
+                  <input
+                    type="text"
+                    value={newPipeFilter}
+                    onChange={(e) => setNewPipeFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    3. Payload Input Transformer
+                  </label>
+                  <input
+                    type="text"
+                    value={newPipeTransform}
+                    onChange={(e) => setNewPipeTransform(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                      4. Target Consumer Type
+                    </label>
+                    <select
+                      value={newPipeTargetType}
+                      onChange={(e) => setNewPipeTargetType(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    >
+                      <option value="CLOUD_RUN_SERVICE">
+                        Cloud Run HTTPS Service
+                      </option>
+                      <option value="CLOUD_FUNCTION_GEN2">
+                        Cloud Function Gen2
+                      </option>
+                      <option value="BIGQUERY_STREAMING">
+                        BigQuery Streaming Sink
+                      </option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                      Target Consumer Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newPipeTargetRes}
+                      onChange={(e) => setNewPipeTargetRes(e.target.value)}
+                      placeholder="cloudpulse-worker"
+                      className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={actionBusy === 'PIPE_CREATE' || !newPipeId.trim()}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-amber-600 hover:bg-amber-500 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'PIPE_CREATE'
+                      ? 'Provisioning Pipe + Pub/Sub DLQ...'
+                      : '1-Click Provision EventBridge Pipe + DLQ Topic'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <GitBranch className="w-4 h-4 text-amber-500" />
+                <span>
+                  Active Point-to-Point EventBridge Pipes ({eventPipes.length})
+                </span>
+              </h3>
+
+              <div className="space-y-3">
+                {eventPipes.map((p) => (
+                  <div
+                    key={p.pipeId}
+                    className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-2.5 font-mono text-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-zinc-950 dark:text-zinc-50">
+                          {p.pipeId}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                          {p.status} · {p.eventsRoutedCount || 0} Events Routed
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={actionBusy === `TEST_PIPE_${p.pipeId}`}
+                          onClick={() => handleTestEventPipe(p.pipeId)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold cursor-pointer"
+                        >
+                          <Play className="w-3 h-3" />
+                          <span>Send Test Event</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEventPipe(p.pipeId)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-500 text-[11px] font-bold cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                      <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-[10px] text-zinc-400">
+                          1. SOURCE
+                        </div>
+                        <div className="font-bold truncate">
+                          {p.sourceType}: {p.sourceResource}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-[10px] text-zinc-400">
+                          2. FILTER &amp; TRANSFORM
+                        </div>
+                        <div className="truncate text-amber-500">
+                          {p.filterPattern}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-[10px] text-zinc-400">
+                          3. TARGET + DLQ
+                        </div>
+                        <div className="font-bold text-emerald-500 truncate">
+                          {p.targetResource} (DLQ: {p.pipeId}-dlq)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 10: AWS SECRETS MANAGER / AZURE KEY VAULT AUTO-ROTATION & SYNC
+         ===================================================================== */}
+      {activeSubTab === 'KEYVAULT_ROTATION' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-rose-500" />
+                  <span>
+                    1-Click Secret Rotation &amp; Schedule Provisioner
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Create or rotate a Google Cloud Secret Manager secret (`addVersion`),
+                  arm an automated rotation interval, and sync across `dev`,
+                  `staging`, and `prod`.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    Secret ID (`secretmanager.googleapis.com/v1`)
+                  </label>
+                  <input
+                    type="text"
+                    value={rotateSecretName}
+                    onChange={(e) => setRotateSecretName(e.target.value)}
+                    placeholder="PROD_DATABASE_URL"
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    Auto-Rotation Interval (Days)
+                  </label>
+                  <select
+                    value={rotateDays}
+                    onChange={(e) => setRotateDays(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value={7}>Every 7 Days (High-Security Zero-Trust)</option>
+                    <option value={30}>Every 30 Days (SOC2 / PCI-DSS Standard)</option>
+                    <option value={90}>Every 90 Days (Quarterly Rotation)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono font-bold text-zinc-500 mb-1">
+                    New Secret Value (Leave blank to auto-generate 256-bit
+                    token)
+                  </label>
+                  <input
+                    type="password"
+                    value={rotateCustomPayload}
+                    onChange={(e) => setRotateCustomPayload(e.target.value)}
+                    placeholder="Auto-generate cryptographic secret version..."
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={
+                    actionBusy === `ROTATE_${rotateSecretName}` ||
+                    !rotateSecretName.trim()
+                  }
+                  onClick={() => handleRotateSecretNow(rotateSecretName)}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-rose-600 hover:bg-rose-500 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === `ROTATE_${rotateSecretName}`
+                      ? 'Rotating Secret Version in GCP...'
+                      : '1-Click Rotate Secret Now & Arm Schedule'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-rose-500" />
+                <span>
+                  Live Key Vault / Secret Manager Inventory &amp; Cross-Env Sync
+                  ({keyVaultSecrets.length})
+                </span>
+              </h3>
+
+              {keyVaultSecrets.length === 0 ? (
+                <div className="p-6 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500 text-center">
+                  No secrets found in Secret Manager yet. Use the form on the
+                  left to provision and rotate your first secret.
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                  {keyVaultSecrets.map((sec) => (
+                    <div
+                      key={sec.name}
+                      className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-zinc-950 dark:text-zinc-50">
+                            {sec.name}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-300 text-[10px] font-bold">
+                            Every {sec.rotationPeriodDays}d
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                            Envs: {(sec.syncedEnvs || [sec.environment]).join(', ')}
+                          </span>
+                        </div>
+                        <div className="text-[10.5px] text-zinc-500">
+                          Replication: {sec.replicationType} · Last Rotated:{' '}
+                          {sec.lastRotatedAt
+                            ? new Date(sec.lastRotatedAt).toLocaleDateString()
+                            : 'Active'}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={actionBusy === `ROTATE_${sec.name}`}
+                          onClick={() => handleRotateSecretNow(sec.name)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>Rotate Now</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionBusy === `SYNC_${sec.name}`}
+                          onClick={() => handleSyncSecretEnvs(sec.name)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+                        >
+                          <Layers className="w-3 h-3" />
+                          <span>Sync Dev/Stage/Prod</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
