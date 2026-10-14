@@ -30,6 +30,11 @@ import {
   KeyRound,
   Code2,
   RotateCcw,
+  Award,
+  Network,
+  Boxes,
+  Radar,
+  Workflow,
 } from 'lucide-react';
 
 export default function AwsAzureEnvySuiteStudio({
@@ -129,6 +134,46 @@ export default function AwsAzureEnvySuiteStudio({
   const [rotateSecretName, setRotateSecretName] = useState('PROD_DATABASE_URL');
   const [rotateDays, setRotateDays] = useState(30);
   const [rotateCustomPayload, setRotateCustomPayload] = useState('');
+
+  // Module 11: AWS Trusted Advisor / Azure Advisor 5-Pillar Scorer state
+  const [advisorReceipt, setAdvisorReceipt] = useState(null);
+
+  // Module 12: AWS Transit Gateway / Azure Virtual WAN Hub-and-Spoke Mesh state
+  const [tgwHubVpc, setTgwHubVpc] = useState('default');
+  const [tgwSpokeVpc, setTgwSpokeVpc] = useState('vpc-analytics-spoke');
+  const [tgwRegion, setTgwRegion] = useState('us-central1');
+  const [tgwEnableNat, setTgwEnableNat] = useState(true);
+  const [tgwEnablePga, setTgwEnablePga] = useState(true);
+  const [tgwReceipt, setTgwReceipt] = useState(null);
+
+  // Module 13: AWS ECS Task Definitions / Azure Container Apps Sidecar Compose state
+  const [composeAppName, setComposeAppName] = useState('checkout-sidecar-stack');
+  const [composeRegion, setComposeRegion] = useState('us-central1');
+  const [composeIngressImage, setComposeIngressImage] = useState(
+    'us-docker.pkg.dev/cloudrun/container/hello:latest'
+  );
+  const [composeIngressPort, setComposeIngressPort] = useState(8080);
+  const [composeEnableOtel, setComposeEnableOtel] = useState(true);
+  const [composeEnableRedis, setComposeEnableRedis] = useState(true);
+  const [composeReceipt, setComposeReceipt] = useState(null);
+
+  // Module 14: AWS GuardDuty / Microsoft Sentinel SOAR Playbook state
+  const [soarReceipt, setSoarReceipt] = useState(null);
+
+  // Module 15: AWS Step Functions / Azure Durable Functions Saga Studio state
+  const [sfnWorkflowName, setSfnWorkflowName] = useState(
+    'saga-order-fulfillment-v2'
+  );
+  const [sfnRegion, setSfnRegion] = useState('us-central1');
+  const [sfnMaxRetries, setSfnMaxRetries] = useState(3);
+  const [sfnBackoffMultiplier, setSfnBackoffMultiplier] = useState(2.0);
+  const [sfnStepsText, setSfnStepsText] = useState(
+    'ReserveInventory -> ChargePaymentGateway -> EmitShippingEvent'
+  );
+  const [sfnCompensationStep, setSfnCompensationStep] = useState(
+    'RefundPaymentAndReleaseStock'
+  );
+  const [sfnReceipt, setSfnReceipt] = useState(null);
 
   const fetchOverview = useCallback(async () => {
     if (!projectId) return;
@@ -797,6 +842,197 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
+  // Module 11 handlers: AWS Trusted Advisor / Azure Advisor 5-Pillar Scorer
+  const handleRemediateAdvisorFinding = async (findingId) => {
+    setActionBusy(`ADVISOR_${findingId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'REMEDIATE_ADVISOR_FINDING',
+          findingId,
+        }
+      );
+      setAdvisorReceipt(res.data);
+      onShowToast?.(res.data?.message || 'Remediated Advisor finding.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to remediate Advisor finding.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 12 handlers: AWS Transit Gateway / Azure Virtual WAN Hub-and-Spoke Mesh
+  const handleProvisionTransitHubMesh = async (e) => {
+    e?.preventDefault();
+    setActionBusy('TGW_MESH');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'PROVISION_TRANSIT_HUB_MESH',
+          hubVpc: tgwHubVpc.trim() || 'default',
+          spokeVpc: tgwSpokeVpc.trim() || 'vpc-analytics-spoke',
+          region: tgwRegion.trim() || 'us-central1',
+          enableCloudNat: tgwEnableNat,
+          enablePrivateGoogleAccess: tgwEnablePga,
+        }
+      );
+      setTgwReceipt(res.data);
+      onShowToast?.(
+        res.data?.message || 'Provisioned Transit Gateway Hub-and-Spoke Mesh.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to provision Transit Gateway Hub Mesh.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 13 handlers: AWS ECS Task Definitions / Azure Container Apps Sidecar Compose
+  const handleDeployMultiContainerApp = async (e) => {
+    e?.preventDefault();
+    if (!composeAppName.trim()) return;
+    setActionBusy('COMPOSE_DEPLOY');
+    try {
+      const containers = [
+        {
+          name: 'app-ingress',
+          role: 'INGRESS',
+          image:
+            composeIngressImage.trim() ||
+            'us-docker.pkg.dev/cloudrun/container/hello:latest',
+          port: Number(composeIngressPort || 8080),
+          cpu: '1000m',
+          memory: '512Mi',
+        },
+      ];
+      if (composeEnableOtel) {
+        containers.push({
+          name: 'otel-collector-sidecar',
+          role: 'SIDECAR',
+          image: 'otel/opentelemetry-collector-contrib:latest',
+          port: null,
+          cpu: '250m',
+          memory: '256Mi',
+        });
+      }
+      if (composeEnableRedis) {
+        containers.push({
+          name: 'redis-local-cache-sidecar',
+          role: 'SIDECAR',
+          image: 'redis:7-alpine',
+          port: null,
+          cpu: '250m',
+          memory: '256Mi',
+        });
+      }
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'DEPLOY_MULTICONTAINER_APP',
+          appName: composeAppName.trim(),
+          region: composeRegion.trim() || 'us-central1',
+          containers,
+          sharedVolumeName: 'shared-memory-ipc',
+          sharedMountPath: '/var/run/shared',
+        }
+      );
+      setComposeReceipt(res.data);
+      onShowToast?.(
+        res.data?.message || 'Compiled & deployed Multi-Container Sidecar spec.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to deploy Multi-Container Sidecar App.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 14 handlers: AWS GuardDuty / Microsoft Sentinel SOAR Playbook
+  const handleExecuteSoarPlaybook = async (finding) => {
+    setActionBusy(`SOAR_${finding.id}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'EXECUTE_SOAR_PLAYBOOK',
+          findingId: finding.id,
+          playbookAction: finding.soarPlaybook,
+          targetResource: finding.resource,
+        }
+      );
+      setSoarReceipt(res.data);
+      onShowToast?.(res.data?.message || 'Executed SOAR Quarantine Playbook.');
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to execute SOAR Playbook.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Module 15 handlers: AWS Step Functions / Azure Durable Functions Saga Studio
+  const handleDeployStepFunctionWorkflow = async (e) => {
+    e?.preventDefault();
+    if (!sfnWorkflowName.trim()) return;
+    setActionBusy('SFN_DEPLOY');
+    try {
+      const parsedSteps = sfnStepsText
+        .split('->')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'DEPLOY_STEP_FUNCTION_WORKFLOW',
+          workflowName: sfnWorkflowName.trim(),
+          region: sfnRegion.trim() || 'us-central1',
+          steps:
+            parsedSteps.length > 0
+              ? parsedSteps
+              : ['ValidateOrder', 'ChargeCard', 'DispatchFulfillment'],
+          maxRetries: Number(sfnMaxRetries || 3),
+          backoffMultiplier: Number(sfnBackoffMultiplier || 2.0),
+          compensationStep:
+            sfnCompensationStep.trim() || 'CompensateAndRollbackOrder',
+        }
+      );
+      setSfnReceipt(res.data);
+      onShowToast?.(
+        res.data?.message || 'Compiled & deployed Step Functions Saga Workflow.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to deploy Step Functions Workflow.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
   const copyText = (txt, label = 'Copied to clipboard.') => {
     navigator.clipboard?.writeText(txt);
     onShowToast?.(label);
@@ -812,6 +1048,23 @@ export default function AwsAzureEnvySuiteStudio({
   const ssmFleet = data?.ssmFleet || { targets: [], documents: [], recentExecutions: [] };
   const eventPipes = data?.eventPipes || [];
   const keyVaultSecrets = data?.keyVaultStudio?.secrets || [];
+  const trustedAdvisor = data?.trustedAdvisor || {
+    overallScore: 92,
+    pillars: [],
+    findings: [],
+  };
+  const transitGateway = data?.transitGateway || {
+    vpcs: [],
+    spokes: [],
+    activePeeringsCount: 0,
+  };
+  const containerCompose = data?.containerCompose || { apps: [] };
+  const guardDutySoar = data?.guardDutySoar || {
+    activeThreatsCount: 0,
+    quarantinedCount: 0,
+    findings: [],
+  };
+  const stepFunctions = data?.stepFunctions || { workflows: [] };
   const cloudRunServices = unifiedResources.filter(
     (r) => r.type === 'CLOUD_RUN'
   );
@@ -850,14 +1103,14 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
               <Sparkles className="w-3.5 h-3.5" />
               <span>
-                INNOVATION #39 + #40 · 10-IN-1 AWS &amp; AZURE ENTERPRISE PARITY SUITE FOR GOOGLE CLOUD
+                INNOVATION #39 + #40 + #41 · 15-IN-1 AWS &amp; AZURE ENTERPRISE PARITY SUITE FOR GOOGLE CLOUD
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              AWS &amp; Azure Parity Super-Studio for Google Cloud (Wave 1 &amp; Wave 2 Scale)
+              AWS &amp; Azure Parity Super-Studio for Google Cloud (Wave 1, Wave 2 &amp; Wave 3 Full-Scale)
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              The 10 iconic enterprise cloud workflows engineers rely on in{' '}
+              The 15 iconic enterprise cloud workflows engineers rely on in{' '}
               <strong>Microsoft Azure</strong> and <strong>Amazon Web Services</strong>{' '}
               brought natively to Google Cloud: <strong>Azure Resource Groups</strong>,{' '}
               <strong>Hard-Spend Stop-Loss Fuses</strong>,{' '}
@@ -867,8 +1120,13 @@ export default function AwsAzureEnvySuiteStudio({
               <strong>CloudFormation/ARM Stack Drift &amp; Rollback</strong>,{' '}
               <strong>Cost Explorer + CUD Savings Plans</strong>,{' '}
               <strong>AWS SSM Fleet Run Command</strong>,{' '}
-              <strong>EventBridge Pipes / Logic Apps Router</strong>, and{' '}
-              <strong>Key Vault / Secrets Auto-Rotation &amp; Cross-Env Sync</strong>.
+              <strong>EventBridge Pipes / Logic Apps Router</strong>,{' '}
+              <strong>Key Vault Auto-Rotation &amp; Sync</strong>,{' '}
+              <strong>Trusted Advisor 5-Pillar Scorer</strong>,{' '}
+              <strong>Transit Gateway / Virtual WAN VPC Mesh</strong>,{' '}
+              <strong>ECS/ACA Multi-Container Sidecar Compose</strong>,{' '}
+              <strong>GuardDuty / Sentinel SOAR Playbooks</strong>, and{' '}
+              <strong>Step Functions / Durable Saga Studio</strong>.
             </p>
           </div>
 
@@ -885,7 +1143,7 @@ export default function AwsAzureEnvySuiteStudio({
           </button>
         </div>
 
-        {/* 10 Sub-Studio Navigation Pills */}
+        {/* 15 Sub-Studio Navigation Pills */}
         <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
           {[
             {
@@ -947,6 +1205,36 @@ export default function AwsAzureEnvySuiteStudio({
               label: '10. Key Vault Auto-Rotation & Sync',
               badge: `${keyVaultSecrets.length} Secrets`,
               icon: KeyRound,
+            },
+            {
+              id: 'TRUSTED_ADVISOR',
+              label: '11. Trusted Advisor 5-Pillar',
+              badge: `${trustedAdvisor.overallScore || 92}% Score`,
+              icon: Award,
+            },
+            {
+              id: 'TRANSIT_GATEWAY',
+              label: '12. Transit Gateway VPC Mesh',
+              badge: `${transitGateway.spokes?.length || 0} Spokes`,
+              icon: Network,
+            },
+            {
+              id: 'CONTAINER_COMPOSE',
+              label: '13. ECS/ACA Sidecar Compose',
+              badge: `${containerCompose.apps?.length || 0} Stacks`,
+              icon: Boxes,
+            },
+            {
+              id: 'GUARDDUTY_SOAR',
+              label: '14. GuardDuty/Sentinel SOAR',
+              badge: `${guardDutySoar.activeThreatsCount || 0} Active`,
+              icon: Radar,
+            },
+            {
+              id: 'STEP_FUNCTIONS',
+              label: '15. Step Functions Saga Studio',
+              badge: `${stepFunctions.workflows?.length || 0} State Machines`,
+              icon: Workflow,
             },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -3007,6 +3295,811 @@ export default function AwsAzureEnvySuiteStudio({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 11: AWS TRUSTED ADVISOR / AZURE ADVISOR 5-PILLAR SCORER
+         ===================================================================== */}
+      {activeSubTab === 'TRUSTED_ADVISOR' && (
+        <div className="space-y-6">
+          {/* 5-Pillar Executive Scorecard */}
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-500" />
+                  <span>
+                    AWS Trusted Advisor / Azure Advisor 5-Pillar Well-Architected
+                    Live Scorer
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Instead of hunting through scattered GCP Recommender APIs,
+                  audit your entire project across all 5 Well-Architected
+                  pillars and execute 1-Click Auto-Remediation.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 font-mono">
+                <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                  Composite Well-Architected Score:
+                </span>
+                <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400">
+                  {trustedAdvisor.overallScore || 92}/100
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {(trustedAdvisor.pillars || []).map((p) => (
+                <div
+                  key={p.id}
+                  className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-2 font-mono"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      {p.label}
+                    </span>
+                    <span
+                      className={`font-extrabold ${
+                        p.score >= 90
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-amber-600 dark:text-amber-400'
+                      }`}
+                    >
+                      {p.score}%
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        p.score >= 90 ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                      style={{ width: `${Math.min(100, p.score)}%` }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-zinc-500">
+                    {p.openCount === 0
+                      ? 'All checks passing'
+                      : `${p.openCount} actionable finding(s)`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Actionable Findings Table */}
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+            <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <span>
+                Live Cross-Pillar Advisor Findings &amp; 1-Click Auto-Fixer (
+                {(trustedAdvisor.findings || []).length})
+              </span>
+            </h3>
+
+            <div className="space-y-3">
+              {(trustedAdvisor.findings || []).map((f) => {
+                const isFixed = f.status === 'REMEDIATED';
+                return (
+                  <div
+                    key={f.id}
+                    className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-4 text-xs font-mono"
+                  >
+                    <div className="space-y-1 max-w-3xl">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
+                          {f.pillar}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            isFixed
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : f.severity === 'HIGH'
+                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {isFixed ? 'REMEDIATED' : f.severity}
+                        </span>
+                        <span className="font-extrabold text-zinc-950 dark:text-zinc-100">
+                          {f.title}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                        Resource: <code>{f.resource}</code> — {f.impact}
+                      </p>
+                      <div className="text-[10.5px] text-zinc-500">
+                        CLI Equivalent: <code>{f.cliCommand}</code>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(f.cliCommand, 'Copied Advisor CLI command.')
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Copy CLI</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          isFixed || actionBusy === `ADVISOR_${f.id}`
+                        }
+                        onClick={() => handleRemediateAdvisorFinding(f.id)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>
+                          {isFixed
+                            ? 'Remediated'
+                            : actionBusy === `ADVISOR_${f.id}`
+                              ? 'Applying Fix...'
+                              : '1-Click Auto-Fix'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {advisorReceipt && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-700 dark:text-emerald-300">
+                <strong>Advisor Auto-Remediation Receipt:</strong>{' '}
+                {advisorReceipt.message} ({advisorReceipt.remediatedAt})
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 12: AWS TRANSIT GATEWAY / AZURE VIRTUAL WAN VPC MESH BUILDER
+         ===================================================================== */}
+      {activeSubTab === 'TRANSIT_GATEWAY' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-5 space-y-4">
+            <form
+              onSubmit={handleProvisionTransitHubMesh}
+              className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
+            >
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <Network className="w-4 h-4 text-sky-500" />
+                  <span>
+                    AWS Transit Gateway / Azure Virtual WAN Hub-and-Spoke Mesh
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Attach spoke VPCs to a central Hub VPC with bi-directional
+                  peering, custom route export, Cloud Router + Cloud NAT
+                  egress, and Private Google Access in 1 click.
+                </p>
+              </div>
+
+              <div className="space-y-3 text-xs font-mono">
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                    Transit Hub VPC Network
+                  </label>
+                  <select
+                    value={tgwHubVpc}
+                    onChange={(e) => setTgwHubVpc(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    {(transitGateway.vpcs || []).map((v) => (
+                      <option key={v.name} value={v.name}>
+                        {v.name} ({v.routingMode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Spoke VPC Name
+                    </label>
+                    <input
+                      type="text"
+                      value={tgwSpokeVpc}
+                      onChange={(e) => setTgwSpokeVpc(e.target.value)}
+                      placeholder="vpc-analytics-spoke"
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Cloud Router / NAT Region
+                    </label>
+                    <input
+                      type="text"
+                      value={tgwRegion}
+                      onChange={(e) => setTgwRegion(e.target.value)}
+                      placeholder="us-central1"
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={tgwEnableNat}
+                    onChange={(e) => setTgwEnableNat(e.target.checked)}
+                  />
+                  <span>
+                    Provision Regional Cloud Router + Auto-Allocated Cloud NAT
+                    Gateway
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={tgwEnablePga}
+                    onChange={(e) => setTgwEnablePga(e.target.checked)}
+                  />
+                  <span>
+                    Enable Private Google Access (Zero-Public-IP APIs &amp; GCR)
+                  </span>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={actionBusy === 'TGW_MESH'}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-sky-600 hover:bg-sky-500 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <Network className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'TGW_MESH'
+                      ? 'Synthesizing Hub-and-Spoke VPC Mesh...'
+                      : '1-Click Attach Spoke VPC & Provision Cloud NAT Mesh'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-sky-500" />
+                <span>
+                  Active Transit Gateway / Virtual WAN Spoke Attachments (
+                  {(transitGateway.spokes || []).length})
+                </span>
+              </h3>
+
+              <div className="space-y-2.5">
+                {(transitGateway.spokes || []).map((sp) => (
+                  <div
+                    key={sp.id}
+                    className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-zinc-950 dark:text-zinc-100">
+                          Hub: {sp.hubVpc}
+                        </span>
+                        <span className="text-zinc-400">&lt;--&gt;</span>
+                        <span className="font-extrabold text-sky-600 dark:text-sky-400">
+                          Spoke: {sp.spokeVpc}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                          {sp.peeringState}
+                        </span>
+                      </div>
+                      <div className="text-[10.5px] text-zinc-500">
+                        Region: {sp.region} · Cloud NAT:{' '}
+                        {sp.enableCloudNat ? 'ENABLED' : 'OFF'} · Private Google
+                        Access: {sp.enablePrivateGoogleAccess ? 'ON' : 'OFF'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {tgwReceipt?.cliScript && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="font-bold text-zinc-700 dark:text-zinc-300">
+                      Generated 5-Step Hub-and-Spoke + Cloud NAT Automation
+                      Bundle:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          tgwReceipt.cliScript,
+                          'Copied Transit Gateway CLI bundle.'
+                        )
+                      }
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-[11px] font-bold cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copy Script</span>
+                    </button>
+                  </div>
+                  <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-300 text-[11px] font-mono overflow-x-auto">
+                    {tgwReceipt.cliScript}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 13: AWS ECS TASK DEFINITIONS / AZURE CONTAINER APPS SIDECAR COMPOSE
+         ===================================================================== */}
+      {activeSubTab === 'CONTAINER_COMPOSE' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-5 space-y-4">
+            <form
+              onSubmit={handleDeployMultiContainerApp}
+              className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
+            >
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <Boxes className="w-4 h-4 text-violet-500" />
+                  <span>
+                    AWS ECS Task Definition / Azure Container Apps Sidecar
+                    Compose
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Visually compose multi-container Cloud Run Gen2 deployments
+                  with Primary Ingress + OpenTelemetry Collector + Local Redis
+                  Sidecar sharing an in-memory volume.
+                </p>
+              </div>
+
+              <div className="space-y-3 text-xs font-mono">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Multi-Container Service Name
+                    </label>
+                    <input
+                      type="text"
+                      value={composeAppName}
+                      onChange={(e) => setComposeAppName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Target Region
+                    </label>
+                    <input
+                      type="text"
+                      value={composeRegion}
+                      onChange={(e) => setComposeRegion(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-2">
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Primary Ingress Container Image
+                    </label>
+                    <input
+                      type="text"
+                      value={composeIngressImage}
+                      onChange={(e) => setComposeIngressImage(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Ingress Port
+                    </label>
+                    <input
+                      type="number"
+                      value={composeIngressPort}
+                      onChange={(e) =>
+                        setComposeIngressPort(Number(e.target.value))
+                      }
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={composeEnableOtel}
+                    onChange={(e) => setComposeEnableOtel(e.target.checked)}
+                  />
+                  <span>
+                    Attach Sidecar #1: OpenTelemetry Collector (
+                    <code>otel/opentelemetry-collector-contrib</code>)
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={composeEnableRedis}
+                    onChange={(e) => setComposeEnableRedis(e.target.checked)}
+                  />
+                  <span>
+                    Attach Sidecar #2: Local Sub-Millisecond Redis Cache (
+                    <code>redis:7-alpine</code>)
+                  </span>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={actionBusy === 'COMPOSE_DEPLOY'}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-violet-600 hover:bg-violet-500 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <Rocket className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'COMPOSE_DEPLOY'
+                      ? 'Compiling Cloud Run Gen2 Multi-Container YAML...'
+                      : '1-Click Compile & Deploy Multi-Container Sidecar Stack'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <Code2 className="w-4 h-4 text-violet-500" />
+                <span>
+                  Active Multi-Container Gen2 Sidecar Stacks (
+                  {(containerCompose.apps || []).length})
+                </span>
+              </h3>
+
+              <div className="space-y-3">
+                {(containerCompose.apps || []).map((app) => (
+                  <div
+                    key={app.appName}
+                    className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-extrabold text-zinc-950 dark:text-zinc-100">
+                        {app.appName} ({app.region})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-300 text-[10px] font-bold">
+                        {(app.containers || []).length} Containers · Shared Vol:{' '}
+                        {app.sharedMountPath}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(app.containers || []).map((c) => (
+                        <span
+                          key={c.name}
+                          className="px-2 py-1 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[10.5px]"
+                        >
+                          <strong>{c.role}:</strong> {c.name} ({c.image})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {composeReceipt?.knativeYaml && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="font-bold text-zinc-700 dark:text-zinc-300">
+                      Compiled Knative Gen2 Multi-Container YAML (
+                      <code>gcloud run services replace</code>):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          composeReceipt.knativeYaml,
+                          'Copied Multi-Container Knative YAML.'
+                        )
+                      }
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-[11px] font-bold cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copy YAML</span>
+                    </button>
+                  </div>
+                  <pre className="p-3 rounded-xl bg-zinc-950 text-violet-300 text-[11px] font-mono overflow-x-auto max-h-64">
+                    {composeReceipt.knativeYaml}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 14: AWS GUARDDUTY / MICROSOFT SENTINEL SOAR PLAYBOOKS
+         ===================================================================== */}
+      {activeSubTab === 'GUARDDUTY_SOAR' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <Radar className="w-4 h-4 text-rose-500" />
+                  <span>
+                    AWS GuardDuty / Microsoft Sentinel Live Threat Hunting &amp;
+                    1-Click SOAR Quarantine
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Synthesize live VPC Firewall, GCS Public ACL, and IAM Admin
+                  threat signals with 1-Click SOAR Quarantine Playbooks (Isolate
+                  VM, Lock Bucket ACL, Disable Compromised SA Keys).
+                </p>
+              </div>
+              <div className="flex items-center gap-2 font-mono text-xs">
+                <span className="px-3 py-1.5 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold">
+                  Active Threats: {guardDutySoar.activeThreatsCount || 0}
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                  Quarantined: {guardDutySoar.quarantinedCount || 0}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {(guardDutySoar.findings || []).map((th) => {
+                const isQuarantined = th.status === 'QUARANTINED';
+                return (
+                  <div
+                    key={th.id}
+                    className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 flex flex-wrap items-center justify-between gap-4 text-xs font-mono"
+                  >
+                    <div className="space-y-1 max-w-3xl">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            isQuarantined
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : th.severity === 'CRITICAL'
+                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {isQuarantined ? 'QUARANTINED' : th.severity}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px] font-bold">
+                          {th.detector}
+                        </span>
+                        <span className="font-extrabold text-zinc-950 dark:text-zinc-100">
+                          {th.title}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                        Target: <code>{th.resource}</code> — {th.description}
+                      </p>
+                      <div className="text-[10.5px] text-zinc-500">
+                        SOAR Playbook: <code>{th.soarPlaybook}</code> ·{' '}
+                        <code>{th.cliCommand}</code>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={
+                          isQuarantined || actionBusy === `SOAR_${th.id}`
+                        }
+                        onClick={() => handleExecuteSoarPlaybook(th)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>
+                          {isQuarantined
+                            ? 'Playbook Executed (Quarantined)'
+                            : actionBusy === `SOAR_${th.id}`
+                              ? 'Executing SOAR Playbook...'
+                              : `Execute SOAR: ${th.soarPlaybook}`}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {soarReceipt && (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs font-mono text-rose-700 dark:text-rose-300">
+                <strong>SOAR Playbook Execution Audit:</strong>{' '}
+                {soarReceipt.message} — CLI: <code>{soarReceipt.cliCommand}</code>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODULE 15: AWS STEP FUNCTIONS / AZURE DURABLE FUNCTIONS SAGA STUDIO
+         ===================================================================== */}
+      {activeSubTab === 'STEP_FUNCTIONS' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-5 space-y-4">
+            <form
+              onSubmit={handleDeployStepFunctionWorkflow}
+              className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4"
+            >
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <Workflow className="w-4 h-4 text-emerald-500" />
+                  <span>
+                    AWS Step Functions / Azure Durable Functions Saga Studio
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Design visual Saga state machines with automatic exponential
+                  backoff retry policies and Rollback Compensation handlers,
+                  compiled directly into Google Cloud Workflows YAML.
+                </p>
+              </div>
+
+              <div className="space-y-3 text-xs font-mono">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      State Machine Name
+                    </label>
+                    <input
+                      type="text"
+                      value={sfnWorkflowName}
+                      onChange={(e) => setSfnWorkflowName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Workflow Region
+                    </label>
+                    <input
+                      type="text"
+                      value={sfnRegion}
+                      onChange={(e) => setSfnRegion(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                    Ordered Saga Steps (separated by <code>-&gt;</code>)
+                  </label>
+                  <input
+                    type="text"
+                    value={sfnStepsText}
+                    onChange={(e) => setSfnStepsText(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Max Retries per State
+                    </label>
+                    <input
+                      type="number"
+                      value={sfnMaxRetries}
+                      onChange={(e) =>
+                        setSfnMaxRetries(Number(e.target.value))
+                      }
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Compensation Rollback State
+                    </label>
+                    <input
+                      type="text"
+                      value={sfnCompensationStep}
+                      onChange={(e) => setSfnCompensationStep(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={actionBusy === 'SFN_DEPLOY'}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'SFN_DEPLOY'
+                      ? 'Compiling Saga State Machine to Cloud Workflows YAML...'
+                      : '1-Click Compile & Deploy Saga State Machine'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <Workflow className="w-4 h-4 text-emerald-500" />
+                <span>
+                  Active Step Functions / Cloud Workflows Saga State Machines (
+                  {(stepFunctions.workflows || []).length})
+                </span>
+              </h3>
+
+              <div className="space-y-3">
+                {(stepFunctions.workflows || []).map((wf) => (
+                  <div
+                    key={wf.workflowName}
+                    className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-extrabold text-zinc-950 dark:text-zinc-100">
+                        {wf.workflowName} ({wf.region})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                        Max Retries: {wf.maxRetries}x · Compensation:{' '}
+                        {wf.compensationStep}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                      {(wf.steps || []).map((st, idx) => (
+                        <React.Fragment key={st}>
+                          <span className="px-2 py-1 rounded bg-zinc-200/80 dark:bg-zinc-800 font-bold">
+                            {idx + 1}. {st}
+                          </span>
+                          {idx < (wf.steps || []).length - 1 && (
+                            <span className="text-zinc-400">-&gt;</span>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {sfnReceipt?.workflowYaml && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="font-bold text-zinc-700 dark:text-zinc-300">
+                      Compiled Google Cloud Workflows Saga YAML (with Retry +
+                      Compensation Catch):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyText(
+                          sfnReceipt.workflowYaml,
+                          'Copied Cloud Workflows Saga YAML.'
+                        )
+                      }
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-[11px] font-bold cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copy YAML</span>
+                    </button>
+                  </div>
+                  <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-300 text-[11px] font-mono overflow-x-auto max-h-64">
+                    {sfnReceipt.workflowYaml}
+                  </pre>
                 </div>
               )}
             </div>
