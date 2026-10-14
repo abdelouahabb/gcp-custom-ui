@@ -43,6 +43,8 @@ export default function AwsAzureEnvySuiteStudio({
   cloudFamily = 'AWS_AZURE',
   initialTab = 'RESOURCE_GROUPS',
   onSwitchCloudFamily,
+  onNavigateToGcpTab,
+  onRunInShell,
   onShowToast,
   onShowError,
 }) {
@@ -2186,6 +2188,663 @@ export default function AwsAzureEnvySuiteStudio({
           })}
         </div>
       </div>
+
+      {/* =====================================================================
+          GOOGLE CLOUD UNDER-THE-HOOD ARCHITECTURE & MANUAL VERIFICATION X-RAY
+         ===================================================================== */}
+      {(() => {
+        const pid = projectId || 'my-gcp-project';
+        const GCP_UNDER_THE_HOOD_BLUEPRINTS = {
+          RESOURCE_GROUPS: {
+            sourceFeature: 'Microsoft Azure Resource Groups (RG Spend + RG RBAC + 1-Click Delete RG)',
+            whatGcpCreatesOrMutates:
+              'Applies native Google Cloud `labels.resource_group=<rg-slug>` & `labels.env=<env>` across Compute Engine VMs, Cloud Run v2 Services, Cloud Storage Buckets, BigQuery Datasets, and Secret Manager Secrets; binds CEL-scoped IAM roles (`resource.matchTag` / resource-level IAM) for RG RBAC; and on Delete RG, dispatches real DELETE / STOP calls to each member resource.',
+            gcpServicesInvolved: [
+              { name: 'Compute Engine VMs (Labels & Stop/Delete)', tab: 'VM_SSH' },
+              { name: 'Cloud Run v2 Services (Labels & Delete)', tab: 'CLOUD_RUN' },
+              { name: 'Cloud Storage Buckets', tab: 'STORAGE_GOVERNANCE' },
+              { name: 'BigQuery Datasets', tab: 'BIGQUERY_STUDIO' },
+              { name: 'IAM & Resource Manager Tags', tab: 'SOVEREIGN_STUDIO' },
+            ],
+            apisEnabled: [
+              'compute.googleapis.com',
+              'run.googleapis.com',
+              'storage.googleapis.com',
+              'bigquery.googleapis.com',
+              'cloudresourcemanager.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud asset search-all-resources --scope=projects/${pid} --query="labels.resource_group:*" --format="table(name,assetType,location,labels)"`,
+            consolePath:
+              'GCP Console -> Resource Manager -> Tags & Labels / Asset Inventory (filter by labels.resource_group)',
+            billingNote:
+              '$0.00/mo for GCP resource labels, Asset Inventory queries, and IAM bindings. Deleting a Resource Group immediately stops hourly compute/storage billing for all member resources.',
+          },
+          SPEND_FUSE: {
+            sourceFeature: 'AWS Budgets Actions / Azure VM Auto-Shutdown Hard-Spend Stop-Loss Fuse',
+            whatGcpCreatesOrMutates:
+              'Creates a native Cloud Pub/Sub Topic (`projects/' +
+              pid +
+              '/topics/cloudpulse-hard-spend-fuse`) for budget notifications; patches Cloud Run v2 services (`scaling.maxInstanceCount=3`, `minInstanceCount=0`) at 80% Soft Brake; and calls `instances.stop` on all RUNNING Compute Engine VMs at 95% Compute Park.',
+            gcpServicesInvolved: [
+              { name: 'Cloud Run v2 Autoscaler (min/maxInstances)', tab: 'CLOUD_RUN' },
+              { name: 'Compute Engine VMs (instances.stop)', tab: 'VM_SSH' },
+              { name: 'Cloud Pub/Sub Alert Topic', tab: 'FUNCTIONS_STUDIO' },
+              { name: 'FinOps & Cloud Billing Budgets', tab: 'FINOPS' },
+            ],
+            apisEnabled: [
+              'pubsub.googleapis.com',
+              'run.googleapis.com',
+              'compute.googleapis.com',
+              'billingbudgets.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud pubsub topics list --project=${pid} --filter="name:cloudpulse-hard-spend-fuse" && gcloud run services list --project=${pid} --format="table(metadata.name,spec.template.metadata.annotations['autoscaling.knative.dev/maxScale'])"`,
+            consolePath:
+              'GCP Console -> Pub/Sub -> Topics (cloudpulse-hard-spend-fuse) & Cloud Run -> Service -> Revisions -> Autoscaling',
+            billingNote:
+              '$0.00/mo for Pub/Sub topic (first 10 GB free). Stopping VMs and capping Cloud Run maxInstances prevents runaway compute spend.',
+          },
+          IAM_SIMULATOR: {
+            sourceFeature: 'AWS IAM Policy Simulator & AWS Console "Switch Role" Impersonator',
+            whatGcpCreatesOrMutates:
+              'Reads project IAM policy (`projects:getIamPolicy`), evaluates permissions via `projects:testIamPermissions` against your live credentials, and when you click "1-Click Grant Least-Privilege Role", appends an IAM binding (`projects:setIamPolicy`) on the project for the target member.',
+            gcpServicesInvolved: [
+              { name: 'Cloud IAM Policy & Role Bindings', tab: 'SOVEREIGN_STUDIO' },
+              { name: 'Cloud Audit Logs (SetIamPolicy)', tab: 'LOGS_SHELL' },
+            ],
+            apisEnabled: [
+              'iam.googleapis.com',
+              'cloudresourcemanager.googleapis.com',
+              'iamcredentials.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud projects get-iam-policy ${pid} --format="table(bindings.role,bindings.members)"`,
+            consolePath: 'GCP Console -> IAM & Admin -> IAM (Permissions & Role Bindings)',
+            billingNote: '$0.00/mo — Cloud IAM policies and Policy Simulator evaluations are 100% free on Google Cloud.',
+          },
+          SAS_PRESIGNED: {
+            sourceFeature: 'Azure Storage SAS (Shared Access Signatures) & AWS S3 Presigned URLs',
+            whatGcpCreatesOrMutates:
+              'Uploads objects directly into your Cloud Storage Bucket (`storage.objects.insert` multipart upload) and mints expiring V4 Signed URLs / Zero-SA-Key SAS Bridge tokens backed by OAuth2 / IAM Credentials (`iamcredentials.projects.serviceAccounts.signBlob`).',
+            gcpServicesInvolved: [
+              { name: 'Cloud Storage Buckets & Objects', tab: 'STORAGE_GOVERNANCE' },
+              { name: 'IAM Service Account SignBlob', tab: 'SOVEREIGN_STUDIO' },
+            ],
+            apisEnabled: [
+              'storage.googleapis.com',
+              'iamcredentials.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud storage ls --project=${pid} && gcloud storage buckets list --project=${pid} --format="table(name,location,storageClass,publicAccessPrevention)"`,
+            consolePath: 'GCP Console -> Cloud Storage -> Buckets -> Objects',
+            billingNote:
+              'Standard GCS object storage ($0.020/GB-mo); generating presigned URLs costs $0.00.',
+          },
+          GLOBAL_LB_WIZARD: {
+            sourceFeature: 'AWS ALB + WAF / Azure Application Gateway 1-Screen Wizard',
+            whatGcpCreatesOrMutates:
+              'Collapses 7 Google Cloud networking resources into 1 workflow: (1) Global Static IPv4 Address (`compute.globalAddresses`), (2) Serverless NEG (`compute.regionNetworkEndpointGroups`) pointing to your Cloud Run service, (3) Cloud Armor Security Policy (`compute.securityPolicies`) with OWASP WAF & rate limit, (4) Global Backend Service, (5) URL Map, (6) Google-Managed SSL Certificate (`compute.sslCertificates`), and (7) Global HTTPS Forwarding Rule.',
+            gcpServicesInvolved: [
+              { name: 'VPC Network, Global LB & Cloud Armor', tab: 'VPC_NETWORKS' },
+              { name: 'Cloud Run v2 Target Service', tab: 'CLOUD_RUN' },
+              { name: 'Cloud Armor WAF & Security Perimeter', tab: 'SOVEREIGN_STUDIO' },
+            ],
+            apisEnabled: [
+              'compute.googleapis.com',
+              'run.googleapis.com',
+              'certificatemanager.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud compute forwarding-rules list --global --project=${pid} && gcloud compute security-policies list --project=${pid} && gcloud compute network-endpoint-groups list --project=${pid}`,
+            consolePath:
+              'GCP Console -> Network Services -> Load balancing & Network Security -> Cloud ArmorPolicies',
+            billingNote:
+              'Global Forwarding Rule (~$18/mo base) + Cloud Armor WAF policy ($5/mo per policy + $1/mo per rule) when deployed to GCP.',
+          },
+          CFN_ARM_STACKS: {
+            sourceFeature: 'AWS CloudFormation Stacks & Azure ARM Template Deployments + Drift Detection',
+            whatGcpCreatesOrMutates:
+              'Captures a cryptographic state snapshot of your live Compute Engine VMs, Cloud Run services, GCS Buckets, and BigQuery Datasets; compares live GCP API state against the baseline to flag out-of-band console drift; and exports ready-to-apply Google Cloud Terraform HCL (`google_cloud_run_v2_service`, `google_compute_instance`, `google_storage_bucket`) & Pulumi TypeScript.',
+            gcpServicesInvolved: [
+              { name: 'Cloud Run v2 Services', tab: 'CLOUD_RUN' },
+              { name: 'Compute Engine VMs', tab: 'VM_SSH' },
+              { name: 'Cloud Storage Buckets', tab: 'STORAGE_GOVERNANCE' },
+              { name: 'BigQuery Datasets', tab: 'BIGQUERY_STUDIO' },
+            ],
+            apisEnabled: [
+              'run.googleapis.com',
+              'compute.googleapis.com',
+              'storage.googleapis.com',
+              'bigquery.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud asset search-all-resources --scope=projects/${pid} --format="table(name,assetType,location,state)"`,
+            consolePath: 'GCP Console -> Cloud Asset Inventory -> Resource Search',
+            billingNote: '$0.00/mo — Stack snapshots, live drift comparison, and Terraform HCL / Pulumi export are 100% free.',
+          },
+          COST_EXPLORER_CUD: {
+            sourceFeature: 'AWS Cost Explorer + Savings Plans & Azure Cost Analysis + Reservations',
+            whatGcpCreatesOrMutates:
+              'Inspects live Compute Engine VM machine types, Cloud Run vCPU/RAM allocations, Cloud SQL instances, and GCS storage across your project to compute 14-day daily burn attribution and generates 1-Year (-37%), 3-Year (-55%) Committed Use Discount (CUD) & Spot VM (-68%) conversion commands.',
+            gcpServicesInvolved: [
+              { name: 'FinOps & Cloud Billing Telemetry', tab: 'FINOPS' },
+              { name: 'Compute Engine VMs & Commitments', tab: 'VM_SSH' },
+              { name: 'Cloud Run v2 Fleet', tab: 'CLOUD_RUN' },
+            ],
+            apisEnabled: [
+              'cloudbilling.googleapis.com',
+              'compute.googleapis.com',
+              'run.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud compute commitments list --project=${pid} && gcloud beta billing projects describe ${pid}`,
+            consolePath: 'GCP Console -> Billing -> Cost Table, Reports & Committed Use Discounts (CUDs)',
+            billingNote: '$0.00/mo for Cost Explorer analysis; applying CUDs or Spot VM conversion reduces compute bills by 37% to 68%.',
+          },
+          SSM_FLEET_COMMAND: {
+            sourceFeature: 'AWS Systems Manager (SSM) Run Command & Azure Run Command',
+            whatGcpCreatesOrMutates:
+              'Executes remote shell commands across RUNNING Compute Engine VMs (via OS Config Agent / `gcloud compute ssh --tunnel-through-iap` metadata script execution) and live Cloud Run Gen2 revisions without opening public port 22.',
+            gcpServicesInvolved: [
+              { name: 'Compute Engine VMs & OS Config', tab: 'VM_SSH' },
+              { name: 'Cloud Run v2 Containers', tab: 'CLOUD_RUN' },
+              { name: 'Cloud Logging & Audit Trail', tab: 'LOGS_SHELL' },
+            ],
+            apisEnabled: [
+              'osconfig.googleapis.com',
+              'compute.googleapis.com',
+              'iap.googleapis.com',
+              'run.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud compute instances list --project=${pid} --format="table(name,zone,status,networkInterfaces[0].accessConfigs[0].natIP)"`,
+            consolePath: 'GCP Console -> Compute Engine -> VM instances & OS Patch Management',
+            billingNote: '$0.00/mo for IAP TCP tunneling and remote command dispatch.',
+          },
+          EVENTBRIDGE_PIPES: {
+            sourceFeature: 'AWS EventBridge Pipes & Azure Logic Apps Event Router + DLQ',
+            whatGcpCreatesOrMutates:
+              'Provisions a Google Cloud Pub/Sub Dead-Letter Queue Topic (`projects/' +
+              pid +
+              '/topics/<pipe>-dlq`), configures an Eventarc Trigger (`eventarc.googleapis.com/v1`) matching your source event filter (GCS object finalize, Pub/Sub publish, BigQuery job complete, or Cloud Audit Log), and routes events to your target Cloud Run v2 service.',
+            gcpServicesInvolved: [
+              { name: 'Cloud Functions & Eventarc Triggers', tab: 'FUNCTIONS_STUDIO' },
+              { name: 'Cloud Run v2 Event Consumer', tab: 'CLOUD_RUN' },
+              { name: 'Pub/Sub Dead-Letter Queue (DLQ)', tab: 'SRE_WAR_ROOM' },
+            ],
+            apisEnabled: [
+              'eventarc.googleapis.com',
+              'pubsub.googleapis.com',
+              'run.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud eventarc triggers list --project=${pid} --location=- && gcloud pubsub topics list --project=${pid} --filter="name:-dlq"`,
+            consolePath: 'GCP Console -> Eventarc -> Triggers & Pub/Sub -> Topics (*-dlq)',
+            billingNote: '$0.00/mo for direct Pub/Sub & GCS Eventarc triggers; Pub/Sub DLQ topic is free up to 10 GB/mo.',
+          },
+          KEYVAULT_ROTATION: {
+            sourceFeature: 'AWS Secrets Manager Auto-Rotation & Azure Key Vault Secret Sync',
+            whatGcpCreatesOrMutates:
+              'Creates or rotates encrypted secret versions in Google Cloud Secret Manager (`secretmanager.googleapis.com/v1/projects/' +
+              pid +
+              '/secrets/*/versions:add`) and mirrors environment-scoped secrets (`dev-*`, `staging-*`, `prod-*`) with automatic AES-256-GCM / 256-bit cryptographic key generation.',
+            gcpServicesInvolved: [
+              { name: 'Secret Manager & KMS Vault', tab: 'SOVEREIGN_STUDIO' },
+              { name: 'Cloud Run secretKeyRef Mounts', tab: 'CLOUD_RUN' },
+            ],
+            apisEnabled: [
+              'secretmanager.googleapis.com',
+              'cloudkms.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud secrets list --project=${pid} --format="table(name,createTime,replication.automatic)"`,
+            consolePath: 'GCP Console -> Security -> Secret Manager',
+            billingNote:
+              'Google Cloud Secret Manager Always Free Tier includes 6 active secret versions and 10,000 access operations per month for $0.00 ($0.06/mo per additional active version).',
+          },
+          TRUSTED_ADVISOR: {
+            sourceFeature: 'AWS Trusted Advisor & Microsoft Azure Advisor 5-Pillar Scorer',
+            whatGcpCreatesOrMutates:
+              'Audits your live Compute Engine VMs (public IPv4 exposure, non-Spot pricing), VPC Firewall Rules (`0.0.0.0/0` port 22/3389), Cloud Storage Buckets (public access prevention), and Cloud Run services (`minInstanceCount > 0` idle burn), and executes 1-click live GCP remediations.',
+            gcpServicesInvolved: [
+              { name: 'VPC Firewall Perimeter', tab: 'VPC_NETWORKS' },
+              { name: 'Compute Engine VMs', tab: 'VM_SSH' },
+              { name: 'Cloud Storage Governance', tab: 'STORAGE_GOVERNANCE' },
+              { name: 'Cloud Run Fleet', tab: 'CLOUD_RUN' },
+            ],
+            apisEnabled: [
+              'recommender.googleapis.com',
+              'compute.googleapis.com',
+              'run.googleapis.com',
+              'storage.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud compute firewall-rules list --project=${pid} --format="table(name,network,direction,sourceRanges,allowed)"`,
+            consolePath: 'GCP Console -> Home -> Recommendations (Active Assist) & VPC network -> Firewall',
+            billingNote: '$0.00/mo — Advisor 5-pillar scoring and automated security/cost remediations are 100% free.',
+          },
+          TRANSIT_GATEWAY: {
+            sourceFeature: 'AWS Transit Gateway (TGW) & Azure Virtual WAN Hub-and-Spoke VPC Mesh',
+            whatGcpCreatesOrMutates:
+              'Creates or links Google Cloud Compute Engine VPC Networks (`compute.networks`), establishes bidirectional VPC Network Peering (`addPeering` between Hub VPC and Spoke VPC), provisions a regional Cloud Router + Cloud NAT Gateway for private outbound internet access without public VM IPs, and enables Private Google Access on subnets.',
+            gcpServicesInvolved: [
+              { name: 'VPC Networks, Peering & Cloud NAT', tab: 'VPC_NETWORKS' },
+              { name: 'Compute Engine VMs (Private Subnet)', tab: 'VM_SSH' },
+            ],
+            apisEnabled: [
+              'compute.googleapis.com',
+              'networkconnectivity.googleapis.com',
+              'servicenetworking.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud compute networks list --project=${pid} && gcloud compute networks peerings list --project=${pid} && gcloud compute routers list --project=${pid}`,
+            consolePath:
+              'GCP Console -> VPC network -> VPC networks, VPC network peering & Cloud NAT',
+            billingNote:
+              'VPC Networks and VPC Network Peering cost $0.00/hr to create; Cloud NAT charges ~$0.0014/hr per gateway only if provisioned in GCP.',
+          },
+          CONTAINER_COMPOSE: {
+            sourceFeature: 'AWS ECS Task Definitions & Azure Container Apps Sidecar Compose',
+            whatGcpCreatesOrMutates:
+              'Compiles and deploys a multi-container Google Cloud Run v2 Service (`run.googleapis.com/v2`) containing a primary Ingress container (`port 8080`), an OpenTelemetry Collector sidecar, and a local Redis sidecar sharing an in-memory RAM volume (`/var/run/shared` via `emptyDir: { medium: "MEMORY" }`).',
+            gcpServicesInvolved: [
+              { name: 'Cloud Run v2 Multi-Container Service', tab: 'CLOUD_RUN' },
+              { name: 'Artifact Registry Container Images', tab: 'WAVE9_STUDIO' },
+            ],
+            apisEnabled: [
+              'run.googleapis.com',
+              'artifactregistry.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud run services list --project=${pid} && gcloud beta run services describe <service-name> --region=us-central1 --project=${pid}`,
+            consolePath: 'GCP Console -> Cloud Run -> Services -> YAML (Multi-Container & Volumes)',
+            billingNote:
+              'Request-based Cloud Run v2 services scale to 0 ($0.00/hr when idle) and share the same vCPU/Memory allocation across main + sidecar containers.',
+          },
+          GUARDDUTY_SOAR: {
+            sourceFeature: 'AWS GuardDuty & Microsoft Sentinel SOAR Quarantine Playbooks',
+            whatGcpCreatesOrMutates:
+              'Correlates live GCP security signals (open `0.0.0.0/0` SSH/RDP firewall rules, exposed Service Account keys, unauthenticated Cloud Run endpoints) and executes 1-click SOAR quarantine actions: locking SSH firewall rules to Google IAP (`35.235.240.0/20`) or isolating compromised workloads.',
+            gcpServicesInvolved: [
+              { name: 'VPC Firewall Rules (IAP Quarantine)', tab: 'VPC_NETWORKS' },
+              { name: 'IAM & Service Account Keys', tab: 'SOVEREIGN_STUDIO' },
+              { name: 'SRE Incident War-Room', tab: 'SRE_WAR_ROOM' },
+            ],
+            apisEnabled: [
+              'securitycenter.googleapis.com',
+              'compute.googleapis.com',
+              'iam.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud compute firewall-rules list --project=${pid} --filter="sourceRanges:35.235.240.0/20 OR sourceRanges:0.0.0.0/0"`,
+            consolePath: 'GCP Console -> Security -> Security Command Center & VPC network -> Firewall',
+            billingNote: '$0.00/mo — Firewall IAP locking and SOAR playbooks incur zero GCP charges.',
+          },
+          STEP_FUNCTIONS: {
+            sourceFeature: 'AWS Step Functions & Azure Durable Functions Saga State Machine',
+            whatGcpCreatesOrMutates:
+              'Compiles your visual Saga workflow (sequential steps, exponential backoff retry policy, and compensation rollback state) into native Google Cloud Workflows YAML (`workflows.googleapis.com/v1`) orchestrating Cloud Run, BigQuery, and Pub/Sub endpoints.',
+            gcpServicesInvolved: [
+              { name: 'Cloud Functions, Eventarc & Workflows', tab: 'FUNCTIONS_STUDIO' },
+              { name: 'Cloud Run v2 Step Targets', tab: 'CLOUD_RUN' },
+            ],
+            apisEnabled: [
+              'workflows.googleapis.com',
+              'workflowexecutions.googleapis.com',
+              'run.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud workflows list --location=us-central1 --project=${pid}`,
+            consolePath: 'GCP Console -> Workflows -> Workflows & Executions',
+            billingNote:
+              'Google Cloud Workflows includes 5,000 internal steps + 2,000 external HTTP calls FREE every month ($0.00/mo within free tier).',
+          },
+          MULTI_BRAND_OAUTH: {
+            sourceFeature: 'Azure Entra App Registrations (Multiple OAuth Brandings in 1 GCP Project)',
+            whatGcpCreatesOrMutates:
+              'Overcomes GCP’s 1-OAuth-Brand-Per-Project limitation by configuring Google Cloud Identity Platform Multi-Tenancy (`identitytoolkit.googleapis.com/v2/projects/' +
+              pid +
+              '/tenants`) + Multi-Brand OAuth Broker routing so a single `"prod"` GCP project serves multiple distinct app names, logos, custom domains, and OAuth client IDs.',
+            gcpServicesInvolved: [
+              { name: 'IAM, OAuth & Identity Platform', tab: 'SOVEREIGN_STUDIO' },
+              { name: 'Cloud Run Multi-Brand Auth Broker', tab: 'CLOUD_RUN' },
+            ],
+            apisEnabled: [
+              'identitytoolkit.googleapis.com',
+              'iap.googleapis.com',
+              'run.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud services list --enabled --project=${pid} --filter="name:identitytoolkit.googleapis.com OR name:iap.googleapis.com"`,
+            consolePath:
+              'GCP Console -> Security -> Identity Platform -> Tenants & APIs & Services -> OAuth consent screen',
+            billingNote:
+              'Google Cloud Identity Platform is 100% FREE up to 50,000 Monthly Active Users (MAUs) per month across all tenants.',
+          },
+          ROUTE53_FRONTDOOR_TRAFFIC: {
+            sourceFeature: 'AWS Route 53 Traffic Flow & Azure Front Door Weighted / Geo DNS',
+            whatGcpCreatesOrMutates:
+              'Creates or updates a Google Cloud DNS Managed Zone (`dns.googleapis.com/dns/v1/projects/' +
+              pid +
+              '/managedZones`) and configures Weighted Round-Robin / Geo-Proximity / Health-Checked `routingPolicy` Resource Record Sets across US, EU, and APAC endpoints.',
+            gcpServicesInvolved: [
+              { name: 'Cloud DNS & VPC Networking', tab: 'VPC_NETWORKS' },
+              { name: 'Global Map & Multi-Region Endpoints', tab: 'GLOBAL_MAP' },
+            ],
+            apisEnabled: [
+              'dns.googleapis.com',
+              'compute.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud dns managed-zones list --project=${pid} && gcloud dns record-sets list --zone=prod-global-zone --project=${pid}`,
+            consolePath: 'GCP Console -> Network Services -> Cloud DNS -> Zones',
+            billingNote: 'Cloud DNS Managed Zone costs $0.20/mo per zone + $0.40 per million queries.',
+          },
+          CLOUDTRAIL_ACTIVITY_TIME_DETECTIVE: {
+            sourceFeature: 'AWS CloudTrail Lake & Azure Activity Log "Who-Did-What" SQL Detective',
+            whatGcpCreatesOrMutates:
+              'Queries Google Cloud Audit Logs (`cloudaudit.googleapis.com/activity`, `data_access`, and `policy`) via `logging.googleapis.com/v2/entries:list` & Log Analytics SQL (`global._Default._AllLogs`) and generates 1-click Undo `gcloud` CLI commands for every mutation.',
+            gcpServicesInvolved: [
+              { name: 'Cloud Logging & Audit Timeline', tab: 'LOGS_SHELL' },
+              { name: 'IAM Security & Drift Radar', tab: 'SOVEREIGN_STUDIO' },
+            ],
+            apisEnabled: [
+              'logging.googleapis.com',
+              'cloudresourcemanager.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud logging read 'logName:"cloudaudit.googleapis.com"' --project=${pid} --limit=15 --format="table(timestamp,protoPayload.authenticationInfo.principalEmail,protoPayload.methodName,protoPayload.resourceName)"`,
+            consolePath: 'GCP Console -> Logging -> Logs Explorer & Log Analytics',
+            billingNote:
+              '$0.00/mo — Google Cloud Admin Activity & System Event Audit Logs are retained 400 days for FREE.',
+          },
+          RAM_LIGHTHOUSE_ORG_SHARING: {
+            sourceFeature: 'AWS RAM (Resource Access Manager) & Azure Lighthouse Cross-Project Sharing',
+            whatGcpCreatesOrMutates:
+              'Configures cross-project Google Cloud Shared VPC subnet IAM bindings (`roles/compute.networkUser`), BigQuery Analytics Hub / Authorized Dataset shares (`bigquery.datasets.patch`), or KMS CryptoKey delegation with optional time-bound CEL conditions (`request.time < timestamp(...)`) and zero Service Account JSON keys.',
+            gcpServicesInvolved: [
+              { name: 'VPC Shared Subnets', tab: 'VPC_NETWORKS' },
+              { name: 'BigQuery Authorized Datasets', tab: 'BIGQUERY_STUDIO' },
+              { name: 'IAM Cross-Project Bindings', tab: 'SOVEREIGN_STUDIO' },
+            ],
+            apisEnabled: [
+              'compute.googleapis.com',
+              'bigquery.googleapis.com',
+              'analyticshub.googleapis.com',
+              'cloudkms.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud compute shared-vpc get-host-project ${pid} && bq ls --project_id=${pid}`,
+            consolePath: 'GCP Console -> VPC network -> Shared VPC & BigQuery -> Analytics Hub',
+            billingNote: '$0.00/mo — Cross-project IAM delegation and Shared VPC / Dataset sharing bindings cost nothing.',
+          },
+          BEDROCK_FOUNDRY_AI_GATEWAY: {
+            sourceFeature: 'AWS Bedrock Guardrails & Azure AI Foundry Multi-Model Gateway',
+            whatGcpCreatesOrMutates:
+              'Configures a multi-model Vertex AI Model Garden router (`Gemini 2.5 Pro -> Gemini 2.5 Flash -> Claude 3.7 Sonnet on Vertex AI`), runs Cloud Data Loss Prevention (Sensitive Data Protection / DLP) PII redaction + Prompt-Injection interception before model invocation, and enforces a daily USD token spend cap.',
+            gcpServicesInvolved: [
+              { name: 'Vertex AI & Model Garden Studio', tab: 'WAVE9_STUDIO' },
+              { name: 'Cloud Run AI Gateway Endpoint', tab: 'CLOUD_RUN' },
+              { name: 'DLP & Security Guardrails', tab: 'SOVEREIGN_STUDIO' },
+            ],
+            apisEnabled: [
+              'aiplatform.googleapis.com',
+              'dlp.googleapis.com',
+              'run.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud ai models list --region=us-central1 --project=${pid}`,
+            consolePath: 'GCP Console -> Vertex AI -> Model Garden & Sensitive Data Protection (DLP)',
+            billingNote:
+              'Pay-per-token only when invoking live Vertex AI models; local regex/DLP guardrail simulation in the playground costs $0.00.',
+          },
+          ALIYUN_PTS_MSE_FLASH_SALE_SURGE: {
+            sourceFeature: "Alibaba Cloud PTS + MSE Sentinel 11.11 Singles' Day Flash-Sale Surge Engine",
+            whatGcpCreatesOrMutates:
+              'Pre-warms Google Cloud Run v2 minimum instances (`scaling.minInstanceCount`) in your target region so zero requests hit cold starts, and configures a Cloud Armor Edge Rate-Limit / Token-Bucket QPS circuit-breaker policy with static waiting-room JSON fallback.',
+            gcpServicesInvolved: [
+              { name: 'Cloud Run v2 Autoscaler (minInstances)', tab: 'CLOUD_RUN' },
+              { name: 'Cloud Armor Edge Rate-Limiting', tab: 'VPC_NETWORKS' },
+              { name: 'SRE Load & SLO War-Room', tab: 'SRE_WAR_ROOM' },
+            ],
+            apisEnabled: [
+              'run.googleapis.com',
+              'compute.googleapis.com',
+              'monitoring.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud run services list --project=${pid} --format="table(metadata.name,status.url,spec.template.metadata.annotations['autoscaling.knative.dev/minScale'],spec.template.metadata.annotations['autoscaling.knative.dev/maxScale'])"`,
+            consolePath:
+              'GCP Console -> Cloud Run -> Service -> Revisions (Min/Max Instances) & Network Security -> Cloud Armor',
+            billingNote:
+              'Pre-warmed Cloud Run minInstances incur idle vCPU/RAM instance hours while armed; set minInstances back to 0 after the flash sale to return to $0.00/hr idle.',
+          },
+          ALIYUN_CEN_GA_BANDWIDTH_PACKAGE: {
+            sourceFeature: 'Alibaba Cloud CEN (Cloud Enterprise Network) & Global Accelerator QoS Slicer',
+            whatGcpCreatesOrMutates:
+              'Configures a Google Cloud Network Connectivity Center (NCC) Hub & Spoke topology (`networkconnectivity.googleapis.com/v1`) paired with Premium Tier Global Anycast IP routing and DSCP / Traffic Director QoS bandwidth slicing (Gold Payment / Silver API / Bronze Replication).',
+            gcpServicesInvolved: [
+              { name: 'VPC Network & Connectivity Center', tab: 'VPC_NETWORKS' },
+              { name: 'Global Subsea Cable & Anycast Map', tab: 'GLOBAL_MAP' },
+            ],
+            apisEnabled: [
+              'networkconnectivity.googleapis.com',
+              'compute.googleapis.com',
+              'networkmanagement.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud network-connectivity hubs list --project=${pid} && gcloud network-connectivity spokes list --project=${pid}`,
+            consolePath:
+              'GCP Console -> Network Connectivity -> Network Connectivity Center (Hubs & Spokes)',
+            billingNote:
+              'Planning & topology synthesis in CloudPulse is $0.00; live NCC Hubs and inter-region data transfer follow GCP Premium Tier egress rates.',
+          },
+          POLARDB_GAUSSDB_HTAP_TIME_TRAVEL: {
+            sourceFeature: 'Alibaba PolarDB IMCI & Huawei GaussDB Serverless HTAP + 1.6s Zero-Copy Clone',
+            whatGcpCreatesOrMutates:
+              'Bridges Google Cloud AlloyDB for PostgreSQL (with AlloyDB Columnar Engine for HTAP isolation) / Cloud SQL Enterprise Plus with BigQuery Federated `EXTERNAL_QUERY` Zero-ETL analytics and `gcloud sql instances clone` / AlloyDB continuous backup point-in-time clones.',
+            gcpServicesInvolved: [
+              { name: 'Cloud SQL & AlloyDB Studio', tab: 'CLOUD_SQL_STUDIO' },
+              { name: 'BigQuery Federated HTAP Lakehouse', tab: 'BIGQUERY_STUDIO' },
+            ],
+            apisEnabled: [
+              'alloydb.googleapis.com',
+              'sqladmin.googleapis.com',
+              'bigquery.googleapis.com',
+              'bigqueryconnection.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud sql instances list --project=${pid} && gcloud alloydb clusters list --project=${pid}`,
+            consolePath: 'GCP Console -> AlloyDB -> Clusters & Cloud SQL -> Instances',
+            billingNote:
+              'Metadata blueprint & HTAP query compilation cost $0.00; live Cloud SQL / AlloyDB instances bill per vCPU/GB hour.',
+          },
+          HUAWEI_CCE_MODELARTS_AI_POOL: {
+            sourceFeature: 'Huawei Cloud CCE Volcano Gang-Scheduler + ModelArts / Alibaba PAI Fractional vGPU',
+            whatGcpCreatesOrMutates:
+              'Generates and provisions Google Kubernetes Engine (GKE) GPU Time-Sharing / Multi-Instance GPU (MIG) Node Pools (`--accelerator type=nvidia-l4,gpu-sharing-strategy=time-sharing,max-shared-clients-per-gpu=4`) and CNCF Volcano Gang-Scheduling queues across GKE and Cloud Run L4 GPU services.',
+            gcpServicesInvolved: [
+              { name: 'GKE Kubernetes GPU Node Pools', tab: 'GKE_STUDIO' },
+              { name: 'Cloud Run Gen2 Serverless L4 GPU', tab: 'CLOUD_RUN' },
+              { name: 'Vertex AI & GKE AI Studio', tab: 'WAVE9_STUDIO' },
+            ],
+            apisEnabled: [
+              'container.googleapis.com',
+              'compute.googleapis.com',
+              'aiplatform.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud container clusters list --project=${pid} && gcloud container node-pools list --cluster=<cluster-name> --zone=us-central1-a --project=${pid}`,
+            consolePath:
+              'GCP Console -> Kubernetes Engine -> Clusters -> Nodes (GPU Time-Sharing & MIG)',
+            billingNote:
+              'Fractional vGPU time-slicing (4 to 8 pods per physical L4/A100 GPU) cuts GPU node pool spend by 50% to 75%.',
+          },
+          ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY: {
+            sourceFeature: 'Alibaba RocketMQ 5.0 / Huawei DMS 2-Phase Transactional Half-Message & Delay Queue',
+            whatGcpCreatesOrMutates:
+              'Implements 2-phase transactional outbox messaging and exact-second delayed delivery on Google Cloud by combining Cloud Pub/Sub Topics (`pubsub.googleapis.com/v1`), Cloud Tasks scheduled `scheduleTime` HTTP dispatch (`cloudtasks.googleapis.com/v2`), and Firestore transactional state verification.',
+            gcpServicesInvolved: [
+              { name: 'Cloud Functions, Pub/Sub & Eventarc', tab: 'FUNCTIONS_STUDIO' },
+              { name: 'Cloud Run Target Consumer', tab: 'CLOUD_RUN' },
+            ],
+            apisEnabled: [
+              'pubsub.googleapis.com',
+              'cloudtasks.googleapis.com',
+              'firestore.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud pubsub topics list --project=${pid} && gcloud tasks queues list --location=us-central1 --project=${pid}`,
+            consolePath: 'GCP Console -> Cloud Tasks -> Queues & Pub/Sub -> Topics',
+            billingNote:
+              'Cloud Tasks includes 1,000,000 operations/month FREE and Pub/Sub includes 10 GB/month FREE ($0.00/mo within free tier).',
+          },
+          ALIYUN_NACOS_HIGRESS_CONFIG_MESH: {
+            sourceFeature: 'Alibaba Nacos + Higress / Huawei ServiceComb Zero-Restart Config & AI Wasm Gateway',
+            whatGcpCreatesOrMutates:
+              'Hot-pushes dynamic YAML/JSON configuration via Google Cloud Parameter Manager / Secret Manager live polling and applies Service Extensions Wasm plugins + Traffic Director header-based (`x-gray-cohort`) canary routing rules without restarting Cloud Run or GKE pods.',
+            gcpServicesInvolved: [
+              { name: 'Secret & Parameter Manager Vault', tab: 'SOVEREIGN_STUDIO' },
+              { name: 'Cloud Run Canary Traffic Splitter', tab: 'CLOUD_RUN' },
+              { name: 'VPC Service Extensions & Mesh', tab: 'VPC_NETWORKS' },
+            ],
+            apisEnabled: [
+              'secretmanager.googleapis.com',
+              'networkservices.googleapis.com',
+              'run.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud secrets list --project=${pid} && gcloud network-services wasm-plugins list --location=global --project=${pid}`,
+            consolePath:
+              'GCP Console -> Network Services -> Service Extensions (Wasm) & Security -> Secret Manager',
+            billingNote: '$0.00/mo within Secret Manager free tier (6 active versions + 10k accesses free/mo).',
+          },
+          ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP: {
+            sourceFeature: 'Alibaba Hologres + MaxCompute / Huawei MRS Sub-Second OLAP Serving Accelerator',
+            whatGcpCreatesOrMutates:
+              'Accelerates analytical tables in Google Cloud BigQuery (`bigquery.googleapis.com/bigquery/v2`) by configuring BigQuery BI Engine in-memory reservations (`biEngineRamGb`) + Search/Vector Indexes and Bigtable federated point-lookup tables for sub-10ms high-concurrency serving.',
+            gcpServicesInvolved: [
+              { name: 'BigQuery Lakehouse & BI Engine', tab: 'BIGQUERY_STUDIO' },
+              { name: 'Data Engineering & Medallion Studio', tab: 'DATA_ENGINEER_STUDIO' },
+            ],
+            apisEnabled: [
+              'bigquery.googleapis.com',
+              'bigquerystorage.googleapis.com',
+              'bigtableadmin.googleapis.com',
+            ],
+            manualVerifyCli: `bq ls --project_id=${pid} && gcloud alpha bq bi-engine-reservations describe --location=US --project=${pid}`,
+            consolePath: 'GCP Console -> BigQuery -> BI Engine & Capacity Management',
+            billingNote:
+              'BigQuery includes 10 GB active storage + 1 TB queries/month FREE; BI Engine reservation is billed only if provisioned in GCP.',
+          },
+          HUAWEI_DATAV_NOC_COMMAND_WALL: {
+            sourceFeature: 'Alibaba DataV & Huawei Cloud Astro Executive 3D Digital-Twin NOC Command Wall',
+            whatGcpCreatesOrMutates:
+              'Aggregates live telemetry across Google Cloud Monitoring (`monitoring.googleapis.com/v3`), Cloud Logging, Cloud Run ingress QPS, and Cross-Region Network Intelligence Center latency matrices into a single giant-screen NOC Command Wall.',
+            gcpServicesInvolved: [
+              { name: 'Global 40-Region Subsea Map', tab: 'GLOBAL_MAP' },
+              { name: 'SRE Incident War-Room', tab: 'SRE_WAR_ROOM' },
+              { name: 'FinOps & Monitoring Telemetry', tab: 'FINOPS' },
+            ],
+            apisEnabled: [
+              'monitoring.googleapis.com',
+              'logging.googleapis.com',
+              'networkmanagement.googleapis.com',
+            ],
+            manualVerifyCli: `gcloud monitoring dashboards list --project=${pid}`,
+            consolePath:
+              'GCP Console -> Monitoring -> Dashboards & Network Intelligence -> Performance Dashboard',
+            billingNote: '$0.00/mo — Read-only aggregation of Google Cloud Monitoring & Network Intelligence metrics.',
+          },
+        };
+
+        const bp =
+          GCP_UNDER_THE_HOOD_BLUEPRINTS[activeSubTab] ||
+          GCP_UNDER_THE_HOOD_BLUEPRINTS.RESOURCE_GROUPS;
+        const enableApisCmd = `gcloud services enable ${(bp.apisEnabled || []).join(' ')} --project=${pid}`;
+
+        return (
+          <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-emerald-500/10 border border-blue-500/30 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>
+                    ZERO-BLACKBOX GOOGLE CLOUD X-RAY · EXACT GCP SERVICES, APIS &amp; MANUAL VERIFICATION
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Under the Hood on Google Cloud: {bp.sourceFeature}
+                </h3>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                <button
+                  type="button"
+                  onClick={() => copyText(enableApisCmd, 'Copied gcloud services enable command.')}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Copy Enable APIs CLI</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyText(bp.manualVerifyCli, 'Copied manual GCP verification CLI.')}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Copy Verify CLI</span>
+                </button>
+                {onRunInShell && (
+                  <button
+                    type="button"
+                    onClick={() => onRunInShell(bp.manualVerifyCli)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer"
+                  >
+                    <Play className="w-3 h-3" />
+                    <span>Verify Manually in Cloud Shell</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              <strong className="text-zinc-950 dark:text-white">
+                What Google Cloud Creates / Modifies:
+              </strong>{' '}
+              {bp.whatGcpCreatesOrMutates}
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 pt-1 text-xs font-mono">
+              <div className="lg:col-span-5 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
+                <div className="text-[11px] font-extrabold text-zinc-500 uppercase">
+                  Google Cloud Services Involved (Click to Inspect in App)
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(bp.gcpServicesInvolved || []).map((svc) => (
+                    <button
+                      key={svc.name}
+                      type="button"
+                      onClick={() => onNavigateToGcpTab?.(svc.tab)}
+                      title={`Jump to ${svc.name} studio in CloudPulse to inspect manually`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
+                    >
+                      <span>{svc.name}</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lg:col-span-3 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
+                <div className="text-[11px] font-extrabold text-zinc-500 uppercase">
+                  Required GCP Service APIs Enabled
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(bp.apisEnabled || []).map((api) => (
+                    <span
+                      key={api}
+                      className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold"
+                    >
+                      {api}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lg:col-span-4 p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
+                <div className="text-[11px] font-extrabold text-zinc-500 uppercase">
+                  Where to Check Manually in GCP Console &amp; CLI
+                </div>
+                <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                  <strong>Console:</strong> {bp.consolePath}
+                </div>
+                <div className="p-1.5 rounded bg-zinc-950 text-emerald-300 text-[10px] overflow-x-auto whitespace-nowrap">
+                  $ {bp.manualVerifyCli}
+                </div>
+                <div className="text-[10px] text-zinc-500">
+                  <strong>GCP Cost Impact:</strong> {bp.billingNote}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* =====================================================================
           MODULE 1: AZURE-STYLE RESOURCE GROUPS, SPEND TRACKER, RG-SCOPED RBAC & 1-CLICK TEARDOWN

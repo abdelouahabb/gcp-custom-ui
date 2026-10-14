@@ -2047,6 +2047,8 @@ function CloudPulseCockpit() {
                         : 'AWS_AZURE_PARITY'
                     )
                   }
+                  onNavigateToGcpTab={(tabId) => setActiveTab(tabId)}
+                  onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />
@@ -2065,6 +2067,8 @@ function CloudPulseCockpit() {
                         : 'AWS_AZURE_PARITY'
                     )
                   }
+                  onNavigateToGcpTab={(tabId) => setActiveTab(tabId)}
+                  onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />
