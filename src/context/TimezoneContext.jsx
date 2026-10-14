@@ -330,9 +330,16 @@ export function TimezoneProvider({ children }) {
   const [nowTick, setNowTick] = useState(() => new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setNowTick(new Date());
-    }, 1000);
+    let lastMinuteBucket = Math.floor(Date.now() / 60000);
+    const checkMinuteChange = () => {
+      const currentBucket = Math.floor(Date.now() / 60000);
+      if (currentBucket !== lastMinuteBucket) {
+        lastMinuteBucket = currentBucket;
+        setNowTick(new Date());
+      }
+    };
+    // Check every 15s and only trigger React state update when the minute actually changes
+    const timer = setInterval(checkMinuteChange, 15000);
     return () => clearInterval(timer);
   }, []);
 
@@ -385,7 +392,7 @@ export function TimezoneProvider({ children }) {
       if (!isoInput) return '—';
       const d = isoInput instanceof Date ? isoInput : new Date(isoInput);
       if (Number.isNaN(d.getTime())) return String(isoInput);
-      const includeSeconds = options.includeSeconds !== false;
+      const includeSeconds = Boolean(options.includeSeconds);
       const includeZone = options.includeZone !== false;
       try {
         const formatted = new Intl.DateTimeFormat('en-US', {
@@ -442,7 +449,7 @@ export function TimezoneProvider({ children }) {
     (isoInput = nowTick, options = {}) => {
       const d = isoInput instanceof Date ? isoInput : new Date(isoInput);
       if (Number.isNaN(d.getTime())) return '—';
-      const includeSeconds = options.includeSeconds !== false;
+      const includeSeconds = Boolean(options.includeSeconds);
       try {
         return new Intl.DateTimeFormat('en-US', {
           timeZone: activeTimeZone,
@@ -452,14 +459,14 @@ export function TimezoneProvider({ children }) {
           hour12: !prefs.hour24,
         }).format(d);
       } catch {
-        return d.toTimeString().slice(0, 8);
+        return d.toTimeString().slice(0, 5);
       }
     },
     [activeTimeZone, prefs.hour24, nowTick]
   );
 
   const liveClockText = useMemo(
-    () => formatTimeOnly(nowTick, { includeSeconds: true }),
+    () => formatTimeOnly(nowTick, { includeSeconds: false }),
     [formatTimeOnly, nowTick]
   );
 
@@ -536,7 +543,7 @@ export function useTimezone() {
       showDualUtc: false,
       utcOffsetLabel: getUtcOffsetString(fallbackTz),
       shortTzName: getShortTzAbbreviation(fallbackTz),
-      liveClockText: '00:00:00',
+      liveClockText: '00:00',
       liveShortClockText: '00:00',
       liveDateText: 'Oct 14, 2026',
       nowTick: new Date(),
@@ -601,7 +608,6 @@ export function TimezoneSelectorPill({ onShowToast }) {
         timeZone: 'UTC',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
         hour12: false,
       }).format(nowTick);
     } catch {
@@ -814,7 +820,7 @@ export function TimezoneSelectorPill({ onShowToast }) {
                   : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
               }`}
             >
-              {hour24 ? '✓ 24-Hour (HH:mm:ss)' : '12-Hour (AM/PM)'}
+              {hour24 ? '✓ 24-Hour (HH:mm)' : '12-Hour (AM/PM)'}
             </button>
             <button
               type="button"
