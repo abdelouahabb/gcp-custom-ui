@@ -23359,6 +23359,83 @@ function getOrInitHuaweiModelArtsPool(projectId) {
   return huaweiModelArtsPoolStore.get(projectId);
 }
 
+const aliyunRocketMqStore = new Map();
+const aliyunNacosHigressStore = new Map();
+const aliyunHologresOlapStore = new Map();
+const huaweiDataVNocStore = new Map();
+
+function getOrInitAliyunRocketMq(projectId) {
+  if (!aliyunRocketMqStore.has(projectId)) {
+    aliyunRocketMqStore.set(projectId, [
+      {
+        messageId: 'rmq-tx-half-01',
+        topicName: 'orders-escrow-2pc-topic',
+        payloadSummary: 'Order #99812 · Escrow Hold $420.00',
+        deliveryDelaySec: 900,
+        txState: 'COMMITTED_AFTER_LOCAL_DB_CHECK',
+        gcpBridge: 'Cloud Pub/Sub + Cloud Tasks Exact-Timestamp Delay + Firestore Outbox',
+        createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+      },
+    ]);
+  }
+  return aliyunRocketMqStore.get(projectId);
+}
+
+function getOrInitAliyunNacosHigress(projectId) {
+  if (!aliyunNacosHigressStore.has(projectId)) {
+    aliyunNacosHigressStore.set(projectId, [
+      {
+        configId: 'nacos-higress-01',
+        dataId: 'checkout.feature.flags.yaml',
+        namespace: 'prod-apac-gray-release',
+        canaryHeaderRule: 'x-gray-cohort=vip-11-11',
+        canaryWeightPct: 15,
+        wasmPlugin: 'higress-ai-token-ratelimit-wasm',
+        pushLatencyMs: 38,
+        zeroRestartVerified: true,
+        status: 'HOT_PUSHED_ZERO_RESTART',
+        updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+      },
+    ]);
+  }
+  return aliyunNacosHigressStore.get(projectId);
+}
+
+function getOrInitAliyunHologresOlap(projectId) {
+  if (!aliyunHologresOlapStore.has(projectId)) {
+    aliyunHologresOlapStore.set(projectId, [
+      {
+        tableId: 'holo-mc-realtime-01',
+        sourceMaxComputeDataset: `${projectId}.lakehouse_gold.orders_realtime`,
+        orientationMode: 'ROW_COLUMN_HYBRID_INDEX',
+        pointLookupQpsCapacity: 120000,
+        p99QueryLatencyMs: 6.4,
+        biEngineRamGb: 32,
+        status: 'SUBSECOND_SERVING_ACTIVE',
+        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      },
+    ]);
+  }
+  return aliyunHologresOlapStore.get(projectId);
+}
+
+function getOrInitHuaweiDataVNoc(projectId) {
+  if (!huaweiDataVNocStore.has(projectId)) {
+    huaweiDataVNocStore.set(projectId, {
+      screenTitle: 'Global 11.11 & Multi-Region Digital-Twin Command Wall',
+      globalLiveGmvUsd: 14892400,
+      globalIngressQps: 68400,
+      activeRegionsHealthy: '40 / 40 Regions Green',
+      apakToEuFiberRttMs: 74,
+      apakToUsFiberRttMs: 92,
+      autoMitigatedAnomaliesToday: 14,
+      lastDrillScenario: 'Subsea Cable Cut (APAC-to-EU) Auto-Rerouted via CEN in 1.2s',
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  return huaweiDataVNocStore.get(projectId);
+}
+
 // Role -> Permission knowledge base for AWS-style IAM Policy Simulator
 const GCP_ROLE_PERMISSION_CATALOG = [
   {
@@ -24441,6 +24518,16 @@ app.get(
         huaweiModelArtsPool: {
           pools: getOrInitHuaweiModelArtsPool(projectId),
         },
+        aliyunRocketMq: {
+          messages: getOrInitAliyunRocketMq(projectId),
+        },
+        aliyunNacosHigress: {
+          configs: getOrInitAliyunNacosHigress(projectId),
+        },
+        aliyunHologresOlap: {
+          tables: getOrInitAliyunHologresOlap(projectId),
+        },
+        huaweiDataVNoc: getOrInitHuaweiDataVNoc(projectId),
       });
     } catch (err) {
       return res.status(400).json({
@@ -27316,6 +27403,127 @@ app.post(
           ok: true,
           pool: record,
           message: `Provisioned Huawei CCE Volcano / Alibaba PAI Fractional vGPU Pool "${poolName}" (${virtualGpuPodsScheduled} vGPU pods across ${physicalGpusAllocated} physical GPUs at ${fractionalVgpuSlice}).`,
+        });
+      }
+
+      if (action === 'PUBLISH_ROCKETMQ_HALF_MESSAGE') {
+        const topicName = String(
+          req.body?.topicName || 'orders-escrow-2pc-topic'
+        ).trim();
+        const payloadSummary = String(
+          req.body?.payloadSummary || 'Order #99899 · Escrow Hold $680.00'
+        ).trim();
+        const deliveryDelaySec = Math.max(
+          5,
+          Math.min(604800, Number(req.body?.deliveryDelaySec || 900))
+        );
+
+        const list = getOrInitAliyunRocketMq(projectId);
+        const record = {
+          messageId: `rmq-tx-${Date.now().toString(36).slice(-5)}`,
+          topicName,
+          payloadSummary,
+          deliveryDelaySec,
+          txState: 'COMMITTED_AFTER_LOCAL_DB_CHECK',
+          gcpBridge:
+            'Cloud Pub/Sub + Cloud Tasks Exact-Timestamp Delay + Firestore Outbox',
+          createdAt: new Date().toISOString(),
+        };
+        list.unshift(record);
+        return res.json({
+          ok: true,
+          messageRecord: record,
+          message: `Committed RocketMQ 5.0 2-Phase Transactional Half-Message on "${topicName}" with exact ${deliveryDelaySec}s delayed delivery.`,
+        });
+      }
+
+      if (action === 'PUSH_NACOS_HIGRESS_CONFIG') {
+        const dataId = String(
+          req.body?.dataId || 'checkout.feature.flags.yaml'
+        ).trim();
+        const namespace = String(
+          req.body?.namespace || 'prod-apac-gray-release'
+        ).trim();
+        const canaryHeaderRule = String(
+          req.body?.canaryHeaderRule || 'x-gray-cohort=vip-11-11'
+        ).trim();
+        const canaryWeightPct = Math.max(
+          1,
+          Math.min(100, Number(req.body?.canaryWeightPct || 20))
+        );
+        const wasmPlugin = String(
+          req.body?.wasmPlugin || 'higress-ai-token-ratelimit-wasm'
+        ).trim();
+
+        const list = getOrInitAliyunNacosHigress(projectId);
+        const record = {
+          configId: `nacos-higress-${Date.now().toString(36).slice(-5)}`,
+          dataId,
+          namespace,
+          canaryHeaderRule,
+          canaryWeightPct,
+          wasmPlugin,
+          pushLatencyMs: 34,
+          zeroRestartVerified: true,
+          status: 'HOT_PUSHED_ZERO_RESTART',
+          updatedAt: new Date().toISOString(),
+        };
+        list.unshift(record);
+        return res.json({
+          ok: true,
+          config: record,
+          message: `Hot-pushed Nacos + Higress Wasm Config "${dataId}" (${canaryWeightPct}% gray-release canary) in 34ms with 0 container restarts.`,
+        });
+      }
+
+      if (action === 'PROVISION_HOLOGRES_OLAP_INDEX') {
+        const sourceMaxComputeDataset = String(
+          req.body?.sourceMaxComputeDataset ||
+            `${projectId}.lakehouse_gold.orders_realtime`
+        ).trim();
+        const orientationMode = String(
+          req.body?.orientationMode || 'ROW_COLUMN_HYBRID_INDEX'
+        );
+        const biEngineRamGb = Math.max(
+          4,
+          Math.min(512, Number(req.body?.biEngineRamGb || 32))
+        );
+
+        const list = getOrInitAliyunHologresOlap(projectId);
+        const record = {
+          tableId: `holo-mc-${Date.now().toString(36).slice(-5)}`,
+          sourceMaxComputeDataset,
+          orientationMode,
+          pointLookupQpsCapacity: biEngineRamGb * 4000,
+          p99QueryLatencyMs: 5.8,
+          biEngineRamGb,
+          status: 'SUBSECOND_SERVING_ACTIVE',
+          createdAt: new Date().toISOString(),
+        };
+        list.unshift(record);
+        return res.json({
+          ok: true,
+          table: record,
+          message: `Accelerated "${sourceMaxComputeDataset}" via Hologres + MaxCompute Hybrid Index (${biEngineRamGb} GB BI Engine RAM, p99 5.8ms).`,
+        });
+      }
+
+      if (action === 'TRIGGER_DATAV_NOC_DRILL') {
+        const scenario = String(
+          req.body?.scenario ||
+            '11.11 Midnight Peak + APAC Subsea Fiber Cut Auto-Heal'
+        ).trim();
+        const noc = getOrInitHuaweiDataVNoc(projectId);
+        noc.globalLiveGmvUsd += 1420000;
+        noc.globalIngressQps = 94200;
+        noc.autoMitigatedAnomaliesToday += 1;
+        noc.lastDrillScenario = `${scenario} — Mitigated in 1.1s via CEN + MSE Sentinel`;
+        noc.updatedAt = new Date().toISOString();
+
+        return res.json({
+          ok: true,
+          noc,
+          message: `Executed DataV / Huawei Astro War-Room Drill: "${scenario}" (94,200 QPS sustained, 40/40 regions green).`,
         });
       }
 

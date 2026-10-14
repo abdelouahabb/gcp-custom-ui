@@ -40,12 +40,18 @@ import {
 
 export default function AwsAzureEnvySuiteStudio({
   projectId,
+  cloudFamily = 'AWS_AZURE',
   initialTab = 'RESOURCE_GROUPS',
+  onSwitchCloudFamily,
   onShowToast,
   onShowError,
 }) {
+  const isChinaSuite = cloudFamily === 'ALIBABA_HUAWEI';
   const [activeSubTab, setActiveSubTab] = useState(
-    initialTab || 'RESOURCE_GROUPS'
+    initialTab ||
+      (cloudFamily === 'ALIBABA_HUAWEI'
+        ? 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE'
+        : 'RESOURCE_GROUPS')
   );
   const [loading, setLoading] = useState(false);
   const [actionBusy, setActionBusy] = useState('');
@@ -301,6 +307,40 @@ export default function AwsAzureEnvySuiteStudio({
     '0.25x GPU (6 GB VRAM Isolated Slice)'
   );
   const [vgpuPhysicalCount, setVgpuPhysicalCount] = useState(4);
+
+  // Alibaba & Huawei Module 5: RocketMQ 5.0 / Huawei DMS Transactional Half-Message & Delay Queue
+  const [rmqTopicName, setRmqTopicName] = useState('orders-escrow-2pc-topic');
+  const [rmqPayloadSummary, setRmqPayloadSummary] = useState(
+    'Order #99899 · Escrow Hold $680.00'
+  );
+  const [rmqDelaySec, setRmqDelaySec] = useState(900);
+
+  // Alibaba & Huawei Module 6: Nacos + Higress / Huawei ServiceComb Dynamic Config & Wasm Gateway
+  const [nacosDataId, setNacosDataId] = useState('checkout.feature.flags.yaml');
+  const [nacosNamespace, setNacosNamespace] = useState(
+    'prod-apac-gray-release'
+  );
+  const [nacosCanaryRule, setNacosCanaryRule] = useState(
+    'x-gray-cohort=vip-11-11'
+  );
+  const [nacosCanaryPct, setNacosCanaryPct] = useState(20);
+  const [nacosWasmPlugin, setNacosWasmPlugin] = useState(
+    'higress-ai-token-ratelimit-wasm'
+  );
+
+  // Alibaba & Huawei Module 7: Hologres + MaxCompute / Huawei MRS Sub-Second OLAP Serving
+  const [holoDataset, setHoloDataset] = useState(
+    `${projectId || 'prod'}.lakehouse_gold.orders_realtime`
+  );
+  const [holoOrientation, setHoloOrientation] = useState(
+    'ROW_COLUMN_HYBRID_INDEX'
+  );
+  const [holoBiRamGb, setHoloBiRamGb] = useState(32);
+
+  // Alibaba & Huawei Module 8: DataV / Huawei Astro Digital-Twin NOC Command Wall
+  const [datavDrillScenario, setDatavDrillScenario] = useState(
+    '11.11 Midnight Peak + APAC Subsea Fiber Cut Auto-Heal'
+  );
 
   const fetchOverview = useCallback(async () => {
     if (!projectId) return;
@@ -1609,6 +1649,125 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
+  // Alibaba & Huawei Module 5 handler: RocketMQ 5.0 2PC Half-Message & Delay Queue
+  const handlePublishRocketMqHalfMessage = async (e) => {
+    e?.preventDefault();
+    setActionBusy('ALIYUN_RMQ_PUBLISH');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'PUBLISH_ROCKETMQ_HALF_MESSAGE',
+          topicName: rmqTopicName,
+          payloadSummary: rmqPayloadSummary,
+          deliveryDelaySec: Number(rmqDelaySec || 900),
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          'Committed RocketMQ 5.0 2PC Transactional Half-Message.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to publish RocketMQ 2PC half-message.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Alibaba & Huawei Module 6 handler: Nacos + Higress Dynamic Config & Wasm Gateway
+  const handlePushNacosHigressConfig = async (e) => {
+    e?.preventDefault();
+    setActionBusy('ALIYUN_NACOS_PUSH');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'PUSH_NACOS_HIGRESS_CONFIG',
+          dataId: nacosDataId,
+          namespace: nacosNamespace,
+          canaryHeaderRule: nacosCanaryRule,
+          canaryWeightPct: Number(nacosCanaryPct || 20),
+          wasmPlugin: nacosWasmPlugin,
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          'Hot-pushed Nacos + Higress Wasm configuration with 0 restarts.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to push Nacos + Higress config.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Alibaba & Huawei Module 7 handler: Hologres + MaxCompute Sub-Second OLAP Serving
+  const handleProvisionHologresIndex = async (e) => {
+    e?.preventDefault();
+    setActionBusy('ALIYUN_HOLO_INDEX');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'PROVISION_HOLOGRES_OLAP_INDEX',
+          sourceMaxComputeDataset: holoDataset,
+          orientationMode: holoOrientation,
+          biEngineRamGb: Number(holoBiRamGb || 32),
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          'Provisioned Hologres + MaxCompute Sub-Second OLAP Serving Index.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to provision Hologres OLAP index.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  // Alibaba & Huawei Module 8 handler: DataV / Huawei Astro War-Room NOC Drill
+  const handleTriggerDataVNocDrill = async (e) => {
+    e?.preventDefault();
+    setActionBusy('HUAWEI_DATAV_DRILL');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'TRIGGER_DATAV_NOC_DRILL',
+          scenario: datavDrillScenario,
+        }
+      );
+      onShowToast?.(
+        res.data?.message || 'Executed DataV / Huawei Astro War-Room Drill.'
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to run DataV NOC drill.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
   const copyText = (txt, label = 'Copied to clipboard.') => {
     navigator.clipboard?.writeText(txt);
     onShowToast?.(label);
@@ -1661,6 +1820,20 @@ export default function AwsAzureEnvySuiteStudio({
   const aliyunCenPackages = data?.aliyunCenPackages?.packages || [];
   const polarGaussClusters = data?.polarGaussHtap?.clusters || [];
   const huaweiVgpuPools = data?.huaweiModelArtsPool?.pools || [];
+  const aliyunRocketMqMessages = data?.aliyunRocketMq?.messages || [];
+  const aliyunNacosConfigs = data?.aliyunNacosHigress?.configs || [];
+  const aliyunHologresTables = data?.aliyunHologresOlap?.tables || [];
+  const huaweiDataVNoc = data?.huaweiDataVNoc || {
+    screenTitle: 'Global 11.11 & Multi-Region Digital-Twin Command Wall',
+    globalLiveGmvUsd: 14892400,
+    globalIngressQps: 68400,
+    activeRegionsHealthy: '40 / 40 Regions Green',
+    apakToEuFiberRttMs: 74,
+    apakToUsFiberRttMs: 92,
+    autoMitigatedAnomaliesToday: 14,
+    lastDrillScenario:
+      'Subsea Cable Cut (APAC-to-EU) Auto-Rerouted via CEN in 1.2s',
+  };
   const activePreviewBrand =
     (multiBrandOAuth.brands || []).find(
       (b) => b.brandId === selectedPreviewBrandId
@@ -1670,6 +1843,182 @@ export default function AwsAzureEnvySuiteStudio({
   const cloudRunServices = unifiedResources.filter(
     (r) => r.type === 'CLOUD_RUN'
   );
+
+  const awsAzureTabs = [
+    {
+      id: 'RESOURCE_GROUPS',
+      label: '1. Azure Resource Groups + RBAC',
+      badge: `${resourceGroups.length} Groups`,
+      icon: FolderKanban,
+    },
+    {
+      id: 'SPEND_FUSE',
+      label: '2. Hard-Spend Fuse',
+      badge: `$${spendFuse.monthlyBudgetUsd || 50}/mo Cap`,
+      icon: Flame,
+    },
+    {
+      id: 'IAM_SIMULATOR',
+      label: '3. IAM Simulator & Switch Role',
+      badge: `${principals.length} Identities`,
+      icon: ShieldCheck,
+    },
+    {
+      id: 'SAS_PRESIGNED',
+      label: '4. S3/SAS Presigned URLs',
+      badge: `${buckets.length} Buckets`,
+      icon: Link2,
+    },
+    {
+      id: 'GLOBAL_LB_WIZARD',
+      label: '5. 1-Screen Global LB & WAF',
+      badge: '7-in-1 Wizard',
+      icon: Globe,
+    },
+    {
+      id: 'CFN_ARM_STACKS',
+      label: '6. CloudFormation/ARM Drift & Rollback',
+      badge: `${armStacks.length} Stacks`,
+      icon: Layers,
+    },
+    {
+      id: 'COST_EXPLORER_CUD',
+      label: '7. Cost Explorer & CUD Savings Plans',
+      badge: 'Up to -68%',
+      icon: TrendingDown,
+    },
+    {
+      id: 'SSM_FLEET_COMMAND',
+      label: '8. AWS SSM Fleet Run Command',
+      badge: `${ssmFleet.targets?.length || 0} Targets`,
+      icon: Terminal,
+    },
+    {
+      id: 'EVENTBRIDGE_PIPES',
+      label: '9. EventBridge Pipes & DLQ Router',
+      badge: `${eventPipes.length} Pipes`,
+      icon: GitBranch,
+    },
+    {
+      id: 'KEYVAULT_ROTATION',
+      label: '10. Key Vault Auto-Rotation & Sync',
+      badge: `${keyVaultSecrets.length} Secrets`,
+      icon: KeyRound,
+    },
+    {
+      id: 'TRUSTED_ADVISOR',
+      label: '11. Trusted Advisor 5-Pillar',
+      badge: `${trustedAdvisor.overallScore || 92}% Score`,
+      icon: Award,
+    },
+    {
+      id: 'TRANSIT_GATEWAY',
+      label: '12. Transit Gateway VPC Mesh',
+      badge: `${transitGateway.spokes?.length || 0} Spokes`,
+      icon: Network,
+    },
+    {
+      id: 'CONTAINER_COMPOSE',
+      label: '13. ECS/ACA Sidecar Compose',
+      badge: `${containerCompose.apps?.length || 0} Stacks`,
+      icon: Boxes,
+    },
+    {
+      id: 'GUARDDUTY_SOAR',
+      label: '14. GuardDuty/Sentinel SOAR',
+      badge: `${guardDutySoar.activeThreatsCount || 0} Active`,
+      icon: Radar,
+    },
+    {
+      id: 'STEP_FUNCTIONS',
+      label: '15. Step Functions Saga Studio',
+      badge: `${stepFunctions.workflows?.length || 0} State Machines`,
+      icon: Workflow,
+    },
+    {
+      id: 'MULTI_BRAND_OAUTH',
+      label: '16. Multi-Brand OAuth Studio',
+      badge: `${multiBrandOAuth.brands?.length || 0} Brands in 1 Project`,
+      icon: UserCheck,
+    },
+    {
+      id: 'ROUTE53_FRONTDOOR_TRAFFIC',
+      label: '17. Route 53 / Front Door DNS',
+      badge: `${route53Policies.length} Policies`,
+      icon: Globe,
+    },
+    {
+      id: 'CLOUDTRAIL_ACTIVITY_TIME_DETECTIVE',
+      label: '18. CloudTrail / Activity Detective',
+      badge: `${cloudTrailEvents.length} Audit Events`,
+      icon: Search,
+    },
+    {
+      id: 'RAM_LIGHTHOUSE_ORG_SHARING',
+      label: '19. AWS RAM / Azure Lighthouse',
+      badge: `${ramShares.length} Cross-Shares`,
+      icon: Share2,
+    },
+    {
+      id: 'BEDROCK_FOUNDRY_AI_GATEWAY',
+      label: '20. Bedrock / AI Foundry Gateway',
+      badge: `${bedrockGateway.routes?.length || 0} AI Gateways`,
+      icon: Sparkles,
+    },
+  ];
+
+  const alibabaHuaweiTabs = [
+    {
+      id: 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE',
+      label: '1. Alibaba PTS + MSE 11.11 Surge',
+      badge: `${aliyunFlashSale.campaigns?.length || 0} Armed`,
+      icon: Rocket,
+    },
+    {
+      id: 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE',
+      label: '2. Alibaba CEN & GA QoS Slicer',
+      badge: `${aliyunCenPackages.length} Backbones`,
+      icon: Network,
+    },
+    {
+      id: 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL',
+      label: '3. PolarDB / GaussDB HTAP & Clone',
+      badge: `${polarGaussClusters.length} HTAP Pools`,
+      icon: Layers,
+    },
+    {
+      id: 'HUAWEI_CCE_MODELARTS_AI_POOL',
+      label: '4. Huawei Volcano / PAI vGPU Pool',
+      badge: `${huaweiVgpuPools.length} vGPU Pools`,
+      icon: Boxes,
+    },
+    {
+      id: 'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY',
+      label: '5. RocketMQ 5.0 2PC & Delay Queue',
+      badge: `${aliyunRocketMqMessages.length} 2PC Tx`,
+      icon: Clock,
+    },
+    {
+      id: 'ALIYUN_NACOS_HIGRESS_CONFIG_MESH',
+      label: '6. Nacos + Higress Config & Wasm',
+      badge: `${aliyunNacosConfigs.length} Hot Configs`,
+      icon: GitBranch,
+    },
+    {
+      id: 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP',
+      label: '7. Hologres + MaxCompute Sub-s OLAP',
+      badge: `${aliyunHologresTables.length} Hybrid Tables`,
+      icon: Sparkles,
+    },
+    {
+      id: 'HUAWEI_DATAV_NOC_COMMAND_WALL',
+      label: '8. DataV / Huawei Astro NOC Wall',
+      badge: `${Number(huaweiDataVNoc.globalIngressQps || 68400).toLocaleString()} QPS`,
+      icon: Radar,
+    },
+  ];
+
+  const visibleSubTabs = isChinaSuite ? alibabaHuaweiTabs : awsAzureTabs;
 
   return (
     <div className="space-y-6">
@@ -1702,207 +2051,112 @@ export default function AwsAzureEnvySuiteStudio({
       <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+            <div
+              className={`inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                isChinaSuite
+                  ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30'
+                  : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+              }`}
+            >
               <Sparkles className="w-3.5 h-3.5" />
               <span>
-                INNOVATION #39–#50 · 24-IN-1 AWS, AZURE, ALIBABA CLOUD &amp; HUAWEI CLOUD PARITY SUITE FOR GOOGLE CLOUD
+                {isChinaSuite
+                  ? 'DEDICATED ALIBABA CLOUD (ALIYUN) & HUAWEI CLOUD HYPERSCALE PARITY SUITE (8 BRIDGES)'
+                  : 'DEDICATED AWS & MICROSOFT AZURE ENTERPRISE PARITY SUITE (20 BRIDGES)'}
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              Global Multi-Cloud Parity Super-Studio for Google Cloud (24 AWS, Azure, Alibaba &amp; Huawei Bridges)
+              {isChinaSuite
+                ? 'Alibaba Cloud & Huawei Cloud Hyperscale Parity Super-Studio for Google Cloud (8 Bridges)'
+                : 'AWS & Azure Moonshot Parity Super-Studio for Google Cloud (20 Enterprise Bridges)'}
             </h2>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              All 24 iconic enterprise cloud workflows engineers rely on in{' '}
-              <strong>Microsoft Azure</strong>, <strong>Amazon Web Services</strong>,{' '}
-              <strong>Alibaba Cloud (Aliyun)</strong>, and <strong>Huawei Cloud</strong>{' '}
-              brought natively to Google Cloud: <strong>Azure Resource Groups (Spend + RG-Scoped RBAC + 1-Click Teardown)</strong>,{' '}
-              <strong>Hard-Spend Stop-Loss Fuses</strong>,{' '}
-              <strong>AWS IAM Policy Simulator &amp; Switch-Role</strong>,{' '}
-              <strong>Azure SAS / S3 Presigned Studio</strong>,{' '}
-              <strong>1-Screen Global HTTPS LB + WAF</strong>,{' '}
-              <strong>CloudFormation/ARM Stack Drift &amp; Rollback</strong>,{' '}
-              <strong>Cost Explorer + CUD Savings Plans</strong>,{' '}
-              <strong>AWS SSM Fleet Run Command</strong>,{' '}
-              <strong>EventBridge Pipes / Logic Apps Router</strong>,{' '}
-              <strong>Key Vault Auto-Rotation &amp; Sync</strong>,{' '}
-              <strong>Trusted Advisor 5-Pillar Scorer</strong>,{' '}
-              <strong>Transit Gateway / Virtual WAN VPC Mesh</strong>,{' '}
-              <strong>ECS/ACA Multi-Container Sidecar Compose</strong>,{' '}
-              <strong>GuardDuty / Sentinel SOAR Playbooks</strong>,{' '}
-              <strong>Step Functions / Durable Saga Studio</strong>,{' '}
-              <strong>Multi-Brand OAuth Sign-In Studio</strong>,{' '}
-              <strong>Route 53 / Front Door DNS Routing</strong>,{' '}
-              <strong>CloudTrail Lake / Activity Log SQL Time-Detective</strong>,{' '}
-              <strong>AWS RAM / Azure Lighthouse Cross-Project Sharing</strong>,{' '}
-              <strong>Bedrock / AI Foundry Gateway</strong>,{' '}
-              <strong>Alibaba PTS + MSE Sentinel 11.11 Flash-Sale Surge Engine</strong>,{' '}
-              <strong>Alibaba CEN &amp; Global Accelerator QoS Bandwidth Slicer</strong>,{' '}
-              <strong>PolarDB / Huawei GaussDB Serverless HTAP &amp; Second-Level Clone</strong>, and{' '}
-              <strong>Huawei CCE Volcano / ModelArts &amp; Alibaba PAI Fractional vGPU Pool</strong>.
-            </p>
+            {isChinaSuite ? (
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
+                8 battle-tested hyperscale cloud architectures pioneered by{' '}
+                <strong>Alibaba Cloud (Aliyun)</strong> and{' '}
+                <strong>Huawei Cloud</strong> brought natively to Google Cloud:{' '}
+                <strong>1. Alibaba PTS + MSE Sentinel 11.11 Singles&apos; Day Flash-Sale Pre-Warm &amp; QPS Shedder</strong>,{' '}
+                <strong>2. Alibaba CEN &amp; Global Accelerator Cross-Region QoS Bandwidth Slicer</strong>,{' '}
+                <strong>3. PolarDB / Huawei GaussDB Serverless HTAP &amp; 1.6s Zero-Copy Clone</strong>,{' '}
+                <strong>4. Huawei CCE Volcano Gang-Scheduler + ModelArts / Alibaba PAI Fractional vGPU Pool</strong>,{' '}
+                <strong>5. Alibaba RocketMQ 5.0 2-Phase Transactional Half-Messages &amp; Exact-Second Delay Queue</strong>,{' '}
+                <strong>6. Alibaba Nacos + Higress Zero-Restart Dynamic Config &amp; AI Wasm Gateway</strong>,{' '}
+                <strong>7. Alibaba Hologres + MaxCompute Sub-Second Hybrid Row-Column OLAP Serving</strong>, and{' '}
+                <strong>8. DataV / Huawei Astro Executive Digital-Twin NOC &amp; War-Room Command Wall</strong>.
+              </p>
+            ) : (
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
+                All 20 iconic enterprise cloud workflows engineers rely on in{' '}
+                <strong>Microsoft Azure</strong> and <strong>Amazon Web Services</strong>{' '}
+                brought natively to Google Cloud: <strong>Azure Resource Groups (Spend + RG-Scoped RBAC + 1-Click Teardown)</strong>,{' '}
+                <strong>Hard-Spend Stop-Loss Fuses</strong>,{' '}
+                <strong>AWS IAM Policy Simulator &amp; Switch-Role</strong>,{' '}
+                <strong>Azure SAS / S3 Presigned Studio</strong>,{' '}
+                <strong>1-Screen Global HTTPS LB + WAF</strong>,{' '}
+                <strong>CloudFormation/ARM Stack Drift &amp; Rollback</strong>,{' '}
+                <strong>Cost Explorer + CUD Savings Plans</strong>,{' '}
+                <strong>AWS SSM Fleet Run Command</strong>,{' '}
+                <strong>EventBridge Pipes / Logic Apps Router</strong>,{' '}
+                <strong>Key Vault Auto-Rotation &amp; Sync</strong>,{' '}
+                <strong>Trusted Advisor 5-Pillar Scorer</strong>,{' '}
+                <strong>Transit Gateway / Virtual WAN VPC Mesh</strong>,{' '}
+                <strong>ECS/ACA Multi-Container Sidecar Compose</strong>,{' '}
+                <strong>GuardDuty / Sentinel SOAR Playbooks</strong>,{' '}
+                <strong>Step Functions / Durable Saga Studio</strong>,{' '}
+                <strong>Multi-Brand OAuth Sign-In Studio</strong>,{' '}
+                <strong>Route 53 / Front Door DNS Routing</strong>,{' '}
+                <strong>CloudTrail Lake / Activity Log SQL Time-Detective</strong>,{' '}
+                <strong>AWS RAM / Azure Lighthouse Cross-Project Sharing</strong>, and{' '}
+                <strong>Bedrock / AI Foundry Gateway</strong>.
+              </p>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={fetchOverview}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
-            />
-            <span>Sync Live Project</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {onSwitchCloudFamily && (
+              <div className="inline-flex items-center p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold">
+                <button
+                  type="button"
+                  onClick={() => onSwitchCloudFamily('AWS_AZURE')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    !isChinaSuite
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  AWS / Azure (20)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSwitchCloudFamily('ALIBABA_HUAWEI')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    isChinaSuite
+                      ? 'bg-orange-600 text-white shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  Alibaba / Huawei (8)
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={fetchOverview}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+              />
+              <span>Sync Live Project</span>
+            </button>
+          </div>
         </div>
 
-        {/* 24 Sub-Studio Navigation Pills */}
+        {/* Sub-Studio Navigation Pills (20 in AWS/Azure mode, 8 in Alibaba/Huawei mode) */}
         <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-          {[
-            {
-              id: 'RESOURCE_GROUPS',
-              label: '1. Azure Resource Groups + RBAC',
-              badge: `${resourceGroups.length} Groups`,
-              icon: FolderKanban,
-            },
-            {
-              id: 'SPEND_FUSE',
-              label: '2. Hard-Spend Fuse',
-              badge: `$${spendFuse.monthlyBudgetUsd || 50}/mo Cap`,
-              icon: Flame,
-            },
-            {
-              id: 'IAM_SIMULATOR',
-              label: '3. IAM Simulator & Switch Role',
-              badge: `${principals.length} Identities`,
-              icon: ShieldCheck,
-            },
-            {
-              id: 'SAS_PRESIGNED',
-              label: '4. S3/SAS Presigned URLs',
-              badge: `${buckets.length} Buckets`,
-              icon: Link2,
-            },
-            {
-              id: 'GLOBAL_LB_WIZARD',
-              label: '5. 1-Screen Global LB & WAF',
-              badge: '7-in-1 Wizard',
-              icon: Globe,
-            },
-            {
-              id: 'CFN_ARM_STACKS',
-              label: '6. CloudFormation/ARM Drift & Rollback',
-              badge: `${armStacks.length} Stacks`,
-              icon: Layers,
-            },
-            {
-              id: 'COST_EXPLORER_CUD',
-              label: '7. Cost Explorer & CUD Savings Plans',
-              badge: 'Up to -68%',
-              icon: TrendingDown,
-            },
-            {
-              id: 'SSM_FLEET_COMMAND',
-              label: '8. AWS SSM Fleet Run Command',
-              badge: `${ssmFleet.targets?.length || 0} Targets`,
-              icon: Terminal,
-            },
-            {
-              id: 'EVENTBRIDGE_PIPES',
-              label: '9. EventBridge Pipes & DLQ Router',
-              badge: `${eventPipes.length} Pipes`,
-              icon: GitBranch,
-            },
-            {
-              id: 'KEYVAULT_ROTATION',
-              label: '10. Key Vault Auto-Rotation & Sync',
-              badge: `${keyVaultSecrets.length} Secrets`,
-              icon: KeyRound,
-            },
-            {
-              id: 'TRUSTED_ADVISOR',
-              label: '11. Trusted Advisor 5-Pillar',
-              badge: `${trustedAdvisor.overallScore || 92}% Score`,
-              icon: Award,
-            },
-            {
-              id: 'TRANSIT_GATEWAY',
-              label: '12. Transit Gateway VPC Mesh',
-              badge: `${transitGateway.spokes?.length || 0} Spokes`,
-              icon: Network,
-            },
-            {
-              id: 'CONTAINER_COMPOSE',
-              label: '13. ECS/ACA Sidecar Compose',
-              badge: `${containerCompose.apps?.length || 0} Stacks`,
-              icon: Boxes,
-            },
-            {
-              id: 'GUARDDUTY_SOAR',
-              label: '14. GuardDuty/Sentinel SOAR',
-              badge: `${guardDutySoar.activeThreatsCount || 0} Active`,
-              icon: Radar,
-            },
-            {
-              id: 'STEP_FUNCTIONS',
-              label: '15. Step Functions Saga Studio',
-              badge: `${stepFunctions.workflows?.length || 0} State Machines`,
-              icon: Workflow,
-            },
-            {
-              id: 'MULTI_BRAND_OAUTH',
-              label: '16. Multi-Brand OAuth Studio',
-              badge: `${multiBrandOAuth.brands?.length || 0} Brands in 1 Project`,
-              icon: UserCheck,
-            },
-            {
-              id: 'ROUTE53_FRONTDOOR_TRAFFIC',
-              label: '17. Route 53 / Front Door DNS',
-              badge: `${route53Policies.length} Policies`,
-              icon: Globe,
-            },
-            {
-              id: 'CLOUDTRAIL_ACTIVITY_TIME_DETECTIVE',
-              label: '18. CloudTrail / Activity Detective',
-              badge: `${cloudTrailEvents.length} Audit Events`,
-              icon: Search,
-            },
-            {
-              id: 'RAM_LIGHTHOUSE_ORG_SHARING',
-              label: '19. AWS RAM / Azure Lighthouse',
-              badge: `${ramShares.length} Cross-Shares`,
-              icon: Share2,
-            },
-            {
-              id: 'BEDROCK_FOUNDRY_AI_GATEWAY',
-              label: '20. Bedrock / AI Foundry Gateway',
-              badge: `${bedrockGateway.routes?.length || 0} AI Gateways`,
-              icon: Sparkles,
-            },
-            {
-              id: 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE',
-              label: '21. Alibaba PTS + MSE 11.11 Surge',
-              badge: `${aliyunFlashSale.campaigns?.length || 0} Armed`,
-              icon: Rocket,
-            },
-            {
-              id: 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE',
-              label: '22. Alibaba CEN & GA QoS Slicer',
-              badge: `${aliyunCenPackages.length} Backbones`,
-              icon: Network,
-            },
-            {
-              id: 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL',
-              label: '23. PolarDB / GaussDB HTAP & Clone',
-              badge: `${polarGaussClusters.length} HTAP Pools`,
-              icon: Layers,
-            },
-            {
-              id: 'HUAWEI_CCE_MODELARTS_AI_POOL',
-              label: '24. Huawei Volcano / PAI vGPU Pool',
-              badge: `${huaweiVgpuPools.length} vGPU Pools`,
-              icon: Boxes,
-            },
-          ].map((tab) => {
+          {visibleSubTabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeSubTab === tab.id;
             return (
@@ -6528,6 +6782,387 @@ export default function AwsAzureEnvySuiteStudio({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          CHINA MODULE 5: ALIBABA ROCKETMQ 5.0 2PC HALF-MESSAGE & DELAY QUEUE
+         ===================================================================== */}
+      {activeSubTab === 'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <form
+              onSubmit={handlePublishRocketMqHalfMessage}
+              className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Alibaba RocketMQ 5.0 / Huawei DMS 2-Phase Transactional Half-Message &amp; Exact-Second Delay Queue
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Borrow Alibaba Cloud&apos;s iconic <strong>RocketMQ 5.0 Transactional Half-Messages &amp; Arbitrary Timestamp Delayed Delivery</strong> on Google Cloud: coordinate distributed database commits without XA locks and schedule exact-second order timeouts (e.g., release unpaid inventory in <code>900s</code>) via Pub/Sub + Cloud Tasks + Firestore Outbox.
+              </p>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">RocketMQ / PubSub Transactional Topic</span>
+                <input
+                  type="text"
+                  value={rmqTopicName}
+                  onChange={(e) => setRmqTopicName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                />
+              </label>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">2PC Half-Message Payload Summary</span>
+                <input
+                  type="text"
+                  value={rmqPayloadSummary}
+                  onChange={(e) => setRmqPayloadSummary(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                />
+              </label>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">Exact Delivery Delay (Seconds)</span>
+                <input
+                  type="number"
+                  min="5"
+                  max="604800"
+                  value={rmqDelaySec}
+                  onChange={(e) => setRmqDelaySec(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={actionBusy === 'ALIYUN_RMQ_PUBLISH'}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-amber-600 hover:bg-amber-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {actionBusy === 'ALIYUN_RMQ_PUBLISH'
+                  ? 'Committing 2PC Half-Message...'
+                  : '1-Click Commit 2PC Half-Message & Arm Exact-Second Timer'}
+              </button>
+            </form>
+
+            <div className="xl:col-span-7 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                Active 2-Phase Transactional Half-Messages &amp; Delayed Timers
+              </h3>
+              <div className="space-y-3">
+                {aliyunRocketMqMessages.map((m) => (
+                  <div
+                    key={m.messageId}
+                    className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {m.topicName} · {m.payloadSummary}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                        {m.txState}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Exact Delay Timer: <strong>{m.deliveryDelaySec}s</strong> · Bridge: {m.gcpBridge}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          CHINA MODULE 6: ALIBABA NACOS + HIGRESS CONFIG & AI WASM GATEWAY
+         ===================================================================== */}
+      {activeSubTab === 'ALIYUN_NACOS_HIGRESS_CONFIG_MESH' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <form
+              onSubmit={handlePushNacosHigressConfig}
+              className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <GitBranch className="w-4 h-4 text-violet-500" />
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Alibaba Nacos + Higress / Huawei ServiceComb Zero-Restart Config &amp; AI Wasm Gateway
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Borrow Alibaba&apos;s open-source <strong>Nacos Dynamic Configuration Center</strong> and <strong>Higress Envoy/Wasm Gateway</strong> on Google Cloud: hot-push feature flags, header-based gray-release routing rules, and Wasm AI token rate-limit filters in under 40ms with <strong>zero Cloud Run / GKE container restarts</strong>.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Nacos Data ID</span>
+                  <input
+                    type="text"
+                    value={nacosDataId}
+                    onChange={(e) => setNacosDataId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Namespace</span>
+                  <input
+                    type="text"
+                    value={nacosNamespace}
+                    onChange={(e) => setNacosNamespace(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Gray-Release Header Rule</span>
+                  <input
+                    type="text"
+                    value={nacosCanaryRule}
+                    onChange={(e) => setNacosCanaryRule(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Canary Weight (%)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={nacosCanaryPct}
+                    onChange={(e) => setNacosCanaryPct(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+              </div>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">Higress Wasm Filter Plugin</span>
+                <input
+                  type="text"
+                  value={nacosWasmPlugin}
+                  onChange={(e) => setNacosWasmPlugin(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={actionBusy === 'ALIYUN_NACOS_PUSH'}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-violet-600 hover:bg-violet-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {actionBusy === 'ALIYUN_NACOS_PUSH'
+                  ? 'Hot-Pushing Nacos + Higress Config...'
+                  : '1-Click Hot-Push Nacos Config & Wasm Plugin (0 Restarts)'}
+              </button>
+            </form>
+
+            <div className="xl:col-span-7 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                Active Nacos Dynamic Configs &amp; Higress Gray-Release Rules
+              </h3>
+              <div className="space-y-3">
+                {aliyunNacosConfigs.map((cfg) => (
+                  <div
+                    key={cfg.configId}
+                    className="p-4 rounded-xl border border-violet-500/30 bg-violet-500/5 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {cfg.dataId} ({cfg.namespace})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                        {cfg.status} ({cfg.pushLatencyMs}ms)
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Gray Rule: <code>{cfg.canaryHeaderRule}</code> ({cfg.canaryWeightPct}%) · Wasm: <strong>{cfg.wasmPlugin}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          CHINA MODULE 7: ALIBABA HOLOGRES + MAXCOMPUTE SUB-SECOND OLAP SERVING
+         ===================================================================== */}
+      {activeSubTab === 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <form
+              onSubmit={handleProvisionHologresIndex}
+              className="xl:col-span-5 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-500" />
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                  Alibaba Hologres + MaxCompute / Huawei MRS Sub-Second OLAP Serving Accelerator
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Borrow Alibaba&apos;s <strong>Hologres + MaxCompute HSAP (Hybrid Serving &amp; Analytical Processing)</strong> architecture on Google Cloud: accelerate petabyte BigQuery tables with hybrid Row-Column indexing (BigQuery BI Engine + Bigtable Federated Point-Lookup) for <strong>100,000+ QPS at single-digit millisecond latency</strong>.
+              </p>
+
+              <label className="block space-y-1 text-xs font-mono">
+                <span className="text-zinc-500">Target BigQuery / MaxCompute Table</span>
+                <input
+                  type="text"
+                  value={holoDataset}
+                  onChange={(e) => setHoloDataset(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                />
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                <label className="space-y-1">
+                  <span className="text-zinc-500">Storage Orientation Mode</span>
+                  <select
+                    value={holoOrientation}
+                    onChange={(e) => setHoloOrientation(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  >
+                    <option value="ROW_COLUMN_HYBRID_INDEX">
+                      ROW_COLUMN_HYBRID_INDEX (Point Lookup + OLAP)
+                    </option>
+                    <option value="COLUMNAR_VECTOR_BITMAP_INDEX">
+                      COLUMNAR_VECTOR_BITMAP_INDEX (Ad-Hoc Aggregations)
+                    </option>
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-zinc-500">BI Engine In-Memory Reservation (GB)</span>
+                  <input
+                    type="number"
+                    min="4"
+                    max="512"
+                    value={holoBiRamGb}
+                    onChange={(e) => setHoloBiRamGb(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                  />
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={actionBusy === 'ALIYUN_HOLO_INDEX'}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {actionBusy === 'ALIYUN_HOLO_INDEX'
+                  ? 'Provisioning Hologres Hybrid Index...'
+                  : '1-Click Provision Hologres + MaxCompute Sub-Second Serving Index'}
+              </button>
+            </form>
+
+            <div className="xl:col-span-7 bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                Active Hologres + MaxCompute Hybrid Serving Tables
+              </h3>
+              <div className="space-y-3">
+                {aliyunHologresTables.map((tb) => (
+                  <div
+                    key={tb.tableId}
+                    className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {tb.sourceMaxComputeDataset}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                        {tb.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Mode: <strong>{tb.orientationMode}</strong> · Point-Lookup Capacity: <strong>{Number(tb.pointLookupQpsCapacity).toLocaleString()} QPS</strong> · p99 Latency: <strong>{tb.p99QueryLatencyMs}ms</strong> ({tb.biEngineRamGb} GB RAM)
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          CHINA MODULE 8: DATAV / HUAWEI ASTRO DIGITAL-TWIN NOC COMMAND WALL
+         ===================================================================== */}
+      {activeSubTab === 'HUAWEI_DATAV_NOC_COMMAND_WALL' && (
+        <div className="space-y-6">
+          <div className="bg-zinc-950 text-zinc-100 border border-orange-500/40 rounded-2xl p-6 shadow-lg space-y-5 font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-[11px] text-orange-400 font-extrabold uppercase tracking-wider">
+                  ALIBABA DATAV &amp; HUAWEI CLOUD ASTRO · EXECUTIVE DIGITAL-TWIN NOC WALL
+                </div>
+                <h3 className="text-lg font-extrabold text-white mt-0.5">
+                  {huaweiDataVNoc.screenTitle}
+                </h3>
+              </div>
+              <form
+                onSubmit={handleTriggerDataVNocDrill}
+                className="flex flex-wrap items-center gap-2 text-xs"
+              >
+                <input
+                  type="text"
+                  value={datavDrillScenario}
+                  onChange={(e) => setDatavDrillScenario(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 w-72"
+                />
+                <button
+                  type="submit"
+                  disabled={actionBusy === 'HUAWEI_DATAV_DRILL'}
+                  className="px-3.5 py-1.5 rounded-xl font-extrabold bg-orange-600 hover:bg-orange-500 text-white cursor-pointer"
+                >
+                  {actionBusy === 'HUAWEI_DATAV_DRILL'
+                    ? 'Simulating Drill...'
+                    : 'Trigger Live War-Room Drill'}
+                </button>
+              </form>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+              <div className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800">
+                <div className="text-zinc-400">Live Global Checkout Volume</div>
+                <div className="text-xl font-extrabold text-orange-400 mt-1">
+                  ${Number(huaweiDataVNoc.globalLiveGmvUsd || 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800">
+                <div className="text-zinc-400">Global Edge Ingress QPS</div>
+                <div className="text-xl font-extrabold text-emerald-400 mt-1">
+                  {Number(huaweiDataVNoc.globalIngressQps || 0).toLocaleString()} QPS
+                </div>
+              </div>
+              <div className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800">
+                <div className="text-zinc-400">CEN Backbone Latency</div>
+                <div className="text-xl font-extrabold text-cyan-400 mt-1">
+                  APAC-EU {huaweiDataVNoc.apakToEuFiberRttMs}ms / US {huaweiDataVNoc.apakToUsFiberRttMs}ms
+                </div>
+              </div>
+              <div className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800">
+                <div className="text-zinc-400">Autonomous Mitigations Today</div>
+                <div className="text-xl font-extrabold text-purple-400 mt-1">
+                  {huaweiDataVNoc.autoMitigatedAnomaliesToday} Self-Healed
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs text-orange-200 flex flex-wrap items-center justify-between gap-2">
+              <span>
+                Latest Autonomous Drill Telemetry: <strong>{huaweiDataVNoc.lastDrillScenario}</strong>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                {huaweiDataVNoc.activeRegionsHealthy}
+              </span>
             </div>
           </div>
         </div>

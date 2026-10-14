@@ -1218,8 +1218,16 @@ function CloudPulseCockpit() {
       group: 'SECURITY_SRE',
       label: 'AWS & Azure Parity',
       isStar: true,
-      tip: '16-in-1 AWS & Azure Enterprise Parity Suite for GCP: Azure Resource Groups + RBAC + 1-Click Teardown, Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator & Switch Role, 1-Click SAS/Presigned URLs, 1-Screen Global HTTPS Load Balancer Wizard, and Multi-Brand OAuth Sign-In Studio',
+      tip: '20-in-1 AWS & Azure Enterprise Parity Suite for GCP: Azure Resource Groups + RBAC + 1-Click Teardown, Hard-Spend Fuse, AWS IAM Policy Simulator, S3/SAS Presigned URLs, 1-Screen Global LB + WAF, CloudFormation/ARM Drift, SSM Fleet Command, Multi-Brand OAuth, Route 53/Front Door DNS, CloudTrail Lake, AWS RAM/Lighthouse & Bedrock/AI Foundry Gateway',
       icon: Layers,
+    },
+    {
+      id: 'ALIBABA_HUAWEI_PARITY',
+      group: 'SECURITY_SRE',
+      label: 'Alibaba & Huawei Parity',
+      isStar: true,
+      tip: '8-in-1 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity Suite for GCP: 11.11 Singles-Day PTS + MSE Sentinel Surge Engine, CEN + Global Accelerator QoS Slicer, PolarDB / GaussDB Serverless HTAP & 1.6s Clone, Huawei CCE Volcano + PAI Fractional vGPU Pool, RocketMQ 5.0 2PC Half-Messages, Nacos + Higress Zero-Restart Config Mesh, Hologres + MaxCompute Sub-Second OLAP, and DataV / Astro War-Room NOC Wall',
+      icon: Globe,
     },
     {
       id: 'SRE_WAR_ROOM',
@@ -2028,7 +2036,35 @@ function CloudPulseCockpit() {
 
               {activeTab === 'AWS_AZURE_PARITY' && (
                 <AwsAzureEnvySuiteStudio
+                  key="aws-azure-parity"
+                  cloudFamily="AWS_AZURE"
+                  initialTab="RESOURCE_GROUPS"
                   projectId={selectedProjectId}
+                  onSwitchCloudFamily={(family) =>
+                    setActiveTab(
+                      family === 'ALIBABA_HUAWEI'
+                        ? 'ALIBABA_HUAWEI_PARITY'
+                        : 'AWS_AZURE_PARITY'
+                    )
+                  }
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'ALIBABA_HUAWEI_PARITY' && (
+                <AwsAzureEnvySuiteStudio
+                  key="alibaba-huawei-parity"
+                  cloudFamily="ALIBABA_HUAWEI"
+                  initialTab="ALIYUN_PTS_MSE_FLASH_SALE_SURGE"
+                  projectId={selectedProjectId}
+                  onSwitchCloudFamily={(family) =>
+                    setActiveTab(
+                      family === 'ALIBABA_HUAWEI'
+                        ? 'ALIBABA_HUAWEI_PARITY'
+                        : 'AWS_AZURE_PARITY'
+                    )
+                  }
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />
