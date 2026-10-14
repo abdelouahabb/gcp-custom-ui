@@ -38,6 +38,11 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import {
+  TimezoneProvider,
+  useTimezone,
+  TimezoneSelectorPill,
+} from './context/TimezoneContext';
 import SortableKpiRow from './components/SortableKpiRow';
 import TelemetryCharts from './components/TelemetryCharts';
 import ResourceControlCenter from './components/ResourceControlCenter';
@@ -770,6 +775,13 @@ function classifyDestructiveAxiosConfig(config) {
 
 function CloudPulseCockpit() {
   const { isDark, toggleTheme, mobilePreview, setMobilePreview } = useTheme();
+  const {
+    activeTimeZone,
+    utcOffsetLabel,
+    shortTzName,
+    liveShortClockText,
+    liveDateText,
+  } = useTimezone();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1370,7 +1382,9 @@ function CloudPulseCockpit() {
       >
         {mobilePreview && (
           <div className="bg-[#131314] text-zinc-200 px-6 py-2 flex items-center justify-between text-[11px] font-mono border-b border-zinc-800">
-            <span>23:35 · GCP 5G+</span>
+            <span>
+              {liveShortClockText} {shortTzName} · GCP 5G+
+            </span>
             <div className="w-20 h-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[9px] text-zinc-300">
               LIVE OAUTH
             </div>
@@ -1422,7 +1436,7 @@ function CloudPulseCockpit() {
                         }
                       )
                     : contextData.account}{' '}
-                  · {format(new Date(), 'MMM dd, yyyy')}
+                  · {liveDateText} · {activeTimeZone} ({utcOffsetLabel})
                 </p>
               </div>
             </div>
@@ -1539,6 +1553,9 @@ function CloudPulseCockpit() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Global UI Timezone & Live Clock Selector Pill */}
+              <TimezoneSelectorPill onShowToast={showToast} />
+
               {/* Live GCP Project Dropdown */}
               <div className="relative z-40">
                 <button
@@ -2772,7 +2789,9 @@ function GlobalInstantTooltipHud() {
 export default function App() {
   return (
     <ThemeProvider>
-      <CloudPulseCockpit />
+      <TimezoneProvider>
+        <CloudPulseCockpit />
+      </TimezoneProvider>
     </ThemeProvider>
   );
 }

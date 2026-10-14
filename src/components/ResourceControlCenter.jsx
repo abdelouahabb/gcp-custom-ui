@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
+import { useTimezone } from '../context/TimezoneContext';
 import {
   Filter,
   ChevronDown,
@@ -47,6 +48,7 @@ export default function ResourceControlCenter({
   onRunInShell,
   onAskCopilot,
 }) {
+  const { formatShortDate, shortTzName } = useTimezone();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSource, setSelectedSource] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,9 +117,9 @@ export default function ResourceControlCenter({
 
   const formatReadableDate = (isoString) => {
     try {
-      return format(new Date(isoString), 'MMM dd, yyyy');
+      return `${formatShortDate(isoString)} (${shortTzName})`;
     } catch {
-      return 'Oct 09, 2026';
+      return format(new Date(), 'MMM dd, yyyy');
     }
   };
 

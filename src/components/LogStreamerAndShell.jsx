@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import axios from 'axios';
+import { useTimezone } from '../context/TimezoneContext';
 import {
   Terminal,
   Play,
@@ -38,6 +39,7 @@ export default function LogStreamerAndShell({
   onRefreshLogs,
   onAskCopilot,
 }) {
+  const { activeTimeZone, utcOffsetLabel, formatDateTime } = useTimezone();
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [shellInput, setShellInput] = useState(
@@ -164,9 +166,9 @@ export default function LogStreamerAndShell({
 
   const formatLogDate = (iso) => {
     try {
-      return format(new Date(iso), 'MMM dd, yyyy HH:mm:ss');
+      return formatDateTime(iso, { includeSeconds: true, includeZone: true });
     } catch {
-      return 'Oct 09, 2026 22:45:00';
+      return format(new Date(), 'MMM dd, yyyy HH:mm:ss');
     }
   };
 
@@ -226,6 +228,9 @@ export default function LogStreamerAndShell({
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                 🎁 400-Day Admin Activity Retention · $0.00/mo Always Free
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono font-bold">
+                🕒 TZ: {activeTimeZone} ({utcOffsetLabel})
               </span>
             </div>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 mt-1">

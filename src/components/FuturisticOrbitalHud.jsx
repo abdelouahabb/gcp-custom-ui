@@ -21,6 +21,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { GCP_REGION_CARBON_DATA } from './EngineerWishlistWave2';
+import { useTimezone } from '../context/TimezoneContext';
 
 const STACK_BLUEPRINTS = [
   {
@@ -72,6 +73,7 @@ export default function FuturisticOrbitalHud({
   onShowToast,
   onShowError,
 }) {
+  const { formatDateTime } = useTimezone();
   const [expandedPanel, setExpandedPanel] = useState(null); // null | 'STACK_COMPOSER' | 'FLIGHT_RECORDER' | 'ORBITAL_GRID'
   const [autoPilotActive, setAutoPilotActive] = useState(true);
   const [hudAccent, setHudAccent] = useState('CYBER_CYAN'); // 'CYBER_CYAN' | 'NEON_VIOLET' | 'EMERALD_MATRIX'
@@ -514,7 +516,7 @@ export default function FuturisticOrbitalHud({
                   <div>
                     <div className="font-bold text-zinc-900 dark:text-zinc-100">{ev.title}</div>
                     <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                      {ev.actionType} · {ev.region} · {ev.timestamp}
+                      {ev.actionType} · {ev.region} · {formatDateTime(ev.timestamp)}
                     </div>
                   </div>
                   {ev.undoable && ev.undoPayload && onDeleteResource && (

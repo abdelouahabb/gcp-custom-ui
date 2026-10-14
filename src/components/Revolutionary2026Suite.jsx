@@ -29,6 +29,7 @@ import EngineerWishlistWave2 from './EngineerWishlistWave2';
 import AutonomousCloudBrain from './AutonomousCloudBrain';
 import EngineerMoonshotsWave3 from './EngineerMoonshotsWave3';
 import Lab2026QuantumNexus from './Lab2026QuantumNexus';
+import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
 const VM_HOURLY_RATES = {
@@ -199,6 +200,7 @@ export default function Revolutionary2026Suite({
   onShowToast,
   onShowError,
 }) {
+  const { activeTimeZone, utcOffsetLabel } = useTimezone();
   const [subTab, setSubTab] = useState(
     initialSubTab === 'TOPOLOGY' ? 'QUANTUM_NEXUS' : initialSubTab || 'QUANTUM_NEXUS'
   );
@@ -1271,29 +1273,32 @@ export default function Revolutionary2026Suite({
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5 flex flex-col justify-between">
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Zap className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
                     <h4 className="text-xs font-extrabold font-mono uppercase text-zinc-900 dark:text-zinc-100">
                       Google Cloud Scheduler + Compute Instance Schedules
                     </h4>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      TZ: {activeTimeZone} ({utcOffsetLabel})
+                    </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      const schedulerCli = `# 1. Native Compute Engine Instance Schedule (Stops VMs at 20:00, Wakes at 08:00 Mon-Fri)
+                      const schedulerCli = `# 1. Native Compute Engine Instance Schedule (Stops VMs at 20:00, Wakes at 08:00 Mon-Fri in ${activeTimeZone})
 gcloud compute resource-policies create instance-schedule night-finops-schedule \\
   --project=${projectId} \\
   --region=us-central1 \\
   --vm-start-schedule="0 8 * * 1-5" \\
   --vm-stop-schedule="0 20 * * 1-5" \\
-  --timezone="UTC"
+  --timezone="${activeTimeZone}"
 
-# 2. Google Cloud Scheduler Cron Job for Cloud Run minInstances=0 Night Hibernation
+# 2. Google Cloud Scheduler Cron Job for Cloud Run minInstances=0 Night Hibernation (${activeTimeZone})
 gcloud scheduler jobs create http cloudpulse-night-sleep-cron \\
   --project=${projectId} \\
   --location=us-central1 \\
   --schedule="0 20 * * 1-5" \\
-  --time-zone="UTC" \\
+  --time-zone="${activeTimeZone}" \\
   --uri="https://us-central1-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/${projectId}/services" \\
   --http-method=POST \\
   --oauth-service-account-email="${projectId}@appspot.gserviceaccount.com"`;
@@ -1317,21 +1322,21 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron \\
                   </button>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                  Night-Mode supports both <strong>on-demand REST hibernation</strong> and <strong>autonomous 24/7 Google Cloud Scheduler cron automation</strong>:
+                  Night-Mode supports both <strong>on-demand REST hibernation</strong> and <strong>timezone-aware 24/7 Google Cloud Scheduler cron automation ({activeTimeZone})</strong>:
                 </p>
                 <ul className="space-y-1 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
                   <li>
                     • <strong>1-Click Manual Trigger (Above)</strong>: Immediately calls <code className="text-blue-500">compute.instances.stop</code> and patches Cloud Run <code className="text-blue-500">minInstanceCount=0</code> via <code className="text-blue-500">POST /api/project/{projectId}/hibernate</code>.
                   </li>
                   <li>
-                    • <strong>Unattended Cron (`cloudscheduler.googleapis.com` + `resourcePolicies`)</strong>: Uses <strong>Google Cloud Scheduler</strong> (<code className="text-emerald-600 dark:text-emerald-400">0 20 * * 1-5</code> sleep / <code className="text-emerald-600 dark:text-emerald-400">0 8 * * 1-5</code> wake; first 3 jobs free) + <strong>Compute Engine Instance Schedules</strong> (<code className="text-emerald-600 dark:text-emerald-400">gcloud compute resource-policies create instance-schedule</code>) so GCP hibernates and wakes your fleet even when your browser is closed.
+                    • <strong>Unattended Cron (`cloudscheduler.googleapis.com` + `resourcePolicies`)</strong>: Uses <strong>Google Cloud Scheduler</strong> (<code className="text-emerald-600 dark:text-emerald-400">0 20 * * 1-5</code> sleep / <code className="text-emerald-600 dark:text-emerald-400">0 8 * * 1-5</code> wake in <code className="text-emerald-600 dark:text-emerald-400">{activeTimeZone}</code>; first 3 jobs free) + <strong>Compute Engine Instance Schedules</strong> (<code className="text-emerald-600 dark:text-emerald-400">--timezone=&quot;{activeTimeZone}&quot;</code>) so GCP hibernates and wakes your fleet on your exact local schedule even when your browser is closed.
                   </li>
                 </ul>
               </div>
               <pre className="bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-lg p-2.5 text-[10px] font-mono overflow-x-auto">
 {`gcloud compute resource-policies create instance-schedule night-finops-schedule \\
-  --project=${projectId} --region=us-central1 --vm-start-schedule="0 8 * * 1-5" --vm-stop-schedule="0 20 * * 1-5" --timezone="UTC"
-gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 * * 1-5" --location=us-central1 ...`}
+  --project=${projectId} --region=us-central1 --vm-start-schedule="0 8 * * 1-5" --vm-stop-schedule="0 20 * * 1-5" --timezone="${activeTimeZone}"
+gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 * * 1-5" --time-zone="${activeTimeZone}" --location=us-central1 ...`}
               </pre>
             </div>
           </div>
