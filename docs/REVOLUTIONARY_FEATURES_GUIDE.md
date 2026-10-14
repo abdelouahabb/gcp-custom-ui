@@ -332,5 +332,19 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     5. **Optional Project ID & Credit Balance Masking**: Toggleable switches in the `⚙️` popover to replace live Project IDs with `gde-demo-project` and mask large dollar balances (`$•,•••.••`).
   - **Persistent Across Browser Refreshes (`localStorage`)**: Saves your shield state in `cloudpulse_gde_tutorial_mode_v1` so refreshing the page during a live stream never flashes your email or billing account ID.
 
+### 39. 🌉 AWS & Azure Parity Super-Studio for Google Cloud (`AwsAzureEnvySuiteStudio.jsx`)
+- **Where to find it**: Top navigation tab **`AWS/Azure Parity ★`** (or via **`⌘K`** $\rightarrow$ *"Open AWS & Azure Parity Super-Studio"*).
+- **How it Works**:
+  - **📦 1. Azure-Style "Resource Groups" & Bulk Label Tagger (`UPSERT_RESOURCE_GROUP`, `HIBERNATE_RESOURCE_GROUP`, `DELETE_RESOURCE_GROUP`)**:
+    - Groups any combination of Compute Engine VMs, Cloud Run services, Cloud Storage buckets, BigQuery datasets, and Secret Manager secrets into logical folders (syncing `labels.resource_group` on GCP resources), displays live per-group `$/mo` burn, and enables **1-Click Hibernate Group** or **1-Click Cascade Teardown Group** (protected by the Mandatory Delete Confirmation Modal and grayed-out `line-through` `⏳ DELETING...` visual feedback).
+  - **🛑 2. AWS Budgets Actions / Azure Auto-Shutdown "Hard-Spend Stop-Loss Fuse" (`SAVE_SPEND_FUSE_CONFIG`, `EXECUTE_SPEND_FUSE`)**:
+    - Arms 3 automated stop-loss thresholds (`80%` Soft Brake capping Cloud Run `maxInstances=3` & `minInstances=0`, `95%` Compute Park stopping all `RUNNING` Compute VMs, and `100%` native Pub/Sub `projects/:id/topics/cloudpulse-hard-spend-fuse` wire).
+  - **🕵️‍♂️ 3. AWS-Style "IAM Policy Simulator" & "Switch Role" Service Account Impersonator (`SIMULATE_IAM_POLICY`, `GRANT_SIMULATOR_ROLE`)**:
+    - Evaluates 16 core GCP permissions (`ALLOW` vs `DENY`) for any Service Account or user principal via live `getIamPolicy` + `testIamPermissions`, activates a top-level **🎭 Switch Role Preview** banner, and binds missing least-privilege roles in 1 click.
+  - **🔗 4. Azure SAS / AWS S3 "1-Click Presigned URL & Browser Upload Studio" (`UPLOAD_BUCKET_OBJECT`, `GENERATE_PRESIGNED_URL`)**:
+    - Uploads files directly from the browser (`storage.googleapis.com/upload/storage/v1`) and generates expiring (`15m`, `1h`, `24h`, `7d`) Zero-SA-Key SAS Bridge URLs (`/api/project/:id/aws-azure-parity/presigned-bridge/:sasToken`) plus `gcloud storage sign-url` V4 commands.
+  - **🌐 5. 1-Screen Global HTTPS Load Balancer + Custom Domain + Cloud Armor WAF Wizard (`PROVISION_GLOBAL_LB_STACK`)**:
+    - Collapses GCP's 7-object Global Load Balancer setup (`Global Static IP` ➔ `Serverless NEG` ➔ `Cloud Armor WAF` ➔ `Backend Service` ➔ `URL Map` ➔ `Google-Managed SSL Cert` ➔ `Global Forwarding Rule`) into a single 1-click workflow.
+
 
 

@@ -149,6 +149,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-aws-azure-parity',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open AWS & Azure Parity Super-Studio (Resource Groups, Spend Fuse, IAM Simulator, SAS URLs & 1-Screen LB)',
+        subtitle: 'Azure-style Resource Groups + 1-Click Teardown, Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator, Presigned URLs & Global LB Wizard',
+        keywords: 'aws azure resource group tagger hard spend fuse stop loss budget iam policy simulator switch role presigned url sas s3 load balancer waf',
+        badge: 'AWS/AZURE PARITY',
+        badgeColor: 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        icon: Rocket,
+        run: () => {
+          onSelectTab('AWS_AZURE_PARITY');
+          onClose();
+        }
+      },
+      {
         id: 'open-biglake-iceberg',
         category: '2026 Innovation Lab (Star)',
         title: 'Open Dedicated BigLake & Apache Iceberg Open Lakehouse Studio',

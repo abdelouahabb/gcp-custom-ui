@@ -76,6 +76,7 @@ import GdeStreamerPrivacyShield, {
   loadGdePrivacyConfig,
   redactTextForGdeMode,
 } from './components/GdeStreamerPrivacyShield';
+import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -458,6 +459,71 @@ function classifyDestructiveAxiosConfig(config) {
           confirmLabel: 'Confirm & Freeze Service Account',
           cancelToast: `Action cancelled — "${target}" remains enabled.`,
           impactWarning: `EMERGENCY KILL-SWITCH WARNING: Disabling Service Account "${target}" immediately blocks ALL JSON keys, OAuth tokens, and workloads running as this identity until you re-enable it.`,
+        };
+      }
+    }
+
+    // AWS & Azure Parity Suite destructive / stop-loss actions
+    if (rawUrl.includes('/aws-azure-parity/action')) {
+      const act = String(body.action || '').toUpperCase();
+      if (act === 'DELETE_RESOURCE_GROUP') {
+        const slug = body.slug || 'Resource Group';
+        const cascade = Boolean(body.deleteGcpResources);
+        const count = Array.isArray(body.memberIds) ? body.memberIds.length : 0;
+        return {
+          title: cascade
+            ? `Teardown Resource Group "${slug}" + Delete ${count} GCP Resource(s)?`
+            : `Remove Logical Resource Group "${slug}"?`,
+          resourceKind: cascade
+            ? 'Azure-Style Resource Group + Underlying GCP Resources'
+            : 'Azure-Style Logical Resource Group Container',
+          targetName: slug,
+          location: 'Multi-Region Group',
+          projectId,
+          method: cascade ? 'CASCADE DELETE GROUP' : 'REMOVE GROUP',
+          endpoint: rawUrl,
+          confirmLabel: cascade
+            ? `Confirm & Delete Group + ${count} Resource(s)`
+            : 'Confirm & Remove Group Container',
+          cancelToast: `Deletion of Resource Group "${slug}" cancelled.`,
+          impactWarning: cascade
+            ? `CRITICAL CASCADE TEARDOWN: This will permanently delete Resource Group "${slug}" AND issue live GCP DELETE calls across all ${count} member resource(s) (Cloud Run, VMs, GCS Buckets, BigQuery Datasets, Secrets).`
+            : `This removes the logical Resource Group folder "${slug}" while leaving all underlying GCP resources running untouched.`,
+        };
+      }
+      if (act === 'HIBERNATE_RESOURCE_GROUP') {
+        const slug = body.slug || 'Resource Group';
+        return {
+          title: `Hibernate Resource Group "${slug}"?`,
+          resourceKind: 'Azure-Style Resource Group Compute Park',
+          targetName: slug,
+          location: 'Multi-Region Group',
+          projectId,
+          method: 'HIBERNATE GROUP',
+          endpoint: rawUrl,
+          confirmLabel: 'Confirm & Hibernate Group',
+          cancelToast: `Hibernation of "${slug}" cancelled.`,
+          impactWarning: `This will stop all RUNNING Compute Engine VMs and scale warm Cloud Run services (minInstances -> 0) inside Resource Group "${slug}".`,
+        };
+      }
+      if (
+        act === 'EXECUTE_SPEND_FUSE' &&
+        (body.fuseLevel === 'SOFT_BRAKE' || body.fuseLevel === 'COMPUTE_PARK')
+      ) {
+        return {
+          title: `Execute Hard-Spend Fuse (${body.fuseLevel}) on "${projectId}"?`,
+          resourceKind: 'Automated Stop-Loss Budget Fuse',
+          targetName: `${projectId} (${body.fuseLevel})`,
+          location: 'Global Project Fleet',
+          projectId,
+          method: body.fuseLevel,
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Execute ${body.fuseLevel}`,
+          cancelToast: `Spend Fuse action ${body.fuseLevel} cancelled.`,
+          impactWarning:
+            body.fuseLevel === 'COMPUTE_PARK'
+              ? `This will immediately stop all RUNNING Compute Engine VMs across all zones and scale warm Cloud Run services to minInstances=0.`
+              : `This will scale warm Cloud Run services to minInstances=0 and cap maxInstances=3 across "${projectId}".`,
         };
       }
     }
@@ -1049,6 +1115,14 @@ function CloudPulseCockpit() {
       label: 'Global Map',
       tip: 'Interactive 40-Region & 121-Zone Global Subsea Cable, Carbon Intensity & Chaos Failover Map with click-to-deploy',
       icon: Globe,
+    },
+    {
+      id: 'AWS_AZURE_PARITY',
+      group: 'COMMAND',
+      label: 'AWS/Azure Parity',
+      isStar: true,
+      tip: 'AWS & Azure Dream Features for GCP: Azure-Style Resource Groups & 1-Click Teardown, Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator & Switch Role, 1-Click SAS/Presigned URLs, and 1-Screen Global HTTPS Load Balancer Wizard',
+      icon: Layers,
     },
 
     // II. Core Infrastructure, Compute & Serverless
@@ -1945,6 +2019,14 @@ function CloudPulseCockpit() {
                   initialCommand={shellSeedCommand}
                   onRefreshLogs={() => fetchProjectOverview(selectedProjectId)}
                   onAskCopilot={handleOpenCopilotWithPrompt}
+                />
+              )}
+
+              {activeTab === 'AWS_AZURE_PARITY' && (
+                <AwsAzureEnvySuiteStudio
+                  projectId={selectedProjectId}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
                 />
               )}
 

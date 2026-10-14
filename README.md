@@ -188,6 +188,13 @@
 38. **🎥 GDE Streamer & Video Tutorial Privacy Shield (`GdeStreamerPrivacyShield.jsx`)**
     - **1-Click Screen-Share & Live Recording Redactor (`Alt+G` or Top Header `GDE Mode` Split Button)**: Built for Google Developer Experts (GDEs), instructors, and workshop speakers recording live sessions. Masks your personal & IAM email (`gde-instructor@google-cloud-demo.dev`), Cloud Billing Account IDs (`01GDE•-••••••-TUTOR1`), 12-digit GCP Project Numbers (`#9900••••••01`), Public IPv4 addresses (`34.•••.•••.88`), and optionally Project IDs (`gde-demo-project`) or dollar balances (`$•,•••.••`) across all 20 tabs and modals while keeping all underlying React state and live GCP REST API calls 100% functional.
 
+39. **🌉 AWS & Azure Parity Super-Studio for Google Cloud (`AwsAzureEnvySuiteStudio.jsx`)**
+    - **📦 1. Azure-Style "Resource Groups" & Bulk Label Tagger**: Group any mix of Compute VMs, Cloud Run services, GCS Buckets, BigQuery Datasets, and Secret Manager secrets into logical folders (syncing `labels.resource_group` on GCP), inspect per-group `$/mo` cost, and run **1-Click Hibernate Group** or **1-Click Cascade Teardown Group** (with grayed-out `line-through` `⏳ DELETING...` visual state).
+    - **🛑 2. AWS Budgets Actions / Azure Auto-Shutdown "Hard-Spend Stop-Loss Fuse"**: Replaces GCP's email-only budget alerts with 3 automated stop-loss stages (`80%` Soft Brake capping Cloud Run `maxInstances=3` & `minInstances=0`, `95%` Compute Park stopping all `RUNNING` VMs, and `100%` native Pub/Sub `cloudpulse-hard-spend-fuse` wire).
+    - **🕵️‍♂️ 3. AWS-Style "IAM Policy Simulator" & "Switch Role" Service Account Impersonator**: Simulate 16 core GCP permissions (`ALLOW` vs `DENY`) for any Service Account or user principal via live `getIamPolicy` + `testIamPermissions`, preview the cockpit as that role, and grant missing least-privilege roles in 1 click.
+    - **🔗 4. Azure SAS / AWS S3 "1-Click Presigned URL & Browser Upload Studio"**: Upload files directly from the browser and generate expiring (`15m`, `1h`, `24h`, `7d`) Zero-SA-Key SAS Bridge URLs + `gcloud storage sign-url` V4 commands.
+    - **🌐 5. 1-Screen Global HTTPS Load Balancer + Custom Domain + Cloud Armor WAF Wizard**: Collapses GCP's 7-step Load Balancer setup (`Global Static IP` ➔ `Serverless NEG` ➔ `Cloud Armor WAF` ➔ `Backend Service` ➔ `URL Map` ➔ `Google-Managed SSL Cert` ➔ `Global Forwarding Rule`) into a single screen.
+
 > 📖 **Full Engineering & User Manual**: Read [**`docs/REVOLUTIONARY_FEATURES_GUIDE.md`**](docs/REVOLUTIONARY_FEATURES_GUIDE.md) or click the **`Docs & Guide 📖`** tab directly inside the app for step-by-step explanations of every feature, the exact GCP REST APIs called, and billing impact.
 
 ---
