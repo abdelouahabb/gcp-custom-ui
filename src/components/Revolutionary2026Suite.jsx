@@ -265,20 +265,45 @@ export default function Revolutionary2026Suite({
     if (initialSubTab) setSubTab(initialSubTab);
   }, [initialSubTab]);
 
+  const [extraIacInventory, setExtraIacInventory] = useState({
+    secrets: [],
+    sqlInstances: [],
+    gkeClusters: [],
+    arRepos: [],
+  });
+
   const fetchExtraData = useCallback(async () => {
     if (!projectId) return;
     setLoadingAudit(true);
     try {
-      const [vmRes, secRes] = await Promise.all([
+      const [vmRes, secRes, secretsRes, sqlRes, gkeRes, arRes] = await Promise.all([
         axios
           .get(`/api/project/${encodeURIComponent(projectId)}/vms`)
           .catch(() => ({ data: { vms: [] } })),
         axios
           .get(`/api/project/${encodeURIComponent(projectId)}/security-audit`)
           .catch(() => ({ data: null })),
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/sovereign/secrets-kms`)
+          .catch(() => ({ data: { secrets: [] } })),
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/wave9/cloud-sql`)
+          .catch(() => ({ data: { instances: [] } })),
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/wave9/gke-vertex`)
+          .catch(() => ({ data: { clusters: [] } })),
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/wave9/supply-chain`)
+          .catch(() => ({ data: { repositories: [] } })),
       ]);
       setVms(vmRes.data?.vms || []);
       setAuditData(secRes.data);
+      setExtraIacInventory({
+        secrets: secretsRes.data?.secrets || [],
+        sqlInstances: sqlRes.data?.instances || [],
+        gkeClusters: gkeRes.data?.clusters || [],
+        arRepos: arRes.data?.repositories || [],
+      });
     } finally {
       setLoadingAudit(false);
     }
@@ -317,7 +342,7 @@ export default function Revolutionary2026Suite({
     }
   };
 
-  // Generate 100% live Reverse-Terraform (main.tf) & Reproducible gcloud Script from live GCP resources
+  // Generate 100% live Reverse-Terraform (main.tf), Terraform 1.5+ Import Blocks (imports.tf) & Reproducible gcloud Script
   const generatedTerraform = useMemo(() => {
     const vpcs = overview?.vpcs || [];
     const firewalls = overview?.firewalls || [];
@@ -328,15 +353,30 @@ export default function Revolutionary2026Suite({
     const datasets = (overview?.resources || []).filter(
       (r) => r.type === 'BigQuery Dataset'
     );
+    const gkeClusters =
+      extraIacInventory.gkeClusters.length > 0
+        ? extraIacInventory.gkeClusters
+        : (overview?.resources || []).filter((r) => r.type && r.type.includes('GKE'));
+    const sqlInstances = extraIacInventory.sqlInstances || [];
+    const secrets = extraIacInventory.secrets || [];
+    const arRepos = extraIacInventory.arRepos || [];
+    const customServiceAccounts = (auditData?.serviceAccounts || []).filter(
+      (sa) =>
+        sa.email &&
+        sa.email.endsWith(`@${projectId}.iam.gserviceaccount.com`)
+    );
 
     const lines = [
       `# ============================================================================`,
-      `# Reverse-Engineered Terraform Blueprint (main.tf)`,
+      `# Reverse-Engineered Full-Stack Terraform Blueprint (main.tf)`,
       `# Generated Live by CloudPulse 2026 from GCP Project: ${projectId}`,
+      `# Includes: VPCs, Firewalls, VMs, Cloud Run v2, GCS, BigQuery, GKE, Cloud SQL,`,
+      `#           Secret Manager, Artifact Registry & Custom IAM Service Accounts`,
       `# Timestamp: ${new Date().toISOString()}`,
       `# ============================================================================`,
       ``,
       `terraform {`,
+      `  required_version = ">= 1.5.0"`,
       `  required_providers {`,
       `    google = {`,
       `      source  = "hashicorp/google"`,
@@ -347,17 +387,29 @@ export default function Revolutionary2026Suite({
       ``,
       `provider "google" {`,
       `  project = "${projectId}"`,
-      `  region  = "us-east1"`,
+      `  region  = "us-central1"`,
       `}`,
       ``,
     ];
+
+    customServiceAccounts.forEach((sa) => {
+      const accountId = sa.email.split('@')[0];
+      const tfId = accountId.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `resource "google_service_account" "${tfId}" {`,
+        `  account_id   = "${accountId}"`,
+        `  display_name = "${(sa.displayName || accountId).replace(/"/g, '\\"')}"`,
+        `}`,
+        ``
+      );
+    });
 
     vpcs.forEach((v) => {
       const tfId = v.name.replace(/[^a-zA-Z0-9_]/g, '_');
       lines.push(
         `resource "google_compute_network" "${tfId}" {`,
         `  name                    = "${v.name}"`,
-        `  auto_create_subnetworks = ${v.autoCreateSubnetworks}`,
+        `  auto_create_subnetworks = ${Boolean(v.autoCreateSubnetworks)}`,
         `  routing_mode            = "${v.routingMode || 'REGIONAL'}"`,
         `  mtu                     = ${v.mtu || 1460}`,
         `}`,
@@ -371,8 +423,10 @@ export default function Revolutionary2026Suite({
       const ports = fw.allowed?.[0]?.ports || [];
       lines.push(
         `resource "google_compute_firewall" "${tfId}" {`,
-        `  name    = "${fw.name}"`,
-        `  network = "${fw.network || 'default'}"`,
+        `  name      = "${fw.name}"`,
+        `  network   = "${fw.network || 'default'}"`,
+        `  direction = "${fw.direction || 'INGRESS'}"`,
+        `  priority  = ${fw.priority ?? 1000}`,
         `  allow {`,
         `    protocol = "${proto}"`,
         ...(ports.length > 0
@@ -425,12 +479,15 @@ export default function Revolutionary2026Suite({
         `resource "google_cloud_run_v2_service" "${tfId}" {`,
         `  name     = "${srv.name}"`,
         `  location = "${srv.region}"`,
-        `  ingress  = "${srv.ingress}"`,
+        `  ingress  = "${srv.ingress || 'INGRESS_TRAFFIC_ALL'}"`,
         `  template {`,
-        `    execution_environment = "${srv.executionEnvironment}"`,
+        ...(srv.serviceAccount
+          ? [`    service_account = "${srv.serviceAccount}"`]
+          : []),
+        `    execution_environment = "${srv.executionEnvironment || 'EXECUTION_ENVIRONMENT_GEN2'}"`,
         `    scaling {`,
-        `      min_instance_count = ${srv.minInstances}`,
-        `      max_instance_count = ${srv.maxInstances}`,
+        `      min_instance_count = ${srv.minInstances ?? 0}`,
+        `      max_instance_count = ${srv.maxInstances ?? 10}`,
         `    }`,
         ...(Number(srv.gpuCount || 0) > 0
           ? [
@@ -443,11 +500,11 @@ export default function Revolutionary2026Suite({
         `    containers {`,
         `      image = "${srv.containerImage}"`,
         `      resources {`,
-        `        cpu_idle          = ${srv.cpuIdle}`,
+        `        cpu_idle          = ${Boolean(srv.cpuIdle)}`,
         `        startup_cpu_boost = ${Boolean(srv.startupCpuBoost)}`,
         `        limits = {`,
-        `          cpu    = "${srv.cpu}"`,
-        `          memory = "${srv.memory}"`,
+        `          cpu    = "${srv.cpu || '1'}"`,
+        `          memory = "${srv.memory || '512Mi'}"`,
         ...(Number(srv.gpuCount || 0) > 0
           ? [`          "nvidia.com/gpu" = "${srv.gpuCount}"`]
           : []),
@@ -460,12 +517,71 @@ export default function Revolutionary2026Suite({
       );
     });
 
+    gkeClusters.forEach((c) => {
+      const tfId = (c.name || 'gke_cluster').replace(/[^a-zA-Z0-9_]/g, '_');
+      const isAutopilot = Boolean(c.autopilot || String(c.mode || '').includes('AUTOPILOT'));
+      lines.push(
+        `resource "google_container_cluster" "${tfId}" {`,
+        `  name             = "${c.name}"`,
+        `  location         = "${c.location || c.region || 'us-central1'}"`,
+        ...(isAutopilot ? [`  enable_autopilot = true`] : [`  initial_node_count = ${c.currentNodeCount || 1}`]),
+        `}`,
+        ``
+      );
+    });
+
+    sqlInstances.forEach((db) => {
+      const tfId = (db.name || 'cloud_sql').replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `resource "google_sql_database_instance" "${tfId}" {`,
+        `  name             = "${db.name}"`,
+        `  database_version = "${db.databaseVersion || 'POSTGRES_16'}"`,
+        `  region           = "${db.region || 'us-central1'}"`,
+        `  settings {`,
+        `    tier              = "${db.tier || 'db-custom-2-7680'}"`,
+        `    availability_type = "${db.availabilityType || 'ZONAL'}"`,
+        `  }`,
+        `}`,
+        ``
+      );
+    });
+
+    secrets.forEach((sec) => {
+      const secId = (sec.name || '').split('/').pop();
+      if (!secId) return;
+      const tfId = secId.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `resource "google_secret_manager_secret" "${tfId}" {`,
+        `  secret_id = "${secId}"`,
+        `  replication {`,
+        `    auto {}`,
+        `  }`,
+        `}`,
+        ``
+      );
+    });
+
+    arRepos.forEach((repo) => {
+      const repoId = (repo.name || '').split('/').pop();
+      if (!repoId) return;
+      const tfId = repoId.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `resource "google_artifact_registry_repository" "${tfId}" {`,
+        `  location      = "${repo.location || 'us-central1'}"`,
+        `  repository_id = "${repoId}"`,
+        `  format        = "${repo.format || 'DOCKER'}"`,
+        `}`,
+        ``
+      );
+    });
+
     buckets.forEach((b) => {
       const tfId = b.name.replace(/[^a-zA-Z0-9_]/g, '_');
       lines.push(
         `resource "google_storage_bucket" "${tfId}" {`,
         `  name                        = "${b.name}"`,
         `  location                    = "${(b.region || 'US').toUpperCase()}"`,
+        `  storage_class               = "${b.storageClass || 'STANDARD'}"`,
         `  uniform_bucket_level_access = true`,
         `}`,
         ``
@@ -485,7 +601,144 @@ export default function Revolutionary2026Suite({
     });
 
     return lines.join('\n');
-  }, [overview, vms, projectId]);
+  }, [overview, vms, projectId, extraIacInventory, auditData]);
+
+  // Generate Terraform 1.5+ Declarative `import {}` blocks so engineers can adopt live GCP resources without recreating them
+  const generatedTerraformImports = useMemo(() => {
+    const vpcs = overview?.vpcs || [];
+    const firewalls = overview?.firewalls || [];
+    const runServices = overview?.cloudRunServices || [];
+    const buckets = (overview?.resources || []).filter(
+      (r) => r.type === 'Cloud Storage Bucket'
+    );
+    const datasets = (overview?.resources || []).filter(
+      (r) => r.type === 'BigQuery Dataset'
+    );
+    const secrets = extraIacInventory.secrets || [];
+    const arRepos = extraIacInventory.arRepos || [];
+    const customServiceAccounts = (auditData?.serviceAccounts || []).filter(
+      (sa) =>
+        sa.email &&
+        sa.email.endsWith(`@${projectId}.iam.gserviceaccount.com`)
+    );
+
+    const lines = [
+      `# ============================================================================`,
+      `# Terraform 1.5+ Declarative State Import Blueprint (imports.tf)`,
+      `# Run \`terraform plan -generate-config-out=generated.tf\` or \`terraform apply\``,
+      `# to adopt your existing live GCP resources into Terraform state with 0 downtime`,
+      `# Project: ${projectId}`,
+      `# ============================================================================`,
+      ``,
+    ];
+
+    customServiceAccounts.forEach((sa) => {
+      const accountId = sa.email.split('@')[0];
+      const tfId = accountId.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_service_account.${tfId}`,
+        `  id = "projects/${projectId}/serviceAccounts/${sa.email}"`,
+        `}`,
+        ``
+      );
+    });
+
+    vpcs.forEach((v) => {
+      const tfId = v.name.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_compute_network.${tfId}`,
+        `  id = "projects/${projectId}/global/networks/${v.name}"`,
+        `}`,
+        ``
+      );
+    });
+
+    firewalls.forEach((fw) => {
+      const tfId = fw.name.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_compute_firewall.${tfId}`,
+        `  id = "projects/${projectId}/global/firewalls/${fw.name}"`,
+        `}`,
+        ``
+      );
+    });
+
+    vms.forEach((vm) => {
+      const tfId = vm.name.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_compute_instance.${tfId}`,
+        `  id = "projects/${projectId}/zones/${vm.zone}/instances/${vm.name}"`,
+        `}`,
+        ``
+      );
+    });
+
+    runServices.forEach((srv) => {
+      const tfId = srv.name.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_cloud_run_v2_service.${tfId}`,
+        `  id = "projects/${projectId}/locations/${srv.region}/services/${srv.name}"`,
+        `}`,
+        ``
+      );
+    });
+
+    secrets.forEach((sec) => {
+      const secId = (sec.name || '').split('/').pop();
+      if (!secId) return;
+      const tfId = secId.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_secret_manager_secret.${tfId}`,
+        `  id = "projects/${projectId}/secrets/${secId}"`,
+        `}`,
+        ``
+      );
+    });
+
+    arRepos.forEach((repo) => {
+      const repoId = (repo.name || '').split('/').pop();
+      if (!repoId) return;
+      const tfId = repoId.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_artifact_registry_repository.${tfId}`,
+        `  id = "projects/${projectId}/locations/${repo.location || 'us-central1'}/repositories/${repoId}"`,
+        `}`,
+        ``
+      );
+    });
+
+    buckets.forEach((b) => {
+      const tfId = b.name.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_storage_bucket.${tfId}`,
+        `  id = "${b.name}"`,
+        `}`,
+        ``
+      );
+    });
+
+    datasets.forEach((d) => {
+      const cleanDs = d.name.split('.').pop();
+      const tfId = cleanDs.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(
+        `import {`,
+        `  to = google_bigquery_dataset.${tfId}`,
+        `  id = "projects/${projectId}/datasets/${cleanDs}"`,
+        `}`,
+        ``
+      );
+    });
+
+    return lines.join('\n');
+  }, [overview, vms, projectId, extraIacInventory, auditData]);
 
   const generatedGcloudScript = useMemo(() => {
     const vpcs = overview?.vpcs || [];
@@ -493,6 +746,16 @@ export default function Revolutionary2026Suite({
     const runServices = overview?.cloudRunServices || [];
     const buckets = (overview?.resources || []).filter(
       (r) => r.type === 'Cloud Storage Bucket'
+    );
+    const datasets = (overview?.resources || []).filter(
+      (r) => r.type === 'BigQuery Dataset'
+    );
+    const secrets = extraIacInventory.secrets || [];
+    const arRepos = extraIacInventory.arRepos || [];
+    const customServiceAccounts = (auditData?.serviceAccounts || []).filter(
+      (sa) =>
+        sa.email &&
+        sa.email.endsWith(`@${projectId}.iam.gserviceaccount.com`)
     );
 
     const lines = [
@@ -503,9 +766,18 @@ export default function Revolutionary2026Suite({
       `# ============================================================================`,
       `set -euo pipefail`,
       `PROJECT_ID="\${1:-${projectId}}"`,
-      `echo "Replicating infrastructure onto project: $PROJECT_ID"`,
+      `echo "Replicating full-stack infrastructure onto project: $PROJECT_ID"`,
       ``,
     ];
+
+    customServiceAccounts.forEach((sa) => {
+      const accountId = sa.email.split('@')[0];
+      lines.push(
+        `gcloud iam service-accounts create ${accountId} --project="$PROJECT_ID" --display-name="${(
+          sa.displayName || accountId
+        ).replace(/"/g, '\\"')}" || true`
+      );
+    });
 
     vpcs
       .filter((v) => v.name !== 'default')
@@ -544,6 +816,24 @@ export default function Revolutionary2026Suite({
       );
     });
 
+    arRepos.forEach((repo) => {
+      const repoId = (repo.name || '').split('/').pop();
+      if (!repoId) return;
+      lines.push(
+        `gcloud artifacts repositories create ${repoId} --project="$PROJECT_ID" --location=${
+          repo.location || 'us-central1'
+        } --repository-format=${(repo.format || 'DOCKER').toLowerCase()} || true`
+      );
+    });
+
+    secrets.forEach((sec) => {
+      const secId = (sec.name || '').split('/').pop();
+      if (!secId) return;
+      lines.push(
+        `gcloud secrets create ${secId} --project="$PROJECT_ID" --replication-policy="automatic" || true`
+      );
+    });
+
     runServices.forEach((srv) => {
       const hasGpu = Number(srv.gpuCount || 0) > 0;
       lines.push(
@@ -577,8 +867,15 @@ export default function Revolutionary2026Suite({
       );
     });
 
+    datasets.forEach((d) => {
+      const cleanDs = d.name.split('.').pop();
+      lines.push(
+        `bq --location=${d.region || 'US'} mk --dataset "$PROJECT_ID:${cleanDs}" || true`
+      );
+    });
+
     return lines.join('\n');
-  }, [overview, vms, projectId]);
+  }, [overview, vms, projectId, extraIacInventory, auditData]);
 
   const vpcs = overview?.vpcs || [];
   const firewalls = overview?.firewalls || [];
@@ -1378,15 +1675,15 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
         </div>
       )}
 
-      {/* TAB 3: 1-TAP REVERSE-TERRAFORM & GCLOUD BLUEPRINT EXPORTER */}
+      {/* TAB 3: 1-TAP REVERSE-TERRAFORM, STATE IMPORT & GCLOUD BLUEPRINT EXPORTER */}
       {subTab === 'TERRAFORM' && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIacFormat('TERRAFORM')}
-                title="Switch view to HashiCorp Terraform HCL (main.tf) synthesized from your live GCP resources"
+                title="Switch view to Full-Stack HashiCorp Terraform HCL (main.tf) synthesized from your live GCP resources"
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
                   iacFormat === 'TERRAFORM'
                     ? 'bg-blue-600 text-white border-blue-600'
@@ -1394,6 +1691,18 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 }`}
               >
                 Terraform HCL (main.tf)
+              </button>
+              <button
+                type="button"
+                onClick={() => setIacFormat('TERRAFORM_IMPORT')}
+                title="Switch view to Terraform 1.5+ Declarative import {} blocks (imports.tf) to adopt existing GCP resources into Terraform state with zero downtime"
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
+                  iacFormat === 'TERRAFORM_IMPORT'
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                Terraform 1.5+ Import Blocks (imports.tf)
               </button>
               <button
                 type="button"
@@ -1415,6 +1724,8 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                 const text =
                   iacFormat === 'TERRAFORM'
                     ? generatedTerraform
+                    : iacFormat === 'TERRAFORM_IMPORT'
+                    ? generatedTerraformImports
                     : generatedGcloudScript;
                 navigator.clipboard?.writeText(text);
                 setCopiedType(iacFormat);
@@ -1433,7 +1744,11 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                   <Copy className="w-3.5 h-3.5" />
                   <span>
                     Copy{' '}
-                    {iacFormat === 'TERRAFORM' ? 'main.tf' : 'deploy-stack.sh'}
+                    {iacFormat === 'TERRAFORM'
+                      ? 'main.tf'
+                      : iacFormat === 'TERRAFORM_IMPORT'
+                      ? 'imports.tf'
+                      : 'deploy-stack.sh'}
                   </span>
                 </>
               )}
@@ -1443,6 +1758,8 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
           <pre className="bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-xl p-4 text-xs font-mono overflow-x-auto max-h-[420px] leading-relaxed">
             {iacFormat === 'TERRAFORM'
               ? generatedTerraform
+              : iacFormat === 'TERRAFORM_IMPORT'
+              ? generatedTerraformImports
               : generatedGcloudScript}
           </pre>
         </div>

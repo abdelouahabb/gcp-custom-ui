@@ -10093,9 +10093,42 @@ app.post('/api/project/:projectId/cloudrun/teleport', async (req, res) => {
       req.body?.serviceAccount || sourceSvc.template?.serviceAccount
     );
 
+    // Preserve volumes & volumeMounts (GCS FUSE buckets & emptyDir RAM disks are region-independent)
+    const clonedVolumes = (sourceSvc.template?.volumes || []).filter(
+      (v) => v.gcs || v.emptyDir || v.secret
+    );
+    const allowedVolumeNames = new Set(clonedVolumes.map((v) => v.name));
+    const clonedVolumeMounts = (container.volumeMounts || []).filter((vm) =>
+      allowedVolumeNames.has(vm.name)
+    );
+
+    // Preserve Direct VPC Egress network & tags while detaching region-specific subnetwork if teleporting across regions
+    let clonedVpcAccess = undefined;
+    if (sourceSvc.template?.vpcAccess) {
+      const srcVpc = sourceSvc.template.vpcAccess;
+      if (sourceRegion === targetRegion) {
+        clonedVpcAccess = srcVpc;
+      } else if (srcVpc.networkInterfaces?.[0]?.network) {
+        clonedVpcAccess = {
+          egress: srcVpc.egress || 'PRIVATE_RANGES_ONLY',
+          networkInterfaces: [
+            {
+              network: srcVpc.networkInterfaces[0].network,
+              ...(srcVpc.networkInterfaces[0].tags
+                ? { tags: srcVpc.networkInterfaces[0].tags }
+                : {}),
+            },
+          ],
+        };
+      }
+    }
+
     const clonePayload = {
       description: `Teleported from ${sourceServiceName} (${sourceRegion}) to ${targetRegion} via CloudPulse 2026`,
       ingress: sourceSvc.ingress || 'INGRESS_TRAFFIC_ALL',
+      ...(sourceSvc.invokerIamDisabled !== undefined
+        ? { invokerIamDisabled: Boolean(sourceSvc.invokerIamDisabled) }
+        : {}),
       template: {
         ...(runtimeServiceAccount
           ? { serviceAccount: runtimeServiceAccount }
@@ -10112,11 +10145,16 @@ app.post('/api/project/:projectId/cloudrun/teleport', async (req, res) => {
           maxInstanceCount:
             sourceSvc.template?.scaling?.maxInstanceCount ?? 10,
         },
+        ...(clonedVolumes.length > 0 ? { volumes: clonedVolumes } : {}),
+        ...(clonedVpcAccess ? { vpcAccess: clonedVpcAccess } : {}),
         containers: [
           {
             image: container.image,
             ports: container.ports || [{ containerPort: 8080 }],
             env: container.env || [],
+            ...(clonedVolumeMounts.length > 0
+              ? { volumeMounts: clonedVolumeMounts }
+              : {}),
             resources: container.resources || {
               limits: { cpu: '1', memory: '512Mi' },
               cpuIdle: true,
@@ -10143,24 +10181,28 @@ app.post('/api/project/:projectId/cloudrun/teleport', async (req, res) => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // Grant public allUsers invoker on the teleported service so it's immediately reachable
-    const resourcePath = `projects/${projectId}/locations/${targetRegion}/services/${targetSvcId}`;
-    await axios
-      .post(
-        `https://run.googleapis.com/v2/${resourcePath}:setIamPolicy`,
-        {
-          policy: {
-            bindings: [
-              {
-                role: 'roles/run.invoker',
-                members: ['allUsers'],
-              },
-            ],
+    // Mirror source service IAM policy bindings (preserving Private IAM Auth vs Public allUsers)
+    const sourceResourcePath = `projects/${projectId}/locations/${sourceRegion}/services/${sourceServiceName}`;
+    const targetResourcePath = `projects/${projectId}/locations/${targetRegion}/services/${targetSvcId}`;
+    const srcIamPolicy = await gcpFetch(
+      `https://run.googleapis.com/v2/${sourceResourcePath}:getIamPolicy`,
+      token,
+      projectId
+    ).catch(() => null);
+
+    if (srcIamPolicy?.bindings?.length > 0) {
+      await axios
+        .post(
+          `https://run.googleapis.com/v2/${targetResourcePath}:setIamPolicy`,
+          {
+            policy: {
+              bindings: srcIamPolicy.bindings,
+            },
           },
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      .catch(() => {});
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        .catch(() => {});
+    }
 
     recordFlightEvent(projectId, {
       actionType: 'CLOUD_RUN_TELEPORT',

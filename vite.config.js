@@ -126,64 +126,96 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-    chunkSizeWarningLimit: 900,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('echarts') || id.includes('zrender')) {
-              return 'vendor-echarts';
+      chunkSizeWarningLimit: 1100,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('echarts') || id.includes('zrender')) {
+                return 'vendor-echarts';
+              }
+              if (id.includes('@xterm')) {
+                return 'vendor-xterm';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-lucide';
+              }
+              if (
+                id.includes('/react/') ||
+                id.includes('/react-dom/') ||
+                id.includes('/scheduler/')
+              ) {
+                return 'vendor-react';
+              }
+              return 'vendor-core';
             }
-            if (id.includes('@xterm')) {
-              return 'vendor-xterm';
+            if (id.includes('src/components/AwsAzureEnvySuiteStudio')) {
+              return 'studio-multi-cloud-parity';
             }
-            if (id.includes('lucide-react')) {
-              return 'vendor-lucide';
+            if (id.includes('src/components/GlobalNetworkWorldMap')) {
+              return 'studio-global-map';
+            }
+            if (id.includes('src/components/ResourceProvisionModal')) {
+              return 'studio-provision-modal';
+            }
+            if (id.includes('src/components/CloudRunFleetManager')) {
+              return 'studio-cloudrun';
+            }
+            if (id.includes('src/components/DataEngineeringStudio')) {
+              return 'studio-data-engineering';
             }
             if (
-              id.includes('/react/') ||
-              id.includes('/react-dom/') ||
-              id.includes('/scheduler/')
+              id.includes('src/components/BigQueryStudio') ||
+              id.includes('src/components/BigLakeIcebergStudio')
             ) {
-              return 'vendor-react';
+              return 'studio-bigquery-biglake';
             }
-            return 'vendor-core';
-          }
-          if (id.includes('src/components/GlobalNetworkWorldMap')) {
-            return 'studio-global-map';
-          }
-          if (id.includes('src/components/ResourceProvisionModal')) {
-            return 'studio-provision-modal';
-          }
-          if (id.includes('src/components/CloudRunFleetManager')) {
-            return 'studio-cloudrun';
-          }
-          if (id.includes('src/components/DataEngineeringStudio')) {
-            return 'studio-data-engineering';
-          }
-          if (
-            id.includes('src/components/BigQueryStudio') ||
-            id.includes('src/components/BigLakeIcebergStudio')
-          ) {
-            return 'studio-bigquery-biglake';
-          }
-          if (
-            id.includes('src/components/CloudFunctionsEventarcStudio') ||
-            id.includes('src/components/SovereignTimeMachineIamStudio')
-          ) {
-            return 'studio-functions-iam';
-          }
-          if (
-            id.includes('src/components/EngineerMoonshotsWave3') ||
-            id.includes('src/components/Revolutionary2026Suite') ||
-            id.includes('src/components/EngineerWishlistWave2')
-          ) {
-            return 'studio-innovation-lab';
-          }
+            if (
+              id.includes('src/components/CloudFunctionsEventarcStudio') ||
+              id.includes('src/components/SovereignTimeMachineIamStudio')
+            ) {
+              return 'studio-functions-iam';
+            }
+            if (
+              id.includes('src/components/BillingAccountCreditGuardian') ||
+              id.includes('src/components/EmergencyApiKillSwitch')
+            ) {
+              return 'studio-billing-finops';
+            }
+            if (
+              id.includes('src/components/LogStreamerAndShell') ||
+              id.includes('src/components/InteractiveDocsGuide')
+            ) {
+              return 'studio-logs-docs';
+            }
+            if (
+              id.includes('src/components/VpcNetworksAndFirewalls') ||
+              id.includes('src/components/CloudStorageStudio') ||
+              id.includes('src/components/VmFleetAndSsh')
+            ) {
+              return 'studio-core-infra';
+            }
+            if (
+              id.includes('src/components/GkeFleetStudio') ||
+              id.includes('src/components/CloudSqlAndAlloyDbStudio') ||
+              id.includes('src/components/Wave9AiGkeSqlSupplyChainStudio') ||
+              id.includes('src/components/Wave10Frontier2026Studio')
+            ) {
+              return 'studio-gke-sql-frontier';
+            }
+            if (
+              id.includes('src/components/EngineerMoonshotsWave3') ||
+              id.includes('src/components/Revolutionary2026Suite') ||
+              id.includes('src/components/EngineerWishlistWave2') ||
+              id.includes('src/components/AutonomousCloudBrain') ||
+              id.includes('src/components/Lab2026QuantumNexus')
+            ) {
+              return 'studio-innovation-lab';
+            }
+          },
         },
       },
     },
-  },
   };
 });
 

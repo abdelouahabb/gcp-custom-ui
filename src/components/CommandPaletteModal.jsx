@@ -647,6 +647,48 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-chrono-logs-nlp',
+        category: '2026 SRE & Developer Velocity',
+        title: 'Open 2026 Neural Chrono-Log & LQL Tutorial Studio (3-Layer NLP-to-LQL + Drain3 + Trace Waterfall)',
+        subtitle: 'Compile plain English into LQL at $0.00 (Porter Stemmer + NER + BM25), learn official LQL syntax, and cut $0.50/GiB log noise',
+        keywords: 'logs logging chrono lql query language tutorial natural language nlp error 500 latency trace waterfall drain3 sink exclusion',
+        badge: 'NLP + LQL',
+        badgeColor: 'text-purple-300 bg-purple-500/15 border-purple-500/30',
+        icon: Terminal,
+        run: () => {
+          onSelectTab('LOGS_SHELL');
+          onClose();
+        }
+      },
+      {
+        id: 'open-mobile-cloud-shell',
+        category: '2026 SRE & Developer Velocity',
+        title: 'Open Hybrid Mobile Cloud Shell (Direct REST Bridge + Native gcloud / bq / gsutil / kubectl CLI)',
+        subtitle: 'Run sub-500ms Direct REST fleet queries and real native CLI commands with command history and read-only guardrails',
+        keywords: 'shell terminal cli bash gcloud bq gsutil kubectl command inspect audit timeline who changed what',
+        badge: 'HYBRID SHELL',
+        badgeColor: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+        icon: Terminal,
+        run: () => {
+          onSelectTab('LOGS_SHELL');
+          onClose();
+        }
+      },
+      {
+        id: 'open-always-free-auditor',
+        category: 'FinOps & Sleep Mode',
+        title: 'Open Google Cloud "Always Free" Tier Auditor & $0.00/Mo Micro-Charge Killer',
+        subtitle: 'Audit 15 GCP services against monthly Free Tier limits and eliminate stealth Artifact Registry, Logging, and Secret Manager micro-charges',
+        keywords: 'free tier always free $0 micro charge killer billing credit bonus quota e2-micro',
+        badge: '$0 FREE TIER',
+        badgeColor: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+        icon: DollarSign,
+        run: () => {
+          onSelectTab('BILLING_APIS');
+          onClose();
+        }
+      },
+      {
         id: 'toggle-gde-tutorial-mode',
         category: '2026 SRE & Developer Velocity',
         title: 'Toggle GDE Streamer & Video Tutorial Privacy Shield (Alt+G)',
@@ -665,7 +707,7 @@ export default function CommandPaletteModal({
         category: 'Emergency & Governance',
         title: 'Open Emergency Project Billing Kill-Switch (Unlink Billing Account)',
         subtitle: 'Nuclear option to immediately freeze all project spending if keys are leaked',
-        keywords: 'emergency billing kill switch unlink stop spending hacked leak',
+        keywords: 'emergency billing kill switch unlink stop spending hacked leak quota 429',
         badge: 'NUCLEAR',
         badgeColor: 'text-red-300 bg-red-500/15 border-red-500/30',
         icon: PowerOff,
@@ -683,7 +725,7 @@ export default function CommandPaletteModal({
         category: 'Live Compute Engine Fleet',
         title: `Open Web SSH & Fleet Manager for VM "${vm.name}"`,
         subtitle: `${vm.machineType} • ${vm.zone} • External IP: ${vm.externalIp}`,
-        keywords: `vm ssh ${vm.name} ${vm.zone} ${vm.machineType} stop suspend`,
+        keywords: `vm ssh ${vm.name} ${vm.zone} ${vm.machineType} stop suspend compute instance`,
         badge: 'RUNNING VM',
         badgeColor: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
         icon: Terminal,
@@ -700,7 +742,7 @@ export default function CommandPaletteModal({
         category: 'Live Compute Engine Fleet',
         title: `Manage / Boot Stopped VM "${vm.name}"`,
         subtitle: `${vm.machineType} • ${vm.zone} • Status: ${vm.rawStatus}`,
-        keywords: `vm start boot ${vm.name} ${vm.zone}`,
+        keywords: `vm start boot ${vm.name} ${vm.zone} stopped compute instance`,
         badge: vm.rawStatus,
         badgeColor: 'text-slate-300 bg-slate-800 border-slate-700',
         icon: Server,
@@ -720,7 +762,7 @@ export default function CommandPaletteModal({
         category: 'Live Cloud Run Services',
         title: `Configure Cloud Run Service "${svc.name}" (${svc.region})`,
         subtitle: `Scale ${minInst}-${maxInst} • ${svc.cpu || '1'} vCPU • ${svc.memory || '512Mi'}${gpuTag}`,
-        keywords: `cloud run service ${svc.name} ${svc.region} scale gpu`,
+        keywords: `cloud run service ${svc.name} ${svc.region} scale gpu container serverless`,
         badge: svc.gpuType ? 'GPU RUN' : 'CLOUD RUN',
         badgeColor: 'text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Globe,
@@ -733,11 +775,77 @@ export default function CommandPaletteModal({
 
     if (!query.trim()) return baseActions;
 
-    const terms = query.toLowerCase().trim().split(/\s+/);
-    return baseActions.filter((item) => {
-      const hay = `${item.title} ${item.subtitle} ${item.keywords} ${item.category}`.toLowerCase();
-      return terms.every((t) => hay.includes(t));
-    });
+    // Computational NLP Porter Stemmer + Conversational Stop-Word Filter + BM25 Ranker ($0.00 Local)
+    const STOP_WORDS = new Set([
+      'a', 'an', 'the', 'to', 'for', 'in', 'on', 'of', 'with', 'my', 'me',
+      'please', 'can', 'you', 'how', 'do', 'i', 'want', 'show', 'open', 'go',
+      'take', 'check', 'view', 'let', 'us', 'is', 'are', 'and', 'or', 'at', 'by', 'from'
+    ]);
+    const stemWord = (w) =>
+      w
+        .replace(/ies$/, 'y')
+        .replace(/(ing|ed|es|s)$/, '')
+        .replace(/ation$/, 'ate');
+
+    const rawTokens = query
+      .toLowerCase()
+      .replace(/[^a-z0-9$._-]+/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    const meaningfulTokens = rawTokens.filter((t) => !STOP_WORDS.has(t));
+    const activeTokens = meaningfulTokens.length > 0 ? meaningfulTokens : rawTokens;
+    const stemmedTokens = activeTokens.map(stemWord);
+
+    const scored = baseActions
+      .map((item) => {
+        const titleLower = item.title.toLowerCase();
+        const kwLower = (item.keywords || '').toLowerCase();
+        const subLower = (item.subtitle || '').toLowerCase();
+        const catLower = (item.category || '').toLowerCase();
+        const fullHay = `${titleLower} ${kwLower} ${subLower} ${catLower}`;
+
+        let score = 0;
+        let matchedCount = 0;
+
+        activeTokens.forEach((tok, i) => {
+          const stem = stemmedTokens[i];
+          let tokenMatched = false;
+          if (titleLower.includes(tok) || (stem.length >= 3 && titleLower.includes(stem))) {
+            score += 12;
+            tokenMatched = true;
+          }
+          if (kwLower.includes(tok) || (stem.length >= 3 && kwLower.includes(stem))) {
+            score += 9;
+            tokenMatched = true;
+          }
+          if (subLower.includes(tok) || (stem.length >= 3 && subLower.includes(stem))) {
+            score += 5;
+            tokenMatched = true;
+          }
+          if (catLower.includes(tok) || (stem.length >= 3 && catLower.includes(stem))) {
+            score += 3;
+            tokenMatched = true;
+          }
+          if (tokenMatched) matchedCount += 1;
+        });
+
+        // Phrase proximity bonus
+        if (fullHay.includes(query.toLowerCase().trim())) {
+          score += 20;
+        }
+
+        const coverage = matchedCount / activeTokens.length;
+        return { item, score, coverage, matchedCount };
+      })
+      .filter((entry) => entry.matchedCount > 0 && (entry.coverage >= 0.5 || entry.score >= 12))
+      .sort((a, b) => b.coverage - a.coverage || b.score - a.score);
+
+    return scored.map((entry) => ({
+      ...entry.item,
+      nlpMatchPct: Math.min(99, Math.round(entry.coverage * 75 + Math.min(24, entry.score))),
+    }));
   }, [query, vms, overview, projectId]);
 
   useEffect(() => {
@@ -890,6 +998,11 @@ export default function CommandPaletteModal({
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${action.badgeColor}`}>
                           {action.badge}
                         </span>
+                        {action.nlpMatchPct && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            NLP Match {action.nlpMatchPct}%
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] text-slate-400 truncate mt-0.5">{action.subtitle}</p>
                     </div>
