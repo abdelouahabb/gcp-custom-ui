@@ -1599,7 +1599,10 @@ function CloudPulseCockpit() {
             </div>
           )}
 
-          {loadingOverview && !overview ? (
+          {loadingOverview &&
+          !overview &&
+          activeTab !== 'AWS_AZURE_PARITY' &&
+          activeTab !== 'DOCS_GUIDE' ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {[1, 2, 3, 4].map((n) => (
