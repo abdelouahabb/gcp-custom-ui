@@ -97,6 +97,7 @@ export default function LogStreamerAndShell({
   const [customLqlInput, setCustomLqlInput] = useState('');
   const [showCompiledSqlModal, setShowCompiledSqlModal] = useState(false);
   const [showLqlTutorialModal, setShowLqlTutorialModal] = useState(false);
+  const [allowNeuralLlmTokens, setAllowNeuralLlmTokens] = useState(false);
   const [activeChronoTab, setActiveChronoTab] = useState('SMART_STREAM'); // 'SMART_STREAM' | 'DRAIN3_CLUSTERS' | 'TRACE_WATERFALL' | 'FINOPS_DLP'
   const [timeTravelAnchor, setTimeTravelAnchor] = useState(null);
   const [selectedTraceId, setSelectedTraceId] = useState(null);
@@ -128,6 +129,10 @@ export default function LogStreamerAndShell({
           overrides.aroundTimestamp !== undefined
             ? overrides.aroundTimestamp
             : timeTravelAnchor;
+        const useLlmTokens =
+          overrides.allowNeuralLlmTokens !== undefined
+            ? overrides.allowNeuralLlmTokens
+            : allowNeuralLlmTokens;
 
         const res = await axios.post(
           `/api/project/${encodeURIComponent(projectId)}/chrono-logs/query`,
@@ -137,6 +142,7 @@ export default function LogStreamerAndShell({
             aroundTimestamp: aroundTs || '',
             windowSeconds: 30,
             limit: 60,
+            allowNeuralLlmTokens: Boolean(useLlmTokens),
           }
         );
         setChronoData(res.data);
@@ -153,7 +159,14 @@ export default function LogStreamerAndShell({
         setLoadingChrono(false);
       }
     },
-    [projectId, nlQueryInput, customLqlInput, timeTravelAnchor, selectedTraceId]
+    [
+      projectId,
+      nlQueryInput,
+      customLqlInput,
+      timeTravelAnchor,
+      selectedTraceId,
+      allowNeuralLlmTokens,
+    ]
   );
 
   const fetchAuditTimeline = useCallback(async () => {
@@ -480,8 +493,66 @@ export default function LogStreamerAndShell({
                 <BookOpen className="w-3.5 h-3.5" />
                 <span>{showLqlTutorialModal ? 'Hide LQL & NLP Guide' : 'LQL Tutorial & How NLP Works'}</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !allowNeuralLlmTokens;
+                  setAllowNeuralLlmTokens(next);
+                  fetchChronoLogs({ allowNeuralLlmTokens: next });
+                }}
+                title={
+                  allowNeuralLlmTokens
+                    ? 'BILLABLE TOKEN WARNING: Gemini / Vertex AI neural LLM calls are currently enabled (~130 tokens/query). Click to lock back to $0.00 Local NLP.'
+                    : '0 LLM tokens consumed ($0.00). Click only if you want to authorize Gemini RAM Vault / Vertex AI token consumption.'
+                }
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-mono font-bold cursor-pointer border transition-colors ${
+                  allowNeuralLlmTokens
+                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/50'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-amber-500/40'
+                }`}
+              >
+                <AlertTriangle
+                  className={`w-3.5 h-3.5 ${
+                    allowNeuralLlmTokens ? 'text-amber-500' : 'text-zinc-400'
+                  }`}
+                />
+                <span>
+                  {allowNeuralLlmTokens
+                    ? 'Vertex / Gemini LLM: ON (Consumes Tokens)'
+                    : 'Local NLP Only ($0.00 · 0 Tokens)'}
+                </span>
+              </button>
             </div>
           </form>
+
+          {/* Explicit Vertex AI / Gemini API Key Token Consumption Warning Banner */}
+          {allowNeuralLlmTokens && (
+            <div className="p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-amber-800 dark:text-amber-200">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <strong>TOKEN CONSUMPTION WARNING (Vertex AI / Gemini API Key):</strong>{' '}
+                  Neural LLM query compilation sends your natural-language query to{' '}
+                  <code className="font-bold">gemini-2.5-flash</code> (via your RAM Vault API Key or Vertex AI{' '}
+                  <code className="font-bold">aiplatform.googleapis.com</code> ADC) and consumes{' '}
+                  <strong>~100–250 input/output tokens per query</strong> against your quota/billing. Keep this{' '}
+                  <strong>OFF</strong> to use the 100% free local Porter Stemmer + NER + BM25 engine at{' '}
+                  <strong>$0.00 (0 tokens)</strong>.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAllowNeuralLlmTokens(false);
+                  fetchChronoLogs({ allowNeuralLlmTokens: false });
+                }}
+                className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10.5px] font-mono font-bold cursor-pointer shrink-0"
+              >
+                Switch Back to $0.00 Local NLP
+              </button>
+            </div>
+          )}
 
           {/* Interactive LQL Tutorial & 3-Layer NLP Architecture Drawer */}
           {showLqlTutorialModal && (
@@ -515,28 +586,28 @@ export default function LogStreamerAndShell({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                 <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
                   <div className="text-[10.5px] font-mono font-extrabold text-purple-600 dark:text-purple-400">
-                    STAGE 1 · LEXER & PORTER STEMMER
+                    STAGE 1 · LEXER & PORTER STEMMER ($0.00 · 0 TOKENS)
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                    Strips conversational stop-words (<code className="font-mono">&quot;show me&quot;</code>, <code className="font-mono">&quot;in the&quot;</code>) and applies the <strong>Porter Suffix Stemming Algorithm</strong> so inflected words map to canonical roots (<code className="font-mono">&quot;timeouts&quot;</code> ➔ <code className="font-mono">&quot;timeout&quot;</code>, <code className="font-mono">&quot;excluding&quot;</code> ➔ <code className="font-mono">&quot;exclud&quot;</code>).
+                    Strips conversational stop-words (<code className="font-mono">&quot;show me&quot;</code>, <code className="font-mono">&quot;in the&quot;</code>) and applies the <strong>Porter Suffix Stemming Algorithm</strong> locally in Node.js (<code className="font-mono">&quot;timeouts&quot;</code> ➔ <code className="font-mono">&quot;timeout&quot;</code>, <code className="font-mono">&quot;excluding&quot;</code> ➔ <code className="font-mono">&quot;exclud&quot;</code>).
                   </p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
                   <div className="text-[10.5px] font-mono font-extrabold text-blue-600 dark:text-blue-400">
-                    STAGE 2 · NAMED ENTITY RECOGNITION (NER)
+                    STAGE 2 · NAMED ENTITY RECOGNITION ($0.00 · 0 TOKENS)
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                    Extracts structured telemetry slots: <strong>Services</strong> (<code className="font-mono">&quot;cloud run&quot;</code> ➔ <code className="font-mono">cloud_run_revision</code>), <strong>Geo Aliases</strong> (<code className="font-mono">&quot;iowa&quot;</code> ➔ <code className="font-mono">us-central1</code>), <strong>Latency Math</strong> (<code className="font-mono">&quot;slower than 1500ms&quot;</code> ➔ <code className="font-mono">&gt;&quot;1.5s&quot;</code>), <strong>Time Windows</strong>, and <strong>Negations</strong>.
+                    Extracts structured telemetry slots locally: <strong>Services</strong> (<code className="font-mono">&quot;cloud run&quot;</code> ➔ <code className="font-mono">cloud_run_revision</code>), <strong>Geo Aliases</strong> (<code className="font-mono">&quot;iowa&quot;</code> ➔ <code className="font-mono">us-central1</code>), <strong>Latency Math</strong> (<code className="font-mono">&quot;slower than 1500ms&quot;</code> ➔ <code className="font-mono">&gt;&quot;1.5s&quot;</code>), <strong>Time Windows</strong>, and <strong>Negations</strong>.
                   </p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
-                  <div className="text-[10.5px] font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                    STAGE 3 · TF-IDF + BM25 + GEMINI LLM
+                  <div className="text-[10.5px] font-mono font-extrabold text-amber-600 dark:text-amber-400">
+                    STAGE 3 · TF-IDF + BM25 ($0) + OPT-IN GEMINI LLM (CONSUMES TOKENS)
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                    Classifies SRE intent via <strong>TF-IDF Cosine Similarity</strong>, ranks matching log cards using <strong>Okapi BM25</strong>, and—when your Gemini RAM Vault key or Vertex AI ADC is active—uses <strong>Gemini 2.5 Flash</strong> to synthesize complex LQL.
+                    Classifies SRE intent via <strong>TF-IDF Cosine Similarity</strong> and ranks logs using <strong>Okapi BM25</strong> for <strong>$0.00 (0 tokens)</strong>. Only when you explicitly toggle <strong>&quot;Vertex / Gemini LLM: ON&quot;</strong> will it call <code className="font-mono">gemini-2.5-flash</code> (consuming ~100–250 LLM tokens/query).
                   </p>
                 </div>
               </div>
@@ -660,6 +731,7 @@ export default function LogStreamerAndShell({
           {chronoData?.compiledQuery?.nlpAnalysis && (() => {
             const nlp = chronoData.compiledQuery.nlpAnalysis;
             const ent = nlp.entities || {};
+            const tokGuard = nlp.tokenConsumptionGuard;
             const nerBadges = [
               ...(ent.services || []).map((s) => ({ type: 'SERVICE', value: s.label })),
               ...(ent.statusClass ? [{ type: 'HTTP_CLASS', value: ent.statusClass }] : []),
@@ -693,6 +765,25 @@ export default function LogStreamerAndShell({
                     <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                       Ranker: Okapi BM25 + NER Slot Scorer
                     </span>
+                    {tokGuard && (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                          tokGuard.totalTokenCount > 0
+                            ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700'
+                        }`}
+                        title={tokGuard.notice}
+                      >
+                        <DollarSign className="w-3 h-3" />
+                        <span>
+                          {tokGuard.totalTokenCount > 0
+                            ? `LLM Spend: ${tokGuard.totalTokenCount} tokens (~$${Number(
+                                tokGuard.estimatedCostUsd || 0
+                              ).toFixed(5)})`
+                            : 'LLM Spend: 0 tokens ($0.00 Local NLP)'}
+                        </span>
+                      </span>
+                    )}
                   </div>
 
                   {nlp.stems?.length > 0 && (

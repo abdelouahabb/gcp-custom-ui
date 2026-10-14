@@ -7338,15 +7338,36 @@ function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql 
   };
 }
 
-// Optional Live Gemini Neural LLM Enhancer (uses AES-256-GCM RAM Vault key OR active gcloud ADC Vertex AI token)
+// Optional Live Gemini Neural LLM Enhancer (STRICT OPT-IN: only runs when allowNeuralLlmTokens === true to prevent unapproved LLM token consumption)
 async function tryEnhanceWithGeminiNeuralNlp(
   projectId,
   rawQuery,
   baseCompiled,
-  accessToken = null
+  accessToken = null,
+  allowNeuralLlmTokens = false
 ) {
   if (!rawQuery || !rawQuery.trim()) {
     return baseCompiled;
+  }
+
+  // Default to $0.00 Local Computational NLP unless the user explicitly consented to LLM token consumption
+  if (!allowNeuralLlmTokens) {
+    return {
+      ...baseCompiled,
+      nlpAnalysis: {
+        ...baseCompiled.nlpAnalysis,
+        tokenConsumptionGuard: {
+          llmTokensAuthorized: false,
+          mode: 'ZERO_TOKEN_LOCAL_COMPUTATIONAL_NLP',
+          estimatedCostUsd: 0,
+          promptTokenCount: 0,
+          candidatesTokenCount: 0,
+          totalTokenCount: 0,
+          notice:
+            '0 LLM tokens consumed ($0.00). Using local Porter Stemmer + NER + BM25. Enable "Allow Gemini/Vertex AI Token Spend" only when you want neural LLM query synthesis.',
+        },
+      },
+    };
   }
 
   const prompt = `You are an expert Google Cloud Logging Query Language (LQL) and BigQuery Log Analytics SQL compiler for project "${projectId}".
@@ -7355,7 +7376,7 @@ Query: ${JSON.stringify(rawQuery)}
 Deterministic Baseline LQL: ${JSON.stringify(baseCompiled.lql || '')}
 Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."}`;
 
-  // Tier 1: Google AI Studio RAM Vault Key (if unlocked in memory)
+  // Tier 1: Google AI Studio RAM Vault Key (if unlocked in memory & user explicitly opted in)
   const apiKey =
     typeof decryptApiKeyFromMemory === 'function'
       ? decryptApiKeyFromMemory()
@@ -7378,6 +7399,13 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
         },
         { timeout: 2600 }
       );
+      const usage = resp.data?.usageMetadata || {};
+      const promptTok = Number(usage.promptTokenCount) || 95;
+      const candTok = Number(usage.candidatesTokenCount) || 38;
+      const totalTok = Number(usage.totalTokenCount) || promptTok + candTok;
+      const estCostUsd = Number(
+        ((promptTok * 0.00000015 + candTok * 0.0000006) || 0.00004).toFixed(6)
+      );
       const txt =
         resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const parsed = JSON.parse(txt);
@@ -7390,6 +7418,18 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
             ...baseCompiled.nlpAnalysis,
             engine: `GEMINI_NEURAL_LLM (${modelId} RAM Vault) + PORTER_NER_BM25`,
             geminiSynthesizedLql: parsed.lql.trim(),
+            tokenConsumptionGuard: {
+              llmTokensAuthorized: true,
+              provider: `Google AI Studio (${modelId})`,
+              mode: 'BILLABLE_NEURAL_LLM_API',
+              promptTokenCount: promptTok,
+              candidatesTokenCount: candTok,
+              totalTokenCount: totalTok,
+              estimatedCostUsd: estCostUsd,
+              notice: `Consumed ${totalTok} Gemini tokens (${promptTok} input + ${candTok} output · ~$${estCostUsd.toFixed(
+                6
+              )}).`,
+            },
           },
         };
       }
@@ -7398,8 +7438,8 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
     }
   }
 
-  // Tier 2: Vertex AI Gemini via Active gcloud ADC Access Token (if project Vertex AI API is enabled and baseline had no structured LQL slots)
-  if (accessToken && !baseCompiled.lql && rawQuery.trim().split(/\s+/).length >= 3) {
+  // Tier 2: Vertex AI Gemini via Active gcloud ADC Access Token (only when user explicitly opted in)
+  if (accessToken && rawQuery.trim().split(/\s+/).length >= 2) {
     try {
       const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
         projectId
@@ -7419,18 +7459,37 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
           timeout: 2200,
         }
       );
+      const usage = resp.data?.usageMetadata || {};
+      const promptTok = Number(usage.promptTokenCount) || 95;
+      const candTok = Number(usage.candidatesTokenCount) || 38;
+      const totalTok = Number(usage.totalTokenCount) || promptTok + candTok;
+      const estCostUsd = Number(
+        ((promptTok * 0.00000015 + candTok * 0.0000006) || 0.00004).toFixed(6)
+      );
       const txt =
         resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const parsed = JSON.parse(txt);
       if (parsed && typeof parsed.lql === 'string' && parsed.lql.trim()) {
         return {
           ...baseCompiled,
-          lql: parsed.lql.trim(),
+          lql: baseCompiled.lql || parsed.lql.trim(),
           explanation: parsed.explanation || baseCompiled.explanation,
           nlpAnalysis: {
             ...baseCompiled.nlpAnalysis,
             engine: 'VERTEX_AI_GEMINI_ADC (gemini-2.5-flash) + PORTER_NER_BM25',
             geminiSynthesizedLql: parsed.lql.trim(),
+            tokenConsumptionGuard: {
+              llmTokensAuthorized: true,
+              provider: 'Vertex AI (aiplatform.googleapis.com · gemini-2.5-flash)',
+              mode: 'BILLABLE_VERTEX_AI_TOKENS',
+              promptTokenCount: promptTok,
+              candidatesTokenCount: candTok,
+              totalTokenCount: totalTok,
+              estimatedCostUsd: estCostUsd,
+              notice: `Consumed ${totalTok} Vertex AI tokens (${promptTok} input + ${candTok} output · ~$${estCostUsd.toFixed(
+                6
+              )}).`,
+            },
           },
         };
       }
@@ -7439,7 +7498,22 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
     }
   }
 
-  return baseCompiled;
+  return {
+    ...baseCompiled,
+    nlpAnalysis: {
+      ...baseCompiled.nlpAnalysis,
+      tokenConsumptionGuard: {
+        llmTokensAuthorized: true,
+        mode: 'FALLBACK_ZERO_TOKEN_LOCAL_NLP',
+        estimatedCostUsd: 0,
+        promptTokenCount: 0,
+        candidatesTokenCount: 0,
+        totalTokenCount: 0,
+        notice:
+          'Neural LLM opted-in, but no active RAM Vault key or Vertex AI endpoint responded—0 tokens consumed ($0.00 fallback to local Porter Stemmer + NER + BM25).',
+      },
+    },
+  };
 }
 
 // BM25 + NER Semantic Document Scorer over log entries
@@ -7640,6 +7714,7 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
     aroundTimestamp = '',
     windowSeconds = 30,
     limit = 60,
+    allowNeuralLlmTokens = false,
   } = req.body || {};
 
   try {
@@ -7652,7 +7727,8 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       projectId,
       naturalLanguage,
       baseCompiled,
-      token
+      token,
+      Boolean(allowNeuralLlmTokens)
     );
 
     let effectiveFilter = compiled.lql;
