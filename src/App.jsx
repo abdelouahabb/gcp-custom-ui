@@ -1295,7 +1295,7 @@ function CloudPulseCockpit() {
                       className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/40 px-2 py-0.5 rounded-full"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                      🎥 GDE TUTORIAL SHIELD ON
+                      GDE TUTORIAL SHIELD ON
                     </span>
                   )}
                 </div>
@@ -2121,7 +2121,7 @@ function CloudPulseCockpit() {
             }
             showToast(
               next.enabled
-                ? '🎥 GDE Tutorial Privacy Shield ENABLED — Emails, Billing IDs & Public IPs are now masked for screen recording!'
+                ? 'GDE Tutorial Privacy Shield ENABLED — Emails, Billing IDs & Public IPs are now masked for screen recording.'
                 : 'GDE Tutorial Privacy Shield disabled.'
             );
             return next;

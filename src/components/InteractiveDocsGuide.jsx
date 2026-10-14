@@ -530,21 +530,21 @@ const DOC_SECTIONS = [
   },
   {
     id: 'aws-azure-parity-super-studio',
-    wave: 'INNOVATION #39 · AWS & AZURE DREAM FEATURES FOR GOOGLE CLOUD',
+    wave: 'INNOVATION #39 · AWS & AZURE ENTERPRISE WORKFLOWS FOR GOOGLE CLOUD',
     title:
       'AWS & Azure Parity Super-Studio (Azure Resource Groups, Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator, 1-Click SAS/Presigned URLs & 1-Screen Global Load Balancer)',
-    badge: 'AWS/AZURE PARITY TAB ★',
+    badge: 'AWS/AZURE PARITY TAB',
     badgeColor: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
     icon: Layers,
     targetTab: 'AWS_AZURE_PARITY',
     problemSolved:
       'Engineers migrating from AWS or Microsoft Azure miss 5 iconic cloud workflows that Google Cloud Console either lacks or fragments across 7+ screens: (1) Azure Resource Groups with 1-click group teardown, (2) AWS Budgets Actions / Azure Auto-Shutdown hard-spend stop-loss fuses (since GCP budgets only send emails by default), (3) AWS IAM Policy Simulator & Switch-Role preview, (4) 1-Click Azure SAS / S3 Presigned share links + browser upload without needing a Service Account JSON key, and (5) a 1-Screen Global HTTPS Load Balancer + SSL + Cloud Armor WAF wizard.',
     howItWorks: [
-      '📦 1. Azure-Style Resource Groups & Bulk Label Tagger: Group any mix of Compute VMs, Cloud Run services, GCS Buckets, BigQuery Datasets, and Secret Manager secrets into logical folders (syncing `labels.resource_group` on GCP), inspect per-group `$/mo` burn, and execute 1-Click Hibernate Group or 1-Click Cascade Delete Group (with grayed-out `line-through` `⏳ DELETING...` visual feedback).',
-      '🛑 2. Hard-Spend Stop-Loss Fuse (AWS Budgets Actions / Azure Auto-Shutdown): Arm 3 automated stop-loss stages (80% Soft Brake capping Cloud Run `maxInstances=3` & `minInstances=0`, 95% Compute Park stopping all RUNNING VMs, and 100% native Pub/Sub `cloudpulse-hard-spend-fuse` wire).',
-      '🕵️‍♂️ 3. AWS IAM Policy Simulator & Switch-Role Impersonator: Test any Service Account or user principal against 16 core GCP permissions (`ALLOW` vs `DENY`), preview the cockpit as that role, and grant missing least-privilege roles in 1 click.',
-      '🔗 4. Azure SAS / AWS S3 1-Click Presigned URLs & Browser Upload: Upload files directly from your browser and generate expiring (`15m`, `1h`, `24h`, `7d`) Zero-Key SAS Bridge URLs + `gcloud storage sign-url` V4 commands.',
-      '🌐 5. 1-Screen Global HTTPS Load Balancer + Managed SSL + Cloud Armor WAF Wizard: Collapses GCP’s 7-step Load Balancer setup (`Global IP` + `Serverless NEG` + `Cloud Armor WAF` + `Backend Service` + `URL Map` + `Managed SSL Cert` + `Forwarding Rule`) into a single 1-click workflow.',
+      '1. Azure-Style Resource Groups & Bulk Label Tagger: Group any mix of Compute VMs, Cloud Run services, GCS Buckets, BigQuery Datasets, and Secret Manager secrets into logical folders (syncing `labels.resource_group` on GCP), inspect per-group `$/mo` burn, and execute 1-Click Hibernate Group or 1-Click Cascade Delete Group (with grayed-out `line-through` `DELETING...` visual feedback).',
+      '2. Hard-Spend Stop-Loss Fuse (AWS Budgets Actions / Azure Auto-Shutdown): Arm 3 automated stop-loss stages (80% Soft Brake capping Cloud Run `maxInstances=3` & `minInstances=0`, 95% Compute Park stopping all RUNNING VMs, and 100% native Pub/Sub `cloudpulse-hard-spend-fuse` wire).',
+      '3. AWS IAM Policy Simulator & Switch-Role Impersonator: Test any Service Account or user principal against 16 core GCP permissions (`ALLOW` vs `DENY`), preview the cockpit as that role, and grant missing least-privilege roles in 1 click.',
+      '4. Azure SAS / AWS S3 1-Click Presigned URLs & Browser Upload: Upload files directly from your browser and generate expiring (`15m`, `1h`, `24h`, `7d`) Zero-Key SAS Bridge URLs + `gcloud storage sign-url` V4 commands.',
+      '5. 1-Screen Global HTTPS Load Balancer + Managed SSL + Cloud Armor WAF Wizard: Collapses GCP’s 7-step Load Balancer setup (`Global IP` + `Serverless NEG` + `Cloud Armor WAF` + `Backend Service` + `URL Map` + `Managed SSL Cert` + `Forwarding Rule`) into a single 1-click workflow.',
     ],
     apisUsed: [
       'GET /api/project/:id/aws-azure-parity/overview & POST /api/project/:id/aws-azure-parity/action',

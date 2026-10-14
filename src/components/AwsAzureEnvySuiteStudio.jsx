@@ -16,11 +16,14 @@ import {
   Copy,
   ExternalLink,
   Terminal,
-  Lock,
   Sparkles,
-  Play,
   UserCheck,
-  Layers,
+  Save,
+  Play,
+  Search,
+  Rocket,
+  FileText,
+  Clock,
 } from 'lucide-react';
 
 export default function AwsAzureEnvySuiteStudio({
@@ -69,7 +72,7 @@ export default function AwsAzureEnvySuiteStudio({
     'text/plain; charset=utf-8'
   );
   const [sasDurationSec, setSasDurationSec] = useState(3600);
-  const [sasMethod, setSasMethod] = useState('GET');
+  const [sasMethod] = useState('GET');
   const [generatedSasResult, setGeneratedSasResult] = useState(null);
 
   // Module 5: 1-Screen Global HTTPS Load Balancer Wizard state
@@ -190,7 +193,7 @@ export default function AwsAzureEnvySuiteStudio({
           memberIds: selectedMemberIds,
         }
       );
-      onShowToast?.(res.data?.message || 'Resource Group saved!');
+      onShowToast?.(res.data?.message || 'Resource Group saved.');
       setNewRgSlug('');
       setNewRgDesc('');
       setSelectedMemberIds([]);
@@ -275,7 +278,7 @@ export default function AwsAzureEnvySuiteStudio({
           autoStopRunningVms: autoStopVms,
         }
       );
-      onShowToast?.(res.data?.message || 'Hard-Spend Fuse armed!');
+      onShowToast?.(res.data?.message || 'Hard-Spend Fuse armed.');
       await fetchOverview();
     } catch (err) {
       onShowError?.(
@@ -401,7 +404,7 @@ export default function AwsAzureEnvySuiteStudio({
           textContent: uploadBase64 ? undefined : uploadTextContent,
         }
       );
-      onShowToast?.(res.data?.message || 'Uploaded object to Cloud Storage!');
+      onShowToast?.(res.data?.message || 'Uploaded object to Cloud Storage.');
       setUploadBase64(null);
       await fetchBucketObjects(selectedBucket);
     } catch (err) {
@@ -430,7 +433,7 @@ export default function AwsAzureEnvySuiteStudio({
         }
       );
       setGeneratedSasResult(res.data);
-      onShowToast?.(res.data?.message || 'Generated Presigned / SAS URL!');
+      onShowToast?.(res.data?.message || 'Generated Presigned / SAS URL.');
     } catch (err) {
       onShowError?.(
         err.response?.data?.error ||
@@ -460,7 +463,7 @@ export default function AwsAzureEnvySuiteStudio({
         }
       );
       setLbReceipt(res.data);
-      onShowToast?.(res.data?.message || 'Provisioned Global HTTPS Load Balancer!');
+      onShowToast?.(res.data?.message || 'Provisioned Global HTTPS Load Balancer.');
       await fetchOverview();
     } catch (err) {
       onShowError?.(
@@ -473,7 +476,7 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
-  const copyText = (txt, label = 'Copied to clipboard!') => {
+  const copyText = (txt, label = 'Copied to clipboard.') => {
     navigator.clipboard?.writeText(txt);
     onShowToast?.(label);
   };
@@ -495,13 +498,13 @@ export default function AwsAzureEnvySuiteStudio({
           <div className="flex items-center gap-2.5 text-xs font-mono">
             <UserCheck className="w-4 h-4 text-amber-500 shrink-0" />
             <span className="font-extrabold text-amber-600 dark:text-amber-300">
-              🎭 AWS-STYLE SWITCH ROLE PREVIEW ACTIVE:
+              AWS-STYLE SWITCH ROLE PREVIEW ACTIVE:
             </span>
             <span className="text-zinc-800 dark:text-zinc-200 font-bold">
               {impersonatingBannerPrincipal}
             </span>
             <span className="text-[11px] text-zinc-500">
-              (Evaluating permissions & blast radius as this identity)
+              (Evaluating permissions &amp; blast radius as this identity)
             </span>
           </div>
           <button
@@ -521,14 +524,14 @@ export default function AwsAzureEnvySuiteStudio({
             <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
               <Sparkles className="w-3.5 h-3.5" />
               <span>
-                INNOVATION #39 · AWS &amp; AZURE DREAM FEATURES FOR GOOGLE CLOUD
+                INNOVATION #39 · AWS &amp; AZURE ENTERPRISE WORKFLOWS FOR GOOGLE CLOUD
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
               AWS &amp; Azure Parity Super-Studio for Google Cloud
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
-              The 5 iconic cloud workflows engineers love in{' '}
+              The 5 iconic cloud workflows engineers rely on in{' '}
               <strong>Microsoft Azure</strong> and <strong>Amazon Web Services</strong>{' '}
               that standard Google Cloud Console lacks: logical{' '}
               <strong>Azure Resource Groups</strong> with 1-click group teardown,{' '}
@@ -557,31 +560,31 @@ export default function AwsAzureEnvySuiteStudio({
           {[
             {
               id: 'RESOURCE_GROUPS',
-              label: '📦 1. Azure Resource Groups & Bulk Tagger',
+              label: '1. Azure Resource Groups & Bulk Tagger',
               badge: `${resourceGroups.length} Groups`,
               icon: FolderKanban,
             },
             {
               id: 'SPEND_FUSE',
-              label: '🛑 2. Hard-Spend Stop-Loss Fuse',
+              label: '2. Hard-Spend Stop-Loss Fuse',
               badge: `$${spendFuse.monthlyBudgetUsd || 50}/mo Cap`,
               icon: Flame,
             },
             {
               id: 'IAM_SIMULATOR',
-              label: '🕵️‍♂️ 3. AWS IAM Policy Simulator & Switch Role',
+              label: '3. AWS IAM Policy Simulator & Switch Role',
               badge: `${principals.length} Identities`,
               icon: ShieldCheck,
             },
             {
               id: 'SAS_PRESIGNED',
-              label: '🔗 4. Azure SAS / S3 Presigned URLs & Upload',
+              label: '4. Azure SAS / S3 Presigned URLs & Upload',
               badge: `${buckets.length} Buckets`,
               icon: Link2,
             },
             {
               id: 'GLOBAL_LB_WIZARD',
-              label: '🌐 5. 1-Screen Global Load Balancer & WAF',
+              label: '5. 1-Screen Global Load Balancer & WAF',
               badge: '7-in-1 Wizard',
               icon: Globe,
             },
@@ -666,12 +669,13 @@ export default function AwsAzureEnvySuiteStudio({
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2">
+                            <FolderKanban className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
                             <span
                               className={`font-mono text-sm font-extrabold text-zinc-900 dark:text-zinc-100 ${
                                 isDeleting ? 'line-through' : ''
                               }`}
                             >
-                              📁 {grp.displayName}
+                              {grp.displayName}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                               {grp.environment}
@@ -681,8 +685,9 @@ export default function AwsAzureEnvySuiteStudio({
                               {grp.memberCount} resource(s)
                             </span>
                             {isDeleting && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse">
-                                ⏳ DELETING GROUP...
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse">
+                                <Clock className="w-3 h-3" />
+                                <span>DELETING GROUP...</span>
                               </span>
                             )}
                           </div>
@@ -719,7 +724,7 @@ export default function AwsAzureEnvySuiteStudio({
                             <Trash2 className="w-3.5 h-3.5" />
                             <span>
                               {isDeleting
-                                ? '⏳ DELETING...'
+                                ? 'DELETING...'
                                 : cascadeDeleteGcp
                                 ? 'Teardown Group + Resources'
                                 : 'Remove Group'}
@@ -879,11 +884,14 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'UPSERT_RG' || !newRgSlug.trim()}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-sm cursor-pointer"
               >
-                {actionBusy === 'UPSERT_RG'
-                  ? 'Syncing Resource Group & GCP Labels...'
-                  : '💾 Save Resource Group & Sync GCP resource_group Labels'}
+                <Save className="w-3.5 h-3.5" />
+                <span>
+                  {actionBusy === 'UPSERT_RG'
+                    ? 'Syncing Resource Group & GCP Labels...'
+                    : 'Save Resource Group & Sync GCP resource_group Labels'}
+                </span>
               </button>
             </form>
           </div>
@@ -1000,11 +1008,14 @@ export default function AwsAzureEnvySuiteStudio({
                 type="button"
                 onClick={handleSaveSpendFuse}
                 disabled={actionBusy === 'SAVE_FUSE'}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 cursor-pointer"
               >
-                {actionBusy === 'SAVE_FUSE'
-                  ? 'Saving Stop-Loss Policy...'
-                  : '🛡️ Arm Automated Stop-Loss Budget Fuse Policy'}
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>
+                  {actionBusy === 'SAVE_FUSE'
+                    ? 'Saving Stop-Loss Policy...'
+                    : 'Arm Automated Stop-Loss Budget Fuse Policy'}
+                </span>
               </button>
             </div>
           </div>
@@ -1012,8 +1023,9 @@ export default function AwsAzureEnvySuiteStudio({
           {/* Right Column: 1-Click Live Enforcement Actions */}
           <div className="lg:col-span-5 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3">
-              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
-                ⚡ 1-Click Execute / Test Stop-Loss Fuse Actions Now
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <Play className="w-4 h-4 text-rose-500" />
+                <span>1-Click Execute / Test Stop-Loss Fuse Actions Now</span>
               </h3>
               <p className="text-xs text-zinc-500">
                 Trigger any stop-loss stage immediately against live{' '}
@@ -1128,11 +1140,14 @@ export default function AwsAzureEnvySuiteStudio({
                   type="button"
                   onClick={() => handleRunIamSimulation(selectedPrincipalKey)}
                   disabled={actionBusy === 'IAM_SIM'}
-                  className="px-3 py-2 rounded-xl text-xs font-mono font-bold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer"
                 >
-                  {actionBusy === 'IAM_SIM'
-                    ? 'Simulating...'
-                    : '🔍 Run Policy Simulation'}
+                  <Search className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'IAM_SIM'
+                      ? 'Simulating...'
+                      : 'Run Policy Simulation'}
+                  </span>
                 </button>
 
                 <button
@@ -1144,12 +1159,14 @@ export default function AwsAzureEnvySuiteStudio({
                         : selectedPrincipalKey
                     )
                   }
-                  className="px-3 py-2 rounded-xl text-xs font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 cursor-pointer"
                 >
-                  🎭{' '}
-                  {impersonatingBannerPrincipal === selectedPrincipalKey
-                    ? 'Exit Switch-Role View'
-                    : 'Switch Role Preview'}
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>
+                    {impersonatingBannerPrincipal === selectedPrincipalKey
+                      ? 'Exit Switch-Role View'
+                      : 'Switch Role Preview'}
+                  </span>
                 </button>
               </div>
             </div>
@@ -1157,11 +1174,13 @@ export default function AwsAzureEnvySuiteStudio({
             {simResult && (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
-                    ✅ {simResult.allowedCount} ALLOWED
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{simResult.allowedCount} ALLOWED</span>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold">
-                    ❌ {simResult.deniedCount} DENIED (Implicit)
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>{simResult.deniedCount} DENIED (Implicit)</span>
                   </span>
                   <span className="text-zinc-500">
                     Active Bound Roles:{' '}
@@ -1205,12 +1224,12 @@ export default function AwsAzureEnvySuiteStudio({
                               {isAllowed ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                                   <CheckCircle2 className="w-3 h-3" />
-                                  ALLOWED
+                                  <span>ALLOWED</span>
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
                                   <AlertTriangle className="w-3 h-3" />
-                                  DENIED
+                                  <span>DENIED</span>
                                 </span>
                               )}
                             </td>
@@ -1231,9 +1250,12 @@ export default function AwsAzureEnvySuiteStudio({
                                     actionBusy ===
                                     `GRANT_${row.recommendedLeastPrivilegeRole}`
                                   }
-                                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 cursor-pointer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 cursor-pointer"
                                 >
-                                  + Grant {row.recommendedLeastPrivilegeRole}
+                                  <Plus className="w-3 h-3" />
+                                  <span>
+                                    Grant {row.recommendedLeastPrivilegeRole}
+                                  </span>
                                 </button>
                               )}
                             </td>
@@ -1270,7 +1292,7 @@ export default function AwsAzureEnvySuiteStudio({
                     <code>1h</code>, <code>24h</code>, <code>7d</code>) right
                     from the browser—including a{' '}
                     <strong>Zero-SA-Key Instant SAS Bridge URL</strong> that
-                    works even when signed in with a personal user account!
+                    works even when signed in with a personal user account.
                   </p>
                 </div>
 
@@ -1329,7 +1351,7 @@ export default function AwsAzureEnvySuiteStudio({
                           className="py-6 text-center text-zinc-400"
                         >
                           Bucket is empty — upload a file on the right to test
-                          1-Click Presigned URLs!
+                          1-Click Presigned URLs.
                         </td>
                       </tr>
                     ) : (
@@ -1370,10 +1392,13 @@ export default function AwsAzureEnvySuiteStudio({
               {generatedSasResult && (
                 <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 space-y-2.5 text-xs font-mono">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-extrabold text-sky-600 dark:text-sky-400">
-                      🔗 Expiring SAS / Presigned Link Ready (
-                      gs://{generatedSasResult.bucket}/
-                      {generatedSasResult.objectName})
+                    <span className="inline-flex items-center gap-1.5 font-extrabold text-sky-600 dark:text-sky-400">
+                      <Link2 className="w-3.5 h-3.5" />
+                      <span>
+                        Expiring SAS / Presigned Link Ready (gs://
+                        {generatedSasResult.bucket}/
+                        {generatedSasResult.objectName})
+                      </span>
                     </span>
                     <span className="text-[10px] text-zinc-500">
                       Expires: {generatedSasResult.expiresAt}
@@ -1395,7 +1420,7 @@ export default function AwsAzureEnvySuiteStudio({
                       onClick={() =>
                         copyText(
                           `${window.location.origin}${generatedSasResult.bridgePath}`,
-                          'Copied expiring browser SAS URL!'
+                          'Copied expiring browser SAS URL.'
                         )
                       }
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
@@ -1408,7 +1433,7 @@ export default function AwsAzureEnvySuiteStudio({
                       onClick={() =>
                         copyText(
                           generatedSasResult.gcloudCli,
-                          'Copied gcloud storage sign-url V4 command!'
+                          'Copied gcloud storage sign-url V4 command.'
                         )
                       }
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
@@ -1473,11 +1498,14 @@ export default function AwsAzureEnvySuiteStudio({
               <button
                 type="submit"
                 disabled={actionBusy === 'UPLOAD_OBJ' || !selectedBucket}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white cursor-pointer"
               >
-                {actionBusy === 'UPLOAD_OBJ'
-                  ? 'Uploading to Cloud Storage...'
-                  : `⬆️ Upload to gs://${selectedBucket}/${uploadObjectName}`}
+                <Upload className="w-3.5 h-3.5" />
+                <span>
+                  {actionBusy === 'UPLOAD_OBJ'
+                    ? 'Uploading to Cloud Storage...'
+                    : `Upload to gs://${selectedBucket}/${uploadObjectName}`}
+                </span>
               </button>
             </form>
           </div>
@@ -1599,20 +1627,26 @@ export default function AwsAzureEnvySuiteStudio({
                 disabled={
                   actionBusy === 'PROVISION_LB' || !lbTargetRunService.trim()
                 }
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white cursor-pointer"
               >
-                {actionBusy === 'PROVISION_LB'
-                  ? 'Provisioning Global LB, Serverless NEG, SSL & WAF...'
-                  : '🚀 1-Click Provision Global HTTPS Load Balancer + SSL + WAF'}
+                <Rocket className="w-3.5 h-3.5" />
+                <span>
+                  {actionBusy === 'PROVISION_LB'
+                    ? 'Provisioning Global LB, Serverless NEG, SSL & WAF...'
+                    : '1-Click Provision Global HTTPS Load Balancer + SSL + WAF'}
+                </span>
               </button>
             </form>
           </div>
 
           <div className="lg:col-span-6 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4">
-              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
-                📋 7-Step Global Load Balancer Execution Receipt &amp; CLI
-                Blueprint
+              <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-violet-500" />
+                <span>
+                  7-Step Global Load Balancer Execution Receipt &amp; CLI
+                  Blueprint
+                </span>
               </h3>
 
               {lbReceipt ? (
@@ -1641,7 +1675,7 @@ export default function AwsAzureEnvySuiteStudio({
                       onClick={() =>
                         copyText(
                           lbReceipt.full7StepCli,
-                          'Copied 7-step Global Load Balancer CLI!'
+                          'Copied 7-step Global Load Balancer CLI.'
                         )
                       }
                       className="absolute top-2 right-2 px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-[10px] font-mono font-bold cursor-pointer"
