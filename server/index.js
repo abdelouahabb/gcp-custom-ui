@@ -7441,9 +7441,12 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
   // Tier 2: Vertex AI Gemini via Active gcloud ADC Access Token (only when user explicitly opted in)
   if (accessToken && rawQuery.trim().split(/\s+/).length >= 2) {
     try {
+      const selectedModelId = encryptedAiStudioVault?.model || 'gemini-2.5-flash';
       const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
         projectId
-      )}/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent`;
+      )}/locations/us-central1/publishers/google/models/${encodeURIComponent(
+        selectedModelId
+      )}:generateContent`;
       const resp = await gcpHttp.post(
         vertexUrl,
         {
@@ -7476,11 +7479,11 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
           explanation: parsed.explanation || baseCompiled.explanation,
           nlpAnalysis: {
             ...baseCompiled.nlpAnalysis,
-            engine: 'VERTEX_AI_GEMINI_ADC (gemini-2.5-flash) + PORTER_NER_BM25',
+            engine: `VERTEX_AI_GEMINI_ADC (${selectedModelId}) + PORTER_NER_BM25`,
             geminiSynthesizedLql: parsed.lql.trim(),
             tokenConsumptionGuard: {
               llmTokensAuthorized: true,
-              provider: 'Vertex AI (aiplatform.googleapis.com · gemini-2.5-flash)',
+              provider: `Vertex AI (aiplatform.googleapis.com · ${selectedModelId})`,
               mode: 'BILLABLE_VERTEX_AI_TOKENS',
               promptTokenCount: promptTok,
               candidatesTokenCount: candTok,

@@ -533,8 +533,8 @@ export default function LogStreamerAndShell({
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <div>
                   <strong>TOKEN CONSUMPTION WARNING (Vertex AI / Gemini API Key):</strong>{' '}
-                  Neural LLM query compilation sends your natural-language query to{' '}
-                  <code className="font-bold">gemini-2.5-flash</code> (via your RAM Vault API Key or Vertex AI{' '}
+                  Neural LLM query compilation sends your natural-language query to your selected{' '}
+                  <strong>Gemini model</strong> (configured in the RAM Vault or via Vertex AI{' '}
                   <code className="font-bold">aiplatform.googleapis.com</code> ADC) and consumes{' '}
                   <strong>~100–250 input/output tokens per query</strong> against your quota/billing. Keep this{' '}
                   <strong>OFF</strong> to use the 100% free local Porter Stemmer + NER + BM25 engine at{' '}
@@ -607,7 +607,7 @@ export default function LogStreamerAndShell({
                     STAGE 3 · TF-IDF + BM25 ($0) + OPT-IN GEMINI LLM (CONSUMES TOKENS)
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                    Classifies SRE intent via <strong>TF-IDF Cosine Similarity</strong> and ranks logs using <strong>Okapi BM25</strong> for <strong>$0.00 (0 tokens)</strong>. Only when you explicitly toggle <strong>&quot;Vertex / Gemini LLM: ON&quot;</strong> will it call <code className="font-mono">gemini-2.5-flash</code> (consuming ~100–250 LLM tokens/query).
+                    Classifies SRE intent via <strong>TF-IDF Cosine Similarity</strong> and ranks logs using <strong>Okapi BM25</strong> for <strong>$0.00 (0 tokens)</strong>. Only when you explicitly toggle <strong>&quot;Vertex / Gemini LLM: ON&quot;</strong> will it call your selected <strong>Gemini model</strong> (consuming ~100–250 LLM tokens/query).
                   </p>
                 </div>
               </div>
