@@ -7338,53 +7338,107 @@ function compileNaturalLanguageToLqlAndSql(projectId, nlQuery = '', explicitLql 
   };
 }
 
-// Optional Live Gemini Neural LLM Enhancer (uses AES-256-GCM RAM Vault key if sealed)
-async function tryEnhanceWithGeminiNeuralNlp(projectId, rawQuery, baseCompiled) {
-  if (!rawQuery || typeof decryptApiKeyFromMemory !== 'function') {
+// Optional Live Gemini Neural LLM Enhancer (uses AES-256-GCM RAM Vault key OR active gcloud ADC Vertex AI token)
+async function tryEnhanceWithGeminiNeuralNlp(
+  projectId,
+  rawQuery,
+  baseCompiled,
+  accessToken = null
+) {
+  if (!rawQuery || !rawQuery.trim()) {
     return baseCompiled;
   }
-  const apiKey = decryptApiKeyFromMemory();
-  if (!apiKey) return baseCompiled;
 
-  try {
-    const modelId = encryptedAiStudioVault?.model || 'gemini-2.5-flash';
-    const prompt = `You are a Google Cloud Logging LQL and BigQuery Log Analytics SQL compiler for project "${projectId}".
-Convert this natural language query into valid Cloud Logging LQL and BigQuery SQL over \`${projectId}.global._Default._AllLogs\`:
+  const prompt = `You are an expert Google Cloud Logging Query Language (LQL) and BigQuery Log Analytics SQL compiler for project "${projectId}".
+Convert this plain-English request into valid Cloud Logging LQL (https://docs.cloud.google.com/logging/docs/view/logging-query-language) using official LogEntry fields (resource.type, resource.labels.location, severity, httpRequest.status, httpRequest.latency, textPayload, jsonPayload, protoPayload.authenticationInfo.principalEmail, sample(insertId, 0.1)):
 Query: ${JSON.stringify(rawQuery)}
+Deterministic Baseline LQL: ${JSON.stringify(baseCompiled.lql || '')}
 Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."}`;
 
-    const resp = await gcpHttp.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-        modelId
-      )}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 256,
-          responseMimeType: 'application/json',
+  // Tier 1: Google AI Studio RAM Vault Key (if unlocked in memory)
+  const apiKey =
+    typeof decryptApiKeyFromMemory === 'function'
+      ? decryptApiKeyFromMemory()
+      : null;
+
+  if (apiKey) {
+    try {
+      const modelId = encryptedAiStudioVault?.model || 'gemini-2.5-flash';
+      const resp = await gcpHttp.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+          modelId
+        )}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 256,
+            responseMimeType: 'application/json',
+          },
         },
-      },
-      { timeout: 2600 }
-    );
-    const txt =
-      resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const parsed = JSON.parse(txt);
-    if (parsed && typeof parsed.lql === 'string' && parsed.lql.trim()) {
-      return {
-        ...baseCompiled,
-        lql: baseCompiled.lql || parsed.lql.trim(),
-        explanation: parsed.explanation || baseCompiled.explanation,
-        nlpAnalysis: {
-          ...baseCompiled.nlpAnalysis,
-          engine: `GEMINI_NEURAL_LLM (${modelId}) + PORTER_NER_BM25`,
-          geminiSynthesizedLql: parsed.lql.trim(),
-        },
-      };
+        { timeout: 2600 }
+      );
+      const txt =
+        resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const parsed = JSON.parse(txt);
+      if (parsed && typeof parsed.lql === 'string' && parsed.lql.trim()) {
+        return {
+          ...baseCompiled,
+          lql: baseCompiled.lql || parsed.lql.trim(),
+          explanation: parsed.explanation || baseCompiled.explanation,
+          nlpAnalysis: {
+            ...baseCompiled.nlpAnalysis,
+            engine: `GEMINI_NEURAL_LLM (${modelId} RAM Vault) + PORTER_NER_BM25`,
+            geminiSynthesizedLql: parsed.lql.trim(),
+          },
+        };
+      }
+    } catch {
+      // Proceed to Tier 2 or deterministic AST
     }
-  } catch {
-    // Fallback to deterministic Computational NLP AST
   }
+
+  // Tier 2: Vertex AI Gemini via Active gcloud ADC Access Token (if project Vertex AI API is enabled and baseline had no structured LQL slots)
+  if (accessToken && !baseCompiled.lql && rawQuery.trim().split(/\s+/).length >= 3) {
+    try {
+      const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent`;
+      const resp = await gcpHttp.post(
+        vertexUrl,
+        {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 256,
+            responseMimeType: 'application/json',
+          },
+        },
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 2200,
+        }
+      );
+      const txt =
+        resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const parsed = JSON.parse(txt);
+      if (parsed && typeof parsed.lql === 'string' && parsed.lql.trim()) {
+        return {
+          ...baseCompiled,
+          lql: parsed.lql.trim(),
+          explanation: parsed.explanation || baseCompiled.explanation,
+          nlpAnalysis: {
+            ...baseCompiled.nlpAnalysis,
+            engine: 'VERTEX_AI_GEMINI_ADC (gemini-2.5-flash) + PORTER_NER_BM25',
+            geminiSynthesizedLql: parsed.lql.trim(),
+          },
+        };
+      }
+    } catch {
+      // Fallback to deterministic Computational NLP AST
+    }
+  }
+
   return baseCompiled;
 }
 
@@ -7597,7 +7651,8 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
     const compiled = await tryEnhanceWithGeminiNeuralNlp(
       projectId,
       naturalLanguage,
-      baseCompiled
+      baseCompiled,
+      token
     );
 
     let effectiveFilter = compiled.lql;

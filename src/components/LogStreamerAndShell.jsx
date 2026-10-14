@@ -27,6 +27,8 @@ import {
   Database,
   Zap,
   Cpu,
+  BookOpen,
+  ExternalLink,
   X,
 } from 'lucide-react';
 
@@ -94,6 +96,7 @@ export default function LogStreamerAndShell({
   const [nlQueryInput, setNlQueryInput] = useState('');
   const [customLqlInput, setCustomLqlInput] = useState('');
   const [showCompiledSqlModal, setShowCompiledSqlModal] = useState(false);
+  const [showLqlTutorialModal, setShowLqlTutorialModal] = useState(false);
   const [activeChronoTab, setActiveChronoTab] = useState('SMART_STREAM'); // 'SMART_STREAM' | 'DRAIN3_CLUSTERS' | 'TRACE_WATERFALL' | 'FINOPS_DLP'
   const [timeTravelAnchor, setTimeTravelAnchor] = useState(null);
   const [selectedTraceId, setSelectedTraceId] = useState(null);
@@ -464,8 +467,161 @@ export default function LogStreamerAndShell({
                 <Database className="w-3.5 h-3.5 text-blue-500" />
                 <span>{showCompiledSqlModal ? 'Hide LQL / BigQuery SQL' : 'View LQL & BigQuery SQL'}</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setShowLqlTutorialModal((v) => !v)}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-mono font-bold cursor-pointer border transition-colors ${
+                  showLqlTutorialModal
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>{showLqlTutorialModal ? 'Hide LQL & NLP Guide' : 'LQL Tutorial & How NLP Works'}</span>
+              </button>
             </div>
           </form>
+
+          {/* Interactive LQL Tutorial & 3-Layer NLP Architecture Drawer */}
+          {showLqlTutorialModal && (
+            <div className="p-4 rounded-xl bg-white dark:bg-[#18191c] border border-emerald-500/30 space-y-4 text-xs">
+              <div className="flex flex-wrap items-start justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                      INTERACTIVE ENGINEERING GUIDE
+                    </span>
+                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      How Our 3-Layer NLP-to-LQL Compiler Works & Official Google Cloud LQL Tutorial
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Click any LQL syntax example below to load and execute it live against <code className="font-mono">logging.googleapis.com/v2/entries:list</code>.
+                  </p>
+                </div>
+                <a
+                  href="https://docs.cloud.google.com/logging/docs/view/logging-query-language"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10.5px] font-mono font-bold"
+                >
+                  <span>Official Google Cloud LQL Docs</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              {/* Part 1: How the 3-Layer NLP-to-LQL Engine Works */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
+                  <div className="text-[10.5px] font-mono font-extrabold text-purple-600 dark:text-purple-400">
+                    STAGE 1 · LEXER & PORTER STEMMER
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                    Strips conversational stop-words (<code className="font-mono">&quot;show me&quot;</code>, <code className="font-mono">&quot;in the&quot;</code>) and applies the <strong>Porter Suffix Stemming Algorithm</strong> so inflected words map to canonical roots (<code className="font-mono">&quot;timeouts&quot;</code> ➔ <code className="font-mono">&quot;timeout&quot;</code>, <code className="font-mono">&quot;excluding&quot;</code> ➔ <code className="font-mono">&quot;exclud&quot;</code>).
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
+                  <div className="text-[10.5px] font-mono font-extrabold text-blue-600 dark:text-blue-400">
+                    STAGE 2 · NAMED ENTITY RECOGNITION (NER)
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                    Extracts structured telemetry slots: <strong>Services</strong> (<code className="font-mono">&quot;cloud run&quot;</code> ➔ <code className="font-mono">cloud_run_revision</code>), <strong>Geo Aliases</strong> (<code className="font-mono">&quot;iowa&quot;</code> ➔ <code className="font-mono">us-central1</code>), <strong>Latency Math</strong> (<code className="font-mono">&quot;slower than 1500ms&quot;</code> ➔ <code className="font-mono">&gt;&quot;1.5s&quot;</code>), <strong>Time Windows</strong>, and <strong>Negations</strong>.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-1">
+                  <div className="text-[10.5px] font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                    STAGE 3 · TF-IDF + BM25 + GEMINI LLM
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                    Classifies SRE intent via <strong>TF-IDF Cosine Similarity</strong>, ranks matching log cards using <strong>Okapi BM25</strong>, and—when your Gemini RAM Vault key or Vertex AI ADC is active—uses <strong>Gemini 2.5 Flash</strong> to synthesize complex LQL.
+                  </p>
+                </div>
+              </div>
+
+              {/* Part 2: Interactive Google Cloud LQL Cheat-Sheet & Tutorial */}
+              <div className="space-y-2">
+                <div className="text-[11px] font-mono font-extrabold text-zinc-800 dark:text-zinc-200 uppercase">
+                  What is LQL (Logging Query Language)? Interactive Syntax Reference (Click any row to test live)
+                </div>
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                  <strong>LQL</strong> is Google Cloud&apos;s native domain-specific language for filtering <code className="font-mono">LogEntry</code> protobuf records across <code className="font-mono">logging.googleapis.com/v2/entries:list</code>, Log Sinks (<code className="font-mono">_Default</code> exclusions), and log-based metrics.
+                </p>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                  {[
+                    {
+                      concept: '1. Exact Equality (=) vs. Substring Has (:)',
+                      rule: 'Use = for exact scalar match and : (colon) to check if a string or array field contains a substring (case-insensitive).',
+                      lql: 'resource.type="cloud_run_revision" AND textPayload:"deadline exceeded"',
+                      nl: '5xx timeouts on cloud run over 1s',
+                    },
+                    {
+                      concept: '2. Ordered Severity & Numeric Comparisons (>=, >)',
+                      rule: 'LogSeverity is ordered (DEFAULT < DEBUG < INFO < NOTICE < WARNING < ERROR < CRITICAL < ALERT < EMERGENCY).',
+                      lql: 'severity>=ERROR AND httpRequest.status>=500 AND httpRequest.latency>"1.5s"',
+                      nl: 'show me 5xx timeouts on cloud run in iowa slower than 1500ms in the last 2 hours excluding healthchecks',
+                    },
+                    {
+                      concept: '3. Boolean Logic & Negation (AND, OR, NOT, -)',
+                      rule: 'Implicitly joins adjacent expressions with AND. Prefix any clause with NOT or - (hyphen) to exclude noisy logs.',
+                      lql: 'httpRequest.status=200 AND -httpRequest.requestUrl:"/healthz" AND NOT httpRequest.userAgent:"kube-probe"',
+                      nl: 'all logs excluding healthchecks',
+                    },
+                    {
+                      concept: '4. Regular Expressions (=~ and !~)',
+                      rule: 'Use =~ for RE2 regular expression match and !~ for negated regex match (e.g. scanning for leaked API keys or JWTs).',
+                      lql: 'textPayload =~ "(AIza[0-9A-Za-z_-]{15,}|Bearer eyJ)"',
+                      nl: 'detect unmasked bearer jwt tokens or aiza api key leaks in europe-west1',
+                    },
+                    {
+                      concept: '5. Multi-Value Set Membership (IN (...))',
+                      rule: 'Use IN (...) to match multiple status codes, regions, or RPC methods without repetitive OR chains.',
+                      lql: 'httpRequest.status IN (429, 503, 504) AND resource.labels.location IN ("us-central1", "europe-west1")',
+                      nl: '429 rate limit quota exhausted on vertex ai over 1s',
+                    },
+                    {
+                      concept: '6. Built-In FinOps Sampling Function: sample(field, fraction)',
+                      rule: 'Built-in LQL function used in _Default Sink exclusions to sample a deterministic percentage (e.g. 90% drop) by hashing insertId or trace.',
+                      lql: 'resource.type="http_load_balancer" AND httpRequest.status=200 AND sample(insertId, 0.90)',
+                      nl: 'iam permission denied or secret manager 403 unauthorized access in the past 60m',
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.concept}
+                      onClick={() => {
+                        setCustomLqlInput(item.lql);
+                        setNlQueryInput(item.nl);
+                        setShowCompiledSqlModal(true);
+                        fetchChronoLogs({
+                          naturalLanguage: item.nl,
+                          lqlFilter: item.lql,
+                        });
+                      }}
+                      className="p-2.5 rounded-lg bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 cursor-pointer transition-colors space-y-1"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-bold text-[11px] text-emerald-700 dark:text-emerald-400">
+                          {item.concept}
+                        </span>
+                        <span className="text-[10px] font-mono text-purple-500 font-bold">
+                          Click to Run LQL ➔
+                        </span>
+                      </div>
+                      <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400">
+                        {item.rule}
+                      </p>
+                      <code className="block text-[10.5px] font-mono text-zinc-900 dark:text-zinc-200 bg-zinc-200/60 dark:bg-zinc-900 px-2 py-1 rounded overflow-x-auto">
+                        {item.lql}
+                      </code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Instant Intent Preset Chips */}
           <div className="flex flex-wrap items-center justify-between gap-2">

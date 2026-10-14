@@ -300,18 +300,19 @@ const DOC_SECTIONS = [
   },
   {
     id: 'neural-chrono-log-and-trace-studio-2026',
-    wave: 'MOONSHOT 2026 · NEURAL CHRONO-LOG, DRAIN3 CLUSTERING, TRACE WATERFALL & LOG FINOPS STUDIO',
+    wave: 'MOONSHOT 2026 · NEURAL CHRONO-LOG, 3-LAYER NLP-TO-LQL COMPILER, DRAIN3 CLUSTERING, TRACE WATERFALL & LOG FINOPS STUDIO',
     title:
-      '2026 Neural Chrono-Log & Trace Studio: Drain3 Pattern Clustering, Cross-Service `traceId` Waterfall, NL-to-LQL/BigQuery SQL, `±30s` Time-Travel, `_Default` Sink FinOps & DLP Leak Radar',
-    badge: 'LOGS & SHELL TAB · $0.50/GiB NOISE CUTTER',
+      '2026 Neural Chrono-Log & Trace Studio: 3-Layer NLP-to-LQL/BigQuery SQL Compiler, Official LQL Interactive Tutorial, Drain3 Pattern Clustering, Cross-Service `traceId` Waterfall & `_Default` Sink FinOps',
+    badge: 'LOGS & SHELL TAB · NLP + LQL + $0.50/GiB NOISE CUTTER',
     badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
     icon: Zap,
     targetTab: 'LOGS_SHELL',
     problemSolved:
-      'Google Cloud Logs Explorer still behaves like a 2016 JSON tree-viewer: engineers must click 5 nested protoPayload levels to read one error, write LQL syntax by hand during outages, scroll through thousands of duplicate stack traces, and unknowingly pay $0.50/GiB for noisy /healthz probes or leak Bearer tokens in stdout.',
+      'Google Cloud Logs Explorer still behaves like a 2016 JSON tree-viewer: engineers must click 5 nested protoPayload levels to read one error, memorize Google Cloud Logging Query Language (LQL) operators (=, :, =~, -negation, sample()) during high-stress outages, scroll through thousands of duplicate stack traces, and unknowingly pay $0.50/GiB for noisy /healthz probes or leak Bearer tokens in stdout.',
     howItWorks: [
-      'Bi-Directional Natural Language <-> LQL + BigQuery Log Analytics SQL Compiler: Type plain English (e.g. "5xx timeouts on cloud run over 1s" or "429 quota errors") and compile simultaneously into native Cloud Logging LQL (`entries:list`) and linked BigQuery SQL (`SELECT ... FROM <project>.global._Default._AllLogs`).',
-      'Zero-JSON-Digging Flattened SRE Stream & `±30s` Time-Travel Peek: Hoists HTTP Method/Status, Latency (ms), Service/Revision, Actor/Principal, Trace ID, and DLP Leak badges to the top of every card, with a 1-click `±30s Peek` button that locks the query window around any failure.',
+      '3-Layer Hybrid NLP-to-LQL & BigQuery SQL Compiler: (1) Stage 1 Lexical Tokenizer & Porter Suffix Stemmer (`nlpTokenizeAndStem`, `porterStemWord`) strips conversational stop-words and reduces inflected words to morphological roots (`"timeouts"` -> `"timeout"`, `"excluding"` -> `"exclud"`). (2) Stage 2 Named Entity Recognition (NER) Slot Parser (`extractNlpEntities`) extracts services (`"cloud run"` -> `cloud_run_revision`), human geo aliases (`"iowa"` -> `us-central1`, `"belgium"` -> `europe-west1`), latency math (`"slower than 1500ms"` -> `httpRequest.latency>"1.5s"`), relative time windows (`"last 2 hours"`), and negations (`"excluding healthchecks"` -> `-httpRequest.requestUrl:"/healthz"`). (3) Stage 3 TF-IDF Cosine Intent Classifier + Okapi BM25 Document Ranker + Live Gemini 2.5 Flash Neural Enhancer (via RAM Vault or Vertex AI ADC).',
+      'Built-In Interactive Google Cloud LQL Tutorial (`https://docs.cloud.google.com/logging/docs/view/logging-query-language`): Click "LQL Tutorial & How NLP Works" inside the Logs & Shell tab to learn and test all 6 core LQL operators in 1 click: (1) Exact Equality (`=`) vs. Case-Insensitive Substring Has (`:`), (2) Ordered Severity & Latency Comparisons (`severity>=ERROR`, `httpRequest.latency>"1.5s"`), (3) Boolean Logic & Hyphen Negation (`AND`, `OR`, `NOT`, `-`), (4) RE2 Regular Expressions (`=~` and `!~`), (5) Multi-Value Set Membership (`IN (...)`), and (6) Built-In Deterministic Sampling (`sample(insertId, 0.90)`).',
+      'Zero-JSON-Digging Flattened SRE Stream & `±30s` Time-Travel Peek: Hoists HTTP Method/Status, Latency (ms), Service/Revision, Actor/Principal, Trace ID, Per-Log `BM25 Match %`, and DLP Leak badges to the top of every card, with a 1-click `±30s Peek` button that locks the query window around any failure.',
       'Semantic Drain3 Pattern Clustering & Cross-Service `traceId` Waterfall: Tokenizes dynamic values (`<UUID>`, `<IP>`, `<METRIC>`, `<GCP_API_KEY>`, `<JWT_TOKEN>`) to collapse repetitive log noise into signatures, and stitches sibling spans across `http_load_balancer` -> `cloud_run_revision` -> `cloudsql_database` -> `aiplatform.googleapis.com` into a visual Gantt waterfall.',
       'Log FinOps `_Default` Sink Exclusion Manager & Live DLP Secret Leak Radar: Inspects `logging.googleapis.com/v2/projects/:id/sinks/_Default` to apply 1-click LQL exclusion rules that drop noisy `/healthz` probes ($0.50/GiB saved) and continuously scans log payloads for unmasked `AIza...` keys, Bearer JWTs, and PII emails.',
       'Global 430+ World IANA Timezone Engine (`TimezoneContext.jsx`): Supports all official `Intl.supportedValuesOf("timeZone")` zones across 8 continent filters with a minute-aligned `HH:mm` clock (zero per-second React re-render churn) and Dual (+UTC) mode.',
