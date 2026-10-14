@@ -1770,11 +1770,88 @@ export default function AwsAzureEnvySuiteStudio({
     }
   };
 
+  // Universal Disable / Teardown / Restore handlers for any of the 28 Parity Modules
+  const handleDisableParityModule = async (moduleId) => {
+    setActionBusy(`DISABLE_MOD_${moduleId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'DISABLE_PARITY_FEATURE_MODULE',
+          moduleId,
+        }
+      );
+      onShowToast?.(
+        res.data?.message ||
+          `Disabled ${moduleId} ($0.00/hr — zero active resources or charges).`
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          `Failed to disable ${moduleId}.`
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleRestoreParityModule = async (moduleId) => {
+    setActionBusy(`RESTORE_MOD_${moduleId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'RESTORE_PARITY_FEATURE_MODULE',
+          moduleId,
+        }
+      );
+      onShowToast?.(res.data?.message || `Re-enabled ${moduleId}.`);
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          `Failed to re-enable ${moduleId}.`
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleDeleteParityItem = async (moduleId, itemId) => {
+    setActionBusy(`DEL_ITEM_${moduleId}_${itemId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'DELETE_PARITY_MODULE_ITEM',
+          moduleId,
+          itemId,
+        }
+      );
+      onShowToast?.(
+        res.data?.message || `Disabled and removed ${itemId} ($0.00/hr).`
+      );
+      await fetchOverview();
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          `Failed to remove ${itemId}.`
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
   const copyText = (txt, label = 'Copied to clipboard.') => {
     navigator.clipboard?.writeText(txt);
     onShowToast?.(label);
   };
 
+  const disabledModules = data?.disabledModules || [];
   const unifiedResources = data?.unifiedResources || [];
   const resourceGroups = data?.resourceGroups || [];
   const spendFuse = data?.spendFuse || {};
@@ -2737,16 +2814,35 @@ export default function AwsAzureEnvySuiteStudio({
           GCP_UNDER_THE_HOOD_BLUEPRINTS[activeSubTab] ||
           GCP_UNDER_THE_HOOD_BLUEPRINTS.RESOURCE_GROUPS;
         const enableApisCmd = `gcloud services enable ${(bp.apisEnabled || []).join(' ')} --project=${pid}`;
+        const isModuleDisabled = disabledModules.includes(activeSubTab);
 
         return (
-          <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-emerald-500/10 border border-blue-500/30 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5">
+          <div
+            className={`rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 border transition-colors ${
+              isModuleDisabled
+                ? 'bg-emerald-500/5 border-emerald-500/40'
+                : 'bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-emerald-500/10 border-blue-500/30'
+            }`}
+          >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                  <Terminal className="w-3.5 h-3.5" />
-                  <span>
-                    ZERO-BLACKBOX GOOGLE CLOUD X-RAY · EXACT GCP SERVICES, APIS &amp; MANUAL VERIFICATION
-                  </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center gap-2 text-[11px] font-mono font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>
+                      ZERO-BLACKBOX GOOGLE CLOUD X-RAY · EXACT GCP SERVICES, APIS &amp; MANUAL VERIFICATION
+                    </span>
+                  </div>
+                  {isModuleDisabled ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>FEATURE DISABLED · $0.00/HR</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                      <span>FEATURE ACTIVE</span>
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
                   Under the Hood on Google Cloud: {bp.sourceFeature}
@@ -2780,8 +2876,61 @@ export default function AwsAzureEnvySuiteStudio({
                     <span>Verify Manually in Cloud Shell</span>
                   </button>
                 )}
+                {isModuleDisabled ? (
+                  <button
+                    type="button"
+                    disabled={actionBusy === `RESTORE_MOD_${activeSubTab}`}
+                    onClick={() => handleRestoreParityModule(activeSubTab)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>
+                      {actionBusy === `RESTORE_MOD_${activeSubTab}`
+                        ? 'Re-Enabling...'
+                        : 'Re-Enable Feature'}
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={actionBusy === `DISABLE_MOD_${activeSubTab}`}
+                    onClick={() => handleDisableParityModule(activeSubTab)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>
+                      {actionBusy === `DISABLE_MOD_${activeSubTab}`
+                        ? 'Disabling & Tearing Down...'
+                        : 'Disable & Teardown Feature ($0.00/hr)'}
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
+
+            {isModuleDisabled && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                <div className="flex items-start gap-2.5 text-emerald-900 dark:text-emerald-200">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-extrabold">
+                      Feature Disabled &amp; Torn Down on Project &apos;{pid}&apos; — Confirmed $0.00/hr Active Cost
+                    </div>
+                    <div className="text-[11px] opacity-90 mt-0.5">
+                      All active routes, rules, pre-warmed instances, and background allocations for this bridge have been cleared. You will not be billed for any resources under this module.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRestoreParityModule(activeSubTab)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Restore Default Configuration</span>
+                </button>
+              </div>
+            )}
 
             <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
               <strong className="text-zinc-950 dark:text-white">
@@ -2838,7 +2987,10 @@ export default function AwsAzureEnvySuiteStudio({
                   $ {bp.manualVerifyCli}
                 </div>
                 <div className="text-[10px] text-zinc-500">
-                  <strong>GCP Cost Impact:</strong> {bp.billingNote}
+                  <strong>GCP Cost Impact:</strong>{' '}
+                  {isModuleDisabled
+                    ? '$0.00/hr — Feature currently disabled & torn down.'
+                    : bp.billingNote}
                 </div>
               </div>
             </div>
@@ -6830,24 +6982,51 @@ export default function AwsAzureEnvySuiteStudio({
               )}
 
               <div className="space-y-2.5 pt-2">
-                {(bedrockGateway.routes || []).map((rt) => (
-                  <div
-                    key={rt.routeId}
-                    className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
-                  >
-                    <div>
-                      <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                        {rt.routeName} ({rt.primaryModel} -&gt; {rt.fallbackModel} -&gt; {rt.thirdFallbackModel})
+                {(bedrockGateway.routes || []).length === 0 ? (
+                  <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-xs font-mono text-emerald-700 dark:text-emerald-300 flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      0 Active Bedrock / AI Foundry Gateway Routes — Confirmed $0.00/hr Active Cost.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRestoreParityModule('BEDROCK_FOUNDRY_AI_GATEWAY')}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-extrabold cursor-pointer"
+                    >
+                      Restore Default Routes
+                    </button>
+                  </div>
+                ) : (
+                  (bedrockGateway.routes || []).map((rt) => (
+                    <div
+                      key={rt.routeId}
+                      className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+                    >
+                      <div>
+                        <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                          {rt.routeName} ({rt.primaryModel} -&gt; {rt.fallbackModel} -&gt; {rt.thirdFallbackModel})
+                        </div>
+                        <div className="text-[11px] text-zinc-500">
+                          Spend Today: ${rt.accruedTodayUsd} / ${rt.dailySpendCapUsd} Cap · Cache Hit: {rt.cacheHitRatePct}% · Blocked Injections: {rt.blockedInjectionsCount}
+                        </div>
                       </div>
-                      <div className="text-[11px] text-zinc-500">
-                        Spend Today: ${rt.accruedTodayUsd} / ${rt.dailySpendCapUsd} Cap · Cache Hit: {rt.cacheHitRatePct}% · Blocked Injections: {rt.blockedInjectionsCount}
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                          {rt.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem('BEDROCK_FOUNDRY_AI_GATEWAY', rt.routeId)
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-                      {rt.status}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -6998,9 +7177,24 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                         {c.campaignName} ({c.targetService} · {c.region})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-                        {c.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                          {c.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem(
+                              'ALIYUN_PTS_MSE_FLASH_SALE_SURGE',
+                              c.campaignId
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                       <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
@@ -7146,9 +7340,24 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                         {pkg.packageName} ({pkg.totalBandwidthMbps} Mbps · Anycast {pkg.anycastIp})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-                        {pkg.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                          {pkg.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem(
+                              'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE',
+                              pkg.packageId
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[11px] text-zinc-500">
                       Connected Spokes: {(pkg.hubSpokes || []).join(' · ')}
@@ -7270,9 +7479,24 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                         {cl.clusterName} ({cl.primaryRegion})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-                        {cl.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                          {cl.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem(
+                              'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL',
+                              cl.clusterId
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[11px] text-zinc-500">
                       Bridge: {cl.engineBridge} · Zero-Copy Clone: <strong>{cl.latestSnapshotCloneName}</strong> ({cl.cloneProvisionTimeSec}s provision time, $0 extra storage)
@@ -7411,9 +7635,24 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                         {pool.poolName} ({pool.acceleratorType})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-                        {pool.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                          {pool.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem(
+                              'HUAWEI_CCE_MODELARTS_AI_POOL',
+                              pool.poolId
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[11px] text-zinc-500">
                       Scheduler: {pool.schedulerType} · Slice: <strong>{pool.fractionalVgpuSlice}</strong>
@@ -7523,9 +7762,24 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                         {m.topicName} · {m.payloadSummary}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-                        {m.txState}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                          {m.txState}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem(
+                              'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY',
+                              m.messageId
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[11px] text-zinc-500">
                       Exact Delay Timer: <strong>{m.deliveryDelaySec}s</strong> · Bridge: {m.gcpBridge}
@@ -7637,9 +7891,24 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                         {cfg.dataId} ({cfg.namespace})
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-                        {cfg.status} ({cfg.pushLatencyMs}ms)
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                          {cfg.status} ({cfg.pushLatencyMs}ms)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem(
+                              'ALIYUN_NACOS_HIGRESS_CONFIG_MESH',
+                              cfg.configId
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[11px] text-zinc-500">
                       Gray Rule: <code>{cfg.canaryHeaderRule}</code> ({cfg.canaryWeightPct}%) · Wasm: <strong>{cfg.wasmPlugin}</strong>
@@ -7736,9 +8005,24 @@ export default function AwsAzureEnvySuiteStudio({
                       <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                         {tb.sourceMaxComputeDataset}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-                        {tb.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
+                          {tb.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteParityItem(
+                              'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP',
+                              tb.tableId
+                            )
+                          }
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Disable / Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[11px] text-zinc-500">
                       Mode: <strong>{tb.orientationMode}</strong> · Point-Lookup Capacity: <strong>{Number(tb.pointLookupQpsCapacity).toLocaleString()} QPS</strong> · p99 Latency: <strong>{tb.p99QueryLatencyMs}ms</strong> ({tb.biEngineRamGb} GB RAM)

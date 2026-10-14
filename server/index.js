@@ -23436,6 +23436,14 @@ function getOrInitHuaweiDataVNoc(projectId) {
   return huaweiDataVNocStore.get(projectId);
 }
 
+const disabledParityModulesStore = new Map();
+function getOrInitDisabledParityModules(projectId) {
+  if (!disabledParityModulesStore.has(projectId)) {
+    disabledParityModulesStore.set(projectId, new Set());
+  }
+  return disabledParityModulesStore.get(projectId);
+}
+
 // Role -> Permission knowledge base for AWS-style IAM Policy Simulator
 const GCP_ROLE_PERMISSION_CATALOG = [
   {
@@ -24528,6 +24536,9 @@ app.get(
           tables: getOrInitAliyunHologresOlap(projectId),
         },
         huaweiDataVNoc: getOrInitHuaweiDataVNoc(projectId),
+        disabledModules: Array.from(
+          getOrInitDisabledParityModules(projectId)
+        ),
       });
     } catch (err) {
       return res.status(400).json({
@@ -27524,6 +27535,170 @@ app.post(
           ok: true,
           noc,
           message: `Executed DataV / Huawei Astro War-Room Drill: "${scenario}" (94,200 QPS sustained, 40/40 regions green).`,
+        });
+      }
+
+      if (action === 'DELETE_PARITY_MODULE_ITEM') {
+        const moduleId = String(req.body?.moduleId || '').trim();
+        const itemId = String(req.body?.itemId || '').trim();
+        if (moduleId === 'BEDROCK_FOUNDRY_AI_GATEWAY') {
+          const gw = getOrInitBedrockFoundryGateway(projectId);
+          gw.routes = (gw.routes || []).filter((r) => r.routeId !== itemId);
+        } else if (moduleId === 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE') {
+          const fs = getOrInitAliyunFlashSale(projectId);
+          fs.campaigns = (fs.campaigns || []).filter(
+            (c) => c.campaignId !== itemId
+          );
+        } else if (moduleId === 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE') {
+          const list = getOrInitAliyunCenPackages(projectId);
+          aliyunCenPackagesStore.set(
+            projectId,
+            list.filter((p) => p.packageId !== itemId)
+          );
+        } else if (moduleId === 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL') {
+          const list = getOrInitPolarGaussHtap(projectId);
+          polarGaussHtapStore.set(
+            projectId,
+            list.filter((c) => c.clusterId !== itemId)
+          );
+        } else if (moduleId === 'HUAWEI_CCE_MODELARTS_AI_POOL') {
+          const list = getOrInitHuaweiModelArtsPool(projectId);
+          huaweiModelArtsPoolStore.set(
+            projectId,
+            list.filter((p) => p.poolId !== itemId)
+          );
+        } else if (moduleId === 'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY') {
+          const list = getOrInitAliyunRocketMq(projectId);
+          aliyunRocketMqStore.set(
+            projectId,
+            list.filter((m) => m.messageId !== itemId)
+          );
+        } else if (moduleId === 'ALIYUN_NACOS_HIGRESS_CONFIG_MESH') {
+          const list = getOrInitAliyunNacosHigress(projectId);
+          aliyunNacosHigressStore.set(
+            projectId,
+            list.filter((c) => c.configId !== itemId)
+          );
+        } else if (moduleId === 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP') {
+          const list = getOrInitAliyunHologresOlap(projectId);
+          aliyunHologresOlapStore.set(
+            projectId,
+            list.filter((t) => t.tableId !== itemId)
+          );
+        }
+        return res.json({
+          ok: true,
+          moduleId,
+          itemId,
+          message: `Disabled and removed "${itemId}" from ${moduleId} ($0.00/hr active cost).`,
+        });
+      }
+
+      if (action === 'DISABLE_PARITY_FEATURE_MODULE') {
+        const moduleId = String(req.body?.moduleId || '').trim();
+        const disabledSet = getOrInitDisabledParityModules(projectId);
+        disabledSet.add(moduleId);
+
+        // Clear active items for that module so zero active routes/pools/campaigns remain
+        if (moduleId === 'BEDROCK_FOUNDRY_AI_GATEWAY') {
+          bedrockFoundryGatewayStore.set(projectId, {
+            routes: [],
+            recentEvaluations: [],
+          });
+        } else if (moduleId === 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE') {
+          aliyunFlashSaleStore.set(projectId, {
+            campaigns: [],
+            surgeDrills: [],
+          });
+        } else if (moduleId === 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE') {
+          aliyunCenPackagesStore.set(projectId, []);
+        } else if (moduleId === 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL') {
+          polarGaussHtapStore.set(projectId, []);
+        } else if (moduleId === 'HUAWEI_CCE_MODELARTS_AI_POOL') {
+          huaweiModelArtsPoolStore.set(projectId, []);
+        } else if (moduleId === 'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY') {
+          aliyunRocketMqStore.set(projectId, []);
+        } else if (moduleId === 'ALIYUN_NACOS_HIGRESS_CONFIG_MESH') {
+          aliyunNacosHigressStore.set(projectId, []);
+        } else if (moduleId === 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP') {
+          aliyunHologresOlapStore.set(projectId, []);
+        } else if (moduleId === 'ROUTE53_FRONTDOOR_TRAFFIC') {
+          route53FrontDoorPoliciesStore.set(projectId, []);
+        } else if (moduleId === 'RAM_LIGHTHOUSE_ORG_SHARING') {
+          ramLighthouseSharesStore.set(projectId, []);
+        } else if (moduleId === 'MULTI_BRAND_OAUTH') {
+          multiBrandOAuthStore.set(projectId, []);
+        } else if (moduleId === 'STEP_FUNCTIONS') {
+          stepFunctionsWorkflowsStore.set(projectId, []);
+        } else if (moduleId === 'CONTAINER_COMPOSE') {
+          containerComposeAppsStore.set(projectId, []);
+        } else if (moduleId === 'TRANSIT_GATEWAY') {
+          transitGatewaySpokesStore.set(projectId, []);
+        } else if (moduleId === 'EVENTBRIDGE_PIPES') {
+          eventBridgePipesStore.set(projectId, []);
+        } else if (moduleId === 'CFN_ARM_STACKS') {
+          cfnArmStacksStore.set(projectId, []);
+        } else if (moduleId === 'SPEND_FUSE') {
+          const fuse = getOrInitSpendFuse(projectId);
+          fuse.armed = false;
+        }
+
+        return res.json({
+          ok: true,
+          moduleId,
+          disabledModules: Array.from(disabledSet),
+          message: `Disabled feature "${moduleId}" on project "${projectId}". All active routes/pools/policies for this feature have been torn down ($0.00/hr — zero active charges).`,
+        });
+      }
+
+      if (action === 'RESTORE_PARITY_FEATURE_MODULE') {
+        const moduleId = String(req.body?.moduleId || '').trim();
+        const disabledSet = getOrInitDisabledParityModules(projectId);
+        disabledSet.delete(moduleId);
+
+        // Delete empty store entry so getOrInit* re-populates the default sample blueprint
+        if (moduleId === 'BEDROCK_FOUNDRY_AI_GATEWAY') {
+          bedrockFoundryGatewayStore.delete(projectId);
+        } else if (moduleId === 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE') {
+          aliyunFlashSaleStore.delete(projectId);
+        } else if (moduleId === 'ALIYUN_CEN_GA_BANDWIDTH_PACKAGE') {
+          aliyunCenPackagesStore.delete(projectId);
+        } else if (moduleId === 'POLARDB_GAUSSDB_HTAP_TIME_TRAVEL') {
+          polarGaussHtapStore.delete(projectId);
+        } else if (moduleId === 'HUAWEI_CCE_MODELARTS_AI_POOL') {
+          huaweiModelArtsPoolStore.delete(projectId);
+        } else if (moduleId === 'ALIYUN_ROCKETMQ_TRANSACTIONAL_DELAY') {
+          aliyunRocketMqStore.delete(projectId);
+        } else if (moduleId === 'ALIYUN_NACOS_HIGRESS_CONFIG_MESH') {
+          aliyunNacosHigressStore.delete(projectId);
+        } else if (moduleId === 'ALIYUN_HOLOGRES_MAXCOMPUTE_OLAP') {
+          aliyunHologresOlapStore.delete(projectId);
+        } else if (moduleId === 'ROUTE53_FRONTDOOR_TRAFFIC') {
+          route53FrontDoorPoliciesStore.delete(projectId);
+        } else if (moduleId === 'RAM_LIGHTHOUSE_ORG_SHARING') {
+          ramLighthouseSharesStore.delete(projectId);
+        } else if (moduleId === 'MULTI_BRAND_OAUTH') {
+          multiBrandOAuthStore.delete(projectId);
+        } else if (moduleId === 'STEP_FUNCTIONS') {
+          stepFunctionsWorkflowsStore.delete(projectId);
+        } else if (moduleId === 'CONTAINER_COMPOSE') {
+          containerComposeAppsStore.delete(projectId);
+        } else if (moduleId === 'TRANSIT_GATEWAY') {
+          transitGatewaySpokesStore.delete(projectId);
+        } else if (moduleId === 'EVENTBRIDGE_PIPES') {
+          eventBridgePipesStore.delete(projectId);
+        } else if (moduleId === 'CFN_ARM_STACKS') {
+          cfnArmStacksStore.delete(projectId);
+        } else if (moduleId === 'SPEND_FUSE') {
+          const fuse = getOrInitSpendFuse(projectId);
+          fuse.armed = true;
+        }
+
+        return res.json({
+          ok: true,
+          moduleId,
+          disabledModules: Array.from(disabledSet),
+          message: `Re-enabled feature "${moduleId}" on project "${projectId}".`,
         });
       }
 
