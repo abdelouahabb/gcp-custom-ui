@@ -1214,6 +1214,14 @@ function CloudPulseCockpit() {
       icon: ShieldCheck,
     },
     {
+      id: 'AWS_AZURE_PARITY',
+      group: 'SECURITY_SRE',
+      label: 'AWS & Azure Parity',
+      isStar: true,
+      tip: '16-in-1 AWS & Azure Enterprise Parity Suite for GCP: Azure Resource Groups + RBAC + 1-Click Teardown, Hard-Spend Stop-Loss Fuse, AWS IAM Policy Simulator & Switch Role, 1-Click SAS/Presigned URLs, 1-Screen Global HTTPS Load Balancer Wizard, and Multi-Brand OAuth Sign-In Studio',
+      icon: Layers,
+    },
+    {
       id: 'SRE_WAR_ROOM',
       group: 'SECURITY_SRE',
       label: 'SRE War-room',
@@ -1706,8 +1714,8 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'SOVEREIGN_STUDIO', label: 'IAM', meta: 'SA Key Kill-Switch, JIT & Drift' },
-                            { id: 'SRE_WAR_ROOM', label: 'SRE War-room', meta: '14.4x SLO Burn & VPC-SC Perimeter' },
                             { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: '16-in-1 Multi-Cloud Bridge & OAuth' },
+                            { id: 'SRE_WAR_ROOM', label: 'SRE War-room', meta: '14.4x SLO Burn & VPC-SC Perimeter' },
                           ],
                         },
                         {

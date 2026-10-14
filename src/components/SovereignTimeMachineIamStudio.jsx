@@ -24,7 +24,6 @@ import {
   Layers,
   Zap,
 } from 'lucide-react';
-import AwsAzureEnvySuiteStudio from './AwsAzureEnvySuiteStudio';
 
 export default function SovereignTimeMachineIamStudio({
   projectId,
@@ -847,12 +846,6 @@ export default function SovereignTimeMachineIamStudio({
                 ? `${vaultData.secrets?.length || 0} Secrets`
                 : 'Zero-Trust Vault',
               tip: 'Provision regionally-pinned GDPR/SEC/HIPAA secrets in Secret Manager, audit Cloud KMS rotation, and synthesize Cloud Armor OWASP Top-10 WAF policies',
-            },
-            {
-              id: 'AWS_AZURE_PARITY',
-              label: 'AWS & Azure Parity',
-              badge: '16-in-1 Bridge',
-              tip: 'AWS & Azure Enterprise Parity Suite: AWS IAM Policy Simulator & Switch Role, Multi-Brand OAuth Sign-In Studio, Azure Resource Groups + RBAC, S3/SAS Presigned URLs, Key Vault Rotation & 16 Multi-Cloud Bridges',
             },
           ].map((tab) => {
             const active =
@@ -3281,12 +3274,5 @@ gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-
             </div>
           </div>
         </div>)}
-
-      {activeSubTab === 'AWS_AZURE_PARITY' && (
-        <AwsAzureEnvySuiteStudio
-          projectId={projectId}
-          initialTab="IAM_SIMULATOR"
-          onShowToast={onTriggerToast}
-        />)}
     </div>);
 }
