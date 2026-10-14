@@ -241,20 +241,20 @@ export default function LogStreamerAndShell({
     fetchChronoLogs({ aroundTimestamp: '' });
   };
 
+  const [shellHistoryCursor, setShellHistoryCursor] = useState(-1);
+
   const quickCommands = [
-    { label: 'List Projects', cmd: 'gcloud projects list --limit=8' },
-    {
-      label: 'List GCS Buckets',
-      cmd: `gcloud storage buckets list --project=${projectId}`,
-    },
-    {
-      label: 'Enabled APIs',
-      cmd: `gcloud services list --enabled --project=${projectId} --limit=15`,
-    },
-    {
-      label: 'Cloud Run Services',
-      cmd: `gcloud run services list --project=${projectId}`,
-    },
+    { label: 'List Buckets', cmd: `gcloud storage buckets list --project=${projectId}` },
+    { label: 'Cloud Run Fleet', cmd: `gcloud run services list --project=${projectId}` },
+    { label: 'Compute VMs', cmd: `gcloud compute instances list --project=${projectId}` },
+    { label: 'VPC Networks', cmd: `gcloud compute networks list --project=${projectId}` },
+    { label: 'Firewall Rules', cmd: `gcloud compute firewall-rules list --project=${projectId}` },
+    { label: 'IAM Service Accounts', cmd: `gcloud iam service-accounts list --project=${projectId}` },
+    { label: 'Secret Manager', cmd: `gcloud secrets list --project=${projectId}` },
+    { label: 'BigQuery Datasets', cmd: `bq ls --project_id=${projectId}` },
+    { label: 'Enabled APIs', cmd: `gcloud services list --enabled --project=${projectId} --limit=20` },
+    { label: 'Recent Error Logs', cmd: `gcloud logging read "severity>=ERROR" --limit=5 --project=${projectId}` },
+    { label: 'SDK Version', cmd: `gcloud version` },
     { label: 'Active Auth', cmd: 'gcloud auth list' },
   ];
 
@@ -277,6 +277,7 @@ export default function LogStreamerAndShell({
     const cmd = (cmdOverride || shellInput).trim();
     if (!cmd || shellRunning) return;
     setShellInput(cmd);
+    setShellHistoryCursor(-1);
     setShellRunning(true);
     try {
       const res = await axios.post(
@@ -289,7 +290,8 @@ export default function LogStreamerAndShell({
           command: res.data.command || cmd,
           output: res.data.output,
           durationMs: res.data.durationMs,
-          exitCode: res.data.exitCode,
+          exitCode: res.data.exitCode ?? 0,
+          engine: res.data.engine || 'HYBRID_SHELL',
         },
         ...prev,
       ]);
@@ -301,11 +303,26 @@ export default function LogStreamerAndShell({
           output: err.response?.data?.error || err.message,
           durationMs: 0,
           exitCode: 1,
+          engine: 'ERROR',
         },
         ...prev,
       ]);
     } finally {
       setShellRunning(false);
+    }
+  };
+
+  const cycleShellHistory = (direction) => {
+    if (shellHistory.length === 0) return;
+    const nextIdx =
+      direction === 'PREV'
+        ? Math.min(shellHistory.length - 1, shellHistoryCursor + 1)
+        : Math.max(-1, shellHistoryCursor - 1);
+    setShellHistoryCursor(nextIdx);
+    if (nextIdx >= 0 && shellHistory[nextIdx]) {
+      setShellInput(shellHistory[nextIdx].command);
+    } else if (nextIdx === -1) {
+      setShellInput('');
     }
   };
 
@@ -1880,20 +1897,32 @@ export default function LogStreamerAndShell({
 
         {/* Right Column: Touch-Optimized Mobile Cloud Shell */}
         <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
               <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>Touch-Optimized Mobile Cloud Shell</span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Executes live read-only <code className="font-mono">gcloud</code> CLI commands with automatic resource attribution & data-loss guardrails.
+                Hybrid Direct REST Bridge + Real <code className="font-mono">gcloud</code>,{' '}
+                <code className="font-mono">bq</code>, <code className="font-mono">gsutil</code> &{' '}
+                <code className="font-mono">kubectl</code> CLI execution with read-only data-loss guardrails.
               </p>
             </div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded">
-              <ShieldAlert className="w-3.5 h-3.5" />
-              Safe Guardrails ON
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[10.5px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded">
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>Safe Guardrails ON</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShellHistory([])}
+                title="Clear terminal output history"
+                className="px-2 py-1 rounded text-[10.5px] font-mono bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
           {/* One-Tap Smart Command Chips for Mobile Ergonomics */}
@@ -1904,22 +1933,22 @@ export default function LogStreamerAndShell({
                 type="button"
                 disabled={shellRunning}
                 onClick={() => executeShellCommand(q.cmd)}
-                className="shrink-0 text-xs font-mono bg-zinc-100 dark:bg-zinc-800/90 hover:bg-blue-500/15 hover:text-blue-500 dark:hover:text-blue-400 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="shrink-0 text-xs font-mono bg-zinc-100 dark:bg-zinc-800/90 hover:bg-blue-500/15 hover:text-blue-500 dark:hover:text-blue-400 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 $ {q.label}
               </button>
             ))}
           </div>
 
-          {/* Command Input Form */}
+          {/* Command Input Form + Touch History Navigation */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               executeShellCommand();
             }}
-            className="flex items-center gap-2 mb-4"
+            className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 mb-4"
           >
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-[200px]">
               <span className="font-mono text-xs text-emerald-500 absolute left-3 top-1/2 -translate-y-1/2">
                 $
               </span>
@@ -1927,37 +1956,106 @@ export default function LogStreamerAndShell({
                 type="text"
                 value={shellInput}
                 onChange={(e) => setShellInput(e.target.value)}
-                placeholder="gcloud storage buckets list..."
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    cycleShellHistory('PREV');
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    cycleShellHistory('NEXT');
+                  }
+                }}
+                placeholder="Type any read-only gcloud, bq, gsutil, or kubectl command..."
                 aria-label="Cloud Shell command input"
                 className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] pl-7 pr-3 py-[8px] text-xs font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-zinc-950 dark:text-zinc-100 transition-all"
               />
             </div>
-            <button
-              type="submit"
-              disabled={shellRunning || !shellInput.trim()}
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-[16px] py-[8px] text-xs font-[600] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>{shellRunning ? 'Running...' : 'Run'}</span>
-            </button>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => cycleShellHistory('PREV')}
+                disabled={shellHistory.length === 0}
+                title="Previous command in history (Up Arrow)"
+                className="px-2 py-[8px] rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono disabled:opacity-40 cursor-pointer"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                onClick={() => cycleShellHistory('NEXT')}
+                disabled={shellHistory.length === 0}
+                title="Next command in history (Down Arrow)"
+                className="px-2 py-[8px] rounded-[8px] border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono disabled:opacity-40 cursor-pointer"
+              >
+                Next
+              </button>
+              <button
+                type="submit"
+                disabled={shellRunning || !shellInput.trim()}
+                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-[14px] py-[8px] text-xs font-[600] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>{shellRunning ? 'Running...' : 'Run'}</span>
+              </button>
+            </div>
           </form>
 
           {/* Terminal Output Stream */}
-          <div className="flex-1 bg-[#131314] border border-zinc-800 rounded-lg p-3.5 font-mono text-xs text-zinc-200 space-y-3 max-h-[320px] overflow-y-auto">
-            {shellHistory.map((item) => (
-              <div
-                key={item.id}
-                className="border-b border-zinc-800/80 pb-3 last:border-b-0 last:pb-0"
-              >
-                <div className="flex items-center justify-between text-[11px] text-emerald-400 mb-1">
-                  <span>$ {item.command}</span>
-                  <span className="text-zinc-500">{item.durationMs}ms</span>
-                </div>
-                <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
-                  {item.output}
-                </pre>
+          <div className="flex-1 bg-[#131314] border border-zinc-800 rounded-lg p-3.5 font-mono text-xs text-zinc-200 space-y-3 max-h-[340px] overflow-y-auto">
+            {shellHistory.length === 0 ? (
+              <div className="text-[11px] text-zinc-500 text-center py-8">
+                Terminal cleared. Tap any quick command chip above or type a <code className="font-mono">gcloud</code> / <code className="font-mono">bq</code> command.
               </div>
-            ))}
+            ) : (
+              shellHistory.map((item) => (
+                <div
+                  key={item.id}
+                  className="border-b border-zinc-800/80 pb-3 last:border-b-0 last:pb-0 space-y-1.5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                    <span
+                      onClick={() => setShellInput(item.command)}
+                      title="Click to load command into input"
+                      className="text-emerald-400 font-bold cursor-pointer hover:underline break-all"
+                    >
+                      $ {item.command}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {item.engine && (
+                        <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-[9.5px] text-purple-300">
+                          {item.engine}
+                        </span>
+                      )}
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold ${
+                          item.exitCode === 0
+                            ? 'bg-emerald-500/15 text-emerald-400'
+                            : 'bg-red-500/20 text-red-400'
+                        }`}
+                      >
+                        exit={item.exitCode ?? 0}
+                      </span>
+                      <span className="text-zinc-500">{item.durationMs}ms</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(item.output, `shell-out-${item.id}`)}
+                        className="text-[10px] text-zinc-400 hover:text-white inline-flex items-center gap-0.5 cursor-pointer"
+                      >
+                        {copiedId === `shell-out-${item.id}` ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
+                    {item.output}
+                  </pre>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

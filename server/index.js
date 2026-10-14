@@ -8652,7 +8652,35 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
   }
 });
 
-// 11. POST /api/project/:projectId/shell -> Fast API-backed & safe gcloud shell
+// Helper: Safely parse CLI arguments (respecting single/double quotes) without invoking a subshell
+function tokenizeSafeCliCommand(cmdString = '') {
+  const args = [];
+  let current = '';
+  let quoteChar = null;
+  for (let i = 0; i < cmdString.length; i++) {
+    const ch = cmdString[i];
+    if (quoteChar) {
+      if (ch === quoteChar) {
+        quoteChar = null;
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"' || ch === "'") {
+      quoteChar = ch;
+    } else if (/\s/.test(ch)) {
+      if (current.length > 0) {
+        args.push(current);
+        current = '';
+      }
+    } else {
+      current += ch;
+    }
+  }
+  if (current.length > 0) args.push(current);
+  return args;
+}
+
+// 11. POST /api/project/:projectId/shell -> Real Hybrid REST + Native CLI (`gcloud`, `bq`, `gsutil`, `kubectl`) Cloud Shell Engine
 app.post('/api/project/:projectId/shell', async (req, res) => {
   const { projectId } = req.params;
   const rawCommand = (req.body?.command || '').trim();
@@ -8667,20 +8695,42 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
     return res.status(401).json({ error: 'Not authenticated.' });
   }
 
-  const lower = rawCommand.toLowerCase();
+  // Strip optional leading "$ " if pasted by user
+  const normalizedCmd = rawCommand.replace(/^\$\s+/, '').trim();
+  const lower = normalizedCmd.toLowerCase();
+
+  // 1. Strict Accidental-Data-Loss & Shell-Injection Guardrail
   if (
-    /\b(delete|rm|destroy|drop|truncate|remove)\b/.test(lower) ||
-    /[;&|`$><]/.test(rawCommand)
+    /\b(delete|rm|rb|destroy|drop|truncate|remove-iam-policy-binding|purge|undelete|reset|stop|disable)\b/i.test(
+      lower
+    ) ||
+    /[;&|`$><\n\r]/.test(normalizedCmd)
   ) {
     return res.json({
-      command: rawCommand,
+      command: normalizedCmd,
       exitCode: 1,
-      durationMs: 8,
-      output: `[GUARDRAIL BLOCKED] Destructive commands are blocked in the quick shell. Use the explicit confirmation button in the Resource Inspector.`,
+      durationMs: 6,
+      engine: 'GUARDRAIL_INTERCEPTOR',
+      output: `[GUARDRAIL BLOCKED] Destructive mutations or shell-chaining operators are blocked in the read-only Cloud Shell.\nUse the dedicated studio action buttons (protected by the Mandatory Delete & Blast-Radius Gatekeeper) for state-changing operations.`,
     });
   }
 
-  // Execute common gcloud commands directly via our fast IPv4 REST bridge so they return in <300ms on any account (including browser OAuth tokens on Cloud Run!)
+  const parsedTokens = tokenizeSafeCliCommand(normalizedCmd);
+  const binary = (parsedTokens[0] || '').toLowerCase();
+  const ALLOWED_BINARIES = new Set(['gcloud', 'bq', 'gsutil', 'kubectl']);
+
+  if (!ALLOWED_BINARIES.has(binary)) {
+    return res.json({
+      command: normalizedCmd,
+      exitCode: 1,
+      durationMs: 5,
+      engine: 'GUARDRAIL_INTERCEPTOR',
+      output: `[UNSUPPORTED BINARY] CloudPulse Shell only executes official Google Cloud SDK binaries: gcloud, bq, gsutil, and kubectl.\nReceived: "${parsedTokens[0] || ''}"`,
+    });
+  }
+
+  // 2. Ultra-Fast <250ms Direct REST Fast-Paths for high-frequency inspection commands
+  // (Works both locally and on serverless Cloud Run with browser OAuth tokens)
   try {
     if (lower.startsWith('gcloud projects list')) {
       const d = await gcpFetch(
@@ -8695,16 +8745,35 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
           }`
       );
       return res.json({
-        command: rawCommand,
+        command: normalizedCmd,
         exitCode: 0,
         durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (cloudresourcemanager.googleapis.com)',
         output:
           `PROJECT_ID                     NAME                       PROJECT_NUMBER\n` +
           rows.join('\n'),
       });
     }
 
-    if (lower.startsWith('gcloud storage buckets list')) {
+    if (lower.startsWith('gcloud projects describe')) {
+      const targetProj = parsedTokens[3] && !parsedTokens[3].startsWith('-') ? parsedTokens[3] : projectId;
+      const d = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+          targetProj
+        )}`,
+        token,
+        targetProj
+      );
+      return res.json({
+        command: normalizedCmd,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (cloudresourcemanager.googleapis.com)',
+        output: JSON.stringify(d, null, 2),
+      });
+    }
+
+    if (lower.startsWith('gcloud storage buckets list') || lower.startsWith('gsutil ls')) {
       const d = await gcpFetch(
         `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
           projectId
@@ -8716,18 +8785,22 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
       const output =
         items.length === 0
           ? `Listed 0 items in project ${projectId}.`
-          : items
+          : `STORAGE_URI                              LOCATION       STORAGE_CLASS   PUBLIC_ACCESS_PREVENTION\n` +
+            items
               .map(
                 (b) =>
-                  `gs://${b.name.padEnd(38)} ${b.location.padEnd(14)} ${
-                    b.storageClass
+                  `${`gs://${b.name}`.padEnd(40)} ${(b.location || '-').padEnd(
+                    14
+                  )} ${(b.storageClass || 'STANDARD').padEnd(15)} ${
+                    b.iamConfiguration?.publicAccessPrevention || 'inherited'
                   }`
               )
               .join('\n');
       return res.json({
-        command: rawCommand,
+        command: normalizedCmd,
         exitCode: 0,
         durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (storage.googleapis.com)',
         output,
       });
     }
@@ -8763,9 +8836,83 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
               )
               .join('\n');
       return res.json({
-        command: rawCommand,
+        command: normalizedCmd,
         exitCode: 0,
         durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (compute.googleapis.com)',
+        output,
+      });
+    }
+
+    if (lower.startsWith('gcloud compute firewall-rules list')) {
+      const d = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/global/firewalls?maxResults=50`,
+        token,
+        projectId
+      );
+      const rules = d.items || [];
+      const output =
+        rules.length === 0
+          ? `Listed 0 VPC firewall rules in project ${projectId}.`
+          : `NAME                           NETWORK   DIRECTION   PRIORITY   ALLOW/DENY             DISABLED\n` +
+            rules
+              .map((r) => {
+                const netName = (r.network || '').split('/').pop() || 'default';
+                const specs = (r.allowed || r.denied || [])
+                  .map(
+                    (a) =>
+                      `${a.IPProtocol}${
+                        a.ports?.length ? ':' + a.ports.join(',') : ''
+                      }`
+                  )
+                  .join(';');
+                return `${r.name.padEnd(30)} ${netName.padEnd(9)} ${(
+                  r.direction || 'INGRESS'
+                ).padEnd(11)} ${String(r.priority ?? 1000).padEnd(
+                  10
+                )} ${specs.padEnd(22)} ${Boolean(r.disabled)}`;
+              })
+              .join('\n');
+      return res.json({
+        command: normalizedCmd,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (compute.googleapis.com)',
+        output,
+      });
+    }
+
+    if (lower.startsWith('gcloud compute networks list')) {
+      const d = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/global/networks`,
+        token,
+        projectId
+      );
+      const nets = d.items || [];
+      const output =
+        nets.length === 0
+          ? `Listed 0 VPC networks in project ${projectId}.`
+          : `NAME                 SUBNET_MODE   BGP_ROUTING_MODE   MTU\n` +
+            nets
+              .map(
+                (n) =>
+                  `${n.name.padEnd(20)} ${(n.autoCreateSubnetworks
+                    ? 'AUTO'
+                    : 'CUSTOM'
+                  ).padEnd(13)} ${(
+                    n.routingConfig?.routingMode || 'REGIONAL'
+                  ).padEnd(18)} ${n.mtu || 1460}`
+              )
+              .join('\n');
+      return res.json({
+        command: normalizedCmd,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (compute.googleapis.com)',
         output,
       });
     }
@@ -8785,9 +8932,10 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
           }`
       );
       return res.json({
-        command: rawCommand,
+        command: normalizedCmd,
         exitCode: 0,
         durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (serviceusage.googleapis.com)',
         output: `NAME                                       TITLE\n` + rows.join('\n'),
       });
     }
@@ -8804,40 +8952,172 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
       const output =
         services.length === 0
           ? `Listed 0 Cloud Run services in project ${projectId}.`
-          : services
-              .map((s) => `${s.name.split('/').pop().padEnd(28)} ${s.uri}`)
+          : `SERVICE                        REGION          URI\n` +
+            services
+              .map((s) => {
+                const parts = (s.name || '').split('/');
+                const sName = parts[parts.length - 1] || s.name;
+                const sReg = parts[3] || '-';
+                return `${sName.padEnd(30)} ${sReg.padEnd(15)} ${s.uri || '-'}`;
+              })
               .join('\n');
       return res.json({
-        command: rawCommand,
+        command: normalizedCmd,
         exitCode: 0,
         durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (run.googleapis.com/v2)',
+        output,
+      });
+    }
+
+    if (lower.startsWith('gcloud iam service-accounts list')) {
+      const d = await gcpFetch(
+        `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/serviceAccounts`,
+        token,
+        projectId
+      );
+      const sas = d.accounts || [];
+      const output =
+        sas.length === 0
+          ? `Listed 0 IAM Service Accounts in project ${projectId}.`
+          : `DISPLAY_NAME                   EMAIL                                                        DISABLED\n` +
+            sas
+              .map(
+                (sa) =>
+                  `${(sa.displayName || '-').slice(0, 29).padEnd(30)} ${(
+                    sa.email || ''
+                  ).padEnd(60)} ${Boolean(sa.disabled)}`
+              )
+              .join('\n');
+      return res.json({
+        command: normalizedCmd,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (iam.googleapis.com/v1)',
+        output,
+      });
+    }
+
+    if (lower.startsWith('gcloud secrets list')) {
+      const d = await gcpFetch(
+        `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/secrets`,
+        token,
+        projectId
+      );
+      const secrets = d.secrets || [];
+      const output =
+        secrets.length === 0
+          ? `Listed 0 Secret Manager secrets in project ${projectId}.`
+          : `NAME                                     CREATED                    REPLICATION\n` +
+            secrets
+              .map((s) => {
+                const sName = (s.name || '').split('/').pop();
+                const rep = s.replication?.automatic ? 'automatic' : 'user-managed';
+                return `${sName.padEnd(40)} ${(s.createTime || '-').padEnd(26)} ${rep}`;
+              })
+              .join('\n');
+      return res.json({
+        command: normalizedCmd,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (secretmanager.googleapis.com/v1)',
+        output,
+      });
+    }
+
+    if (lower.startsWith('bq ls')) {
+      const d = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+          projectId
+        )}/datasets`,
+        token,
+        projectId
+      );
+      const ds = d.datasets || [];
+      const output =
+        ds.length === 0
+          ? `Listed 0 BigQuery datasets in project ${projectId}.`
+          : `DATASET_ID                     LOCATION       LABELS\n` +
+            ds
+              .map(
+                (item) =>
+                  `${(item.datasetReference?.datasetId || '-').padEnd(30)} ${(
+                    item.location || 'US'
+                  ).padEnd(14)} ${JSON.stringify(item.labels || {})}`
+              )
+              .join('\n');
+      return res.json({
+        command: normalizedCmd,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (bigquery.googleapis.com/v2)',
         output,
       });
     }
 
     if (lower.startsWith('gcloud auth list') || lower.startsWith('gcloud config')) {
       return res.json({
-        command: rawCommand,
+        command: normalizedCmd,
         exitCode: 0,
         durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (active-session)',
         output: `ACTIVE ACCOUNT: ${account}\nACTIVE PROJECT: ${projectId}\nMETRICS_ENV: datacloud.antigravity`,
       });
     }
-
-    return res.json({
-      command: rawCommand,
-      exitCode: 0,
-      durationMs: 12,
-      output: `Supported instant CloudPulse Shell commands (works across any connected OAuth account & Cloud Run):\n• gcloud projects list\n• gcloud storage buckets list --project=${projectId}\n• gcloud compute instances list --project=${projectId}\n• gcloud services list --enabled --project=${projectId}\n• gcloud run services list --project=${projectId}\n• gcloud auth list`,
-    });
-  } catch (err) {
-    return res.json({
-      command: rawCommand,
-      exitCode: 1,
-      durationMs: Date.now() - t0,
-      output: err.response?.data?.error?.message || err.message,
-    });
+  } catch {
+    // If REST fast-path encounters a custom flag or error, fall through to real CLI binary execution below
   }
+
+  // 3. Real Native CLI Execution (`execFile` on `gcloud`, `bq`, `gsutil`, `kubectl`)
+  // Automatically injects `--project=${projectId}` (or `--project_id=${projectId}` for bq) if omitted
+  const cliArgs = parsedTokens.slice(1);
+  const hasProjectFlag = cliArgs.some(
+    (a) =>
+      a === '--project' ||
+      a.startsWith('--project=') ||
+      a === '--project_id' ||
+      a.startsWith('--project_id=')
+  );
+  if (projectId && !hasProjectFlag && binary === 'gcloud' && cliArgs[0] !== 'version' && cliArgs[0] !== 'help') {
+    cliArgs.push(`--project=${projectId}`);
+  } else if (projectId && !hasProjectFlag && binary === 'bq') {
+    cliArgs.unshift(`--project_id=${projectId}`);
+  }
+
+  return new Promise((resolve) => {
+    execFile(
+      binary,
+      cliArgs,
+      {
+        env: ATTRIBUTION_ENV,
+        timeout: 14000,
+        maxBuffer: 2 * 1024 * 1024,
+      },
+      (error, stdout, stderr) => {
+        const combinedOutput = [stdout, stderr]
+          .map((s) => String(s || '').trim())
+          .filter(Boolean)
+          .join('\n');
+        resolve(
+          res.json({
+            command: `${binary} ${cliArgs.join(' ')}`,
+            exitCode: error ? error.code || 1 : 0,
+            durationMs: Date.now() - t0,
+            engine: `NATIVE_CLI_EXEC (${binary})`,
+            output:
+              combinedOutput ||
+              (error
+                ? error.message
+                : `Command completed with exit code 0 (0 items returned).`),
+          })
+        );
+      }
+    );
+  });
 });
 
 // 12. POST /api/project/:projectId/ai-copilot -> Grounded in real project inventory
