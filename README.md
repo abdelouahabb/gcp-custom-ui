@@ -251,9 +251,9 @@
 - **🌐 VPC Networks, Enterprise Firewalls, Storage, BigQuery, BigLake Metastore & Mobile Cloud Shell**
   - Provision and manage custom/auto-mode VPC Networks (`REGIONAL` / `GLOBAL` BGP routing, Jumbo Frames MTU `8896`), `ALLOW`/`DENY` Ingress & Egress Firewall Rules with live `PATCH` editing and IAP lockdown, Cloud Storage Buckets, BigQuery Datasets & Partitioned/Clustered Tables, **BigLake Metastore Catalogs (`/biglake/metastore/catalogs` — `biglake.googleapis.com/v1`)**, real-time Cloud Logging & **400-Day Cloud Audit "Who-Changed-What" Activity Timeline**, and an interactive Mobile Cloud Shell (`gcloud` / `bq`).
 
-- **🕒 Global UI Timezone Engine & Live Dual-Clock Selector (`src/context/TimezoneContext.jsx`)**
-  - **Auto-Detected Browser IANA Timezone + 14 Global/GCP Regional Presets**: Automatically detects your browser's local IANA timezone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) and lets you switch in 1 click between **Auto Local**, **UTC / Zulu (SRE Standard)**, or any major GCP regional timezone (`Africa/Algiers`, `Europe/Paris`, `Europe/London`, `Europe/Helsinki`, `America/New_York`, `America/Chicago`, `America/Los_Angeles`, `America/Sao_Paulo`, `Asia/Dubai`, `Asia/Singapore`, `Asia/Tokyo`, `Australia/Sydney`).
-  - **24h / 12h & Dual (+UTC) Mode**: Synchronizes Cloud Audit `"Who-Changed-What"` timestamps, Flight Recorder mutation timestamps, resource creation dates, and **Night-Mode Cloud Scheduler / Compute Instance Schedule** `--timezone` flags (`x-client-timezone` header).
+- **🕒 Global World IANA Timezone Engine & Live Dual-Clock Selector (`src/context/TimezoneContext.jsx`)**
+  - **All 430+ Official World IANA Timezones (`Intl.supportedValuesOf('timeZone')`)**: Covers every country, territory, island, and half-hour / 45-minute offset on Earth (`UTC-11:00` through `UTC+14:00`), grouped by continent (`All World`, `GCP Regions (42)`, `Africa`, `Americas`, `Asia & MENA`, `Europe`, `Oceania & Pacific`, `Atlantic & Indian`) with instant live search by city, country, IANA ID, UTC offset, or GCP region.
+  - **Global `Date.prototype` Timezone Bridge + 24h/12h & Dual (`+UTC`) Mode**: Automatically synchronizes `toLocaleString`, `toLocaleDateString`, `toLocaleTimeString`, Cloud Audit `"Who-Changed-What"` timestamps, Flight Recorder mutation timestamps, resource creation dates, and **Night-Mode Cloud Scheduler / Compute Instance Schedule** `--timezone` flags (`x-client-timezone` header).
 
 - **🔐 Zero-Hardcoded-Credentials Multi-Account Onboarding Gate**
   - Sign in from mobile or desktop using:
