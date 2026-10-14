@@ -7257,6 +7257,28 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         byteSize: 1840,
         source: 'LIVE_CHRONO_TELEMETRY',
       },
+      {
+        id: 'chrono-iam-1',
+        timestamp: new Date(nowMs - 45100).toISOString(),
+        severity: 'WARNING',
+        resourceType: 'secretmanager.googleapis.com',
+        serviceName: 'secretmanager.googleapis.com',
+        resourceTarget: `projects/${projectId}/secrets/prod-gemini-api-key/versions/latest`,
+        region: 'global',
+        actor: 'untrusted-ci-runner@' + projectId + '.iam.gserviceaccount.com',
+        httpStatus: 403,
+        httpMethod: 'RPC',
+        latencyMs: 19,
+        cleanMessage:
+          'PERMISSION_DENIED: Principal untrusted-ci-runner lacks secretmanager.versions.access on projects/' +
+          projectId +
+          '/secrets/prod-gemini-api-key (IAM condition evaluation failed)',
+        traceId: sharedTraceB,
+        spanId: 'span-iam-04',
+        logName: 'cloudaudit.googleapis.com%2Fdata_access',
+        byteSize: 1290,
+        source: 'LIVE_CHRONO_TELEMETRY',
+      },
     ].map((item) => ({
       ...item,
       signaturePattern: tokenizeDrain3Signature(item.cleanMessage),
@@ -7264,9 +7286,62 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       raw: item,
     }));
 
-    const allEntries = [...normalizedEntries, ...supplementalEntries].sort(
+    const unfilteredPool = [...normalizedEntries, ...supplementalEntries].sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
+
+    const qLower = `${naturalLanguage} ${effectiveFilter}`.toLowerCase();
+    const filteredPool = unfilteredPool.filter((entry) => {
+      if (timeTravelWindow) {
+        const tMs = new Date(entry.timestamp).getTime();
+        const startMs = new Date(timeTravelWindow.startIso).getTime();
+        const endMs = new Date(timeTravelWindow.endIso).getTime();
+        if (tMs < startMs || tMs > endMs) return false;
+      }
+      if (!qLower.trim()) return true;
+      if (
+        (qLower.includes('5xx') || qLower.includes('status>=500')) &&
+        entry.httpStatus < 500
+      ) {
+        return false;
+      }
+      if (
+        (qLower.includes('429') || qLower.includes('quota')) &&
+        entry.httpStatus !== 429 &&
+        !entry.cleanMessage.toLowerCase().includes('quota')
+      ) {
+        return false;
+      }
+      if (
+        (qLower.includes('iam') ||
+          qLower.includes('secretmanager') ||
+          qLower.includes('permission')) &&
+        !entry.serviceName.includes('secret') &&
+        !entry.serviceName.includes('iam') &&
+        entry.httpStatus !== 403 &&
+        entry.dlpFindings?.length === 0
+      ) {
+        return false;
+      }
+      if (
+        (qLower.includes('dlp') ||
+          qLower.includes('aiza') ||
+          qLower.includes('bearer ')) &&
+        (!entry.dlpFindings || entry.dlpFindings.length === 0)
+      ) {
+        return false;
+      }
+      if (
+        qLower.includes('cloud_run_revision') &&
+        entry.resourceType !== 'cloud_run_revision'
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const allEntries =
+      filteredPool.length > 0 ? filteredPool : unfilteredPool;
 
     // 1. Semantic Drain3 Pattern Clustering
     const clusterMap = new Map();
@@ -7317,9 +7392,9 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         return b.count - a.count;
       });
 
-    // 2. Cross-Service Distributed Trace Waterfalls (`traceId` grouping)
+    // 2. Cross-Service Distributed Trace Waterfalls (`traceId` grouping across full pool so sibling spans are always stitched)
     const traceGroupsMap = new Map();
-    for (const entry of allEntries) {
+    for (const entry of unfilteredPool) {
       if (!entry.traceId) continue;
       if (!traceGroupsMap.has(entry.traceId)) {
         traceGroupsMap.set(entry.traceId, []);
@@ -7417,9 +7492,9 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       isExcluded: existingExclusions.some((ex) => ex.name === item.exclusionName),
     }));
 
-    // 6. Aggregate DLP Leak Radar
+    // 6. Aggregate DLP Leak Radar across full project pool
     const dlpAlerts = [];
-    for (const entry of allEntries) {
+    for (const entry of unfilteredPool) {
       if (entry.dlpFindings?.length > 0) {
         for (const f of entry.dlpFindings) {
           dlpAlerts.push({

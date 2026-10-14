@@ -1359,7 +1359,7 @@ function CloudPulseCockpit() {
       id: 'LOGS_SHELL',
       group: 'OPS_DOCS',
       label: 'Logs',
-      tip: 'Live Cloud Logging Streamer & Interactive gcloud / bq / gsutil Web Cloud Shell',
+      tip: '2026 Neural Chrono-Log & Trace Studio (Drain3 Clustering, Trace Waterfall, NL-to-LQL, Log FinOps, DLP Shield & Cloud Shell)',
       icon: Terminal,
     },
     {
@@ -1908,7 +1908,7 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'FINOPS', label: 'Finops', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
-                            { id: 'LOGS_SHELL', label: 'Logs', meta: 'Live Logging & Web Cloud Shell' },
+                            { id: 'LOGS_SHELL', label: 'Logs', meta: 'Neural Chrono-Logs, Trace Waterfall & Shell' },
                             { id: 'DOCS_GUIDE', label: 'Docs', meta: 'Interactive Architecture & API Guide' },
                           ],
                         },
