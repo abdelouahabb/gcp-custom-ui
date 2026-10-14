@@ -915,7 +915,7 @@ const DOC_SECTIONS = [
     wave: 'WAVE 11 SRE & FINOPS',
     title:
       '37. Cloud Run Dead Container (Artifact Registry) & Cloud Storage Build-Artifact Hunter',
-    badge: 'Cloud Run ★ → Search Dead Containers & GCS Artifacts',
+    badge: 'Cloud Run → Search Dead Containers & GCS Artifacts',
     badgeColor:
       'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30',
     icon: HardDrive,
@@ -961,22 +961,22 @@ const DOC_SECTIONS = [
     id: 'aws-azure-enterprise-parity-super-studio',
     wave: 'WAVE 12 AWS & AZURE PARITY SUITE',
     title:
-      '39, 40 & 41. 15-in-1 AWS & Azure Enterprise Parity Super-Studio for Google Cloud (Wave 1, Wave 2 & Wave 3 Full-Scale)',
+      '39, 40, 41 & 42. 16-in-1 AWS & Azure Enterprise Parity Super-Studio for Google Cloud (Including Azure Architect Wishlist)',
     badge: 'Top Header -> AWS/Azure Parity',
     badgeColor:
       'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30',
     icon: Layers,
     targetTab: 'AWS_AZURE_PARITY',
     problemSolved:
-      'Engineers migrating from AWS or Azure miss 15 iconic enterprise workflows that Google Cloud Console either scatters across 6+ pages or lacks natively: Azure Resource Groups, Automated Spend Stop-Loss Fuses, AWS IAM Policy Simulator & Switch-Role, 1-Click S3/SAS Presigned URLs, 1-Screen Global HTTPS LB + WAF, CloudFormation/ARM Stack Drift & Rollback, Cost Explorer + CUD Savings Plans, AWS SSM Fleet Run Command, EventBridge Pipes with DLQ, Key Vault Auto-Rotation + Cross-Env Sync, Trusted Advisor 5-Pillar Scorer, Transit Gateway / Virtual WAN VPC Mesh, ECS/ACA Multi-Container Sidecar Compose, GuardDuty / Sentinel SOAR Playbooks, and Step Functions / Durable Saga Studio.',
+      'Engineers migrating from AWS or Azure miss 16 iconic enterprise workflows that Google Cloud Console either scatters across 6+ pages or lacks natively: Azure Resource Groups (with live/accrued spend, RG-scoped RBAC & 1-click teardown), Automated Spend Stop-Loss Fuses, AWS IAM Policy Simulator & Switch-Role, 1-Click S3/SAS Presigned URLs, 1-Screen Global HTTPS LB + WAF, CloudFormation/ARM Stack Drift & Rollback, Cost Explorer + CUD Savings Plans, AWS SSM Fleet Run Command, EventBridge Pipes with DLQ, Key Vault Auto-Rotation + Cross-Env Sync, Trusted Advisor 5-Pillar Scorer, Transit Gateway / Virtual WAN VPC Mesh, ECS/ACA Multi-Container Sidecar Compose, GuardDuty / Sentinel SOAR Playbooks, Step Functions / Durable Saga Studio, and Multi-Brand OAuth Sign-In Studio inside a single "prod" project.',
     howItWorks: [
-      'Modules 1-5 (Wave 1 Foundation): (1) Azure-Style Resource Groups (labels.resource_group) with 1-click group hibernate & cascade teardown, (2) AWS Budgets Actions / Azure Auto-Shutdown Hard-Spend Stop-Loss Fuse, (3) AWS IAM Policy Simulator & Switch-Role Preview with 1-click least-privilege role grant, (4) Azure SAS / S3 1-Click Presigned URLs & Browser Upload Studio, and (5) 1-Screen Global HTTPS Load Balancer + Managed SSL + Cloud Armor WAF Wizard.',
+      'Modules 1-5 & 16 (Wave 1 Foundation + Azure Architect Wishlist): (1) Azure-Style Resource Groups (labels.resource_group) with live $/hr + $/mo + accrued session spend, RG-scoped RBAC role assignment (Reader/Contributor/Owner + GCP IAM CEL Condition), 1-click group hibernate & cascade teardown, (2) AWS Budgets Actions / Azure Auto-Shutdown Hard-Spend Stop-Loss Fuse, (3) AWS IAM Policy Simulator & Switch-Role Preview with 1-click least-privilege role grant, (4) Azure SAS / S3 1-Click Presigned URLs & Browser Upload Studio, (5) 1-Screen Global HTTPS Load Balancer + Managed SSL + Cloud Armor WAF Wizard, and (16) Multi-Brand OAuth Sign-In Studio (multiple distinct OAuth brandings inside 1 "prod" GCP project via Identity Platform Multi-Tenancy + Custom Auth Domains).',
       'Modules 6-10 (Wave 2 Enterprise Scale): (6) CloudFormation / Azure ARM Stack Snapshot, Live Console Drift Detector, 1-Click Rollback & Terraform HCL / Pulumi TS Exporter, (7) AWS Cost Explorer / Azure Cost Analysis 14-Day Daily Burn Attribution & 1-Click Cloud Billing CUD / Spot Arbitrage Plans, (8) AWS Systems Manager (SSM) Fleet Run Command & Zero-SSH Patch Manager across VMs and Cloud Run, (9) AWS EventBridge Pipes / Azure Logic Apps Visual Event Router with automatic Dead-Letter Queue (-dlq) Pub/Sub provisioning, and (10) AWS Secrets Manager / Azure Key Vault 1-Click Secret Rotation & Dev/Staging/Prod Cross-Env Sync.',
       'Modules 11-15 (Wave 3 Hyper-Scale & Architecture Parity): (11) AWS Trusted Advisor / Azure Advisor 5-Pillar Well-Architected Live Scorer & 1-Click Auto-Fixer, (12) AWS Transit Gateway / Azure Virtual WAN Hub-and-Spoke VPC Peering & Cloud NAT Mesh Builder, (13) AWS ECS Task Definitions / Azure Container Apps Multi-Container Gen2 Sidecar & Compose Deployer, (14) AWS GuardDuty / Microsoft Sentinel Live Threat Hunting & 1-Click SOAR Quarantine Playbooks, and (15) AWS Step Functions / Azure Durable Functions Visual Saga State-Machine & Cloud Workflows YAML Compiler.',
     ],
     apisUsed: [
       'GET /api/project/:id/aws-azure-parity/overview (12-way parallel discovery with 3.5s fast timeout guard)',
-      'POST /api/project/:id/aws-azure-parity/action (UPSERT_RESOURCE_GROUP, HIBERNATE_RESOURCE_GROUP, DELETE_RESOURCE_GROUP, SAVE_SPEND_FUSE_CONFIG, EXECUTE_SPEND_FUSE, SIMULATE_IAM_POLICY, GRANT_SIMULATOR_ROLE, UPLOAD_BUCKET_OBJECT, GENERATE_PRESIGNED_URL, PROVISION_GLOBAL_LB_STACK, SNAPSHOT_ARM_STACK, DETECT_STACK_DRIFT, ROLLBACK_ARM_STACK, APPLY_FINOPS_ARBITRAGE, EXECUTE_SSM_FLEET_COMMAND, PROVISION_EVENT_PIPE, TEST_EVENT_PIPE, ROTATE_SECRET_NOW, SYNC_SECRET_ACROSS_ENV, REMEDIATE_ADVISOR_FINDING, PROVISION_TRANSIT_HUB_MESH, DEPLOY_MULTICONTAINER_APP, EXECUTE_SOAR_PLAYBOOK, DEPLOY_STEP_FUNCTION_WORKFLOW)',
+      'POST /api/project/:id/aws-azure-parity/action (UPSERT_RESOURCE_GROUP, ASSIGN_RG_IAM_ROLE, HIBERNATE_RESOURCE_GROUP, DELETE_RESOURCE_GROUP, SAVE_SPEND_FUSE_CONFIG, EXECUTE_SPEND_FUSE, SIMULATE_IAM_POLICY, GRANT_SIMULATOR_ROLE, UPLOAD_BUCKET_OBJECT, GENERATE_PRESIGNED_URL, PROVISION_GLOBAL_LB_STACK, SNAPSHOT_ARM_STACK, DETECT_STACK_DRIFT, ROLLBACK_ARM_STACK, APPLY_FINOPS_ARBITRAGE, EXECUTE_SSM_FLEET_COMMAND, PROVISION_EVENT_PIPE, TEST_EVENT_PIPE, ROTATE_SECRET_NOW, SYNC_SECRET_ACROSS_ENV, REMEDIATE_ADVISOR_FINDING, PROVISION_TRANSIT_HUB_MESH, DEPLOY_MULTICONTAINER_APP, EXECUTE_SOAR_PLAYBOOK, DEPLOY_STEP_FUNCTION_WORKFLOW, CREATE_OAUTH_BRAND_PROFILE, DELETE_OAUTH_BRAND_PROFILE)',
     ],
     billingImpact:
       'Prevents runaway cloud bills via automated Hard-Spend Stop-Loss Fuses, enforces Well-Architected cost/security guardrails, and unlocks up to 55%-68% compute savings via 1-Click CUD and Scale-to-Zero arbitrage.',
