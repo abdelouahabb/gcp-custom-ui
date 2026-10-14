@@ -32,7 +32,8 @@ export default function SovereignTimeMachineIamStudio({
   onRefreshOverview,
 }) {
   const [activeSubTab, setActiveSubTab] = useState(
-    initialSubTab || 'IAM_SURGEON');
+    initialSubTab || 'IAM_SURGEON'
+  );
   const [copiedText, setCopiedText] = useState('');
 
   useEffect(() => {
@@ -55,7 +56,8 @@ export default function SovereignTimeMachineIamStudio({
   const [newSaAccountId, setNewSaAccountId] = useState('');
   const [newSaDisplayName, setNewSaDisplayName] = useState('');
   const [newSaDescription, setNewSaDescription] = useState(
-    'Least-privilege custom runtime Service Account');
+    'Least-privilege custom runtime Service Account'
+  );
   const [newSaRoles, setNewSaRoles] = useState([
     'roles/logging.logWriter',
     'roles/monitoring.metricWriter',
@@ -121,14 +123,16 @@ export default function SovereignTimeMachineIamStudio({
     setLoadingIam(true);
     try {
       const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/sovereign/iam-surgeon`);
+        `/api/project/${encodeURIComponent(projectId)}/sovereign/iam-surgeon`
+      );
       setIamData(res.data);
       const firstSa = res.data?.serviceAccounts?.[0]?.email || '';
       setSelectedSaEmail((prev) => prev || firstSa);
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to scan project IAM bindings');
+          err.response?.data?.error || 'Failed to scan project IAM bindings'
+        );
       }
     } finally {
       setLoadingIam(false);
@@ -148,7 +152,8 @@ export default function SovereignTimeMachineIamStudio({
           `/api/project/${encodeURIComponent(projectId)}/sovereign/time-machine`,
           {
             params: targetBase ? { baselineSnapshotId: targetBase } : {},
-          });
+          }
+        );
         setTmData(res.data);
         if (!selectedBaselineId && res.data?.baselineSnapshot?.snapshotId) {
           setSelectedBaselineId(res.data.baselineSnapshot.snapshotId);
@@ -157,26 +162,30 @@ export default function SovereignTimeMachineIamStudio({
         if (onTriggerToast) {
           onTriggerToast(
             err.response?.data?.error ||
-              'Failed to compute Cryptographic State Time-Machine');
+              'Failed to compute Cryptographic State Time-Machine'
+          );
         }
       } finally {
         setLoadingTm(false);
       }
     },
-    [projectId, selectedBaselineId, onTriggerToast]);
+    [projectId, selectedBaselineId, onTriggerToast]
+  );
 
   const fetchVaultStudio = useCallback(async () => {
     if (!projectId) return;
     setLoadingVault(true);
     try {
       const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/sovereign/secrets-kms`);
+        `/api/project/${encodeURIComponent(projectId)}/sovereign/secrets-kms`
+      );
       setVaultData(res.data);
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            'Failed to load Secret Manager & KMS status');
+            'Failed to load Secret Manager & KMS status'
+        );
       }
     } finally {
       setLoadingVault(false);
@@ -213,8 +222,10 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/iam-surgeon/remediate`,
-        finalPayload);
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
+        finalPayload
+      );
       if (res.data?.privateKeyJson) {
         triggerJsonFileDownload(res.data.fileName, res.data.privateKeyJson);
       }
@@ -228,7 +239,8 @@ export default function SovereignTimeMachineIamStudio({
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            'IAM remediation requires resourcemanager.projects.setIamPolicy permission');
+            'IAM remediation requires resourcemanager.projects.setIamPolicy permission'
+        );
       }
     } finally {
       setRemediatingId(null);
@@ -239,20 +251,24 @@ export default function SovereignTimeMachineIamStudio({
     setNewSaRoles((prev) =>
       prev.includes(roleName)
         ? prev.filter((r) => r !== roleName)
-        : [...prev, roleName]);
+        : [...prev, roleName]
+    );
   };
 
   const handleApplySaRolePreset = (presetKey) => {
     if (presetKey === 'ZERO') {
       setNewSaRoles([]);
       setNewSaDescription(
-        'Zero project-wide IAM roles (bind resource-level permissions only)');
+        'Zero project-wide IAM roles (bind resource-level permissions only)'
+      );
     } else if (presetKey === 'CLOUD_RUN') {
       setNewSaAccountId((prev) => prev || 'cloudrun-least-priv-sa');
       setNewSaDisplayName(
-        (prev) => prev || 'Cloud Run Least-Privilege Runtime SA');
+        (prev) => prev || 'Cloud Run Least-Privilege Runtime SA'
+      );
       setNewSaDescription(
-        'Minimal Cloud Run runtime identity (Logs, Metrics & Secret Manager Accessor)');
+        'Minimal Cloud Run runtime identity (Logs, Metrics & Secret Manager Accessor)'
+      );
       setNewSaRoles([
         'roles/logging.logWriter',
         'roles/monitoring.metricWriter',
@@ -261,9 +277,11 @@ export default function SovereignTimeMachineIamStudio({
     } else if (presetKey === 'VM_GKE') {
       setNewSaAccountId((prev) => prev || 'compute-node-least-priv');
       setNewSaDisplayName(
-        (prev) => prev || 'Compute / GKE Node Least-Privilege SA');
+        (prev) => prev || 'Compute / GKE Node Least-Privilege SA'
+      );
       setNewSaDescription(
-        'Replaces over-privileged default Compute SA with Logs, Metrics & Artifact Registry Reader');
+        'Replaces over-privileged default Compute SA with Logs, Metrics & Artifact Registry Reader'
+      );
       setNewSaRoles([
         'roles/logging.logWriter',
         'roles/monitoring.metricWriter',
@@ -272,9 +290,11 @@ export default function SovereignTimeMachineIamStudio({
     } else if (presetKey === 'DATA_PIPELINE') {
       setNewSaAccountId((prev) => prev || 'data-pipeline-worker-sa');
       setNewSaDisplayName(
-        (prev) => prev || 'Data Pipeline Least-Privilege Worker SA');
+        (prev) => prev || 'Data Pipeline Least-Privilege Worker SA'
+      );
       setNewSaDescription(
-        'Scoped identity for Storage Object Viewer & BigQuery Job User');
+        'Scoped identity for Storage Object Viewer & BigQuery Job User'
+      );
       setNewSaRoles([
         'roles/logging.logWriter',
         'roles/storage.objectViewer',
@@ -290,7 +310,8 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/iam-surgeon/remediate`,
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
         {
           action: 'CREATE_SERVICE_ACCOUNT',
           accountId: newSaAccountId.trim(),
@@ -299,7 +320,8 @@ export default function SovereignTimeMachineIamStudio({
             `CloudPulse Custom SA (${newSaAccountId.trim()})`,
           description: newSaDescription.trim(),
           roles: newSaRoles,
-        });
+        }
+      );
       const createdEmail = res.data?.serviceAccount?.email || '';
       if (createdEmail) setSelectedSaEmail(createdEmail);
       setNewSaAccountId('');
@@ -313,7 +335,8 @@ export default function SovereignTimeMachineIamStudio({
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to create Service Account');
+          err.response?.data?.error || 'Failed to create Service Account'
+        );
       }
     } finally {
       setSaActionBusy(false);
@@ -327,23 +350,27 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/iam-surgeon/remediate`,
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
         {
           action: 'CREATE_SA_KEY',
           serviceAccountEmail: targetEmail,
-        });
+        }
+      );
       if (res.data?.privateKeyJson) {
         triggerJsonFileDownload(res.data.fileName, res.data.privateKeyJson);
       }
       if (onTriggerToast) {
         onTriggerToast(
-          res.data?.message || `Created & downloaded JSON key for ${targetEmail}`);
+          res.data?.message || `Created & downloaded JSON key for ${targetEmail}`
+        );
       }
       await fetchIamSurgeon();
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to create Service Account JSON key');
+          err.response?.data?.error || 'Failed to create Service Account JSON key'
+        );
       }
     } finally {
       setSaActionBusy(false);
@@ -355,12 +382,14 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/iam-surgeon/remediate`,
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
         {
           action: 'DOWNLOAD_SA_KEY',
           keyName,
           serviceAccountEmail,
-        });
+        }
+      );
       if (res.data?.downloadJson) {
         triggerJsonFileDownload(res.data.fileName, res.data.downloadJson);
       }
@@ -370,7 +399,8 @@ export default function SovereignTimeMachineIamStudio({
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to download key metadata');
+          err.response?.data?.error || 'Failed to download key metadata'
+        );
       }
     } finally {
       setSaActionBusy(false);
@@ -384,23 +414,27 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/iam-surgeon/remediate`,
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
         {
           action: 'MINT_SA_TOKEN',
           serviceAccountEmail: targetEmail,
-        });
+        }
+      );
       if (res.data?.downloadJson) {
         triggerJsonFileDownload(res.data.fileName, res.data.downloadJson);
       }
       if (onTriggerToast) {
         onTriggerToast(
-          res.data?.message || `Minted 1h OAuth2 token for ${targetEmail}`);
+          res.data?.message || `Minted 1h OAuth2 token for ${targetEmail}`
+        );
       }
       await fetchIamSurgeon();
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to mint Service Account token');
+          err.response?.data?.error || 'Failed to mint Service Account token'
+        );
       }
     } finally {
       setSaActionBusy(false);
@@ -412,19 +446,23 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/time-machine/snapshot`,
-        { action, label });
+          projectId
+        )}/sovereign/time-machine/snapshot`,
+        { action, label }
+      );
       if (onTriggerToast) {
         onTriggerToast(
           res.data?.message ||
-            `Sealed SHA-256 snapshot ${res.data?.snapshot?.merkleRootShort || ''}`);
+            `Sealed SHA-256 snapshot ${res.data?.snapshot?.merkleRootShort || ''}`
+        );
       }
       setNewSnapshotLabel('');
       await fetchTimeMachine();
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Time-Machine operation failed');
+          err.response?.data?.error || 'Time-Machine operation failed'
+        );
       }
     } finally {
       setTmActionBusy(false);
@@ -457,7 +495,8 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/secrets-kms/create-secret`,
+          projectId
+        )}/sovereign/secrets-kms/create-secret`,
         {
           secretId: secretId.trim(),
           secretValue,
@@ -465,14 +504,16 @@ export default function SovereignTimeMachineIamStudio({
           region: secretRegion,
           rotationDays: secretRotationDays,
           serviceAccountEmail: secretBindSaEmail,
-        });
+        }
+      );
       if (onTriggerToast) {
         onTriggerToast(
           `Sealed secret "${secretId.trim()}" in Secret Manager (${secretReplicationMode})${
             res.data?.grantedAccessorTo
               ? ` & granted secretAccessor to ${res.data.grantedAccessorTo}`
               : ''
-          }`);
+          }`
+        );
       }
       setExpandedSecretId(secretId.trim());
       setSecretId('');
@@ -481,7 +522,8 @@ export default function SovereignTimeMachineIamStudio({
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to create Secret Manager secret');
+          err.response?.data?.error || 'Failed to create Secret Manager secret'
+        );
       }
     } finally {
       setCreatingSecret(false);
@@ -500,13 +542,15 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/secrets-kms/action`,
+          projectId
+        )}/sovereign/secrets-kms/action`,
         {
           action: 'ROTATE_SECRET',
           secretId: targetSecretId,
           newSecretValue: newVal,
           disablePreviousVersions: rotateDisableOld,
-        });
+        }
+      );
       setRotateValues((prev) => ({ ...prev, [targetSecretId]: '' }));
       if (onTriggerToast) {
         onTriggerToast(res.data?.message || `Rotated ${targetSecretId}`);
@@ -515,7 +559,8 @@ export default function SovereignTimeMachineIamStudio({
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || `Failed to rotate ${targetSecretId}`);
+          err.response?.data?.error || `Failed to rotate ${targetSecretId}`
+        );
       }
     } finally {
       setSecretActionBusy(null);
@@ -525,18 +570,21 @@ export default function SovereignTimeMachineIamStudio({
   const handleToggleSecretVersionState = async (
     targetSecretId,
     version,
-    targetState) => {
+    targetState
+  ) => {
     setSecretActionBusy(`VER:${targetSecretId}:${version}:${targetState}`);
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/secrets-kms/action`,
+          projectId
+        )}/sovereign/secrets-kms/action`,
         {
           action: 'TOGGLE_VERSION_STATE',
           secretId: targetSecretId,
           version,
           targetState,
-        });
+        }
+      );
       if (onTriggerToast) {
         onTriggerToast(res.data?.message || `Updated version v${version}`);
       }
@@ -545,7 +593,8 @@ export default function SovereignTimeMachineIamStudio({
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            `Failed to ${targetState.toLowerCase()} version v${version}`);
+            `Failed to ${targetState.toLowerCase()} version v${version}`
+        );
       }
     } finally {
       setSecretActionBusy(null);
@@ -567,22 +616,26 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/secrets-kms/action`,
+          projectId
+        )}/sovereign/secrets-kms/action`,
         {
           action: 'GRANT_SECRET_ACCESSOR',
           secretId: targetSecretId,
           serviceAccountEmail: saEmail,
-        });
+        }
+      );
       if (onTriggerToast) {
         onTriggerToast(
           res.data?.message ||
-            `Granted secretAccessor on ${targetSecretId} to ${saEmail}`);
+            `Granted secretAccessor on ${targetSecretId} to ${saEmail}`
+        );
       }
       await fetchVaultStudio();
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to grant secretAccessor role');
+          err.response?.data?.error || 'Failed to grant secretAccessor role'
+        );
       }
     } finally {
       setSecretActionBusy(null);
@@ -594,11 +647,13 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/secrets-kms/action`,
+          projectId
+        )}/sovereign/secrets-kms/action`,
         {
           action: 'DELETE_SECRET',
           secretId: targetSecretId,
-        });
+        }
+      );
       if (onTriggerToast) {
         onTriggerToast(res.data?.message || `Deleted secret ${targetSecretId}`);
       }
@@ -607,7 +662,8 @@ export default function SovereignTimeMachineIamStudio({
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || `Failed to delete ${targetSecretId}`);
+          err.response?.data?.error || `Failed to delete ${targetSecretId}`
+        );
       }
     } finally {
       setSecretActionBusy(null);
@@ -634,24 +690,28 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/iam-surgeon/remediate`,
+          projectId
+        )}/sovereign/iam-surgeon/remediate`,
         {
           action: 'PROVISION_GITHUB_OIDC_WIF',
           serviceAccountEmail: targetSa,
           githubRepo: cleanRepo,
-        });
+        }
+      );
       setWifResult(res.data);
       if (onTriggerToast) {
         onTriggerToast(
           res.data?.message ||
-            `Provisioned Keyless GitHub OIDC Workload Identity Federation for ${cleanRepo}`);
+            `Provisioned Keyless GitHub OIDC Workload Identity Federation for ${cleanRepo}`
+        );
       }
       await fetchIamSurgeon();
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            'Failed to provision Workload Identity Pool / OIDC Provider');
+            'Failed to provision Workload Identity Pool / OIDC Provider'
+        );
       }
     } finally {
       setWifBusy(false);
@@ -663,23 +723,27 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/secrets-kms/action`,
+          projectId
+        )}/sovereign/secrets-kms/action`,
         {
           action: 'CONFIGURE_AUTO_ROTATION_SCHEDULE',
           secretId: targetSecretId,
           rotationPeriodDays,
-        });
+        }
+      );
       if (onTriggerToast) {
         onTriggerToast(
           res.data?.message ||
-            `Configured ${rotationPeriodDays}d auto-rotation schedule on ${targetSecretId}`);
+            `Configured ${rotationPeriodDays}d auto-rotation schedule on ${targetSecretId}`
+        );
       }
       await fetchVaultStudio();
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            `Failed to configure auto-rotation schedule on ${targetSecretId}`);
+            `Failed to configure auto-rotation schedule on ${targetSecretId}`
+        );
       }
     } finally {
       setSecretActionBusy(null);
@@ -691,16 +755,19 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/secrets-kms/action`,
+          projectId
+        )}/sovereign/secrets-kms/action`,
         {
           action: 'RELOAD_MOUNTED_WORKLOADS',
           secretId: targetSecretId,
           workloads,
-        });
+        }
+      );
       if (onTriggerToast) {
         onTriggerToast(
           res.data?.message ||
-            `Reloaded Cloud Run workloads mounted to ${targetSecretId}`);
+            `Reloaded Cloud Run workloads mounted to ${targetSecretId}`
+        );
       }
       await fetchVaultStudio();
       if (onRefreshOverview) onRefreshOverview();
@@ -708,7 +775,8 @@ export default function SovereignTimeMachineIamStudio({
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            `Failed to reload Cloud Run workloads for ${targetSecretId}`);
+            `Failed to reload Cloud Run workloads for ${targetSecretId}`
+        );
       }
     } finally {
       setSecretActionBusy(null);
@@ -721,7 +789,8 @@ export default function SovereignTimeMachineIamStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/sovereign/secrets-kms/action`,
+          projectId
+        )}/sovereign/secrets-kms/action`,
         {
           action: 'HEAL_CLOUDRUN_SECRET_REF',
           secretId: brokenRef.secretId,
@@ -729,11 +798,13 @@ export default function SovereignTimeMachineIamStudio({
           region: brokenRef.region,
           envKey: brokenRef.envKey,
           healStrategy,
-        });
+        }
+      );
       if (onTriggerToast) {
         onTriggerToast(
           res.data?.message ||
-            `Healed broken secret reference ${brokenRef.secretId} on ${brokenRef.serviceName}`);
+            `Healed broken secret reference ${brokenRef.secretId} on ${brokenRef.serviceName}`
+        );
       }
       await fetchVaultStudio();
       if (onRefreshOverview) onRefreshOverview();
@@ -741,7 +812,8 @@ export default function SovereignTimeMachineIamStudio({
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            `Failed to heal broken secret reference on ${brokenRef.serviceName}`);
+            `Failed to heal broken secret reference on ${brokenRef.serviceName}`
+        );
       }
     } finally {
       setSecretActionBusy(null);
@@ -757,7 +829,8 @@ export default function SovereignTimeMachineIamStudio({
       return (
         f.role.toLowerCase().includes(q) ||
         f.member.toLowerCase().includes(q) ||
-        f.riskLabel.toLowerCase().includes(q));
+        f.riskLabel.toLowerCase().includes(q)
+      );
     }
     return true;
   });
@@ -834,7 +907,7 @@ export default function SovereignTimeMachineIamStudio({
               label: '2. SHA-256 Cloud State Time-Machine & Drift Radar',
               badge: tmData
                 ? tmData.inSync
-                  ? 'SYNCED '
+                  ? 'SYNCED ✓'
                   : `${tmData.drifts?.length || 0} DRIFTS`
                 : 'Merkle Diff',
               tip: 'Seal SHA-256 Merkle-signed snapshots of VMs, Cloud Run, Storage, BigQuery, Firewalls & IAM, detect out-of-band console tampering, and heal drift in 1 tap',
@@ -888,7 +961,8 @@ export default function SovereignTimeMachineIamStudio({
                 >
                   {tab.badge}
                 </span>
-              </button>);
+              </button>
+            );
           })}
         </div>
       </div>
@@ -1046,7 +1120,8 @@ export default function SovereignTimeMachineIamStudio({
                   }`}
                 >
                   {mode.label}
-                </button>))}
+                </button>
+              ))}
             </div>
 
             {iamSectionView === 'SPLIT' && filteredFindings.length > 3 && (
@@ -1058,7 +1133,8 @@ export default function SovereignTimeMachineIamStudio({
                 {expandAllIamRoles
                   ? '▴ Collapse IAM Roles to Top 3'
                   : `▾ Show All ${filteredFindings.length} IAM Roles (Scrollable)`}
-              </button>)}
+              </button>
+            )}
           </div>
 
           {/* IAM Role Bindings Section (Hidden when focused purely on SA_VAULT) */}
@@ -1096,7 +1172,8 @@ export default function SovereignTimeMachineIamStudio({
                       }`}
                     >
                       {f.label}
-                    </button>))}
+                    </button>
+                  ))}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -1116,7 +1193,8 @@ export default function SovereignTimeMachineIamStudio({
                         }`}
                       >
                         {h}h
-                      </button>))}
+                      </button>
+                    ))}
                   </div>
 
                   <input
@@ -1139,7 +1217,8 @@ export default function SovereignTimeMachineIamStudio({
               >
                 {(iamSectionView === 'SPLIT' && !expandAllIamRoles
                   ? filteredFindings.slice(0, 3)
-                  : filteredFindings).map((item) => {
+                  : filteredFindings
+                ).map((item) => {
                   const isBusy = remediatingId === item.findingId;
                   const isProtectedOwner =
                     Boolean(item.isProtectedRootOwner) ||
@@ -1186,7 +1265,8 @@ export default function SovereignTimeMachineIamStudio({
                             {item.condition && (
                               <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
                                 ⏱JIT Condition Active: {item.condition.title}
-                              </span>)}
+                              </span>
+                            )}
                           </div>
                           <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
                             {item.riskLabel}
@@ -1207,7 +1287,8 @@ export default function SovereignTimeMachineIamStudio({
                               <span>
                                 Protected Root Owner (Lockout Guardrail Active)
                               </span>
-                            </span>) : (
+                            </span>
+                          ) : (
                             <>
                               {!item.condition && canJit && (
                                 <button
@@ -1228,7 +1309,8 @@ export default function SovereignTimeMachineIamStudio({
                                         recommendedAltRoles:
                                           item.recommendedAltRoles || [],
                                         blastRadiusScore: item.blastRadiusScore,
-                                      })
+                                      }
+                                    )
                                   }
                                   title={`Review & approve attaching a ${selectedJitHours}-hour auto-expiring CEL condition to ${item.role}`}
                                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
@@ -1237,7 +1319,8 @@ export default function SovereignTimeMachineIamStudio({
                                   <span>
                                     Review {selectedJitHours}h JIT Lease...
                                   </span>
-                                </button>)}
+                                </button>
+                              )}
 
                               {item.recommendedRole &&
                                 item.recommendedRole !== item.role && (
@@ -1260,7 +1343,8 @@ export default function SovereignTimeMachineIamStudio({
                                           recommendedAltRoles:
                                             item.recommendedAltRoles || [],
                                           blastRadiusScore: item.blastRadiusScore,
-                                        })
+                                        }
+                                      )
                                     }
                                     title={`Review & approve scoping ${item.member} from ${item.role} to least-privilege ${item.recommendedRole}`}
                                     className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
@@ -1269,27 +1353,33 @@ export default function SovereignTimeMachineIamStudio({
                                     <span>
                                       Review Scope → {item.recommendedRole}...
                                     </span>
-                                  </button>)}
+                                  </button>
+                                )}
 
                               <button
                                 type="button"
                                 onClick={() =>
                                   handleCopy(
                                     item.gcloudDowngradeCli,
-                                    'IAM surgery CLI')
+                                    'IAM surgery CLI'
+                                  )
                                 }
                                 title="Copy reproducible gcloud IAM least-privilege remediation command"
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-[11px] font-mono cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800"
                               >
                                 {copiedText === item.gcloudDowngradeCli ? (
-                                  <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />) : (
-                                  <Copy className="w-3.5 h-3.5" />)}
+                                  <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
                                 <span>CLI</span>
                               </button>
-                            </>)}
+                            </>
+                          )}
                         </div>
                       </div>
-                    </div>);
+                    </div>
+                  );
                 })}
               </div>
 
@@ -1324,8 +1414,10 @@ export default function SovereignTimeMachineIamStudio({
                       Full Roles View →
                     </button>
                   </div>
-                </div>)}
-            </div>)}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* =================================================================
               SERVICE ACCOUNT KEY, OAUTH2 TOKEN & STOLEN-CREDENTIAL KILL-SWITCH
@@ -1546,14 +1638,15 @@ export default function SovereignTimeMachineIamStudio({
                               {item.desc}
                             </div>
                           </div>
-                        </label>);
+                        </label>
+                      );
                     })}
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <span className="text-[10.5px] font-mono text-zinc-400">
-                     Once created, this Service Account is immediately selectable in **Cloud Run**, **Compute VM**, **GKE**, and **Provision Resource** (`iam.serviceAccounts.actAs`).
+                    ✓ Once created, this Service Account is immediately selectable in **Cloud Run**, **Compute VM**, **GKE**, and **Provision Resource** (`iam.serviceAccounts.actAs`).
                   </span>
                   <button
                     type="submit"
@@ -1565,7 +1658,8 @@ export default function SovereignTimeMachineIamStudio({
                       : `Provision Custom SA (${newSaRoles.length} Scoped Roles)`}
                   </button>
                 </div>
-              </form>)}
+              </form>
+            )}
 
             {/* Quick Mint & Download Bar: Pick Service Account -> Grant actAs, Download .json Key, or 1h OAuth2 Token */}
             <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-end">
@@ -1579,12 +1673,15 @@ export default function SovereignTimeMachineIamStudio({
                   className="w-full h-[36px] bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 text-xs font-mono text-white"
                 >
                   {(iamData?.serviceAccounts || []).length === 0 ? (
-                    <option value="">No Service Accounts found — Create one above</option>) : (
+                    <option value="">No Service Accounts found — Create one above</option>
+                  ) : (
                     (iamData?.serviceAccounts || []).map((sa) => (
                       <option key={sa.email} value={sa.email}>
                         {sa.disabled ? '[FROZEN] ' : ''}
                         {sa.email} ({sa.userManagedKeys?.length || 0} keys)
-                      </option>)))}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -1598,19 +1695,23 @@ export default function SovereignTimeMachineIamStudio({
                     try {
                       const res = await axios.post(
                         `/api/project/${encodeURIComponent(
-                          projectId)}/service-accounts/grant-act-as`,
-                        { serviceAccountEmail: selectedSaEmail });
+                          projectId
+                        )}/service-accounts/grant-act-as`,
+                        { serviceAccountEmail: selectedSaEmail }
+                      );
                       if (onTriggerToast) {
                         onTriggerToast(
                           res.data?.message ||
-                            `Granted iam.serviceAccounts.actAs on ${selectedSaEmail}`);
+                            `Granted iam.serviceAccounts.actAs on ${selectedSaEmail}`
+                        );
                       }
                       await fetchIamSurgeon();
                     } catch (err) {
                       if (onTriggerToast) {
                         onTriggerToast(
                           err.response?.data?.error ||
-                            'Failed to bind roles/iam.serviceAccountUser');
+                            'Failed to bind roles/iam.serviceAccountUser'
+                        );
                       }
                     } finally {
                       setSaActionBusy(false);
@@ -1664,8 +1765,9 @@ export default function SovereignTimeMachineIamStudio({
 
               {(iamData?.userManagedKeys || []).length === 0 ? (
                 <div className="p-3 rounded-lg bg-zinc-950/60 border border-zinc-800 text-xs font-mono text-zinc-400">
-                   Zero static Service Account `.json` keys currently active. Click **"Create & Download `.json` Key"** above if you need a downloadable key file, or test revoking a stolen key!
-                </div>) : (
+                  ✓ Zero static Service Account `.json` keys currently active. Click **"Create & Download `.json` Key"** above if you need a downloadable key file, or test revoking a stolen key!
+                </div>
+              ) : (
                 <div className="grid grid-cols-1 gap-2">
                   {iamData.userManagedKeys.map((k) => (
                     <div
@@ -1682,8 +1784,9 @@ export default function SovereignTimeMachineIamStudio({
                           </span>
                           {k.hasVaultPrivateKey && (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                               Full Private `.json` in Session Vault
-                            </span>)}
+                              ✓ Full Private `.json` in Session Vault
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10.5px] text-zinc-400">
                           Created: {k.validAfterTime ? new Date(k.validAfterTime).toLocaleString() : 'Live'} · Age: {k.ageDays}d · Alg: {k.keyAlgorithm}
@@ -1697,7 +1800,8 @@ export default function SovereignTimeMachineIamStudio({
                           onClick={() =>
                             handleDownloadExistingSaKey(
                               k.name,
-                              k.serviceAccountEmail)
+                              k.serviceAccountEmail
+                            )
                           }
                           title="Download this Service Account key (.json private credentials if created in this session, or X.509 PEM public certificate metadata)"
                           className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
@@ -1720,7 +1824,8 @@ export default function SovereignTimeMachineIamStudio({
                                 serviceAccountEmail: k.serviceAccountEmail,
                                 keyId: k.keyId,
                                 ageDays: k.ageDays,
-                              })
+                              }
+                            )
                           }
                           title="Mint & download a brand-new .json key and atomically revoke this compromised key"
                           className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-mono font-bold cursor-pointer"
@@ -1738,7 +1843,8 @@ export default function SovereignTimeMachineIamStudio({
                                 serviceAccountEmail: k.serviceAccountEmail,
                                 keyId: k.keyId,
                                 ageDays: k.ageDays,
-                              })
+                              }
+                            )
                           }
                           title="Review & approve permanently revoking this stolen Service Account JSON key"
                           className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
@@ -1747,8 +1853,10 @@ export default function SovereignTimeMachineIamStudio({
                           <span>Revoke Stolen Key...</span>
                         </button>
                       </div>
-                    </div>))}
-                </div>)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 2. Created Short-Lived OAuth2 Tokens List (Copy, Download, or Revoke) */}
@@ -1799,7 +1907,8 @@ export default function SovereignTimeMachineIamStudio({
                           onClick={() =>
                             triggerJsonFileDownload(
                               `${projectId}-${t.tokenId}.json`,
-                              JSON.stringify(t, null, 2))
+                              JSON.stringify(t, null, 2)
+                            )
                           }
                           className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
                         >
@@ -1819,7 +1928,8 @@ export default function SovereignTimeMachineIamStudio({
                               {
                                 serviceAccountEmail: t.serviceAccountEmail,
                                 tokenId: t.tokenId,
-                              })
+                              }
+                            )
                           }
                           className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
                         >
@@ -1827,9 +1937,11 @@ export default function SovereignTimeMachineIamStudio({
                           <span>Revoke Token...</span>
                         </button>
                       </div>
-                    </div>))}
+                    </div>
+                  ))}
                 </div>
-              </div>)}
+              </div>
+            )}
 
             {/* 3. Service Account Emergency Kill-Switch Directory (Freeze/Unfreeze Entire Bot) */}
             {(iamData?.serviceAccounts || []).length > 0 && (
@@ -1857,10 +1969,12 @@ export default function SovereignTimeMachineIamStudio({
                           {sa.disabled ? (
                             <span className="text-red-400 font-bold">
                               FROZEN (DISABLED)
-                            </span>) : (
+                            </span>
+                          ) : (
                             <span className="text-emerald-400 font-bold">
                               ● ACTIVE
-                            </span>)}{' '}
+                            </span>
+                          )}{' '}
                           · {sa.userManagedKeys?.length || 0} user-managed key(s)
                         </div>
                       </div>
@@ -1878,7 +1992,8 @@ export default function SovereignTimeMachineIamStudio({
                             {
                               serviceAccountEmail: sa.email,
                               disable: !sa.disabled,
-                            })
+                            }
+                          )
                         }
                         className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold cursor-pointer shrink-0 border ${
                           sa.disabled
@@ -1886,11 +2001,13 @@ export default function SovereignTimeMachineIamStudio({
                             : 'bg-red-600/20 text-red-300 border-red-500/40 hover:bg-red-600/30'
                         }`}
                       >
-                        {sa.disabled ? ' Re-Enable SA...' : 'Freeze SA...'}
+                        {sa.disabled ? '✓ Re-Enable SA...' : 'Freeze SA...'}
                       </button>
-                    </div>))}
+                    </div>
+                  ))}
                 </div>
-              </div>)}
+              </div>
+            )}
 
             {/* 4. 1-Click Keyless GitHub Actions OIDC Workload Identity Federation Architect ("Kill the .json Key Forever") */}
             <div className="space-y-2.5 pt-3 border-t border-zinc-800">
@@ -1936,7 +2053,7 @@ export default function SovereignTimeMachineIamStudio({
                   >
                     {wifBusy
                       ? 'Provisioning OIDC Pool...'
-                      : '️ Provision Keyless GitHub OIDC'}
+                      : '🛡️ Provision Keyless GitHub OIDC'}
                   </button>
                 </div>
               </form>
@@ -1945,7 +2062,7 @@ export default function SovereignTimeMachineIamStudio({
                 <div className="p-3 rounded-xl bg-emerald-950/25 border border-emerald-500/40 space-y-2 text-xs font-mono">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-extrabold text-emerald-300">
-                       Keyless OIDC Provider Ready for `{wifResult.githubRepo}` → `{wifResult.serviceAccountEmail}`
+                      ✓ Keyless OIDC Provider Ready for `{wifResult.githubRepo}` → `{wifResult.serviceAccountEmail}`
                     </span>
                     <div className="flex flex-wrap items-center gap-1.5">
                       {wifResult.gcloudCliScript && (
@@ -1954,18 +2071,21 @@ export default function SovereignTimeMachineIamStudio({
                           onClick={() =>
                             handleCopy(
                               wifResult.gcloudCliScript,
-                              'gcloud OIDC Pool & Provider CLI')
+                              'gcloud OIDC Pool & Provider CLI'
+                            )
                           }
                           className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[10.5px] font-bold cursor-pointer"
                         >
                           Copy `gcloud` OIDC CLI
-                        </button>)}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() =>
                           handleCopy(
                             wifResult.githubActionsYaml,
-                            'GitHub Actions OIDC YAML snippet')
+                            'GitHub Actions OIDC YAML snippet'
+                          )
                         }
                         className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer"
                       >
@@ -1983,15 +2103,19 @@ export default function SovereignTimeMachineIamStudio({
                           key={idx}
                           className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px]"
                         >
-                           {st}
-                        </span>))}
-                    </div>)}
+                          ✓ {st}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <pre className="p-2.5 rounded-lg bg-black/90 border border-zinc-800 text-[10.5px] text-emerald-200 overflow-x-auto">
                     {wifResult.githubActionsYaml}
                   </pre>
-                </div>)}
+                </div>
+              )}
             </div>
-          </div>)}
+          </div>
+          )}
 
           {/* TWO-STEP IAM SURGERY APPROVAL & BEFORE/AFTER POLICY DIFF MODAL */}
           {pendingIamApproval && (
@@ -2029,7 +2153,7 @@ export default function SovereignTimeMachineIamStudio({
                     onClick={() => setPendingIamApproval(null)}
                     className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-mono cursor-pointer"
                   >
-                     Cancel
+                    ✕ Cancel
                   </button>
                 </div>
 
@@ -2078,7 +2202,8 @@ export default function SovereignTimeMachineIamStudio({
                           <div className="text-[10.5px] text-zinc-300">
                             Scoped least-privilege role replacement
                           </div>
-                        </>) : (
+                        </>
+                      ) : (
                         <>
                           <div className="font-extrabold text-emerald-200">
                             {pendingIamApproval.payload.role} (JIT Condition)
@@ -2088,9 +2213,11 @@ export default function SovereignTimeMachineIamStudio({
                             {pendingIamApproval.payload.jitHours} hours via CEL
                             timestamp condition
                           </div>
-                        </>)}
+                        </>
+                      )}
                     </div>
-                  </div>) : (
+                  </div>
+                ) : (
                   <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/40 text-xs font-mono space-y-1">
                     <div className="text-red-300 font-bold">
                       Security Credential Action Impact:
@@ -2107,7 +2234,8 @@ export default function SovereignTimeMachineIamStudio({
                           : `Service Account ${pendingIamApproval.payload.serviceAccountEmail} will be re-enabled (:enable).`
                         : `Key ${pendingIamApproval.payload.keyName} will be permanently deleted from IAM. Any external attacker or workload using this stolen JSON file will immediately lose access.`}
                     </div>
-                  </div>)}
+                  </div>
+                )}
 
                 {/* Optional Alternative Role Picker when Scoping Down */}
                 {pendingIamApproval.payload.action === 'DOWNGRADE_ROLE' && (
@@ -2133,7 +2261,8 @@ export default function SovereignTimeMachineIamStudio({
                             }`}
                           >
                             {r}
-                          </button>))}
+                          </button>
+                        ))}
                     </div>
                     <input
                       type="text"
@@ -2142,7 +2271,8 @@ export default function SovereignTimeMachineIamStudio({
                       className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
                       placeholder="roles/..."
                     />
-                  </div>)}
+                  </div>
+                )}
 
                 {/* Instant Rollback CLI Rescue Command */}
                 {pendingIamApproval.payload.role && (
@@ -2153,7 +2283,8 @@ export default function SovereignTimeMachineIamStudio({
                     <pre className="p-2.5 rounded-xl bg-black border border-zinc-800 text-[10.5px] font-mono text-blue-300 overflow-x-auto">
                       {`gcloud projects add-iam-policy-binding ${projectId} --member="${pendingIamApproval.payload.member}" --role="${pendingIamApproval.payload.role}"`}
                     </pre>
-                  </div>)}
+                  </div>
+                )}
 
                 {/* Mandatory Approval Checkbox */}
                 <label className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 cursor-pointer select-none">
@@ -2190,13 +2321,15 @@ export default function SovereignTimeMachineIamStudio({
                     <span>
                       {remediatingId
                         ? 'Applying Approved Change...'
-                        : ' Approve & Execute IAM Change'}
+                        : '✓ Approve & Execute IAM Change'}
                     </span>
                   </button>
                 </div>
               </div>
-            </div>)}
-        </div>)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* =====================================================================
           TAB 2: CRYPTOGRAPHIC CLOUD STATE TIME-MACHINE & GITOPS DRIFT RADAR
@@ -2246,7 +2379,7 @@ export default function SovereignTimeMachineIamStudio({
                   }`}
                 >
                   {tmData?.inSync
-                    ? ' ZERO OUT-OF-BAND DRIFT (100% MERKLE MATCH)'
+                    ? '✓ ZERO OUT-OF-BAND DRIFT (100% MERKLE MATCH)'
                     : `${tmData?.drifts?.length || 0} CONFIGURATION DRIFTS DETECTED`}
                 </span>
               </div>
@@ -2305,7 +2438,8 @@ export default function SovereignTimeMachineIamStudio({
                     className="flex-1 px-2.5 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-mono font-bold cursor-pointer"
                   >
                     1-Tap Heal Drift to Baseline
-                  </button>)}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -2336,9 +2470,11 @@ export default function SovereignTimeMachineIamStudio({
                     }`}
                   >
                     {snap.merkleRootShort} · {snap.label}
-                  </button>);
+                  </button>
+                );
               })}
-            </div>)}
+            </div>
+          )}
 
           {/* Side-by-Side Drift Diff Cards */}
           {tmData?.drifts?.length > 0 ? (
@@ -2368,8 +2504,10 @@ export default function SovereignTimeMachineIamStudio({
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-zinc-900 text-zinc-200 border border-zinc-700 text-[11px] font-mono cursor-pointer hover:bg-zinc-800"
                     >
                       {copiedText === d.healCli ? (
-                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />) : (
-                        <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />)}
+                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                      ) : (
+                        <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                      )}
                       <span>Copy Rollback CLI</span>
                     </button>
                   </div>
@@ -2377,7 +2515,7 @@ export default function SovereignTimeMachineIamStudio({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
                     <div className="p-2.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
                       <div className="text-[10px] text-emerald-400 font-bold mb-0.5">
-                         SIGNED SNAPSHOT BASELINE (EXPECTED)
+                        ✓ SIGNED SNAPSHOT BASELINE (EXPECTED)
                       </div>
                       <div className="break-all">{d.beforeValue}</div>
                     </div>
@@ -2388,8 +2526,10 @@ export default function SovereignTimeMachineIamStudio({
                       <div className="break-all">{d.afterValue}</div>
                     </div>
                   </div>
-                </div>))}
-            </div>) : (
+                </div>
+              ))}
+            </div>
+          ) : (
             <div className="p-6 rounded-[10px] border border-emerald-500/30 bg-emerald-950/10 text-center space-y-2">
               <ShieldCheck className="w-8 h-8 text-zinc-500 dark:text-zinc-400 mx-auto" />
               <div className="text-sm font-extrabold text-emerald-400">
@@ -2398,8 +2538,10 @@ export default function SovereignTimeMachineIamStudio({
               <p className="text-xs text-zinc-400 max-w-xl mx-auto">
                 Every Compute VM, Cloud Run service, Cloud Storage bucket, BigQuery dataset, VPC Firewall rule, and IAM binding matches the signed SHA-256 baseline snapshot (`{tmData?.baselineSnapshot?.merkleRootShort}`). Click **"Inject Out-of-Band Drift Drill"** above to test live drift detection and rollback!
               </p>
-            </div>)}
-        </div>)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* =====================================================================
           TAB 3: SOVEREIGN SECRET MANAGER, KMS & CLOUD ARMOR WAF STUDIO
@@ -2425,7 +2567,9 @@ export default function SovereignTimeMachineIamStudio({
               Math.round(
                 ((fin.totalEnabledVersions || 0) /
                   (fin.freeTierActiveVersionsLimit || 6)) *
-                  100));
+                  100
+              )
+            );
 
             return (
               <div
@@ -2458,9 +2602,10 @@ export default function SovereignTimeMachineIamStudio({
                       }`}
                     >
                       {fin.withinFreeTier
-                        ? ` 100% INSIDE FREE TIER (${fin.totalEnabledVersions} / ${fin.freeTierActiveVersionsLimit} Free Active Versions Used · $0.00/mo)`
-                        : ` PAID TIER ACTIVE (${fin.totalEnabledVersions} Active Versions · ${fin.billableActiveVersions} Billable @ $0.06 = ~$${Number(
-                            fin.estimatedMonthlyUsd || 0).toFixed(2)}/mo)`}
+                        ? `🎁 100% INSIDE FREE TIER (${fin.totalEnabledVersions} / ${fin.freeTierActiveVersionsLimit} Free Active Versions Used · $0.00/mo)`
+                        : `💳 PAID TIER ACTIVE (${fin.totalEnabledVersions} Active Versions · ${fin.billableActiveVersions} Billable @ $0.06 = ~$${Number(
+                            fin.estimatedMonthlyUsd || 0
+                          ).toFixed(2)}/mo)`}
                     </span>
                   </div>
                 </div>
@@ -2541,7 +2686,8 @@ export default function SovereignTimeMachineIamStudio({
                     </div>
                   </div>
                 </div>
-              </div>);
+              </div>
+            );
           })()}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2604,7 +2750,8 @@ export default function SovereignTimeMachineIamStudio({
                       <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
                         {bp.desc}
                       </div>
-                    </button>))}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -2725,7 +2872,8 @@ export default function SovereignTimeMachineIamStudio({
                   {(vaultData?.serviceAccounts || []).map((sa) => (
                     <option key={sa.email} value={sa.email}>
                       {sa.email} ({sa.displayName})
-                    </option>))}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -2766,7 +2914,7 @@ export default function SovereignTimeMachineIamStudio({
                   <div className="font-mono font-extrabold text-red-600 dark:text-red-400 flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>
-                      ️ CRITICAL: Does Delete or Destroy Put a Secret Back into Plaintext? NO — It Disappears Forever!
+                      ⚠️ CRITICAL: Does Delete or Destroy Put a Secret Back into Plaintext? NO — It Disappears Forever!
                     </span>
                   </div>
                   <p className="text-zinc-700 dark:text-zinc-300 text-[10.5px]">
@@ -2783,7 +2931,7 @@ export default function SovereignTimeMachineIamStudio({
                     </div>
                     <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/35">
                       <div className="font-extrabold text-red-600 dark:text-red-400">
-                         2. DESTROY Version ($0/mo · Permanent)
+                        🔥 2. DESTROY Version ($0/mo · Permanent)
                       </div>
                       <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
                         Cryptographically shreds that version&apos;s payload <strong>forever</strong> (cannot be undone). <strong>It will NOT return to plaintext</strong>—the value is gone!
@@ -2791,7 +2939,7 @@ export default function SovereignTimeMachineIamStudio({
                     </div>
                     <div className="p-2 rounded bg-white/85 dark:bg-zinc-950/80 border border-red-500/45">
                       <div className="font-extrabold text-red-600 dark:text-red-400">
-                        ️ 3. DELETE Secret (Permanent)
+                        🗑️ 3. DELETE Secret (Permanent)
                       </div>
                       <div className="text-zinc-600 dark:text-zinc-400 mt-0.5">
                         Erases the entire secret &amp; all versions forever. Any Cloud Run service still referencing <code className="font-bold">secretKeyRef</code> will <strong>fail to start</strong> until you update or remove that env var!
@@ -2807,7 +2955,7 @@ export default function SovereignTimeMachineIamStudio({
                       <span className="font-extrabold text-red-400 flex items-center gap-1.5">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
                         <span>
-                           LIVE BROKEN `secretKeyRef` RADAR ({vaultData.brokenSecretReferences.length} Cloud Run Binding(s) at Crash Risk!)
+                          🚨 LIVE BROKEN `secretKeyRef` RADAR ({vaultData.brokenSecretReferences.length} Cloud Run Binding(s) at Crash Risk!)
                         </span>
                       </span>
                       <span className="text-[10px] text-red-300">
@@ -2839,7 +2987,8 @@ export default function SovereignTimeMachineIamStudio({
                                 className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
                               >
                                 🩹 Heal: Point to `latest`
-                              </button>)}
+                              </button>
+                            )}
                             <button
                               type="button"
                               disabled={Boolean(secretActionBusy)}
@@ -2848,12 +2997,14 @@ export default function SovereignTimeMachineIamStudio({
                               }
                               className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-extrabold cursor-pointer"
                             >
-                               Unbind Dead `secretKeyRef`
+                              🧹 Unbind Dead `secretKeyRef`
                             </button>
                           </div>
-                        </div>))}
+                        </div>
+                      ))}
                     </div>
-                  </div>)}
+                  </div>
+                )}
 
                 {vaultData?.secrets?.length > 0 ? (
                   <div className="space-y-2.5 max-h-[540px] overflow-y-auto pr-1">
@@ -2898,12 +3049,14 @@ export default function SovereignTimeMachineIamStudio({
                                 </span>
                                 {mountedList.length > 0 && (
                                   <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold">
-                                     Mounted by {mountedList.length} Cloud Run Ref(s)
-                                  </span>)}
+                                    🚀 Mounted by {mountedList.length} Cloud Run Ref(s)
+                                  </span>
+                                )}
                                 {s.rotationSchedule?.rotationPeriod && (
                                   <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold">
                                     ⏱️ Auto-Rotate Active
-                                  </span>)}
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[10px] text-zinc-500 mt-1 flex flex-wrap items-center gap-2">
                                 <span>
@@ -2915,7 +3068,8 @@ export default function SovereignTimeMachineIamStudio({
                                 {s.accessorMembers?.length > 0 && (
                                   <span className="text-emerald-600 dark:text-emerald-400">
                                     · IAM Accessors: {s.accessorMembers.length}
-                                  </span>)}
+                                  </span>
+                                )}
                               </div>
                             </div>
 
@@ -2924,7 +3078,8 @@ export default function SovereignTimeMachineIamStudio({
                                 type="button"
                                 onClick={() =>
                                   setExpandedSecretId(
-                                    isExpanded ? null : s.secretId)
+                                    isExpanded ? null : s.secretId
+                                  )
                                 }
                                 className={`px-2.5 py-1 rounded-[7px] text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
                                   isExpanded
@@ -2934,7 +3089,7 @@ export default function SovereignTimeMachineIamStudio({
                               >
                                 {isExpanded
                                   ? 'Hide Lifecycle Controls ▲'
-                                  : ' Rotate / Versions / IAM ▼'}
+                                  : '🔄 Rotate / Versions / IAM ▼'}
                               </button>
 
                               <button
@@ -3002,7 +3157,7 @@ export default function SovereignTimeMachineIamStudio({
                                   >
                                     {rotateBusy
                                       ? 'Rotating...'
-                                      : ' Rotate & Mint New Version'}
+                                      : '🔄 Rotate & Mint New Version'}
                                   </button>
                                 </div>
                               </div>
@@ -3053,8 +3208,10 @@ export default function SovereignTimeMachineIamStudio({
                                             {v.createTime && (
                                               <span className="text-[10px] text-zinc-500">
                                                 {new Date(
-                                                  v.createTime).toLocaleDateString()}
-                                              </span>)}
+                                                  v.createTime
+                                                ).toLocaleDateString()}
+                                              </span>
+                                            )}
                                           </div>
 
                                           {!isDestroyed && (
@@ -3063,56 +3220,68 @@ export default function SovereignTimeMachineIamStudio({
                                                 <button
                                                   type="button"
                                                   disabled={Boolean(
-                                                    secretActionBusy)}
+                                                    secretActionBusy
+                                                  )}
                                                   onClick={() =>
                                                     handleToggleSecretVersionState(
                                                       s.secretId,
                                                       v.version,
-                                                      'DISABLE')
+                                                      'DISABLE'
+                                                    )
                                                   }
                                                   title={`Disable version ${v.version} ($0.00/mo). The encrypted secret is kept safe and can be re-enabled anytime; it does NOT revert to plaintext.`}
                                                   className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer"
                                                 >
                                                   ⏸ Disable ($0/mo)
-                                                </button>) : (
+                                                </button>
+                                              ) : (
                                                 <button
                                                   type="button"
                                                   disabled={Boolean(
-                                                    secretActionBusy)}
+                                                    secretActionBusy
+                                                  )}
                                                   onClick={() =>
                                                     handleToggleSecretVersionState(
                                                       s.secretId,
                                                       v.version,
-                                                      'ENABLE')
+                                                      'ENABLE'
+                                                    )
                                                   }
                                                   title={`Re-enable version ${v.version} for live workload access`}
                                                   className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
                                                 >
                                                   ▶ Enable
-                                                </button>)}
+                                                </button>
+                                              )}
 
                                               <button
                                                 type="button"
                                                 disabled={Boolean(
-                                                  secretActionBusy)}
+                                                  secretActionBusy
+                                                )}
                                                 onClick={() =>
                                                   handleToggleSecretVersionState(
                                                     s.secretId,
                                                     v.version,
-                                                    'DESTROY')
+                                                    'DESTROY'
+                                                  )
                                                 }
                                                 title={`IRREVERSIBLE: Permanently shreds version ${v.version}'s cryptographic payload ($0.00/mo). It will disappear forever and will NOT revert back to plaintext!`}
                                                 className="px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer"
                                               >
-                                                 Destroy (Disappears Forever)
+                                                🔥 Destroy (Disappears Forever)
                                               </button>
-                                            </div>)}
-                                        </div>);
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
                                     })}
-                                  </div>) : (
+                                  </div>
+                                ) : (
                                   <div className="text-[11px] font-mono text-zinc-500">
                                     No versions minted yet. Use Rotate above to mint Version 1.
-                                  </div>)}
+                                  </div>
+                                )}
                               </div>
 
                               {/* 3. Resource-Scoped IAM Secret Accessor Binding */}
@@ -3133,9 +3302,11 @@ export default function SovereignTimeMachineIamStudio({
                                         key={mem}
                                         className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono"
                                       >
-                                         {mem}
-                                      </span>))}
-                                  </div>)}
+                                        ✓ {mem}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
 
                                 <div className="flex flex-col sm:flex-row gap-2">
                                   <select
@@ -3156,7 +3327,9 @@ export default function SovereignTimeMachineIamStudio({
                                       (sa) => (
                                         <option key={sa.email} value={sa.email}>
                                           {sa.email} ({sa.displayName})
-                                        </option>))}
+                                        </option>
+                                      )
+                                    )}
                                   </select>
                                   <button
                                     type="button"
@@ -3168,7 +3341,7 @@ export default function SovereignTimeMachineIamStudio({
                                   >
                                     {grantBusy
                                       ? 'Binding IAM...'
-                                      : ' Grant secretAccessor'}
+                                      : '🔑 Grant secretAccessor'}
                                   </button>
                                 </div>
                               </div>
@@ -3195,7 +3368,8 @@ export default function SovereignTimeMachineIamStudio({
                                           s.rotationSchedule.nextRotationTime
                                             ? new Date(
                                                 s.rotationSchedule
-                                                  .nextRotationTime).toLocaleDateString()
+                                                  .nextRotationTime
+                                              ).toLocaleDateString()
                                             : 'Active'
                                         } (Re-Sync 30d)`
                                       : '⏱️ Enable $0/mo 30-Day Auto-Rotation'}
@@ -3210,8 +3384,9 @@ export default function SovereignTimeMachineIamStudio({
                                           key={`${mw.serviceName}-${mw.envKey}-${mIdx}`}
                                           className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-200 border border-purple-500/30 text-[10px] font-mono"
                                         >
-                                           {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
-                                        </span>))}
+                                          🚀 {mw.serviceName} ({mw.region}) → {mw.envKey}@{mw.version}
+                                        </span>
+                                      ))}
                                     </div>
                                     <button
                                       type="button"
@@ -3219,26 +3394,33 @@ export default function SovereignTimeMachineIamStudio({
                                       onClick={() =>
                                         handleReloadMountedWorkloads(
                                           s.secretId,
-                                          mountedList)
+                                          mountedList
+                                        )
                                       }
                                       className="w-full py-1.5 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-[10.5px] font-mono font-bold cursor-pointer"
                                     >
                                       {reloadBusy
                                         ? 'Rolling Fresh Cloud Run Revision(s)...'
-                                        : ` 1-Click Hot-Reload ${mountedList.length} Mounted Cloud Run Service(s) to "${s.secretId}@latest"`}
+                                        : `🚀 1-Click Hot-Reload ${mountedList.length} Mounted Cloud Run Service(s) to "${s.secretId}@latest"`}
                                     </button>
-                                  </div>) : (
+                                  </div>
+                                ) : (
                                   <div className="text-[10.5px] font-mono text-zinc-500">
                                     No Cloud Run services currently mount `{s.secretId}` via `secretKeyRef`. Seal an env var in the Cloud Run Leak Surgeon to link it automatically.
-                                  </div>)}
+                                  </div>
+                                )}
                               </div>
-                            </div>)}
-                        </div>);
+                            </div>
+                          )}
+                        </div>
+                      );
                     })}
-                  </div>) : (
+                  </div>
+                ) : (
                   <div className="text-xs text-zinc-500 font-mono py-4">
                     No secrets provisioned yet in `{projectId}`. Use the Sovereign Secret Provisioner on the left (or the 1-Click Leak Surgeon in Cloud Run) to seal up to **6 Active Secret Versions for $0.00/mo**!
-                  </div>)}
+                  </div>
+                )}
               </div>
 
               {/* Cloud Armor OWASP Top-10 & Adaptive DDoS Rate-Limit Synthesizer */}
@@ -3264,7 +3446,8 @@ gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-
                   onClick={() =>
                     handleCopy(
                       `gcloud compute security-policies create cloudpulse-zero-trust-waf --project=${projectId} && gcloud compute security-policies rules create 1000 --security-policy=cloudpulse-zero-trust-waf --expression="evaluatePreconfiguredWaf('sqli-v33-stable') || evaluatePreconfiguredWaf('xss-v33-stable')" --action=deny-403 --project=${projectId} && gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-zero-trust-waf --src-ip-ranges="*" --action=throttle --rate-limit-threshold-count=100 --rate-limit-threshold-interval-sec=60 --conform-action=allow --exceed-action=deny-429 --enforce-on-key=IP --project=${projectId}`,
-                      'Cloud Armor WAF policy CLI')
+                      'Cloud Armor WAF policy CLI'
+                    )
                   }
                   className="w-full py-1.5 rounded-[8px] border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-mono font-bold cursor-pointer"
                 >
@@ -3273,6 +3456,8 @@ gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-
               </div>
             </div>
           </div>
-        </div>)}
-    </div>);
+        </div>
+      )}
+    </div>
+  );
 }

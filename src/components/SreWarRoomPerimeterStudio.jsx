@@ -40,7 +40,8 @@ export default function SreWarRoomPerimeterStudio({
   const [perimeterBlueprint, setPerimeterBlueprint] =
     useState('sec-17a4-enclave');
   const [perimeterName, setPerimeterName] = useState(
-    'cloudpulse_zero_exfil_perimeter');
+    'cloudpulse_zero_exfil_perimeter'
+  );
   const [vipMode, setVipMode] = useState('RESTRICTED_VIP');
   const [restrictedServices, setRestrictedServices] = useState([
     'storage.googleapis.com',
@@ -74,12 +75,14 @@ export default function SreWarRoomPerimeterStudio({
     setLoadingWarRoom(true);
     try {
       const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/wave8/war-room`);
+        `/api/project/${encodeURIComponent(projectId)}/wave8/war-room`
+      );
       setWarRoomData(res.data);
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to load SRE Incident War-Room');
+          err.response?.data?.error || 'Failed to load SRE Incident War-Room'
+        );
       }
     } finally {
       setLoadingWarRoom(false);
@@ -91,13 +94,15 @@ export default function SreWarRoomPerimeterStudio({
     setLoadingVpcSc(true);
     try {
       const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/wave8/vpc-sc-perimeter`);
+        `/api/project/${encodeURIComponent(projectId)}/wave8/vpc-sc-perimeter`
+      );
       setVpcScData(res.data);
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            'Failed to inspect VPC Service Controls & Private Google Access');
+            'Failed to inspect VPC Service Controls & Private Google Access'
+        );
       }
     } finally {
       setLoadingVpcSc(false);
@@ -109,12 +114,14 @@ export default function SreWarRoomPerimeterStudio({
     setLoadingPubsub(true);
     try {
       const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/wave8/pubsub-dlq`);
+        `/api/project/${encodeURIComponent(projectId)}/wave8/pubsub-dlq`
+      );
       setPubsubData(res.data);
     } catch (err) {
       if (onTriggerToast) {
         onTriggerToast(
-          err.response?.data?.error || 'Failed to load Pub/Sub & DLQ inventory');
+          err.response?.data?.error || 'Failed to load Pub/Sub & DLQ inventory'
+        );
       }
     } finally {
       setLoadingPubsub(false);
@@ -132,8 +139,10 @@ export default function SreWarRoomPerimeterStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/wave8/war-room/incident-drill`,
-        { action });
+          projectId
+        )}/wave8/war-room/incident-drill`,
+        { action }
+      );
       if (onTriggerToast) onTriggerToast(res.data?.message || 'Drill updated');
       await fetchWarRoom();
     } catch (err) {
@@ -151,11 +160,14 @@ export default function SreWarRoomPerimeterStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/wave8/vpc-sc-perimeter/enable-pga`,
-        { region, subnetName });
+          projectId
+        )}/wave8/vpc-sc-perimeter/enable-pga`,
+        { region, subnetName }
+      );
       if (onTriggerToast) {
         onTriggerToast(
-          res.data?.message || `Enabled Private Google Access on ${subnetName}`);
+          res.data?.message || `Enabled Private Google Access on ${subnetName}`
+        );
       }
       await fetchVpcSc();
       if (onRefreshOverview) onRefreshOverview();
@@ -163,7 +175,8 @@ export default function SreWarRoomPerimeterStudio({
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            'Failed to enable Private Google Access on subnet');
+            'Failed to enable Private Google Access on subnet'
+        );
       }
     } finally {
       setEnablingPgaSubnet(null);
@@ -207,17 +220,20 @@ export default function SreWarRoomPerimeterStudio({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(
-          projectId)}/wave8/pubsub-dlq/provision-pair`,
+          projectId
+        )}/wave8/pubsub-dlq/provision-pair`,
         {
           topicName: topicName.trim(),
           maxDeliveryAttempts,
           ackDeadlineSeconds,
           enableExactlyOnceDelivery: exactlyOnce,
           retentionDays,
-        });
+        }
+      );
       if (onTriggerToast) {
         onTriggerToast(
-          res.data?.message || 'Provisioned Pub/Sub Topic + DLQ Pair');
+          res.data?.message || 'Provisioned Pub/Sub Topic + DLQ Pair'
+        );
       }
       setTopicName('');
       await fetchPubsubDlq();
@@ -225,7 +241,8 @@ export default function SreWarRoomPerimeterStudio({
       if (onTriggerToast) {
         onTriggerToast(
           err.response?.data?.error ||
-            'Failed to provision Pub/Sub Topic + DLQ Pair');
+            'Failed to provision Pub/Sub Topic + DLQ Pair'
+        );
       }
     } finally {
       setProvisioningPubsub(false);
@@ -336,7 +353,8 @@ export default function SreWarRoomPerimeterStudio({
                 >
                   {tab.badge}
                 </span>
-              </button>);
+              </button>
+            );
           })}
         </div>
       </div>
@@ -388,7 +406,7 @@ export default function SreWarRoomPerimeterStudio({
               <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
                 {slo?.fastBurn1h >= 14.4
                   ? 'P1 PAGE: Exhausts monthly budget in 50h!'
-                  : ' Below 14.4x P1 paging threshold'}
+                  : '✓ Below 14.4x P1 paging threshold'}
               </div>
             </div>
 
@@ -427,7 +445,8 @@ export default function SreWarRoomPerimeterStudio({
                     className="flex-1 px-2.5 py-1.5 rounded-[8px] bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold cursor-pointer"
                   >
                     Inject P1 Cascade Drill
-                  </button>) : (
+                  </button>
+                ) : (
                   <button
                     type="button"
                     disabled={drillBusy}
@@ -438,7 +457,8 @@ export default function SreWarRoomPerimeterStudio({
                     className="flex-1 px-2.5 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer"
                   >
                     Mitigate & Resolve P1
-                  </button>)}
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -465,7 +485,8 @@ export default function SreWarRoomPerimeterStudio({
                   onClick={() =>
                     handleCopy(
                       warRoomData.postmortemMarkdown,
-                      'Blameless Postmortem Markdown')
+                      'Blameless Postmortem Markdown'
+                    )
                   }
                   className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer"
                 >
@@ -475,7 +496,8 @@ export default function SreWarRoomPerimeterStudio({
               <pre className="text-[11px] font-mono text-zinc-200 whitespace-pre-wrap bg-zinc-900/90 p-3 rounded-[8px] border border-zinc-800 max-h-60 overflow-y-auto">
                 {warRoomData.postmortemMarkdown}
               </pre>
-            </div>)}
+            </div>
+          )}
 
           {/* Correlated LogRCA Root-Cause Clusters */}
           <div className="space-y-2.5">
@@ -520,8 +542,10 @@ export default function SreWarRoomPerimeterStudio({
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-zinc-900 text-zinc-100 border border-zinc-700 text-[11px] font-mono cursor-pointer hover:bg-zinc-800"
                     >
                       {copiedText === c.hotfixCli ? (
-                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />) : (
-                        <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />)}
+                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                      ) : (
+                        <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                      )}
                       <span>Copy 1-Tap Hotfix CLI</span>
                     </button>
                   </div>
@@ -529,10 +553,12 @@ export default function SreWarRoomPerimeterStudio({
                   <div className="text-xs font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-900/80 p-2 rounded border border-zinc-200 dark:border-zinc-800">
                     {c.sampleSummary}
                   </div>
-                </div>);
+                </div>
+              );
             })}
           </div>
-        </div>)}
+        </div>
+      )}
 
       {/* =====================================================================
           TAB 2: VPC SERVICE CONTROLS (VPC-SC) & PRIVATE GOOGLE ACCESS ARCHITECT
@@ -588,7 +614,8 @@ export default function SreWarRoomPerimeterStudio({
                   <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
                     {bp.desc}
                   </div>
-                </button>))}
+                </button>
+              ))}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -657,7 +684,8 @@ export default function SreWarRoomPerimeterStudio({
                             setRestrictedServices((prev) => [...prev, svc]);
                           } else {
                             setRestrictedServices((prev) =>
-                              prev.filter((s) => s !== svc));
+                              prev.filter((s) => s !== svc)
+                            );
                           }
                         }}
                       />
@@ -665,7 +693,8 @@ export default function SreWarRoomPerimeterStudio({
                         {!isPerimeterCustom ? '[LOCKED] ' : ''}
                         {svc}
                       </span>
-                    </label>);
+                    </label>
+                  );
                 })}
               </div>
             </div>
@@ -719,8 +748,9 @@ export default function SreWarRoomPerimeterStudio({
 
                     {sn.privateIpGoogleAccess ? (
                       <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
-                         PGA ENABLED
-                      </span>) : (
+                        ✓ PGA ENABLED
+                      </span>
+                    ) : (
                       <button
                         type="button"
                         disabled={busy}
@@ -729,12 +759,15 @@ export default function SreWarRoomPerimeterStudio({
                         className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
                       >
                         {busy ? 'Enabling...' : '1-Tap Enable PGA'}
-                      </button>)}
-                  </div>);
+                      </button>
+                    )}
+                  </div>
+                );
               })}
             </div>
           </div>
-        </div>)}
+        </div>
+      )}
 
       {/* =====================================================================
           TAB 3: EVENTARC & PUB/SUB DEAD-LETTER QUEUE (DLQ) AUTOPSY STUDIO
@@ -788,7 +821,8 @@ export default function SreWarRoomPerimeterStudio({
                   <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
                     {bp.desc}
                   </div>
-                </button>))}
+                </button>
+              ))}
             </div>
 
             <div>
@@ -818,7 +852,8 @@ export default function SreWarRoomPerimeterStudio({
                   value={maxDeliveryAttempts}
                   onChange={(e) =>
                     setMaxDeliveryAttempts(
-                      Math.max(5, Number(e.target.value || 5)))
+                      Math.max(5, Number(e.target.value || 5))
+                    )
                   }
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 disabled:opacity-60"
                 />
@@ -835,7 +870,8 @@ export default function SreWarRoomPerimeterStudio({
                   value={ackDeadlineSeconds}
                   onChange={(e) =>
                     setAckDeadlineSeconds(
-                      Math.max(10, Math.min(600, Number(e.target.value || 20))))
+                      Math.max(10, Math.min(600, Number(e.target.value || 20)))
+                    )
                   }
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 />
@@ -908,12 +944,17 @@ export default function SreWarRoomPerimeterStudio({
                     >
                       {s.hasDlqProtection ? 'DLQ SHIELDED' : 'NO DLQ'}
                     </span>
-                  </div>))}
-              </div>) : (
+                  </div>
+                ))}
+              </div>
+            ) : (
               <div className="text-xs font-mono text-zinc-500 py-6 text-center">
                 No Pub/Sub subscriptions found in `{projectId}`. Use the form on the left to provision a Topic + Dead-Letter Queue (`-dlq`) + Subscription triad in 1 tap!
-              </div>)}
+              </div>
+            )}
           </div>
-        </div>)}
-    </div>);
+        </div>
+      )}
+    </div>
+  );
 }
