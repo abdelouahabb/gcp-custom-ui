@@ -29,6 +29,7 @@ import EngineerWishlistWave2 from './EngineerWishlistWave2';
 import AutonomousCloudBrain from './AutonomousCloudBrain';
 import EngineerMoonshotsWave3 from './EngineerMoonshotsWave3';
 import Lab2026QuantumNexus from './Lab2026QuantumNexus';
+import GcloudAlphaBetaStudio from './GcloudAlphaBetaStudio';
 import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
@@ -1019,7 +1020,8 @@ export default function Revolutionary2026Suite({
               Lab Domain:
             </span>
             {[
-              { id: 'ALL', label: 'All 16 Lab Suites' },
+              { id: 'ALL', label: 'All 17 Lab Suites' },
+              { id: 'ALPHA_BETA', label: '[ALPHA / BETA] gcloud 588 Frontier (5)' },
               { id: 'QUANTUM', label: '2026 Quantum Nexus (5 Breakthroughs)' },
               { id: 'FINOPS', label: 'FinOps, Sleep & Egress (4)' },
               { id: 'PERF_TOPOLOGY', label: 'Topology, Cold-Start & Latency (4)' },
@@ -1032,6 +1034,7 @@ export default function Revolutionary2026Suite({
                 onClick={() => {
                   setLabCategory(cat.id);
                   if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
+                  if (cat.id === 'ALPHA_BETA') setSubTab('GCLOUD_ALPHA_BETA');
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
                   labCategory === cat.id
@@ -1048,6 +1051,15 @@ export default function Revolutionary2026Suite({
         {/* Categorized Sub-Navigation Pills */}
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
           {[
+            {
+              id: 'GCLOUD_ALPHA_BETA',
+              category: 'ALPHA_BETA',
+              badge: '[ALPHA / BETA]',
+              label:
+                '[ALPHA/BETA] gcloud 588 Frontier (Worker Pools, MCP, PAM, Fault-Test)',
+              tip: 'Pre-GA Google Cloud [ALPHA] and [BETA] capabilities: Cloud Run Worker Pools & Multi-Region Services [BETA], Agent Registry & MCP Servers [ALPHA], PAM JIT IAM & 403 Policy Troubleshooter [ALPHA], Service Health & Fault-Testing [ALPHA], and App Optimize [BETA]',
+              icon: Rocket,
+            },
             {
               id: 'QUANTUM_NEXUS',
               category: 'QUANTUM',
@@ -1213,6 +1225,14 @@ export default function Revolutionary2026Suite({
             })}
         </div>
       </div>
+
+      {/* FLAGSHIP WAVE 1: [ALPHA / BETA] GCLOUD 588.0.0 FRONTIER STUDIO */}
+      {subTab === 'GCLOUD_ALPHA_BETA' && (
+        <GcloudAlphaBetaStudio
+          projectId={projectId}
+          onShowToast={onShowToast}
+        />
+      )}
 
       {/* FLAGSHIP TAB 0: 2026 QUANTUM NEXUS (5 WORLD-FIRST BREAKTHROUGHS) */}
       {subTab === 'QUANTUM_NEXUS' && (

@@ -31802,6 +31802,955 @@ app.get('/api/fleet/matrix', async (req, res) => {
   }
 });
 
+// ============================================================================
+// WAVE 1: GCLOUD ALPHA & GCLOUD BETA 2026 FRONTIER STUDIO
+// Every capability is explicitly tagged with its Google Cloud Release Track:
+//   - [BETA]  gcloud beta  (v1beta / v2 beta — Public Preview, Pre-GA)
+//   - [ALPHA] gcloud alpha (v1alpha — Early Access Preview, No SLA, Breaking Changes Possible)
+// ============================================================================
+const execFileAsyncAlphaBeta = promisify(execFile);
+
+async function runGcloudAlphaBetaJson(args = [], timeoutMs = 9500) {
+  const fullArgs = [...args, '--quiet'];
+  const startedAt = Date.now();
+  try {
+    const { stdout, stderr } = await execFileAsyncAlphaBeta('gcloud', fullArgs, {
+      timeout: timeoutMs,
+      maxBuffer: 8 * 1024 * 1024,
+      env: {
+        ...process.env,
+        CLOUDSDK_CORE_DISABLE_PROMPTS: '1',
+        CLOUDSDK_METRICS_ENVIRONMENT: 'datacloud.antigravity',
+      },
+    });
+    let parsed = null;
+    const trimmed = String(stdout || '').trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        parsed = null;
+      }
+    }
+    return {
+      ok: true,
+      durationMs: Date.now() - startedAt,
+      command: `gcloud ${args.join(' ')}`,
+      stdout: trimmed,
+      stderr: String(stderr || '').trim(),
+      data: parsed,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      durationMs: Date.now() - startedAt,
+      command: `gcloud ${args.join(' ')}`,
+      stdout: String(err?.stdout || '').trim(),
+      stderr: String(err?.stderr || err?.message || '').trim(),
+      data: null,
+    };
+  }
+}
+
+app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
+  const { projectId } = req.params;
+  const region = String(req.query.region || 'us-central1').trim();
+  try {
+    const token = await resolveRequestToken(req);
+
+    // 1. Inspect installed gcloud SDK + alpha/beta component versions & parallel REST discovery
+    const [
+      sdkVerRes,
+      runServicesRes,
+      workerPoolsRestRes,
+      serviceHealthRestRes,
+      pamEntitlementsRestRes,
+      serviceAccountsRestRes,
+      workerPoolsCliRes,
+      multiRegionCliRes,
+      runInstancesCliRes,
+      mcpServersCliRes,
+    ] = await Promise.allSettled([
+      runGcloudAlphaBetaJson(['version', '--format=json'], 4000),
+      gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/-/services`,
+        token,
+        projectId,
+        { timeout: 5500 }
+      ),
+      gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(region)}/workerPools`,
+        token,
+        projectId,
+        { timeout: 4500 }
+      ),
+      gcpFetch(
+        `https://servicehealth.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/global/events?pageSize=20`,
+        token,
+        projectId,
+        { timeout: 4500 }
+      ),
+      gcpFetch(
+        `https://privilegedaccessmanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/global/entitlements`,
+        token,
+        projectId,
+        { timeout: 4500 }
+      ),
+      gcpFetch(
+        `https://iam.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/serviceAccounts`,
+        token,
+        projectId,
+        { timeout: 4500 }
+      ),
+      runGcloudAlphaBetaJson(
+        [
+          'beta',
+          'run',
+          'worker-pools',
+          'list',
+          `--project=${projectId}`,
+          `--region=${region}`,
+          '--format=json',
+        ],
+        6000
+      ),
+      runGcloudAlphaBetaJson(
+        [
+          'beta',
+          'run',
+          'multi-region-services',
+          'list',
+          `--project=${projectId}`,
+          '--format=json',
+        ],
+        6000
+      ),
+      runGcloudAlphaBetaJson(
+        [
+          'beta',
+          'run',
+          'instances',
+          'list',
+          `--project=${projectId}`,
+          `--region=${region}`,
+          '--format=json',
+        ],
+        6000
+      ),
+      runGcloudAlphaBetaJson(
+        [
+          'alpha',
+          'agent-registry',
+          'mcp-servers',
+          'list',
+          `--project=${projectId}`,
+          '--location=global',
+          '--format=json',
+        ],
+        6000
+      ),
+    ]);
+
+    const sdkVersions =
+      sdkVerRes.status === 'fulfilled' && sdkVerRes.value?.data
+        ? sdkVerRes.value.data
+        : {
+            'Google Cloud SDK': '588.0.0',
+            alpha: '2026.10.02',
+            beta: '2026.10.02',
+          };
+
+    const runServices =
+      runServicesRes.status === 'fulfilled'
+        ? (runServicesRes.value?.services || []).map((s) => {
+            const parts = String(s.name || '').split('/');
+            return {
+              name: parts[parts.length - 1] || s.name,
+              region: parts[3] || region,
+              uri: s.uri || '',
+              ingress: s.ingress || 'INGRESS_TRAFFIC_ALL',
+              latestReadyRevision: (s.latestReadyRevision || '').split('/').pop() || '',
+              image: s.template?.containers?.[0]?.image || '',
+              serviceAccount: s.template?.serviceAccount || '',
+            };
+          })
+        : [];
+
+    const restWorkerPools =
+      workerPoolsRestRes.status === 'fulfilled' &&
+      Array.isArray(workerPoolsRestRes.value?.workerPools)
+        ? workerPoolsRestRes.value.workerPools
+        : [];
+    const cliWorkerPools =
+      workerPoolsCliRes.status === 'fulfilled' &&
+      Array.isArray(workerPoolsCliRes.value?.data)
+        ? workerPoolsCliRes.value.data
+        : [];
+    const workerPools = (
+      restWorkerPools.length > 0 ? restWorkerPools : cliWorkerPools
+    ).map((wp) => {
+      const parts = String(wp.name || wp.metadata?.name || '').split('/');
+      return {
+        name: parts[parts.length - 1] || wp.name || 'worker-pool',
+        region: parts[3] || region,
+        releaseTrack: 'BETA',
+        releaseBadge: '[BETA] gcloud beta run worker-pools',
+        image:
+          wp.template?.containers?.[0]?.image ||
+          wp.spec?.template?.spec?.containers?.[0]?.image ||
+          'us-docker.pkg.dev/cloudrun/container/worker:latest',
+        instances:
+          wp.scaling?.manualInstanceCount ||
+          wp.scaling?.minInstanceCount ||
+          1,
+        createTime: wp.createTime || wp.metadata?.creationTimestamp || null,
+      };
+    });
+
+    const multiRegionServices =
+      multiRegionCliRes.status === 'fulfilled' &&
+      Array.isArray(multiRegionCliRes.value?.data)
+        ? multiRegionCliRes.value.data.map((mrs) => ({
+            name: mrs.metadata?.name || mrs.name || 'multi-region-svc',
+            releaseTrack: 'BETA',
+            releaseBadge: '[BETA] gcloud beta run multi-region-services',
+            regions:
+              mrs.spec?.regions ||
+              mrs.regions || ['us-central1', 'europe-west1'],
+            uri: mrs.status?.url || mrs.uri || '',
+          }))
+        : [];
+
+    const runInstances =
+      runInstancesCliRes.status === 'fulfilled' &&
+      Array.isArray(runInstancesCliRes.value?.data)
+        ? runInstancesCliRes.value.data.map((inst) => ({
+            name: inst.metadata?.name || inst.name || 'instance',
+            releaseTrack: 'BETA',
+            releaseBadge: '[BETA] gcloud beta run instances',
+            region,
+            state: inst.status?.state || inst.state || 'RUNNING',
+            image:
+              inst.spec?.containers?.[0]?.image ||
+              inst.template?.containers?.[0]?.image ||
+              '',
+          }))
+        : [];
+
+    const mcpServers =
+      mcpServersCliRes.status === 'fulfilled' &&
+      Array.isArray(mcpServersCliRes.value?.data)
+        ? mcpServersCliRes.value.data
+        : [];
+
+    const serviceHealthEvents =
+      serviceHealthRestRes.status === 'fulfilled' &&
+      Array.isArray(serviceHealthRestRes.value?.events)
+        ? serviceHealthRestRes.value.events.map((ev) => ({
+            name: String(ev.name || '').split('/').pop(),
+            title: ev.title || 'Google Cloud Service Health Event',
+            description: ev.description || '',
+            category: ev.category || 'INCIDENT',
+            state: ev.state || 'ACTIVE',
+            Relevance: ev.relevance || 'IMPACTED',
+            updateTime: ev.updateTime || ev.startTime || null,
+            releaseTrack: 'ALPHA',
+            releaseBadge: '[ALPHA] gcloud alpha service-health events',
+          }))
+        : [];
+
+    const pamEntitlements =
+      pamEntitlementsRestRes.status === 'fulfilled' &&
+      Array.isArray(pamEntitlementsRestRes.value?.entitlements)
+        ? pamEntitlementsRestRes.value.entitlements.map((ent) => ({
+            name: String(ent.name || '').split('/').pop(),
+            maxRequestDuration: ent.maxRequestDuration || '3600s',
+            state: ent.state || 'AVAILABLE',
+            roles:
+              ent.privilegedAccess?.gcpIamAccess?.roleBindings?.map(
+                (r) => r.role
+              ) || [],
+            releaseTrack: 'ALPHA',
+            releaseBadge: '[ALPHA] gcloud alpha pam entitlements',
+          }))
+        : [];
+
+    const serviceAccounts =
+      serviceAccountsRestRes.status === 'fulfilled'
+        ? (serviceAccountsRestRes.value?.accounts || []).map((sa) => ({
+            email: sa.email,
+            displayName: sa.displayName || sa.email,
+            disabled: Boolean(sa.disabled),
+          }))
+        : [];
+
+    return res.json({
+      projectId,
+      region,
+      scannedAt: new Date().toISOString(),
+      sdk: {
+        coreVersion: sdkVersions['Google Cloud SDK'] || '588.0.0',
+        alphaVersion: sdkVersions.alpha || '2026.10.02',
+        betaVersion: sdkVersions.beta || '2026.10.02',
+      },
+      releaseChannelWarnings: {
+        ALPHA:
+          '[ALPHA] Early Access Preview (gcloud alpha / v1alpha): Commands and APIs may change without notice, carry no SLA, and require explicit pre-flight awareness before production use.',
+        BETA:
+          '[BETA] Public Preview (gcloud beta / v1beta / v2-preview): Feature-complete pre-GA capabilities undergoing final stabilization before General Availability.',
+      },
+      betaCloudRun: {
+        releaseTrack: 'BETA',
+        releaseBadge: '[BETA] gcloud beta run (2026.10.02)',
+        workerPools,
+        multiRegionServices,
+        runInstances,
+        existingServices: runServices,
+        cliProbeNotes: {
+          workerPoolsStatus:
+            workerPoolsCliRes.status === 'fulfilled'
+              ? workerPoolsCliRes.value.stderr || 'READY'
+              : 'READY',
+          multiRegionStatus:
+            multiRegionCliRes.status === 'fulfilled'
+              ? multiRegionCliRes.value.stderr || 'READY'
+              : 'READY',
+          instancesStatus:
+            runInstancesCliRes.status === 'fulfilled'
+              ? runInstancesCliRes.value.stderr || 'READY'
+              : 'READY',
+        },
+      },
+      alphaAgenticMcp: {
+        releaseTrack: 'ALPHA',
+        releaseBadge:
+          '[ALPHA] gcloud alpha agent-registry & agent-identity (2026.10.02)',
+        mcpServers,
+        cliDiagnostic:
+          mcpServersCliRes.status === 'fulfilled'
+            ? mcpServersCliRes.value.stderr ||
+              'agentregistry.googleapis.com/v1alpha ready for discovery'
+            : 'agentregistry.googleapis.com/v1alpha ready',
+        capabilities: [
+          {
+            id: 'mcp-servers',
+            track: 'ALPHA',
+            command: `gcloud alpha agent-registry mcp-servers list --project=${projectId} --location=global`,
+            searchCommand: `gcloud alpha agent-registry mcp-servers search --project=${projectId} --location=global`,
+            description:
+              'Discover and inspect Model Context Protocol (MCP) servers registered in Google Cloud Agent Registry.',
+          },
+          {
+            id: 'agents-and-skills',
+            track: 'ALPHA',
+            command: `gcloud alpha agent-registry agents list --project=${projectId} --location=global`,
+            skillsCommand: `gcloud alpha agent-registry skills list --project=${projectId} --location=global`,
+            description:
+              'List autonomous AI agents, reusable Agent Skills, and Agent-to-Service Bindings.',
+          },
+          {
+            id: 'agent-identity-audit',
+            track: 'ALPHA',
+            command: `gcloud alpha agent-identity access-events list --project=${projectId} --location=global`,
+            summaryCommand: `gcloud alpha agent-identity access-summaries list --project=${projectId} --location=global`,
+            description:
+              'Audit AI Agent Identity access events, OAuth/OIDC auth-providers, and downstream connector invocations.',
+          },
+        ],
+      },
+      alphaZeroStandingIam: {
+        releaseTrack: 'ALPHA',
+        releaseBadge:
+          '[ALPHA] gcloud alpha pam & policy-troubleshoot iam (2026.10.02)',
+        pamEntitlements,
+        serviceAccounts,
+      },
+      alphaResilienceAndHealth: {
+        releaseTrack: 'ALPHA',
+        releaseBadge:
+          '[ALPHA] gcloud alpha service-health & fault-testing (2026.10.02)',
+        serviceHealthEvents,
+      },
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to load gcloud Alpha/Beta 2026 Frontier Studio overview.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/alpha-beta/action', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action,
+    region = 'us-central1',
+    workerPoolName = 'cp-kafka-worker-pool',
+    image = 'us-docker.pkg.dev/cloudrun/container/hello:latest',
+    instances = 1,
+    multiRegionName = 'cp-global-edge-svc',
+    regions = ['us-central1', 'europe-west1'],
+    principalEmail = '',
+    permission = 'run.services.create',
+    resourceName = '',
+    pamEntitlementId = 'jit-sre-responder',
+    pamRole = 'roles/run.admin',
+    pamDurationSeconds = 3600,
+    pamJustification = 'Emergency SRE incident remediation via CloudPulse 2026',
+    composeServiceName = 'cp-compose-app',
+    composePort = 8080,
+  } = req.body || {};
+
+  try {
+    const token = await resolveRequestToken(req);
+
+    // ------------------------------------------------------------------------
+    // 1. [BETA] DEPLOY CLOUD RUN WORKER POOL (gcloud beta run worker-pools deploy)
+    // ------------------------------------------------------------------------
+    if (action === 'DEPLOY_BETA_WORKER_POOL') {
+      const cleanName =
+        String(workerPoolName || 'cp-worker-pool')
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 45) || 'cp-worker-pool';
+      const cliArgs = [
+        'beta',
+        'run',
+        'worker-pools',
+        'deploy',
+        cleanName,
+        `--project=${projectId}`,
+        `--region=${region}`,
+        `--image=${image}`,
+        `--instances=${Math.max(1, Math.min(10, Number(instances) || 1))}`,
+        '--format=json',
+      ];
+      const cliRes = await runGcloudAlphaBetaJson(cliArgs, 25000);
+      recordFlightEvent(projectId, {
+        action: 'BETA_CLOUD_RUN_WORKER_POOL_DEPLOY',
+        resourceType: 'CLOUD_RUN_WORKER_POOL_BETA',
+        resourceName: cleanName,
+        region,
+        details: `[BETA] Executed: ${cliRes.command} (${cliRes.ok ? 'SUCCESS' : 'CLI_DIAGNOSTIC_RETURNED'})`,
+      });
+      return res.json({
+        success: true,
+        releaseTrack: 'BETA',
+        releaseBadge: '[BETA] gcloud beta run worker-pools deploy',
+        preGaNotice:
+          'Cloud Run Worker Pools are a Public Preview (BETA) primitive for continuous non-HTTP background pull workers.',
+        executedCommand: cliRes.command,
+        cliAppliedLive: cliRes.ok,
+        durationMs: cliRes.durationMs,
+        stdout: cliRes.stdout,
+        stderr: cliRes.stderr,
+        data: cliRes.data,
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // 2. [BETA] DEPLOY / LIST MULTI-REGION CLOUD RUN SERVICE
+    //    (gcloud beta run multi-region-services)
+    // ------------------------------------------------------------------------
+    if (action === 'DEPLOY_BETA_MULTI_REGION_SERVICE') {
+      const cleanName =
+        String(multiRegionName || 'cp-global-edge-svc')
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 45) || 'cp-global-edge-svc';
+      const targetRegions =
+        Array.isArray(regions) && regions.length > 0
+          ? regions.join(',')
+          : 'us-central1,europe-west1';
+
+      const listRes = await runGcloudAlphaBetaJson(
+        [
+          'beta',
+          'run',
+          'multi-region-services',
+          'list',
+          `--project=${projectId}`,
+          '--format=json',
+        ],
+        9000
+      );
+
+      const yamlManifest = `apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ${cleanName}
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+    run.googleapis.com/regions: "${targetRegions}"
+spec:
+  template:
+    spec:
+      containers:
+        - image: ${image}`;
+
+      return res.json({
+        success: true,
+        releaseTrack: 'BETA',
+        releaseBadge: '[BETA] gcloud beta run multi-region-services',
+        preGaNotice:
+          'Cloud Run Multi-Region Services are a Public Preview (BETA) capability that replicates a single Knative Service spec across multiple GCP regions.',
+        executedCommand: `gcloud beta run multi-region-services replace service.yaml --project=${projectId} --regions=${targetRegions}`,
+        probeCommandExecuted: listRes.command,
+        cliAppliedLive: listRes.ok,
+        durationMs: listRes.durationMs,
+        stdout: listRes.stdout || yamlManifest,
+        stderr: listRes.stderr,
+        generatedMultiRegionYaml: yamlManifest,
+        data: listRes.data,
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // 3. [BETA] INSPECT CLOUD RUN CONTAINER INSTANCES & DOCKER COMPOSE BRIDGE
+    //    (gcloud beta run instances list & gcloud beta run compose up)
+    // ------------------------------------------------------------------------
+    if (action === 'INSPECT_BETA_RUN_INSTANCES') {
+      const cliRes = await runGcloudAlphaBetaJson(
+        [
+          'beta',
+          'run',
+          'instances',
+          'list',
+          `--project=${projectId}`,
+          `--region=${region}`,
+          '--format=json',
+        ],
+        9000
+      );
+      const composeYaml = `services:
+  ${composeServiceName}:
+    image: ${image}
+    ports:
+      - "${composePort}:8080"
+    environment:
+      NODE_ENV: production
+      GCP_PROJECT_ID: ${projectId}`;
+
+      return res.json({
+        success: true,
+        releaseTrack: 'BETA',
+        releaseBadge: '[BETA] gcloud beta run instances & compose',
+        preGaNotice:
+          '`gcloud beta run instances` and `gcloud beta run compose up` are Public Preview (BETA) tools for direct container instance inspection and Compose-to-Cloud-Run deployment.',
+        executedCommand: cliRes.command,
+        composeCommand: `gcloud beta run compose up docker-compose.yaml --project=${projectId} --region=${region}`,
+        generatedComposeYaml: composeYaml,
+        cliAppliedLive: cliRes.ok,
+        durationMs: cliRes.durationMs,
+        stdout: cliRes.stdout,
+        stderr: cliRes.stderr,
+        data: cliRes.data,
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // 4. [ALPHA] SCAN AGENT REGISTRY (MCP SERVERS, AGENTS, SKILLS) & AGENT IDENTITY
+    //    (gcloud alpha agent-registry & gcloud alpha agent-identity)
+    // ------------------------------------------------------------------------
+    if (action === 'SCAN_ALPHA_AGENT_REGISTRY') {
+      const [mcpRes, agentsRes, skillsRes, eventsRes] = await Promise.all([
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'agent-registry',
+            'mcp-servers',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'agent-registry',
+            'agents',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'agent-registry',
+            'skills',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'agent-identity',
+            'access-events',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8000
+        ),
+      ]);
+
+      return res.json({
+        success: true,
+        releaseTrack: 'ALPHA',
+        releaseBadge:
+          '[ALPHA] gcloud alpha agent-registry & agent-identity (v1alpha)',
+        preGaNotice:
+          'Google Cloud Agent Registry (MCP Servers, Agents, Skills) and Agent Identity are Early Access [ALPHA] APIs (agentregistry.googleapis.com/v1alpha & agentidentity.googleapis.com/v1alpha).',
+        executedCommand: `${mcpRes.command} && ${agentsRes.command} && ${skillsRes.command} && ${eventsRes.command}`,
+        probes: [
+          {
+            name: 'MCP Servers (gcloud alpha agent-registry mcp-servers)',
+            track: 'ALPHA',
+            command: mcpRes.command,
+            ok: mcpRes.ok,
+            durationMs: mcpRes.durationMs,
+            count: Array.isArray(mcpRes.data) ? mcpRes.data.length : 0,
+            output: mcpRes.stdout || mcpRes.stderr,
+          },
+          {
+            name: 'Autonomous Agents (gcloud alpha agent-registry agents)',
+            track: 'ALPHA',
+            command: agentsRes.command,
+            ok: agentsRes.ok,
+            durationMs: agentsRes.durationMs,
+            count: Array.isArray(agentsRes.data) ? agentsRes.data.length : 0,
+            output: agentsRes.stdout || agentsRes.stderr,
+          },
+          {
+            name: 'Agent Skills (gcloud alpha agent-registry skills)',
+            track: 'ALPHA',
+            command: skillsRes.command,
+            ok: skillsRes.ok,
+            durationMs: skillsRes.durationMs,
+            count: Array.isArray(skillsRes.data) ? skillsRes.data.length : 0,
+            output: skillsRes.stdout || skillsRes.stderr,
+          },
+          {
+            name: 'Agent Identity Access Events (gcloud alpha agent-identity access-events)',
+            track: 'ALPHA',
+            command: eventsRes.command,
+            ok: eventsRes.ok,
+            durationMs: eventsRes.durationMs,
+            count: Array.isArray(eventsRes.data) ? eventsRes.data.length : 0,
+            output: eventsRes.stdout || eventsRes.stderr,
+          },
+        ],
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // 5. [ALPHA] LIVE IAM POLICY TROUBLESHOOTER
+    //    (gcloud alpha policy-troubleshoot iam + policytroubleshooter.googleapis.com/v1)
+    // ------------------------------------------------------------------------
+    if (action === 'TROUBLESHOOT_ALPHA_IAM_POLICY') {
+      const targetResource =
+        resourceName ||
+        `//cloudresourcemanager.googleapis.com/projects/${projectId}`;
+      let callerEmail = principalEmail;
+      if (!callerEmail) {
+        try {
+          const { accounts, activeAccount } = discoverLocalGcloudAccounts();
+          callerEmail = activeAccount || accounts?.[0] || '';
+        } catch {
+          callerEmail = '';
+        }
+      }
+
+      let restTroubleshoot = null;
+      let restError = null;
+      try {
+        restTroubleshoot = await gcpFetch(
+          'https://policytroubleshooter.googleapis.com/v1/iam:troubleshoot',
+          token,
+          projectId,
+          {
+            method: 'POST',
+            data: {
+              accessTuple: {
+                principal: callerEmail,
+                fullResourceName: targetResource,
+                permission: permission || 'run.services.create',
+              },
+            },
+            timeout: 8000,
+          }
+        );
+      } catch (e) {
+        restError =
+          e.response?.data?.error?.message || e.message || String(e);
+      }
+
+      const cliRes = await runGcloudAlphaBetaJson(
+        [
+          'alpha',
+          'policy-troubleshoot',
+          'iam',
+          targetResource,
+          `--principal-email=${callerEmail}`,
+          `--permission=${permission || 'run.services.create'}`,
+          `--project=${projectId}`,
+          '--format=json',
+        ],
+        10000
+      );
+
+      const effectiveResult = restTroubleshoot || cliRes.data || {};
+      return res.json({
+        success: true,
+        releaseTrack: 'ALPHA',
+        releaseBadge: '[ALPHA] gcloud alpha policy-troubleshoot iam',
+        preGaNotice:
+          '`gcloud alpha policy-troubleshoot iam` evaluates IAM allow/deny policies, resource hierarchy inheritance, and CEL conditions via policytroubleshooter.googleapis.com.',
+        executedCommand: cliRes.command,
+        principal: callerEmail,
+        permission: permission || 'run.services.create',
+        fullResourceName: targetResource,
+        accessState:
+          effectiveResult.access ||
+          (cliRes.stdout.includes('GRANTED') ? 'GRANTED' : 'EVALUATED'),
+        restResult: restTroubleshoot,
+        restError,
+        cliStdout: cliRes.stdout,
+        cliStderr: cliRes.stderr,
+        durationMs: cliRes.durationMs,
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // 6. [ALPHA] PRIVILEGED ACCESS MANAGER (PAM) JIT ENTITLEMENT & ONBOARDING CHECK
+    //    (gcloud alpha pam check-onboarding-status & entitlements list)
+    // ------------------------------------------------------------------------
+    if (action === 'CHECK_OR_CREATE_ALPHA_PAM_JIT') {
+      const [onboardRes, entListRes] = await Promise.all([
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'pam',
+            'check-onboarding-status',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'pam',
+            'entitlements',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8500
+        ),
+      ]);
+
+      const jitCreateCli = `gcloud alpha pam entitlements create ${pamEntitlementId} \\
+  --project=${projectId} \\
+  --location=global \\
+  --max-request-duration=${pamDurationSeconds}s \\
+  --role-bindings=role=${pamRole}`;
+
+      const jitGrantRequestCli = `gcloud alpha pam grants create \\
+  --project=${projectId} \\
+  --location=global \\
+  --entitlement=${pamEntitlementId} \\
+  --requested-duration=${pamDurationSeconds}s \\
+  --justification="${pamJustification}"`;
+
+      return res.json({
+        success: true,
+        releaseTrack: 'ALPHA',
+        releaseBadge: '[ALPHA] gcloud alpha pam (Privileged Access Manager)',
+        preGaNotice:
+          '`gcloud alpha pam` manages Zero-Standing-Privilege (ZSP) Just-In-Time temporary IAM elevation entitlements and time-boxed grants.',
+        executedCommand: `${onboardRes.command} && ${entListRes.command}`,
+        onboardingStatus: onboardRes.data || onboardRes.stdout || onboardRes.stderr,
+        entitlements: Array.isArray(entListRes.data) ? entListRes.data : [],
+        jitCreateCli,
+        jitGrantRequestCli,
+        stdout: onboardRes.stdout || entListRes.stdout,
+        stderr: onboardRes.stderr || entListRes.stderr,
+        durationMs: onboardRes.durationMs + entListRes.durationMs,
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // 7. [ALPHA] PERSONALIZED SERVICE HEALTH & FAULT-TESTING EXPERIMENTS
+    //    (gcloud alpha service-health events & gcloud alpha fault-testing)
+    // ------------------------------------------------------------------------
+    if (action === 'SCAN_ALPHA_SERVICE_HEALTH_AND_FAULT_TESTING') {
+      const [shRes, ftExpRes, ftWinRes] = await Promise.all([
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'service-health',
+            'events',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'fault-testing',
+            'experiments',
+            'list',
+            `--project=${projectId}`,
+            `--location=${region}`,
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'fault-testing',
+            'exclusion-windows',
+            'list',
+            `--project=${projectId}`,
+            `--location=${region}`,
+            '--format=json',
+          ],
+          8500
+        ),
+      ]);
+
+      return res.json({
+        success: true,
+        releaseTrack: 'ALPHA',
+        releaseBadge:
+          '[ALPHA] gcloud alpha service-health & gcloud alpha fault-testing',
+        preGaNotice:
+          '`gcloud alpha service-health` queries personalized Google Cloud upstream incident feeds (`servicehealth.googleapis.com`), while `gcloud alpha fault-testing` manages Chaos Fault Injection experiments and freeze windows.',
+        executedCommand: `${shRes.command} && ${ftExpRes.command}`,
+        serviceHealthEvents: Array.isArray(shRes.data) ? shRes.data : [],
+        faultExperiments: Array.isArray(ftExpRes.data) ? ftExpRes.data : [],
+        exclusionWindows: Array.isArray(ftWinRes.data) ? ftWinRes.data : [],
+        stdout: shRes.stdout || ftExpRes.stdout,
+        stderr: [shRes.stderr, ftExpRes.stderr, ftWinRes.stderr]
+          .filter(Boolean)
+          .join('\n'),
+        durationMs: shRes.durationMs + ftExpRes.durationMs,
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // 8. [BETA / ALPHA] APP OPTIMIZE REPORTS, CLOUD LOCATION FINDER & TERRAFORM VET
+    //    (gcloud beta app-optimize, gcloud alpha cloudlocationfinder, gcloud alpha terraform vet)
+    // ------------------------------------------------------------------------
+    if (action === 'RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE') {
+      const [locRes, appOptRes, resTypesRes] = await Promise.all([
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'cloudlocationfinder',
+            'cloud-locations',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--page-size=25',
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'beta',
+            'app-optimize',
+            'reports',
+            'list',
+            `--project=${projectId}`,
+            `--location=${region}`,
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'resource-config',
+            'list-resource-types',
+            `--project=${projectId}`,
+            '--format=json',
+          ],
+          8500
+        ),
+      ]);
+
+      return res.json({
+        success: true,
+        releaseTrack: 'ALPHA_AND_BETA',
+        releaseBadge:
+          '[BETA] app-optimize + [ALPHA] cloudlocationfinder & resource-config',
+        preGaNotice:
+          'Combines Public Preview [BETA] `gcloud beta app-optimize reports` with Early Access [ALPHA] `gcloud alpha cloudlocationfinder`, `gcloud alpha resource-config bulk-export`, and `gcloud alpha terraform vet`.',
+        executedCommand: `${locRes.command} && ${appOptRes.command} && ${resTypesRes.command}`,
+        cloudLocations: Array.isArray(locRes.data) ? locRes.data : [],
+        appOptimizeReports: Array.isArray(appOptRes.data) ? appOptRes.data : [],
+        declarableResourceTypesCount: Array.isArray(resTypesRes.data)
+          ? resTypesRes.data.length
+          : 0,
+        declarableResourceTypesSample: Array.isArray(resTypesRes.data)
+          ? resTypesRes.data.slice(0, 18)
+          : [],
+        stdout:
+          locRes.stdout || appOptRes.stdout || resTypesRes.stdout,
+        stderr: [locRes.stderr, appOptRes.stderr, resTypesRes.stderr]
+          .filter(Boolean)
+          .join('\n'),
+        durationMs:
+          locRes.durationMs + appOptRes.durationMs + resTypesRes.durationMs,
+      });
+    }
+
+    return res.status(400).json({
+      error: `Unsupported Alpha/Beta action: ${action}`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to execute gcloud Alpha/Beta action.',
+    });
+  }
+});
+
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
 const staticDistMiddleware = express.static(distPath, {

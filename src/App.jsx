@@ -1441,8 +1441,22 @@ function CloudPulseCockpit() {
               </div>
             </div>
 
-            {/* Top-Right Cluster: Live GCP Project Switcher + Primary Provision Resource CTA */}
+            {/* Top-Right Cluster: [ALPHA/BETA] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
             <div className="flex items-center gap-2.5 shrink-0">
+              {/* 1-Click [ALPHA/BETA] gcloud 588.0.0 Frontier Lab Launcher */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInnovationSubTab('GCLOUD_ALPHA_BETA');
+                  setActiveTab('INNOVATION_LAB');
+                }}
+                title="Open [ALPHA/BETA] gcloud 588.0.0 Frontier Lab (Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP Servers [ALPHA], PAM JIT IAM & 403 Policy Troubleshooter [ALPHA], Service Health & Fault-Testing [ALPHA])"
+                className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 rounded-xl px-3 py-2.5 text-xs font-mono font-extrabold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                <span>[ALPHA/BETA] Lab</span>
+              </button>
+
               {/* Live GCP Project Dropdown */}
               <div className={`relative shrink-0 ${projectMenuOpen ? 'z-[70]' : 'z-50'}`}>
                 <button
