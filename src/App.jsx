@@ -816,6 +816,11 @@ function classifyDestructiveAxiosConfig(config) {
           'TROUBLESHOOT_ALPHA_IAM_POLICY',
           'SCAN_ALPHA_SERVICE_HEALTH_AND_FAULT_TESTING',
           'RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE',
+          'SCAN_ALPHA_MODEL_ARMOR_AND_SANITIZE',
+          'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY',
+          'SCAN_BETA_CLOUD_QUOTAS',
+          'SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST',
+          'SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE',
         ].includes(String(body.action || '').toUpperCase()));
 
     if (isReadOnlyOrDryRun) {
@@ -913,6 +918,10 @@ function classifyDestructiveAxiosConfig(config) {
         body.workerPoolName ||
         body.multiRegionName ||
         body.pamEntitlementId ||
+        body.modelArmorTemplateId ||
+        body.clusterDirectorId ||
+        body.deliveryTrustPolicyId ||
+        body.quotaId ||
         act;
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
@@ -921,7 +930,7 @@ function classifyDestructiveAxiosConfig(config) {
         headerBadge: `[${track}] Pre-GA Google Cloud Command & Cost Gatekeeper`,
         targetLabel: `Target [${track}] Resource / Operation`,
         resourceKind: isBeta
-          ? 'gcloud beta run (Public Preview API)'
+          ? 'gcloud beta (Public Preview API)'
           : 'gcloud alpha (Early Access v1alpha API)',
         targetName: `${target} [${track}]`,
         location: body.region || 'global',
@@ -935,11 +944,25 @@ function classifyDestructiveAxiosConfig(config) {
             ? `1. Invokes "gcloud beta run worker-pools deploy ${target}" in ${body.region || 'us-central1'}.\n2. Provisions ${body.instances || 1} continuous non-HTTP background pull worker instance(s) using image "${body.image || 'worker:latest'}".`
             : act === 'DEPLOY_BETA_MULTI_REGION_SERVICE'
             ? `1. Probes "gcloud beta run multi-region-services" on project "${projectId}".\n2. Synthesizes the multi-region Knative Service specification across ${(body.regions || []).join(', ') || 'us-central1, europe-west1'}.`
+            : act === 'DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE'
+            ? `1. Invokes "gcloud alpha model-armor templates create ${body.modelArmorTemplateId || 'cp-llm-shield-strict'}" in ${body.region || 'us-central1'}.\n2. Enables Prompt Injection & Jailbreak blocking, Malicious URI filtering, and Responsible AI filters on modelarmor.googleapis.com/v1alpha.`
+            : act === 'APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER'
+            ? `1. Invokes "gcloud beta quotas adjuster settings update --enablement=${body.quotaAdjusterEnablement || 'ENABLED'}" on project "${projectId}".\n2. Prepares the declarative QuotaPreference configuration for ${body.quotaService || 'compute.googleapis.com'} / ${body.quotaId || 'CPUS-per-project-region'}.`
+            : act === 'GENERATE_ALPHA_AUDIT_OR_TRUST_POLICY'
+            ? `1. Invokes "gcloud alpha audit-manager audit-reports generate --compliance-standard=${body.complianceStandard || 'SOC2'}" in ${body.region || 'us-central1'}.\n2. Synthesizes the CEL-enforced Software Delivery Trust policy (${body.deliveryTrustPolicyId || 'cp-slsa-l3-enforcer'}).`
+            : act === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT'
+            ? `1. Invokes "gcloud alpha cluster-director clusters create ${body.clusterDirectorId || 'cp-ai-hypercomputer-01'} --quickstart-cluster" in ${body.region || 'us-central1'}.\n2. Orchestrates topology-aware AI Hypercomputer compute, Slurm scheduling, and VPC networking.`
             : `1. Executes the [${track}] gcloud 588.0.0 CLI / REST operation (${act}) against project "${projectId}".`,
         costWarning:
           act === 'DEPLOY_BETA_WORKER_POOL'
             ? `CONTINUOUS WORKER BILLING WARNING ([BETA]): Cloud Run Worker Pools run non-HTTP background instances continuously (${body.instances || 1} instance(s) active 24/7) and do NOT scale to zero when idle. You will be billed hourly for vCPU and Memory until the worker pool is deleted or scaled down.`
-            : `PRE-GA [${track}] & COST NOTICE: [${track}] commands invoke pre-GA Google Cloud APIs. Any provisioned compute, multi-region replicas, or entitlements follow Google Cloud Preview pricing and SLA terms.`,
+            : act === 'DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE'
+            ? `MODEL ARMOR & SDP BILLING NOTICE ([ALPHA]): Creating a Model Armor template is free of fixed hourly compute cost, but invoking sanitize-user-prompt / sanitize-model-response and Sensitive Data Protection (SDP) inspection incurs per-token / per-MB API inspection charges.`
+            : act === 'APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER'
+            ? `QUOTA CEILING & FINOPS WARNING ([BETA]): Enabling the Autonomous Quota Adjuster allows Google Cloud to automatically request higher quota limits when utilization nears 80%. Raising quota ceilings does not charge by itself, but permits higher maximum resource consumption.`
+            : act === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT'
+            ? `HIGH-COST AI HYPERCOMPUTER WARNING ([ALPHA]): Cluster Director provisions multi-node HPC / GPU / TPU Slurm clusters (${body.acceleratorProfile || 'A3 Mega / H100'}). If fulfilled in your project, GPU/TPU nodes and Managed Lustre storage incur high hourly compute charges ($/hr).`
+            : `PRE-GA [${track}] & COST NOTICE: [${track}] commands invoke pre-GA Google Cloud APIs. Any provisioned compute, multi-region replicas, compliance reports, or entitlements follow Google Cloud Preview pricing and SLA terms.`,
         impactWarning: `You are executing a Pre-GA [${track}] operation on live project "${projectId}".`,
       };
     }
