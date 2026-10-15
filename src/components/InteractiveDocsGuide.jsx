@@ -42,13 +42,14 @@ const DOC_SECTIONS = [
     problemSolved:
       'Legacy Cloud Logging consoles force SREs to dig through deeply nested JSON trees without correlated container CPU/RAM metrics, deployment markers, instant field cardinality facets, service-level P50/P90/P99 latency heatmaps, live Grok virtual field extraction, source-code Git blame + unified diff patches, multi-window SLO burn-rate alerts, kernel eBPF TCP/DNS telemetry, or synthetic canary log replay.',
     howItWorks: [
-      'Interactive 24-Bucket Stacked Severity Histogram + Correlated Infra Overlay: Plots ERROR/WARN/INFO volume and P95 latency alongside container CPU/RAM utilization sparkbars and clickable K8s/Cloud Run markers (DEPLOY revision rollout, 429 QUOTA Vertex AI spike, SCALE +6 autoscale). Clicking any bar locks a ±30s time-travel window.',
-      'VictoriaLogs / OpenObserve Field Facet Sidebar + Cards vs. Columnar Table View + JSON Key-Value Pill Flattener (Tab 01): Inspect field cardinality and filter in 1 click (+ = include / - != exclude), toggle between Cards View and High-Density Columnar Table View, or bookmark and diff any two log payloads side by side.',
+      '100% Live Execution (Zero Simulated Entries): Streams exclusively from live logging.googleapis.com/v2/entries:list and computes the 24-bucket histogram, anomaly baseline diff, and FinOps byte breakdown directly from real project logs and live host CPU/RAM telemetry.',
+      'VictoriaLogs / OpenObserve Field Facet Sidebar + Cards vs. Columnar Table View + JSON Key-Value Pill Flattener (Tab 01): Inspect live field cardinality and filter in 1 click (+ = include / - != exclude), toggle between Cards View and High-Density Columnar Table View, or bookmark and diff any two log payloads side by side.',
       'Log-to-Metrics & 5-Bin Latency Heatmap (Tab 02) + Live Grok / Named-Regex Virtual Field Extractor (Tab 03): Computes real-time P50/P90/P99 latency, error rate %, and 5-bin latency heatmaps by service, and extracts virtual schema-on-read columns on the fly using named capture groups (?<field>...).',
-      'Wave 3 Jaw-Breaking SRE Suite (Tabs 09–12): (09) Stack-Trace Source-Code Pinpointer, Git Blame Commit Correlator & 1-Click Unified Diff Patch (.patch) Generator, (10) Google SRE Workbook Multi-Window SLO Error-Budget Burn Matrix (1h 14.4x Fast-Burn Page vs 6h 6.0x vs 24h 3.0x), (11) Cilium Hubble / Pixie / Coroot eBPF Syscall, CoreDNS & TCP Retransmit X-Ray with bpftrace one-liners, and (12) Interactive Log-Replay Time-Machine & Synthetic Canary Verifier.',
+      'Wave 3 Live SRE Suite (Tabs 09–12): (09) Live Git CLI Blame & Line History Inspector (git log, git show, git blame -L via execFile), (10) Live Service SLO Burn Matrix & 1-Click Cloud Logging Metric Provisioner (POST /v2/projects/:id/metrics), (11) Live Linux Kernel /proc/net/snmp Socket Telemetry & DNS/TCP/TLS 1.3 Endpoint Probe, and (12) Live Cloud Logging entries:write Canary Injector.',
     ],
     apisUsed: [
-      'POST /api/project/:id/chrono-logs/query & POST /api/project/:id/chrono-logs/replay-canary',
+      'POST /api/project/:id/chrono-logs/query & POST /api/project/:id/chrono-logs/replay-canary (logging.googleapis.com/v2/entries:list & entries:write)',
+      'POST /api/project/:id/chrono-logs/git-blame, POST /api/project/:id/chrono-logs/create-log-metric & POST /api/project/:id/chrono-logs/network-kernel-probe',
       'POST /api/project/:id/chrono-logs/exclusion (_Default Sink FinOps Noise-Cutter)',
     ],
     billingImpact:
