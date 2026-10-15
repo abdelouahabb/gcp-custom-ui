@@ -8276,6 +8276,33 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
           ? 2410
           : 65 + ((bIdx * 17) % 110);
 
+      // Wave 2 #3: Correlated Infrastructure Metrics & Deployment/Autoscale Event Overlay per bucket
+      const cpuUtilizationPct = isSpikeBucket ? (bIdx === 19 ? 94 : 88) : 34 + ((bIdx * 7) % 28);
+      const memoryUtilizationPct = isSpikeBucket ? (bIdx === 20 ? 91 : 84) : 48 + ((bIdx * 5) % 22);
+      let infraMarker = null;
+      if (bIdx === 17) {
+        infraMarker = {
+          type: 'REVISION_DEPLOY',
+          badge: 'DEPLOY',
+          title: 'Cloud Run Revision Deployed: cloudpulse-api-gateway-00042-xqw',
+          detail: 'Traffic shifted 100% -> 00042-xqw (concurrency=80, max-instances=25)',
+        };
+      } else if (bIdx === 19) {
+        infraMarker = {
+          type: 'QUOTA_EXHAUSTION',
+          badge: '429 QUOTA',
+          title: 'Vertex AI RPM Quota Exhausted (60/60 RPM)',
+          detail: 'aiplatform.googleapis.com/generate_content_requests_per_minute hit 100%',
+        };
+      } else if (bIdx === 21) {
+        infraMarker = {
+          type: 'AUTOSCALE_OUT',
+          badge: 'SCALE +6',
+          title: 'Cloud Run Autoscaler Scaled 2 -> 8 Instances',
+          detail: 'Cold-start burst triggered by queued 504 upstream requests',
+        };
+      }
+
       return {
         bucketIndex: bIdx,
         startIso: new Date(bucketStartMs).toISOString(),
@@ -8287,6 +8314,9 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         infoCount,
         totalCount: errorCount + warningCount + infoCount,
         p95LatencyMs,
+        cpuUtilizationPct,
+        memoryUtilizationPct,
+        infraMarker,
         isAnomalySpike: isSpikeBucket,
       };
     });
@@ -8386,6 +8416,117 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       gcloudLogMetricCli: `gcloud logging metrics create cloudpulse_sre_anomaly_count \\\n  --project=${projectId} \\\n  --description="Auto-generated SRE log-based metric from CloudPulse 2026 Log Explorer" \\\n  --log-filter='${cleanLql.replace(/'/g, "\\'")}'`,
     };
 
+    // 11. Wave 2 #1: Log-to-Metrics & Latency Heatmap Aggregator (P50 / P90 / P99 Latency + Error Rate + Throughput by Service)
+    const serviceGroupMap = new Map();
+    for (const e of allEntries) {
+      const sName = e.serviceName || 'gcp_service';
+      if (!serviceGroupMap.has(sName)) {
+        serviceGroupMap.set(sName, {
+          serviceName: sName,
+          resourceType: e.resourceType,
+          region: e.region,
+          latencies: [],
+          totalCount: 0,
+          errorCount: 0,
+          totalBytes: 0,
+          heatmapBins: [0, 0, 0, 0, 0], // <50ms, 50-250ms, 250-1000ms, 1000-2000ms, >2000ms
+        });
+      }
+      const g = serviceGroupMap.get(sName);
+      const lat = Number(e.latencyMs) || 25;
+      g.latencies.push(lat);
+      g.totalCount += 1;
+      if (e.severity === 'ERROR' || e.severity === 'CRITICAL' || e.httpStatus >= 400) {
+        g.errorCount += 1;
+      }
+      g.totalBytes += e.byteSize || 800;
+      if (lat < 50) g.heatmapBins[0] += 1;
+      else if (lat < 250) g.heatmapBins[1] += 1;
+      else if (lat < 1000) g.heatmapBins[2] += 1;
+      else if (lat < 2000) g.heatmapBins[3] += 1;
+      else g.heatmapBins[4] += 1;
+    }
+
+    const percentile = (sortedArr, p) => {
+      if (!sortedArr.length) return 0;
+      const idx = Math.min(sortedArr.length - 1, Math.max(0, Math.floor(sortedArr.length * p)));
+      return sortedArr[idx];
+    };
+
+    const logToMetricsByService = Array.from(serviceGroupMap.values())
+      .map((g) => {
+        const sorted = [...g.latencies].sort((a, b) => a - b);
+        const p50Ms = percentile(sorted, 0.5);
+        const p90Ms = percentile(sorted, 0.9);
+        const p99Ms = percentile(sorted, 0.99);
+        const errorRatePct = Math.round((g.errorCount / Math.max(1, g.totalCount)) * 100);
+        return {
+          serviceName: g.serviceName,
+          resourceType: g.resourceType,
+          region: g.region,
+          totalCount: g.totalCount,
+          errorCount: g.errorCount,
+          errorRatePct,
+          p50Ms,
+          p90Ms,
+          p99Ms,
+          totalKb: Number((g.totalBytes / 1024).toFixed(1)),
+          heatmapBins: g.heatmapBins,
+          lqlFilter: `resource.labels.service_name="${g.serviceName}"`,
+        };
+      })
+      .sort((a, b) => b.p99Ms - a.p99Ms);
+
+    // 12. Wave 2 #5: Grok / Named-Regex Live Virtual Field Extractor Presets
+    const grokVirtualExtractors = [
+      {
+        id: 'grok-upstream-timeout',
+        name: 'Cloud Run Upstream Timeout & Request UUID Extractor',
+        pattern: 'after (?<upstream_ms>\\d+)ms.*request (?<request_uuid>[0-9a-f-]{20,}) from (?<client_ip>[0-9.]+)',
+        description: 'Extracts upstream_ms, request_uuid, and client_ip from unstructured Cloud Run / Envoy timeout logs',
+      },
+      {
+        id: 'grok-vertex-quota',
+        name: 'Vertex AI Quota Metric & Limit Extractor',
+        pattern: 'Quota exceeded for (?<quota_metric>[a-z0-9_./]+)\\s*\\(limit=(?<rpm_limit>\\d+)\\)\\s*after (?<wait_ms>\\d+)ms',
+        description: 'Extracts quota_metric, rpm_limit, and wait_ms from HTTP 429 ResourceExhausted logs',
+      },
+      {
+        id: 'grok-iam-denial',
+        name: 'IAM Permission & Secret Target Extractor',
+        pattern: 'Principal (?<principal>[a-z0-9_-]+) lacks (?<permission>[a-z0-9.]+) on (?<target_uri>[a-z0-9/_-]+)',
+        description: 'Extracts principal, permission, and target_uri from PERMISSION_DENIED audit logs',
+      },
+    ];
+
+    // 13. Wave 2 #4: Saved SRE Views & Presets
+    const savedSreViews = [
+      {
+        id: 'view-5xx-gateway',
+        name: 'P1 Incident: Cloud Run 5xx & Vertex 429 Cascade',
+        nl: 'show me 5xx timeouts on cloud run in iowa slower than 1500ms in the last 2 hours excluding healthchecks',
+        lql: 'resource.type="cloud_run_revision" AND httpRequest.status>=500 AND httpRequest.latency>"1.5s"',
+        severity: 'ALL',
+        viewMode: 'TABLE',
+      },
+      {
+        id: 'view-dlp-security',
+        name: 'SecOps: Unmasked Bearer JWT & AIza Key Audit',
+        nl: 'detect unmasked bearer jwt tokens or aiza api key leaks in europe-west1',
+        lql: 'textPayload =~ "(AIza[0-9A-Za-z_-]{15,}|Bearer eyJ)"',
+        severity: 'WARNING',
+        viewMode: 'CARDS',
+      },
+      {
+        id: 'view-iam-403',
+        name: 'Zero-Trust: IAM & Secret Manager 403 Denials',
+        nl: 'iam permission denied or secret manager 403 unauthorized access in the past 60m',
+        lql: 'protoPayload.status.code=7 OR httpRequest.status=403',
+        severity: 'WARNING',
+        viewMode: 'TABLE',
+      },
+    ];
+
     return res.json({
       projectId,
       compiledQuery: {
@@ -8421,6 +8562,9 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       fieldFacets,
       anomalyBaselineDiff,
       queryTranspilations,
+      logToMetricsByService,
+      grokVirtualExtractors,
+      savedSreViews,
       logFinOps: {
         pricingRatePerGibUsd: 0.5,
         freeTierGibPerMonth: 50,

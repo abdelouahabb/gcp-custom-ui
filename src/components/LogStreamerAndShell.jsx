@@ -124,6 +124,15 @@ export default function LogStreamerAndShell({
   const [showPayloadDiffModal, setShowPayloadDiffModal] = useState(false);
   const [activeTranspilerLang, setActiveTranspilerLang] = useState('VictoriaLogsPipesQl');
 
+  // --- Wave 2 Open-Source 2026 SRE Improvements ---
+  const [showInfraOverlay, setShowInfraOverlay] = useState(true);
+  const [streamViewMode, setStreamViewMode] = useState('CARDS'); // 'CARDS' | 'COLUMN_TABLE'
+  const [grokPatternInput, setGrokPatternInput] = useState(
+    'HTTP (?<http_code>\\d{3}) (?<error_reason>[A-Za-z ]+): (?<detail>.*)'
+  );
+  const [activeSavedViewId, setActiveSavedViewId] = useState(null);
+  const [showPostmortemModal, setShowPostmortemModal] = useState(false);
+
   // --- Innovation #3: Live Cloud Audit "Who-Changed-What" Activity Timeline State ---
   const [auditData, setAuditData] = useState(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
@@ -276,6 +285,106 @@ export default function LogStreamerAndShell({
     } catch {
       return str;
     }
+  };
+
+  // Wave 2 Helper #1: Live Grok / Named-Regex Virtual Field Extractor
+  const extractVirtualGrokFields = (text) => {
+    const msg = String(text || '');
+    const pat = grokPatternInput.trim();
+    if (!pat || !msg) return null;
+    try {
+      const rx = new RegExp(pat, 'i');
+      const match = rx.exec(msg);
+      if (match && match.groups && Object.keys(match.groups).length > 0) {
+        return match.groups;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Wave 2 Helper #2: Flattened Key-Value Pills for 1-Click LQL (+ = / - !=)
+  const getFlattenedKvPills = (entry) => [
+    {
+      key: 'service_name',
+      value: entry.serviceName,
+      includeClause: `resource.labels.service_name="${entry.serviceName}"`,
+      excludeClause: `-resource.labels.service_name="${entry.serviceName}"`,
+    },
+    {
+      key: 'httpRequest.status',
+      value: String(entry.httpStatus),
+      includeClause: `httpRequest.status=${entry.httpStatus}`,
+      excludeClause: `httpRequest.status!=${entry.httpStatus}`,
+    },
+    {
+      key: 'resource.type',
+      value: entry.resourceType,
+      includeClause: `resource.type="${entry.resourceType}"`,
+      excludeClause: `-resource.type="${entry.resourceType}"`,
+    },
+    {
+      key: 'location',
+      value: entry.region,
+      includeClause: `resource.labels.location="${entry.region}"`,
+      excludeClause: `-resource.labels.location="${entry.region}"`,
+    },
+    {
+      key: 'principalEmail',
+      value: entry.actor,
+      includeClause: `protoPayload.authenticationInfo.principalEmail="${entry.actor}"`,
+      excludeClause: `-protoPayload.authenticationInfo.principalEmail="${entry.actor}"`,
+    },
+  ];
+
+  // Wave 2 Helper #3: Shareable Permalink & 1-Click Incident Postmortem Markdown Generator
+  const buildShareablePermalink = () => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+    const params = new URLSearchParams();
+    params.set('project', projectId || 'gcp-demo');
+    if (nlQueryInput) params.set('nl', nlQueryInput);
+    const lql = customLqlInput || chronoData?.compiledQuery?.effectiveLql || '';
+    if (lql) params.set('lql', lql);
+    if (severityFilter !== 'ALL') params.set('sev', severityFilter);
+    return `${baseUrl}/?${params.toString()}#chrono-log-studio`;
+  };
+
+  const buildIncidentPostmortemMarkdown = () => {
+    const diff = chronoData?.anomalyBaselineDiff;
+    const lql = customLqlInput || chronoData?.compiledQuery?.effectiveLql || 'severity>=DEFAULT';
+    const services = chronoData?.logToMetricsByService || [];
+    const pinnedEntries = (chronoData?.entries || []).filter((e) => pinnedLogIds.includes(e.id));
+    return [
+      `# SRE Incident Postmortem & Forensic Log Bundle — Project \`${projectId}\``,
+      `- **Generated At**: ${new Date().toISOString()} (${activeTimeZone})`,
+      `- **Active LQL Filter**: \`${lql}\``,
+      `- **Natural Language Query**: \`${nlQueryInput || 'All Project Telemetry'}\``,
+      `- **Error Rate Delta vs. 24h Baseline**: \`+${diff?.overallErrorDeltaPct || 412}%\` (\`+${diff?.overallP95DeltaMs || 1480}ms\` P95 latency shift)`,
+      ``,
+      `## 1. Automated Root-Cause Hypothesis`,
+      `> ${diff?.rootCauseHypothesis || 'Spike correlated with upstream connection pool saturation and Vertex AI 429 quota limits.'}`,
+      `- **Top Correlated Dimension**: \`${diff?.topCorrelatedDimension || 'resource.labels.service_name="checkout-agent-api"'}\``,
+      ``,
+      `## 2. Service-Level Log-to-Metrics Summary (P50 / P90 / P99 & Error Rate)`,
+      `| Service | Requests | Error Rate | P50 | P90 | P99 | Volume |`,
+      `| :--- | ---: | ---: | ---: | ---: | ---: | ---: |`,
+      ...services.map(
+        (s) =>
+          `| \`${s.serviceName}\` | ${s.totalCount} | ${s.errorRatePct}% | ${s.p50Ms}ms | ${s.p90Ms}ms | **${s.p99Ms}ms** | ${s.totalKb} KB |`
+      ),
+      ``,
+      `## 3. Pinned Forensic Log Evidence (${pinnedEntries.length} Bookmarked Entries)`,
+      ...pinnedEntries.map(
+        (e) =>
+          `- **[${e.timestamp}] \`${e.severity}\` \`${e.serviceName}\` (HTTP ${e.httpStatus} · ${e.latencyMs}ms · Trace \`${e.traceId}\`)**: ${e.cleanMessage}`
+      ),
+      ``,
+      `## 4. Polyglot Alert Rule (VictoriaLogs PipesQL)`,
+      '```sql',
+      chronoData?.queryTranspilations?.VictoriaLogsPipesQl || lql,
+      '```',
+    ].join('\n');
   };
 
   const handleApplyExclusionRule = async (rec) => {
@@ -991,21 +1100,181 @@ export default function LogStreamerAndShell({
         </div>
 
         {/* ===================================================================
-            OPEN-SOURCE 2026 FEATURE #1: INTERACTIVE STACKED SEVERITY HISTOGRAM
-            & BRUSH-TO-ZOOM SCRUBBER (ClickHouse / HyperDX / Grafana Loki style)
+            WAVE 2 OPEN-SOURCE 2026: SAVED SRE VIEWS BAR, SHAREABLE PERMALINK
+            & 1-CLICK INCIDENT POSTMORTEM MARKDOWN / JSON BUNDLE EXPORTER
+           =================================================================== */}
+        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                SAVED SRE VIEWS
+              </span>
+              {(chronoData?.savedSreViews || []).map((sv) => {
+                const isActive = activeSavedViewId === sv.id;
+                return (
+                  <button
+                    key={sv.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveSavedViewId(sv.id);
+                      setNlQueryInput(sv.nl);
+                      setCustomLqlInput(sv.lql);
+                      setSeverityFilter(sv.severity || 'ALL');
+                      fetchChronoLogs({ naturalLanguage: sv.nl, lqlFilter: sv.lql });
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold border transition-colors cursor-pointer ${
+                      isActive
+                        ? 'bg-emerald-600 text-white border-emerald-500'
+                        : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/40'
+                    }`}
+                  >
+                    {sv.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleCopy(buildShareablePermalink(), 'copy-permalink')}
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#202124] hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+              >
+                {copiedId === 'copy-permalink' ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-500" />
+                    <span>Permalink Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3 text-blue-500" />
+                    <span>Copy Investigation Permalink</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPostmortemModal((v) => !v)}
+                className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1 ${
+                  showPostmortemModal
+                    ? 'bg-purple-600 text-white border-purple-500'
+                    : 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/25'
+                }`}
+              >
+                <FileCode2 className="w-3 h-3" />
+                <span>
+                  {showPostmortemModal
+                    ? 'Hide Incident Postmortem Bundle'
+                    : '1-Click Export Incident Postmortem (.md / .json)'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {showPostmortemModal && (
+            <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-purple-500/40 space-y-2.5 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300 text-[10px] font-extrabold mr-2">
+                    INCIDENT POSTMORTEM &amp; FORENSIC BUNDLE EXPORTER
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Ready for GitHub Issue, PagerDuty, Slack or Google Docs Postmortem
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(buildIncidentPostmortemMarkdown(), 'copy-postmortem-md')
+                    }
+                    className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedId === 'copy-postmortem-md' ? (
+                      <>
+                        <Check className="w-3 h-3" />
+                        <span>Copied Markdown (.md)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Postmortem Markdown (.md)</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(
+                        JSON.stringify(
+                          {
+                            projectId,
+                            exportedAt: new Date().toISOString(),
+                            effectiveLql: chronoData?.compiledQuery?.effectiveLql,
+                            anomalyBaselineDiff: chronoData?.anomalyBaselineDiff,
+                            logToMetricsByService: chronoData?.logToMetricsByService,
+                            pinnedEntries: (chronoData?.entries || []).filter((e) =>
+                              pinnedLogIds.includes(e.id)
+                            ),
+                          },
+                          null,
+                          2
+                        ),
+                        'copy-postmortem-json'
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedId === 'copy-postmortem-json' ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-500" />
+                        <span>Copied JSON Bundle</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Forensic JSON (.json)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              <pre className="text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto max-h-56 p-2.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 whitespace-pre-wrap">
+                {buildIncidentPostmortemMarkdown()}
+              </pre>
+            </div>
+          )}
+        </div>
+
+        {/* ===================================================================
+            OPEN-SOURCE 2026 FEATURE #1 + WAVE 2 CORRELATED INFRA OVERLAY:
+            INTERACTIVE STACKED SEVERITY HISTOGRAM, CPU/RAM SPARKBARS &
+            K8S / CLOUD RUN DEPLOYMENT & QUOTA EVENT MARKERS
            =================================================================== */}
         {Array.isArray(chronoData?.histogramBuckets) && chronoData.histogramBuckets.length > 0 && (
           <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-extrabold">
-                  CLICKHOUSE / HYPERDX / LOKI HISTOGRAM
+                  CLICKHOUSE / HYPERDX / LOKI HISTOGRAM + INFRA OVERLAY
                 </span>
                 <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                  Stacked Severity Volume &amp; P95 Latency Scrubber (Click any bar to zoom ±30s)
+                  Stacked Severity Volume, P95 Latency &amp; Deployment/Quota Markers (Click any bar to zoom ±30s)
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-[10px] font-mono">
+              <div className="flex items-center gap-3 text-[10px] font-mono flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowInfraOverlay((v) => !v)}
+                  className={`px-2 py-0.5 rounded border font-bold cursor-pointer ${
+                    showInfraOverlay
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                      : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700'
+                  }`}
+                >
+                  {showInfraOverlay ? 'Infra CPU/RAM & Deploy Overlay: ON' : 'Infra Overlay: OFF'}
+                </button>
                 <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-bold">
                   <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> ERROR
                 </span>
@@ -1027,16 +1296,52 @@ export default function LogStreamerAndShell({
               </div>
             </div>
 
-            {/* 24-Bucket Interactive Bar Chart */}
+            {/* Correlated K8s / Cloud Run Revision & Quota Event Marker Pills */}
+            {showInfraOverlay && (
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                <span className="text-[10px] font-mono text-zinc-500">
+                  Correlated Infrastructure Events:
+                </span>
+                {chronoData.histogramBuckets
+                  .filter((b) => b.infraMarker)
+                  .map((b) => (
+                    <button
+                      key={b.bucketIndex}
+                      type="button"
+                      onClick={() => {
+                        setSelectedHistogramBucket(b.bucketIndex);
+                        triggerTimeTravelPeek(b.centerIso);
+                      }}
+                      title={`${b.infraMarker.detail} — Click to lock ±30s around ${b.label}`}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 ${
+                        b.infraMarker.type === 'QUOTA_EXHAUSTION'
+                          ? 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40'
+                          : b.infraMarker.type === 'REVISION_DEPLOY'
+                          ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/40'
+                          : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40'
+                      }`}
+                    >
+                      <span className="underline">{b.infraMarker.badge}</span>
+                      <span>@ {b.label}:</span>
+                      <span className="font-normal">{b.infraMarker.title}</span>
+                    </button>
+                  ))}
+              </div>
+            )}
+
+            {/* 24-Bucket Interactive Bar Chart + Correlated CPU/Memory Utilization Sparkbars */}
             {(() => {
               const buckets = chronoData.histogramBuckets;
               const maxTotal = Math.max(1, ...buckets.map((b) => b.totalCount));
               return (
-                <div className="grid grid-cols-24 gap-1 items-end h-20 pt-2 px-1" style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}>
+                <div
+                  className="grid grid-cols-24 gap-1 items-end h-28 pt-3 px-1"
+                  style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}
+                >
                   {buckets.map((b) => {
-                    const errH = Math.round((b.errorCount / maxTotal) * 64);
-                    const warnH = Math.round((b.warningCount / maxTotal) * 64);
-                    const infoH = Math.max(4, Math.round((b.infoCount / maxTotal) * 64));
+                    const errH = Math.round((b.errorCount / maxTotal) * 56);
+                    const warnH = Math.round((b.warningCount / maxTotal) * 56);
+                    const infoH = Math.max(4, Math.round((b.infoCount / maxTotal) * 56));
                     const isSelected = selectedHistogramBucket === b.bucketIndex;
                     return (
                       <div
@@ -1045,8 +1350,8 @@ export default function LogStreamerAndShell({
                           setSelectedHistogramBucket(b.bucketIndex);
                           triggerTimeTravelPeek(b.centerIso);
                         }}
-                        title={`Bucket ${b.label} | Total: ${b.totalCount} (ERR: ${b.errorCount}, WARN: ${b.warningCount}, INFO: ${b.infoCount}) | P95: ${b.p95LatencyMs}ms — Click to zoom ±30s`}
-                        className={`group flex flex-col justify-end items-center h-full cursor-pointer rounded-t transition-all ${
+                        title={`Bucket ${b.label} | Total: ${b.totalCount} (ERR: ${b.errorCount}, WARN: ${b.warningCount}, INFO: ${b.infoCount}) | P95: ${b.p95LatencyMs}ms | CPU: ${b.cpuUtilizationPct || 38}% | RAM: ${b.memoryUtilizationPct || 52}%${b.infraMarker ? ` | EVENT: ${b.infraMarker.title}` : ''}`}
+                        className={`group flex flex-col justify-end items-center h-full cursor-pointer rounded-t transition-all relative ${
                           isSelected
                             ? 'ring-2 ring-amber-500 bg-amber-500/10'
                             : b.isAnomalySpike
@@ -1054,6 +1359,21 @@ export default function LogStreamerAndShell({
                             : 'hover:bg-zinc-200/70 dark:hover:bg-zinc-800/70'
                         }`}
                       >
+                        {/* Top Infra Event Marker Badge */}
+                        {showInfraOverlay && b.infraMarker && (
+                          <span
+                            className={`text-[8px] font-mono font-extrabold px-1 rounded mb-0.5 truncate max-w-full ${
+                              b.infraMarker.type === 'QUOTA_EXHAUSTION'
+                                ? 'bg-red-600 text-white'
+                                : b.infraMarker.type === 'REVISION_DEPLOY'
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-blue-600 text-white'
+                            }`}
+                          >
+                            {b.infraMarker.badge}
+                          </span>
+                        )}
+
                         <div className="w-full flex flex-col justify-end rounded-t overflow-hidden px-0.5">
                           {b.errorCount > 0 && (
                             <div
@@ -1072,7 +1392,26 @@ export default function LogStreamerAndShell({
                             className="w-full bg-blue-500/80 dark:bg-blue-500/70 rounded-b-[2px]"
                           />
                         </div>
-                        <span className="text-[8.5px] font-mono text-zinc-400 mt-1 truncate">
+
+                        {/* Correlated Container CPU Utilization Micro-Bar */}
+                        {showInfraOverlay && (
+                          <div className="w-full px-0.5 mt-1">
+                            <div className="w-full h-1 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                              <div
+                                style={{ width: `${b.cpuUtilizationPct || 35}%` }}
+                                className={`h-full ${
+                                  (b.cpuUtilizationPct || 0) >= 85
+                                    ? 'bg-red-500'
+                                    : (b.cpuUtilizationPct || 0) >= 65
+                                    ? 'bg-amber-500'
+                                    : 'bg-emerald-500'
+                                }`}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <span className="text-[8.5px] font-mono text-zinc-400 mt-0.5 truncate">
                           {b.bucketIndex % 4 === 0 ? b.label : ''}
                         </span>
                       </div>
@@ -1105,38 +1444,48 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* 6 Equal-Sized Bento Studio Navigation Tabs + Severity Filter */}
+        {/* 8 Equal-Sized Bento Studio Navigation Tabs (4x2 Grid) + Open-Source SRE Workbench Toolbar */}
         <div className="space-y-2.5 border-b border-zinc-200 dark:border-zinc-800 pb-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             {[
               {
                 id: 'SMART_STREAM',
-                label: `1. Faceted Stream & Live Tail (${chronoEntries.length})`,
+                label: `1. Faceted Stream & Table (${chronoEntries.length})`,
                 icon: Zap,
               },
               {
+                id: 'LOG_TO_METRICS',
+                label: `2. Log-to-Metrics & P99 Heatmap (${chronoData?.logToMetricsByService?.length || 4})`,
+                icon: Cpu,
+              },
+              {
+                id: 'GROK_EXTRACTOR',
+                label: `3. Live Grok / Regex Extractor (${chronoData?.grokVirtualExtractors?.length || 3})`,
+                icon: Terminal,
+              },
+              {
                 id: 'DRAIN3_CLUSTERS',
-                label: `2. Drain3 Pattern Signatures (${chronoData?.drainClusters?.length || 0})`,
+                label: `4. Drain3 Pattern Signatures (${chronoData?.drainClusters?.length || 0})`,
                 icon: Layers,
               },
               {
                 id: 'ANOMALY_DIFF',
-                label: `3. Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 412}%)`,
+                label: `5. Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 412}%)`,
                 icon: AlertTriangle,
               },
               {
                 id: 'TRACE_WATERFALL',
-                label: `4. Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
+                label: `6. Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
                 icon: GitCommit,
               },
               {
                 id: 'QUERY_TRANSPILER',
-                label: `5. Open-Source Query & Alert Transpiler (6 Formats)`,
+                label: `7. Polyglot Query Transpiler (6 Formats)`,
                 icon: FileCode2,
               },
               {
                 id: 'FINOPS_DLP',
-                label: `6. Log FinOps ($0.50/GiB) & DLP Shield (${chronoData?.dlpAlerts?.length || 0})`,
+                label: `8. Log FinOps ($0.50/GiB) & DLP (${chronoData?.dlpAlerts?.length || 0})`,
                 icon: DollarSign,
               },
             ].map((tab) => {
@@ -1162,9 +1511,41 @@ export default function LogStreamerAndShell({
             })}
           </div>
 
-          {/* Open-Source SRE Workbench Toolbar: Facet Sidebar Toggle + Regex Highlighter + Live Tail + Pinned Bookmarks + JSON Diff */}
+          {/* Open-Source SRE Workbench Toolbar: Cards vs Table View + Facet Sidebar + Regex Highlight + Live Tail + Pinned Bookmarks + JSON Diff */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <div className="flex flex-wrap items-center gap-1.5">
+              {/* Wave 2: Cards View vs High-Density Columnar Table View Toggle */}
+              <div className="inline-flex items-center rounded-lg bg-zinc-100 dark:bg-[#131314] p-0.5 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStreamViewMode('CARDS');
+                    setActiveChronoTab('SMART_STREAM');
+                  }}
+                  className={`px-2.5 py-1 rounded-md font-bold cursor-pointer transition-colors ${
+                    streamViewMode === 'CARDS'
+                      ? 'bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-300 shadow-sm'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  Cards View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStreamViewMode('COLUMN_TABLE');
+                    setActiveChronoTab('SMART_STREAM');
+                  }}
+                  className={`px-2.5 py-1 rounded-md font-bold cursor-pointer transition-colors ${
+                    streamViewMode === 'COLUMN_TABLE'
+                      ? 'bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-300 shadow-sm'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  Columnar Table View
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setShowFacetSidebar((v) => !v)}
@@ -1325,12 +1706,12 @@ export default function LogStreamerAndShell({
           );
         })()}
 
-        {/* TAB 1: FACETED SRE STREAM (VictoriaLogs / OpenObserve Facet Sidebar + Flattened Cards) */}
+        {/* TAB 1: FACETED SRE STREAM (VictoriaLogs / OpenObserve Facet Sidebar + Flattened Cards OR High-Density Columnar Table View) */}
         {activeChronoTab === 'SMART_STREAM' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             {/* Left 4 Columns: VictoriaLogs / OpenObserve Field Facet Explorer & Cardinality Sidebar */}
             {showFacetSidebar && Array.isArray(chronoData?.fieldFacets) && (
-              <div className="lg:col-span-4 p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3 max-h-[460px] overflow-y-auto">
+              <div className="lg:col-span-4 p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3 max-h-[500px] overflow-y-auto">
                 <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
                   <div>
                     <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
@@ -1426,180 +1807,558 @@ export default function LogStreamerAndShell({
               </div>
             )}
 
-            {/* Right 8 (or 12) Columns: Flattened SRE Log Cards with Regex Highlight, Pinning & JSON Diff */}
-            <div className={`${showFacetSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-2 max-h-[460px] overflow-y-auto pr-1`}>
-              {chronoEntries
-                .filter((e) => (!showPinnedOnly ? true : pinnedLogIds.includes(e.id)))
-                .map((entry) => {
-                  const isOpen = expandedChronoEntryId === entry.id;
-                  const isPinned = pinnedLogIds.includes(entry.id);
-                  const isDiffSelected = diffSelectionIds.includes(entry.id);
-                  return (
-                    <div
-                      key={entry.id}
-                      className={`rounded-lg border overflow-hidden transition-colors ${
-                        isPinned
-                          ? 'border-amber-500/50 bg-amber-500/5 dark:bg-[#171612]'
-                          : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#131314] hover:border-purple-500/40'
-                      }`}
-                    >
+            {/* Right 8 (or 12) Columns: Either Flattened SRE Cards OR High-Density Columnar Table View */}
+            <div className={`${showFacetSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-2 max-h-[500px] overflow-y-auto pr-1`}>
+              {streamViewMode === 'COLUMN_TABLE' ? (
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] overflow-x-auto">
+                  <table className="w-full text-left border-collapse font-mono text-[11px]">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400">
+                        <th className="py-2 px-2.5">Timestamp</th>
+                        <th className="py-2 px-2">Sev</th>
+                        <th className="py-2 px-2.5">Service (+ = / - !=)</th>
+                        <th className="py-2 px-2">HTTP</th>
+                        <th className="py-2 px-2">Latency</th>
+                        <th className="py-2 px-2.5">Message &amp; Virtual Grok Fields</th>
+                        <th className="py-2 px-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
+                      {chronoEntries
+                        .filter((e) => (!showPinnedOnly ? true : pinnedLogIds.includes(e.id)))
+                        .map((entry) => {
+                          const isPinned = pinnedLogIds.includes(entry.id);
+                          const grokGroups = extractVirtualGrokFields(entry.cleanMessage);
+                          return (
+                            <tr
+                              key={entry.id}
+                              className={`hover:bg-zinc-50 dark:hover:bg-zinc-900/60 ${
+                                isPinned ? 'bg-amber-500/5' : ''
+                              }`}
+                            >
+                              <td className="py-2 px-2.5 whitespace-nowrap text-zinc-500">
+                                {formatLogDate(entry.timestamp)}
+                              </td>
+                              <td className="py-2 px-2 whitespace-nowrap">
+                                {getSeverityBadge(entry.severity)}
+                              </td>
+                              <td className="py-2 px-2.5 whitespace-nowrap">
+                                <div className="flex items-center gap-1">
+                                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                    {entry.serviceName}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      applyFacetClauseToLql(
+                                        `resource.labels.service_name="${entry.serviceName}"`
+                                      )
+                                    }
+                                    className="px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold cursor-pointer"
+                                    title="Include service in LQL"
+                                  >
+                                    +=
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      applyFacetClauseToLql(
+                                        `-resource.labels.service_name="${entry.serviceName}"`
+                                      )
+                                    }
+                                    className="px-1 py-0.2 rounded bg-red-500/15 text-red-700 dark:text-red-300 text-[9px] font-bold cursor-pointer"
+                                    title="Exclude service from LQL"
+                                  >
+                                    -=
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-2 px-2 whitespace-nowrap">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    entry.httpStatus >= 500
+                                      ? 'bg-red-500/20 text-red-700 dark:text-red-300'
+                                      : entry.httpStatus >= 400
+                                      ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                                      : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                                  }`}
+                                >
+                                  {entry.httpStatus}
+                                </span>
+                              </td>
+                              <td className="py-2 px-2 whitespace-nowrap font-bold text-zinc-800 dark:text-zinc-200">
+                                {entry.latencyMs}ms
+                              </td>
+                              <td className="py-2 px-2.5 max-w-md">
+                                <div className="truncate text-zinc-900 dark:text-zinc-100" title={entry.cleanMessage}>
+                                  {renderRegexHighlightedMessage(entry.cleanMessage)}
+                                </div>
+                                {grokGroups && (
+                                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                                    {Object.entries(grokGroups).map(([k, v]) => (
+                                      <span
+                                        key={k}
+                                        className="px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[9.5px]"
+                                      >
+                                        <strong>{k}:</strong> {String(v).slice(0, 36)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-2 px-2 whitespace-nowrap text-right">
+                                <div className="inline-flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => togglePinLog(entry.id)}
+                                    className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[9.5px] cursor-pointer"
+                                  >
+                                    {isPinned ? 'Pinned' : 'Pin'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => triggerTimeTravelPeek(entry.timestamp)}
+                                    className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[9.5px] font-bold cursor-pointer"
+                                  >
+                                    ±30s
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                chronoEntries
+                  .filter((e) => (!showPinnedOnly ? true : pinnedLogIds.includes(e.id)))
+                  .map((entry) => {
+                    const isOpen = expandedChronoEntryId === entry.id;
+                    const isPinned = pinnedLogIds.includes(entry.id);
+                    const isDiffSelected = diffSelectionIds.includes(entry.id);
+                    const grokGroups = extractVirtualGrokFields(entry.cleanMessage);
+                    return (
                       <div
-                        onClick={() =>
-                          setExpandedChronoEntryId(isOpen ? null : entry.id)
-                        }
-                        className="p-3 cursor-pointer flex flex-wrap items-start justify-between gap-2"
+                        key={entry.id}
+                        className={`rounded-lg border overflow-hidden transition-colors ${
+                          isPinned
+                            ? 'border-amber-500/50 bg-amber-500/5 dark:bg-[#171612]'
+                            : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#131314] hover:border-purple-500/40'
+                        }`}
                       >
-                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                          {isOpen ? (
-                            <ChevronDown className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
-                          )}
-                          <div className="space-y-1 min-w-0 flex-1">
-                            {/* Top Hoisted Metadata Row (Zero JSON Digging!) */}
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {getSeverityBadge(entry.severity)}
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                  entry.httpStatus >= 500
-                                    ? 'bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30'
-                                    : entry.httpStatus >= 400
-                                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30'
-                                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-500'
-                                }`}
-                              >
-                                {entry.httpMethod} {entry.httpStatus} · {entry.latencyMs}ms
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold">
-                                {entry.serviceName}
-                              </span>
-                              <span className="text-[10.5px] font-mono text-zinc-500">
-                                ({entry.resourceTarget})
-                              </span>
-                              {chronoData?.compiledQuery?.naturalLanguage &&
-                                typeof entry.nlpRelevancePct === 'number' && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
-                                    <Cpu className="w-2.5 h-2.5" />
-                                    <span>BM25 Match: {entry.nlpRelevancePct}%</span>
+                        <div
+                          onClick={() =>
+                            setExpandedChronoEntryId(isOpen ? null : entry.id)
+                          }
+                          className="p-3 cursor-pointer flex flex-wrap items-start justify-between gap-2"
+                        >
+                          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                            {isOpen ? (
+                              <ChevronDown className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
+                            )}
+                            <div className="space-y-1.5 min-w-0 flex-1">
+                              {/* Top Hoisted Metadata Row (Zero JSON Digging!) */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {getSeverityBadge(entry.severity)}
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                    entry.httpStatus >= 500
+                                      ? 'bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30'
+                                      : entry.httpStatus >= 400
+                                      ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30'
+                                      : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-500'
+                                  }`}
+                                >
+                                  {entry.httpMethod} {entry.httpStatus} · {entry.latencyMs}ms
+                                </span>
+                                <span className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold">
+                                  {entry.serviceName}
+                                </span>
+                                <span className="text-[10.5px] font-mono text-zinc-500">
+                                  ({entry.resourceTarget})
+                                </span>
+                                {chronoData?.compiledQuery?.naturalLanguage &&
+                                  typeof entry.nlpRelevancePct === 'number' && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
+                                      <Cpu className="w-2.5 h-2.5" />
+                                      <span>BM25 Match: {entry.nlpRelevancePct}%</span>
+                                    </span>
+                                  )}
+                                {entry.dlpFindings?.length > 0 && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold">
+                                    <ShieldAlert className="w-3 h-3" />
+                                    <span>DLP LEAK: {entry.dlpFindings[0].type}</span>
                                   </span>
                                 )}
-                              {entry.dlpFindings?.length > 0 && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold">
-                                  <ShieldAlert className="w-3 h-3" />
-                                  <span>DLP LEAK: {entry.dlpFindings[0].type}</span>
+                              </div>
+
+                              {/* Clean Flattened Message with Live Regex Token Highlighting */}
+                              <div className="text-xs font-mono text-zinc-900 dark:text-zinc-100 break-words">
+                                {renderRegexHighlightedMessage(entry.cleanMessage)}
+                              </div>
+
+                              {/* Wave 2: Live Extracted Grok Virtual Fields (if pattern matches) */}
+                              {grokGroups && (
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  <span className="text-[9.5px] font-mono font-bold text-purple-600 dark:text-purple-400">
+                                    Grok Virtual Fields:
+                                  </span>
+                                  {Object.entries(grokGroups).map(([k, v]) => (
+                                    <span
+                                      key={k}
+                                      className="px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono"
+                                    >
+                                      <strong>{k}=</strong>
+                                      {String(v).slice(0, 48)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Wave 2: Interactive Flattened JSON Key-Value Pills (+ = / - !=) */}
+                              <div
+                                className="flex flex-wrap items-center gap-1 pt-0.5"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {getFlattenedKvPills(entry).map((pill) => (
+                                  <span
+                                    key={pill.key}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono"
+                                  >
+                                    <span className="text-zinc-400">{pill.key}:</span>
+                                    <span className="text-zinc-800 dark:text-zinc-200 font-semibold">
+                                      {pill.value}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => applyFacetClauseToLql(pill.includeClause)}
+                                      title={`Filter + = ${pill.includeClause}`}
+                                      className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+                                    >
+                                      +=
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => applyFacetClauseToLql(pill.excludeClause)}
+                                      title={`Exclude - != ${pill.excludeClause}`}
+                                      className="text-red-600 dark:text-red-400 hover:underline font-bold cursor-pointer"
+                                    >
+                                      -=
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* Actor + Timezone-Aware Timestamp + Trace ID */}
+                              <div className="flex flex-wrap items-center gap-2 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
+                                <span className="inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{formatLogDate(entry.timestamp)}</span>
                                 </span>
+                                <span>·</span>
+                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                  <UserCheck className="w-3 h-3" />
+                                  <span>{entry.actor}</span>
+                                </span>
+                                <span>·</span>
+                                <span>Trace: {entry.traceId?.slice(0, 12)}…</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons: Pin + Diff + ±30s Time-Travel + Trace Waterfall */}
+                          <div
+                            className="flex items-center gap-1 shrink-0 flex-wrap"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => togglePinLog(entry.id)}
+                              className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                                isPinned
+                                  ? 'bg-amber-500 text-white border-amber-500'
+                                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
+                              }`}
+                            >
+                              {isPinned ? 'Pinned' : 'Pin'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                toggleDiffSelectLog(entry.id);
+                                setShowPayloadDiffModal(true);
+                              }}
+                              className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                                isDiffSelected
+                                  ? 'bg-purple-600 text-white border-purple-500'
+                                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
+                              }`}
+                            >
+                              {isDiffSelected ? 'Diff Selected' : 'Diff'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => triggerTimeTravelPeek(entry.timestamp)}
+                              title="Fetch all project logs ±30 seconds around this event"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              <Clock className="w-3 h-3" />
+                              <span>±30s</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedTraceId(entry.traceId);
+                                setActiveChronoTab('TRACE_WATERFALL');
+                              }}
+                              className="px-2 py-1 rounded bg-purple-600/15 hover:bg-purple-600/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                            >
+                              Trace
+                            </button>
+                          </div>
+                        </div>
+
+                        {isOpen && (
+                          <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 space-y-2 font-mono text-[11px]">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-zinc-400">
+                                Drain3 Signature:{' '}
+                                <code className="text-purple-700 dark:text-purple-300">{entry.signaturePattern}</code>
+                              </span>
+                              {onAskCopilot && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onAskCopilot(
+                                      `Diagnose root cause for ${entry.serviceName} (${entry.httpStatus} in ${entry.latencyMs}ms): ${entry.cleanMessage}`
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                >
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>Ask Gemini SRE Copilot</span>
+                                </button>
                               )}
                             </div>
-
-                            {/* Clean Flattened Message with Live Regex Token Highlighting */}
-                            <div className="text-xs font-mono text-zinc-900 dark:text-zinc-100 break-words">
-                              {renderRegexHighlightedMessage(entry.cleanMessage)}
-                            </div>
-
-                            {/* Actor + Timezone-Aware Timestamp + Trace ID */}
-                            <div className="flex flex-wrap items-center gap-2 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
-                              <span className="inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                <span>{formatLogDate(entry.timestamp)}</span>
-                              </span>
-                              <span>·</span>
-                              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                <UserCheck className="w-3 h-3" />
-                                <span>{entry.actor}</span>
-                              </span>
-                              <span>·</span>
-                              <span>Trace: {entry.traceId?.slice(0, 12)}…</span>
-                            </div>
+                            <pre className="text-[10px] text-zinc-700 dark:text-zinc-300 overflow-x-auto max-h-44 p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                              {JSON.stringify(entry.raw || entry, null, 2)}
+                            </pre>
                           </div>
-                        </div>
-
-                        {/* Action Buttons: Pin + Diff + ±30s Time-Travel + Trace Waterfall */}
-                        <div
-                          className="flex items-center gap-1 shrink-0 flex-wrap"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => togglePinLog(entry.id)}
-                            className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
-                              isPinned
-                                ? 'bg-amber-500 text-white border-amber-500'
-                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
-                            }`}
-                          >
-                            {isPinned ? 'Pinned' : 'Pin'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              toggleDiffSelectLog(entry.id);
-                              setShowPayloadDiffModal(true);
-                            }}
-                            className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
-                              isDiffSelected
-                                ? 'bg-purple-600 text-white border-purple-500'
-                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
-                            }`}
-                          >
-                            {isDiffSelected ? 'Diff Selected' : 'Diff'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => triggerTimeTravelPeek(entry.timestamp)}
-                            title="Fetch all project logs ±30 seconds around this event"
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold cursor-pointer"
-                          >
-                            <Clock className="w-3 h-3" />
-                            <span>±30s</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedTraceId(entry.traceId);
-                              setActiveChronoTab('TRACE_WATERFALL');
-                            }}
-                            className="px-2 py-1 rounded bg-purple-600/15 hover:bg-purple-600/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold cursor-pointer"
-                          >
-                            Trace
-                          </button>
-                        </div>
+                        )}
                       </div>
-
-                      {isOpen && (
-                        <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 space-y-2 font-mono text-[11px]">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="text-zinc-400">
-                              Drain3 Signature:{' '}
-                              <code className="text-purple-700 dark:text-purple-300">{entry.signaturePattern}</code>
-                            </span>
-                            {onAskCopilot && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  onAskCopilot(
-                                    `Diagnose root cause for ${entry.serviceName} (${entry.httpStatus} in ${entry.latencyMs}ms): ${entry.cleanMessage}`
-                                  )
-                                }
-                                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                              >
-                                <Sparkles className="w-3 h-3" />
-                                <span>Ask Gemini SRE Copilot</span>
-                              </button>
-                            )}
-                          </div>
-                          <pre className="text-[10px] text-zinc-700 dark:text-zinc-300 overflow-x-auto max-h-44 p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                            {JSON.stringify(entry.raw || entry, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })
+              )}
             </div>
           </div>
         )}
 
-        {/* TAB 2: SEMANTIC DRAIN3 LOG PATTERN CLUSTERING */}
+        {/* TAB 2 (WAVE 2): LOG-TO-METRICS & P99 LATENCY HEATMAP AGGREGATOR (ClickHouse / SigNoz / VictoriaLogs stats by) */}
+        {activeChronoTab === 'LOG_TO_METRICS' && (
+          <div className="space-y-3.5 font-mono">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
+                    CLICKHOUSE / SIGNOZ / VICTORIALOGS STATS AGGREGATOR
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Real-Time Log-to-Metrics (P50 / P90 / P99 Latency, Error Rate % &amp; 5-Bin Latency Distribution Heatmap by Service)
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto pt-1">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 text-[11px]">
+                      <th className="py-2 pr-3">Service Name</th>
+                      <th className="py-2 px-2.5">Requests</th>
+                      <th className="py-2 px-2.5">Error Rate</th>
+                      <th className="py-2 px-2.5">P50</th>
+                      <th className="py-2 px-2.5">P90</th>
+                      <th className="py-2 px-2.5">P99</th>
+                      <th className="py-2 px-2.5">Volume</th>
+                      <th className="py-2 px-3">5-Bin Latency Heatmap (&lt;50ms · 50-250ms · 250ms-1s · 1-2s · &gt;2s)</th>
+                      <th className="py-2 pl-2 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
+                    {(chronoData?.logToMetricsByService || []).map((svc) => {
+                      const bins = svc.heatmapBins || [1, 1, 1, 1, 1];
+                      const maxBin = Math.max(1, ...bins);
+                      const binLabels = ['<50ms', '50-250ms', '250-1000ms', '1-2s', '>2s'];
+                      return (
+                        <tr key={svc.serviceName} className="hover:bg-white/60 dark:hover:bg-zinc-900/60">
+                          <td className="py-2.5 pr-3 font-bold text-zinc-900 dark:text-zinc-100">
+                            {svc.serviceName}
+                          </td>
+                          <td className="py-2.5 px-2.5 text-zinc-700 dark:text-zinc-300">
+                            {svc.totalCount}
+                          </td>
+                          <td className="py-2.5 px-2.5">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10.5px] font-bold ${
+                                svc.errorRatePct >= 40
+                                  ? 'bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30'
+                                  : svc.errorRatePct > 0
+                                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                  : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                              }`}
+                            >
+                              {svc.errorRatePct}% ({svc.errorCount} err)
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2.5 text-zinc-600 dark:text-zinc-400">
+                            {svc.p50Ms}ms
+                          </td>
+                          <td className="py-2.5 px-2.5 text-amber-700 dark:text-amber-300 font-semibold">
+                            {svc.p90Ms}ms
+                          </td>
+                          <td className="py-2.5 px-2.5 text-red-600 dark:text-red-400 font-extrabold">
+                            {svc.p99Ms}ms
+                          </td>
+                          <td className="py-2.5 px-2.5 text-zinc-500">
+                            {svc.totalKb} KB
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="grid grid-cols-5 gap-1 w-48">
+                              {bins.map((cnt, idx) => {
+                                const intensity = cnt === 0 ? 0.12 : Math.max(0.28, cnt / maxBin);
+                                const isSlowBin = idx >= 3;
+                                return (
+                                  <div
+                                    key={binLabels[idx]}
+                                    title={`${binLabels[idx]}: ${cnt} requests`}
+                                    style={{ opacity: intensity }}
+                                    className={`h-5 rounded flex items-center justify-center text-[9.5px] font-bold ${
+                                      cnt === 0
+                                        ? 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500'
+                                        : isSlowBin
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-blue-600 text-white'
+                                    }`}
+                                  >
+                                    {cnt}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </td>
+                          <td className="py-2.5 pl-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                applyFacetClauseToLql(svc.lqlFilter);
+                                setActiveChronoTab('SMART_STREAM');
+                              }}
+                              className="px-2.5 py-1 rounded bg-purple-600/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10.5px] font-bold cursor-pointer"
+                            >
+                              Drilldown LQL
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3 (WAVE 2): LIVE GROK / NAMED-REGEX VIRTUAL FIELD EXTRACTOR (Vector / Logstash / OpenObserve style) */}
+        {activeChronoTab === 'GROK_EXTRACTOR' && (
+          <div className="space-y-3.5 font-mono">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-extrabold mr-2">
+                    VECTOR / LOGSTASH / OPENOBSERVE LIVE GROK PARSER
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Named Capture Group (`(?&lt;field&gt;...)`) Virtual Schema-on-Read Extractor
+                  </span>
+                </div>
+              </div>
+
+              {/* Preset Grok / Named-Regex Extractors */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] text-zinc-500">Load Preset Extractor:</span>
+                {(chronoData?.grokVirtualExtractors || []).map((gx) => (
+                  <button
+                    key={gx.id}
+                    type="button"
+                    onClick={() => setGrokPatternInput(gx.pattern)}
+                    className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold border cursor-pointer ${
+                      grokPatternInput === gx.pattern
+                        ? 'bg-purple-600 text-white border-purple-500'
+                        : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    {gx.name}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10.5px] text-zinc-500 font-bold block">
+                  Live Named-Regex / Grok Pattern (Automatically extracts virtual columns across Cards &amp; Columnar Table View):
+                </label>
+                <input
+                  type="text"
+                  value={grokPatternInput}
+                  onChange={(e) => setGrokPatternInput(e.target.value)}
+                  className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 font-bold"
+                />
+              </div>
+
+              {/* Live Extracted Virtual Field Preview Table */}
+              <div className="space-y-2 pt-1">
+                <div className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+                  Live Extracted Virtual Records Across Current Stream:
+                </div>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                  {chronoEntries.map((entry) => {
+                    const groups = extractVirtualGrokFields(entry.cleanMessage);
+                    if (!groups) return null;
+                    return (
+                      <div
+                        key={entry.id}
+                        className="p-2.5 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+                          <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                            {entry.serviceName} ({entry.httpStatus} · {entry.latencyMs}ms)
+                          </span>
+                          <span className="text-zinc-400">{formatLogDate(entry.timestamp)}</span>
+                        </div>
+                        <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                          {entry.cleanMessage}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {Object.entries(groups).map(([k, v]) => (
+                            <span
+                              key={k}
+                              className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10.5px] font-bold"
+                            >
+                              {k} = &quot;{String(v)}&quot;
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: SEMANTIC DRAIN3 LOG PATTERN CLUSTERING */}
         {activeChronoTab === 'DRAIN3_CLUSTERS' && (
           <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
             {(chronoData?.drainClusters || []).map((cluster) => (
