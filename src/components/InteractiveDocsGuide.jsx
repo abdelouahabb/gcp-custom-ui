@@ -31,6 +31,74 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'borderless-apache-iceberg-50-playbook-lakehouse-matrix',
+    wave: 'DATA ENGINEERING & BIGLAKE · 50-PLAYBOOK BORDERLESS APACHE ICEBERG & MULTI-ENGINE LAKEHOUSE MATRIX',
+    title:
+      '50-Playbook Borderless Apache Iceberg & Multi-Engine Lakehouse Matrix — 8 Domains, Symmetrical 3x3 Bento Grid, v2 Metadata X-Ray & 4 Live TCO Simulators',
+    badge: 'DATA ENGINEERING + BIGLAKE TAB',
+    badgeColor: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40',
+    icon: Layers,
+    targetTab: 'DATA_ENGINEERING',
+    problemSolved:
+      'Modern Lakehouse architects and data engineers need concrete, copy-ready blueprints and live provisioning across all 50 enterprise Apache Iceberg scenarios—spanning Open Iceberg REST Catalogs, 100+ Hive Metastore (HMS) & Delta Lake migrations, BigQuery + Spark 3.5 + Trino multi-engine concurrency, Streaming CDC (Kafka / Beam / Debezium), Multi-Petabyte GCS Prefix Hashing & Autoclass, Borderless Multi-Cloud (S3 / ADLS / CCI), Row/Column Security + WORM Vaults, Spanner/AlloyDB/Bigtable HTAP, and GenAI Semantic SQL (`AI.IF` / `VECTOR_SEARCH`).',
+    howItWorks: [
+      'Symmetrical 3x3 Equal-Sized Bento Domain Grid (All 8 Domains · 50 Playbooks): Filter across D01 (REST Catalog & HMS/Delta Migrations), D02 (Multi-Engine BQ/Spark/Trino), D03 (Streaming CDC & ACID DML), D04 (GCS Prefix Hashing, Autoclass & Compaction), D05 (Multi-Cloud S3/ADLS Omni & CCI), D06 (RLS/CLS Governance & SEC 17a-4 WORM), D07 (Spanner/AlloyDB/Bigtable HTAP), and D08 (Conversational BI Agents, Semantic SQL & Vector RAG).',
+      '3 Equal-Sized Workspace View Modes (01 · Workbench, 02 · 50-Grid, 03 · v2 X-Ray): Switch between the Split Workbench (with the 4-Stage Lakehouse Architecture Pipeline Ribbon and Multi-Engine Code Synthesizer for BigQuery SQL, Serverless PySpark 3.5 REST 1.10, and gcloud 588.0.0 CLI), the 3-column 50-Playbook Bento Matrix Grid, and the Apache Iceberg Spec v2 Metadata & 16-Shard GCS Prefix Hash X-Ray.',
+      '4 Interactive Lakehouse TCO & Performance Simulators (S1–S4): Model (S1) Migrate vs. Federate (AWS S3/Azure ADLS egress vs BigQuery Omni Cross-Cloud Cache), (S2) BigQuery Lakehouse vs 24/7 Trino on GKE (10TB+ TPC-DS), (S3) 100+ HMS/Delta Zero-Rewrite In-Place Registration (CALL system.add_files), and (S4) Streaming Small-File Compaction (512MB Z-Order bin-packing) + GCS Autoclass storage tiering.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/data-engineer/iceberg-matrix/probe (BigQuery + GCS + [ALPHA] BigLake Iceberg REST Catalog + [ALPHA] Managed Kafka + [ALPHA] Dataplex)',
+      'POST /api/project/:id/data-engineer/iceberg-matrix/execute (BigQuery Dataset bootstrap + [ALPHA] Iceberg REST Catalog registration)',
+    ],
+    billingImpact:
+      'Read-only estate probing is 100% $0.00; 1-Tap Playbook Bootstrap is protected by the Universal Cost Gatekeeper and defaults to scale-to-zero BigQuery & Serverless Spark.',
+  },
+  {
+    id: 'gcloud-588-alpha-beta-frontier-wave1-wave2',
+    wave: '[ALPHA / BETA] GCLOUD 588.0.0 FRONTIER LAB · WAVE 1 + WAVE 2 (10 PRE-GA CAPABILITIES)',
+    title:
+      '[ALPHA / BETA] gcloud 588.0.0 Frontier Lab — Worker Pools, Multi-Region Run, Agent Registry & MCP, PAM JIT, Model Armor, Developer Knowledge, Quota Adjuster, Audit Manager & Hypercomputer Lustre',
+    badge: '2026 INNOVATION LAB (WAVE 1 + WAVE 2)',
+    badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+    icon: Rocket,
+    targetTab: 'INNOVATION_LAB',
+    targetSubTab: 'GCLOUD_ALPHA_BETA',
+    problemSolved:
+      'Google Cloud SDK 588.0.0 ships powerful pre-GA capabilities inside `gcloud beta` and `gcloud alpha` that are hidden from standard cloud consoles—spanning pull-based Worker Pools, MCP Server registries, Just-In-Time PAM entitlements, LLM prompt-injection edge firewalls, automated quota adjusters, and AI Hypercomputer Lustre clusters.',
+    howItWorks: [
+      'Explicit [BETA · PUBLIC PREVIEW] & [ALPHA · EARLY ACCESS] Badging + Equal-Sized 2x5 Bento Grid: Filter between ALL WAVES (10), WAVE 1 (5), and WAVE 2 (5 · NEW) or ALL TRACKS, [BETA] ONLY, and [ALPHA] ONLY.',
+      'Wave 1 (01–05): (01) [BETA] Cloud Run Worker Pools & Multi-Region Services, (02) [ALPHA] Autonomous Agent Registry & MCP Servers, (03) [ALPHA] Privileged Access Manager (PAM) JIT & IAM 403 Policy Troubleshooter, (04) [ALPHA] Personalized Service Health & Cloud Run Fault-Injection, and (05) [BETA] App Hub & Application Optimize.',
+      'Wave 2 (06–10): (06) [ALPHA] Vertex AI Model Armor Prompt-Injection & SDP/PII Firewall, (07) [ALPHA] Developer Knowledge MCP, App-Topology & Design Center, (08) [BETA] Cloud Quotas Live Adjuster, (09) [ALPHA] Sovereign Audit Manager & Software Delivery Trust, and (10) [ALPHA] AI Hypercomputer Cluster Director & Managed Lustre (1,000 MB/s/TiB).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/alpha-beta/overview & POST /api/project/:id/alpha-beta/action',
+      'gcloud beta / gcloud alpha 588.0.0 CLI + v1beta / v1alpha REST bridges',
+    ],
+    billingImpact:
+      'Discovery and policy troubleshooting run at $0.00; every mutating [ALPHA] or [BETA] action is intercepted by the Universal 1-Tap Cost Gatekeeper.',
+  },
+  {
+    id: 'universal-1-tap-cloud-action-cost-gatekeeper',
+    wave: 'FINOPS & ZERO-TRUST SAFETY · UNIVERSAL 1-TAP CLOUD ACTION & COST GATEKEEPER',
+    title:
+      'Universal 1-Tap Cloud Action & FinOps Cost Gatekeeper — Pre-Execution "What Happens Next", Cost Impact & Release Track Modal',
+    badge: 'GLOBAL SAFETY INTERCEPTOR',
+    badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+    icon: ShieldCheck,
+    targetTab: 'OVERVIEW',
+    problemSolved:
+      'In cloud environments, a single 1-tap button click can provision billable compute nodes, allocate GPUs, rewrite IAM policies, or invoke pre-GA [ALPHA]/[BETA] APIs—so engineers must always be warned about exact next steps and billing impact before execution.',
+    howItWorks: [
+      'Global Axios Request Interceptor (classifyDestructiveAxiosConfig in src/App.jsx): Intercepts every mutating DELETE, POST, PATCH, and PUT request across all 22 studios while allowing zero-cost read-only probes and local NLP compilers to run without friction.',
+      '3-Part Pre-Execution Disclosure Modal: Displays (1) What Happens Next (exact API/CLI sequence), (2) Google Cloud Billing & Cost Impact Warning (FINOPS GUARDRAIL), and (3) explicit [GA · PRODUCTION], [BETA · PUBLIC PREVIEW], or [ALPHA · EARLY ACCESS] release track badges.',
+    ],
+    apisUsed: [
+      'Global Axios request interceptor across all /api/project/:id/* mutating endpoints',
+    ],
+    billingImpact:
+      'Prevents accidental cloud spend by requiring explicit human confirmation with full SKU cost visibility before any mutating cloud action runs.',
+  },
+  {
     id: 'derived-control-plane-synthesis-and-live-rest-execution',
     wave: 'CONTROL-PLANE SYNTHESIS · BLAST-RADIUS GRAPH, CAUSAL CORRELATOR, TRANSACTIONAL RUNBOOKS, FLEET MATRIX & SHA-256 DRIFT RECEIPTS',
     title:
