@@ -564,6 +564,12 @@ export default function ResourceControlCenter({
                     onTriggerAction({
                       actionType: 'ROLLBACK_CANARY',
                       targetId: selectedResource.id,
+                      payload: {
+                        resourceName: selectedResource.name,
+                        resourceType: selectedResource.type,
+                        region: selectedResource.region,
+                        zone: selectedResource.zone || selectedResource.details?.zone,
+                      },
                     })
                   }
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-[8px] px-[16px] py-[9px] text-xs font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -581,6 +587,10 @@ export default function ResourceControlCenter({
                       actionType: 'OPTIMIZE_FINOPS',
                       targetId: selectedResource.id,
                       payload: {
+                        resourceName: selectedResource.name,
+                        resourceType: selectedResource.type,
+                        region: selectedResource.region,
+                        zone: selectedResource.zone || selectedResource.details?.zone,
                         newCostUsd: Number(
                           (selectedResource.monthlyCostUsd * 0.72).toFixed(2)
                         ),
@@ -598,13 +608,40 @@ export default function ResourceControlCenter({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    onRunInShell(
-                      selectedResource.category === 'storage'
-                        ? `gcloud storage buckets list --project=${projectId}`
-                        : `gcloud services list --enabled --project=${projectId}`
-                    )
-                  }
+                  onClick={() => {
+                    const rType = selectedResource.type || '';
+                    const rName = selectedResource.name || '';
+                    const rZone =
+                      selectedResource.zone ||
+                      selectedResource.details?.zone ||
+                      selectedResource.region ||
+                      'us-east1-b';
+                    const rRegion =
+                      selectedResource.details?.region ||
+                      selectedResource.region ||
+                      'us-central1';
+
+                    let inspectCmd = `gcloud services list --enabled --project=${projectId}`;
+                    if (rType === 'Cloud Storage Bucket' || selectedResource.category === 'storage') {
+                      inspectCmd = `gcloud storage buckets describe gs://${rName} --format=json --project=${projectId}`;
+                    } else if (rType === 'Compute Engine VM') {
+                      inspectCmd = `gcloud compute instances describe ${rName} --zone=${rZone} --format=json --project=${projectId}`;
+                    } else if (rType === 'Cloud Run Service') {
+                      inspectCmd = `gcloud run services describe ${rName} --region=${rRegion} --format=json --project=${projectId}`;
+                    } else if (rType === 'BigQuery Dataset') {
+                      inspectCmd = `bq show --format=prettyjson ${projectId}:${rName}`;
+                    } else if (rType === 'VPC Firewall Rule') {
+                      inspectCmd = `gcloud compute firewall-rules describe ${rName} --format=json --project=${projectId}`;
+                    } else if (rType === 'VPC Network') {
+                      inspectCmd = `gcloud compute networks describe ${rName} --format=json --project=${projectId}`;
+                    } else if (rType.includes('GKE')) {
+                      inspectCmd = `gcloud container clusters describe ${rName} --location=${rRegion} --format=json --project=${projectId}`;
+                    } else if (rType === 'Enabled GCP Service API') {
+                      const svc = selectedResource.details?.serviceName || selectedResource.storageClass || rName;
+                      inspectCmd = `gcloud services list --enabled --filter="config.name:${svc}" --project=${projectId}`;
+                    }
+                    onRunInShell(inspectCmd);
+                  }}
                   className="inline-flex items-center justify-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-[500] transition-colors shadow-sm"
                 >
                   <Terminal className="w-3.5 h-3.5" />
