@@ -31,24 +31,24 @@ import {
 
 const DOC_SECTIONS = [
   {
-    id: 'open-source-2026-sre-log-explorer-wave1-wave2',
-    wave: 'SRE LOG INTELLIGENCE · 2026 OPEN-SOURCE LOG EXPLORER SUITE (CLICKHOUSE, HYPERDX, VICTORIALOGS, SIGNOZ, LNAV & LOKI)',
+    id: 'open-source-2026-sre-log-explorer-wave1-wave2-wave3',
+    wave: 'SRE LOG INTELLIGENCE · 2026 OPEN-SOURCE LOG EXPLORER SUITE (WAVE 1 + WAVE 2 + WAVE 3 · 12-TAB BENTO WORKBENCH)',
     title:
-      '2026 Open-Source SRE Log Explorer & Neural Chrono-Log Studio — 24-Bucket Infra Histogram, Faceted Columnar Stream, Log-to-Metrics P99 Heatmap, Live Grok Extractor, Anomaly Baseline Diff & 6-Format Query Transpiler',
-    badge: 'LOGS & SHELL TAB (WAVE 1 + WAVE 2)',
+      '2026 Open-Source SRE Log Explorer & Neural Chrono-Log Studio — 24-Bucket Infra Histogram, Faceted Columnar Stream, Log-to-Metrics P99 Heatmap, Live Grok Extractor, Source-Code Git Blame & Patch, Multi-Window SLO Burn Matrix, eBPF Kernel X-Ray & Canary Log Replay',
+    badge: 'LOGS & SHELL TAB (WAVE 1 + WAVE 2 + WAVE 3)',
     badgeColor: 'bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/40',
     icon: Terminal,
     targetTab: 'LOGS_SHELL',
     problemSolved:
-      'Legacy Cloud Logging consoles force SREs to dig through deeply nested JSON trees without correlated container CPU/RAM metrics, deployment markers, instant field cardinality facets, service-level P50/P90/P99 latency heatmaps, live Grok virtual field extraction, anomaly baseline diffs, or polyglot open-source query translation.',
+      'Legacy Cloud Logging consoles force SREs to dig through deeply nested JSON trees without correlated container CPU/RAM metrics, deployment markers, instant field cardinality facets, service-level P50/P90/P99 latency heatmaps, live Grok virtual field extraction, source-code Git blame + unified diff patches, multi-window SLO burn-rate alerts, kernel eBPF TCP/DNS telemetry, or synthetic canary log replay.',
     howItWorks: [
       'Interactive 24-Bucket Stacked Severity Histogram + Correlated Infra Overlay: Plots ERROR/WARN/INFO volume and P95 latency alongside container CPU/RAM utilization sparkbars and clickable K8s/Cloud Run markers (DEPLOY revision rollout, 429 QUOTA Vertex AI spike, SCALE +6 autoscale). Clicking any bar locks a ±30s time-travel window.',
-      'VictoriaLogs / OpenObserve Field Facet Sidebar + Cards vs. Columnar Table View + JSON Key-Value Pill Flattener: Inspect field cardinality and filter in 1 click (+ = include / - != exclude), toggle between Cards View and High-Density Columnar Table View, or bookmark and diff any two log payloads side by side.',
-      'Log-to-Metrics & 5-Bin Latency Heatmap (Tab 2) + Live Grok / Named-Regex Virtual Field Extractor (Tab 3): Computes real-time P50/P90/P99 latency, error rate %, and 5-bin latency heatmaps by service, and extracts virtual schema-on-read columns on the fly using named capture groups (?<field>...).',
-      'SigNoz / Drain3 Anomaly Baseline Diff (Tab 5), 6-Format Polyglot Transpiler (Tab 7) & 1-Click Incident Postmortem Exporter: Compares current incident rates against the 24h baseline (+412% error spike), transpiles LQL into VictoriaLogs PipesQL, Grafana Loki LogQL, ClickHouse OTel SQL, BigQuery _AllLogs SQL, PrometheusRule YAML, and gcloud CLI, and exports complete Markdown (.md) or JSON incident postmortems.',
+      'VictoriaLogs / OpenObserve Field Facet Sidebar + Cards vs. Columnar Table View + JSON Key-Value Pill Flattener (Tab 01): Inspect field cardinality and filter in 1 click (+ = include / - != exclude), toggle between Cards View and High-Density Columnar Table View, or bookmark and diff any two log payloads side by side.',
+      'Log-to-Metrics & 5-Bin Latency Heatmap (Tab 02) + Live Grok / Named-Regex Virtual Field Extractor (Tab 03): Computes real-time P50/P90/P99 latency, error rate %, and 5-bin latency heatmaps by service, and extracts virtual schema-on-read columns on the fly using named capture groups (?<field>...).',
+      'Wave 3 Jaw-Breaking SRE Suite (Tabs 09–12): (09) Stack-Trace Source-Code Pinpointer, Git Blame Commit Correlator & 1-Click Unified Diff Patch (.patch) Generator, (10) Google SRE Workbook Multi-Window SLO Error-Budget Burn Matrix (1h 14.4x Fast-Burn Page vs 6h 6.0x vs 24h 3.0x), (11) Cilium Hubble / Pixie / Coroot eBPF Syscall, CoreDNS & TCP Retransmit X-Ray with bpftrace one-liners, and (12) Interactive Log-Replay Time-Machine & Synthetic Canary Verifier.',
     ],
     apisUsed: [
-      'POST /api/project/:id/chrono-logs/query (logging.googleapis.com/v2/entries:list + Local 3-Stage NLP Compiler + Open-Source Analytics Engine)',
+      'POST /api/project/:id/chrono-logs/query & POST /api/project/:id/chrono-logs/replay-canary',
       'POST /api/project/:id/chrono-logs/exclusion (_Default Sink FinOps Noise-Cutter)',
     ],
     billingImpact:

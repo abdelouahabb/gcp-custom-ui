@@ -133,6 +133,11 @@ export default function LogStreamerAndShell({
   const [activeSavedViewId, setActiveSavedViewId] = useState(null);
   const [showPostmortemModal, setShowPostmortemModal] = useState(false);
 
+  // --- Wave 3 Jaw-Breaking SRE Observability & Log Intelligence State ---
+  const [replayLoading, setReplayLoading] = useState(false);
+  const [replayResult, setReplayResult] = useState(null);
+  const [selectedSloService, setSelectedSloService] = useState('checkout-agent-api');
+
   // --- Innovation #3: Live Cloud Audit "Who-Changed-What" Activity Timeline State ---
   const [auditData, setAuditData] = useState(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
@@ -385,6 +390,25 @@ export default function LogStreamerAndShell({
       chronoData?.queryTranspilations?.VictoriaLogsPipesQl || lql,
       '```',
     ].join('\n');
+  };
+
+  const handleReplayCanaryScenario = async (scenarioId) => {
+    if (!projectId || replayLoading) return;
+    setReplayLoading(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/chrono-logs/replay-canary`,
+        {
+          scenarioId,
+          grokPattern: grokPatternInput,
+        }
+      );
+      setReplayResult(res.data);
+    } catch {
+      // ignore
+    } finally {
+      setReplayLoading(false);
+    }
   };
 
   const handleApplyExclusionRule = async (rec) => {
@@ -1444,49 +1468,69 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* 8 Equal-Sized Bento Studio Navigation Tabs (4x2 Grid) + Open-Source SRE Workbench Toolbar */}
+        {/* 12 Equal-Sized Bento Studio Navigation Tabs (4x3 Grid) + Open-Source SRE Workbench Toolbar */}
         <div className="space-y-2.5 border-b border-zinc-200 dark:border-zinc-800 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             {[
               {
                 id: 'SMART_STREAM',
-                label: `1. Faceted Stream & Table (${chronoEntries.length})`,
+                label: `01. Faceted Stream & Table (${chronoEntries.length})`,
                 icon: Zap,
               },
               {
                 id: 'LOG_TO_METRICS',
-                label: `2. Log-to-Metrics & P99 Heatmap (${chronoData?.logToMetricsByService?.length || 4})`,
+                label: `02. Log-to-Metrics & P99 Heatmap (${chronoData?.logToMetricsByService?.length || 4})`,
                 icon: Cpu,
               },
               {
                 id: 'GROK_EXTRACTOR',
-                label: `3. Live Grok / Regex Extractor (${chronoData?.grokVirtualExtractors?.length || 3})`,
+                label: `03. Live Grok / Regex Extractor (${chronoData?.grokVirtualExtractors?.length || 3})`,
                 icon: Terminal,
               },
               {
                 id: 'DRAIN3_CLUSTERS',
-                label: `4. Drain3 Pattern Signatures (${chronoData?.drainClusters?.length || 0})`,
+                label: `04. Drain3 Pattern Signatures (${chronoData?.drainClusters?.length || 0})`,
                 icon: Layers,
               },
               {
                 id: 'ANOMALY_DIFF',
-                label: `5. Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 412}%)`,
+                label: `05. Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 412}%)`,
                 icon: AlertTriangle,
               },
               {
                 id: 'TRACE_WATERFALL',
-                label: `6. Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
+                label: `06. Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
                 icon: GitCommit,
               },
               {
                 id: 'QUERY_TRANSPILER',
-                label: `7. Polyglot Query Transpiler (6 Formats)`,
+                label: `07. Polyglot Query Transpiler (6 Formats)`,
                 icon: FileCode2,
               },
               {
                 id: 'FINOPS_DLP',
-                label: `8. Log FinOps ($0.50/GiB) & DLP (${chronoData?.dlpAlerts?.length || 0})`,
+                label: `08. Log FinOps ($0.50/GiB) & DLP (${chronoData?.dlpAlerts?.length || 0})`,
                 icon: DollarSign,
+              },
+              {
+                id: 'SOURCE_BLAME',
+                label: `09. Source-Code Blame & Hotfix (${chronoData?.sourceBlameAndHotfixes?.length || 3})`,
+                icon: FileCode2,
+              },
+              {
+                id: 'SLO_BURN_MATRIX',
+                label: `10. SLO Error-Budget Burn (18.6x Fast)`,
+                icon: AlertCircle,
+              },
+              {
+                id: 'EBPF_KERNEL_XRAY',
+                label: `11. eBPF Syscall, DNS & TCP X-Ray (${chronoData?.ebpfKernelTelemetry?.length || 3})`,
+                icon: Cpu,
+              },
+              {
+                id: 'CANARY_REPLAY',
+                label: `12. Canary Log Replay & Alert Drill (${chronoData?.replayScenarios?.length || 3})`,
+                icon: Play,
               },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -2118,6 +2162,15 @@ export default function LogStreamerAndShell({
                             >
                               Trace
                             </button>
+                            {entry.severity !== 'INFO' && (
+                              <button
+                                type="button"
+                                onClick={() => setActiveChronoTab('SOURCE_BLAME')}
+                                className="px-2 py-1 rounded bg-red-600/15 hover:bg-red-600/25 text-red-700 dark:text-red-300 border border-red-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                              >
+                                Git Blame &amp; Patch
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -2820,6 +2873,435 @@ export default function LogStreamerAndShell({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 09 (WAVE 3): STACK-TRACE SOURCE-CODE PINPOINTER, GIT BLAME COMMIT CORRELATOR & 1-CLICK HOTFIX DIFF GENERATOR */}
+        {activeChronoTab === 'SOURCE_BLAME' && (
+          <div className="space-y-3.5 font-mono">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10px] font-extrabold mr-2">
+                    SOURCE-MAP &amp; GIT BLAME CORRELATOR
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Pinpoints Exact File:Line, Offending Git Commit SHA &amp; Ready-to-Apply Unified Diff Patch (.patch)
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                {(chronoData?.sourceBlameAndHotfixes || []).map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {getSeverityBadge(item.severity)}
+                        <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10.5px] font-extrabold">
+                          {item.filePath}:{item.lineNumber}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-bold">
+                          Commit {item.gitCommitSha} ({item.committedAgo} by {item.gitAuthor})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(item.unifiedDiffPatch, `patch-${item.id}`)
+                          }
+                          className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedId === `patch-${item.id}` ? (
+                            <>
+                              <Check className="w-3 h-3" />
+                              <span>Copied Unified Diff (.patch)</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Copy Unified Diff (.patch)</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(item.ghPrCli, `gh-cli-${item.id}`)}
+                          className="px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedId === `gh-cli-${item.id}` ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-500" />
+                              <span>Copied PR CLI</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Copy `gh pr create` CLI</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                      <strong>{item.prTitle}:</strong> {item.blameVerdict}
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">
+                          Offending Source Line ({item.filePath}:{item.lineNumber})
+                        </div>
+                        <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-red-500/30 text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre">
+                          {item.offendingCodeSnippet}
+                        </pre>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                          Synthesized 1-Click Hotfix Diff Patch
+                        </div>
+                        <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-emerald-500/30 text-[10.5px] text-emerald-800 dark:text-emerald-300 overflow-x-auto whitespace-pre">
+                          {item.unifiedDiffPatch}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 10 (WAVE 3): LIVE SLO ERROR-BUDGET BURN-RATE MATRIX & MULTI-WINDOW ALERT COMPILER (Google SRE Workbook) */}
+        {activeChronoTab === 'SLO_BURN_MATRIX' && (
+          <div className="space-y-3.5 font-mono">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold mr-2">
+                    GOOGLE SRE WORKBOOK MULTI-WINDOW SLO ENGINE
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Live 30-Day Error Budget Burn-Rate Matrix (1h 14.4x Fast-Burn Page vs. 6h 6.0x vs. 24h 3.0x Ticket)
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                {(chronoData?.sloBurnRateMatrix || []).map((slo) => {
+                  const isCrit = slo.status === 'CRITICAL_FAST_BURN_PAGE';
+                  const isWarn = slo.status === 'ELEVATED_6H_BURN_WARN';
+                  return (
+                    <div
+                      key={slo.serviceName}
+                      onClick={() => setSelectedSloService(slo.serviceName)}
+                      className={`p-3.5 rounded-xl border cursor-pointer transition-all space-y-2.5 ${
+                        selectedSloService === slo.serviceName
+                          ? 'ring-2 ring-purple-500 bg-white dark:bg-[#202124] border-purple-500'
+                          : 'bg-white dark:bg-[#202124] border-zinc-200 dark:border-zinc-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                          {slo.serviceName}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold border ${
+                            isCrit
+                              ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40'
+                              : isWarn
+                              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                          }`}
+                        >
+                          {slo.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5 text-[10.5px]">
+                        <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                          <div className="text-zinc-400 text-[9.5px]">Target / Now</div>
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                            {slo.sloTargetPct}% / {slo.currentSuccessPct}%
+                          </div>
+                        </div>
+                        <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                          <div className="text-zinc-400 text-[9.5px]">Budget Left</div>
+                          <div className="font-bold text-amber-600 dark:text-amber-400">
+                            {slo.budgetRemainingPct}% ({slo.budgetRemainingMinutes}m)
+                          </div>
+                        </div>
+                        <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                          <div className="text-zinc-400 text-[9.5px]">Exhaustion ETA</div>
+                          <div className="font-bold text-red-600 dark:text-red-400">
+                            {slo.exhaustionEtaHours}h
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Multi-Window Burn Rates */}
+                      <div className="flex items-center justify-between text-[10.5px] pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                        <span>
+                          1h Burn:{' '}
+                          <strong className={slo.burnRate1h >= 14.4 ? 'text-red-600 dark:text-red-400' : ''}>
+                            {slo.burnRate1h}x
+                          </strong>
+                        </span>
+                        <span>
+                          6h Burn:{' '}
+                          <strong className={slo.burnRate6h >= 6.0 ? 'text-amber-600 dark:text-amber-400' : ''}>
+                            {slo.burnRate6h}x
+                          </strong>
+                        </span>
+                        <span>
+                          24h Burn: <strong>{slo.burnRate24h}x</strong>
+                        </span>
+                      </div>
+
+                      <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                        <div
+                          style={{ width: `${Math.max(5, slo.budgetRemainingPct)}%` }}
+                          className={`h-full rounded-full ${
+                            isCrit ? 'bg-red-500' : isWarn ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {(() => {
+                const activeSlo =
+                  (chronoData?.sloBurnRateMatrix || []).find(
+                    (s) => s.serviceName === selectedSloService
+                  ) || chronoData?.sloBurnRateMatrix?.[0];
+                if (!activeSlo) return null;
+                return (
+                  <div className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10.5px] font-bold text-purple-700 dark:text-purple-300">
+                        Multi-Window Burn-Rate Alert Rule ({activeSlo.serviceName})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(
+                            activeSlo.prometheusBurnRuleYaml,
+                            `slo-yaml-${activeSlo.serviceName}`
+                          )
+                        }
+                        className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiedId === `slo-yaml-${activeSlo.serviceName}` ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-500" />
+                            <span>Copied SLO Rule</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Multi-Window Alert YAML</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <pre className="text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre-wrap">
+                      {activeSlo.prometheusBurnRuleYaml}
+                    </pre>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 11 (WAVE 3): eBPF ZERO-INSTRUMENTATION SYSCALL, DNS & TCP RETRANSMIT X-RAY (Cilium Hubble / Pixie / Coroot style) */}
+        {activeChronoTab === 'EBPF_KERNEL_XRAY' && (
+          <div className="space-y-3.5 font-mono">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-2">
+                    CILIUM HUBBLE / PIXIE / COROOT eBPF X-RAY
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Zero-Instrumentation Kernel Socket Stalls, CoreDNS Tail Latency, TCP Retransmits &amp; CFS CPU Throttling
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                {(chronoData?.ebpfKernelTelemetry || []).map((row) => (
+                  <div
+                    key={row.id}
+                    className="p-3.5 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                          {row.serviceName}
+                        </span>
+                        <span className="text-[10.5px] text-zinc-500">
+                          ({row.podOrRevision})
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold">
+                          {row.kernelProbe}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(row.bpftraceScript, `bpf-${row.id}`)}
+                        className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiedId === `bpf-${row.id}` ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-500" />
+                            <span>Copied bpftrace One-Liner</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy bpftrace One-Liner</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-[10.5px]">
+                      <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">CoreDNS Lookup</div>
+                        <div className="font-bold text-amber-600 dark:text-amber-400">
+                          {row.dnsLookupMs}ms
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">TCP SYN RTT</div>
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                          {row.tcpSynRttMs}ms
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">TCP Retransmits</div>
+                        <div className="font-bold text-red-600 dark:text-red-400">
+                          {row.tcpRetransmitsPerMin}/min
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">TLS Handshake</div>
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                          {row.tlsHandshakeMs}ms
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">Socket Queue</div>
+                        <div className="font-bold text-purple-600 dark:text-purple-300">
+                          {row.socketQueueWaitMs}ms
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">CFS CPU Throttled</div>
+                        <div className="font-bold text-red-600 dark:text-red-400">
+                          {row.cgroupCpuThrottledPct}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                      <strong>Kernel Verdict:</strong> {row.kernelVerdict}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 12 (WAVE 3): INTERACTIVE LOG-REPLAY TIME-MACHINE & SYNTHETIC CANARY LOAD INJECTOR */}
+        {activeChronoTab === 'CANARY_REPLAY' && (
+          <div className="space-y-3.5 font-mono">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-extrabold mr-2">
+                    CHAOS LOG REPLAY &amp; SYNTHETIC CANARY VERIFIER
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Replay Historical Incident Bursts to Verify LQL Filters, Grok Capture Groups, DLP Redaction &amp; SLO Alert Rules
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                {(chronoData?.replayScenarios || []).map((sc) => (
+                  <div
+                    key={sc.id}
+                    className="p-3.5 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between space-y-2.5 text-xs"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {sc.name}
+                      </div>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        {sc.description}
+                      </p>
+                      <code className="block text-[10px] p-1.5 rounded bg-zinc-50 dark:bg-zinc-900 text-purple-700 dark:text-purple-300 border border-zinc-200 dark:border-zinc-800">
+                        {sc.expectedLqlMatch}
+                      </code>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={replayLoading}
+                      onClick={() => handleReplayCanaryScenario(sc.id)}
+                      className="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {replayLoading
+                        ? 'Replaying Synthetic Burst...'
+                        : `Replay ${sc.syntheticEventsCount} Canary Events`}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {replayResult && (
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-emerald-500/40 space-y-2.5 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                    <div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold mr-2">
+                        4-STAGE PIPELINE VERIFICATION: ALL PASSED
+                      </span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                        {replayResult.title} ({replayResult.detectionLatencyMs}ms End-to-End Detection)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {(replayResult.checks || []).map((chk) => (
+                      <div
+                        key={chk.stage}
+                        className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
+                            {chk.stage}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-extrabold">
+                            {chk.status}
+                          </span>
+                        </div>
+                        <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400">
+                          {chk.detail}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

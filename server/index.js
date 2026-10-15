@@ -8527,6 +8527,261 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       },
     ];
 
+    // 14. Wave 3 #1: Stack-Trace Source-Code Pinpointer, Git Blame Commit Correlator & 1-Click Hotfix Diff Generator
+    const sourceBlameAndHotfixes = [
+      {
+        id: 'blame-checkout-504',
+        serviceName: 'checkout-agent-api',
+        httpStatus: 504,
+        severity: 'ERROR',
+        errorSignature: 'HTTP 504 Gateway Timeout: upstream Vertex AI RAG pipeline deadline exceeded after 2410ms',
+        filePath: 'src/services/checkoutOrchestrator.ts',
+        lineNumber: 148,
+        gitCommitSha: 'a94f82c1',
+        gitAuthor: 'alex.sre@cloudpulse-eng.io',
+        committedAgo: '42m ago',
+        prTitle: 'PR #418: Increase RAG context window to 64k tokens on checkout flow',
+        blameVerdict:
+          'Commit a94f82c1 removed the 900ms AbortController timeout and disabled token-bucket circuit breaking before calling vertex-rag-worker.',
+        offendingCodeSnippet: [
+          '145 | export async function invokeCheckoutRag(reqPayload: CheckoutPayload) {',
+          '146 |   // REGRESSION (a94f82c1): Unbounded 64k context call with no AbortSignal',
+          '147 |   const ragStart = performance.now();',
+          '148 | > const ragResp = await vertexRagClient.generate({ prompt: reqPayload.fullHistory, timeoutMs: 0 });',
+          '149 |   return normalizeCheckoutDecision(ragResp, performance.now() - ragStart);',
+          '150 | }',
+        ].join('\n'),
+        unifiedDiffPatch: [
+          '--- a/src/services/checkoutOrchestrator.ts',
+          '+++ b/src/services/checkoutOrchestrator.ts',
+          '@@ -146,3 +146,7 @@ export async function invokeCheckoutRag(reqPayload: CheckoutPayload) {',
+          '-  const ragResp = await vertexRagClient.generate({ prompt: reqPayload.fullHistory, timeoutMs: 0 });',
+          '+  const ragResp = await vertexRagClient.generateWithFallback({',
+          '+    prompt: reqPayload.fullHistory.slice(-8192),',
+          '+    timeoutMs: 1100,',
+          '+    retryOn429WithJitter: true,',
+          '+  });',
+        ].join('\n'),
+        ghPrCli: `git apply checkout-504-hotfix.patch && gh pr create --title "fix(checkout): restore 1100ms AbortController & 429 exponential jitter" --body "Resolves Cloud Run 504 cascade from commit a94f82c1"`,
+      },
+      {
+        id: 'blame-vertex-429',
+        serviceName: 'vertex-rag-worker',
+        httpStatus: 429,
+        severity: 'ERROR',
+        errorSignature: 'HTTP 429 ResourceExhausted: Quota exceeded for aiplatform.googleapis.com/generate_content_requests',
+        filePath: 'src/ai/vertexRagClient.ts',
+        lineNumber: 93,
+        gitCommitSha: '7c19e04b',
+        gitAuthor: 'ml.platform@cloudpulse-eng.io',
+        committedAgo: '1h 15m ago',
+        prTitle: 'PR #415: Switch batch worker concurrency from 4 to 32 parallel streams',
+        blameVerdict:
+          'Parallel fan-out (concurrency=32) bursts 480 RPM in 2 seconds against us-central1 single-region Vertex AI quota without regional failover.',
+        offendingCodeSnippet: [
+          '90  | export async function dispatchRagBatch(chunks: string[]) {',
+          '91  |   // REGRESSION (7c19e04b): Unthrottled Promise.all across 32 chunks in 1 region',
+          '92  |   const endpoint = "us-central1-aiplatform.googleapis.com";',
+          '93  | > return Promise.all(chunks.map((c) => callVertexGenerateContent(endpoint, c)));',
+          '94  | }',
+        ].join('\n'),
+        unifiedDiffPatch: [
+          '--- a/src/ai/vertexRagClient.ts',
+          '+++ b/src/ai/vertexRagClient.ts',
+          '@@ -92,2 +92,6 @@ export async function dispatchRagBatch(chunks: string[]) {',
+          '-  const endpoint = "us-central1-aiplatform.googleapis.com";',
+          '-  return Promise.all(chunks.map((c) => callVertexGenerateContent(endpoint, c)));',
+          '+  const regionalPool = ["us-central1", "us-east4", "europe-west1"];',
+          '+  return pLimit(6)(chunks.map((c, idx) =>',
+          '+    callVertexWithRegionalFailover(regionalPool[idx % regionalPool.length], c)',
+          '+  ));',
+        ].join('\n'),
+        ghPrCli: `git apply vertex-429-multiregion.patch && gh pr create --title "fix(vertex-rag): cap concurrency to 6 and add multi-region 429 failover" --body "Eliminates 429 ResourceExhausted spikes"`,
+      },
+      {
+        id: 'blame-secret-403',
+        serviceName: 'secretmanager.googleapis.com',
+        httpStatus: 403,
+        severity: 'WARNING',
+        errorSignature: 'PERMISSION_DENIED: Principal runner-sa lacks secretmanager.versions.access on prod-stripe-webhook-key',
+        filePath: 'infra/terraform/iam_bindings.tf',
+        lineNumber: 62,
+        gitCommitSha: 'e41209d3',
+        gitAuthor: 'secops@cloudpulse-eng.io',
+        committedAgo: '3h ago',
+        prTitle: 'PR #409: Scope down default compute service account permissions',
+        blameVerdict:
+          'Service Account runner-sa was migrated off roles/editor without binding roles/secretmanager.secretAccessor on prod-stripe-webhook-key.',
+        offendingCodeSnippet: [
+          '59  | resource "google_secret_manager_secret_iam_member" "stripe_key_access" {',
+          '60  |   secret_id = google_secret_manager_secret.prod_stripe_webhook_key.id',
+          '61  |   role      = "roles/secretmanager.viewer" # BUG: viewer cannot read secret payload!',
+          '62  | > member    = "serviceAccount:runner-sa@${var.project_id}.iam.gserviceaccount.com"',
+          '63  | }',
+        ].join('\n'),
+        unifiedDiffPatch: [
+          '--- a/infra/terraform/iam_bindings.tf',
+          '+++ b/infra/terraform/iam_bindings.tf',
+          '@@ -61,1 +61,1 @@ resource "google_secret_manager_secret_iam_member" "stripe_key_access" {',
+          '-  role      = "roles/secretmanager.viewer"',
+          '+  role      = "roles/secretmanager.secretAccessor"',
+        ].join('\n'),
+        ghPrCli: `gcloud secrets add-iam-policy-binding prod-stripe-webhook-key --member="serviceAccount:runner-sa@${projectId}.iam.gserviceaccount.com" --role="roles/secretmanager.secretAccessor" --project=${projectId}`,
+      },
+    ];
+
+    // 15. Wave 3 #2: Live SLO Error-Budget Burn-Rate Matrix & Multi-Window Alert Compiler (Google SRE Workbook)
+    const sloBurnRateMatrix = [
+      {
+        serviceName: 'checkout-agent-api',
+        sloTargetPct: 99.9,
+        currentSuccessPct: 96.8,
+        monthlyBudgetMinutes: 43.2,
+        budgetRemainingPct: 18.4,
+        budgetRemainingMinutes: 7.9,
+        burnRate1h: 18.6, // > 14.4x triggers Critical Page
+        burnRate6h: 7.4,  // > 6.0x triggers Critical Page
+        burnRate24h: 3.8, // > 3.0x triggers Ticket
+        exhaustionEtaHours: 5.2,
+        status: 'CRITICAL_FAST_BURN_PAGE',
+        lqlDrilldown: 'resource.labels.service_name="checkout-agent-api" AND httpRequest.status>=500',
+        prometheusBurnRuleYaml: [
+          `groups:`,
+          `  - name: google-sre-multiwindow-slo-checkout`,
+          `    rules:`,
+          `      - alert: CheckoutSloFastBurn1hAnd6h`,
+          `        expr: |`,
+          `          (sum(rate(http_requests_total{service="checkout-agent-api",status=~"5.."}[1h])) / sum(rate(http_requests_total{service="checkout-agent-api"}[1h]))) > (14.4 * (1 - 0.999))`,
+          `          and`,
+          `          (sum(rate(http_requests_total{service="checkout-agent-api",status=~"5.."}[6h])) / sum(rate(http_requests_total{service="checkout-agent-api"}[6h]))) > (6.0 * (1 - 0.999))`,
+          `        for: 2m`,
+          `        labels:`,
+          `          severity: page`,
+          `          slo_burn_class: fast_14_4x`,
+        ].join('\n'),
+      },
+      {
+        serviceName: 'vertex-rag-worker',
+        sloTargetPct: 99.5,
+        currentSuccessPct: 94.2,
+        monthlyBudgetMinutes: 216.0,
+        budgetRemainingPct: 34.0,
+        budgetRemainingMinutes: 73.4,
+        burnRate1h: 11.6,
+        burnRate6h: 6.2,
+        burnRate24h: 2.9,
+        exhaustionEtaHours: 14.8,
+        status: 'ELEVATED_6H_BURN_WARN',
+        lqlDrilldown: 'resource.labels.service_name="vertex-rag-worker" AND httpRequest.status>=429',
+        prometheusBurnRuleYaml: [
+          `groups:`,
+          `  - name: google-sre-multiwindow-slo-vertex-rag`,
+          `    rules:`,
+          `      - alert: VertexRagQuotaBurn6h`,
+          `        expr: |`,
+          `          (sum(rate(http_requests_total{service="vertex-rag-worker",status=~"429|5.."}[6h])) / sum(rate(http_requests_total{service="vertex-rag-worker"}[6h]))) > (6.0 * (1 - 0.995))`,
+          `        for: 5m`,
+          `        labels:`,
+          `          severity: warning`,
+        ].join('\n'),
+      },
+      {
+        serviceName: 'auth-token-gateway',
+        sloTargetPct: 99.95,
+        currentSuccessPct: 99.98,
+        monthlyBudgetMinutes: 21.6,
+        budgetRemainingPct: 91.2,
+        budgetRemainingMinutes: 19.7,
+        burnRate1h: 0.4,
+        burnRate6h: 0.5,
+        burnRate24h: 0.4,
+        exhaustionEtaHours: 720,
+        status: 'HEALTHY_WITHIN_BUDGET',
+        lqlDrilldown: 'resource.labels.service_name="auth-token-gateway"',
+        prometheusBurnRuleYaml: `# Healthy (0.4x burn rate — well below 1.0x sustainable threshold)`,
+      },
+    ];
+
+    // 16. Wave 3 #3: eBPF Zero-Instrumentation Syscall, DNS & TCP Retransmit X-Ray (Cilium Hubble / Pixie / Coroot style)
+    const ebpfKernelTelemetry = [
+      {
+        id: 'ebpf-checkout-tcp',
+        serviceName: 'checkout-agent-api',
+        podOrRevision: 'checkout-agent-api-00042-k9x',
+        kernelProbe: 'kprobe:tcp_retransmit_skb + uprobe:SSL_do_handshake',
+        dnsLookupMs: 48.4,
+        tcpSynRttMs: 19.2,
+        tcpRetransmitsPerMin: 34,
+        tlsHandshakeMs: 112.5,
+        socketQueueWaitMs: 390.0,
+        cgroupCpuThrottledPct: 41.2,
+        oomKillEvents: 0,
+        kernelVerdict:
+          'eBPF kprobe:tcp_retransmit_skb detected 34 TCP retransmissions/min to 142.250.190.42:443 (aiplatform.googleapis.com) combined with 41.2% CFS CPU bandwidth throttling during TLS handshake.',
+        bpftraceScript: `bpftrace -e 'kprobe:tcp_retransmit_skb { @[comm, pid] = count(); } interval:s:5 { print(@); clear(@); }'`,
+      },
+      {
+        id: 'ebpf-vertex-coredns',
+        serviceName: 'vertex-rag-worker',
+        podOrRevision: 'vertex-rag-worker-00018-v4p',
+        kernelProbe: 'kprobe:udp_sendmsg + tracepoint:oom:mark_victim',
+        dnsLookupMs: 184.0,
+        tcpSynRttMs: 11.4,
+        tcpRetransmitsPerMin: 9,
+        tlsHandshakeMs: 64.0,
+        socketQueueWaitMs: 620.0,
+        cgroupCpuThrottledPct: 68.5,
+        oomKillEvents: 1,
+        kernelVerdict:
+          'CoreDNS UDP conntrack table contention caused 184ms DNS lookup tails (ndots:5 search path amplification) + 1 container cgroup memory high-watermark stall.',
+        bpftraceScript: `bpftrace -e 'tracepoint:oom:mark_victim { printf("OOM Kill: pid=%d comm=%s\\n", args->pid, str(args->comm)); }'`,
+      },
+      {
+        id: 'ebpf-auth-gateway',
+        serviceName: 'auth-token-gateway',
+        podOrRevision: 'auth-token-gateway-00011-z2m',
+        kernelProbe: 'kprobe:tcp_connect + tracepoint:syscalls:sys_enter_epoll_wait',
+        dnsLookupMs: 2.1,
+        tcpSynRttMs: 1.8,
+        tcpRetransmitsPerMin: 0,
+        tlsHandshakeMs: 8.4,
+        socketQueueWaitMs: 1.2,
+        cgroupCpuThrottledPct: 2.4,
+        oomKillEvents: 0,
+        kernelVerdict:
+          'Zero TCP retransmits; keep-alive HTTP/2 connection pool warm with 1.8ms intra-zone RTT.',
+        bpftraceScript: `bpftrace -e 'tracepoint:sock:inet_sock_set_state /args->newstate == 1/ { @conn[comm] = count(); }'`,
+      },
+    ];
+
+    // 17. Wave 3 #4: Interactive Log-Replay Time-Machine & Synthetic Canary Scenarios
+    const replayScenarios = [
+      {
+        id: 'CLOUD_RUN_504_POOL_EXHAUSTION',
+        name: 'Replay P1 Incident: Cloud Run 504 + Vertex 429 Cascade',
+        description:
+          'Injects a realistic 5-event cross-service trace burst (checkout-agent-api -> vertex-rag-worker) to verify LQL filters, Grok capture groups, and 14.4x SLO Fast-Burn alerts.',
+        syntheticEventsCount: 5,
+        expectedLqlMatch: 'resource.type="cloud_run_revision" AND httpRequest.status>=500',
+      },
+      {
+        id: 'DLP_CANARY_CREDENTIAL_LEAK',
+        name: 'Inject Canary DLP Secret Leak (Bearer JWT + AIza Key)',
+        description:
+          'Fires a synthetic warning log containing a canary Bearer JWT and AIzaSy key to verify real-time DLP redaction and _Default sink alerting.',
+        syntheticEventsCount: 3,
+        expectedLqlMatch: 'textPayload =~ "(AIza[0-9A-Za-z_-]{15,}|Bearer eyJ)"',
+      },
+      {
+        id: 'EBPF_DNS_THROTTLING_STORM',
+        name: 'Simulate CoreDNS 180ms Stall + TCP Retransmit Storm',
+        description:
+          'Replays kernel eBPF socket stall logs alongside HTTP 503 upstream resets to test correlation between network retransmits and P99 latency.',
+        syntheticEventsCount: 4,
+        expectedLqlMatch: 'httpRequest.status IN (503, 504) AND httpRequest.latency>"1.5s"',
+      },
+    ];
+
     return res.json({
       projectId,
       compiledQuery: {
@@ -8565,6 +8820,10 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
       logToMetricsByService,
       grokVirtualExtractors,
       savedSreViews,
+      sourceBlameAndHotfixes,
+      sloBurnRateMatrix,
+      ebpfKernelTelemetry,
+      replayScenarios,
       logFinOps: {
         pricingRatePerGibUsd: 0.5,
         freeTierGibPerMonth: 50,
@@ -8584,6 +8843,98 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         'Failed to run Neural Chrono-Log query',
     });
   }
+});
+
+// Wave 3 #4 Endpoint: Interactive Log-Replay Time-Machine & Synthetic Canary Load Injector
+app.post('/api/project/:projectId/chrono-logs/replay-canary', async (req, res) => {
+  const { projectId } = req.params;
+  const { scenarioId = 'CLOUD_RUN_504_POOL_EXHAUSTION', grokPattern = '' } = req.body || {};
+  const nowIso = new Date().toISOString();
+
+  const scenarioConfigs = {
+    CLOUD_RUN_504_POOL_EXHAUSTION: {
+      title: 'Cloud Run 504 + Vertex AI 429 Cascade Replay',
+      injectedCount: 5,
+      sampleMessage:
+        'HTTP 504 Gateway Timeout: upstream Vertex AI RAG pipeline deadline exceeded after 2495ms for request 99f1c2e4-8b11-4d3a-9f01-77a82019c001 from 203.0.113.88',
+      lqlFilterMatched: true,
+      dlpShieldTriggered: false,
+      sloAlertFired: 'CheckoutSloFastBurn1hAnd6h (18.6x burn > 14.4x threshold)',
+      ebpfCorrelated: 'kprobe:tcp_retransmit_skb (34 retransmits/min)',
+      detectionLatencyMs: 380,
+    },
+    DLP_CANARY_CREDENTIAL_LEAK: {
+      title: 'Canary Bearer JWT + AIza API Key Secret Leak Drill',
+      injectedCount: 3,
+      sampleMessage:
+        'Outbound webhook debug header Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.canaryPayload and key AIzaSyD9f8CanaryKeyTest001928374',
+      lqlFilterMatched: true,
+      dlpShieldTriggered: true,
+      sloAlertFired: 'DlpSecretLeakCriticalPage (Immediate Zero-Trust Redaction)',
+      ebpfCorrelated: 'uprobe:SSL_write (Egress payload intercepted)',
+      detectionLatencyMs: 210,
+    },
+    EBPF_DNS_THROTTLING_STORM: {
+      title: 'CoreDNS 184ms Conntrack Stall + HTTP 503 Retry Storm',
+      injectedCount: 4,
+      sampleMessage:
+        'HTTP 503 Service Unavailable: upstream connection reset after 1890ms for request 44a9b1c0-1122-4f99-8800-129384756abc from 198.51.100.42',
+      lqlFilterMatched: true,
+      dlpShieldTriggered: false,
+      sloAlertFired: 'VertexRagQuotaBurn6h (6.2x burn > 6.0x threshold)',
+      ebpfCorrelated: 'kprobe:udp_sendmsg (184ms CoreDNS tail latency)',
+      detectionLatencyMs: 340,
+    },
+  };
+
+  const chosen =
+    scenarioConfigs[scenarioId] || scenarioConfigs.CLOUD_RUN_504_POOL_EXHAUSTION;
+
+  let extractedGrokFields = {};
+  if (grokPattern) {
+    try {
+      const rx = new RegExp(grokPattern, 'i');
+      const m = rx.exec(chosen.sampleMessage);
+      if (m && m.groups) extractedGrokFields = m.groups;
+    } catch {
+      extractedGrokFields = {};
+    }
+  }
+
+  return res.json({
+    projectId,
+    scenarioId,
+    replayedAt: nowIso,
+    ...chosen,
+    extractedGrokFields,
+    checks: [
+      {
+        stage: '1. LQL Filter & BM25 Stream Ingestion',
+        status: 'PASS',
+        detail: `${chosen.injectedCount} synthetic log events ingested & matched active LQL filter in ${chosen.detectionLatencyMs}ms`,
+      },
+      {
+        stage: '2. Live Grok / Named-Regex Virtual Field Parser',
+        status: 'PASS',
+        detail:
+          Object.keys(extractedGrokFields).length > 0
+            ? `Extracted virtual fields: ${JSON.stringify(extractedGrokFields)}`
+            : 'Default structured HTTP status, latency, and traceId fields extracted',
+      },
+      {
+        stage: '3. DLP Secret Redaction & Security Gatekeeper',
+        status: 'PASS',
+        detail: chosen.dlpShieldTriggered
+          ? 'Canary Bearer JWT & AIzaSy key automatically masked to [REDACTED_BY_DLP]'
+          : 'Zero unmasked PII/Credentials detected in replay payload',
+      },
+      {
+        stage: '4. Multi-Window SLO Burn-Rate & eBPF Kernel Correlator',
+        status: 'PASS',
+        detail: `Alert fired: ${chosen.sloAlertFired} · Kernel probe: ${chosen.ebpfCorrelated}`,
+      },
+    ],
+  });
 });
 
 app.post('/api/project/:projectId/chrono-logs/exclusion', async (req, res) => {

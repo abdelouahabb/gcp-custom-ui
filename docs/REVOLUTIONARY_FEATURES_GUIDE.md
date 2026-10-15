@@ -444,22 +444,30 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     - **`03 · v2 X-Ray`**: Synthesizes live Apache Iceberg Spec v2 `v4.metadata.json` (`format-version: 2`, `identifier-field-ids`, `column-id` schema evolution, `partition-specs`, and `snap-*.avro` manifest summaries), a **16-Shard GCS Hex Prefix Entropy Visualizer (`/0x0f/`–`/0xff/`)**, and a **Multi-Engine Optimistic Concurrency Control (OCC) Matrix**.
   - **4 Equal-Sized Interactive Simulators (`S1`–`S4`)**: Model `S1` Migrate vs. Federate (S3/ADLS Egress vs. BigQuery Omni Cross-Cloud Cache), `S2` BigQuery Lakehouse vs. 24/7 Trino on GKE (`10TB+ TPC-DS`), `S3` 100+ Hive Metastore / Delta In-Place Upgrade (`0 Bytes` rewritten via `system.add_files`), and `S4` Streaming Small-File Compaction (`512MB` Z-Order bin-packing) + GCS Autoclass storage savings.
 
-### 46. 2026 Open-Source SRE Log Explorer & Neural Chrono-Log Studio — Wave 1 & Wave 2 (`src/components/LogStreamerAndShell.jsx` & `server/index.js`)
-- **Where to find it**: Open **`Cloud Shell & Logs`** (`LogStreamerAndShell.jsx`).
+### 46. 2026 Open-Source SRE Log Explorer & Neural Chrono-Log Studio — Wave 1, Wave 2 & Wave 3 (`src/components/LogStreamerAndShell.jsx` & `server/index.js`)
+- **Where to find it**: Open **`Cloud Shell & Logs`** (`LogStreamerAndShell.jsx`) — organized as a symmetrical **12-Tab Equal-Sized Bento Grid (`4×3`)**.
 - **How it Works**:
   - **1. Interactive 24-Bucket Stacked Severity Histogram + Correlated Infra CPU/Memory & Deployment/Quota Overlay (ClickHouse / HyperDX / Grafana Loki Style)**:
     - Plots `ERROR`, `WARNING`, and `INFO` log volume alongside `P95` latency across 24 time buckets.
     - Overlays container **CPU/Memory utilization sparkbars** underneath each bucket and clickable K8s / Cloud Run infrastructure event markers (`DEPLOY` revision rollout, `429 QUOTA` Vertex AI saturation, and `SCALE +6` autoscale). Clicking any bar or marker locks a `±30s` causal time-travel window.
-  - **2. VictoriaLogs / OpenObserve Field Facet Sidebar, Columnar Table View & Interactive JSON Key-Value Pill Flattener**:
+  - **2. VictoriaLogs / OpenObserve Field Facet Sidebar, Columnar Table View & Interactive JSON Key-Value Pill Flattener (`Tab 01: LOG_STREAM`)**:
     - Computes live field cardinality (`serviceName`, `httpStatus`, `resourceType`, `region`, `actor`, `severity`) with 1-click `+ =` (include in LQL) and `- !=` (exclude from LQL) operators.
-    - Toggle between **Cards View** and **High-Density Columnar Table View**, with flattened JSON key-value pills (`+=` / `-=`) on every log entry.
-  - **3. Real-Time Log-to-Metrics & 5-Bin Latency Distribution Heatmap (`Tab 2: LOG_TO_METRICS`)**:
+    - Toggle between **Cards View** and **High-Density Columnar Table View**, with flattened JSON key-value pills (`+=` / `-=`) and a **`Git Blame & Patch`** quick-jump button on `ERROR`/`WARNING` entries.
+  - **3. Real-Time Log-to-Metrics & 5-Bin Latency Distribution Heatmap (`Tab 02: LOG_TO_METRICS`)**:
     - Computes real-time `P50`, `P90`, and `P99` latency, error rate %, request count, byte volume (`KB`), and a **5-bin latency distribution heatmap** (`<50ms`, `50-250ms`, `250-1000ms`, `1-2s`, `>2s`) grouped by service with 1-click LQL drilldown.
-  - **4. Live Grok / Named-Regex (`(?<field>...)`) Virtual Field Extractor (`Tab 3: GROK_EXTRACTOR`)**:
+  - **4. Live Grok / Named-Regex (`(?<field>...)`) Virtual Field Extractor (`Tab 03: GROK_EXTRACTOR`)**:
     - Parses unstructured log messages on the fly using named capture groups (`HTTP (?<http_code>\d{3}) (?<error_reason>[A-Za-z ]+): (?<detail>.*)`) and injects extracted virtual schema-on-read columns into both Cards View and Columnar Table View.
-  - **5. SigNoz / Drain3 Anomaly Baseline Diff (`Tab 5: ANOMALY_DIFF`) & 6-Format Polyglot Query/Alert Transpiler (`Tab 7: QUERY_TRANSPILER`)**:
+  - **5. Drain3 Pattern Clustering (`Tab 04: DRAIN_PATTERNS`), SigNoz Anomaly Baseline Diff (`Tab 05: ANOMALY_DIFF`), OpenTelemetry Trace Waterfall (`Tab 06: TRACE_WATERFALL`), 6-Format Polyglot Query/Alert Transpiler (`Tab 07: QUERY_TRANSPILER`) & Cloud DLP Redactor + FinOps Archiver (`Tab 08: DLP_FINOPS`)**:
     - Compares the active incident window against the 24-hour baseline (`+412%` error rate delta, `+1,480ms` P95 shift, automated root-cause correlation) and translates the active LQL filter into **VictoriaLogs `PipesQL`**, **Grafana Loki `LogQL`**, **ClickHouse OTel SQL**, **BigQuery `_AllLogs` SQL**, **Prometheus `PrometheusRule` YAML**, and **`gcloud logging metrics create` CLI**.
-  - **6. Saved SRE Views, Shareable Permalinks, Live Tail (`4.5s`), Multi-Pin Side-by-Side JSON Diff & 1-Click Incident Postmortem Bundle Exporter (`.md` / `.json`)**:
+  - **6. Wave 3 — Stack-Trace Source-Code Pinpointer, Git Blame Commit Correlator & 1-Click Hotfix Diff Generator (`Tab 09: SOURCE_BLAME`)**:
+    - Correlates `504`, `429`, and `403` log signatures to the exact repository file and line number (`src/services/checkoutUpstreamClient.ts:142`, `src/ai/vertexQuotaRouter.ts:88`, `src/middleware/zeroTrustBoundary.go:219`), identifies the offending Git commit SHA (`a94f82e1` by `sre-release-bot`) and root cause, and synthesizes a ready-to-apply **Unified Diff Patch (`.patch`)** plus a copy-ready `git apply` + `gh pr create` CLI command.
+  - **7. Wave 3 — Live SLO Error-Budget Burn-Rate Matrix & Multi-Window Alert Compiler (`Tab 10: SLO_BURN_MATRIX`)**:
+    - Implements Google SRE Workbook multi-window error-budget tracking (`99.90%` / `99.95%` SLOs) with simultaneous `1h` (`14.4x` Fast-Burn Page), `6h` (`6.0x`), and `24h` (`3.0x` Ticket) burn-rate gauges, time-to-exhaustion countdowns (`16.8 hours`), and copy-ready **Google Cloud Monitoring / Prometheus Multi-Window Burn-Rate Alert YAML**.
+  - **8. Wave 3 — eBPF Zero-Instrumentation Syscall, DNS & TCP Retransmit X-Ray (`Tab 11: EBPF_KERNEL_XRAY`)**:
+    - Inspired by Cilium Hubble, Pixie, and Coroot: correlates application logs with kernel `kprobe:tcp_retransmit_skb` (`14` TCP SYN retransmits to `10.128.0.44:8443`), `kprobe:udp_sendmsg` CoreDNS lookup stalls (`184ms`), TLS handshake time, socket queue wait, and CFS CPU throttling (`38.4%`), complete with copy-ready `bpftrace` kernel probes.
+  - **9. Wave 3 — Interactive Log-Replay Time-Machine & Synthetic Canary Load Injector (`Tab 12: CANARY_REPLAY`)**:
+    - Replays historical incident bursts (`SCENARIO_504_CASCADE`, `SCENARIO_PII_LEAK_CANARY`, `SCENARIO_DNS_EBPF_STALL`) directly into the live stream via `POST /api/project/:id/chrono-logs/replay-canary` and verifies all 4 observability stages (`1. LQL Filter Match`, `2. Grok Field Extraction`, `3. Cloud DLP Secret Redaction`, and `4. SLO Burn + eBPF Probe Trigger`).
+  - **10. Saved SRE Views, Shareable Permalinks, Live Tail (`4.5s`), Multi-Pin Side-by-Side JSON Diff & 1-Click Incident Postmortem Bundle Exporter (`.md` / `.json`)**:
     - Load curated SRE investigation presets in 1 click, copy shareable investigation permalinks, compare any two log payloads side by side, or export a complete Markdown/JSON incident postmortem bundle.
 
 ### 47. Full Light Mode (White Mode) & Dark Mode Dual-Theme UI Parity (`src/index.css` & All 35+ Studio Components)
