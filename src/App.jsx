@@ -1455,9 +1455,9 @@ function CloudPulseCockpit() {
             </div>
           </div>
 
-          {/* Secondary Telemetry & Cockpit Controls Bar */}
-          <div className="flex items-center justify-between gap-2 flex-wrap mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
-            <div className="flex items-center gap-2 flex-wrap">
+          {/* Secondary Telemetry & Cockpit Controls Bar (Single-Row Compact Layout) */}
+          <div className="flex items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-3 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
+            <div className="flex items-center gap-1.5 lg:flex-nowrap flex-wrap min-w-0">
               {/* Live Burn-Rate Radar Ticker Pill */}
               <button
                 type="button"
@@ -1466,11 +1466,11 @@ function CloudPulseCockpit() {
                   setActiveTab('INNOVATION_LAB');
                 }}
                 title="Open Live Wallet Burn-Rate Radar & Night-Mode FinOps Sleep Switch (Zeroes active vCPU/GPU compute via REST API or Google Cloud Scheduler; attached Persistent Disks & unused Static External IPs still bill)"
-                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap shrink-0"
               >
-                <DollarSign className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                <DollarSign className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                 <span>${liveBurn.hourly.toFixed(4)}/hr</span>
-                <span className="hidden xl:inline text-[10px] opacity-75">
+                <span className="hidden 2xl:inline text-[10px] opacity-75">
                   (~${liveBurn.monthly.toFixed(2)}/mo)
                 </span>
               </button>
@@ -1480,7 +1480,7 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => setActiveTab('FINOPS')}
                 title="Open Cloud Billing Account & Promotional Credits Guardian"
-                className={`inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm border cursor-pointer whitespace-nowrap ${
+                className={`inline-flex items-center gap-1 rounded-[8px] px-2 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm border cursor-pointer whitespace-nowrap shrink-0 ${
                   gdeSummary.hasImportedCredits &&
                   gdeSummary.nearestExpiryDays !== null &&
                   gdeSummary.nearestExpiryDays <= 14 &&
@@ -1502,31 +1502,31 @@ function CloudPulseCockpit() {
                 <span>
                   {gdePrivacyConfig.enabled &&
                   gdePrivacyConfig.hideCreditBalances !== false
-                    ? 'Remaining Bonus: $•••.••'
+                    ? 'Bonus: $•••.••'
                     : gdeSummary.hasImportedCredits
-                      ? `Remaining Bonus: $${gdeSummary.totalRemainingUsd.toLocaleString(
+                      ? `Bonus: $${gdeSummary.totalRemainingUsd.toLocaleString(
                           'en-US',
                           {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           }
                         )}`
-                      : 'Remaining Bonus: $0.00 (Upload CSV)'}
+                      : 'Bonus: $0.00'}
                 </span>
                 {gdeSummary.hasImportedCredits &&
                 gdeSummary.expiringSoonRemainingUsd > 0 &&
                 gdeSummary.nearestExpiryDays !== null ? (
-                  <span className="hidden sm:inline text-[10px] opacity-90">
+                  <span className="hidden 2xl:inline text-[10px] opacity-90">
                     {gdePrivacyConfig.enabled &&
                     gdePrivacyConfig.hideCreditBalances !== false
-                      ? `· $•••.•• expiring in ${gdeSummary.nearestExpiryDays}d`
+                      ? `· $•••.•• (${gdeSummary.nearestExpiryDays}d)`
                       : `· $${gdeSummary.expiringSoonRemainingUsd.toLocaleString(
                           'en-US',
                           {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           }
-                        )} expiring in ${gdeSummary.nearestExpiryDays}d`}
+                        )} (${gdeSummary.nearestExpiryDays}d)`}
                   </span>
                 ) : null}
               </button>
@@ -1545,28 +1545,30 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => setCommandPaletteOpen(true)}
                 title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
-                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-mono font-bold transition-colors shadow-sm"
+                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm whitespace-nowrap shrink-0"
               >
-                <Command className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                <Command className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                 <span>⌘K Ops</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 lg:flex-nowrap flex-wrap shrink-0">
               {/* Global UI Timezone & Live Clock Selector Pill */}
               <TimezoneSelectorPill onShowToast={showToast} />
 
               {/* Live GCP Project Dropdown */}
-              <div className="relative z-40">
+              <div className="relative z-40 shrink-0">
                 <button
                   type="button"
                   onClick={() => setProjectMenuOpen((o) => !o)}
                   title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
-                  className="inline-flex items-center gap-2 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-mono font-medium transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-medium transition-colors shadow-sm whitespace-nowrap"
                 >
-                  <span className="w-2 h-2 rounded-full bg-zinc-500 dark:bg-zinc-400" />
-                  <span>{selectedProjectId}</span>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                  <span className="w-2 h-2 rounded-full bg-zinc-500 dark:bg-zinc-400 shrink-0" />
+                  <span className="max-w-[140px] xl:max-w-[200px] truncate">
+                    {selectedProjectId}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 </button>
 
                 {projectMenuOpen && (
@@ -1616,10 +1618,10 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenCopilotWithPrompt('')}
                 title="Run 1-Tap Project Health, Zombie Waste, Firewall Perimeter & Live Pricing Drift Scan"
-                className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap shrink-0"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                <span>Health &amp; Drift Scan</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span>Health &amp; Drift</span>
               </button>
 
               {/* Refresh Button */}
@@ -1632,10 +1634,10 @@ function CloudPulseCockpit() {
                 }}
                 title={`Refresh live GCP telemetry, VMs, Cloud Run services, Storage buckets, and VPCs for ${selectedProjectId}`}
                 aria-label="Refresh GCP telemetry"
-                className="p-2 rounded-[8px] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm disabled:opacity-50"
+                className="p-1.5 rounded-[8px] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm disabled:opacity-50 shrink-0"
               >
                 <RefreshCw
-                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${
+                  className={`w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 ${
                     loadingOverview ? 'animate-spin' : ''
                   }`}
                 />
@@ -1651,12 +1653,12 @@ function CloudPulseCockpit() {
                     : 'Switch to 2026 OLED Dark Cockpit Mode'
                 }
                 aria-label="Toggle Dark or Light Mode"
-                className="p-2 rounded-[8px] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm"
+                className="p-1.5 rounded-[8px] bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm shrink-0"
               >
                 {isDark ? (
-                  <Sun className="w-4 h-4 text-zinc-400" />
+                  <Sun className="w-3.5 h-3.5 text-zinc-400" />
                 ) : (
-                  <Moon className="w-4 h-4 text-zinc-600" />
+                  <Moon className="w-3.5 h-3.5 text-zinc-600" />
                 )}
               </button>
 
@@ -1665,16 +1667,16 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={handleDisconnect}
                 title="Disconnect active session & switch Google Cloud account"
-                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors"
+                className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0"
               >
-                <LogOut className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                <span>Disconnect</span>
+                <LogOut className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span className="hidden xl:inline">Disconnect</span>
               </button>
             </div>
           </div>
 
-          {/* Underline Navigation Tabs (Single-Row Horizontal Scroll with Monochrome SVG Icons) */}
-          <nav className="flex items-center gap-4 sm:gap-5 mt-4 pb-2.5 border-b border-zinc-200 dark:border-zinc-800 -mb-2 overflow-x-auto">
+          {/* Underline Navigation Tabs (Single-Row Compact Horizontal Bar) */}
+          <nav className="flex items-center justify-between gap-2 lg:gap-2.5 mt-3.5 pb-2 border-b border-zinc-200 dark:border-zinc-800 -mb-2 overflow-x-auto no-scrollbar">
             {navTabs.map((tab, idx) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -1684,7 +1686,7 @@ function CloudPulseCockpit() {
                 <React.Fragment key={tab.id}>
                   {showGroupDivider && (
                     <span
-                      className="h-4 w-px bg-zinc-300 dark:bg-zinc-700/80 mb-2 shrink-0"
+                      className="h-3.5 w-px bg-zinc-300 dark:bg-zinc-700/80 mb-1.5 shrink-0"
                       aria-hidden="true"
                     />
                   )}
@@ -1692,13 +1694,13 @@ function CloudPulseCockpit() {
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
                     title={tab.tip}
-                    className={`inline-flex items-center gap-1.5 text-xs whitespace-nowrap transition-all cursor-pointer shrink-0 pb-2 font-semibold border-b-2 ${
+                    className={`inline-flex items-center gap-1 text-[11.5px] whitespace-nowrap transition-all cursor-pointer shrink-0 pb-1.5 font-semibold border-b-2 ${
                       isActive
                         ? 'border-zinc-900 dark:border-zinc-100 text-zinc-950 dark:text-white'
                         : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border-transparent hover:border-zinc-400 dark:hover:border-zinc-600'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5 text-current opacity-80" />
+                    <Icon className="w-3.5 h-3.5 text-current opacity-80 shrink-0" />
                     <span>{tab.label}</span>
                   </button>
                 </React.Fragment>

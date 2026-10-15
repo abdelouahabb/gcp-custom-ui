@@ -387,14 +387,14 @@ export default function GdeStreamerPrivacyShield({
   ].filter(Boolean).length;
 
   return (
-    <div className="relative z-40" ref={popoverRef} data-gde-ignore="true">
+    <div className="relative z-40 shrink-0" ref={popoverRef} data-gde-ignore="true">
       <div className="inline-flex items-center rounded-[8px] shadow-sm">
         {/* Main 1-Click Toggle Button */}
         <button
           type="button"
           onClick={() => updateConfig({ enabled: !config.enabled })}
           title="GDE Streamer & Tutorial Privacy Mode (Shortcut: Alt+G) — Hides your email, Cloud Billing Account ID, Project Numbers, and Public IPs for safe screen sharing & video recording"
-          className={`inline-flex items-center gap-1.5 rounded-l-[8px] px-2.5 py-2 text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap ${
+          className={`inline-flex items-center gap-1 rounded-l-[8px] px-2 py-1.5 text-[11px] font-mono font-bold border transition-all cursor-pointer whitespace-nowrap ${
             config.enabled
               ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-sm'
               : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
@@ -419,7 +419,7 @@ export default function GdeStreamerPrivacyShield({
           type="button"
           onClick={() => setPopoverOpen((v) => !v)}
           title="Configure GDE Streamer Privacy Shield rules (Emails, Billing IDs, Project IDs, Public IPs)"
-          className={`inline-flex items-center justify-center px-2 py-2 text-xs border-y border-r rounded-r-[8px] transition-colors cursor-pointer ${
+          className={`inline-flex items-center justify-center px-1.5 py-1.5 text-[11px] border-y border-r rounded-r-[8px] transition-colors cursor-pointer ${
             config.enabled
               ? 'bg-rose-700 hover:bg-rose-600 text-white border-rose-500'
               : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700'

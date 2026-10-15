@@ -710,18 +710,18 @@ export function TimezoneSelectorPill({ onShowToast }) {
   }, [enrichedCatalog, continentFilter, searchQuery]);
 
   return (
-    <div className="relative z-40" ref={containerRef}>
+    <div className="relative z-40 shrink-0" ref={containerRef}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         title={`Active UI Timezone: ${activeTimeZone} (${utcOffsetLabel} · ${shortTzName}) — Click to search & switch across all ${allIanaZones.length} Global IANA Timezones`}
-        className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-2 text-xs font-mono font-semibold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+        className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2 py-1.5 text-[11px] font-mono font-semibold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
       >
         <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
         <span className="font-bold text-zinc-900 dark:text-zinc-100">
           {liveClockText}
         </span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+        <span className="hidden xl:inline text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
           {compactTzDisplay} · {utcOffsetLabel}
         </span>
         <ChevronDown className="w-3.5 h-3.5 opacity-70 shrink-0" />
