@@ -118,9 +118,9 @@ export default function LogStreamerAndShell({
   });
   const [liveTailActive, setLiveTailActive] = useState(false);
   const [regexHighlightInput, setRegexHighlightInput] = useState('504|429|403|deadline|Quota|AIza|Bearer');
-  const [pinnedLogIds, setPinnedLogIds] = useState(['chrono-trace-a1', 'chrono-trace-a2']);
+  const [pinnedLogIds, setPinnedLogIds] = useState([]);
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
-  const [diffSelectionIds, setDiffSelectionIds] = useState(['chrono-trace-a1', 'chrono-trace-a2']);
+  const [diffSelectionIds, setDiffSelectionIds] = useState([]);
   const [showPayloadDiffModal, setShowPayloadDiffModal] = useState(false);
   const [activeTranspilerLang, setActiveTranspilerLang] = useState('VictoriaLogsPipesQl');
 
@@ -128,15 +128,29 @@ export default function LogStreamerAndShell({
   const [showInfraOverlay, setShowInfraOverlay] = useState(true);
   const [streamViewMode, setStreamViewMode] = useState('CARDS'); // 'CARDS' | 'COLUMN_TABLE'
   const [grokPatternInput, setGrokPatternInput] = useState(
-    'HTTP (?<http_code>\\d{3}) (?<error_reason>[A-Za-z ]+): (?<detail>.*)'
+    '(?<method_name>[A-Za-z0-9_.]+)\\s+on\\s+(?<resource_target>[A-Za-z0-9_./:-]+)\\s*\\((?<status_detail>[^)]+)\\)'
   );
   const [activeSavedViewId, setActiveSavedViewId] = useState(null);
   const [showPostmortemModal, setShowPostmortemModal] = useState(false);
 
-  // --- Wave 3 Jaw-Breaking SRE Observability & Log Intelligence State ---
+  // --- Wave 3 Real Live Execution State (Git Blame CLI, Cloud Logging Metric API, Live Network/Kernel Probe & entries:write) ---
   const [replayLoading, setReplayLoading] = useState(false);
   const [replayResult, setReplayResult] = useState(null);
-  const [selectedSloService, setSelectedSloService] = useState('checkout-agent-api');
+  const [customCanaryMessage, setCustomCanaryMessage] = useState('');
+  const [customCanarySeverity, setCustomCanarySeverity] = useState('ERROR');
+  const [selectedSloService, setSelectedSloService] = useState('');
+  const [creatingMetricId, setCreatingMetricId] = useState(null);
+  const [createdMetricBanner, setCreatedMetricBanner] = useState(null);
+
+  const [gitBlameFileInput, setGitBlameFileInput] = useState('server/index.js');
+  const [gitBlameLineInput, setGitBlameLineInput] = useState(7715);
+  const [gitBlameLoading, setGitBlameLoading] = useState(false);
+  const [gitBlameResult, setGitBlameResult] = useState(null);
+
+  const [probeHostInput, setProbeHostInput] = useState('logging.googleapis.com');
+  const [probePortInput, setProbePortInput] = useState(443);
+  const [probeLoading, setProbeLoading] = useState(false);
+  const [customProbeResult, setCustomProbeResult] = useState(null);
 
   // --- Innovation #3: Live Cloud Audit "Who-Changed-What" Activity Timeline State ---
   const [auditData, setAuditData] = useState(null);
@@ -186,6 +200,20 @@ export default function LogStreamerAndShell({
         ) {
           setSelectedTraceId(res.data.traceWaterfalls[0].traceId);
         }
+        if (
+          !selectedSloService &&
+          Array.isArray(res.data?.sloBurnRateMatrix) &&
+          res.data.sloBurnRateMatrix.length > 0
+        ) {
+          setSelectedSloService(res.data.sloBurnRateMatrix[0].serviceName);
+        }
+        if (
+          diffSelectionIds.length === 0 &&
+          Array.isArray(res.data?.entries) &&
+          res.data.entries.length >= 2
+        ) {
+          setDiffSelectionIds([res.data.entries[0].id, res.data.entries[1].id]);
+        }
       } catch {
         // ignore silent errors
       } finally {
@@ -198,6 +226,8 @@ export default function LogStreamerAndShell({
       customLqlInput,
       timeTravelAnchor,
       selectedTraceId,
+      selectedSloService,
+      diffSelectionIds.length,
       allowNeuralLlmTokens,
     ]
   );
@@ -401,13 +431,103 @@ export default function LogStreamerAndShell({
         {
           scenarioId,
           grokPattern: grokPatternInput,
+          customMessage: customCanaryMessage.trim(),
+          customSeverity: customCanarySeverity,
         }
       );
       setReplayResult(res.data);
+      // Immediately refresh live Cloud Logging stream so the written entries appear
+      await fetchChronoLogs();
     } catch {
       // ignore
     } finally {
       setReplayLoading(false);
+    }
+  };
+
+  const handleRunLiveGitBlame = async (fileOverride, lineOverride) => {
+    if (!projectId || gitBlameLoading) return;
+    const targetFile = fileOverride !== undefined ? fileOverride : gitBlameFileInput;
+    const targetLine = lineOverride !== undefined ? lineOverride : gitBlameLineInput;
+    setGitBlameFileInput(targetFile);
+    setGitBlameLineInput(targetLine);
+    setGitBlameLoading(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/chrono-logs/git-blame`,
+        {
+          filePath: targetFile,
+          lineNumber: Number(targetLine) || 1,
+        }
+      );
+      setGitBlameResult(res.data);
+    } catch (err) {
+      setGitBlameResult({
+        error: err.response?.data?.error || err.message || 'git blame failed',
+      });
+    } finally {
+      setGitBlameLoading(false);
+    }
+  };
+
+  const handleCreateLiveLogMetric = async (slo) => {
+    if (!projectId || creatingMetricId) return;
+    const metricName =
+      slo?.metricName ||
+      `slo_err_${String(slo?.serviceName || 'project')
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '_')
+        .slice(0, 40)}`;
+    const filter = slo?.lqlDrilldown || customLqlInput || 'severity>=ERROR';
+    setCreatingMetricId(metricName);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/chrono-logs/create-log-metric`,
+        {
+          metricName,
+          filter,
+          description: `Live SLO Error Metric for ${slo?.serviceName || projectId}`,
+        }
+      );
+      setCreatedMetricBanner({
+        metricName,
+        filter,
+        status: res.data?.updated ? 'UPDATED_IN_GCP' : 'CREATED_IN_GCP',
+      });
+      await fetchChronoLogs();
+    } catch (err) {
+      setCreatedMetricBanner({
+        metricName,
+        filter,
+        error: err.response?.data?.error || err.message,
+      });
+    } finally {
+      setCreatingMetricId(null);
+    }
+  };
+
+  const handleRunLiveNetworkProbe = async (hostOverride, portOverride) => {
+    if (!projectId || probeLoading) return;
+    const host = hostOverride !== undefined ? hostOverride : probeHostInput;
+    const port = portOverride !== undefined ? portOverride : probePortInput;
+    setProbeHostInput(host);
+    setProbePortInput(port);
+    setProbeLoading(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/chrono-logs/network-kernel-probe`,
+        {
+          host,
+          port: Number(port) || 443,
+        }
+      );
+      setCustomProbeResult(res.data);
+    } catch (err) {
+      setCustomProbeResult({
+        error: err.response?.data?.error || err.message,
+      });
+    } finally {
+      setProbeLoading(false);
     }
   };
 
@@ -2877,21 +2997,84 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* TAB 09 (WAVE 3): STACK-TRACE SOURCE-CODE PINPOINTER, GIT BLAME COMMIT CORRELATOR & 1-CLICK HOTFIX DIFF GENERATOR */}
+        {/* TAB 09 (WAVE 3): LIVE GIT BLAME, REPOSITORY COMMIT CORRELATOR & UNIFIED DIFF INSPECTOR (`execFile('git')`) */}
         {activeChronoTab === 'SOURCE_BLAME' && (
           <div className="space-y-3.5 font-mono">
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10px] font-extrabold mr-2">
-                    SOURCE-MAP &amp; GIT BLAME CORRELATOR
+                    LIVE GIT CLI (`git log`, `git show`, `git blame -L`)
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                    Pinpoints Exact File:Line, Offending Git Commit SHA &amp; Ready-to-Apply Unified Diff Patch (.patch)
+                    Real Repository Commits, File:Line Blame Inspector &amp; Unified Diffs
                   </span>
                 </div>
               </div>
 
+              {/* Interactive Live `git blame -L` & `git log -p -L` Runner */}
+              <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs">
+                <div className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+                  Run Live <code className="text-purple-600 dark:text-purple-300">git blame -L</code> &amp;{' '}
+                  <code className="text-purple-600 dark:text-purple-300">git log -n 1 -p -L</code> on Any Repository File:
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="text"
+                    value={gitBlameFileInput}
+                    onChange={(e) => setGitBlameFileInput(e.target.value)}
+                    placeholder="File path (e.g. server/index.js or src/App.jsx)"
+                    className="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    value={gitBlameLineInput}
+                    onChange={(e) => setGitBlameLineInput(Number(e.target.value) || 1)}
+                    placeholder="Line #"
+                    className="w-28 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                  <button
+                    type="button"
+                    disabled={gitBlameLoading}
+                    onClick={() => handleRunLiveGitBlame()}
+                    className="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    {gitBlameLoading ? 'Running git blame...' : 'Run Live git blame'}
+                  </button>
+                </div>
+
+                {gitBlameResult && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 pt-1">
+                    {gitBlameResult.error ? (
+                      <div className="col-span-2 p-2.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-300 text-xs">
+                        {gitBlameResult.error}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-bold text-purple-600 dark:text-purple-300 uppercase">
+                            Live `git blame -L` Output ({gitBlameResult.filePath}:{gitBlameResult.lineNumber})
+                          </div>
+                          <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre max-h-48">
+                            {gitBlameResult.blameOutput}
+                          </pre>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                            Live `git log -n 1 -p -L` Line Evolution Patch
+                          </div>
+                          <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-emerald-800 dark:text-emerald-300 overflow-x-auto whitespace-pre max-h-48">
+                            {gitBlameResult.patchOutput}
+                          </pre>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Real Git Commits from Repository */}
               <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
                 {(chronoData?.sourceBlameAndHotfixes || []).map((item) => (
                   <div
@@ -2911,6 +3094,13 @@ export default function LogStreamerAndShell({
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
+                          onClick={() => handleRunLiveGitBlame(item.filePath, item.lineNumber)}
+                          className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10.5px] font-bold cursor-pointer"
+                        >
+                          Blame Line {item.lineNumber}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() =>
                             handleCopy(item.unifiedDiffPatch, `patch-${item.id}`)
                           }
@@ -2919,12 +3109,12 @@ export default function LogStreamerAndShell({
                           {copiedId === `patch-${item.id}` ? (
                             <>
                               <Check className="w-3 h-3" />
-                              <span>Copied Unified Diff (.patch)</span>
+                              <span>Copied Commit Diff</span>
                             </>
                           ) : (
                             <>
                               <Copy className="w-3 h-3" />
-                              <span>Copy Unified Diff (.patch)</span>
+                              <span>Copy Commit Diff (.patch)</span>
                             </>
                           )}
                         </button>
@@ -2936,12 +3126,12 @@ export default function LogStreamerAndShell({
                           {copiedId === `gh-cli-${item.id}` ? (
                             <>
                               <Check className="w-3 h-3 text-emerald-500" />
-                              <span>Copied PR CLI</span>
+                              <span>Copied Git CLI</span>
                             </>
                           ) : (
                             <>
                               <Copy className="w-3 h-3" />
-                              <span>Copy `gh pr create` CLI</span>
+                              <span>Copy `git show / revert` CLI</span>
                             </>
                           )}
                         </button>
@@ -2955,7 +3145,7 @@ export default function LogStreamerAndShell({
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                       <div className="space-y-1">
                         <div className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">
-                          Offending Source Line ({item.filePath}:{item.lineNumber})
+                          Live Disk Source Lines ({item.filePath}:{item.lineNumber})
                         </div>
                         <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-red-500/30 text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre">
                           {item.offendingCodeSnippet}
@@ -2963,7 +3153,7 @@ export default function LogStreamerAndShell({
                       </div>
                       <div className="space-y-1">
                         <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">
-                          Synthesized 1-Click Hotfix Diff Patch
+                          Live `git show {item.gitCommitSha}` Unified Diff
                         </div>
                         <pre className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-emerald-500/30 text-[10.5px] text-emerald-800 dark:text-emerald-300 overflow-x-auto whitespace-pre">
                           {item.unifiedDiffPatch}
@@ -2977,163 +3167,274 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* TAB 10 (WAVE 3): LIVE SLO ERROR-BUDGET BURN-RATE MATRIX & MULTI-WINDOW ALERT COMPILER (Google SRE Workbook) */}
+        {/* TAB 10 (WAVE 3): LIVE SLO ERROR-BUDGET BURN-RATE MATRIX & LIVE GCP LOG-BASED METRIC CREATOR */}
         {activeChronoTab === 'SLO_BURN_MATRIX' && (
           <div className="space-y-3.5 font-mono">
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold mr-2">
-                    GOOGLE SRE WORKBOOK MULTI-WINDOW SLO ENGINE
+                    LIVE CLOUD LOGGING &amp; MONITORING SLO ENGINE
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                    Live 30-Day Error Budget Burn-Rate Matrix (1h 14.4x Fast-Burn Page vs. 6h 6.0x vs. 24h 3.0x Ticket)
+                    Computed from Live Project Log Stream + 1-Click `logging.googleapis.com/v2/projects/{projectId}/metrics` Provisioner
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                {(chronoData?.sloBurnRateMatrix || []).map((slo) => {
-                  const isCrit = slo.status === 'CRITICAL_FAST_BURN_PAGE';
-                  const isWarn = slo.status === 'ELEVATED_6H_BURN_WARN';
-                  return (
-                    <div
-                      key={slo.serviceName}
-                      onClick={() => setSelectedSloService(slo.serviceName)}
-                      className={`p-3.5 rounded-xl border cursor-pointer transition-all space-y-2.5 ${
-                        selectedSloService === slo.serviceName
-                          ? 'ring-2 ring-purple-500 bg-white dark:bg-[#202124] border-purple-500'
-                          : 'bg-white dark:bg-[#202124] border-zinc-200 dark:border-zinc-800'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                          {slo.serviceName}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold border ${
-                            isCrit
-                              ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40'
-                              : isWarn
-                              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
-                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                          }`}
-                        >
-                          {slo.status}
-                        </span>
-                      </div>
+              {createdMetricBanner && (
+                <div
+                  className={`p-2.5 rounded-lg text-xs border ${
+                    createdMetricBanner.error
+                      ? 'bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-300'
+                      : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                  }`}
+                >
+                  {createdMetricBanner.error ? (
+                    <span>
+                      <strong>Cloud Logging Metric API Error:</strong> {createdMetricBanner.error}
+                    </span>
+                  ) : (
+                    <span>
+                      <strong>Live Cloud Logging Metric {createdMetricBanner.status}:</strong>{' '}
+                      <code>{createdMetricBanner.metricName}</code> with filter{' '}
+                      <code>{createdMetricBanner.filter}</code>
+                    </span>
+                  )}
+                </div>
+              )}
 
-                      <div className="grid grid-cols-3 gap-1.5 text-[10.5px]">
-                        <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                          <div className="text-zinc-400 text-[9.5px]">Target / Now</div>
-                          <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                            {slo.sloTargetPct}% / {slo.currentSuccessPct}%
-                          </div>
-                        </div>
-                        <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                          <div className="text-zinc-400 text-[9.5px]">Budget Left</div>
-                          <div className="font-bold text-amber-600 dark:text-amber-400">
-                            {slo.budgetRemainingPct}% ({slo.budgetRemainingMinutes}m)
-                          </div>
-                        </div>
-                        <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                          <div className="text-zinc-400 text-[9.5px]">Exhaustion ETA</div>
-                          <div className="font-bold text-red-600 dark:text-red-400">
-                            {slo.exhaustionEtaHours}h
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Multi-Window Burn Rates */}
-                      <div className="flex items-center justify-between text-[10.5px] pt-1 border-t border-zinc-200 dark:border-zinc-800">
-                        <span>
-                          1h Burn:{' '}
-                          <strong className={slo.burnRate1h >= 14.4 ? 'text-red-600 dark:text-red-400' : ''}>
-                            {slo.burnRate1h}x
-                          </strong>
-                        </span>
-                        <span>
-                          6h Burn:{' '}
-                          <strong className={slo.burnRate6h >= 6.0 ? 'text-amber-600 dark:text-amber-400' : ''}>
-                            {slo.burnRate6h}x
-                          </strong>
-                        </span>
-                        <span>
-                          24h Burn: <strong>{slo.burnRate24h}x</strong>
-                        </span>
-                      </div>
-
-                      <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                        <div
-                          style={{ width: `${Math.max(5, slo.budgetRemainingPct)}%` }}
-                          className={`h-full rounded-full ${
-                            isCrit ? 'bg-red-500' : isWarn ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {(() => {
-                const activeSlo =
-                  (chronoData?.sloBurnRateMatrix || []).find(
-                    (s) => s.serviceName === selectedSloService
-                  ) || chronoData?.sloBurnRateMatrix?.[0];
-                if (!activeSlo) return null;
-                return (
-                  <div className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10.5px] font-bold text-purple-700 dark:text-purple-300">
-                        Multi-Window Burn-Rate Alert Rule ({activeSlo.serviceName})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleCopy(
-                            activeSlo.prometheusBurnRuleYaml,
-                            `slo-yaml-${activeSlo.serviceName}`
-                          )
-                        }
-                        className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
+              {(chronoData?.sloBurnRateMatrix || []).length === 0 ? (
+                <div className="p-4 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500">
+                  No log entries or Cloud Monitoring services found in the active filter window. Run a broader query or write a canary log in Tab 12 to compute live service SLO burn rates.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  {(chronoData?.sloBurnRateMatrix || []).map((slo) => {
+                    const isCrit = slo.status === 'CRITICAL_FAST_BURN_PAGE';
+                    const isWarn = slo.status === 'ELEVATED_6H_BURN_WARN';
+                    return (
+                      <div
+                        key={slo.serviceName}
+                        onClick={() => setSelectedSloService(slo.serviceName)}
+                        className={`p-3.5 rounded-xl border cursor-pointer transition-all space-y-2.5 ${
+                          selectedSloService === slo.serviceName
+                            ? 'ring-2 ring-purple-500 bg-white dark:bg-[#202124] border-purple-500'
+                            : 'bg-white dark:bg-[#202124] border-zinc-200 dark:border-zinc-800'
+                        }`}
                       >
-                        {copiedId === `slo-yaml-${activeSlo.serviceName}` ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-500" />
-                            <span>Copied SLO Rule</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3" />
-                            <span>Copy Multi-Window Alert YAML</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    <pre className="text-[10.5px] text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre-wrap">
-                      {activeSlo.prometheusBurnRuleYaml}
-                    </pre>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                            {slo.serviceName}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold border shrink-0 ${
+                              isCrit
+                                ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40'
+                                : isWarn
+                                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                                : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            }`}
+                          >
+                            {slo.status}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1.5 text-[10.5px]">
+                          <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            <div className="text-zinc-400 text-[9.5px]">Target / Live</div>
+                            <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                              {slo.sloTargetPct}% / {slo.currentSuccessPct}%
+                            </div>
+                          </div>
+                          <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            <div className="text-zinc-400 text-[9.5px]">Budget Left</div>
+                            <div className="font-bold text-amber-600 dark:text-amber-400">
+                              {slo.budgetRemainingPct}% ({slo.budgetRemainingMinutes}m)
+                            </div>
+                          </div>
+                          <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            <div className="text-zinc-400 text-[9.5px]">Observed</div>
+                            <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                              {slo.errorRequestsObserved || 0}/{slo.totalRequestsObserved || 0} err
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Multi-Window Burn Rates */}
+                        <div className="flex items-center justify-between text-[10.5px] pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                          <span>
+                            1h Burn:{' '}
+                            <strong className={slo.burnRate1h >= 14.4 ? 'text-red-600 dark:text-red-400' : ''}>
+                              {slo.burnRate1h}x
+                            </strong>
+                          </span>
+                          <span>
+                            6h Burn:{' '}
+                            <strong className={slo.burnRate6h >= 6.0 ? 'text-amber-600 dark:text-amber-400' : ''}>
+                              {slo.burnRate6h}x
+                            </strong>
+                          </span>
+                          <span>
+                            24h Burn: <strong>{slo.burnRate24h}x</strong>
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={creatingMetricId === slo.metricName}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateLiveLogMetric(slo);
+                          }}
+                          className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer disabled:opacity-50"
+                        >
+                          {creatingMetricId === slo.metricName
+                            ? 'Creating Metric in GCP...'
+                            : `1-Click Create GCP Log Metric (${slo.metricName})`}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Live Existing Cloud Logging Metrics in GCP Project */}
+              {(chronoData?.liveLogMetrics || []).length > 0 && (
+                <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
+                  <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                    Live Google Cloud Log-Based Metrics in Project `{projectId}` (`GET /v2/projects/{projectId}/metrics`):
                   </div>
-                );
-              })()}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {chronoData.liveLogMetrics.slice(0, 6).map((m) => (
+                      <div
+                        key={m.name}
+                        className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                      >
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
+                          {m.name}
+                        </div>
+                        <div className="text-[10px] text-purple-700 dark:text-purple-300 break-all">
+                          {m.filter}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* TAB 11 (WAVE 3): eBPF ZERO-INSTRUMENTATION SYSCALL, DNS & TCP RETRANSMIT X-RAY (Cilium Hubble / Pixie / Coroot style) */}
+        {/* TAB 11 (WAVE 3): LIVE LINUX KERNEL `/proc/net/snmp` SOCKET TELEMETRY & LIVE DNS / TCP / TLS 1.3 HANDSHAKE PROBE */}
         {activeChronoTab === 'EBPF_KERNEL_XRAY' && (
           <div className="space-y-3.5 font-mono">
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold mr-2">
-                    CILIUM HUBBLE / PIXIE / COROOT eBPF X-RAY
+                    LIVE LINUX `/proc/net/snmp` + LIVE `tls.connect` PROBE
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                    Zero-Instrumentation Kernel Socket Stalls, CoreDNS Tail Latency, TCP Retransmits &amp; CFS CPU Throttling
+                    Real Host Kernel TCP Retransmits, Active Sockets, DNS Resolution Latency &amp; TLS 1.3 Handshake Timing
                   </span>
                 </div>
+              </div>
+
+              {/* Live Host Kernel Summary Bar from /proc/net/snmp & /proc/net/sockstat */}
+              {chronoData?.kernelHostSummary && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-[10.5px]">
+                  <div className="p-2 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">TCPCurrEstab</div>
+                    <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                      {chronoData.kernelHostSummary.tcpCurrEstab} sockets
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">TCP OutSegs</div>
+                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                      {chronoData.kernelHostSummary.tcpOutSegs.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">RetransSegs</div>
+                    <div className="font-extrabold text-amber-600 dark:text-amber-400">
+                      {chronoData.kernelHostSummary.tcpRetransSegs.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">Retrans Ratio</div>
+                    <div className="font-extrabold text-red-600 dark:text-red-400">
+                      {chronoData.kernelHostSummary.tcpRetransmitRatioPct}%
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">TCP TimeWait</div>
+                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                      {chronoData.kernelHostSummary.tcpTimeWait}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">UDP Datagrams</div>
+                    <div className="font-extrabold text-blue-600 dark:text-blue-400">
+                      {chronoData.kernelHostSummary.udpInDatagrams.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">CPU Load (1m)</div>
+                    <div className="font-extrabold text-purple-600 dark:text-purple-300">
+                      {chronoData.kernelHostSummary.cpuLoadAvg1m} ({chronoData.kernelHostSummary.cpuCount} cores)
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-400">Host RAM Used</div>
+                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                      {chronoData.kernelHostSummary.memUsedPct}%
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Interactive On-Demand Endpoint Network & TLS Probe */}
+              <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs">
+                <div className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+                  Run On-Demand Live DNS + TCP 3-Way Handshake + TLS 1.3 Probe Against Any Endpoint:
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="text"
+                    value={probeHostInput}
+                    onChange={(e) => setProbeHostInput(e.target.value)}
+                    placeholder="Hostname or URL (e.g. logging.googleapis.com, bigquery.googleapis.com)"
+                    className="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                  <input
+                    type="number"
+                    value={probePortInput}
+                    onChange={(e) => setProbePortInput(Number(e.target.value) || 443)}
+                    className="w-24 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
+                  <button
+                    type="button"
+                    disabled={probeLoading}
+                    onClick={() => handleRunLiveNetworkProbe()}
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    {probeLoading ? 'Probing Endpoint...' : 'Run Live DNS / TCP / TLS Probe'}
+                  </button>
+                </div>
+
+                {customProbeResult?.probe && (
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-zinc-800 dark:text-zinc-200">
+                    <strong>Live Probe Result ({customProbeResult.probe.host}):</strong> Resolved IP{' '}
+                    <code>{customProbeResult.probe.resolvedIp}</code> in{' '}
+                    <strong>{customProbeResult.probe.dnsLookupMs}ms</strong> · TCP SYN-ACK RTT:{' '}
+                    <strong>{customProbeResult.probe.tcpSynRttMs}ms</strong> · TLS Handshake:{' '}
+                    <strong>{customProbeResult.probe.tlsHandshakeMs}ms</strong> (
+                    <code>{customProbeResult.probe.tlsProtocol}</code> /{' '}
+                    <code>{customProbeResult.probe.tlsCipher}</code>)
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2.5">
@@ -3162,12 +3463,12 @@ export default function LogStreamerAndShell({
                         {copiedId === `bpf-${row.id}` ? (
                           <>
                             <Check className="w-3 h-3 text-emerald-500" />
-                            <span>Copied bpftrace One-Liner</span>
+                            <span>Copied Kernel CLI</span>
                           </>
                         ) : (
                           <>
                             <Copy className="w-3 h-3" />
-                            <span>Copy bpftrace One-Liner</span>
+                            <span>Copy `ss -ti` / `/proc/net/snmp` CLI</span>
                           </>
                         )}
                       </button>
@@ -3175,37 +3476,37 @@ export default function LogStreamerAndShell({
 
                     <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-[10.5px]">
                       <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                        <div className="text-zinc-400">CoreDNS Lookup</div>
+                        <div className="text-zinc-400">Live DNS Lookup</div>
                         <div className="font-bold text-amber-600 dark:text-amber-400">
                           {row.dnsLookupMs}ms
                         </div>
                       </div>
                       <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                        <div className="text-zinc-400">TCP SYN RTT</div>
+                        <div className="text-zinc-400">Live TCP SYN RTT</div>
                         <div className="font-bold text-zinc-900 dark:text-zinc-100">
                           {row.tcpSynRttMs}ms
                         </div>
                       </div>
                       <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                        <div className="text-zinc-400">TCP Retransmits</div>
+                        <div className="text-zinc-400">Host RetransSegs</div>
                         <div className="font-bold text-red-600 dark:text-red-400">
-                          {row.tcpRetransmitsPerMin}/min
+                          {row.tcpRetransmitsPerMin} ({row.tcpRetransmitRatioPct || 0}%)
                         </div>
                       </div>
                       <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                        <div className="text-zinc-400">TLS Handshake</div>
+                        <div className="text-zinc-400">Live TLS Handshake</div>
                         <div className="font-bold text-zinc-900 dark:text-zinc-100">
                           {row.tlsHandshakeMs}ms
                         </div>
                       </div>
                       <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                        <div className="text-zinc-400">Socket Queue</div>
+                        <div className="text-zinc-400">TCP TimeWait</div>
                         <div className="font-bold text-purple-600 dark:text-purple-300">
-                          {row.socketQueueWaitMs}ms
+                          {row.socketQueueWaitMs} sockets
                         </div>
                       </div>
                       <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                        <div className="text-zinc-400">CFS CPU Throttled</div>
+                        <div className="text-zinc-400">Cgroup Throttled</div>
                         <div className="font-bold text-red-600 dark:text-red-400">
                           {row.cgroupCpuThrottledPct}%
                         </div>
@@ -3213,7 +3514,7 @@ export default function LogStreamerAndShell({
                     </div>
 
                     <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
-                      <strong>Kernel Verdict:</strong> {row.kernelVerdict}
+                      <strong>Live Kernel &amp; Socket Verdict:</strong> {row.kernelVerdict}
                     </div>
                   </div>
                 ))}
@@ -3222,18 +3523,43 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* TAB 12 (WAVE 3): INTERACTIVE LOG-REPLAY TIME-MACHINE & SYNTHETIC CANARY LOAD INJECTOR */}
+        {/* TAB 12 (WAVE 3): REAL GOOGLE CLOUD LOGGING `entries:write` CANARY LOG INJECTOR & PIPELINE VERIFIER */}
         {activeChronoTab === 'CANARY_REPLAY' && (
           <div className="space-y-3.5 font-mono">
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-extrabold mr-2">
-                    CHAOS LOG REPLAY &amp; SYNTHETIC CANARY VERIFIER
+                    LIVE `POST https://logging.googleapis.com/v2/entries:write`
                   </span>
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                    Replay Historical Incident Bursts to Verify LQL Filters, Grok Capture Groups, DLP Redaction &amp; SLO Alert Rules
+                    Writes Real LogEntry Payloads Into `projects/{projectId}/logs/cloudpulse-sre-canary` &amp; Reads Them Back Live
                   </span>
+                </div>
+              </div>
+
+              {/* Optional Custom Message Input for Live `entries:write` */}
+              <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
+                <div className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+                  Optional Custom Log Payload to Write to Google Cloud Logging (`entries:write`):
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <select
+                    value={customCanarySeverity}
+                    onChange={(e) => setCustomCanarySeverity(e.target.value)}
+                    className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="ERROR">ERROR</option>
+                    <option value="WARNING">WARNING</option>
+                    <option value="INFO">INFO</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={customCanaryMessage}
+                    onChange={(e) => setCustomCanaryMessage(e.target.value)}
+                    placeholder="Optional custom log message (leave blank to use preset scenario payload)"
+                    className="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
+                  />
                 </div>
               </div>
 
@@ -3261,8 +3587,8 @@ export default function LogStreamerAndShell({
                       className="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
                     >
                       {replayLoading
-                        ? 'Replaying Synthetic Burst...'
-                        : `Replay ${sc.syntheticEventsCount} Canary Events`}
+                        ? 'Writing to Cloud Logging API...'
+                        : `Write ${sc.syntheticEventsCount} Real Entry/Entries to GCP`}
                     </button>
                   </div>
                 ))}
@@ -3272,13 +3598,32 @@ export default function LogStreamerAndShell({
                 <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-emerald-500/40 space-y-2.5 text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                     <div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold mr-2">
-                        4-STAGE PIPELINE VERIFICATION: ALL PASSED
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold mr-2 ${
+                          replayResult.gcpWriteSucceeded
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-red-500/20 text-red-700 dark:text-red-300'
+                        }`}
+                      >
+                        {replayResult.gcpWriteSucceeded
+                          ? 'LIVE CLOUD LOGGING WRITE: HTTP 200 OK'
+                          : 'CLOUD LOGGING WRITE ERROR'}
                       </span>
                       <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                        {replayResult.title} ({replayResult.detectionLatencyMs}ms End-to-End Detection)
+                        {replayResult.title} ({replayResult.detectionLatencyMs}ms API Write Latency)
                       </span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomLqlInput(`logName="${replayResult.logName}"`);
+                        setActiveChronoTab('SMART_STREAM');
+                        fetchChronoLogs({ lqlFilter: `logName="${replayResult.logName}"` });
+                      }}
+                      className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10.5px] font-bold cursor-pointer"
+                    >
+                      View Written Logs in Tab 01
+                    </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {(replayResult.checks || []).map((chk) => (
@@ -3290,11 +3635,17 @@ export default function LogStreamerAndShell({
                           <span className="font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
                             {chk.stage}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-extrabold">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold ${
+                              chk.status === 'PASS'
+                                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                : 'bg-red-500/20 text-red-700 dark:text-red-300'
+                            }`}
+                          >
                             {chk.status}
                           </span>
                         </div>
-                        <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400">
+                        <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400 break-all">
                           {chk.detail}
                         </div>
                       </div>

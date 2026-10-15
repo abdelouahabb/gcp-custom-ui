@@ -780,6 +780,8 @@ function classifyDestructiveAxiosConfig(config) {
     const isReadOnlyOrDryRun =
       !rawUrl.includes('/api/project/') ||
       rawUrl.includes('/chrono-logs/query') ||
+      rawUrl.includes('/chrono-logs/git-blame') ||
+      rawUrl.includes('/chrono-logs/network-kernel-probe') ||
       rawUrl.includes('/chrono-logs/replay-canary') ||
       rawUrl.includes('/shell') ||
       rawUrl.includes('/benchmark') ||
