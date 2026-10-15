@@ -822,13 +822,40 @@ function classifyDestructiveAxiosConfig(config) {
           'SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST',
           'SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE',
         ].includes(String(body.action || '').toUpperCase())) ||
-      rawUrl.includes('/data-engineer/iceberg-matrix/probe');
+      (rawUrl.includes('/data-engineer/iceberg-matrix/probe') &&
+        Boolean(body.autoRefresh));
 
     if (isReadOnlyOrDryRun) {
       return null;
     }
 
-    // 3A-0. 1-Tap 50-Playbook Borderless Apache Iceberg Lakehouse Bootstrap (/data-engineer/iceberg-matrix/execute)
+    // 3A-0a. Probe Live Iceberg Estate (Read-Only 5-Service Lakehouse Discovery Modal)
+    if (rawUrl.includes('/data-engineer/iceberg-matrix/probe')) {
+      const reg = body.region || 'us-central1';
+      const pbTitle =
+        body.playbookTitle || body.playbookId || '50-Playbook Iceberg Matrix';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'ALPHA',
+        title: `Confirm Live Iceberg Estate Probe (Read-Only · $0.00)?`,
+        headerBadge: `[GA + ALPHA] 5-Service Lakehouse Estate Discovery Gatekeeper`,
+        targetLabel: 'Target GCP Project & Lakehouse Services to Inspect',
+        resourceKind:
+          'BigQuery Datasets + GCS Buckets + [ALPHA] BigLake Iceberg REST + [ALPHA] Managed Kafka + [ALPHA] Dataplex',
+        targetName: `${projectId} (${reg} · Context: ${pbTitle})`,
+        location: reg,
+        projectId,
+        method: 'READ-ONLY ESTATE PROBE',
+        endpoint: rawUrl,
+        confirmLabel: 'Approve & Run 5-Service Read-Only Probe ($0.00)',
+        cancelToast: 'Live Iceberg Estate Probe cancelled.',
+        whatHappensNext: `1. BigQuery Datasets (GA REST): Queries bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets to list existing Lakehouse datasets.\n2. Cloud Storage Buckets (GA REST): Queries storage.googleapis.com/storage/v1/b?project=${projectId} to list live gs:// buckets and storage classes (STANDARD / AUTOCLASS).\n3. [ALPHA] BigLake Iceberg REST Catalogs: Runs "gcloud alpha biglake iceberg catalogs list --project=${projectId}" to discover open Iceberg REST catalogs.\n4. [ALPHA] Managed Kafka Clusters: Runs "gcloud alpha managed-kafka clusters list --location=${reg}" to check streaming ingestion readiness.\n5. [ALPHA] Dataplex Governance Lakes: Runs "gcloud alpha dataplex lakes list --location=${reg}" and populates the 5-card live telemetry strip.`,
+        costWarning: `100% READ-ONLY DISCOVERY ($0.00 BILLING IMPACT): This action only executes read-only GET / list queries across BigQuery, Cloud Storage, BigLake, Managed Kafka, and Dataplex. It NEVER creates, modifies, or deletes any cloud resource and incurs $0.00 in Google Cloud charges.`,
+        impactWarning: `Approving this probe will inspect live Lakehouse metadata in project "${projectId}" (${reg}) with zero mutations.`,
+      };
+    }
+
+    // 3A-0b. 1-Tap 50-Playbook Borderless Apache Iceberg Lakehouse Bootstrap (/data-engineer/iceberg-matrix/execute)
     if (rawUrl.includes('/data-engineer/iceberg-matrix/execute')) {
       const pbTitle =
         body.playbookTitle || body.playbookId || 'Apache Iceberg Lakehouse Playbook';

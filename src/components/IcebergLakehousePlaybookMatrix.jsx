@@ -1108,41 +1108,47 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
     region,
   ]);
 
-  const handleProbeEstate = useCallback(async () => {
-    if (!projectId) return;
-    setProbing(true);
-    try {
-      const res = await axios.post(
-        `/api/project/${encodeURIComponent(
-          projectId
-        )}/data-engineer/iceberg-matrix/probe`,
-        {
-          region,
-          playbookId: activePlaybook.id,
+  const handleProbeEstate = useCallback(
+    async (isAutoRefresh = false) => {
+      if (!projectId) return;
+      setProbing(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/data-engineer/iceberg-matrix/probe`,
+          {
+            region,
+            playbookId: activePlaybook.id,
+            playbookTitle: activePlaybook.title,
+            releaseTrack: activePlaybook.track,
+            autoRefresh: Boolean(isAutoRefresh),
+          }
+        );
+        setProbeResult(res.data);
+        if (onShowToast) {
+          onShowToast(
+            `Probed live Iceberg Lakehouse estate (${
+              res.data?.liveEstate?.bigQueryDatasetsCount || 0
+            } BQ datasets, ${
+              res.data?.liveEstate?.gcsBucketsCount || 0
+            } GCS buckets)`
+          );
         }
-      );
-      setProbeResult(res.data);
-      if (onShowToast) {
-        onShowToast(
-          `Probed live Iceberg Lakehouse estate (${
-            res.data?.liveEstate?.bigQueryDatasetsCount || 0
-          } BQ datasets, ${
-            res.data?.liveEstate?.gcsBucketsCount || 0
-          } GCS buckets)`
-        );
+      } catch (err) {
+        if (onShowError && !err?.__cancelledByUser) {
+          onShowError(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to probe live Lakehouse estate.'
+          );
+        }
+      } finally {
+        setProbing(false);
       }
-    } catch (err) {
-      if (onShowError) {
-        onShowError(
-          err.response?.data?.error ||
-            err.message ||
-            'Failed to probe live Lakehouse estate.'
-        );
-      }
-    } finally {
-      setProbing(false);
-    }
-  }, [projectId, region, activePlaybook, onShowToast, onShowError]);
+    },
+    [projectId, region, activePlaybook, onShowToast, onShowError]
+  );
 
   const handleExecutePlaybook = async () => {
     if (!projectId) return;
@@ -1165,7 +1171,7 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
       if (onShowToast && res.data?.message) {
         onShowToast(res.data.message);
       }
-      handleProbeEstate();
+      handleProbeEstate(true);
     } catch (err) {
       if (onShowError && !err?.__cancelledByUser) {
         onShowError(
@@ -1210,7 +1216,7 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={handleProbeEstate}
+              onClick={() => handleProbeEstate(false)}
               disabled={probing}
               className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
