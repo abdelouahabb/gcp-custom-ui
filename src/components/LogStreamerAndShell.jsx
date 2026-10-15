@@ -105,6 +105,25 @@ export default function LogStreamerAndShell({
   const [applyingExclusionId, setApplyingExclusionId] = useState(null);
   const [exclusionBanner, setExclusionBanner] = useState(null);
 
+  // --- 2026 Open-Source Log Explorer Suite (ClickHouse / HyperDX / VictoriaLogs / SigNoz / lnav / Grafana Loki) ---
+  const [selectedHistogramBucket, setSelectedHistogramBucket] = useState(null);
+  const [showFacetSidebar, setShowFacetSidebar] = useState(true);
+  const [expandedFacetKeys, setExpandedFacetKeys] = useState({
+    serviceName: true,
+    httpStatus: true,
+    resourceType: true,
+    region: false,
+    actor: false,
+    severity: false,
+  });
+  const [liveTailActive, setLiveTailActive] = useState(false);
+  const [regexHighlightInput, setRegexHighlightInput] = useState('504|429|403|deadline|Quota|AIza|Bearer');
+  const [pinnedLogIds, setPinnedLogIds] = useState(['chrono-trace-a1', 'chrono-trace-a2']);
+  const [showPinnedOnly, setShowPinnedOnly] = useState(false);
+  const [diffSelectionIds, setDiffSelectionIds] = useState(['chrono-trace-a1', 'chrono-trace-a2']);
+  const [showPayloadDiffModal, setShowPayloadDiffModal] = useState(false);
+  const [activeTranspilerLang, setActiveTranspilerLang] = useState('VictoriaLogsPipesQl');
+
   // --- Innovation #3: Live Cloud Audit "Who-Changed-What" Activity Timeline State ---
   const [auditData, setAuditData] = useState(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
@@ -198,10 +217,65 @@ export default function LogStreamerAndShell({
     fetchAuditTimeline();
   }, [fetchAuditTimeline]);
 
+  // Live Tail auto-polling interval (lnav / Dozzle style)
+  useEffect(() => {
+    if (!liveTailActive || !projectId) return undefined;
+    const timer = setInterval(() => {
+      fetchChronoLogs();
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [liveTailActive, projectId, fetchChronoLogs]);
+
   const handleCopy = (text, id) => {
     navigator.clipboard?.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  const applyFacetClauseToLql = (clause) => {
+    const base = (customLqlInput || chronoData?.compiledQuery?.effectiveLql || '').trim();
+    const nextLql = base ? `${base} AND ${clause}` : clause;
+    setCustomLqlInput(nextLql);
+    setShowCompiledSqlModal(true);
+    fetchChronoLogs({ lqlFilter: nextLql });
+  };
+
+  const togglePinLog = (logId) => {
+    setPinnedLogIds((prev) =>
+      prev.includes(logId) ? prev.filter((id) => id !== logId) : [...prev, logId]
+    );
+  };
+
+  const toggleDiffSelectLog = (logId) => {
+    setDiffSelectionIds((prev) => {
+      if (prev.includes(logId)) return prev.filter((id) => id !== logId);
+      if (prev.length >= 2) return [prev[1], logId];
+      return [...prev, logId];
+    });
+  };
+
+  const renderRegexHighlightedMessage = (text) => {
+    const str = String(text || '');
+    const pattern = regexHighlightInput.trim();
+    if (!pattern) return str;
+    try {
+      const regex = new RegExp(`(${pattern})`, 'gi');
+      const parts = str.split(regex);
+      return parts.map((part, idx) =>
+        regex.test(part) ? (
+          <mark
+            key={idx}
+            className="px-1 py-0.2 rounded bg-amber-400/30 dark:bg-amber-400/25 text-amber-900 dark:text-amber-200 border border-amber-500/40 font-extrabold"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={idx}>{part}</span>
+        )
+      );
+    } catch {
+      return str;
+    }
   };
 
   const handleApplyExclusionRule = async (rec) => {
@@ -238,6 +312,7 @@ export default function LogStreamerAndShell({
 
   const clearTimeTravelPeek = () => {
     setTimeTravelAnchor(null);
+    setSelectedHistogramBucket(null);
     fetchChronoLogs({ aroundTimestamp: '' });
   };
 
@@ -915,6 +990,100 @@ export default function LogStreamerAndShell({
           )}
         </div>
 
+        {/* ===================================================================
+            OPEN-SOURCE 2026 FEATURE #1: INTERACTIVE STACKED SEVERITY HISTOGRAM
+            & BRUSH-TO-ZOOM SCRUBBER (ClickHouse / HyperDX / Grafana Loki style)
+           =================================================================== */}
+        {Array.isArray(chronoData?.histogramBuckets) && chronoData.histogramBuckets.length > 0 && (
+          <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-extrabold">
+                  CLICKHOUSE / HYPERDX / LOKI HISTOGRAM
+                </span>
+                <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                  Stacked Severity Volume &amp; P95 Latency Scrubber (Click any bar to zoom ±30s)
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-[10px] font-mono">
+                <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> ERROR
+                </span>
+                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block" /> WARN
+                </span>
+                <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" /> INFO
+                </span>
+                {selectedHistogramBucket !== null && (
+                  <button
+                    type="button"
+                    onClick={clearTimeTravelPeek}
+                    className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold cursor-pointer"
+                  >
+                    Reset Zoom
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 24-Bucket Interactive Bar Chart */}
+            {(() => {
+              const buckets = chronoData.histogramBuckets;
+              const maxTotal = Math.max(1, ...buckets.map((b) => b.totalCount));
+              return (
+                <div className="grid grid-cols-24 gap-1 items-end h-20 pt-2 px-1" style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}>
+                  {buckets.map((b) => {
+                    const errH = Math.round((b.errorCount / maxTotal) * 64);
+                    const warnH = Math.round((b.warningCount / maxTotal) * 64);
+                    const infoH = Math.max(4, Math.round((b.infoCount / maxTotal) * 64));
+                    const isSelected = selectedHistogramBucket === b.bucketIndex;
+                    return (
+                      <div
+                        key={b.bucketIndex}
+                        onClick={() => {
+                          setSelectedHistogramBucket(b.bucketIndex);
+                          triggerTimeTravelPeek(b.centerIso);
+                        }}
+                        title={`Bucket ${b.label} | Total: ${b.totalCount} (ERR: ${b.errorCount}, WARN: ${b.warningCount}, INFO: ${b.infoCount}) | P95: ${b.p95LatencyMs}ms — Click to zoom ±30s`}
+                        className={`group flex flex-col justify-end items-center h-full cursor-pointer rounded-t transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-amber-500 bg-amber-500/10'
+                            : b.isAnomalySpike
+                            ? 'bg-red-500/5 hover:bg-red-500/15'
+                            : 'hover:bg-zinc-200/70 dark:hover:bg-zinc-800/70'
+                        }`}
+                      >
+                        <div className="w-full flex flex-col justify-end rounded-t overflow-hidden px-0.5">
+                          {b.errorCount > 0 && (
+                            <div
+                              style={{ height: `${Math.max(4, errH)}px` }}
+                              className="w-full bg-red-500 rounded-t-[2px]"
+                            />
+                          )}
+                          {b.warningCount > 0 && (
+                            <div
+                              style={{ height: `${Math.max(3, warnH)}px` }}
+                              className="w-full bg-amber-500"
+                            />
+                          )}
+                          <div
+                            style={{ height: `${infoH}px` }}
+                            className="w-full bg-blue-500/80 dark:bg-blue-500/70 rounded-b-[2px]"
+                          />
+                        </div>
+                        <span className="text-[8.5px] font-mono text-zinc-400 mt-1 truncate">
+                          {b.bucketIndex % 4 === 0 ? b.label : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
         {/* Active ±30s Time-Travel Lock Banner */}
         {timeTravelAnchor && (
           <div className="p-3 rounded-lg bg-amber-500/15 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2">
@@ -936,13 +1105,13 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* 4 Moonshot Studio Navigation Tabs + Severity Filter */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
-          <div className="flex flex-wrap items-center gap-1.5">
+        {/* 6 Equal-Sized Bento Studio Navigation Tabs + Severity Filter */}
+        <div className="space-y-2.5 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
               {
                 id: 'SMART_STREAM',
-                label: `1. Flattened SRE Stream (${chronoEntries.length})`,
+                label: `1. Faceted Stream & Live Tail (${chronoEntries.length})`,
                 icon: Zap,
               },
               {
@@ -951,13 +1120,23 @@ export default function LogStreamerAndShell({
                 icon: Layers,
               },
               {
+                id: 'ANOMALY_DIFF',
+                label: `3. Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 412}%)`,
+                icon: AlertTriangle,
+              },
+              {
                 id: 'TRACE_WATERFALL',
-                label: `3. Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
+                label: `4. Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
                 icon: GitCommit,
               },
               {
+                id: 'QUERY_TRANSPILER',
+                label: `5. Open-Source Query & Alert Transpiler (6 Formats)`,
+                icon: FileCode2,
+              },
+              {
                 id: 'FINOPS_DLP',
-                label: `4. Log FinOps ($0.50/GiB) & DLP Shield (${chronoData?.dlpAlerts?.length || 0})`,
+                label: `6. Log FinOps ($0.50/GiB) & DLP Shield (${chronoData?.dlpAlerts?.length || 0})`,
                 icon: DollarSign,
               },
             ].map((tab) => {
@@ -968,174 +1147,455 @@ export default function LogStreamerAndShell({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveChronoTab(tab.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer border ${
+                  className={`w-full h-10 px-3 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer border inline-flex items-center justify-between gap-2 ${
                     active
-                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
                       : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-200'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
+                  <span className="inline-flex items-center gap-1.5 truncate">
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-[#131314] p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
-            {['ALL', 'ERROR', 'WARNING', 'INFO'].map((sev) => (
+          {/* Open-Source SRE Workbench Toolbar: Facet Sidebar Toggle + Regex Highlighter + Live Tail + Pinned Bookmarks + JSON Diff */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
-                key={sev}
                 type="button"
-                onClick={() => setSeverityFilter(sev)}
-                className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                  severityFilter === sev
-                    ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-bold shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                onClick={() => setShowFacetSidebar((v) => !v)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 ${
+                  showFacetSidebar
+                    ? 'bg-blue-600/15 text-blue-700 dark:text-blue-300 border-blue-500/40'
+                    : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
                 }`}
               >
-                {sev}
+                <Filter className="w-3 h-3" />
+                <span>{showFacetSidebar ? 'Hide Facets' : 'Show Facets'}</span>
               </button>
-            ))}
+
+              <button
+                type="button"
+                onClick={() => setLiveTailActive((v) => !v)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border cursor-pointer inline-flex items-center gap-1.5 ${
+                  liveTailActive
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${liveTailActive ? 'bg-white animate-ping' : 'bg-emerald-500'}`} />
+                <span>{liveTailActive ? 'Live Tail: STREAMING (4.5s)' : 'Start Live Tail'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPinnedOnly((v) => !v)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border cursor-pointer ${
+                  showPinnedOnly
+                    ? 'bg-amber-600 text-white border-amber-500'
+                    : 'bg-zinc-100 dark:bg-[#131314] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                Pinned Bookmarks ({pinnedLogIds.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPayloadDiffModal((v) => !v)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border cursor-pointer ${
+                  showPayloadDiffModal
+                    ? 'bg-purple-600 text-white border-purple-500'
+                    : 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30'
+                }`}
+              >
+                Side-by-Side JSON Diff ({diffSelectionIds.length}/2)
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Regex Token Highlighter Input (lnav / Dozzle style) */}
+              <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-[#131314] px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">
+                  Regex Highlight:
+                </span>
+                <input
+                  type="text"
+                  value={regexHighlightInput}
+                  onChange={(e) => setRegexHighlightInput(e.target.value)}
+                  placeholder="e.g. 504|429|deadline|Quota"
+                  className="bg-transparent text-[11px] font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none w-44"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 bg-zinc-100 dark:bg-[#131314] p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
+                {['ALL', 'ERROR', 'WARNING', 'INFO'].map((sev) => (
+                  <button
+                    key={sev}
+                    type="button"
+                    onClick={() => setSeverityFilter(sev)}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                      severityFilter === sev
+                        ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-bold shadow-sm'
+                        : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    {sev}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* TAB 1: ZERO-JSON-DIGGING FLATTENED SRE STREAM & ±30s TIME-TRAVEL */}
-        {activeChronoTab === 'SMART_STREAM' && (
-          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-            {chronoEntries.map((entry) => {
-              const isOpen = expandedChronoEntryId === entry.id;
-              return (
-                <div
-                  key={entry.id}
-                  className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#131314] overflow-hidden hover:border-purple-500/40 transition-colors"
+        {/* Side-by-Side JSON Payload Diff Drawer (lnav / SigNoz style) */}
+        {showPayloadDiffModal && (() => {
+          const allPool = chronoData?.entries || [];
+          const leftEntry = allPool.find((e) => e.id === diffSelectionIds[0]) || allPool[0];
+          const rightEntry = allPool.find((e) => e.id === diffSelectionIds[1]) || allPool[1] || allPool[0];
+          if (!leftEntry || !rightEntry) return null;
+          const fieldRows = [
+            { label: 'Log ID', a: leftEntry.id, b: rightEntry.id },
+            { label: 'Timestamp', a: leftEntry.timestamp, b: rightEntry.timestamp },
+            { label: 'Severity', a: leftEntry.severity, b: rightEntry.severity },
+            { label: 'Service Name', a: leftEntry.serviceName, b: rightEntry.serviceName },
+            { label: 'Resource Target', a: leftEntry.resourceTarget, b: rightEntry.resourceTarget },
+            { label: 'Region / Zone', a: leftEntry.region, b: rightEntry.region },
+            { label: 'HTTP Status', a: String(leftEntry.httpStatus), b: String(rightEntry.httpStatus) },
+            { label: 'Latency (ms)', a: `${leftEntry.latencyMs}ms`, b: `${rightEntry.latencyMs}ms` },
+            { label: 'Principal / Actor', a: leftEntry.actor, b: rightEntry.actor },
+            { label: 'Trace ID', a: leftEntry.traceId, b: rightEntry.traceId },
+            { label: 'Drain3 Signature', a: leftEntry.signaturePattern, b: rightEntry.signaturePattern },
+          ];
+          return (
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-purple-500/40 space-y-3 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300 text-[10px] font-extrabold mr-2">
+                    SIDE-BY-SIDE LOG PAYLOAD DIFF
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Comparing Log A ({leftEntry.serviceName}) vs. Log B ({rightEntry.serviceName})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPayloadDiffModal(false)}
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
                 >
-                  <div
-                    onClick={() =>
-                      setExpandedChronoEntryId(isOpen ? null : entry.id)
-                    }
-                    className="p-3 cursor-pointer flex flex-wrap items-start justify-between gap-2"
-                  >
-                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                      {isOpen ? (
-                        <ChevronDown className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
-                      )}
-                      <div className="space-y-1 min-w-0 flex-1">
-                        {/* Top Hoisted Metadata Row (Zero JSON Digging!) */}
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {getSeverityBadge(entry.severity)}
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-                              entry.httpStatus >= 500
-                                ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                : entry.httpStatus >= 400
-                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                : 'bg-emerald-500/15 text-emerald-500'
-                            }`}
-                          >
-                            {entry.httpMethod} {entry.httpStatus} · {entry.latencyMs}ms
-                          </span>
-                          <span className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold">
-                            {entry.serviceName}
-                          </span>
-                          <span className="text-[10.5px] font-mono text-zinc-500">
-                            ({entry.resourceTarget})
-                          </span>
-                          {chronoData?.compiledQuery?.naturalLanguage &&
-                            typeof entry.nlpRelevancePct === 'number' && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
-                                <Cpu className="w-2.5 h-2.5" />
-                                <span>BM25 Match: {entry.nlpRelevancePct}%</span>
-                              </span>
-                            )}
-                          {entry.dlpFindings?.length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold">
-                              <ShieldAlert className="w-3 h-3" />
-                              <span>DLP LEAK: {entry.dlpFindings[0].type}</span>
-                            </span>
-                          )}
-                        </div>
+                  Close Diff
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[11px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-500">
+                      <th className="py-1.5 pr-3">Field</th>
+                      <th className="py-1.5 px-3">Log A ({leftEntry.id})</th>
+                      <th className="py-1.5 pl-3">Log B ({rightEntry.id})</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
+                    {fieldRows.map((row) => {
+                      const isDiff = row.a !== row.b;
+                      return (
+                        <tr
+                          key={row.label}
+                          className={isDiff ? 'bg-amber-500/10' : ''}
+                        >
+                          <td className="py-1.5 pr-3 font-bold text-zinc-600 dark:text-zinc-400">
+                            {row.label}
+                          </td>
+                          <td className={`py-1.5 px-3 break-all ${isDiff ? 'text-red-700 dark:text-red-300 font-bold' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                            {row.a}
+                          </td>
+                          <td className={`py-1.5 pl-3 break-all ${isDiff ? 'text-emerald-700 dark:text-emerald-300 font-bold' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                            {row.b}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
 
-                        {/* Clean Flattened Message */}
-                        <div className="text-xs font-mono text-zinc-900 dark:text-zinc-100 break-words">
-                          {entry.cleanMessage}
-                        </div>
-
-                        {/* Actor + Timezone-Aware Timestamp + Trace ID */}
-                        <div className="flex flex-wrap items-center gap-2 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>{formatLogDate(entry.timestamp)}</span>
-                          </span>
-                          <span>·</span>
-                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                            <UserCheck className="w-3 h-3" />
-                            <span>{entry.actor}</span>
-                          </span>
-                          <span>·</span>
-                          <span>Trace: {entry.traceId?.slice(0, 12)}…</span>
-                        </div>
-                      </div>
+        {/* TAB 1: FACETED SRE STREAM (VictoriaLogs / OpenObserve Facet Sidebar + Flattened Cards) */}
+        {activeChronoTab === 'SMART_STREAM' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            {/* Left 4 Columns: VictoriaLogs / OpenObserve Field Facet Explorer & Cardinality Sidebar */}
+            {showFacetSidebar && Array.isArray(chronoData?.fieldFacets) && (
+              <div className="lg:col-span-4 p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3 max-h-[460px] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                  <div>
+                    <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
+                      VictoriaLogs / OpenObserve Facets
                     </div>
+                    <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                      Field Cardinality &amp; 1-Click LQL
+                    </div>
+                  </div>
+                  {customLqlInput && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomLqlInput('');
+                        fetchChronoLogs({ lqlFilter: '' });
+                      }}
+                      className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px] font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                    >
+                      Clear LQL
+                    </button>
+                  )}
+                </div>
 
-                    {/* Action Buttons: ±30s Time-Travel + Trace Waterfall */}
+                {chronoData.fieldFacets.map((facet) => {
+                  const isExp = Boolean(expandedFacetKeys[facet.fieldKey]);
+                  return (
                     <div
-                      className="flex items-center gap-1.5 shrink-0"
-                      onClick={(e) => e.stopPropagation()}
+                      key={facet.fieldKey}
+                      className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] overflow-hidden"
                     >
                       <button
                         type="button"
-                        onClick={() => triggerTimeTravelPeek(entry.timestamp)}
-                        title="Fetch all project logs ±30 seconds around this event"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-mono font-bold cursor-pointer"
+                        onClick={() =>
+                          setExpandedFacetKeys((prev) => ({
+                            ...prev,
+                            [facet.fieldKey]: !prev[facet.fieldKey],
+                          }))
+                        }
+                        className="w-full px-2.5 py-2 flex items-center justify-between text-left text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 cursor-pointer"
                       >
-                        <Clock className="w-3 h-3" />
-                        <span>±30s Peek</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedTraceId(entry.traceId);
-                          setActiveChronoTab('TRACE_WATERFALL');
-                        }}
-                        className="px-2.5 py-1 rounded bg-purple-600/15 hover:bg-purple-600/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10.5px] font-mono font-bold cursor-pointer"
-                      >
-                        ↳ Trace Waterfall
-                      </button>
-                    </div>
-                  </div>
-
-                  {isOpen && (
-                    <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 space-y-2 font-mono text-[11px]">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-zinc-400">
-                          Drain3 Signature:{' '}
-                          <code className="text-purple-700 dark:text-purple-300">{entry.signaturePattern}</code>
+                        <span className="truncate">{facet.label}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] text-zinc-500">
+                          {facet.distinctCount} distinct
                         </span>
-                        {onAskCopilot && (
+                      </button>
+
+                      {isExp && (
+                        <div className="px-2.5 pb-2.5 pt-1 space-y-1.5 border-t border-zinc-100 dark:border-zinc-800/80">
+                          {facet.topValues.map((tv) => (
+                            <div key={tv.value} className="space-y-1">
+                              <div className="flex items-center justify-between gap-1 text-[10.5px] font-mono">
+                                <span
+                                  className="truncate text-zinc-800 dark:text-zinc-200 font-semibold max-w-[150px]"
+                                  title={tv.value}
+                                >
+                                  {tv.value}
+                                </span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <span className="text-[10px] text-zinc-400">
+                                    {tv.count} ({tv.pct}%)
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => applyFacetClauseToLql(tv.includeClause)}
+                                    title={`Include in LQL: ${tv.includeClause}`}
+                                    className="px-1.5 py-0.2 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[9.5px] font-bold cursor-pointer"
+                                  >
+                                    + =
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => applyFacetClauseToLql(tv.excludeClause)}
+                                    title={`Exclude in LQL: ${tv.excludeClause}`}
+                                    className="px-1.5 py-0.2 rounded bg-red-500/15 hover:bg-red-500/30 text-red-700 dark:text-red-300 border border-red-500/30 text-[9.5px] font-bold cursor-pointer"
+                                  >
+                                    - !=
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                                <div
+                                  style={{ width: `${Math.max(4, tv.pct)}%` }}
+                                  className="h-full bg-blue-500 rounded-full"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Right 8 (or 12) Columns: Flattened SRE Log Cards with Regex Highlight, Pinning & JSON Diff */}
+            <div className={`${showFacetSidebar ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-2 max-h-[460px] overflow-y-auto pr-1`}>
+              {chronoEntries
+                .filter((e) => (!showPinnedOnly ? true : pinnedLogIds.includes(e.id)))
+                .map((entry) => {
+                  const isOpen = expandedChronoEntryId === entry.id;
+                  const isPinned = pinnedLogIds.includes(entry.id);
+                  const isDiffSelected = diffSelectionIds.includes(entry.id);
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`rounded-lg border overflow-hidden transition-colors ${
+                        isPinned
+                          ? 'border-amber-500/50 bg-amber-500/5 dark:bg-[#171612]'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#131314] hover:border-purple-500/40'
+                      }`}
+                    >
+                      <div
+                        onClick={() =>
+                          setExpandedChronoEntryId(isOpen ? null : entry.id)
+                        }
+                        className="p-3 cursor-pointer flex flex-wrap items-start justify-between gap-2"
+                      >
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          {isOpen ? (
+                            <ChevronDown className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
+                          )}
+                          <div className="space-y-1 min-w-0 flex-1">
+                            {/* Top Hoisted Metadata Row (Zero JSON Digging!) */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {getSeverityBadge(entry.severity)}
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                  entry.httpStatus >= 500
+                                    ? 'bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30'
+                                    : entry.httpStatus >= 400
+                                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30'
+                                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-500'
+                                }`}
+                              >
+                                {entry.httpMethod} {entry.httpStatus} · {entry.latencyMs}ms
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-bold">
+                                {entry.serviceName}
+                              </span>
+                              <span className="text-[10.5px] font-mono text-zinc-500">
+                                ({entry.resourceTarget})
+                              </span>
+                              {chronoData?.compiledQuery?.naturalLanguage &&
+                                typeof entry.nlpRelevancePct === 'number' && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
+                                    <Cpu className="w-2.5 h-2.5" />
+                                    <span>BM25 Match: {entry.nlpRelevancePct}%</span>
+                                  </span>
+                                )}
+                              {entry.dlpFindings?.length > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-extrabold">
+                                  <ShieldAlert className="w-3 h-3" />
+                                  <span>DLP LEAK: {entry.dlpFindings[0].type}</span>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Clean Flattened Message with Live Regex Token Highlighting */}
+                            <div className="text-xs font-mono text-zinc-900 dark:text-zinc-100 break-words">
+                              {renderRegexHighlightedMessage(entry.cleanMessage)}
+                            </div>
+
+                            {/* Actor + Timezone-Aware Timestamp + Trace ID */}
+                            <div className="flex flex-wrap items-center gap-2 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                <span>{formatLogDate(entry.timestamp)}</span>
+                              </span>
+                              <span>·</span>
+                              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                <UserCheck className="w-3 h-3" />
+                                <span>{entry.actor}</span>
+                              </span>
+                              <span>·</span>
+                              <span>Trace: {entry.traceId?.slice(0, 12)}…</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons: Pin + Diff + ±30s Time-Travel + Trace Waterfall */}
+                        <div
+                          className="flex items-center gap-1 shrink-0 flex-wrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <button
                             type="button"
-                            onClick={() =>
-                              onAskCopilot(
-                                `Diagnose root cause for ${entry.serviceName} (${entry.httpStatus} in ${entry.latencyMs}ms): ${entry.cleanMessage}`
-                              )
-                            }
-                            className="inline-flex items-center gap-1 text-blue-400 hover:underline cursor-pointer"
+                            onClick={() => togglePinLog(entry.id)}
+                            className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                              isPinned
+                                ? 'bg-amber-500 text-white border-amber-500'
+                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
+                            }`}
                           >
-                            <Sparkles className="w-3 h-3" />
-                            <span>Ask Gemini SRE Copilot</span>
+                            {isPinned ? 'Pinned' : 'Pin'}
                           </button>
-                        )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              toggleDiffSelectLog(entry.id);
+                              setShowPayloadDiffModal(true);
+                            }}
+                            className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                              isDiffSelected
+                                ? 'bg-purple-600 text-white border-purple-500'
+                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
+                            }`}
+                          >
+                            {isDiffSelected ? 'Diff Selected' : 'Diff'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => triggerTimeTravelPeek(entry.timestamp)}
+                            title="Fetch all project logs ±30 seconds around this event"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            <Clock className="w-3 h-3" />
+                            <span>±30s</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedTraceId(entry.traceId);
+                              setActiveChronoTab('TRACE_WATERFALL');
+                            }}
+                            className="px-2 py-1 rounded bg-purple-600/15 hover:bg-purple-600/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            Trace
+                          </button>
+                        </div>
                       </div>
-                      <pre className="text-[10px] text-zinc-700 dark:text-zinc-300 overflow-x-auto max-h-44 p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                        {JSON.stringify(entry.raw || entry, null, 2)}
-                      </pre>
+
+                      {isOpen && (
+                        <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 space-y-2 font-mono text-[11px]">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-zinc-400">
+                              Drain3 Signature:{' '}
+                              <code className="text-purple-700 dark:text-purple-300">{entry.signaturePattern}</code>
+                            </span>
+                            {onAskCopilot && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onAskCopilot(
+                                    `Diagnose root cause for ${entry.serviceName} (${entry.httpStatus} in ${entry.latencyMs}ms): ${entry.cleanMessage}`
+                                  )
+                                }
+                                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                <span>Ask Gemini SRE Copilot</span>
+                              </button>
+                            )}
+                          </div>
+                          <pre className="text-[10px] text-zinc-700 dark:text-zinc-300 overflow-x-auto max-h-44 p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            {JSON.stringify(entry.raw || entry, null, 2)}
+                          </pre>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+            </div>
           </div>
         )}
 
@@ -1212,7 +1672,96 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* TAB 3: CROSS-SERVICE DISTRIBUTED TRACE WATERFALL (`traceId` STITCHING) */}
+        {/* TAB 3: OPEN-SOURCE 2026 FEATURE #3 — ANOMALY BASELINE DIFF & "WHY DID 5XX SPIKE?" ENGINE */}
+        {activeChronoTab === 'ANOMALY_DIFF' && chronoData?.anomalyBaselineDiff && (
+          <div className="space-y-3.5">
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2 font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-extrabold">
+                    SIGNOZ / DRAIN3 ANOMALY BASELINE DIFF
+                  </span>
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    {chronoData.anomalyBaselineDiff.incidentWindowLabel} vs.{' '}
+                    {chronoData.anomalyBaselineDiff.baselineWindowLabel}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-extrabold">
+                  <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30">
+                    Error Rate: +{chronoData.anomalyBaselineDiff.overallErrorDeltaPct}%
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    P95 Delta: +{chronoData.anomalyBaselineDiff.overallP95DeltaMs}ms
+                  </span>
+                </div>
+              </div>
+              <div className="text-xs text-zinc-800 dark:text-zinc-200">
+                <strong>Automated Root-Cause Correlation:</strong>{' '}
+                {chronoData.anomalyBaselineDiff.rootCauseHypothesis}
+              </div>
+              <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                Top Correlated Dimension:{' '}
+                <code className="px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300 font-bold">
+                  {chronoData.anomalyBaselineDiff.topCorrelatedDimension}
+                </code>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {(chronoData.anomalyBaselineDiff.signatureDeltas || []).map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-[#131314] space-y-2 font-mono"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {getSeverityBadge(item.severity)}
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                          item.classification === 'NEW_INCIDENT_SPIKE'
+                            ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40'
+                            : item.classification === 'ELEVATED_REGRESSION'
+                            ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
+                        }`}
+                      >
+                        {item.classification} ({item.deltaPct >= 0 ? `+${item.deltaPct}%` : `${item.deltaPct}%`})
+                      </span>
+                      <span className="text-[11px] text-zinc-500">
+                        Baseline: <strong>{item.baselineRatePerMin}/min</strong> -&gt; Now:{' '}
+                        <strong className="text-zinc-900 dark:text-zinc-100">{item.currentRatePerMin}/min</strong>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => applyFacetClauseToLql(item.lqlDrilldown)}
+                        className="px-2.5 py-1 rounded bg-purple-600/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10.5px] font-bold cursor-pointer"
+                      >
+                        Filter in LQL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTraceId(item.sampleTraceId);
+                          setActiveChronoTab('TRACE_WATERFALL');
+                        }}
+                        className="px-2.5 py-1 rounded bg-blue-600/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10.5px] font-bold cursor-pointer"
+                      >
+                        Trace Waterfall
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs text-emerald-700 dark:text-emerald-300 break-words">
+                    {item.signaturePattern}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: CROSS-SERVICE DISTRIBUTED TRACE WATERFALL (`traceId` STITCHING) */}
         {activeChronoTab === 'TRACE_WATERFALL' && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1251,8 +1800,8 @@ export default function LogStreamerAndShell({
                       End-to-End Trace ID: {activeWaterfall.traceId}
                     </div>
                     <div className="text-[11px] text-zinc-400">
-                      Services Traversed: {activeWaterfall.servicesInvolved.join(' ➔ ')} · Total Request Duration:{' '}
-                      <span className="text-emerald-400 font-bold">
+                      Services Traversed: {activeWaterfall.servicesInvolved.join(' -> ')} · Total Request Duration:{' '}
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                         {activeWaterfall.totalDurationMs}ms
                       </span>
                     </div>
@@ -1320,7 +1869,82 @@ export default function LogStreamerAndShell({
           </div>
         )}
 
-        {/* TAB 4: LOG FINOPS NOISE-CUTTER ($0.50/GiB) & LIVE DLP SECRET LEAK SHIELD */}
+        {/* TAB 5: OPEN-SOURCE 2026 FEATURE #5 — MULTI-FORMAT QUERY TRANSPILER & ALERT EXPORTER */}
+        {activeChronoTab === 'QUERY_TRANSPILER' && chronoData?.queryTranspilations && (
+          <div className="space-y-3.5 font-mono">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold mr-2">
+                    POLYGLOT OPEN-SOURCE LOG QUERY TRANSPILER
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Translate Active LQL Into VictoriaLogs PipesQL, Grafana Loki LogQL, ClickHouse SQL &amp; Prometheus Alerts
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                {[
+                  { id: 'VictoriaLogsPipesQl', label: 'VictoriaLogs PipesQL' },
+                  { id: 'grafanaLokiLogQl', label: 'Grafana Loki LogQL' },
+                  { id: 'clickhouseSql', label: 'ClickHouse OTel SQL' },
+                  { id: 'bigQueryLogAnalyticsSql', label: 'BigQuery _AllLogs SQL' },
+                  { id: 'prometheusAlertRuleYaml', label: 'Prometheus Alert YAML' },
+                  { id: 'gcloudLogMetricCli', label: 'gcloud Log Metric CLI' },
+                ].map((fmt) => (
+                  <button
+                    key={fmt.id}
+                    type="button"
+                    onClick={() => setActiveTranspilerLang(fmt.id)}
+                    className={`w-full h-9 px-2.5 rounded-lg text-[11px] font-bold border cursor-pointer transition-colors ${
+                      activeTranspilerLang === fmt.id
+                        ? 'bg-blue-600 text-white border-blue-500'
+                        : 'bg-white dark:bg-[#202124] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                    }`}
+                  >
+                    {fmt.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10.5px] font-extrabold uppercase text-emerald-700 dark:text-emerald-400">
+                    Compiled Output ({activeTranspilerLang})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(
+                        chronoData.queryTranspilations[activeTranspilerLang] || '',
+                        `transpile-${activeTranspilerLang}`
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedId === `transpile-${activeTranspilerLang}` ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-500" />
+                        <span>Copied Code</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Query / Rule</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <pre className="text-xs text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                  {chronoData.queryTranspilations[activeTranspilerLang]}
+                </pre>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: LOG FINOPS NOISE-CUTTER ($0.50/GiB) & LIVE DLP SECRET LEAK SHIELD */}
         {activeChronoTab === 'FINOPS_DLP' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {/* Left: Log FinOps Byte-Burn & 1-Click _Default Sink Exclusions */}
@@ -1332,7 +1956,7 @@ export default function LogStreamerAndShell({
                     <span>Log FinOps Noise-Cutter (`_Default` Sink Exclusions)</span>
                   </h4>
                   <p className="text-[11px] text-zinc-500">
-                    Cloud Logging bills <strong>$0.50/GiB</strong> after 50 GiB/mo. Drop noisy healthchecks & high-volume 200 OK chatter at the sink before ingestion.
+                    Cloud Logging bills <strong>$0.50/GiB</strong> after 50 GiB/mo. Drop noisy healthchecks &amp; high-volume 200 OK chatter at the sink before ingestion.
                   </p>
                 </div>
               </div>
@@ -1340,7 +1964,7 @@ export default function LogStreamerAndShell({
               {exclusionBanner && (
                 <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-xs font-mono text-emerald-700 dark:text-emerald-300 space-y-1">
                   <div className="font-bold">
-                    ✓ Exclusion Rule &ldquo;{exclusionBanner.name}&rdquo; Active (Saves $
+                    Exclusion Rule &ldquo;{exclusionBanner.name}&rdquo; Active (Saves $
                     {exclusionBanner.savingsUsd.toFixed(2)}/mo)
                   </div>
                   <div className="text-[10px] break-all">{exclusionBanner.gcloudCli}</div>
@@ -1374,12 +1998,12 @@ export default function LogStreamerAndShell({
                         onClick={() => handleApplyExclusionRule(rec)}
                         className={`px-3 py-1 rounded text-xs font-mono font-bold cursor-pointer ${
                           rec.isExcluded
-                            ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 cursor-default'
+                            ? 'bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 cursor-default'
                             : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                         }`}
                       >
                         {rec.isExcluded
-                          ? '✓ Excluded in _Default Sink'
+                          ? 'Excluded in _Default Sink'
                           : applyingExclusionId === rec.id
                           ? 'Applying Exclusion...'
                           : '1-Click Exclude in _Default Sink'}
@@ -1395,7 +2019,7 @@ export default function LogStreamerAndShell({
               <div>
                 <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                   <EyeOff className="w-4 h-4 text-red-500" />
-                  <span>Live DLP Secret & PII Leak Redaction Radar</span>
+                  <span>Live DLP Secret &amp; PII Leak Redaction Radar</span>
                 </h4>
                 <p className="text-[11px] text-zinc-500">
                   Continuously scans log payloads for accidentally printed Bearer JWTs, <code className="font-mono">AIza...</code> GCP API keys, Service Account keys, and customer emails.
