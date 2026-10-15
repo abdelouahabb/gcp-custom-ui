@@ -770,6 +770,315 @@ function classifyDestructiveAxiosConfig(config) {
     }
   }
 
+  // ==========================================================================
+  // 3. UNIVERSAL 1-TAP CLOUD MUTATION, DEPLOYMENT & COST GATEKEEPER
+  // Warns the engineer before ANY 1-Tap Cloud Action (POST / PATCH / PUT)
+  // mutates live Google Cloud resources or changes cloud billing!
+  // ==========================================================================
+  if (method === 'post' || method === 'patch' || method === 'put') {
+    // Exempt strictly read-only, auth, local-probe, or dry-run endpoints
+    const isReadOnlyOrDryRun =
+      !rawUrl.includes('/api/project/') ||
+      rawUrl.includes('/chrono-logs/query') ||
+      rawUrl.includes('/shell') ||
+      rawUrl.includes('/benchmark') ||
+      rawUrl.includes('/provision/preflight') ||
+      rawUrl.includes('/tunnels/probe') ||
+      rawUrl.includes('/dlp-scan') ||
+      rawUrl.includes('/functions/test-event') ||
+      rawUrl.includes('/ai-copilot') ||
+      rawUrl.includes('/ai-vault/ask') ||
+      rawUrl.includes('/billing-guardian/auto-download-credits-csv') ||
+      rawUrl.includes('/billing-guardian/sync-console-credits') ||
+      rawUrl.includes('/billing-guardian/reset-console-credits') ||
+      (rawUrl.includes('/vms/') && rawUrl.endsWith('/ssh')) ||
+      (rawUrl.includes('/bigquery/query') && Boolean(body.dryRun)) ||
+      (rawUrl.includes('/synthesis/runbook') &&
+        String(body.mode || 'DRY_RUN').toUpperCase() === 'DRY_RUN') ||
+      (rawUrl.includes('/sovereign/time-machine/snapshot') &&
+        String(body.action || '').toUpperCase() !== 'HEAL_DRIFT') ||
+      (rawUrl.includes('/quantum-nexus/action') &&
+        ['CAPTURE_SNAPSHOT', 'SIMULATE_BLAST'].includes(
+          String(body.action || '').toUpperCase()
+        )) ||
+      (rawUrl.includes('/aws-azure-parity/action') &&
+        [
+          'SIMULATE_IAM_POLICY',
+          'DETECT_STACK_DRIFT',
+          'QUERY_CLOUDTRAIL_AUDIT_LAKE',
+          'TEST_EVENT_PIPE',
+          'TEST_AI_GATEWAY_PROMPT',
+        ].includes(String(body.action || '').toUpperCase())) ||
+      (rawUrl.includes('/alpha-beta/action') &&
+        [
+          'INSPECT_BETA_RUN_INSTANCES',
+          'SCAN_ALPHA_AGENT_REGISTRY',
+          'TROUBLESHOOT_ALPHA_IAM_POLICY',
+          'SCAN_ALPHA_SERVICE_HEALTH_AND_FAULT_TESTING',
+          'RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE',
+        ].includes(String(body.action || '').toUpperCase()));
+
+    if (isReadOnlyOrDryRun) {
+      return null;
+    }
+
+    // 3A. 1-Tap Night-Mode FinOps Sleep / Wake Switch (/hibernate)
+    if (rawUrl.includes('/hibernate')) {
+      const mode = String(body.mode || 'SLEEP').toUpperCase();
+      const isWake = mode === 'WAKE';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: isWake
+          ? `Confirm 1-Tap Wake: Restore Parked VMs & Warm Cloud Run Fleet?`
+          : `Confirm 1-Tap Night-Mode Sleep: Park All Running Compute?`,
+        headerBadge: 'CloudPulse 2026 1-Tap Cloud & Billing Gatekeeper',
+        targetLabel: 'Target Project Fleet Operation',
+        resourceKind: 'Compute Engine VMs + Cloud Run Fleet',
+        targetName: `${projectId} (${isWake ? 'WAKE FLEET' : 'PARK COMPUTE TO $0/HR'})`,
+        location: 'All Project Zones & Regions',
+        projectId,
+        method: isWake ? '1-TAP WAKE FLEET' : '1-TAP PARK COMPUTE',
+        endpoint: rawUrl,
+        confirmLabel: isWake
+          ? 'Confirm & Wake Project Compute (Resumes Billing)'
+          : 'Confirm & Park Active Compute for the Night',
+        cancelToast: `1-Tap ${mode} cancelled — fleet state unchanged.`,
+        whatHappensNext: isWake
+          ? `1. Reads your pre-sleep snapshot in memory.\n2. Calls compute.googleapis.com/v1 instances.start across previously running VMs.\n3. Restores previous minInstanceCount settings on warm Cloud Run services.`
+          : `1. Saves a snapshot of your currently RUNNING VMs and warm Cloud Run services.\n2. Calls compute.googleapis.com/v1 instances.stop across all running VMs.\n3. Scales warm Cloud Run services (minInstanceCount > 0) down to 0.`,
+        costWarning: isWake
+          ? `BILLING RESUMPTION WARNING: Waking your Compute Engine VMs and warm Cloud Run instances immediately resumes hourly vCPU, RAM, and GPU charges ($/hr) on your Google Cloud invoice.`
+          : `FINOPS SAVINGS + RESIDUAL COST NOTICE: Active vCPU/RAM/GPU compute drops to $0.00/hr while parked. However, Google Cloud still bills monthly for attached Persistent Disks ($0.04–$0.17/GB-mo) and reserved Static External IPs ($7.30/mo) on STOPPED VMs.`,
+        impactWarning: isWake
+          ? `All parked VMs and warm Cloud Run instances in "${projectId}" will boot back up and begin billing immediately.`
+          : `All currently RUNNING VMs in "${projectId}" will be stopped and warm Cloud Run instances scaled to 0.`,
+      };
+    }
+
+    // 3B. 1-Tap 3-Tier Stack Synthesizer (/stack-deploy)
+    if (rawUrl.includes('/stack-deploy')) {
+      const prefix = body.prefix || body.stackName || 'cloudpulse-stack';
+      const reg = body.region || 'us-central1';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm 1-Tap 3-Tier Stack Synthesis ("${prefix}")?`,
+        headerBadge: 'CloudPulse 2026 1-Tap Cloud & Billing Gatekeeper',
+        targetLabel: '3-Tier Architecture Stack to Provision',
+        resourceKind: 'GCS Bucket + BigQuery Dataset + Cloud Run Service',
+        targetName: `${prefix} (3 Live GCP Resources)`,
+        location: reg,
+        projectId,
+        method: '1-TAP STACK DEPLOY',
+        endpoint: rawUrl,
+        confirmLabel: 'Confirm & Provision 3-Tier Stack in GCP',
+        cancelToast: '1-Tap Stack Synthesis cancelled — 0 resources created.',
+        whatHappensNext: `1. Creates a live Cloud Storage Bucket (storage.googleapis.com) in ${reg}.\n2. Creates a live BigQuery Dataset (bigquery.googleapis.com) in ${reg}.\n3. Deploys a live Cloud Run Gen2 Service (run.googleapis.com/v2) pre-wired with GCS_BUCKET_URI and BIGQUERY_DATASET environment variables.`,
+        costWarning: `CLOUD COST & BILLING NOTICE: Cloud Run is deployed with Scale-to-Zero (minInstanceCount: 0 -> $0.00/hr idle compute), and empty GCS/BigQuery containers cost $0.00 until data is ingested or queried. Artifact Registry / container pull and active HTTP requests are billed at standard regional rates.`,
+        impactWarning: `This will create 3 real Google Cloud resources in project "${projectId}" (${reg}). You can roll them back anytime from the Flight Recorder.`,
+      };
+    }
+
+    // 3C. 1-Tap Cross-Region Cloud Run Teleporter (/cloudrun/teleport)
+    if (rawUrl.includes('/cloudrun/teleport')) {
+      const src = body.serviceName || body.sourceService || 'cloud-run-service';
+      const targetReg = body.targetRegion || 'europe-west1';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm 1-Tap Cross-Region Teleport of "${src}" to ${targetReg}?`,
+        headerBadge: 'CloudPulse 2026 1-Tap Cloud & Billing Gatekeeper',
+        targetLabel: 'Cloud Run Service to Clone Across Regions',
+        resourceKind: 'Cloud Run Gen2 Service (run.googleapis.com/v2)',
+        targetName: `${src} → ${targetReg}`,
+        location: targetReg,
+        projectId,
+        method: '1-TAP TELEPORT',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Teleport Service to ${targetReg}`,
+        cancelToast: `Cross-region teleport of "${src}" cancelled.`,
+        whatHappensNext: `1. Reads the live revision spec (image, CPU/RAM/GPU, env vars, IAM policy) of "${src}".\n2. Deploys a cloned Cloud Run service in target region "${targetReg}" via run.googleapis.com/v2.\n3. Mirrors the public/private IAM invoker policy on the new regional endpoint.`,
+        costWarning: `CLOUD COST & EGRESS NOTICE: Deploying into "${targetReg}" applies ${targetReg}'s regional pricing tier multiplier. If the source service has minInstances > 0 or attached GPUs, the cloned service will also incur continuous hourly warm-instance charges unless scaled to 0.`,
+        impactWarning: `This provisions a live Cloud Run service in "${targetReg}" inside project "${projectId}".`,
+      };
+    }
+
+    // 3D. [ALPHA / BETA] gcloud 588.0.0 Frontier Lab Mutations (/alpha-beta/action)
+    if (rawUrl.includes('/alpha-beta/action')) {
+      const act = String(body.action || '').toUpperCase();
+      const isBeta = act.includes('BETA');
+      const track = isBeta ? 'BETA' : 'ALPHA';
+      const target =
+        body.workerPoolName ||
+        body.multiRegionName ||
+        body.pamEntitlementId ||
+        act;
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: track,
+        title: `Confirm [${track}] Pre-GA Cloud Command (${act})?`,
+        headerBadge: `[${track}] Pre-GA Google Cloud Command & Cost Gatekeeper`,
+        targetLabel: `Target [${track}] Resource / Operation`,
+        resourceKind: isBeta
+          ? 'gcloud beta run (Public Preview API)'
+          : 'gcloud alpha (Early Access v1alpha API)',
+        targetName: `${target} [${track}]`,
+        location: body.region || 'global',
+        projectId,
+        method: `[${track}] 1-TAP EXECUTE`,
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Execute [${track}] Command`,
+        cancelToast: `[${track}] action ${act} cancelled.`,
+        whatHappensNext:
+          act === 'DEPLOY_BETA_WORKER_POOL'
+            ? `1. Invokes "gcloud beta run worker-pools deploy ${target}" in ${body.region || 'us-central1'}.\n2. Provisions ${body.instances || 1} continuous non-HTTP background pull worker instance(s) using image "${body.image || 'worker:latest'}".`
+            : act === 'DEPLOY_BETA_MULTI_REGION_SERVICE'
+            ? `1. Probes "gcloud beta run multi-region-services" on project "${projectId}".\n2. Synthesizes the multi-region Knative Service specification across ${(body.regions || []).join(', ') || 'us-central1, europe-west1'}.`
+            : `1. Executes the [${track}] gcloud 588.0.0 CLI / REST operation (${act}) against project "${projectId}".`,
+        costWarning:
+          act === 'DEPLOY_BETA_WORKER_POOL'
+            ? `CONTINUOUS WORKER BILLING WARNING ([BETA]): Cloud Run Worker Pools run non-HTTP background instances continuously (${body.instances || 1} instance(s) active 24/7) and do NOT scale to zero when idle. You will be billed hourly for vCPU and Memory until the worker pool is deleted or scaled down.`
+            : `PRE-GA [${track}] & COST NOTICE: [${track}] commands invoke pre-GA Google Cloud APIs. Any provisioned compute, multi-region replicas, or entitlements follow Google Cloud Preview pricing and SLA terms.`,
+        impactWarning: `You are executing a Pre-GA [${track}] operation on live project "${projectId}".`,
+      };
+    }
+
+    // 3E. 1-Tap Resource Control Center Actions (/api/project/:id/action)
+    if (rawUrl.endsWith('/action') && !rawUrl.includes('/quantum-nexus/action') && !rawUrl.includes('/wave10/action') && !rawUrl.includes('/data-engineer/action') && !rawUrl.includes('/aws-azure-parity/action') && !rawUrl.includes('/alpha-beta/action') && !rawUrl.includes('/secrets-kms/action') && !rawUrl.includes('/credentials/action')) {
+      const act = String(body.actionType || body.action || '').toUpperCase();
+      const resId = body.resourceId || body.resourceName || 'target-resource';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title:
+          act === 'ROLLBACK_CANARY'
+            ? `Confirm 1-Tap Canary Rollback on "${resId}"?`
+            : `Confirm 1-Tap Live FinOps Optimization on "${resId}"?`,
+        headerBadge: 'CloudPulse 2026 1-Tap SRE & FinOps Gatekeeper',
+        targetLabel: 'Target Live Resource to Mutate',
+        resourceKind: body.resourceType || 'Google Cloud Resource',
+        targetName: `${resId} (${act})`,
+        location: body.region || 'global',
+        projectId,
+        method: `1-TAP ${act}`,
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Execute ${act} on GCP`,
+        cancelToast: `1-Tap ${act} on "${resId}" cancelled.`,
+        whatHappensNext:
+          act === 'ROLLBACK_CANARY'
+            ? `1. Fetches the live revision history of "${resId}" via run.googleapis.com/v2.\n2. Shifts 100% of production HTTPS traffic back to the prior stable revision.`
+            : `1. Inspects resource type of "${resId}".\n2. Calls the corresponding Google Cloud REST API (PATCH storage.googleapis.com for Autoclass/PAP, PATCH bigquery.googleapis.com for PHYSICAL compressed billing, or PATCH run.googleapis.com/v2 for cpuIdle: true & minInstanceCount: 0).`,
+        costWarning:
+          act === 'ROLLBACK_CANARY'
+            ? `BILLING IMPACT ($0.00): Shifting traffic percentages between existing Cloud Run revisions is a free control-plane operation.`
+            : `FINOPS COST REDUCTION: Enables Scale-to-Zero / Autoclass / Physical Compressed Storage to reduce ongoing monthly spend. Note: GCS Autoclass and BigQuery Physical billing changes have minimum transition windows in Google Cloud.`,
+        impactWarning: `This directly mutates live resource "${resId}" in project "${projectId}" via Google Cloud REST APIs.`,
+      };
+    }
+
+    // 3F. 1-Tap Transactional Synthesis Runbooks (/synthesis/runbook with mode === 'EXECUTE')
+    if (rawUrl.includes('/synthesis/runbook')) {
+      const rbId = body.runbookId || 'COMPOSITE_RUNBOOK';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm 1-Tap Multi-Step Runbook Execution ("${rbId}")?`,
+        headerBadge: 'CloudPulse 2026 Transactional Runbook Gatekeeper',
+        targetLabel: 'Multi-API Remediation Runbook',
+        resourceKind: 'Cross-Service Control-Plane Runbook',
+        targetName: rbId,
+        location: 'Project-Wide',
+        projectId,
+        method: '1-TAP RUNBOOK EXECUTE',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Execute Live Runbook (${rbId})`,
+        cancelToast: `Runbook "${rbId}" execution cancelled.`,
+        whatHappensNext: `1. Executes each step of "${rbId}" sequentially against live Google Cloud REST APIs (VPC Firewalls, Cloud Run scaling, GCS compliance, BigQuery PHYSICAL billing).\n2. Computes a cryptographic SHA-256 Merkle state receipt before and after execution.`,
+        costWarning: `CLOUD BILLING & CONFIGURATION IMPACT: Modifies live firewall rules, scaling floors (minInstanceCount -> 0), or storage billing models across multiple resources in project "${projectId}".`,
+        impactWarning: `This executes live multi-resource mutations across "${projectId}".`,
+      };
+    }
+
+    // 3G. Compute Engine VM Power / Machine Type / Deletion Protection (/vms/:zone/:name/power)
+    const vmPowerMatch = rawUrl.match(/\/vms\/([^/]+)\/([^/]+)\/power|\/vms\/([^/]+)\/power/);
+    if (vmPowerMatch) {
+      const act = String(body.action || 'POWER_ACTION').toUpperCase();
+      const vmName = decodeURIComponent(
+        vmPowerMatch[2] || vmPowerMatch[3] || body.name || 'vm-instance'
+      );
+      const zone = decodeURIComponent(vmPowerMatch[1] || body.zone || 'gcp-zone');
+      const isStart = act === 'START' || act === 'RESUME' || act === 'RESET';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm 1-Tap VM Action: ${act} on "${vmName}"?`,
+        headerBadge: 'CloudPulse 2026 Compute Engine & Cost Gatekeeper',
+        targetLabel: 'Target Compute Engine VM Instance',
+        resourceKind: 'Compute Engine VM (compute.googleapis.com/v1)',
+        targetName: `${vmName} (${act})`,
+        location: zone,
+        projectId,
+        method: `VM ${act}`,
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & ${act} VM "${vmName}"`,
+        cancelToast: `VM action ${act} on "${vmName}" cancelled.`,
+        whatHappensNext: `1. Calls compute.googleapis.com/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/${act.toLowerCase()}.\n2. Polls the live GCP Zone Operation until the VM state transitions.`,
+        costWarning: isStart
+          ? `ACTIVE VM BILLING WARNING: Starting or resuming "${vmName}" immediately begins continuous hourly vCPU, Memory, and GPU billing ($/hr) until the instance is stopped.`
+          : act === 'STOP' || act === 'SUSPEND'
+          ? `RESIDUAL DISK & STATIC IP BILLING WARNING: Stopping "${vmName}" halts vCPU/RAM charges ($0/hr compute), but its attached Boot Persistent Disk ($0.04–$0.17/GB-mo) and any reserved Static External IP ($7.30/mo) CONTINUE billing while stopped!`
+          : `Changing machine type or deletion protection updates the VM's hardware billing rate or termination lock in "${zone}".`,
+        impactWarning: `This mutates the live state of Compute Engine VM "${vmName}" in "${zone}".`,
+      };
+    }
+
+    // 3H. Universal Catch-All for All Remaining 1-Tap Cloud Mutations (Provision, Patch, Seal Secrets, Firewall Edit, Quantum Nexus, Wave 10, Data Engineer, Multi-Cloud Parity, API Enable, etc.)
+    const actName =
+      body.action ||
+      body.actionType ||
+      body.resourceType ||
+      body.serviceType ||
+      method.toUpperCase();
+    const targetResource =
+      body.name ||
+      body.serviceName ||
+      body.datasetId ||
+      body.bucketName ||
+      body.secretId ||
+      body.clusterName ||
+      body.instanceName ||
+      body.ruleName ||
+      body.slug ||
+      rawUrl.replace(`/api/project/${projectId}`, '') ||
+      'Google Cloud Resource';
+    const targetLoc =
+      body.region || body.zone || body.location || 'Global / Regional';
+
+    return {
+      gateType: 'ONE_TAP_CLOUD_ACTION',
+      releaseTrack: rawUrl.includes('alpha')
+        ? 'ALPHA'
+        : rawUrl.includes('beta')
+        ? 'BETA'
+        : 'GA',
+      title: `Confirm 1-Tap Cloud Action on "${targetResource}"?`,
+      headerBadge: 'CloudPulse 2026 1-Tap Cloud Mutation & Cost Gatekeeper',
+      targetLabel: 'Target Cloud Resource / API Mutation',
+      resourceKind: `${method.toUpperCase()} · ${actName}`,
+      targetName: String(targetResource),
+      location: String(targetLoc),
+      projectId,
+      method: `1-TAP ${String(actName).slice(0, 22).toUpperCase()}`,
+      endpoint: rawUrl,
+      confirmLabel: 'Confirm & Execute in Google Cloud',
+      cancelToast: `1-Tap Cloud Action cancelled — no changes made to "${projectId}".`,
+      whatHappensNext: `1. Sends an authenticated ${method.toUpperCase()} request to ${rawUrl} on Google Cloud project "${projectId}".\n2. Provisions or mutates "${targetResource}" (${targetLoc}) via official Google Cloud REST / CLI control-plane APIs.\n3. Records the mutation in the session Cloud Flight Recorder for audit & rollback tracking.`,
+      costWarning: `CLOUD BILLING & STATE NOTICE: This command modifies live Google Cloud infrastructure or configuration in "${projectId}". Provisioning compute, storage, databases, warm containers (minInstances > 0), or enabling paid APIs may incur hourly or usage-based charges on your Cloud Billing account.`,
+      impactWarning: `Please verify the target resource ("${targetResource}"), region ("${targetLoc}"), and billing impact before confirming execution.`,
+    };
+  }
+
   return null;
 }
 
@@ -2455,6 +2764,8 @@ function MandatoryDeleteConfirmationModal({
 
   if (!activeItem || !activeItem.descriptor) return null;
   const {
+    gateType,
+    releaseTrack = 'GA',
     title,
     headerBadge,
     targetLabel,
@@ -2465,8 +2776,13 @@ function MandatoryDeleteConfirmationModal({
     method,
     endpoint,
     confirmLabel,
+    whatHappensNext,
+    costWarning,
     impactWarning,
   } = activeItem.descriptor;
+
+  const isOneTapAction = gateType === 'ONE_TAP_CLOUD_ACTION';
+  const normalizedTrack = String(releaseTrack || 'GA').toUpperCase();
 
   // Compute live dependency blast radius from project overview state
   const blastRadiusItems = [];
@@ -2523,10 +2839,25 @@ function MandatoryDeleteConfirmationModal({
     const matchedRun = runServices.find((s) => s.name === cleanTarget);
     if (matchedRun?.uri) {
       blastRadiusItems.push(
-        `Live HTTPS Traffic Endpoint ${matchedRun.uri} will immediately return 404.`
+        `Live HTTPS Traffic Endpoint ${matchedRun.uri} ${
+          isOneTapAction
+            ? 'will receive this live configuration / traffic update.'
+            : 'will immediately return 404.'
+        }`
       );
     }
   }
+
+  const effectiveWhatHappens =
+    whatHappensNext ||
+    impactWarning ||
+    `This operation executes a live Google Cloud API call (${method}) against "${targetName}" in project "${projectId}".`;
+
+  const effectiveCostWarning =
+    costWarning ||
+    (isOneTapAction
+      ? `BILLING & COST NOTICE: Modifying or provisioning live Google Cloud resources can trigger hourly compute/network billing ($/hr), persistent storage/snapshot fees ($/GB-mo), or Cloud Build / API invocation charges on project "${projectId}".`
+      : `BILLING & TEARDOWN NOTICE: Deleting "${targetName}" terminates its active hourly runtime billing, but verify whether detached persistent disks, static external IPv4 addresses ($0.01/hr when unattached), or Cloud Storage snapshots remain billed in project "${projectId}".`);
 
   return (
     <div
@@ -2534,41 +2865,93 @@ function MandatoryDeleteConfirmationModal({
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#202124] border-2 border-red-500/80 shadow-2xl shadow-red-950/50 overflow-hidden"
+        className={`w-full max-w-xl rounded-2xl bg-white dark:bg-[#202124] border-2 ${
+          isOneTapAction
+            ? 'border-amber-500/80 shadow-2xl shadow-amber-950/50'
+            : 'border-red-500/80 shadow-2xl shadow-red-950/50'
+        } overflow-hidden max-h-[92vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Hazard Header */}
-        <div className="bg-zinc-900 dark:bg-zinc-950 border-b border-red-500/40 px-5 py-3.5 flex items-center justify-between gap-3 text-white">
-          <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4 text-zinc-300" />
+        {/* Top Hazard / Cost Gatekeeper Header */}
+        <div
+          className={`bg-zinc-900 dark:bg-zinc-950 border-b ${
+            isOneTapAction ? 'border-amber-500/40' : 'border-red-500/40'
+          } px-5 py-3.5 flex items-center justify-between gap-3 text-white shrink-0`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span
+              className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${
+                isOneTapAction
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                  : 'bg-red-500/15 border-red-500/40 text-red-300'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
             </span>
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 font-bold">
-                {headerBadge ||
-                  'CloudPulse 2026 Destructive Action Gatekeeper'}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 font-bold">
+                  {headerBadge ||
+                    (isOneTapAction
+                      ? 'CloudPulse 2026 1-Tap Cloud Action & Cost Gatekeeper'
+                      : 'CloudPulse 2026 Destructive Action Gatekeeper')}
+                </span>
+                {normalizedTrack === 'ALPHA' && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40">
+                    [ALPHA · EARLY ACCESS]
+                  </span>
+                )}
+                {normalizedTrack === 'BETA' && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    [BETA · PUBLIC PREVIEW]
+                  </span>
+                )}
+                {normalizedTrack === 'GA' && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    [GA · LIVE GCP API]
+                  </span>
+                )}
               </div>
-              <h3 className="text-sm sm:text-base font-extrabold tracking-tight">
+              <h3 className="text-sm sm:text-base font-extrabold tracking-tight truncate">
                 {title}
               </h3>
             </div>
           </div>
           {queueLength > 1 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-black/30 border border-white/20">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-black/30 border border-white/20 shrink-0">
               1 of {queueLength} queued
             </span>
           )}
         </div>
 
-        {/* Body */}
-        <div className="p-5 space-y-4">
+        {/* Scrollable Body */}
+        <div className="p-5 space-y-3.5 overflow-y-auto">
           {/* Resource Target Summary Card */}
-          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2">
+          <div
+            className={`p-3.5 rounded-xl border space-y-2 ${
+              isOneTapAction
+                ? 'bg-amber-500/10 border-amber-500/30'
+                : 'bg-red-500/10 border-red-500/30'
+            }`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                {targetLabel || 'Target Resource to Destroy'}
+              <span
+                className={`text-[10px] font-mono font-bold uppercase tracking-wider ${
+                  isOneTapAction
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}
+              >
+                {targetLabel ||
+                  (isOneTapAction
+                    ? 'Target Cloud Resource & 1-Tap Operation'
+                    : 'Target Resource to Destroy')}
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-600 text-white">
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold text-white ${
+                  isOneTapAction ? 'bg-amber-600' : 'bg-red-600'
+                }`}
+              >
                 {method}
               </span>
             </div>
@@ -2597,6 +2980,31 @@ function MandatoryDeleteConfirmationModal({
             </div>
           </div>
 
+          {/* 1. What Happens Next (Step-by-Step Cloud Execution) */}
+          <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1.5">
+            <div className="font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider text-[10px] font-mono flex items-center justify-between gap-2">
+              <span>1. What Happens Next (Live Cloud Execution Sequence)</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30">
+                PRE-EXECUTION PREVIEW
+              </span>
+            </div>
+            <p className="font-medium">{effectiveWhatHappens}</p>
+            <div className="text-[10px] font-mono text-zinc-500 truncate pt-0.5">
+              API Endpoint: {endpoint}
+            </div>
+          </div>
+
+          {/* 2. Cloud Billing & Cost Impact Warning */}
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1.5">
+            <div className="font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[10px] font-mono flex items-center justify-between gap-2">
+              <span>2. Google Cloud Billing & Cost Impact Warning</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
+                FINOPS GUARDRAIL
+              </span>
+            </div>
+            <p className="font-medium">{effectiveCostWarning}</p>
+          </div>
+
           {/* Live Dependency & Blast-Radius Pre-Flight Scan */}
           {blastRadiusItems.length > 0 && (
             <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 space-y-1">
@@ -2611,17 +3019,6 @@ function MandatoryDeleteConfirmationModal({
             </div>
           )}
 
-          {/* Impact Warning */}
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1.5">
-            <div className="font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-              <span>Permanent Google Cloud Impact Warning</span>
-            </div>
-            <p>{impactWarning}</p>
-            <div className="text-[10px] font-mono text-zinc-500 truncate pt-1">
-              API Endpoint: {endpoint}
-            </div>
-          </div>
-
           {/* Action Buttons */}
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
             <button
@@ -2629,15 +3026,22 @@ function MandatoryDeleteConfirmationModal({
               onClick={onCancel}
               className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
             >
-              Cancel (Keep Safe) [Esc]
+              Cancel (Do Not Execute) [Esc]
             </button>
             <button
               type="button"
               onClick={onConfirm}
-              className="px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className={`px-4 py-2.5 rounded-xl text-xs font-mono font-extrabold text-white shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                isOneTapAction
+                  ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/30'
+                  : 'bg-red-600 hover:bg-red-500 shadow-red-600/30'
+              }`}
             >
               <span>
-                {confirmLabel || 'Confirm & Permanently Delete'}
+                {confirmLabel ||
+                  (isOneTapAction
+                    ? 'Acknowledge Cost & Execute 1-Tap Action'
+                    : 'Confirm & Permanently Delete')}
               </span>
             </button>
           </div>
