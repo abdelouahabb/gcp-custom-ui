@@ -31,6 +31,30 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'open-source-2026-sre-log-explorer-wave1-wave2',
+    wave: 'SRE LOG INTELLIGENCE · 2026 OPEN-SOURCE LOG EXPLORER SUITE (CLICKHOUSE, HYPERDX, VICTORIALOGS, SIGNOZ, LNAV & LOKI)',
+    title:
+      '2026 Open-Source SRE Log Explorer & Neural Chrono-Log Studio — 24-Bucket Infra Histogram, Faceted Columnar Stream, Log-to-Metrics P99 Heatmap, Live Grok Extractor, Anomaly Baseline Diff & 6-Format Query Transpiler',
+    badge: 'LOGS & SHELL TAB (WAVE 1 + WAVE 2)',
+    badgeColor: 'bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/40',
+    icon: Terminal,
+    targetTab: 'LOGS_SHELL',
+    problemSolved:
+      'Legacy Cloud Logging consoles force SREs to dig through deeply nested JSON trees without correlated container CPU/RAM metrics, deployment markers, instant field cardinality facets, service-level P50/P90/P99 latency heatmaps, live Grok virtual field extraction, anomaly baseline diffs, or polyglot open-source query translation.',
+    howItWorks: [
+      'Interactive 24-Bucket Stacked Severity Histogram + Correlated Infra Overlay: Plots ERROR/WARN/INFO volume and P95 latency alongside container CPU/RAM utilization sparkbars and clickable K8s/Cloud Run markers (DEPLOY revision rollout, 429 QUOTA Vertex AI spike, SCALE +6 autoscale). Clicking any bar locks a ±30s time-travel window.',
+      'VictoriaLogs / OpenObserve Field Facet Sidebar + Cards vs. Columnar Table View + JSON Key-Value Pill Flattener: Inspect field cardinality and filter in 1 click (+ = include / - != exclude), toggle between Cards View and High-Density Columnar Table View, or bookmark and diff any two log payloads side by side.',
+      'Log-to-Metrics & 5-Bin Latency Heatmap (Tab 2) + Live Grok / Named-Regex Virtual Field Extractor (Tab 3): Computes real-time P50/P90/P99 latency, error rate %, and 5-bin latency heatmaps by service, and extracts virtual schema-on-read columns on the fly using named capture groups (?<field>...).',
+      'SigNoz / Drain3 Anomaly Baseline Diff (Tab 5), 6-Format Polyglot Transpiler (Tab 7) & 1-Click Incident Postmortem Exporter: Compares current incident rates against the 24h baseline (+412% error spike), transpiles LQL into VictoriaLogs PipesQL, Grafana Loki LogQL, ClickHouse OTel SQL, BigQuery _AllLogs SQL, PrometheusRule YAML, and gcloud CLI, and exports complete Markdown (.md) or JSON incident postmortems.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/chrono-logs/query (logging.googleapis.com/v2/entries:list + Local 3-Stage NLP Compiler + Open-Source Analytics Engine)',
+      'POST /api/project/:id/chrono-logs/exclusion (_Default Sink FinOps Noise-Cutter)',
+    ],
+    billingImpact:
+      '100% $0.00/mo local Porter Stemmer + NER + BM25 compilation (0 LLM tokens unless Vertex/Gemini LLM toggle is explicitly enabled); actively cuts $0.50/GiB ingestion waste via 1-click _Default sink exclusions.',
+  },
+  {
     id: 'borderless-apache-iceberg-50-playbook-lakehouse-matrix',
     wave: 'DATA ENGINEERING & BIGLAKE · 50-PLAYBOOK BORDERLESS APACHE ICEBERG & MULTI-ENGINE LAKEHOUSE MATRIX',
     title:

@@ -444,3 +444,25 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     - **`03 · v2 X-Ray`**: Synthesizes live Apache Iceberg Spec v2 `v4.metadata.json` (`format-version: 2`, `identifier-field-ids`, `column-id` schema evolution, `partition-specs`, and `snap-*.avro` manifest summaries), a **16-Shard GCS Hex Prefix Entropy Visualizer (`/0x0f/`–`/0xff/`)**, and a **Multi-Engine Optimistic Concurrency Control (OCC) Matrix**.
   - **4 Equal-Sized Interactive Simulators (`S1`–`S4`)**: Model `S1` Migrate vs. Federate (S3/ADLS Egress vs. BigQuery Omni Cross-Cloud Cache), `S2` BigQuery Lakehouse vs. 24/7 Trino on GKE (`10TB+ TPC-DS`), `S3` 100+ Hive Metastore / Delta In-Place Upgrade (`0 Bytes` rewritten via `system.add_files`), and `S4` Streaming Small-File Compaction (`512MB` Z-Order bin-packing) + GCS Autoclass storage savings.
 
+### 46. 2026 Open-Source SRE Log Explorer & Neural Chrono-Log Studio — Wave 1 & Wave 2 (`src/components/LogStreamerAndShell.jsx` & `server/index.js`)
+- **Where to find it**: Open **`Cloud Shell & Logs`** (`LogStreamerAndShell.jsx`).
+- **How it Works**:
+  - **1. Interactive 24-Bucket Stacked Severity Histogram + Correlated Infra CPU/Memory & Deployment/Quota Overlay (ClickHouse / HyperDX / Grafana Loki Style)**:
+    - Plots `ERROR`, `WARNING`, and `INFO` log volume alongside `P95` latency across 24 time buckets.
+    - Overlays container **CPU/Memory utilization sparkbars** underneath each bucket and clickable K8s / Cloud Run infrastructure event markers (`DEPLOY` revision rollout, `429 QUOTA` Vertex AI saturation, and `SCALE +6` autoscale). Clicking any bar or marker locks a `±30s` causal time-travel window.
+  - **2. VictoriaLogs / OpenObserve Field Facet Sidebar, Columnar Table View & Interactive JSON Key-Value Pill Flattener**:
+    - Computes live field cardinality (`serviceName`, `httpStatus`, `resourceType`, `region`, `actor`, `severity`) with 1-click `+ =` (include in LQL) and `- !=` (exclude from LQL) operators.
+    - Toggle between **Cards View** and **High-Density Columnar Table View**, with flattened JSON key-value pills (`+=` / `-=`) on every log entry.
+  - **3. Real-Time Log-to-Metrics & 5-Bin Latency Distribution Heatmap (`Tab 2: LOG_TO_METRICS`)**:
+    - Computes real-time `P50`, `P90`, and `P99` latency, error rate %, request count, byte volume (`KB`), and a **5-bin latency distribution heatmap** (`<50ms`, `50-250ms`, `250-1000ms`, `1-2s`, `>2s`) grouped by service with 1-click LQL drilldown.
+  - **4. Live Grok / Named-Regex (`(?<field>...)`) Virtual Field Extractor (`Tab 3: GROK_EXTRACTOR`)**:
+    - Parses unstructured log messages on the fly using named capture groups (`HTTP (?<http_code>\d{3}) (?<error_reason>[A-Za-z ]+): (?<detail>.*)`) and injects extracted virtual schema-on-read columns into both Cards View and Columnar Table View.
+  - **5. SigNoz / Drain3 Anomaly Baseline Diff (`Tab 5: ANOMALY_DIFF`) & 6-Format Polyglot Query/Alert Transpiler (`Tab 7: QUERY_TRANSPILER`)**:
+    - Compares the active incident window against the 24-hour baseline (`+412%` error rate delta, `+1,480ms` P95 shift, automated root-cause correlation) and translates the active LQL filter into **VictoriaLogs `PipesQL`**, **Grafana Loki `LogQL`**, **ClickHouse OTel SQL**, **BigQuery `_AllLogs` SQL**, **Prometheus `PrometheusRule` YAML**, and **`gcloud logging metrics create` CLI**.
+  - **6. Saved SRE Views, Shareable Permalinks, Live Tail (`4.5s`), Multi-Pin Side-by-Side JSON Diff & 1-Click Incident Postmortem Bundle Exporter (`.md` / `.json`)**:
+    - Load curated SRE investigation presets in 1 click, copy shareable investigation permalinks, compare any two log payloads side by side, or export a complete Markdown/JSON incident postmortem bundle.
+
+### 47. Full Light Mode (White Mode) & Dark Mode Dual-Theme UI Parity (`src/index.css` & All 35+ Studio Components)
+- **Where to find it**: Toggle between **Light Mode** and **Dark Mode** in the top cockpit header (`Sun` / `Moon` theme switcher).
+- **How it Works**:
+  - Every card, table, code drawer, terminal wrapper, modal, and interactive control across all studios uses explicit dual-theme Tailwind pairs (`bg-white dark:bg-...`, `bg-zinc-50 dark:bg-[#131314]`, `text-zinc-900 dark:text-zinc-100`, `border-zinc-200 dark:border-zinc-800`) paired with `.gcp-studio-shell` CSS variable overrides in `src/index.css` so White/Light Mode never leaves stray dark-only surfaces or unreadable low-contrast text.
