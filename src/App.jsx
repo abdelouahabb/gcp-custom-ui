@@ -1397,8 +1397,8 @@ function CloudPulseCockpit() {
 
         {/* Header Row */}
         <header className="relative z-30 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#202124]/90 backdrop-blur-md px-4 sm:px-6 py-4">
-          {/* Top Row: CloudPulse 2026 Brand (Left) + Primary Provision Resource CTA (Top Right) */}
-          <div className="flex items-center justify-between gap-4">
+          {/* Top Row: CloudPulse 2026 Brand (Left) + Live GCP Project Switcher & Provision Resource CTA (Top Right) */}
+          <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center shadow-sm shrink-0">
                 <Cloud className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
@@ -1441,8 +1441,68 @@ function CloudPulseCockpit() {
               </div>
             </div>
 
-            {/* Primary CTA Pinned to Top-Right on the Exact Same Row as CloudPulse 2026 */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Top-Right Cluster: Live GCP Project Switcher + Primary Provision Resource CTA */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              {/* Live GCP Project Dropdown */}
+              <div className="relative z-40 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setProjectMenuOpen((o) => !o)}
+                  title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
+                  className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="hidden md:inline text-[11px] font-sans font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Project:
+                  </span>
+                  <span className="max-w-[160px] sm:max-w-[220px] truncate">
+                    {selectedProjectId}
+                  </span>
+                  <ChevronDown className="w-4 h-4 opacity-70 shrink-0" />
+                </button>
+
+                {projectMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-50 max-h-80 overflow-y-auto">
+                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800">
+                      Real GCP Projects ({contextData.projects?.length || 1})
+                    </div>
+                    {(contextData.projects || []).map((proj) => (
+                      <button
+                        key={proj.projectId}
+                        type="button"
+                        onClick={() => {
+                          sessionStorage.setItem(
+                            'cloudpulse_project_explicit',
+                            'true'
+                          );
+                          setSelectedProjectId(proj.projectId);
+                          setProjectMenuOpen(false);
+                          showToast(
+                            `Switched live GCP project to ${proj.projectId}`
+                          );
+                        }}
+                        title={`Switch active telemetry & control plane to project ${proj.projectId} (${proj.name})`}
+                        className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors flex items-center justify-between ${
+                          selectedProjectId === proj.projectId
+                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold'
+                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-mono">{proj.projectId}</div>
+                          <div className="text-[10px] text-zinc-500">
+                            {proj.name} · #{proj.projectNumber}
+                          </div>
+                        </div>
+                        {selectedProjectId === proj.projectId && (
+                          <Check className="w-4 h-4 shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => handleOpenProvision('GCS_BUCKET')}
@@ -1470,7 +1530,7 @@ function CloudPulseCockpit() {
               >
                 <DollarSign className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
                 <span>${liveBurn.hourly.toFixed(4)}/hr</span>
-                <span className="hidden 2xl:inline text-[10px] opacity-75">
+                <span className="hidden xl:inline text-[10px] opacity-75">
                   (~${liveBurn.monthly.toFixed(2)}/mo)
                 </span>
               </button>
@@ -1516,7 +1576,7 @@ function CloudPulseCockpit() {
                 {gdeSummary.hasImportedCredits &&
                 gdeSummary.expiringSoonRemainingUsd > 0 &&
                 gdeSummary.nearestExpiryDays !== null ? (
-                  <span className="hidden 2xl:inline text-[10px] opacity-90">
+                  <span className="hidden xl:inline text-[10px] opacity-90">
                     {gdePrivacyConfig.enabled &&
                     gdePrivacyConfig.hideCreditBalances !== false
                       ? `· $•••.•• (${gdeSummary.nearestExpiryDays}d)`
@@ -1555,63 +1615,6 @@ function CloudPulseCockpit() {
             <div className="flex items-center gap-1.5 lg:flex-nowrap flex-wrap shrink-0">
               {/* Global UI Timezone & Live Clock Selector Pill */}
               <TimezoneSelectorPill onShowToast={showToast} />
-
-              {/* Live GCP Project Dropdown */}
-              <div className="relative z-40 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setProjectMenuOpen((o) => !o)}
-                  title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
-                  className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-medium transition-colors shadow-sm whitespace-nowrap"
-                >
-                  <span className="w-2 h-2 rounded-full bg-zinc-500 dark:bg-zinc-400 shrink-0" />
-                  <span className="max-w-[140px] xl:max-w-[200px] truncate">
-                    {selectedProjectId}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-70 shrink-0" />
-                </button>
-
-                {projectMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-50 max-h-80 overflow-y-auto">
-                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800">
-                      Real GCP Projects ({contextData.projects?.length || 1})
-                    </div>
-                    {(contextData.projects || []).map((proj) => (
-                      <button
-                        key={proj.projectId}
-                        type="button"
-                        onClick={() => {
-                          sessionStorage.setItem(
-                            'cloudpulse_project_explicit',
-                            'true'
-                          );
-                          setSelectedProjectId(proj.projectId);
-                          setProjectMenuOpen(false);
-                          showToast(
-                            `Switched live GCP project to ${proj.projectId}`
-                          );
-                        }}
-                        title={`Switch active telemetry & control plane to project ${proj.projectId} (${proj.name})`}
-                        className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors flex items-center justify-between ${
-                          selectedProjectId === proj.projectId
-                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold'
-                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                        }`}
-                      >
-                        <div>
-                          <div className="font-mono">{proj.projectId}</div>
-                          <div className="text-[10px] text-zinc-500">
-                            {proj.name} · #{proj.projectNumber}
-                          </div>
-                        </div>
-                        {selectedProjectId === proj.projectId && (
-                          <Check className="w-4 h-4 shrink-0" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* 1-Tap Project Health, Drift & FinOps Scanner Button */}
               <button
