@@ -24,6 +24,7 @@ import {
   Lock,
   Zap,
 } from 'lucide-react';
+import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 
 export default function DataEngineeringStudio({
   projectId,
@@ -31,7 +32,7 @@ export default function DataEngineeringStudio({
   onShowError,
   onRunInShell,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('MEDALLION_ELT');
+  const [activeSubTab, setActiveSubTab] = useState('ICEBERG_50_MATRIX');
   const [loading, setLoading] = useState(false);
   const [busyAction, setBusyAction] = useState('');
   const [copiedKey, setCopiedKey] = useState('');
@@ -930,42 +931,47 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
         </div>
       </div>
 
-      {/* 7 Friendly Sub-Studio Navigation Pills */}
+      {/* 8 Friendly Sub-Studio Navigation Pills */}
       <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-[#202124] p-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
         {[
           {
+            id: 'ICEBERG_50_MATRIX',
+            label: '1. 50-Playbook Borderless Iceberg Lakehouse Matrix',
+            badge: '50 Scenarios · 8 Domains',
+          },
+          {
             id: 'MEDALLION_ELT',
-            label: '1. Medallion Pipeline Builder',
+            label: '2. Medallion Pipeline Builder',
             badge: 'Source → Gold',
           },
           {
             id: 'DATAFORM_SQLX',
-            label: '2. Dataform & dbt Auto-Clean SQLX',
+            label: '3. Dataform & dbt Auto-Clean SQLX',
             badge: 'QUALIFY Dedup',
           },
           {
             id: 'DATAPLEX_MESH',
-            label: '3. Dataplex Profiling & Data Products',
+            label: '4. Dataplex Profiling & Data Products',
             badge: 'SDK 588.0.0',
           },
           {
             id: 'SCHEMA_CONTRACTS',
-            label: '4. Visual Schema Mapper & Contracts',
+            label: '5. Visual Schema Mapper & Contracts',
             badge: 'Zero Broken Views',
           },
           {
             id: 'SLOT_DOCTOR_DAGS',
-            label: '5. Slot/Skew Doctor & Serverless DAGs',
+            label: '6. Slot/Skew Doctor & Serverless DAGs',
             badge: '-$348/mo',
           },
           {
             id: 'DATA_AGENT_KIT',
-            label: '6. Data Agent Kit (deployment.yaml & MCP URIs)',
+            label: '7. Data Agent Kit (deployment.yaml & MCP URIs)',
             badge: 'datacloud:antigravity',
           },
           {
             id: 'SERVERLESS_SPARK',
-            label: '7. Serverless Spark & BigLake Iceberg',
+            label: '8. Serverless Spark & BigLake Iceberg',
             badge: '$0 Idle Cluster',
           },
         ].map((t) => (
@@ -992,6 +998,16 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
           </button>
         ))}
       </div>
+
+      {/* TAB 0: 50-PLAYBOOK BORDERLESS ICEBERG LAKEHOUSE MATRIX */}
+      {activeSubTab === 'ICEBERG_50_MATRIX' && (
+        <IcebergLakehousePlaybookMatrix
+          projectId={projectId}
+          onRunInShell={onRunInShell}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
+      )}
 
       {/* TAB 1: MEDALLION PIPELINE BUILDER */}
       {activeSubTab === 'MEDALLION_ELT' && (

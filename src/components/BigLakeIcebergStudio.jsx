@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Sliders,
 } from 'lucide-react';
+import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 
 const BIGLAKE_TABS = [
   {
@@ -42,6 +43,11 @@ const BIGLAKE_TABS = [
     id: 'RLS_CLS_OMNI',
     label: '4. Row/Column Security & Cross-Cloud Omni (S3 / Azure)',
     badge: '$0 Egress Omni',
+  },
+  {
+    id: 'ICEBERG_50_MATRIX',
+    label: '5. 50-Playbook Borderless Iceberg & Multi-Engine Matrix',
+    badge: '50 Scenarios · 8 Domains',
   },
 ];
 
@@ -1391,6 +1397,16 @@ OPTIONS (
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'ICEBERG_50_MATRIX' && (
+        <IcebergLakehousePlaybookMatrix
+          projectId={projectId}
+          onRunInShell={onRunInShell}
+          onOpenBigQuerySql={onOpenBigQuerySql}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
       )}
     </div>
   );

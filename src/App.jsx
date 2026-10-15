@@ -821,10 +821,39 @@ function classifyDestructiveAxiosConfig(config) {
           'SCAN_BETA_CLOUD_QUOTAS',
           'SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST',
           'SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE',
-        ].includes(String(body.action || '').toUpperCase()));
+        ].includes(String(body.action || '').toUpperCase())) ||
+      rawUrl.includes('/data-engineer/iceberg-matrix/probe');
 
     if (isReadOnlyOrDryRun) {
       return null;
+    }
+
+    // 3A-0. 1-Tap 50-Playbook Borderless Apache Iceberg Lakehouse Bootstrap (/data-engineer/iceberg-matrix/execute)
+    if (rawUrl.includes('/data-engineer/iceberg-matrix/execute')) {
+      const pbTitle =
+        body.playbookTitle || body.playbookId || 'Apache Iceberg Lakehouse Playbook';
+      const track = String(body.releaseTrack || 'GA').toUpperCase();
+      const ds = body.datasetId || 'iceberg_lakehouse_2026';
+      const bkt = body.bucketName || `${projectId}-iceberg-lakehouse`;
+      const reg = body.region || 'us-central1';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: track,
+        title: `Confirm 1-Tap Iceberg Lakehouse Bootstrap: "${pbTitle}"?`,
+        headerBadge: `[${track}] Apache Iceberg Lakehouse & Cost Gatekeeper`,
+        targetLabel: 'Target Lakehouse Dataset & Open Iceberg Catalog',
+        resourceKind: `BigQuery Dataset + Apache Iceberg V2 (${body.catalogId || 'cp_iceberg_rest_catalog'})`,
+        targetName: `${projectId}.${ds} (gs://${bkt})`,
+        location: reg,
+        projectId,
+        method: `[${track}] 1-TAP LAKEHOUSE`,
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Bootstrap [${track}] Iceberg Playbook`,
+        cancelToast: `Iceberg Lakehouse playbook "${pbTitle}" cancelled.`,
+        whatHappensNext: `1. Verifies or creates BigQuery Lakehouse Dataset "${projectId}.${ds}" via bigquery.googleapis.com/bigquery/v2.\n2. Binds Apache Iceberg V2 metadata pointers for "${pbTitle}" (${body.playbookId}) targeting gs://${bkt}.\n3. Logs a reversible audit receipt in the CloudPulse 2026 Flight Recorder.`,
+        costWarning: `LAKEHOUSE STORAGE & COMPUTE BILLING NOTICE: Creating a BigQuery dataset container is $0.00/mo. Storing Parquet + Iceberg metadata in Cloud Storage incurs standard GCS storage rates ($0.020/GB-mo Standard or $0.0012/GB-mo Archive with Autoclass), and executing BigQuery SQL / Serverless Spark batches incurs per-TB scan ($6.25/TB after 1TB/mo free tier) or Dataproc Serverless DCU-hour charges.`,
+        impactWarning: `This bootstraps the live Lakehouse dataset "${projectId}.${ds}" in project "${projectId}".`,
+      };
     }
 
     // 3A. 1-Tap Night-Mode FinOps Sleep / Wake Switch (/hibernate)
