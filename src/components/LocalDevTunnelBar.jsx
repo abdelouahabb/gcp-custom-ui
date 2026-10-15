@@ -512,7 +512,7 @@ export default function LocalDevTunnelBar({
                       <strong>
                         {probe.tcpReachable
                           ? `✓ 127.0.0.1:${t.localPort} Socket Reachable (${probe.rttMs}ms)`
-                          : `ℹ️ Local Socket Info:`}
+                          : `ℹ Local Socket Info:`}
                       </strong>{' '}
                       {probe.detail}
                       {probe.httpProbe?.statusCode && (

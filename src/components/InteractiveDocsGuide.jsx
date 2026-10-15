@@ -31,6 +31,31 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'derived-control-plane-synthesis-and-live-rest-execution',
+    wave: 'CONTROL-PLANE SYNTHESIS · BLAST-RADIUS GRAPH, CAUSAL CORRELATOR, TRANSACTIONAL RUNBOOKS, FLEET MATRIX & SHA-256 DRIFT RECEIPTS',
+    title:
+      '5 Derived Control-Plane Synthesis Capabilities & 100% Live GCP REST Execution Engine',
+    badge: 'HEALTH & DRIFT + SRE COCKPIT',
+    badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+    icon: ShieldCheck,
+    targetTab: 'OVERVIEW',
+    problemSolved:
+      'Individual cloud APIs expose isolated slices of telemetry (Compute, Cloud Run, IAM, Secret Manager, Cloud Audit, Billing), forcing engineers to manually piece together blast radius, incident root cause, multi-step remediations, cross-project posture, and cryptographic proof of drift healing.',
+    howItWorks: [
+      '1. Cross-Resource Dependency & Blast-Radius Graph (GET /api/project/:id/synthesis/overview): Joins live Compute Engine VMs, Cloud Run services, VPC Firewalls, IAM Service Accounts, Secret Manager versions, GCS Buckets, and BigQuery Datasets into a unified graph that flags single points of failure (SPOF_SERVICE_ACCOUNT, WORLD_OPEN_FIREWALL_BLAST).',
+      '2. Causal Root-Cause Correlator: Cross-correlates cloudaudit.googleapis.com/activity mutations, logging.googleapis.com/v2 error spikes, and run.googleapis.com/v2 revision rollouts to pinpoint the exact trigger of an incident.',
+      '3. Multi-Step Transactional Runbook & Pre-Flight Dry-Run Composer (POST /api/project/:id/synthesis/runbook): Runs pre-flight DRY_RUN checks or 1-click live EXECUTE across ZERO_TRUST_PERIMETER_LOCKDOWN, FINOPS_AUTOPILOT_HARVEST, CLOUDRUN_TRAFFIC_SAFE_ROLLBACK, and DRIFT_RECONCILE_ALL.',
+      '4. Cross-Project Fleet Federation & Comparative Posture Matrix (GET /api/fleet/matrix): Fans out across all authenticated GCP projects in parallel to compare $/hr & $/mo burn, Security Score (0-100), Always-Free Tier headroom, and resource counts.',
+      '5. Closed-Loop Drift Watcher & SHA-256 Audit Receipts: Computes deterministic SHA-256 Merkle digests over live canonical project state and emits verifiable beforeSha256 -> afterSha256 remediation receipts when HEAL_DRIFT, OPTIMIZE_FINOPS, or ROLLBACK_CANARY execute.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/synthesis/overview & POST /api/project/:id/synthesis/runbook',
+      'GET /api/fleet/matrix & POST /api/project/:id/action (ROLLBACK_CANARY, OPTIMIZE_FINOPS)',
+    ],
+    billingImpact:
+      '100% $0.00/mo zero-token control-plane synthesis engine; directly reduces cloud spend via live FinOps Autopilot mutations (Autoclass, BigQuery PHYSICAL billing, Cloud Run cpuIdle scale-to-zero, and orphan resource reclamation).',
+  },
+  {
     id: 'always-free-tier-auditor-and-zero-dollar-architect',
     wave: 'FINOPS & FREE TIER · GOOGLE CLOUD "ALWAYS FREE" AUDITOR, $0.00/MO ARCHITECT & MICRO-CHARGE KILLER',
     title:
@@ -68,7 +93,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       'Monthly Free Tier vs. Paid Tier Quota Meter: Tracks your live active secret versions against Google Cloud’s monthly Free Tier (First 6 Active Secret Versions FREE + 10,000 Access Ops FREE + 3 Rotations FREE / month; $0.06/active-version/mo beyond 6; $0.00/mo for DISABLED and DESTROYED versions).',
       'Live Cloud Run secretKeyRef Dependency Radar & 1-Click Broken Reference Healer: Scans all live Cloud Run v2 services in parallel to map every container env var and volume mount referencing a secret. Flags broken pointers (deleted secrets or DISABLED/DESTROYED versions) and heals them in 1 click ("Heal: Point to latest" or "Unbind Dead secretKeyRef"), plus "1-Click Hot-Reload Mounted Cloud Run Services" after rotation.',
-      '️ Autonomous $0.00/Mo 30-Day Rotation Schedule: Provisions a Pub/Sub rotation topic, grants roles/pubsub.publisher to the Secret Manager service agent, and configures a 30-day rotationSchedule within Google Cloud’s 3 Free Rotations/month quota.',
+      ' Autonomous $0.00/Mo 30-Day Rotation Schedule: Provisions a Pub/Sub rotation topic, grants roles/pubsub.publisher to the Secret Manager service agent, and configures a 30-day rotationSchedule within Google Cloud’s 3 Free Rotations/month quota.',
       'CRITICAL 3-State Lifecycle & No-Plaintext-Fallback Warning: Explains clearly that sealing an env var removes the plaintext from Cloud Run and replaces it with a secretKeyRef pointer—so clicking Destroy Version or Delete Secret NEVER reverts it back to plaintext; it disappears forever! Guides engineers to use " Disable ($0.00/mo · Reversible)" to pause billing while keeping the encrypted payload recoverable.',
     ],
     apisUsed: [

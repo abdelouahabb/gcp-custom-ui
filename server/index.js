@@ -21688,7 +21688,7 @@ app.delete(
 );
 
 // ============================================================================
-// ‍ 2026 DATA ENGINEERING STUDIO ("ZERO-FRICTION GCP DATA MESH & MEDALLION ELT")
+//  2026 DATA ENGINEERING STUDIO ("ZERO-FRICTION GCP DATA MESH & MEDALLION ELT")
 // Integrates Google Cloud SDK 588.0.0 capabilities:
 //  1. Medallion Lakehouse Builder (Bronze Raw -> Silver Cleaned -> Gold Marts)
 //  2. Native Dataform & dbt SQLX Studio (`dataform.googleapis.com/v1beta1`)
@@ -32388,7 +32388,7 @@ if [ -n "$TARGET_URI" ]; then
 fi
 echo -e "\\033[1;32m➜ Launching Live Cloud Run Container SSH PTY:\\033[0m \\033[1;33m${baseSshCli}\${REV_FLAG}\\033[0m"
 ${baseSshCli}\${REV_FLAG} || {
-  echo -e "\\n\\033[38;5;214mℹ️  Container SSH session ended. Dropping into interactive Cloud Run Admin PTY (run '${baseSshCli}' to reconnect):\\033[0m\\n"
+  echo -e "\\n\\033[38;5;214mℹ  Container SSH session ended. Dropping into interactive Cloud Run Admin PTY (run '${baseSshCli}' to reconnect):\\033[0m\\n"
   exec bash --login
 }
 `;

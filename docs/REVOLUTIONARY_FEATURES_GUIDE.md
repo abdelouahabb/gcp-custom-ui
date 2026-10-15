@@ -220,8 +220,8 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   - ** Mandatory Human Approval Modal**: Requires explicit review of the exact `gcloud` command and human approval before any IAM privilege reduction is executed.
   - ** Service Account `.json` Key & OAuth2 Token Kill-Switch Vault**: Dedicated top sub-tab switcher + compact collapsible IAM roles list so you can immediately inspect all Service Accounts, create & download a `.json` key, disable/re-enable a key to test breakage, permanently delete a leaked key, or trigger the **1-Click Emergency Key Purge + Active OAuth2 Token Revocation**.
 
-### 28. ‍ 2026 Data Engineering Studio — Medallion ELT, Dataform/dbt SQLX, Dataplex Data Mesh & Slot Doctor (`DataEngineeringStudio.jsx`)
-- **Where to find it**: Top navigation tab **`Data Engineering ‍`**.
+### 28.  2026 Data Engineering Studio — Medallion ELT, Dataform/dbt SQLX, Dataplex Data Mesh & Slot Doctor (`DataEngineeringStudio.jsx`)
+- **Where to find it**: Top navigation tab **`Data Engineering `**.
 - **How it Works**:
   - ** 1-Canvas "Source-to-Gold" Medallion ELT Pipeline Builder**: Wire any source (`GCS Parquet/CSV/JSON`, `BigQuery Data Transfer Service`, `Pub/Sub Stream`, or `Cloud SQL / AlloyDB CDC`) into **Bronze (`BigLake External / Raw Landing`)** $\rightarrow$ **Silver (`Deduplicated, Typed & PII-Cleaned`)** $\rightarrow$ **Gold (`Partitioned + Clustered BI Mart`)** in 1 click, paired with an interactive **Workload Engine & FinOps Advisor** (`BigQuery ELT` vs. `Dataproc Serverless Spark 2.2` vs. `Dataflow` vs. `Cloud Workflows`).
   - ** Dataform (`.sqlx`) & `dbt` (`.sql`) Auto-Clean Studio**: Generates copy-ready Dataform `.sqlx`, dbt `.sql`, and Executable BigQuery DDL with `QUALIFY ROW_NUMBER() OVER (...) = 1` deduplication, `SAFE_CAST` hygiene, and `TO_HEX(SHA256(...))` PII masking, plus 1-click Dataform Repository creation (`dataform.googleapis.com/v1beta1`).
@@ -293,12 +293,12 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     4. **`CLOUD_RUN_PROXY`** — Authenticated Cloud Run developer proxy (`gcloud run services proxy`) that automatically injects `Authorization: Bearer $(gcloud auth print-identity-token)` for `Private (IAM Auth)` Cloud Run services on `127.0.0.1:8080`.
   - ** Live `127.0.0.1` TCP Socket & HTTP Health Probe (`POST /api/project/:id/tunnels/probe`)**: Measures real millisecond TCP handshake latency on `127.0.0.1:<port>` and generates copy-ready connection strings (`psql`, `mysql`, `ssh`, `curl`).
 
-### 36. ‍ Live Cloud Audit "Who-Changed-What" Activity Timeline (`LogStreamerAndShell.jsx`) &  Live GCP API Quota Saturation / HTTP 429 Radar (`EmergencyApiKillSwitch.jsx`)
+### 36.  Live Cloud Audit "Who-Changed-What" Activity Timeline (`LogStreamerAndShell.jsx`) &  Live GCP API Quota Saturation / HTTP 429 Radar (`EmergencyApiKillSwitch.jsx`)
 - **Where to find it**:
-  - **Cloud Audit "Who-Changed-What" Timeline**: Top navigation tab **`Cloud Shell & Logs`** $\rightarrow$ click **`‍ Who-Changed-What Audit`** in the top-right mode switcher.
+  - **Cloud Audit "Who-Changed-What" Timeline**: Top navigation tab **`Cloud Shell & Logs`** $\rightarrow$ click **` Who-Changed-What Audit`** in the top-right mode switcher.
   - **GCP API Quota Saturation & HTTP 429 Radar**: Top header **`APIs`** button (or **`Billing & APIs `**) $\rightarrow$ inside the API & Quota Manager modal, switch to **` Quota & 429 Radar`**.
 - **How it Works**:
-  - **‍ Live Cloud Audit "Who-Changed-What" Activity Timeline (`GET /api/project/:id/audit-timeline`)**:
+  - ** Live Cloud Audit "Who-Changed-What" Activity Timeline (`GET /api/project/:id/audit-timeline`)**:
     - Queries live Google Cloud Audit Logs (`cloudaudit.googleapis.com/activity` and `cloudaudit.googleapis.com/policy`) and cross-correlates active project mutations across **Cloud Run**, **Compute Engine**, **IAM & Security**, **Secret Manager**, **VPC & Firewall**, and **Data & Storage**.
     - Displays the **Actor Principal Email** (`user:...` or `serviceAccount:...`), **Caller IP Address**, **User-Agent** (`gcloud CLI`, `Terraform`, `Cloud Console UI`, or `CloudPulse Cockpit`), **Risk Badge** (`CRITICAL`, `HIGH`, `NORMAL`), and an expandable **JSON Payload Diff & 1-Click Verify / Rollback CLI Drawer**.
   - ** Live GCP API Quota Saturation & HTTP 429 Outage Early-Warning Radar (`GET /api/project/:id/quotas/radar`)**:
@@ -392,3 +392,11 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     - **Native CLI Execution Engine (`NATIVE_CLI_EXEC`)**: Spawns the real installed `gcloud`, `bq`, `gsutil`, or `kubectl` binary via `execFile` (with `CLOUDSDK_METRICS_ENVIRONMENT=datacloud.antigravity` and automatic `--project` injection) for any other read-only CLI command (`gcloud version`, `gcloud logging read`, `gcloud run services describe`, and all `$ Inspect in Shell` audit commands).
     - **Strict Read-Only & Shell-Injection Guardrail (`GUARDRAIL_INTERCEPTOR`)**: Tokenizes quoted arguments via `tokenizeSafeCliCommand` and blocks shell-chaining operators (`;`, `&`, `|`, `` ` ``, `$`, `>`, `<`) and destructive verbs (`delete`, `rm`, `rb`, `destroy`, `drop`, `truncate`, `remove-iam-policy-binding`, `purge`, `reset`, `stop`, `disable`).
 
+### 42. 5 Derived Control-Plane Synthesis Capabilities & 100% Live Early-Wave REST Execution (`GeminiCopilotModal.jsx`, `ResourceControlCenter.jsx`, `Lab2026QuantumNexus.jsx` & `server/index.js`)
+- **Where to find it**: Click **`Health & Drift`** in the secondary header bar (or open **`1-Tap Project Health, Drift & Control-Plane Synthesis`**) and switch to **`5 Derived Synthesis Capabilities`**, plus inside **`2026 SRE Cockpit`** (`ResourceControlCenter.jsx`) and **`2026 Quantum Nexus`** (`Lab2026QuantumNexus.jsx`).
+- **How it Works**:
+  - **1. Cross-Resource Dependency & Blast-Radius Graph (`GET /api/project/:id/synthesis/overview`)**: Joins live Compute Engine VMs, Cloud Run services, VPC Firewalls, Service Accounts (`iam.googleapis.com`), Secret Manager versions, GCS Buckets, and BigQuery Datasets into a unified dependency graph (`nodes` + `edges`) that automatically flags single points of failure (`SPOF_SERVICE_ACCOUNT`, `WORLD_OPEN_FIREWALL_BLAST`).
+  - **2. Causal Root-Cause Correlator (Audit + Logs + Metrics + Revisions)**: Cross-correlates `cloudaudit.googleapis.com/activity` mutations, `logging.googleapis.com/v2` error spikes, and `run.googleapis.com/v2` revision rollouts to attribute incidents to exact root causes (IAM policy change, secret version disable/destroy, firewall edit, or revision rollout).
+  - **3. Multi-Step Transactional Runbook & Pre-Flight Dry-Run Composer (`POST /api/project/:id/synthesis/runbook`)**: Provides 4 composite runbooks (`ZERO_TRUST_PERIMETER_LOCKDOWN`, `FINOPS_AUTOPILOT_HARVEST`, `CLOUDRUN_TRAFFIC_SAFE_ROLLBACK`, `DRIFT_RECONCILE_ALL`) with **`Dry-Run Pre-Flight`** validation before **`Execute Live Runbook`**.
+  - **4. Cross-Project Fleet Federation & Comparative Posture Matrix (`GET /api/fleet/matrix`)**: Queries all authenticated GCP projects in parallel to compare **Hourly/Monthly Burn (`$/hr` & `$/mo`)**, **Security Score (`0–100`)**, **Always-Free Tier Headroom**, and **Active Resource Counts** with 1-click project context switching.
+  - **5. Closed-Loop Drift Watcher & Cryptographic Audit Receipt (`SHA-256`)**: Computes a deterministic `SHA-256` Merkle digest over `gatherLiveCanonicalProjectState` and issues verifiable `beforeSha256` -> `afterSha256` remediation receipts across `HEAL_DRIFT`, `OPTIMIZE_FINOPS`, and `ROLLBACK_CANARY`.
