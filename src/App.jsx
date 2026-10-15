@@ -2373,6 +2373,13 @@ function CloudPulseCockpit() {
         projectId={selectedProjectId}
         overview={overview}
         liveBurn={liveBurn}
+        gdeSummary={gdeSummary}
+        onSwitchProject={(nextProjId) => {
+          if (nextProjId) {
+            sessionStorage.setItem('cloudpulse_project_explicit', 'true');
+            setSelectedProjectId(nextProjId);
+          }
+        }}
         onRefresh={() => {
           fetchProjectOverview(selectedProjectId);
           setVmRefreshTrigger((c) => c + 1);

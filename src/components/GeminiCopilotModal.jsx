@@ -15,6 +15,12 @@ import {
   ArrowRight,
   Activity,
   KeyRound,
+  GitBranch,
+  FileCheck2,
+  Layers,
+  Play,
+  Download,
+  Copy,
 } from 'lucide-react';
 import {
   LivePricingCatalogControlBar,
@@ -54,30 +60,69 @@ export default function GeminiCopilotModal({
   projectId,
   overview,
   liveBurn,
+  gdeSummary,
+  onSwitchProject,
   onRefresh,
   onSelectTab,
   onShowToast,
 }) {
   const { meta: pricingMeta } = useLivePricingCatalog();
   const [zombieData, setZombieData] = useState(null);
+  const [synthesisData, setSynthesisData] = useState(null);
+  const [fleetMatrix, setFleetMatrix] = useState(null);
   const [loadingScan, setLoadingScan] = useState(false);
+  const [loadingFleet, setLoadingFleet] = useState(false);
   const [busyActionId, setBusyActionId] = useState(null);
   const [actionBanner, setActionBanner] = useState('');
+  const [lastRunbookLog, setLastRunbookLog] = useState(null);
+  const [gitOpsViewMode, setGitOpsViewMode] = useState('DIFF'); // 'DIFF' | 'IMPORTS'
 
   const runLiveProjectAudit = useCallback(async () => {
     if (!projectId) return;
     setLoadingScan(true);
     try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/zombies`
-      );
-      setZombieData(res.data);
+      const creditBal = Number(gdeSummary?.totalRemainingUsd || 0);
+      const creditDays =
+        gdeSummary?.nearestExpiryDays !== null &&
+        gdeSummary?.nearestExpiryDays !== undefined
+          ? gdeSummary.nearestExpiryDays
+          : '';
+      const [zRes, synRes] = await Promise.allSettled([
+        axios.get(`/api/project/${encodeURIComponent(projectId)}/zombies`),
+        axios.get(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/synthesis/overview?creditRemainingUsd=${encodeURIComponent(
+            creditBal
+          )}&creditDaysLeft=${encodeURIComponent(creditDays)}`
+        ),
+      ]);
+      if (zRes.status === 'fulfilled') {
+        setZombieData(zRes.value.data);
+      }
+      if (synRes.status === 'fulfilled') {
+        setSynthesisData(synRes.value.data);
+      }
     } catch {
-      // fallback if zombies endpoint times out
+      // fallback if scan times out
     } finally {
       setLoadingScan(false);
     }
-  }, [projectId]);
+  }, [projectId, gdeSummary?.totalRemainingUsd, gdeSummary?.nearestExpiryDays]);
+
+  const handleScanFleetMatrix = useCallback(async () => {
+    setLoadingFleet(true);
+    try {
+      const res = await axios.get('/api/fleet/matrix');
+      setFleetMatrix(res.data);
+    } catch (err) {
+      setActionBanner(
+        `Fleet matrix scan failed: ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setLoadingFleet(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen && projectId) {
@@ -110,15 +155,20 @@ export default function GeminiCopilotModal({
     setActionBanner('');
     try {
       await axios.patch(
-        `/api/project/${encodeURIComponent(projectId)}/firewalls/${encodeURIComponent(fw.name)}`,
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/firewalls/${encodeURIComponent(fw.name)}`,
         {
           sourceRanges: ['35.235.240.0/20'],
-          description: `${fw.description || ''} [Locked to Google IAP 35.235.240.0/20 via Health Scanner]`.trim(),
+          description: `${
+            fw.description || ''
+          } [Locked to Google IAP 35.235.240.0/20 via Health Scanner]`.trim(),
         }
       );
       const msg = `Locked firewall "${fw.name}" to Google IAP (35.235.240.0/20)!`;
       setActionBanner(msg);
       if (onShowToast) onShowToast(msg);
+      await runLiveProjectAudit();
       if (onRefresh) await onRefresh();
     } catch (err) {
       setActionBanner(
@@ -141,7 +191,9 @@ export default function GeminiCopilotModal({
       );
       const msg =
         res.data?.message ||
-        `Remediated ${zombie.name} (+$${Number(zombie.annualCostUsd || 0).toFixed(2)}/yr saved)!`;
+        `Remediated ${zombie.name} (+$${Number(zombie.annualCostUsd || 0).toFixed(
+          2
+        )}/yr saved)!`;
       setActionBanner(msg);
       if (onShowToast) onShowToast(msg);
       await runLiveProjectAudit();
@@ -155,12 +207,61 @@ export default function GeminiCopilotModal({
     }
   };
 
+  const handleExecuteRunbookDag = async (runbookId) => {
+    setBusyActionId(`dag-${runbookId}`);
+    setActionBanner('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/synthesis/runbook`,
+        { runbookId }
+      );
+      setLastRunbookLog(res.data);
+      const msg = res.data?.message || `Executed runbook ${runbookId}`;
+      setActionBanner(msg);
+      if (onShowToast) onShowToast(msg);
+      await runLiveProjectAudit();
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      setActionBanner(
+        `Runbook execution error: ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setBusyActionId(null);
+    }
+  };
+
+  const handleDownloadSignedDossier = () => {
+    const dossier = synthesisData?.executiveDossier || {
+      projectId,
+      generatedAt: new Date().toISOString(),
+      healthScore,
+    };
+    const blob = new Blob([JSON.stringify(dossier, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cloudpulse-2026-signed-audit-dossier-${projectId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (onShowToast) {
+      onShowToast(
+        `Downloaded SHA-256 Signed Audit Dossier for ${projectId}`
+      );
+    }
+  };
+
   const totalFindings =
     exposedFirewalls.length + zombies.length + priceDriftCount;
+  const runway = synthesisData?.creditRunwayOptimizer;
+  const runbooks = synthesisData?.autonomousRunbooks || [];
+  const gitOpsBridge = synthesisData?.gitOpsBridge;
+  const dossier = synthesisData?.executiveDossier;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="w-full max-w-4xl bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+      <div className="w-full max-w-5xl bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-500/[0.06]">
           <div className="flex items-center gap-3">
@@ -178,11 +279,16 @@ export default function GeminiCopilotModal({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 font-mono">
-                  1-Tap Project Health, Drift & FinOps Scanner
+                  1-Tap Project Health, Drift, FinOps & Control-Plane Synthesis Hub
                 </h3>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                   {projectId}
                 </span>
+                {synthesisData?.merkleSnapshot?.merkleRootShort && (
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+                    Merkle: {synthesisData.merkleSnapshot.merkleRootShort}
+                  </span>
+                )}
                 <span
                   className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full border ${
                     totalFindings === 0
@@ -192,13 +298,15 @@ export default function GeminiCopilotModal({
                 >
                   {totalFindings === 0
                     ? '0 Active Findings'
-                    : `${totalFindings} Actionable Finding${totalFindings > 1 ? 's' : ''}`}
+                    : `${totalFindings} Actionable Finding${
+                        totalFindings > 1 ? 's' : ''
+                      }`}
                 </span>
               </div>
               <p className="text-[11px] text-zinc-500">
-                Real-time deterministic scanner for Zombie Waste, Exposed{' '}
-                <code className="font-mono">0.0.0.0/0</code> Firewalls, Idle
-                Cloud Run Burn, and Live GCP SKU Price Drift.
+                Real-time deterministic scanner + Closed-Loop Cross-Studio Runbooks,
+                Promotional Credit Runway Optimizer, ClickOps-to-GitOps Diff, and
+                Multi-Project Fleet Federation.
               </p>
             </div>
           </div>
@@ -206,12 +314,25 @@ export default function GeminiCopilotModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={handleDownloadSignedDossier}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer"
+              title="Download Cryptographically Signed SHA-256 Executive Audit & Compliance Dossier (JSON)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Signed Dossier</span>
+            </button>
+            <button
+              type="button"
               onClick={runLiveProjectAudit}
               disabled={loadingScan}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer hover:bg-zinc-700"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${loadingScan ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
+                className={`w-3.5 h-3.5 ${
+                  loadingScan
+                    ? 'animate-spin text-zinc-500 dark:text-zinc-400'
+                    : ''
+                }`}
               />
               <span>{loadingScan ? 'Scanning...' : 'Re-Scan Live'}</span>
             </button>
@@ -233,9 +354,9 @@ export default function GeminiCopilotModal({
               <button
                 type="button"
                 onClick={() => setActionBanner('')}
-                className="text-zinc-400 hover:text-white"
+                className="text-zinc-400 hover:text-white px-2 font-bold"
               >
-                ✕
+                X
               </button>
             </div>
           )}
@@ -268,7 +389,8 @@ export default function GeminiCopilotModal({
                 ${totalAnnualWasteUsd.toFixed(2)}/yr
               </div>
               <div className="text-[10px] text-zinc-500">
-                {zombies.length} idle/unattached resource{zombies.length === 1 ? '' : 's'}
+                {zombies.length} idle/unattached resource
+                {zombies.length === 1 ? '' : 's'}
               </div>
             </div>
 
@@ -283,7 +405,8 @@ export default function GeminiCopilotModal({
                     : 'text-emerald-600 dark:text-emerald-400'
                 }`}
               >
-                {exposedFirewalls.length} Rule{exposedFirewalls.length === 1 ? '' : 's'}
+                {exposedFirewalls.length} Rule
+                {exposedFirewalls.length === 1 ? '' : 's'}
               </div>
               <div className="text-[10px] text-zinc-500">
                 SSH/RDP/DB world-open check
@@ -307,6 +430,296 @@ export default function GeminiCopilotModal({
                 Source: {pricingMeta.source}
               </div>
             </div>
+          </div>
+
+          {/* DERIVED CAPABILITY A: Promotional Credit & Budget Runway Optimizer */}
+          {runway && (
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3 font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Activity className="w-4 h-4" />
+                  <span>
+                    Promotional Credit & Budget Runway Optimizer (
+                    {runway.usingLiveImportedCredits
+                      ? 'Synced GDE / Promotional Ledger'
+                      : 'Active Trial / Credit Envelope'}
+                    )
+                  </span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold">
+                  Balance: ${runway.balanceUsd.toFixed(2)} · Expires:{' '}
+                  {runway.expiryDays}d · Current Runway: {runway.currentRunwayDays}d{' '}
+                  to {runway.optimizedRunwayDays}d (+{runway.runwayExtensionDays}d)
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-700 dark:text-zinc-300">
+                {runway.headline}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {(runway.freeCapacityMenu || []).map((cap) => (
+                  <div
+                    key={cap.id}
+                    className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between"
+                  >
+                    <div className="text-[10px] text-zinc-500">{cap.label}</div>
+                    <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                      {cap.freeUnitsAvailable} {cap.unit}
+                    </div>
+                    <div className="text-[10px] text-zinc-400">
+                      @${cap.unitRateUsd}/unit before credit expiry
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* DERIVED CAPABILITY B: Closed-Loop Cross-Studio Autonomous Runbook DAGs */}
+          {runbooks.length > 0 && (
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3 font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-extrabold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                  <Play className="w-4 h-4" />
+                  <span>
+                    Closed-Loop Cross-Studio Autonomous Runbook DAGs (Live Multi-API
+                    Execution)
+                  </span>
+                </div>
+                {dossier?.cryptographicSignature && (
+                  <span className="text-[10px] text-zinc-500">
+                    Signed State: {dossier.cryptographicSignature.slice(0, 23)}...
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {runbooks.map((rb) => (
+                  <div
+                    key={rb.id}
+                    className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                          {rb.badge}
+                        </span>
+                        <span className="text-[10px] text-zinc-400">
+                          ~{rb.estimatedDurationSec}s
+                        </span>
+                      </div>
+                      <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {rb.title}
+                      </div>
+                      <ul className="space-y-1 text-[10px] text-zinc-500">
+                        {rb.steps.map((st, idx) => (
+                          <li key={idx} className="leading-snug">
+                            {st}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={busyActionId === `dag-${rb.id}`}
+                      onClick={() => handleExecuteRunbookDag(rb.id)}
+                      className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>
+                        {busyActionId === `dag-${rb.id}`
+                          ? 'Executing Live DAG...'
+                          : 'Execute 4-Step Live DAG'}
+                      </span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {lastRunbookLog && (
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 space-y-1.5 text-[11px]">
+                  <div className="font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+                    <span>
+                      Last Executed DAG: {lastRunbookLog.runbookId} (Merkle Anchor:{' '}
+                      {lastRunbookLog.merkleRootShort})
+                    </span>
+                    <span>{lastRunbookLog.durationMs}ms</span>
+                  </div>
+                  {(lastRunbookLog.executionLog || []).map((entry) => (
+                    <div
+                      key={entry.step}
+                      className="text-zinc-700 dark:text-zinc-300"
+                    >
+                      [Step {entry.step} · {entry.status}] {entry.detail}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* DERIVED CAPABILITY C: ClickOps-to-GitOps Live Session HCL Diff Bridge */}
+          {gitOpsBridge && (
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-2.5 font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-extrabold uppercase text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                  <GitBranch className="w-4 h-4" />
+                  <span>
+                    ClickOps-to-GitOps Live Session HCL Diff Bridge (
+                    {gitOpsBridge.eventsCount} Flight Mutation
+                    {gitOpsBridge.eventsCount === 1 ? '' : 's'})
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setGitOpsViewMode('DIFF')}
+                    className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer ${
+                      gitOpsViewMode === 'DIFF'
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                        : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    git diff main.tf
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGitOpsViewMode('IMPORTS')}
+                    className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer ${
+                      gitOpsViewMode === 'IMPORTS'
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                        : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    imports.tf
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        gitOpsViewMode === 'DIFF'
+                          ? gitOpsBridge.unifiedDiff
+                          : gitOpsBridge.importsTf
+                      );
+                      if (onShowToast) {
+                        onShowToast(
+                          `Copied ${
+                            gitOpsViewMode === 'DIFF'
+                              ? 'git diff main.tf'
+                              : 'imports.tf'
+                          } to clipboard`
+                        );
+                      }
+                    }}
+                    className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy</span>
+                  </button>
+                </div>
+              </div>
+              <pre className="p-3 rounded-lg bg-zinc-950 text-zinc-200 text-[11px] overflow-x-auto max-h-44 leading-relaxed border border-zinc-800">
+                {gitOpsViewMode === 'DIFF'
+                  ? gitOpsBridge.unifiedDiff
+                  : gitOpsBridge.importsTf}
+              </pre>
+            </div>
+          )}
+
+          {/* DERIVED CAPABILITY D: Multi-Project Fleet Posture & FinOps Federation Matrix */}
+          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3 font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs font-extrabold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                <Layers className="w-4 h-4" />
+                <span>
+                  Multi-Project Fleet Posture & FinOps Federation Matrix
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={loadingFleet}
+                onClick={handleScanFleetMatrix}
+                className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`w-3 h-3 ${loadingFleet ? 'animate-spin' : ''}`}
+                />
+                <span>
+                  {loadingFleet
+                    ? 'Sweeping Accessible GCP Projects...'
+                    : fleetMatrix
+                    ? `Re-Sweep Fleet (${fleetMatrix.projectsScanned} Projects)`
+                    : 'Sweep All Accessible GCP Projects'}
+                </span>
+              </button>
+            </div>
+
+            {fleetMatrix?.fleet && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[11px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 uppercase text-[10px]">
+                      <th className="py-1.5 pr-3">Project ID</th>
+                      <th className="py-1.5 px-2">VMs</th>
+                      <th className="py-1.5 px-2">Cloud Run</th>
+                      <th className="py-1.5 px-2">GCS / BQ</th>
+                      <th className="py-1.5 px-2">0.0.0.0/0 FW</th>
+                      <th className="py-1.5 px-2">Est. Burn</th>
+                      <th className="py-1.5 pl-2 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
+                    {fleetMatrix.fleet.map((row) => (
+                      <tr key={row.projectId}>
+                        <td className="py-2 pr-3 font-bold text-zinc-900 dark:text-zinc-100">
+                          {row.projectId}
+                        </td>
+                        <td className="py-2 px-2">
+                          {row.runningVmsCount}/{row.vmsCount}
+                        </td>
+                        <td className="py-2 px-2">{row.cloudRunCount}</td>
+                        <td className="py-2 px-2">
+                          {row.bucketsCount} / {row.datasetsCount}
+                        </td>
+                        <td
+                          className={`py-2 px-2 font-bold ${
+                            row.openFirewallsCount > 0
+                              ? 'text-amber-500'
+                              : 'text-emerald-500'
+                          }`}
+                        >
+                          {row.openFirewallsCount}
+                        </td>
+                        <td className="py-2 px-2 font-bold">
+                          ${row.monthlyBurnUsd.toFixed(2)}/mo
+                        </td>
+                        <td className="py-2 pl-2 text-right">
+                          {row.projectId === projectId ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-bold">
+                              Active
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onSwitchProject) {
+                                  onSwitchProject(row.projectId);
+                                }
+                              }}
+                              className="px-2 py-1 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
+                            >
+                              Switch
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Section 1: Live GCP Billing Catalog & Variable Rate Sync */}
@@ -378,7 +791,7 @@ export default function GeminiCopilotModal({
                             (a) =>
                               `${a.IPProtocol}:${(a.ports || ['all']).join(',')}`
                           )
-                          .join(' ' )}{' '}
+                          .join(' ')}{' '}
                         to {(fw.sourceRanges || []).join(', ')}
                       </div>
                     </div>
@@ -477,14 +890,14 @@ export default function GeminiCopilotModal({
             )}
           </div>
 
-          {/* Section 4: Live Option 3 AES-256-GCM AI Studio BYOK Vault & Gemini 2.5 SRE Co-Architect */}
+          {/* Section 4: Live Option 3 AES-256-GCM AI Studio BYOK Vault & SRE Co-Architect */}
           <EngineerMoonshotsWave3
             activeTab="X6"
             projectId={projectId}
             overview={overview}
             onRefreshGlobal={() => {
-              fetchDeepAudit();
-              if (onRefreshGlobal) onRefreshGlobal();
+              runLiveProjectAudit();
+              if (onRefresh) onRefresh();
             }}
           />
         </div>
