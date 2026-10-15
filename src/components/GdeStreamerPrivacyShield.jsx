@@ -387,7 +387,7 @@ export default function GdeStreamerPrivacyShield({
   ].filter(Boolean).length;
 
   return (
-    <div className="relative z-40 shrink-0" ref={popoverRef} data-gde-ignore="true">
+    <div className={`relative shrink-0 ${popoverOpen ? 'z-50' : 'z-10'}`} ref={popoverRef} data-gde-ignore="true">
       <div className="inline-flex items-center rounded-[8px] shadow-sm">
         {/* Main 1-Click Toggle Button */}
         <button

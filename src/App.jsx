@@ -1396,9 +1396,9 @@ function CloudPulseCockpit() {
         )}
 
         {/* Header Row */}
-        <header className="relative z-30 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#202124]/90 backdrop-blur-md px-4 sm:px-6 py-4">
+        <header className="relative z-40 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#202124]/90 backdrop-blur-md px-4 sm:px-6 py-4">
           {/* Top Row: CloudPulse 2026 Brand (Left) + Live GCP Project Switcher & Provision Resource CTA (Top Right) */}
-          <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+          <div className="relative z-50 flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center shadow-sm shrink-0">
                 <Cloud className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
@@ -1444,7 +1444,7 @@ function CloudPulseCockpit() {
             {/* Top-Right Cluster: Live GCP Project Switcher + Primary Provision Resource CTA */}
             <div className="flex items-center gap-2.5 shrink-0">
               {/* Live GCP Project Dropdown */}
-              <div className="relative z-40 shrink-0">
+              <div className={`relative shrink-0 ${projectMenuOpen ? 'z-[70]' : 'z-50'}`}>
                 <button
                   type="button"
                   onClick={() => setProjectMenuOpen((o) => !o)}
@@ -1462,7 +1462,7 @@ function CloudPulseCockpit() {
                 </button>
 
                 {projectMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] shadow-xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-50 max-h-80 overflow-y-auto">
+                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] shadow-2xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-[80] max-h-80 overflow-y-auto">
                     <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800">
                       Real GCP Projects ({contextData.projects?.length || 1})
                     </div>
@@ -1516,7 +1516,7 @@ function CloudPulseCockpit() {
           </div>
 
           {/* Secondary Telemetry & Cockpit Controls Bar (Single-Row Compact Layout) */}
-          <div className="flex items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-3 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
+          <div className="relative z-30 flex items-center justify-between gap-1.5 lg:flex-nowrap flex-wrap mt-3 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
             <div className="flex items-center gap-1.5 lg:flex-nowrap flex-wrap min-w-0">
               {/* Live Burn-Rate Radar Ticker Pill */}
               <button

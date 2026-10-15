@@ -710,7 +710,7 @@ export function TimezoneSelectorPill({ onShowToast }) {
   }, [enrichedCatalog, continentFilter, searchQuery]);
 
   return (
-    <div className="relative z-40 shrink-0" ref={containerRef}>
+    <div className={`relative shrink-0 ${open ? 'z-50' : 'z-10'}`} ref={containerRef}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
