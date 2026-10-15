@@ -1446,7 +1446,7 @@ spec:
             <HardDrive className="w-3.5 h-3.5" />
             <span>Search Dead Containers & GCS Artifacts</span>
             {artifactScanState.data?.summary && (
-              <span className="px-1.5 py-0.2 rounded-full bg-zinc-900/80 text-amber-300 text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-50 dark:bg-zinc-900/80 text-amber-700 dark:text-amber-300 text-[10px] font-mono">
                 {artifactScanState.data.summary.deadContainerImagesCount} Dead ·{' '}
                 {artifactScanState.data.summary.totalStorageObjectsCount} GCS
               </span>
@@ -1544,11 +1544,11 @@ spec:
         );
 
         return (
-          <div className="p-4 rounded-xl border border-amber-500/40 bg-zinc-950 text-zinc-100 space-y-4 shadow-xl">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+          <div className="p-4 rounded-xl border border-amber-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-mono font-extrabold">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-extrabold">
                     <HardDrive className="w-3 h-3" />
                     <span>ARTIFACT REGISTRY & CLOUD STORAGE HYGIENE SCANNER</span>
                   </span>
@@ -1557,13 +1557,13 @@ spec:
                     <span>Active Cloud Run Containers Protected from Deletion</span>
                   </span>
                 </div>
-                <h4 className="text-sm sm:text-base font-extrabold text-white mt-1">
+                <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
                   Dead Container Images (Artifact Registry) & Build / Staging Artifacts (Cloud Storage)
                 </h4>
                 <p className="text-xs text-zinc-400">
                   Cross-references all live Cloud Run services against{' '}
-                  <code className="text-amber-300">artifactregistry.googleapis.com/v1</code>{' '}
-                  repositories and <code className="text-blue-300">storage.googleapis.com/v1</code>{' '}
+                  <code className="text-amber-700 dark:text-amber-300">artifactregistry.googleapis.com/v1</code>{' '}
+                  repositories and <code className="text-blue-700 dark:text-blue-300">storage.googleapis.com/v1</code>{' '}
                   buckets (`_cloudbuild`, `run-sources-*`, `gcf-v2-*`, and project buckets) to find unused container digests and leftover build tarballs.
                 </p>
               </div>
@@ -1587,7 +1587,7 @@ spec:
                 <button
                   type="button"
                   onClick={() => setShowArtifactHunter(false)}
-                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-mono text-zinc-300 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
                 >
                   Close
                 </button>
@@ -1595,7 +1595,7 @@ spec:
             </div>
 
             {artifactScanState.error && (
-              <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/40 text-xs text-red-200 flex items-center gap-2">
+              <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/40 text-xs text-red-800 dark:text-red-200 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
                 <span>{artifactScanState.error}</span>
               </div>
@@ -1603,7 +1603,7 @@ spec:
 
             {/* 4 Live KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   1. Dead Container Images (Artifact Registry)
                 </div>
@@ -1615,7 +1615,7 @@ spec:
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   2. Cloud Storage Build & Staging Artifacts
                 </div>
@@ -1627,7 +1627,7 @@ spec:
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   3. Reclaimable Storage Spend
                 </div>
@@ -1639,7 +1639,7 @@ spec:
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800 flex flex-col justify-between gap-1.5">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-1.5">
                 <div className="text-[10px] font-mono text-zinc-400">
                   4. 1-Click Bulk Cleanup Actions
                 </div>
@@ -1651,7 +1651,7 @@ spec:
                       artifactActionBusy === 'SWEEP_ALL_CONTAINERS'
                     }
                     onClick={() => handleSweepAllDeadContainers(deadContainersList)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
                   >
                     <Trash2 className="w-3 h-3" />
                     <span>Sweep {deadContainersList.length} Dead Container(s)</span>
@@ -1663,7 +1663,7 @@ spec:
                       artifactActionBusy === 'PURGE_ALL_GCS'
                     }
                     onClick={() => handlePurgeGcsArtifacts(buildStagingObjectsList)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-700 dark:text-red-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-40"
                   >
                     <Trash2 className="w-3 h-3" />
                     <span>Purge {buildStagingObjectsList.length} Build Tarball(s)</span>
@@ -1674,14 +1674,14 @@ spec:
 
             {/* Sub-Tab Switcher + Search + Filter */}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <div className="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+              <div className="flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setArtifactHunterTab('CONTAINERS')}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
                     artifactHunterTab === 'CONTAINERS'
                       ? 'bg-amber-500 text-zinc-950'
-                      : 'text-zinc-400 hover:text-zinc-200'
+                      : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5" />
@@ -1693,7 +1693,7 @@ spec:
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer ${
                     artifactHunterTab === 'STORAGE'
                       ? 'bg-blue-500 text-white'
-                      : 'text-zinc-400 hover:text-zinc-200'
+                      : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                   }`}
                 >
                   <HardDrive className="w-3.5 h-3.5" />
@@ -1707,14 +1707,14 @@ spec:
                   value={artifactHunterSearch}
                   onChange={(e) => setArtifactHunterSearch(e.target.value)}
                   placeholder="Filter by image, repo, bucket, digest, or .tgz..."
-                  className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-zinc-100 placeholder-zinc-500 font-mono w-64"
+                  className="px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 font-mono w-64"
                 />
-                <label className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-300 cursor-pointer select-none bg-zinc-900 px-2.5 py-1.5 rounded-lg border border-zinc-800">
+                <label className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer select-none bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
                   <input
                     type="checkbox"
                     checked={artifactOnlyDead}
                     onChange={(e) => setArtifactOnlyDead(e.target.checked)}
-                    className="rounded border-zinc-700"
+                    className="rounded border-zinc-300 dark:border-zinc-700"
                   />
                   <span>Only Dead / Staging Artifacts</span>
                 </label>
@@ -1729,7 +1729,7 @@ spec:
                     Scanning Artifact Registry repositories across regions and cross-referencing live Cloud Run revisions...
                   </div>
                 ) : filteredContainers.length === 0 ? (
-                  <div className="p-6 rounded-lg bg-zinc-900/60 border border-zinc-800 text-center text-xs font-mono text-zinc-400">
+                  <div className="p-6 rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-center text-xs font-mono text-zinc-400">
                     No matching container images found in Artifact Registry.
                   </div>
                 ) : (
@@ -1749,8 +1749,8 @@ spec:
                           isDeletingImg
                             ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
                             : img.isDead
-                            ? 'bg-zinc-900/90 border-amber-500/30'
-                            : 'bg-zinc-900/40 border-emerald-500/25'
+                            ? 'bg-zinc-50 dark:bg-zinc-900/90 border-amber-500/30'
+                            : 'bg-zinc-50 dark:bg-zinc-900/40 border-emerald-500/25'
                         }`}
                       >
                         {isDeletingImg && (
@@ -1766,10 +1766,10 @@ spec:
                                 isDeletingImg
                                   ? 'bg-red-500/20 text-red-400 border-red-500/40'
                                   : !img.isDead
-                                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                                   : img.statusCategory === 'DEAD_DELETED_SERVICE'
-                                  ? 'bg-red-500/20 text-red-300 border-red-500/40'
-                                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40'
+                                  : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
                               }`}
                             >
                               {isDeletingImg
@@ -1782,7 +1782,7 @@ spec:
                               className={`text-xs font-mono font-bold truncate ${
                                 isDeletingImg
                                   ? 'line-through text-zinc-400'
-                                  : 'text-white'
+                                  : 'text-zinc-900 dark:text-white'
                               }`}
                             >
                               {img.shortPackage}
@@ -1790,7 +1790,7 @@ spec:
                             <span className="text-[11px] font-mono text-zinc-400">
                               ({img.repository} · {img.location})
                             </span>
-                            <span className="text-[11px] font-mono font-semibold text-amber-300">
+                            <span className="text-[11px] font-mono font-semibold text-amber-700 dark:text-amber-300">
                               {img.sizeMb} MB
                             </span>
                             {img.ageDays !== null && (
@@ -1807,12 +1807,12 @@ spec:
                             }`}
                           >
                             Digest:{' '}
-                            <span className="text-zinc-300">
+                            <span className="text-zinc-700 dark:text-zinc-300">
                               {img.digestShort}
                             </span>{' '}
                             · Tags:{' '}
                             {img.tags?.length > 0 ? (
-                              <span className="text-blue-300">
+                              <span className="text-blue-700 dark:text-blue-300">
                                 {img.tags.join(', ')}
                               </span>
                             ) : (
@@ -1830,7 +1830,7 @@ spec:
 
                         <div className="flex items-center gap-2 shrink-0">
                           {isDeletingImg ? (
-                            <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-300">
+                            <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-700 dark:text-red-300">
                               Deleting in GCP...
                             </span>
                           ) : img.isDead ? (
@@ -1838,7 +1838,7 @@ spec:
                               type="button"
                               disabled={busyThis}
                               onClick={() => handleDeleteDeadContainerImage(img)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-700 dark:text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               <span>
@@ -1846,7 +1846,7 @@ spec:
                               </span>
                             </button>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-300">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
                               <Lock className="w-3 h-3" />
                               <span>Protected (Serving Cloud Run)</span>
                             </span>
@@ -1878,8 +1878,8 @@ spec:
                             isDeletingBucket
                               ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
                               : b.isBuildStagingBucket
-                              ? 'bg-amber-500/10 border-amber-500/35 text-amber-200'
-                              : 'bg-zinc-900 border-zinc-800 text-zinc-300'
+                              ? 'bg-amber-500/10 border-amber-500/35 text-amber-800 dark:text-amber-200'
+                              : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
                           }`}
                         >
                           <span
@@ -1892,7 +1892,7 @@ spec:
                             gs://{b.name} ({b.objectsCount} obj · {b.totalSizeMb} MB)
                           </span>
                           {isDeletingBucket ? (
-                            <span className="px-1.5 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
+                            <span className="px-1.5 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
                               DELETING BUCKET...
                             </span>
                           ) : (
@@ -1904,7 +1904,7 @@ spec:
                                   handleEmptyAndDeleteStagingBucket(b.name)
                                 }
                                 title="Force-empty and delete this entire staging bucket"
-                                className="px-1.5 py-0.5 rounded bg-red-500/20 hover:bg-red-500/35 border border-red-500/40 text-red-300 text-[10px] font-bold cursor-pointer"
+                                className="px-1.5 py-0.5 rounded bg-red-500/20 hover:bg-red-500/35 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold cursor-pointer"
                               >
                                 Empty & Delete Bucket
                               </button>
@@ -1921,7 +1921,7 @@ spec:
                     Scanning Cloud Storage buckets (`_cloudbuild`, `run-sources-*`, `gcf-v2-*`, and project buckets) for build artifacts...
                   </div>
                 ) : filteredStorage.length === 0 ? (
-                  <div className="p-6 rounded-lg bg-zinc-900/60 border border-zinc-800 text-center text-xs font-mono text-zinc-400">
+                  <div className="p-6 rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-center text-xs font-mono text-zinc-400">
                     No matching artifacts found in Cloud Storage buckets.
                   </div>
                 ) : (
@@ -1939,8 +1939,8 @@ spec:
                           isDeletingObj
                             ? 'border-red-500/40 bg-red-500/5 opacity-55 grayscale select-none pointer-events-none'
                             : obj.isBuildStagingArtifact
-                            ? 'bg-zinc-900/90 border-amber-500/30'
-                            : 'bg-zinc-900/50 border-zinc-800'
+                            ? 'bg-zinc-50 dark:bg-zinc-900/90 border-amber-500/30'
+                            : 'bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800'
                         }`}
                       >
                         {isDeletingObj && (
@@ -1956,8 +1956,8 @@ spec:
                                 isDeletingObj
                                   ? 'bg-red-500/20 text-red-400 border-red-500/40'
                                   : obj.isBuildStagingArtifact
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                  : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                                  : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30'
                               }`}
                             >
                               {isDeletingObj
@@ -1970,12 +1970,12 @@ spec:
                               className={`text-xs font-mono font-bold truncate ${
                                 isDeletingObj
                                   ? 'line-through text-zinc-400'
-                                  : 'text-white'
+                                  : 'text-zinc-900 dark:text-white'
                               }`}
                             >
                               gs://{obj.bucket}/{obj.name}
                             </span>
-                            <span className="text-[11px] font-mono font-semibold text-amber-300">
+                            <span className="text-[11px] font-mono font-semibold text-amber-700 dark:text-amber-300">
                               {obj.sizeMb} MB
                             </span>
                             <span className="text-[10px] font-mono text-zinc-400">
@@ -1996,7 +1996,7 @@ spec:
 
                         <div className="flex items-center gap-2 shrink-0">
                           {isDeletingObj ? (
-                            <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-300">
+                            <span className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/40 text-[10px] font-mono font-bold text-red-700 dark:text-red-300">
                               Deleting in GCP...
                             </span>
                           ) : (
@@ -2004,7 +2004,7 @@ spec:
                               type="button"
                               disabled={busyObj}
                               onClick={() => handleDeleteSingleGcsArtifact(obj)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-700 dark:text-red-300 text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               <span>
@@ -2062,20 +2062,20 @@ spec:
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-lg">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] font-mono font-bold">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold">
                   <span>BEYOND GCP CONSOLE YAML EXPORT · LIVE KNATIVE → KUBERNETES AST TRANSPILER</span>
                 </div>
-                <h4 className="text-sm sm:text-base font-extrabold text-white mt-1">
+                <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
                   Graduate Cloud Run Service (`{sampleSrv.name}`) → Production GKE Kubernetes Cluster
                 </h4>
-                <p className="text-xs text-zinc-300">
+                <p className="text-xs text-zinc-700 dark:text-zinc-300">
                   Google Cloud Console only gives you a raw Knative `serving.knative.dev/v1` YAML and leaves you on your own. CloudPulse transpiles your Cloud Run service into a <strong>6-Resource Native Kubernetes Bundle</strong> (`Deployment` + `HPA v2` + `PDB` + `Service` + `NetworkPolicy` + `Workload Identity SA`) and deploys it to a live GKE cluster in 1 click.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowGlobalGkeTranspiler(false)}
-                className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-xs font-mono text-zinc-300 cursor-pointer"
+                className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
                 Close Studio
               </button>
@@ -2083,7 +2083,7 @@ spec:
 
             {/* 4 Architectural & FinOps Benefits Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   1. Compute & GPU FinOps Arbitrage
                 </div>
@@ -2095,7 +2095,7 @@ spec:
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   2. Shared RAM `/dev/shm` & Stateful CSI
                 </div>
@@ -2107,11 +2107,11 @@ spec:
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   3. Native HPA v2 + PodDisruptionBudget
                 </div>
-                <div className="text-sm font-extrabold text-blue-300 mt-0.5">
+                <div className="text-sm font-extrabold text-blue-700 dark:text-blue-300 mt-0.5">
                   Scale {bundle.minReplicas} → {bundle.maxReplicas} Pods (Zero-Downtime)
                 </div>
                 <div className="text-[10px] font-mono text-zinc-400">
@@ -2119,7 +2119,7 @@ spec:
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   4. Zero-Timeout WebSockets & L3/L4 NetPol
                 </div>
@@ -2175,7 +2175,7 @@ spec:
                     className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
                       active
                         ? 'bg-blue-600/30 border-blue-400 text-white'
-                        : 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
+                        : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                     }`}
                   >
                     <div className="text-[11px] font-bold font-mono">
@@ -2192,8 +2192,8 @@ spec:
 
             {/* Target GKE Cluster & 1-Click Live Rollout Controls */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800 space-y-2.5">
-                <div className="text-xs font-extrabold text-blue-300 font-mono">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                <div className="text-xs font-extrabold text-blue-700 dark:text-blue-300 font-mono">
                   Target GKE Cluster & Namespace Rollout
                 </div>
 
@@ -2211,7 +2211,7 @@ spec:
                           [sampleSrv.id]: { ...cfg, namespace: e.target.value },
                         }))
                       }
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-white"
+                      className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
                     />
                   </div>
 
@@ -2231,7 +2231,7 @@ spec:
                             },
                           }))
                         }
-                        className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-white"
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
                       >
                         {gkeClusters.map((c) => (
                           <option key={c.name} value={c.name}>
@@ -2254,13 +2254,13 @@ spec:
                           }))
                         }
                         placeholder="new-gke-autopilot-cluster"
-                        className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-white"
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
                       />
                     )}
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 text-xs font-mono text-zinc-300 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={Boolean(cfg.createAutopilotCluster)}
@@ -2312,7 +2312,7 @@ spec:
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 space-y-2">
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     <button
@@ -2329,7 +2329,7 @@ spec:
                       className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
                         cfg.manifestViewMode !== 'KNATIVE_CONSOLE'
                           ? 'bg-emerald-600 text-white'
-                          : 'bg-zinc-900 text-zinc-400'
+                          : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-400'
                       }`}
                     >
                       CloudPulse 6-Resource GKE Bundle
@@ -2348,14 +2348,14 @@ spec:
                       className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
                         cfg.manifestViewMode === 'KNATIVE_CONSOLE'
                           ? 'bg-red-600 text-white'
-                          : 'bg-zinc-900 text-zinc-400'
+                          : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-400'
                       }`}
                     >
                       Raw GCP Console Knative YAML
                     </button>
                   </div>
                 </div>
-                <pre className="text-[10px] font-mono text-emerald-300 overflow-x-auto max-h-52">
+                <pre className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-52">
                   {cfg.manifestViewMode === 'KNATIVE_CONSOLE'
                     ? bundle.rawKnativeYaml
                     : bundle.k8sBundleYaml}
@@ -2398,7 +2398,7 @@ spec:
           </div>
 
           {/* Copy command to deploy CloudPulse 2026 itself to Cloud Run */}
-          <div className="flex items-center gap-2 bg-zinc-900/95 text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-800 text-[11px] font-mono">
+          <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900/95 text-zinc-800 dark:text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
             <Terminal className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
             <span className="truncate max-w-xs sm:max-w-md" title={selfDeployCmd}>
               {selfDeployCmd}
@@ -2744,7 +2744,7 @@ spec:
                       <button
                         type="button"
                         onClick={() => handleCopy(srv.uri, `uri-${srv.id}`)}
-                        className="text-[10px] text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-0.5"
+                        className="text-[10px] text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 inline-flex items-center gap-0.5"
                       >
                         {copiedId === `uri-${srv.id}` ? (
                           <>
@@ -3000,7 +3000,7 @@ spec:
                         onClick={() =>
                           setOpenDrawer((prev) => ({ ...prev, [srv.id]: null }))
                         }
-                        className="text-xs text-zinc-400 hover:text-zinc-200"
+                        className="text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
                       >
                         Close
                       </button>
@@ -3563,7 +3563,7 @@ spec:
                                   type="button"
                                   onClick={() => onOpenSecretManagerStudio()}
                                   title="Open Dedicated Secret Manager Lifecycle Studio to rotate versions, disable old versions ($0/mo), manage IAM secretAccessor bindings, and track your 6 Free Active Versions quota"
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-100 border border-zinc-700 transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
                                 >
                                   <KeyRound className="w-3 h-3 text-amber-400" />
                                   <span>
@@ -4218,7 +4218,7 @@ spec:
                                 [srv.id]: null,
                               }))
                             }
-                            className="text-xs text-zinc-400 hover:text-zinc-200 px-2 py-1"
+                            className="text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 px-2 py-1"
                           >
                             Close
                           </button>
@@ -4353,7 +4353,7 @@ spec:
                                       }
                                       className={`text-[10.5px] font-mono font-bold px-2.5 py-1 rounded border transition-colors cursor-pointer ${
                                         isSelectedForAutopsy
-                                          ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                                          ? 'bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
                                           : 'bg-white dark:bg-zinc-950 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
                                       }`}
                                     >
@@ -4638,11 +4638,11 @@ spec:
                             Live Cloud Logging Stream (`logging.googleapis.com/v2` · {revLogs.length} Recent Entries for {autopsyState.selectedRevision || srv.latestReadyRevision}):
                           </div>
                           {revLogs.length === 0 && !autopsyState.loading ? (
-                            <div className="p-2.5 rounded-lg bg-zinc-950 text-zinc-400 font-mono text-[10.5px]">
+                            <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 text-zinc-400 font-mono text-[10.5px]">
                               No recent container stderr/stdout or startup error logs recorded for this revision.
                             </div>
                           ) : (
-                            <div className="max-h-48 overflow-y-auto rounded-lg bg-zinc-950 border border-zinc-800 p-2.5 space-y-1 font-mono text-[10.5px]">
+                            <div className="max-h-48 overflow-y-auto rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-2.5 space-y-1 font-mono text-[10.5px]">
                               {revLogs.map((l) => {
                                 const isErr =
                                   l.severity === 'ERROR' ||
@@ -4656,8 +4656,8 @@ spec:
                                       isErr
                                         ? 'text-red-400'
                                         : isWarn
-                                        ? 'text-amber-300'
-                                        : 'text-zinc-300'
+                                        ? 'text-amber-700 dark:text-amber-300'
+                                        : 'text-zinc-700 dark:text-zinc-300'
                                     }`}
                                   >
                                     <span className="text-zinc-500 shrink-0">
@@ -4668,10 +4668,10 @@ spec:
                                     <span
                                       className={`px-1 rounded text-[9px] uppercase font-bold shrink-0 ${
                                         isErr
-                                          ? 'bg-red-500/20 text-red-300'
+                                          ? 'bg-red-500/20 text-red-700 dark:text-red-300'
                                           : isWarn
-                                          ? 'bg-amber-500/20 text-amber-300'
-                                          : 'bg-zinc-800 text-zinc-400'
+                                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
                                       }`}
                                     >
                                       {l.stream}:{l.severity}
@@ -4773,7 +4773,7 @@ spec:
                     <div className="mt-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4 bg-zinc-50 dark:bg-zinc-900/90 p-4 rounded-xl text-zinc-900 dark:text-zinc-100">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider font-mono text-blue-300 flex items-center gap-1.5">
+                          <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider font-mono text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
                             <Layers className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                             <span>
                               Graduate `{srv.name}` ({srv.region}) → Production GKE Kubernetes Cluster
@@ -4788,7 +4788,7 @@ spec:
                           onClick={() =>
                             setOpenDrawer((prev) => ({ ...prev, [srv.id]: null }))
                           }
-                          className="text-xs font-mono text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                          className="text-xs font-mono text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 cursor-pointer"
                         >
                           Close
                         </button>
@@ -4796,7 +4796,7 @@ spec:
 
                       {/* FinOps & Architecture Advantage Bar */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                        <div className="p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800">
+                        <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                           <div className="text-[10px] font-mono text-zinc-400">
                             Cloud Run Warm Burn ({bundle.minReplicas}x {srv.cpu}vCPU/{srv.memory})
                           </div>
@@ -4805,7 +4805,7 @@ spec:
                           </div>
                         </div>
 
-                        <div className="p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800">
+                        <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                           <div className="text-[10px] font-mono text-zinc-400">
                             GKE Autopilot Pod Billing (-42%)
                           </div>
@@ -4814,8 +4814,8 @@ spec:
                           </div>
                         </div>
 
-                        <div className="p-2.5 rounded-lg bg-zinc-900/90 border border-emerald-500/30">
-                          <div className="text-[10px] font-mono text-emerald-300">
+                        <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-emerald-500/30">
+                          <div className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
                             GKE Spot VM / Spot GPU Pool (-68%)
                           </div>
                           <div className="text-sm font-extrabold text-emerald-400 mt-0.5 font-mono">
@@ -4867,7 +4867,7 @@ spec:
                               className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
                                 active
                                   ? 'bg-blue-600/30 border-blue-400 text-white'
-                                  : 'bg-zinc-900/60 border-zinc-800 text-zinc-400'
+                                  : 'bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                               }`}
                             >
                               <div className="text-[10.5px] font-bold font-mono">
@@ -4884,7 +4884,7 @@ spec:
 
                       {/* Target GKE Cluster + Side-by-Side YAML Preview */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                        <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800 space-y-2.5">
+                        <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div>
                               <label className="block text-[10px] font-mono text-zinc-400 mb-1">
@@ -4902,7 +4902,7 @@ spec:
                                     },
                                   }))
                                 }
-                                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-white"
+                                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
                               />
                             </div>
 
@@ -4927,7 +4927,7 @@ spec:
                                       },
                                     }))
                                   }
-                                  className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-white"
+                                  className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
                                 >
                                   {gkeClusters.map((c) => (
                                     <option key={c.name} value={c.name}>
@@ -4952,13 +4952,13 @@ spec:
                                       },
                                     }))
                                   }
-                                  className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-white"
+                                  className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
                                 />
                               )}
                             </div>
                           </div>
 
-                          <label className="flex items-center gap-2 text-xs font-mono text-zinc-300 cursor-pointer">
+                          <label className="flex items-center gap-2 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={Boolean(cfg.createAutopilotCluster)}
@@ -5010,7 +5010,7 @@ spec:
                           </div>
                         </div>
 
-                        <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 space-y-2">
+                        <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
@@ -5026,7 +5026,7 @@ spec:
                               className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
                                 cfg.manifestViewMode !== 'KNATIVE_CONSOLE'
                                   ? 'bg-emerald-600 text-white'
-                                  : 'bg-zinc-900 text-zinc-400'
+                                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-400'
                               }`}
                             >
                               CloudPulse 6-Resource GKE Bundle
@@ -5045,13 +5045,13 @@ spec:
                               className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer ${
                                 cfg.manifestViewMode === 'KNATIVE_CONSOLE'
                                   ? 'bg-red-600 text-white'
-                                  : 'bg-zinc-900 text-zinc-400'
+                                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-400'
                               }`}
                             >
                               Raw GCP Console Knative YAML
                             </button>
                           </div>
-                          <pre className="text-[10px] font-mono text-emerald-300 overflow-x-auto max-h-48">
+                          <pre className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-48">
                             {cfg.manifestViewMode === 'KNATIVE_CONSOLE'
                               ? bundle.rawKnativeYaml
                               : bundle.k8sBundleYaml}

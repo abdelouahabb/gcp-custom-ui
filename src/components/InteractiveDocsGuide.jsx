@@ -397,7 +397,7 @@ const DOC_SECTIONS = [
     title:
       '2026 Neural Chrono-Log & Trace Studio: 3-Layer NLP-to-LQL/BigQuery SQL Compiler, Official LQL Interactive Tutorial, Drain3 Pattern Clustering, Cross-Service `traceId` Waterfall & `_Default` Sink FinOps',
     badge: 'LOGS & SHELL TAB · NLP + LQL + $0.50/GiB NOISE CUTTER',
-    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    badgeColor: 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/40',
     icon: Zap,
     targetTab: 'LOGS_SHELL',
     problemSolved:
@@ -1295,7 +1295,7 @@ export default function InteractiveDocsGuide({
 
                 {/* Right Column: Under-the-Hood REST APIs & Billing/Safety Impact */}
                 <div className="lg:col-span-5 space-y-3">
-                  <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
                     <div className="text-[10px] font-mono font-bold uppercase text-blue-400 flex items-center gap-1.5">
                       <Terminal className="w-3.5 h-3.5" />
                       <span>Under-the-Hood GCP REST APIs Called</span>
@@ -1304,7 +1304,7 @@ export default function InteractiveDocsGuide({
                       {doc.apisUsed.map((api, i) => (
                         <div
                           key={i}
-                          className="text-[11px] font-mono text-zinc-300 break-all"
+                          className="text-[11px] font-mono text-zinc-700 dark:text-zinc-300 break-all"
                         >
                           • {api}
                         </div>

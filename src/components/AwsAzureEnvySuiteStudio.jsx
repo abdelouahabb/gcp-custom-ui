@@ -3337,7 +3337,7 @@ export default function AwsAzureEnvySuiteStudio({
                   <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
                     <strong>Console:</strong> {bp.consolePath}
                   </div>
-                  <div className="p-1.5 rounded bg-zinc-950 text-emerald-300 text-[10px] overflow-x-auto whitespace-nowrap">
+                  <div className="p-1.5 rounded bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 text-[10px] overflow-x-auto whitespace-nowrap">
                     $ {bp.manualVerifyCli}
                   </div>
                   <div className="text-[10px] text-zinc-500">
@@ -3540,7 +3540,7 @@ export default function AwsAzureEnvySuiteStudio({
                             <strong>{(confirmTeardownModal.apisEnabled || []).length}</strong> underlying Google Cloud APIs (
                             <code>{(confirmTeardownModal.apisEnabled || []).join(', ')}</code>) across project <code>{pid}</code>. Warning: any other workloads in <code>{pid}</code> that depend on these APIs will also stop working!
                           </p>
-                          <div className="p-2 rounded bg-zinc-950 text-rose-300 text-[10px] overflow-x-auto whitespace-nowrap">
+                          <div className="p-2 rounded bg-white dark:bg-zinc-950 text-rose-700 dark:text-rose-300 text-[10px] overflow-x-auto whitespace-nowrap">
                             $ gcloud services disable {(confirmTeardownModal.apisEnabled || []).join(' ')} --project={pid}
                           </div>
                         </div>
@@ -3552,7 +3552,7 @@ export default function AwsAzureEnvySuiteStudio({
                         <div className="text-[10px] font-bold text-zinc-500 uppercase">
                           Google Cloud CLI Verification Command:
                         </div>
-                        <div className="p-2 rounded-lg bg-zinc-950 text-emerald-300 text-[10px] overflow-x-auto whitespace-nowrap">
+                        <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 text-[10px] overflow-x-auto whitespace-nowrap">
                           $ {confirmTeardownModal.manualVerifyCli}
                         </div>
                       </div>
@@ -4093,7 +4093,7 @@ export default function AwsAzureEnvySuiteStudio({
                 type="button"
                 onClick={handleSaveSpendFuse}
                 disabled={actionBusy === 'SAVE_FUSE'}
-                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-zinc-900 dark:text-white dark:text-zinc-950 cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -4752,7 +4752,7 @@ export default function AwsAzureEnvySuiteStudio({
                   </div>
 
                   <div className="relative">
-                    <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-400 text-[11px] font-mono overflow-x-auto max-h-64">
+                    <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-emerald-400 text-[11px] font-mono overflow-x-auto max-h-64">
                       {lbReceipt.full7StepCli}
                     </pre>
                     <button
@@ -4763,7 +4763,7 @@ export default function AwsAzureEnvySuiteStudio({
                           'Copied 7-step Global Load Balancer CLI.'
                         )
                       }
-                      className="absolute top-2 right-2 px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-[10px] font-mono font-bold cursor-pointer"
+                      className="absolute top-2 right-2 px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-[10px] font-mono font-bold cursor-pointer"
                     >
                       Copy CLI
                     </button>
@@ -4938,7 +4938,7 @@ export default function AwsAzureEnvySuiteStudio({
                         </div>
                       )}
 
-                      <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-400 text-[10.5px] font-mono overflow-x-auto max-h-40">
+                      <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-emerald-400 text-[10.5px] font-mono overflow-x-auto max-h-40">
                         {iacCode}
                       </pre>
                     </div>
@@ -5170,7 +5170,7 @@ export default function AwsAzureEnvySuiteStudio({
               </div>
 
               {finopsReceipt?.gcloudCudCli && (
-                <div className="p-3 rounded-xl bg-zinc-950 text-emerald-400 text-[11px] font-mono space-y-1.5">
+                <div className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-emerald-400 text-[11px] font-mono space-y-1.5">
                   <div className="text-zinc-400 font-bold">
                     Reproducible CUD / Budget CLI:
                   </div>
@@ -5319,7 +5319,7 @@ export default function AwsAzureEnvySuiteStudio({
                   {(ssmFleet.recentExecutions || []).map((exec) => (
                     <div
                       key={exec.executionId}
-                      className="p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 font-mono text-xs space-y-2"
+                      className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 font-mono text-xs space-y-2"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-bold text-blue-400">
@@ -5332,17 +5332,17 @@ export default function AwsAzureEnvySuiteStudio({
                       {(exec.results || []).map((r, idx) => (
                         <div
                           key={idx}
-                          className="p-2 rounded bg-zinc-900 border border-zinc-800 space-y-1 text-[11px]"
+                          className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1 text-[11px]"
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-emerald-400">
                               {r.targetName}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px]">
                               {r.status} (exit={r.exitCode})
                             </span>
                           </div>
-                          <div className="text-zinc-300 break-all">
+                          <div className="text-zinc-700 dark:text-zinc-300 break-all">
                             {r.stdout}
                           </div>
                         </div>
@@ -6067,7 +6067,7 @@ export default function AwsAzureEnvySuiteStudio({
                       <span>Copy Script</span>
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-300 text-[11px] font-mono overflow-x-auto">
+                  <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono overflow-x-auto">
                     {tgwReceipt.cliScript}
                   </pre>
                 </div>
@@ -6255,7 +6255,7 @@ export default function AwsAzureEnvySuiteStudio({
                       <span>Copy YAML</span>
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-zinc-950 text-violet-300 text-[11px] font-mono overflow-x-auto max-h-64">
+                  <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-violet-300 text-[11px] font-mono overflow-x-auto max-h-64">
                     {composeReceipt.knativeYaml}
                   </pre>
                 </div>
@@ -6564,7 +6564,7 @@ export default function AwsAzureEnvySuiteStudio({
                       <span>Copy YAML</span>
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-300 text-[11px] font-mono overflow-x-auto max-h-64">
+                  <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono overflow-x-auto max-h-64">
                     {sfnReceipt.workflowYaml}
                   </pre>
                 </div>
@@ -6917,7 +6917,7 @@ export default function AwsAzureEnvySuiteStudio({
                         <span>Copy Code</span>
                       </button>
                     </div>
-                    <pre className="p-3 rounded-xl bg-zinc-950 text-indigo-300 text-[11px] font-mono overflow-x-auto">
+                    <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-indigo-700 dark:text-indigo-300 text-[11px] font-mono overflow-x-auto">
                       {oauthBrokerReceipt.brokerSnippet}
                     </pre>
                   </div>
@@ -7190,7 +7190,7 @@ export default function AwsAzureEnvySuiteStudio({
                 type="button"
                 onClick={() => handleQueryCloudTrailLake()}
                 disabled={actionBusy === 'CLOUDTRAIL_QUERY'}
-                className="px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-950 cursor-pointer"
               >
                 {actionBusy === 'CLOUDTRAIL_QUERY'
                   ? 'Scanning Audit Lake...'
@@ -7222,7 +7222,7 @@ export default function AwsAzureEnvySuiteStudio({
             )}
 
             {ctSqlText && (
-              <pre className="p-3 rounded-xl bg-zinc-950 text-amber-300 text-[11px] font-mono overflow-x-auto">
+              <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-amber-700 dark:text-amber-300 text-[11px] font-mono overflow-x-auto">
                 {ctSqlText}
               </pre>
             )}
@@ -7440,7 +7440,7 @@ export default function AwsAzureEnvySuiteStudio({
                         Revoke Share
                       </button>
                     </div>
-                    <div className="text-[10px] font-mono text-emerald-400 bg-zinc-950 p-2 rounded-lg overflow-x-auto">
+                    <div className="text-[10px] font-mono text-emerald-400 bg-white dark:bg-zinc-950 p-2 rounded-lg overflow-x-auto">
                       {sh.cliCommand}
                     </div>
                   </div>
@@ -7603,7 +7603,7 @@ export default function AwsAzureEnvySuiteStudio({
                   <button
                     type="submit"
                     disabled={actionBusy === 'AI_GW_TEST'}
-                    className="px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-950 cursor-pointer"
                   >
                     {actionBusy === 'AI_GW_TEST'
                       ? 'Evaluating Guardrails...'
@@ -7817,7 +7817,7 @@ export default function AwsAzureEnvySuiteStudio({
                   <button
                     type="submit"
                     disabled={actionBusy === 'ALIYUN_PTS_DRILL'}
-                    className="px-3 py-1.5 rounded-xl font-extrabold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl font-extrabold bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-950 cursor-pointer"
                   >
                     {actionBusy === 'ALIYUN_PTS_DRILL'
                       ? 'Running PTS Surge...'
@@ -8699,13 +8699,13 @@ export default function AwsAzureEnvySuiteStudio({
          ===================================================================== */}
       {activeSubTab === 'HUAWEI_DATAV_NOC_COMMAND_WALL' && (
         <div className="space-y-6">
-          <div className="bg-zinc-950 text-zinc-100 border border-orange-500/40 rounded-2xl p-6 shadow-lg space-y-5 font-mono">
+          <div className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-orange-500/40 rounded-2xl p-6 shadow-lg space-y-5 font-mono">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="text-[11px] text-orange-400 font-extrabold uppercase tracking-wider">
                   ALIBABA DATAV &amp; HUAWEI CLOUD ASTRO · EXECUTIVE DIGITAL-TWIN NOC WALL
                 </div>
-                <h3 className="text-lg font-extrabold text-white mt-0.5">
+                <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white mt-0.5">
                   {huaweiDataVNoc.screenTitle}
                 </h3>
               </div>
@@ -8717,7 +8717,7 @@ export default function AwsAzureEnvySuiteStudio({
                   type="text"
                   value={datavDrillScenario}
                   onChange={(e) => setDatavDrillScenario(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 w-72"
+                  className="px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 w-72"
                 />
                 <button
                   type="submit"
@@ -8732,25 +8732,25 @@ export default function AwsAzureEnvySuiteStudio({
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-              <div className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800">
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-zinc-400">Live Global Checkout Volume</div>
                 <div className="text-xl font-extrabold text-orange-400 mt-1">
                   ${Number(huaweiDataVNoc.globalLiveGmvUsd || 0).toLocaleString()}
                 </div>
               </div>
-              <div className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800">
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-zinc-400">Global Edge Ingress QPS</div>
                 <div className="text-xl font-extrabold text-emerald-400 mt-1">
                   {Number(huaweiDataVNoc.globalIngressQps || 0).toLocaleString()} QPS
                 </div>
               </div>
-              <div className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800">
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-zinc-400">CEN Backbone Latency</div>
                 <div className="text-xl font-extrabold text-cyan-400 mt-1">
                   APAC-EU {huaweiDataVNoc.apakToEuFiberRttMs}ms / US {huaweiDataVNoc.apakToUsFiberRttMs}ms
                 </div>
               </div>
-              <div className="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800">
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-zinc-400">Autonomous Mitigations Today</div>
                 <div className="text-xl font-extrabold text-purple-400 mt-1">
                   {huaweiDataVNoc.autoMitigatedAnomaliesToday} Self-Healed
@@ -8762,7 +8762,7 @@ export default function AwsAzureEnvySuiteStudio({
               <span>
                 Latest Autonomous Drill Telemetry: <strong>{huaweiDataVNoc.lastDrillScenario}</strong>
               </span>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
                 {huaweiDataVNoc.activeRegionsHealthy}
               </span>
             </div>

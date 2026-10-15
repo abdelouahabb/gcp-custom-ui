@@ -821,7 +821,7 @@ export default function AutonomousCloudBrain({
         </div>
 
         {/* 30-Day SVG Time-Crystal Projection Graph */}
-        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+        <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-400">
             <span>
               30-Day Cumulative Spend Trajectory (Day 1 → Day 30)
@@ -949,12 +949,12 @@ export default function AutonomousCloudBrain({
           </svg>
 
           {/* Auto-Mitigation Command Bar */}
-          <div className="pt-2 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-            <div className="text-zinc-300 truncate max-w-2xl">
+          <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+            <div className="text-zinc-700 dark:text-zinc-300 truncate max-w-2xl">
               <span className="text-blue-400 font-bold">
                 Auto-Mitigation CLI:{' '}
               </span>
-              <code className="text-emerald-300">
+              <code className="text-emerald-700 dark:text-emerald-300">
                 {activeScenario.mitigationCmd}
               </code>
             </div>
@@ -963,7 +963,7 @@ export default function AutonomousCloudBrain({
               onClick={() =>
                 handleCopy(activeScenario.mitigationCmd, 'MITIGATION')
               }
-              className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer flex items-center gap-1"
             >
               {copiedCmd === 'MITIGATION' ? (
                 <>
@@ -1253,7 +1253,7 @@ export default function AutonomousCloudBrain({
                 )}
               </button>
             </div>
-            <pre className="flex-1 p-3 rounded-xl bg-zinc-950 text-emerald-300 border border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-64">
+            <pre className="flex-1 p-3 rounded-xl bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-64">
               {compiledBlueprint.script}
             </pre>
           </div>

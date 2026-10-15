@@ -17,7 +17,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-white dark:bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#202124] rounded-[12px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-xl p-6 space-y-4">
         <div className="flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-4">
           <div className="flex items-center gap-3">
@@ -65,7 +65,7 @@ export default function CloudRunDeployModal({ isOpen, onClose, projectId }) {
                 )}
               </button>
             </div>
-            <pre className="p-3 rounded-lg bg-zinc-950 text-emerald-400 font-mono text-[11px] whitespace-pre-wrap break-all">
+            <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 text-emerald-400 font-mono text-[11px] whitespace-pre-wrap break-all">
               $ {deployCmd}
             </pre>
           </div>

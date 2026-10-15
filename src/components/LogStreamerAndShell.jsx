@@ -362,15 +362,15 @@ export default function LogStreamerAndShell({
   const getCategoryBadge = (cat) => {
     switch (cat) {
       case 'CREATE':
-        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        return 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40';
       case 'DELETE':
-        return 'bg-red-500/20 text-red-300 border-red-500/40';
+        return 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/40';
       case 'IAM_SECURITY':
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+        return 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40';
       case 'POWER':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+        return 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/40';
       default:
-        return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+        return 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/40';
     }
   };
 
@@ -845,9 +845,9 @@ export default function LogStreamerAndShell({
           {/* Collapsible Compiled LQL & Linked BigQuery Log Analytics SQL Drawer */}
           {showCompiledSqlModal && chronoData?.compiledQuery && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-              <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase text-purple-300 font-bold">
+                  <span className="text-[10px] font-mono uppercase text-purple-700 dark:text-purple-300 font-bold">
                     Native Cloud Logging LQL Filter (`entries:list`)
                   </span>
                   <button
@@ -858,7 +858,7 @@ export default function LogStreamerAndShell({
                         'copy-lql'
                       )
                     }
-                    className="text-[10px] font-mono text-zinc-300 hover:text-white inline-flex items-center gap-1 cursor-pointer"
+                    className="text-[10px] font-mono text-zinc-700 dark:text-zinc-300 hover:text-white inline-flex items-center gap-1 cursor-pointer"
                   >
                     {copiedId === 'copy-lql' ? (
                       <>
@@ -878,13 +878,13 @@ export default function LogStreamerAndShell({
                   value={customLqlInput || chronoData.compiledQuery.effectiveLql || ''}
                   onChange={(e) => setCustomLqlInput(e.target.value)}
                   placeholder='resource.type="cloud_run_revision" AND severity>=ERROR'
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-[11px] font-mono text-emerald-300"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-2.5 py-1.5 text-[11px] font-mono text-emerald-700 dark:text-emerald-300"
                 />
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase text-blue-300 font-bold">
+                  <span className="text-[10px] font-mono uppercase text-blue-700 dark:text-blue-300 font-bold">
                     Log Analytics BigQuery SQL (`_Default._AllLogs`)
                   </span>
                   <button
@@ -892,7 +892,7 @@ export default function LogStreamerAndShell({
                     onClick={() =>
                       handleCopy(chronoData.compiledQuery.bigQuerySql, 'copy-bq-sql')
                     }
-                    className="text-[10px] font-mono text-zinc-300 hover:text-white inline-flex items-center gap-1 cursor-pointer"
+                    className="text-[10px] font-mono text-zinc-700 dark:text-zinc-300 hover:text-white inline-flex items-center gap-1 cursor-pointer"
                   >
                     {copiedId === 'copy-bq-sql' ? (
                       <>
@@ -907,7 +907,7 @@ export default function LogStreamerAndShell({
                     )}
                   </button>
                 </div>
-                <pre className="text-[10px] font-mono text-blue-200 overflow-x-auto max-h-28">
+                <pre className="text-[10px] font-mono text-blue-800 dark:text-blue-200 overflow-x-auto max-h-28">
                   {chronoData.compiledQuery.bigQuerySql}
                 </pre>
               </div>
@@ -1107,11 +1107,11 @@ export default function LogStreamerAndShell({
                   </div>
 
                   {isOpen && (
-                    <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-950 text-zinc-200 space-y-2 font-mono text-[11px]">
+                    <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 space-y-2 font-mono text-[11px]">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-zinc-400">
                           Drain3 Signature:{' '}
-                          <code className="text-purple-300">{entry.signaturePattern}</code>
+                          <code className="text-purple-700 dark:text-purple-300">{entry.signaturePattern}</code>
                         </span>
                         {onAskCopilot && (
                           <button
@@ -1128,7 +1128,7 @@ export default function LogStreamerAndShell({
                           </button>
                         )}
                       </div>
-                      <pre className="text-[10px] text-zinc-300 overflow-x-auto max-h-44 p-2 rounded bg-zinc-900 border border-zinc-800">
+                      <pre className="text-[10px] text-zinc-700 dark:text-zinc-300 overflow-x-auto max-h-44 p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                         {JSON.stringify(entry.raw || entry, null, 2)}
                       </pre>
                     </div>
@@ -1194,7 +1194,7 @@ export default function LogStreamerAndShell({
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded bg-zinc-900 text-emerald-300 font-mono text-xs break-words border border-zinc-800">
+                <div className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-900 text-emerald-700 dark:text-emerald-300 font-mono text-xs break-words border border-zinc-200 dark:border-zinc-800">
                   {cluster.signaturePattern}
                 </div>
 
@@ -1244,10 +1244,10 @@ export default function LogStreamerAndShell({
             </div>
 
             {activeWaterfall && (
-              <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-3 text-zinc-100 font-mono">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
+              <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3 text-zinc-900 dark:text-zinc-100 font-mono">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
                   <div>
-                    <div className="text-xs font-bold text-purple-300">
+                    <div className="text-xs font-bold text-purple-700 dark:text-purple-300">
                       End-to-End Trace ID: {activeWaterfall.traceId}
                     </div>
                     <div className="text-[11px] text-zinc-400">
@@ -1267,33 +1267,33 @@ export default function LogStreamerAndShell({
                   {activeWaterfall.spans.map((span) => (
                     <div
                       key={span.spanId}
-                      className="p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800 space-y-1.5"
+                      className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-2">
                           <span
                             className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                               span.httpStatus >= 500
-                                ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                                ? 'bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/40'
                                 : span.httpStatus >= 400
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                                : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
                             }`}
                           >
                             {span.httpMethod} {span.httpStatus}
                           </span>
-                          <span className="font-bold text-white">{span.serviceName}</span>
+                          <span className="font-bold text-zinc-900 dark:text-white">{span.serviceName}</span>
                           <span className="text-zinc-400 text-[11px]">
                             ({span.resourceTarget})
                           </span>
                         </div>
-                        <span className="text-xs font-bold text-amber-300">
+                        <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
                           {span.latencyMs}ms
                         </span>
                       </div>
 
                       {/* Proportional Gantt Span Bar */}
-                      <div className="w-full h-2.5 rounded-full bg-zinc-800 overflow-hidden relative">
+                      <div className="w-full h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden relative">
                         <div
                           style={{
                             marginLeft: `${span.offsetPct}%`,
@@ -1309,7 +1309,7 @@ export default function LogStreamerAndShell({
                         />
                       </div>
 
-                      <div className="text-[11px] text-zinc-300 break-words">
+                      <div className="text-[11px] text-zinc-700 dark:text-zinc-300 break-words">
                         {span.cleanMessage}
                       </div>
                     </div>
@@ -1364,7 +1364,7 @@ export default function LogStreamerAndShell({
                     <div className="text-[11px] font-mono text-zinc-500">
                       {rec.recommendation}
                     </div>
-                    <pre className="p-2 rounded bg-zinc-950 text-emerald-300 text-[10px] font-mono overflow-x-auto">
+                    <pre className="p-2 rounded bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono overflow-x-auto">
                       {rec.exclusionFilter}
                     </pre>
                     <div className="flex items-center justify-end gap-2 pt-1">
@@ -1417,7 +1417,7 @@ export default function LogStreamerAndShell({
                         {alert.serviceName} · {formatLogDate(alert.timestamp)}
                       </span>
                     </div>
-                    <div className="p-2 rounded bg-zinc-950 text-amber-200 text-[10.5px] font-mono break-all">
+                    <div className="p-2 rounded bg-white dark:bg-zinc-950 text-amber-800 dark:text-amber-200 text-[10.5px] font-mono break-all">
                       Redacted Safe Preview: {alert.redactedPreview}
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
@@ -1692,11 +1692,11 @@ export default function LogStreamerAndShell({
 
                   {/* Expanded ProtoPayload Request / Policy Delta Inspector */}
                   {isOpen && (
-                    <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-950 text-zinc-200 space-y-2.5 font-mono text-[11px]">
+                    <div className="p-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 space-y-2.5 font-mono text-[11px]">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="text-zinc-400">
                           Target Resource URI:{' '}
-                          <span className="text-emerald-300 font-bold">
+                          <span className="text-emerald-700 dark:text-emerald-300 font-bold">
                             {ev.resourceName}
                           </span>{' '}
                           · Status: {ev.statusMessage}
@@ -1719,7 +1719,7 @@ export default function LogStreamerAndShell({
 
                       {ev.policyDelta?.length > 0 && (
                         <div className="p-2.5 rounded bg-amber-500/10 border border-amber-500/30 space-y-1">
-                          <div className="text-[10px] font-bold uppercase text-amber-300">
+                          <div className="text-[10px] font-bold uppercase text-amber-700 dark:text-amber-300">
                             IAM Policy Binding Deltas (`serviceData.policyDelta`):
                           </div>
                           {ev.policyDelta.map((d, idx) => (
@@ -1730,38 +1730,38 @@ export default function LogStreamerAndShell({
                               <span
                                 className={`px-1.5 py-0.5 rounded font-bold ${
                                   d.action === 'ADD'
-                                    ? 'bg-emerald-500/20 text-emerald-300'
-                                    : 'bg-red-500/20 text-red-300'
+                                    ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-red-500/20 text-red-700 dark:text-red-300'
                                 }`}
                               >
                                 {d.action}
                               </span>
-                              <span className="text-white">{d.role}</span>
+                              <span className="text-zinc-900 dark:text-white">{d.role}</span>
                               <span className="text-zinc-400">➔</span>
-                              <span className="text-blue-300">{d.member}</span>
+                              <span className="text-blue-700 dark:text-blue-300">{d.member}</span>
                             </div>
                           ))}
                         </div>
                       )}
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-                        <div className="p-2.5 rounded bg-zinc-900 border border-zinc-800 overflow-x-auto max-h-48">
+                        <div className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-x-auto max-h-48">
                           <div className="text-[10px] text-zinc-400 mb-1 flex items-center gap-1">
                             <FileCode2 className="w-3 h-3" />
                             <span>protoPayload.request (Mutation Spec)</span>
                           </div>
-                          <pre className="text-[10px] text-emerald-300">
+                          <pre className="text-[10px] text-emerald-700 dark:text-emerald-300">
                             {ev.requestPayload
                               ? JSON.stringify(ev.requestPayload, null, 2)
                               : '// No request body recorded in Admin Activity entry'}
                           </pre>
                         </div>
 
-                        <div className="p-2.5 rounded bg-zinc-900 border border-zinc-800 overflow-x-auto max-h-48">
+                        <div className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-x-auto max-h-48">
                           <div className="text-[10px] text-zinc-400 mb-1">
                             Inspection / Rollback CLI Command
                           </div>
-                          <pre className="text-[10px] text-blue-300 whitespace-pre-wrap">
+                          <pre className="text-[10px] text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
                             {ev.reverseCli}
                           </pre>
                         </div>
@@ -2002,7 +2002,7 @@ export default function LogStreamerAndShell({
           </form>
 
           {/* Terminal Output Stream */}
-          <div className="flex-1 bg-[#131314] border border-zinc-800 rounded-lg p-3.5 font-mono text-xs text-zinc-200 space-y-3 max-h-[340px] overflow-y-auto">
+          <div className="flex-1 bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-3.5 font-mono text-xs text-zinc-800 dark:text-zinc-200 space-y-3 max-h-[340px] overflow-y-auto">
             {shellHistory.length === 0 ? (
               <div className="text-[11px] text-zinc-500 text-center py-8">
                 Terminal cleared. Tap any quick command chip above or type a <code className="font-mono">gcloud</code> / <code className="font-mono">bq</code> command.
@@ -2011,7 +2011,7 @@ export default function LogStreamerAndShell({
               shellHistory.map((item) => (
                 <div
                   key={item.id}
-                  className="border-b border-zinc-800/80 pb-3 last:border-b-0 last:pb-0 space-y-1.5"
+                  className="border-b border-zinc-200 dark:border-zinc-800/80 pb-3 last:border-b-0 last:pb-0 space-y-1.5"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                     <span
@@ -2023,7 +2023,7 @@ export default function LogStreamerAndShell({
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {item.engine && (
-                        <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-[9.5px] text-purple-300">
+                        <span className="px-1.5 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[9.5px] text-purple-700 dark:text-purple-300">
                           {item.engine}
                         </span>
                       )}
@@ -2050,7 +2050,7 @@ export default function LogStreamerAndShell({
                       </button>
                     </div>
                   </div>
-                  <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
+                  <pre className="text-[11px] text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
                     {item.output}
                   </pre>
                 </div>

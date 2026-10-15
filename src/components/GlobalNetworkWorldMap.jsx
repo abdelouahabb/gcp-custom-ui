@@ -2927,14 +2927,14 @@ export default function GlobalNetworkWorldMap({
                 onClick={() => setSimMode(mode.id)}
                 className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                   active
-                    ? 'bg-zinc-900 text-white dark:bg-zinc-900 border-blue-500 shadow-sm'
+                    ? 'bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-900 border-blue-500 shadow-sm'
                     : 'bg-zinc-50/80 dark:bg-zinc-950/60 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
                 }`}
               >
                 <div className="text-xs font-bold font-mono">{mode.title}</div>
                 <div
                   className={`text-[10px] mt-0.5 line-clamp-1 ${
-                    active ? 'text-zinc-300' : 'text-zinc-500'
+                    active ? 'text-zinc-700 dark:text-zinc-300' : 'text-zinc-500'
                   }`}
                 >
                   {mode.desc}
@@ -2954,9 +2954,9 @@ export default function GlobalNetworkWorldMap({
       {/* 2. Interactive Orbital World Map Canvas + Right Region/Zone Inspector */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {/* Left/Center 8 Columns: Full Interactive SVG World Map */}
-        <div className="xl:col-span-8 bg-[#05070e] border border-blue-500/30 rounded-2xl overflow-hidden shadow-2xl relative">
+        <div className="xl:col-span-8 bg-white dark:bg-[#05070e] border border-blue-500/30 rounded-2xl overflow-hidden shadow-2xl relative">
           {/* Top Map HUD Overlay */}
-          <div className="px-4 py-2.5 bg-zinc-950/90 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono">
+          <div className="px-4 py-2.5 bg-white dark:bg-zinc-950/90 border-b border-zinc-200 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono">
             <div className="flex items-center gap-4 flex-wrap">
               <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
@@ -2990,14 +2990,14 @@ export default function GlobalNetworkWorldMap({
               )}
               <span className="text-zinc-400">
                 Active Regions:{' '}
-                <strong className="text-white">{activeRegionIds.length}</strong> /{' '}
+                <strong className="text-zinc-900 dark:text-white">{activeRegionIds.length}</strong> /{' '}
                 {GCP_GLOBAL_REGIONS.length}
               </span>
             </div>
           </div>
 
           {/* Interactive Camera & Region Quick-Zoom Bar */}
-          <div className="px-3.5 py-2 bg-zinc-950/95 border-b border-zinc-800/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+          <div className="px-3.5 py-2 bg-white dark:bg-zinc-950/95 border-b border-zinc-200 dark:border-zinc-800/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
             {/* Continent Camera Presets */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-zinc-400 flex items-center gap-1 font-bold">
@@ -3016,7 +3016,7 @@ export default function GlobalNetworkWorldMap({
                   key={c.id}
                   type="button"
                   onClick={() => focusOnContinent(c.id)}
-                  className="px-2 py-1 rounded-md bg-zinc-900 hover:bg-blue-500/20 text-zinc-300 hover:text-blue-300 border border-zinc-800 hover:border-blue-500/40 transition-colors cursor-pointer"
+                  className="px-2 py-1 rounded-md bg-zinc-50 dark:bg-zinc-900 hover:bg-blue-500/20 text-zinc-700 dark:text-zinc-300 hover:text-blue-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 transition-colors cursor-pointer"
                 >
                   {c.label}
                 </button>
@@ -3028,7 +3028,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={selectedRegionId}
                 onChange={(e) => focusOnRegion(e.target.value, 3.4)}
-                className="bg-zinc-900 border border-blue-500/40 text-blue-300 rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-blue-500/40 text-blue-700 dark:text-blue-300 rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer"
                 title="Select any of the 40 GCP Regions to zoom directly to it"
               >
                 {[
@@ -3062,19 +3062,19 @@ export default function GlobalNetworkWorldMap({
                 title="When enabled, only the selected/hovered region displays its orbiting Availability Zone dots and full label, while neighboring regions fade into transparent Ghost Mode to prevent overlap when zoomed in"
                 className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-colors cursor-pointer ${
                   spotlightMode
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                    : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 {spotlightMode ? 'Spotlight Focus: ON' : 'Show All Labels'}
               </button>
 
-              <div className="inline-flex items-center rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
+              <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 overflow-hidden">
                 <button
                   type="button"
                   onClick={() => handleZoomStep(-0.6)}
                   title="Zoom Out"
-                  className="p-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer"
+                  className="p-1.5 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-white cursor-pointer"
                 >
                   <ZoomOut className="w-3.5 h-3.5" />
                 </button>
@@ -3085,7 +3085,7 @@ export default function GlobalNetworkWorldMap({
                   type="button"
                   onClick={() => handleZoomStep(0.6)}
                   title="Zoom In"
-                  className="p-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer"
+                  className="p-1.5 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-white cursor-pointer"
                 >
                   <ZoomIn className="w-3.5 h-3.5" />
                 </button>
@@ -3093,7 +3093,7 @@ export default function GlobalNetworkWorldMap({
                   type="button"
                   onClick={handleResetMapCamera}
                   title="Reset Camera to Full World View (1x)"
-                  className="px-2 py-1 text-[10px] text-zinc-400 hover:text-white border-l border-zinc-800 cursor-pointer flex items-center gap-1"
+                  className="px-2 py-1 text-[10px] text-zinc-400 hover:text-white border-l border-zinc-200 dark:border-zinc-800 cursor-pointer flex items-center gap-1"
                 >
                   <Maximize2 className="w-3 h-3" />
                   <span>Reset</span>
@@ -3103,7 +3103,7 @@ export default function GlobalNetworkWorldMap({
           </div>
 
           {/* Wave 4 Orbital Engineering Bar: Visual Lens (Traffic / Carbon / Spot) + Point-to-Point Fiber RTT Analyzer */}
-          <div className="px-3.5 py-2 bg-zinc-950 border-b border-zinc-800/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+          <div className="px-3.5 py-2 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
             {/* Visual Map Lens Switcher */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-zinc-400 font-bold">Map Lens:</span>
@@ -3118,8 +3118,8 @@ export default function GlobalNetworkWorldMap({
                   onClick={() => setMapLens(lens.id)}
                   className={`px-2 py-1 rounded-md border transition-colors cursor-pointer ${
                     mapLens === lens.id
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-bold'
-                      : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 font-bold'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                   }`}
                 >
                   {lens.label}
@@ -3131,8 +3131,8 @@ export default function GlobalNetworkWorldMap({
                 onClick={() => setShowHybridTunnel(!showHybridTunnel)}
                 className={`px-2 py-1 rounded-md border transition-colors cursor-pointer ${
                   showHybridTunnel
-                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300 font-bold'
-                    : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                 }`}
               >
                 Hybrid VPN/IAP Tunnel
@@ -3146,8 +3146,8 @@ export default function GlobalNetworkWorldMap({
                 onClick={() => setRouteAnalyzerEnabled(!routeAnalyzerEnabled)}
                 className={`px-2 py-1 rounded-md border cursor-pointer font-bold ${
                   routeAnalyzerEnabled
-                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                    : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300'
+                    : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
                 }`}
               >
                 Fiber RTT & Egress Laser
@@ -3157,7 +3157,7 @@ export default function GlobalNetworkWorldMap({
                   <select
                     value={routeSourceRegionId}
                     onChange={(e) => setRouteSourceRegionId(e.target.value)}
-                    className="bg-zinc-900 border border-amber-500/40 text-amber-200 rounded px-1.5 py-0.5 text-[10px]"
+                    className="bg-zinc-50 dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded px-1.5 py-0.5 text-[10px]"
                   >
                     {GCP_GLOBAL_REGIONS.map((r) => (
                       <option key={r.id} value={r.id}>
@@ -3169,7 +3169,7 @@ export default function GlobalNetworkWorldMap({
                   <select
                     value={routeDestRegionId}
                     onChange={(e) => setRouteDestRegionId(e.target.value)}
-                    className="bg-zinc-900 border border-amber-500/40 text-amber-200 rounded px-1.5 py-0.5 text-[10px]"
+                    className="bg-zinc-50 dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded px-1.5 py-0.5 text-[10px]"
                   >
                     {GCP_GLOBAL_REGIONS.map((r) => (
                       <option key={r.id} value={r.id}>
@@ -3177,7 +3177,7 @@ export default function GlobalNetworkWorldMap({
                       </option>
                     ))}
                   </select>
-                  <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold text-[10px]">
+                  <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 font-bold text-[10px]">
                     {routeTelemetry.fiberKm.toLocaleString()} km ·{' '}
                     {routeTelemetry.rttMs}ms RTT · ${routeTelemetry.ratePerGb}/GB
                   </span>
@@ -3202,7 +3202,7 @@ export default function GlobalNetworkWorldMap({
             onMouseDown={handleMapMouseDown}
             onMouseMove={handleMapMouseMove}
             onMouseUp={handleMapMouseUp}
-            className={`relative w-full aspect-[1200/560] bg-[radial-gradient(ellipse_at_center,_#0b1528_0%,_#04060c_100%)] overflow-hidden overscroll-contain touch-none select-none outline-none ${
+            className={`relative w-full aspect-[1200/560] bg-[radial-gradient(ellipse_at_center,_#e0f2fe_0%,_#f8fafc_100%)] dark:bg-[radial-gradient(ellipse_at_center,_#0b1528_0%,_#04060c_100%)] overflow-hidden overscroll-contain touch-none select-none outline-none ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
@@ -3210,8 +3210,8 @@ export default function GlobalNetworkWorldMap({
             <div
               className={`absolute top-2.5 left-3 z-10 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono transition-colors ${
                 isPointerInsideMap
-                  ? 'bg-blue-950/85 border-blue-500/60 text-blue-200 shadow-lg shadow-blue-950/50'
-                  : 'bg-zinc-950/80 border-zinc-800 text-zinc-300'
+                  ? 'bg-blue-500/10 dark:bg-blue-950/85 border-blue-500/60 text-blue-800 dark:text-blue-200 shadow-lg shadow-blue-950/50'
+                  : 'bg-white/90 dark:bg-zinc-950/80 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
               }`}
             >
               <Move className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
@@ -3224,7 +3224,7 @@ export default function GlobalNetworkWorldMap({
 
             {/* Chaos Outage Active Alert Pill */}
             {(severedRegions.length > 0 || severedZones.length > 0) && (
-              <div className="absolute top-10 left-3 z-10 flex items-center gap-2 px-3 py-1 rounded-lg bg-red-950/90 border border-red-500 text-red-200 text-[10px] font-mono font-bold shadow-lg">
+              <div className="absolute top-10 left-3 z-10 flex items-center gap-2 px-3 py-1 rounded-lg bg-red-500/10 dark:bg-red-950/90 border border-red-500 text-red-800 dark:text-red-200 text-[10px] font-mono font-bold shadow-lg">
                 <AlertTriangle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-bounce" />
                 <span>
                   CHAOS MODE: {severedRegions.length} Region(s), {severedZones.length}{' '}
@@ -3248,7 +3248,7 @@ export default function GlobalNetworkWorldMap({
               <button
                 type="button"
                 onClick={handleResetMapCamera}
-                className="absolute top-2.5 right-3 z-10 px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                className="absolute top-2.5 right-3 z-10 px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
               >
                 Reset to Global View (1.0x)
               </button>
@@ -3281,7 +3281,7 @@ export default function GlobalNetworkWorldMap({
                   y1={y}
                   x2={1200}
                   y2={y}
-                  stroke="#1e293b"
+                  className="stroke-slate-300 dark:stroke-[#1e293b]"
                   strokeWidth="0.7"
                   strokeDasharray="3 6"
                 />
@@ -3293,7 +3293,7 @@ export default function GlobalNetworkWorldMap({
                   y1={0}
                   x2={x}
                   y2={560}
-                  stroke="#1e293b"
+                  className="stroke-slate-300 dark:stroke-[#1e293b]"
                   strokeWidth="0.7"
                   strokeDasharray="3 6"
                 />
@@ -3315,8 +3315,7 @@ export default function GlobalNetworkWorldMap({
                 <path
                   key={cont.name}
                   d={cont.d}
-                  fill="#0f172a"
-                  stroke="#1e3a5f"
+                  className="fill-slate-200/90 dark:fill-[#0f172a] stroke-slate-400 dark:stroke-[#1e3a5f]"
                   strokeWidth="1.4"
                 />
               ))}
@@ -3929,7 +3928,7 @@ export default function GlobalNetworkWorldMap({
             </svg>
 
             {/* Bottom Map Legend Bar */}
-            <div className="absolute bottom-2.5 left-3 right-3 px-3 py-1.5 rounded-xl bg-zinc-950/85 backdrop-blur-md border border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
+            <div className="absolute bottom-2.5 left-3 right-3 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-950/85 backdrop-blur-md border border-zinc-200 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />
@@ -3956,13 +3955,13 @@ export default function GlobalNetworkWorldMap({
           </div>
 
           {/* DVR Flight Recorder Time-Machine Scrubber Bar */}
-          <div className="px-3.5 py-2 bg-zinc-950/95 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono">
+          <div className="px-3.5 py-2 bg-white dark:bg-zinc-950/95 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono">
             <div className="flex items-center gap-2">
               <span
                 className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
                   dvrScrubIndex === 0
                     ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
                 }`}
               >
                 {dvrScrubIndex === 0
@@ -4002,7 +4001,7 @@ export default function GlobalNetworkWorldMap({
           {/* Custom Test Packet Launcher Bar below Map */}
           <form
             onSubmit={handleFireCustomPacket}
-            className="p-3 bg-zinc-950 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+            className="p-3 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
           >
             <div className="flex items-center gap-1.5 text-blue-400 font-bold">
               <Crosshair className="w-3.5 h-3.5" />
@@ -4013,7 +4012,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={customOriginId}
                 onChange={(e) => setCustomOriginId(e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
               >
                 {GLOBAL_CLIENT_ORIGINS.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -4027,7 +4026,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={customTargetRegionId}
                 onChange={(e) => setCustomTargetRegionId(e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
               >
                 {GCP_GLOBAL_REGIONS.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -4039,7 +4038,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={customProtocol}
                 onChange={(e) => setCustomProtocol(e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
               >
                 <option value="tcp">TCP</option>
                 <option value="udp">UDP</option>
@@ -4051,7 +4050,7 @@ export default function GlobalNetworkWorldMap({
                 disabled={customProtocol === 'icmp'}
                 value={customPort}
                 onChange={(e) => setCustomPort(Number(e.target.value))}
-                className="w-20 bg-zinc-900 border border-zinc-700 text-zinc-200 rounded-lg px-2 py-1 text-[11px] disabled:opacity-40"
+                className="w-20 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px] disabled:opacity-40"
                 placeholder="Port"
               />
 

@@ -1737,7 +1737,7 @@ export default function ResourceProvisionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-white dark:bg-zinc-950/60 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 overflow-y-auto">
       <div className="bg-white dark:bg-[#202124] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-[1220px] max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto">
         <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-4 pb-3.5 bg-white dark:bg-[#202124]">
           <div className="flex items-center gap-3">
@@ -6488,7 +6488,7 @@ export default function ResourceProvisionModal({
           </div>
 
           {/* Live gcloud CLI Equivalent Preview */}
-          <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3.5 space-y-1.5">
+          <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-zinc-400">
               <span className="font-mono uppercase tracking-wider text-emerald-400">
                 Equivalent gcloud CLI Command
@@ -6515,7 +6515,7 @@ export default function ResourceProvisionModal({
                 )}
               </button>
             </div>
-            <pre className="text-xs font-mono text-zinc-200 whitespace-pre-wrap break-all">
+            <pre className="text-xs font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-all">
               $ {gcloudPreview}
             </pre>
           </div>

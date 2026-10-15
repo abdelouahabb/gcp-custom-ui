@@ -1218,7 +1218,7 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
               type="button"
               onClick={() => handleProbeEstate(false)}
               disabled={probing}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${probing ? 'animate-spin' : ''}`}
@@ -1482,7 +1482,7 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
               <LakehouseTrackBadge track={activePlaybook.track} />
             </div>
 
-            <pre className="p-3.5 rounded-xl bg-zinc-950 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-80 whitespace-pre-wrap leading-relaxed border border-zinc-800">
+            <pre className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-80 whitespace-pre-wrap leading-relaxed border border-zinc-200 dark:border-zinc-800">
               {JSON.stringify(
                 {
                   'format-version': 2,
@@ -1925,7 +1925,7 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
                   })}
                 </div>
 
-                <pre className="p-3.5 rounded-xl bg-zinc-950 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-72 whitespace-pre-wrap leading-relaxed border border-zinc-800">
+                <pre className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-72 whitespace-pre-wrap leading-relaxed border border-zinc-200 dark:border-zinc-800">
                   {codeEngineTab === 'BIGQUERY_SQL'
                     ? synthesizedCode.bqSql
                     : codeEngineTab === 'PYSPARK_REST'

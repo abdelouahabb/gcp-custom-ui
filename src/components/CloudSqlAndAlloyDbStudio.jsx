@@ -987,7 +987,7 @@ WITH (m = 16, ef_construction = 64);`;
               </div>
             </div>
 
-            <div className="p-2.5 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre">
+            <div className="p-2.5 rounded-[8px] bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre">
               {gcloudCli}
             </div>
 
@@ -1045,7 +1045,7 @@ WITH (m = 16, ef_construction = 64);`;
                       <div>
                         <div className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                           <span>{c.name}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px]">
                             ALLOYDB ({c.databaseVersion})
                           </span>
                           <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px]">
@@ -1206,7 +1206,7 @@ WITH (m = 16, ef_construction = 64);`;
               <div className="text-xs font-extrabold text-blue-400">
                 Cloud SQL Enterprise Plus (MySQL / PG)
               </div>
-              <div className="text-lg font-black font-mono text-blue-300">
+              <div className="text-lg font-black font-mono text-blue-700 dark:text-blue-300">
                 ~${cloudSqlPlusMonthly}/mo (Regional HA)
               </div>
               <ul className="text-[11px] font-mono text-zinc-400 space-y-1">
@@ -1218,13 +1218,13 @@ WITH (m = 16, ef_construction = 64);`;
             </div>
 
             <div className="p-3.5 rounded-[10px] border border-blue-500/50 bg-blue-500/10 space-y-2">
-              <div className="text-xs font-extrabold text-blue-300">
+              <div className="text-xs font-extrabold text-blue-700 dark:text-blue-300">
                 Google Cloud AlloyDB (PostgreSQL Only)
               </div>
               <div className="text-lg font-black font-mono text-emerald-400">
                 ~${alloyDbMonthly}/mo (Colossus Storage)
               </div>
-              <ul className="text-[11px] font-mono text-zinc-300 space-y-1">
+              <ul className="text-[11px] font-mono text-zinc-700 dark:text-zinc-300 space-y-1">
                 <li>• Availability SLA: 99.99% (&lt;1s storage-decoupled failover)</li>
                 <li>• OLTP Throughput: 4x Faster than Standard Postgres</li>
                 <li>• Analytical Scan: 100x Faster (In-Memory Columnar Engine)</li>
@@ -1304,7 +1304,7 @@ WITH (m = 16, ef_construction = 64);`;
             <div className="text-xs font-mono font-bold text-emerald-400 uppercase">
               Generated SQL ({sqlEngineFamily} · {sqlArchitecture})
             </div>
-            <pre className="p-3 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
+            <pre className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
               {generatedVectorSql}
             </pre>
           </div>
@@ -1359,11 +1359,11 @@ WITH (m = 16, ef_construction = 64);`;
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 rounded-[8px] bg-zinc-950 text-blue-300 font-mono text-[11px] space-y-1.5">
+            <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 font-mono text-[11px] space-y-1.5">
               <div className="text-zinc-400 font-bold">
                 1. Start Zero-Password Auth Proxy (Local / Sidecar):
               </div>
-              <pre className="overflow-x-auto text-emerald-300">
+              <pre className="overflow-x-auto text-emerald-700 dark:text-emerald-300">
                 {sqlArchitecture === 'ALLOYDB'
                   ? `alloydb-auth-proxy "projects/${projectId}/locations/${sqlRegion}/clusters/${sqlName}/instances/${sqlName}-primary" \\\n  --auto-iam-authn \\\n  --private-ip \\\n  --port=5432`
                   : `cloud-sql-proxy "${projectId}:${sqlRegion}:${sqlName}" \\\n  --auto-iam-authn \\\n  --private-ip \\\n  --port=${
@@ -1372,11 +1372,11 @@ WITH (m = 16, ef_construction = 64);`;
               </pre>
             </div>
 
-            <div className="p-3 rounded-[8px] bg-zinc-950 text-blue-300 font-mono text-[11px] space-y-1.5">
+            <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 font-mono text-[11px] space-y-1.5">
               <div className="text-zinc-400 font-bold">
                 2. Prisma / Drizzle / SQLAlchemy DSN (via Local Auth Proxy):
               </div>
-              <pre className="overflow-x-auto text-amber-300">
+              <pre className="overflow-x-auto text-amber-700 dark:text-amber-300">
                 {sqlEngineFamily === 'MYSQL'
                   ? `DATABASE_URL="mysql://iam_user@127.0.0.1:3306/production_db?sslaccept=strict"`
                   : `DATABASE_URL="postgresql://iam_service_account@127.0.0.1:5432/production_db?sslmode=disable"`}

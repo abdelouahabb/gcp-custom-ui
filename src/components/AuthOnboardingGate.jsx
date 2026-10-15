@@ -586,7 +586,7 @@ export default function AuthOnboardingGate({ onSessionEstablished }) {
                       )}
                     </button>
                   </div>
-                  <pre className="p-2.5 rounded-lg bg-zinc-950 text-emerald-400 font-mono text-xs overflow-x-auto">
+                  <pre className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 text-emerald-400 font-mono text-xs overflow-x-auto">
                     $ gcloud auth login && gcloud auth print-access-token
                   </pre>
 

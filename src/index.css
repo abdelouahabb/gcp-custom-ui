@@ -51,3 +51,42 @@
 ::-webkit-scrollbar-thumb:active {
   background: #185abc;
 }
+
+/* Light-Mode (html:not(.dark)) Safety-Net Layer — Ensures zero residual dark panels in White Mode */
+html:not(.dark) .bg-zinc-950,
+html:not(.dark) .bg-slate-950,
+html:not(.dark) .bg-\[\#131314\],
+html:not(.dark) .bg-\[\#05070e\] {
+  background-color: #ffffff;
+}
+
+html:not(.dark) .bg-zinc-900:not(.text-white),
+html:not(.dark) .bg-slate-900:not(.text-white) {
+  background-color: #fafafa;
+}
+
+html:not(.dark) .border-zinc-800,
+html:not(.dark) .border-slate-800 {
+  border-color: #e4e4e7;
+}
+
+html:not(.dark) .border-zinc-700,
+html:not(.dark) .border-slate-700 {
+  border-color: #d4d4d8;
+}
+
+html:not(.dark) .text-zinc-100,
+html:not(.dark) .text-slate-100 {
+  color: #18181b;
+}
+
+html:not(.dark) .text-zinc-200,
+html:not(.dark) .text-slate-200 {
+  color: #27272a;
+}
+
+html:not(.dark) .text-zinc-300,
+html:not(.dark) .text-slate-300 {
+  color: #3f3f46;
+}
+

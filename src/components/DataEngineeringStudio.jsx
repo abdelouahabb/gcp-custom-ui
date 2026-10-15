@@ -1406,13 +1406,13 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
             </div>
 
             <div className="relative">
-              <pre className="p-3.5 rounded-xl bg-zinc-950 text-emerald-300 border border-zinc-800 text-[11px] font-mono overflow-x-auto leading-relaxed max-h-[300px]">
+              <pre className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono overflow-x-auto leading-relaxed max-h-[300px]">
                 {generatedTransformationCode}
               </pre>
               <button
                 type="button"
                 onClick={() => copyText(generatedTransformationCode, 'sqlx')}
-                className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
               >
                 {copiedKey === 'sqlx' ? (
                   <>
@@ -1465,7 +1465,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                         {cleanQueryResult.rows.map((row, idx) => (
                           <tr
                             key={idx}
-                            className="border-b border-zinc-800/40 text-zinc-800 dark:text-zinc-200"
+                            className="border-b border-zinc-200 dark:border-zinc-800/40 text-zinc-800 dark:text-zinc-200"
                           >
                             {row.map((val, cIdx) => (
                               <td key={cIdx} className="py-1 pr-3 truncate max-w-[180px]">
@@ -1902,7 +1902,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               </p>
             </div>
 
-            <pre className="p-3 rounded-xl bg-zinc-950 text-amber-300 border border-zinc-800 text-[10px] font-mono overflow-x-auto">
+            <pre className="p-3 rounded-xl bg-white dark:bg-zinc-950 text-amber-700 dark:text-amber-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono overflow-x-auto">
               {airflowSample}
             </pre>
 
@@ -2051,7 +2051,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 </div>
               </div>
 
-              <pre className="p-3.5 rounded-xl bg-zinc-950 text-blue-300 border border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-[360px] leading-relaxed">
+              <pre className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono overflow-x-auto max-h-[360px] leading-relaxed">
                 {dakFileTab === 'DEPLOYMENT_YAML'
                   ? dakDeploymentYaml
                   : dakOrchestrationPipelineYaml}
@@ -2174,7 +2174,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               </div>
 
               {dakSearchCli && (
-                <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[10px] font-mono text-blue-300 overflow-x-auto">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto">
                   $ {dakSearchCli}
                 </div>
               )}
@@ -2247,8 +2247,8 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               </div>
 
               {sparkRcaReport && (
-                <div className="p-3.5 rounded-xl bg-zinc-950 border border-amber-500/40 space-y-2.5 text-xs font-mono">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-amber-500/40 space-y-2.5 text-xs font-mono">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
                     <span className="text-amber-400 font-extrabold">
                       {sparkRcaReport.rootCauseCategory}
                     </span>
@@ -2260,25 +2260,25 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     {sparkRcaReport.exceptionSignature}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                    <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                       <div className="text-[9px] text-zinc-500">Median Task</div>
                       <div className="text-emerald-400 font-bold">
                         {sparkRcaReport.skewMetrics.medianTaskDurationMs} ms
                       </div>
                     </div>
-                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                    <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                       <div className="text-[9px] text-zinc-500">P99 Skew Task</div>
                       <div className="text-red-400 font-bold">
                         {sparkRcaReport.skewMetrics.p99TaskDurationMs} ms
                       </div>
                     </div>
-                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                    <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                       <div className="text-[9px] text-zinc-500">Median Shuffle</div>
                       <div className="text-emerald-400 font-bold">
                         {sparkRcaReport.skewMetrics.medianTaskShuffleReadMb} MB
                       </div>
                     </div>
-                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                    <div className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                       <div className="text-[9px] text-zinc-500">Max Skew Partition</div>
                       <div className="text-red-400 font-bold">
                         {sparkRcaReport.skewMetrics.maxTaskShuffleReadMb} MB
@@ -2290,7 +2290,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       Prescribed Spark 2.2 Fixes:
                     </div>
                     {sparkRcaReport.recommendedFixes.map((fix) => (
-                      <div key={fix} className="text-[10px] text-zinc-300">
+                      <div key={fix} className="text-[10px] text-zinc-700 dark:text-zinc-300">
                         • {fix}
                       </div>
                     ))}
@@ -2459,7 +2459,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
 
           {/* Right 7 Cols: PySpark + BigLake Iceberg Code & CLI */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs font-extrabold font-mono text-blue-400 flex items-center gap-1.5">
                   <FileCode className="w-4 h-4 text-zinc-400" />
@@ -2470,7 +2470,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <button
                   type="button"
                   onClick={() => copyText(sparkArtifacts.pysparkCode, 'PYSPARK_CODE')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedKey === 'PYSPARK_CODE' ? (
                     <Check className="w-3 h-3 text-emerald-400" />
@@ -2480,11 +2480,11 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   <span>{copiedKey === 'PYSPARK_CODE' ? 'Copied' : 'Copy PySpark'}</span>
                 </button>
               </div>
-              <pre className="p-3 rounded-xl bg-black/80 border border-zinc-800/90 text-[11px] font-mono text-blue-300 overflow-x-auto leading-relaxed max-h-80">
+              <pre className="p-3 rounded-xl bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800/90 text-[11px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto leading-relaxed max-h-80">
                 {sparkArtifacts.pysparkCode}
               </pre>
 
-              <div className="pt-2 border-t border-zinc-800 space-y-2">
+              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-mono font-bold text-zinc-400">
                     Reproducible `gcloud dataproc batches submit pyspark` Command:
@@ -2502,13 +2502,13 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     <button
                       type="button"
                       onClick={() => copyText(sparkArtifacts.cliCmd, 'SPARK_CLI')}
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                     >
                       {copiedKey === 'SPARK_CLI' ? 'Copied' : 'Copy CLI'}
                     </button>
                   </div>
                 </div>
-                <pre className="p-2.5 rounded-xl bg-black/70 border border-zinc-800 text-[10.5px] font-mono text-emerald-300 overflow-x-auto">
+                <pre className="p-2.5 rounded-xl bg-zinc-100 dark:bg-black/70 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto">
                   {sparkArtifacts.cliCmd}
                 </pre>
               </div>

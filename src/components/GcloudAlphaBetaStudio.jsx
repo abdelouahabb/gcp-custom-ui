@@ -366,7 +366,7 @@ export default function GcloudAlphaBetaStudio({
               type="button"
               onClick={fetchOverview}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 px-3.5 py-2 text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
@@ -471,7 +471,7 @@ export default function GcloudAlphaBetaStudio({
                 <div
                   className={`text-[10px] font-mono mt-0.5 truncate ${
                     isActive
-                      ? 'text-zinc-300 dark:text-zinc-600'
+                      ? 'text-zinc-700 dark:text-zinc-300 dark:text-zinc-600'
                       : 'text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
@@ -1277,7 +1277,7 @@ export default function GcloudAlphaBetaStudio({
               />
             </div>
 
-            <div className="p-2.5 rounded-lg bg-zinc-900 text-emerald-400 font-mono text-[10.5px] break-all">
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-emerald-400 font-mono text-[10.5px] break-all">
               gcloud alpha model-armor templates create {modelArmorTemplateId}{' '}
               --project={projectId} --location={region}{' '}
               --pi-and-jailbreak-filter-settings-enforcement=ENABLED{' '}
@@ -1380,12 +1380,12 @@ export default function GcloudAlphaBetaStudio({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 rounded-xl bg-zinc-900 text-emerald-400 font-mono text-[11px] break-all">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 text-emerald-400 font-mono text-[11px] break-all">
               $ gcloud alpha developer-knowledge answer-query --query=
               {JSON.stringify(devKnowledgeQuery)}{' '}
               --query-filter=&apos;data_source = &quot;docs.cloud.google.com&quot;&apos;
             </div>
-            <div className="p-3 rounded-xl bg-zinc-900 text-emerald-400 font-mono text-[11px] break-all">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 text-emerald-400 font-mono text-[11px] break-all">
               $ gcloud alpha app-topology resources-graph generate --project=
               {projectId} --location={region}
             </div>
@@ -1453,7 +1453,7 @@ export default function GcloudAlphaBetaStudio({
                   quotaService,
                 })
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 px-3.5 py-2.5 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               <Activity className="w-4 h-4" />
               <span>
@@ -1844,7 +1844,7 @@ export default function GcloudAlphaBetaStudio({
           )}
 
           {lastReceipt.executedCommand && (
-            <div className="p-2.5 rounded-xl bg-zinc-900 text-emerald-400 font-mono text-xs break-all">
+            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 text-emerald-400 font-mono text-xs break-all">
               $ {lastReceipt.executedCommand}
             </div>
           )}

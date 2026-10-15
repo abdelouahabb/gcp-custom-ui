@@ -1289,7 +1289,7 @@ export default function Revolutionary2026Suite({
       {/* TAB 1: INTERACTIVE LIVE CLOUD TOPOLOGY & BLAST-RADIUS GRAPH */}
       {subTab === 'TOPOLOGY' && (
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-4">
+          <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-xs font-mono uppercase tracking-wider text-blue-400 flex items-center gap-2">
                 <Share2 className="w-4 h-4" />
@@ -1313,14 +1313,14 @@ export default function Revolutionary2026Suite({
             {/* 4-Column Interactive Architecture Graph */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch pt-2">
               {/* Layer 1: Public Internet & Edge Ingress */}
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-amber-500/30 flex flex-col justify-between space-y-3">
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-amber-500/30 flex flex-col justify-between space-y-3">
                 <div className="space-y-2">
                   <div className="text-[10px] font-mono uppercase text-amber-400 font-bold flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5" />
                     <span>Layer 1 · Public Internet Edge</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs font-mono">
-                    <div className="font-bold text-amber-300">
+                    <div className="font-bold text-amber-700 dark:text-amber-300">
                       0.0.0.0/0 · Global Ingress
                     </div>
                     <div className="text-[10px] text-zinc-400 mt-1">
@@ -1332,7 +1332,7 @@ export default function Revolutionary2026Suite({
                   {publicFirewalls.map((fw) => (
                     <div
                       key={fw.id}
-                      className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] font-mono flex items-center justify-between gap-2"
+                      className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono flex items-center justify-between gap-2"
                     >
                       <div className="truncate">
                         <span className="text-amber-400 font-bold">
@@ -1350,7 +1350,7 @@ export default function Revolutionary2026Suite({
                             .join(' ')}
                         </div>
                       </div>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
                         0.0.0.0/0
                       </span>
                     </div>
@@ -1362,7 +1362,7 @@ export default function Revolutionary2026Suite({
               </div>
 
               {/* Layer 2: VPC Networks & Subnets */}
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-blue-500/30 flex flex-col justify-between space-y-3">
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-blue-500/30 flex flex-col justify-between space-y-3">
                 <div className="space-y-2">
                   <div className="text-[10px] font-mono uppercase text-blue-400 font-bold flex items-center gap-1.5">
                     <Network className="w-3.5 h-3.5" />
@@ -1373,7 +1373,7 @@ export default function Revolutionary2026Suite({
                       key={vpc.id}
                       className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs font-mono space-y-1"
                     >
-                      <div className="font-bold text-blue-300 flex items-center justify-between">
+                      <div className="font-bold text-blue-700 dark:text-blue-300 flex items-center justify-between">
                         <span>vpc/{vpc.name}</span>
                         <span className="text-[10px] bg-blue-500/20 px-1.5 py-0.5 rounded">
                           MTU {vpc.mtu}
@@ -1397,7 +1397,7 @@ export default function Revolutionary2026Suite({
               </div>
 
               {/* Layer 3: Compute VMs & Cloud Run Serverless */}
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-blue-500/30 flex flex-col justify-between space-y-3">
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-blue-500/30 flex flex-col justify-between space-y-3">
                 <div className="space-y-2">
                   <div className="text-[10px] font-mono uppercase text-blue-400 font-bold flex items-center gap-1.5">
                     <Rocket className="w-3.5 h-3.5" />
@@ -1408,7 +1408,7 @@ export default function Revolutionary2026Suite({
                   </div>
 
                   {vms.length === 0 && runServices.length === 0 ? (
-                    <div className="p-3 rounded-lg bg-zinc-950 border border-dashed border-zinc-800 text-[11px] font-mono text-zinc-400">
+                    <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-dashed border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-400">
                       0 Active VMs or Cloud Run Services ($0.00/hr compute burn)
                     </div>
                   ) : (
@@ -1416,11 +1416,11 @@ export default function Revolutionary2026Suite({
                       {vms.map((vm) => (
                         <div
                           key={vm.id}
-                          className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] font-mono"
+                          className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono"
                         >
                           <div className="font-bold text-emerald-400 flex items-center justify-between">
                             <span>VM: {vm.name}</span>
-                            <span className="text-[9px] bg-zinc-800 px-1.5 py-0.5 rounded">
+                            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
                               {vm.zone}
                             </span>
                           </div>
@@ -1432,11 +1432,11 @@ export default function Revolutionary2026Suite({
                       {runServices.map((srv) => (
                         <div
                           key={srv.id}
-                          className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] font-mono"
+                          className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono"
                         >
                           <div className="font-bold text-blue-400 flex items-center justify-between">
                             <span>Run: {srv.name}</span>
-                            <span className="text-[9px] bg-zinc-800 px-1.5 py-0.5 rounded">
+                            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
                               {srv.region}
                             </span>
                           </div>
@@ -1455,7 +1455,7 @@ export default function Revolutionary2026Suite({
                     type="button"
                     onClick={() => onOpenProvision && onOpenProvision('CLOUD_RUN')}
                     title="Open the Live Resource Provisioner to deploy a new serverless Cloud Run container service"
-                    className="py-1.5 rounded-lg border border-blue-500/30 hover:bg-blue-500/15 text-[10px] font-mono text-blue-300 cursor-pointer"
+                    className="py-1.5 rounded-lg border border-blue-500/30 hover:bg-blue-500/15 text-[10px] font-mono text-blue-700 dark:text-blue-300 cursor-pointer"
                   >
                     + Deploy Run
                   </button>
@@ -1465,7 +1465,7 @@ export default function Revolutionary2026Suite({
                       onOpenProvision && onOpenProvision('COMPUTE_VM')
                     }
                     title="Open the Live Resource Provisioner to launch a new Compute Engine VM instance"
-                    className="py-1.5 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/15 text-[10px] font-mono text-emerald-300 cursor-pointer"
+                    className="py-1.5 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/15 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 cursor-pointer"
                   >
                     + Launch VM
                   </button>
@@ -1473,7 +1473,7 @@ export default function Revolutionary2026Suite({
               </div>
 
               {/* Layer 4: Data & Object Storage */}
-              <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-emerald-500/30 flex flex-col justify-between space-y-3">
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-emerald-500/30 flex flex-col justify-between space-y-3">
                 <div className="space-y-2">
                   <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold flex items-center gap-1.5">
                     <HardDrive className="w-3.5 h-3.5" />
@@ -1484,7 +1484,7 @@ export default function Revolutionary2026Suite({
                       key={b.id}
                       className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-[11px] font-mono"
                     >
-                      <div className="font-bold text-emerald-300 truncate">
+                      <div className="font-bold text-emerald-700 dark:text-emerald-300 truncate">
                         gs://{b.name}
                       </div>
                       <div className="text-[10px] text-zinc-400 flex items-center justify-between mt-0.5">
@@ -1692,7 +1692,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron \\
                   </li>
                 </ul>
               </div>
-              <pre className="bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-lg p-2.5 text-[10px] font-mono overflow-x-auto">
+              <pre className="bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5 text-[10px] font-mono overflow-x-auto">
 {`gcloud compute resource-policies create instance-schedule night-finops-schedule \\
   --project=${projectId} --region=us-central1 --vm-start-schedule="0 8 * * 1-5" --vm-stop-schedule="0 20 * * 1-5" --timezone="${activeTimeZone}"
 gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 * * 1-5" --time-zone="${activeTimeZone}" --location=us-central1 ...`}
@@ -1817,7 +1817,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
             </button>
           </div>
 
-          <pre className="bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-xl p-4 text-xs font-mono overflow-x-auto max-h-[420px] leading-relaxed">
+          <pre className="bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-xs font-mono overflow-x-auto max-h-[420px] leading-relaxed">
             {iacFormat === 'TERRAFORM'
               ? generatedTerraform
               : iacFormat === 'TERRAFORM_IMPORT'
@@ -2072,7 +2072,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                       <span>
                         <strong>{t.detector}</strong>: {t.detail}
                       </span>
-                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-amber-300">
+                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-amber-700 dark:text-amber-300">
                         {t.severity}
                       </span>
                     </div>
@@ -2153,7 +2153,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                   ${contextCacheSavings.cachedCostUsd}/mo
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-center">
+              <div className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-center">
                 <div className="text-[10px] font-mono uppercase text-zinc-400">
                   Net Monthly AI Token Savings
                 </div>

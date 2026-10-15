@@ -946,7 +946,7 @@ export default function SovereignTimeMachineIamStudio({
                     ? tab.id === 'IAM_SURGEON_SA_VAULT'
                       ? 'bg-amber-500 text-zinc-950 border-amber-300 shadow-md'
                       : 'bg-blue-600 text-white border-blue-400 shadow-md'
-                    : 'bg-zinc-900/80 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
+                    : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -956,7 +956,7 @@ export default function SovereignTimeMachineIamStudio({
                       ? tab.id === 'IAM_SURGEON_SA_VAULT'
                         ? 'bg-black/20 text-zinc-950 font-extrabold'
                         : 'bg-black/30 text-blue-100'
-                      : 'bg-zinc-800 text-zinc-400'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
                   }`}
                 >
                   {tab.badge}
@@ -1065,7 +1065,7 @@ export default function SovereignTimeMachineIamStudio({
                 <span className="text-[11px] font-mono text-amber-400 font-bold">
                   SA Keys & Tokens Vault
                 </span>
-                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
                   Open →
                 </span>
               </div>
@@ -1128,7 +1128,7 @@ export default function SovereignTimeMachineIamStudio({
               <button
                 type="button"
                 onClick={() => setExpandAllIamRoles((v) => !v)}
-                className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[11px] font-mono cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono cursor-pointer"
               >
                 {expandAllIamRoles
                   ? '▴ Collapse IAM Roles to Top 3'
@@ -1242,7 +1242,7 @@ export default function SovereignTimeMachineIamStudio({
                       key={item.findingId}
                       className={`p-3 rounded-[10px] border space-y-1.5 ${
                         isProtectedOwner
-                          ? 'border-emerald-500/35 bg-emerald-950/10 dark:bg-emerald-950/15'
+                          ? 'border-emerald-500/35 bg-emerald-500/10 dark:bg-emerald-950/10 dark:bg-emerald-950/15'
                           : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314]'
                       }`}
                     >
@@ -1384,14 +1384,14 @@ export default function SovereignTimeMachineIamStudio({
               </div>
 
               {iamSectionView === 'SPLIT' && filteredFindings.length > 3 && (
-                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs font-mono text-zinc-400">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-400">
                   <span>
                     Showing{' '}
-                    <strong className="text-zinc-200">
+                    <strong className="text-zinc-800 dark:text-zinc-200">
                       {expandAllIamRoles ? filteredFindings.length : 3}
                     </strong>{' '}
                     of{' '}
-                    <strong className="text-zinc-200">
+                    <strong className="text-zinc-800 dark:text-zinc-200">
                       {filteredFindings.length}
                     </strong>{' '}
                     IAM role bindings so the Service Account Vault below stays accessible.
@@ -1400,7 +1400,7 @@ export default function SovereignTimeMachineIamStudio({
                     <button
                       type="button"
                       onClick={() => setExpandAllIamRoles((v) => !v)}
-                      className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-blue-300 font-bold cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-blue-700 dark:text-blue-300 font-bold cursor-pointer"
                     >
                       {expandAllIamRoles
                         ? 'Collapse to Top 3 ▴'
@@ -1409,7 +1409,7 @@ export default function SovereignTimeMachineIamStudio({
                     <button
                       type="button"
                       onClick={() => setIamSectionView('ROLES')}
-                      className="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-bold cursor-pointer"
                     >
                       Full Roles View →
                     </button>
@@ -1428,23 +1428,23 @@ export default function SovereignTimeMachineIamStudio({
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <KeyRound className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                  <span className="text-sm font-extrabold text-white">
+                  <span className="text-sm font-extrabold text-zinc-900 dark:text-white">
                     Service Account `.json` Key, OAuth2 Token & Stolen-Credential Kill-Switch Vault
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/30">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30">
                     {iamData?.userManagedKeys?.length || 0} Active JSON Keys ·{' '}
                     {iamData?.mintedTokens?.length || 0} Minted Tokens
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400 max-w-4xl">
-                  Create and download Service Account <code className="text-amber-300 font-mono">.json</code> key files or 1-hour OAuth2 tokens, re-download existing keys, or immediately **Revoke / Rotate / Freeze** a compromised Service Account if a credential file is ever leaked or stolen.
+                  Create and download Service Account <code className="text-amber-700 dark:text-amber-300 font-mono">.json</code> key files or 1-hour OAuth2 tokens, re-download existing keys, or immediately **Revoke / Rotate / Freeze** a compromised Service Account if a credential file is ever leaked or stolen.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowCreateSaForm((v) => !v)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-xs font-mono font-bold cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
                 <span>
@@ -1459,11 +1459,11 @@ export default function SovereignTimeMachineIamStudio({
             {showCreateSaForm && (
               <form
                 onSubmit={handleCreateServiceAccount}
-                className="p-4 rounded-xl bg-zinc-950/95 border border-amber-500/40 space-y-3.5"
+                className="p-4 rounded-xl bg-white dark:bg-zinc-950/95 border border-amber-500/40 space-y-3.5"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
                   <div>
-                    <div className="text-xs font-extrabold font-mono text-amber-300">
+                    <div className="text-xs font-extrabold font-mono text-amber-700 dark:text-amber-300">
                       Least-Privilege Service Account Architect (`iam.googleapis.com`)
                     </div>
                     <p className="text-[11px] text-zinc-400">
@@ -1479,28 +1479,28 @@ export default function SovereignTimeMachineIamStudio({
                     <button
                       type="button"
                       onClick={() => handleApplySaRolePreset('ZERO')}
-                      className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[10px] font-mono text-zinc-200 cursor-pointer"
+                      className="px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
                     >
                       Zero Roles (Strictest)
                     </button>
                     <button
                       type="button"
                       onClick={() => handleApplySaRolePreset('CLOUD_RUN')}
-                      className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[10px] font-mono text-blue-300 cursor-pointer"
+                      className="px-2 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[10px] font-mono text-blue-700 dark:text-blue-300 cursor-pointer"
                     >
                       Cloud Run Runtime
                     </button>
                     <button
                       type="button"
                       onClick={() => handleApplySaRolePreset('VM_GKE')}
-                      className="px-2 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 cursor-pointer"
+                      className="px-2 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[10px] font-mono text-emerald-700 dark:text-emerald-300 cursor-pointer"
                     >
                       Compute VM / GKE Node
                     </button>
                     <button
                       type="button"
                       onClick={() => handleApplySaRolePreset('DATA_PIPELINE')}
-                      className="px-2 py-1 rounded bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-[10px] font-mono text-purple-300 cursor-pointer"
+                      className="px-2 py-1 rounded bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-[10px] font-mono text-purple-700 dark:text-purple-300 cursor-pointer"
                     >
                       Data Pipeline Worker
                     </button>
@@ -1509,7 +1509,7 @@ export default function SovereignTimeMachineIamStudio({
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-mono text-zinc-300 mb-1">
+                    <label className="block text-[11px] font-mono text-zinc-700 dark:text-zinc-300 mb-1">
                       1. Account ID (`6-28 lowercase chars`) *
                     </label>
                     <input
@@ -1517,7 +1517,7 @@ export default function SovereignTimeMachineIamStudio({
                       value={newSaAccountId}
                       onChange={(e) => setNewSaAccountId(e.target.value)}
                       placeholder="e.g. cloudrun-prod-runtime"
-                      className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                      className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-white"
                     />
                     <div className="text-[10px] font-mono text-zinc-500 mt-1 truncate">
                       {newSaAccountId.trim()
@@ -1530,7 +1530,7 @@ export default function SovereignTimeMachineIamStudio({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-mono text-zinc-300 mb-1">
+                    <label className="block text-[11px] font-mono text-zinc-700 dark:text-zinc-300 mb-1">
                       2. Display Name
                     </label>
                     <input
@@ -1538,12 +1538,12 @@ export default function SovereignTimeMachineIamStudio({
                       value={newSaDisplayName}
                       onChange={(e) => setNewSaDisplayName(e.target.value)}
                       placeholder="e.g. Cloud Run Production Runtime SA"
-                      className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                      className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-mono text-zinc-300 mb-1">
+                    <label className="block text-[11px] font-mono text-zinc-700 dark:text-zinc-300 mb-1">
                       3. Audit Purpose / Description
                     </label>
                     <input
@@ -1551,7 +1551,7 @@ export default function SovereignTimeMachineIamStudio({
                       value={newSaDescription}
                       onChange={(e) => setNewSaDescription(e.target.value)}
                       placeholder="Why this Service Account exists"
-                      className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                      className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-white"
                     />
                   </div>
                 </div>
@@ -1559,10 +1559,10 @@ export default function SovereignTimeMachineIamStudio({
                 {/* Explicit Least-Privilege IAM Role Checkboxes */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-mono text-zinc-300">
+                    <label className="text-[11px] font-mono text-zinc-700 dark:text-zinc-300">
                       4. Explicit Least-Privilege IAM Roles (`roles/owner` & `roles/editor` are blocked by policy)
                     </label>
-                    <span className="text-[10.5px] font-mono text-amber-300">
+                    <span className="text-[10.5px] font-mono text-amber-700 dark:text-amber-300">
                       {newSaRoles.length === 0
                         ? 'Zero project-wide roles selected (Strictest)'
                         : `${newSaRoles.length} scoped role(s) selected`}
@@ -1618,7 +1618,7 @@ export default function SovereignTimeMachineIamStudio({
                           className={`p-2 rounded-lg border text-left cursor-pointer transition flex items-start gap-2 ${
                             checked
                               ? 'bg-amber-500/15 border-amber-500/50 text-white'
-                              : 'bg-zinc-900/70 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                              : 'bg-zinc-50 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:border-zinc-700'
                           }`}
                         >
                           <input
@@ -1662,15 +1662,15 @@ export default function SovereignTimeMachineIamStudio({
             )}
 
             {/* Quick Mint & Download Bar: Pick Service Account -> Grant actAs, Download .json Key, or 1h OAuth2 Token */}
-            <div className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-end">
+            <div className="p-3 rounded-xl bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-end">
               <div className="lg:col-span-5 min-w-0">
-                <label className="block text-[11px] font-mono text-amber-300 mb-1 truncate">
+                <label className="block text-[11px] font-mono text-amber-700 dark:text-amber-300 mb-1 truncate">
                   Target Service Account (`iam.googleapis.com`)
                 </label>
                 <select
                   value={selectedSaEmail}
                   onChange={(e) => setSelectedSaEmail(e.target.value)}
-                  className="w-full h-[36px] bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 text-xs font-mono text-white"
+                  className="w-full h-[36px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 text-xs font-mono text-zinc-900 dark:text-white"
                 >
                   {(iamData?.serviceAccounts || []).length === 0 ? (
                     <option value="">No Service Accounts found — Create one above</option>
@@ -1755,7 +1755,7 @@ export default function SovereignTimeMachineIamStudio({
             {/* 1. Created Service Account JSON Keys List (Download, Rotate, or Revoke Stolen File) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold font-mono text-zinc-200">
+                <span className="text-xs font-bold font-mono text-zinc-800 dark:text-zinc-200">
                   1. Created Service Account `.json` Key Files ({iamData?.userManagedKeys?.length || 0})
                 </span>
                 <span className="text-[10.5px] font-mono text-zinc-400">
@@ -1764,7 +1764,7 @@ export default function SovereignTimeMachineIamStudio({
               </div>
 
               {(iamData?.userManagedKeys || []).length === 0 ? (
-                <div className="p-3 rounded-lg bg-zinc-950/60 border border-zinc-800 text-xs font-mono text-zinc-400">
+                <div className="p-3 rounded-lg bg-white dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-400">
                   ✓ Zero static Service Account `.json` keys currently active. Click **"Create & Download `.json` Key"** above if you need a downloadable key file, or test revoking a stolen key!
                 </div>
               ) : (
@@ -1772,18 +1772,18 @@ export default function SovereignTimeMachineIamStudio({
                   {iamData.userManagedKeys.map((k) => (
                     <div
                       key={k.name}
-                      className="p-3 rounded-xl border border-red-500/35 bg-zinc-950/90 flex flex-wrap items-center justify-between gap-3"
+                      className="p-3 rounded-xl border border-red-500/35 bg-white dark:bg-zinc-950/90 flex flex-wrap items-center justify-between gap-3"
                     >
                       <div className="space-y-0.5 text-xs font-mono min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-white truncate">
+                          <span className="font-extrabold text-zinc-900 dark:text-white truncate">
                             {k.serviceAccountEmail}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                             Key ID: {k.keyId?.slice(0, 12)}...
                           </span>
                           {k.hasVaultPrivateKey && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                               ✓ Full Private `.json` in Session Vault
                             </span>
                           )}
@@ -1804,7 +1804,7 @@ export default function SovereignTimeMachineIamStudio({
                             )
                           }
                           title="Download this Service Account key (.json private credentials if created in this session, or X.509 PEM public certificate metadata)"
-                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           ⬇Download `.json`
                         </button>
@@ -1828,7 +1828,7 @@ export default function SovereignTimeMachineIamStudio({
                             )
                           }
                           title="Mint & download a brand-new .json key and atomically revoke this compromised key"
-                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           Rotate & Download New `.json`...
                         </button>
@@ -1861,9 +1861,9 @@ export default function SovereignTimeMachineIamStudio({
 
             {/* 2. Created Short-Lived OAuth2 Tokens List (Copy, Download, or Revoke) */}
             {(iamData?.mintedTokens || []).length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-zinc-800">
+              <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono text-blue-300">
+                  <span className="text-xs font-bold font-mono text-blue-700 dark:text-blue-300">
                     2. Created Short-Lived OAuth2 Access Tokens ({iamData.mintedTokens.length})
                   </span>
                   <span className="text-[10.5px] font-mono text-zinc-400">
@@ -1875,19 +1875,19 @@ export default function SovereignTimeMachineIamStudio({
                   {iamData.mintedTokens.map((t) => (
                     <div
                       key={t.tokenId}
-                      className="p-3 rounded-xl border border-blue-500/35 bg-zinc-950/90 flex flex-wrap items-center justify-between gap-3"
+                      className="p-3 rounded-xl border border-blue-500/35 bg-white dark:bg-zinc-950/90 flex flex-wrap items-center justify-between gap-3"
                     >
                       <div className="space-y-0.5 text-xs font-mono min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-white">
+                          <span className="font-extrabold text-zinc-900 dark:text-white">
                             {t.serviceAccountEmail}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                             {t.tokenId}
                           </span>
                         </div>
                         <div className="text-[10.5px] text-zinc-400">
-                          Token: <code className="text-emerald-300">{t.accessTokenPreview}</code> · Expires: {new Date(t.expireTime).toLocaleTimeString()}
+                          Token: <code className="text-emerald-700 dark:text-emerald-300">{t.accessTokenPreview}</code> · Expires: {new Date(t.expireTime).toLocaleTimeString()}
                         </div>
                       </div>
 
@@ -1897,7 +1897,7 @@ export default function SovereignTimeMachineIamStudio({
                           onClick={() =>
                             handleCopy(t.accessToken, `OAuth2 token ${t.tokenId}`)
                           }
-                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           Copy Bearer Token
                         </button>
@@ -1910,7 +1910,7 @@ export default function SovereignTimeMachineIamStudio({
                               JSON.stringify(t, null, 2)
                             )
                           }
-                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer"
                         >
                           ⬇Download `.json`
                         </button>
@@ -1945,9 +1945,9 @@ export default function SovereignTimeMachineIamStudio({
 
             {/* 3. Service Account Emergency Kill-Switch Directory (Freeze/Unfreeze Entire Bot) */}
             {(iamData?.serviceAccounts || []).length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-zinc-800">
+              <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono text-zinc-300">
+                  <span className="text-xs font-bold font-mono text-zinc-700 dark:text-zinc-300">
                     3. Service Account Emergency Freeze Switch ({iamData.serviceAccounts.length} Accounts)
                   </span>
                   <span className="text-[10.5px] font-mono text-zinc-400">
@@ -1959,10 +1959,10 @@ export default function SovereignTimeMachineIamStudio({
                   {iamData.serviceAccounts.map((sa) => (
                     <div
                       key={sa.email}
-                      className="p-2.5 rounded-xl bg-zinc-950/80 border border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
+                      className="p-2.5 rounded-xl bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
                     >
                       <div className="min-w-0">
-                        <div className="font-bold text-zinc-100 truncate">
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
                           {sa.email}
                         </div>
                         <div className="text-[10px] text-zinc-400">
@@ -1997,8 +1997,8 @@ export default function SovereignTimeMachineIamStudio({
                         }
                         className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold cursor-pointer shrink-0 border ${
                           sa.disabled
-                            ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/30'
-                            : 'bg-red-600/20 text-red-300 border-red-500/40 hover:bg-red-600/30'
+                            ? 'bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/30'
+                            : 'bg-red-600/20 text-red-700 dark:text-red-300 border-red-500/40 hover:bg-red-600/30'
                         }`}
                       >
                         {sa.disabled ? '✓ Re-Enable SA...' : 'Freeze SA...'}
@@ -2010,15 +2010,15 @@ export default function SovereignTimeMachineIamStudio({
             )}
 
             {/* 4. 1-Click Keyless GitHub Actions OIDC Workload Identity Federation Architect ("Kill the .json Key Forever") */}
-            <div className="space-y-2.5 pt-3 border-t border-zinc-800">
+            <div className="space-y-2.5 pt-3 border-t border-zinc-200 dark:border-zinc-800">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Fingerprint className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-bold font-mono text-emerald-300">
+                  <span className="text-xs font-bold font-mono text-emerald-700 dark:text-emerald-300">
                     4. Keyless GitHub Actions OIDC Workload Identity Federation Architect ("Kill the `.json` Key Forever")
                   </span>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
                   $0.00/mo · Zero Static Keys Stored in GitHub
                 </span>
               </div>
@@ -2037,11 +2037,11 @@ export default function SovereignTimeMachineIamStudio({
                     value={githubRepoSlug}
                     onChange={(e) => setGithubRepoSlug(e.target.value)}
                     placeholder="GitHub owner/repository (e.g. my-org/cloudpulse-api)"
-                    className="w-full h-[36px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                    className="w-full h-[36px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div className="sm:col-span-4">
-                  <div className="h-[36px] px-3 rounded-lg bg-zinc-900/70 border border-zinc-800 flex items-center text-[11px] font-mono text-zinc-300 truncate">
+                  <div className="h-[36px] px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 flex items-center text-[11px] font-mono text-zinc-700 dark:text-zinc-300 truncate">
                     Target SA: {selectedSaEmail || iamData?.serviceAccounts?.[0]?.email || 'Select SA above'}
                   </div>
                 </div>
@@ -2059,9 +2059,9 @@ export default function SovereignTimeMachineIamStudio({
               </form>
 
               {wifResult && (
-                <div className="p-3 rounded-xl bg-emerald-950/25 border border-emerald-500/40 space-y-2 text-xs font-mono">
+                <div className="p-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/25 border border-emerald-500/40 space-y-2 text-xs font-mono">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-extrabold text-emerald-300">
+                    <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
                       ✓ Keyless OIDC Provider Ready for `{wifResult.githubRepo}` → `{wifResult.serviceAccountEmail}`
                     </span>
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -2074,7 +2074,7 @@ export default function SovereignTimeMachineIamStudio({
                               'gcloud OIDC Pool & Provider CLI'
                             )
                           }
-                          className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 text-[10.5px] font-bold cursor-pointer"
+                          className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold cursor-pointer"
                         >
                           Copy `gcloud` OIDC CLI
                         </button>
@@ -2093,22 +2093,22 @@ export default function SovereignTimeMachineIamStudio({
                       </button>
                     </div>
                   </div>
-                  <div className="text-[10.5px] text-zinc-300 break-all">
-                    Provider Resource: <code className="text-blue-300">{wifResult.providerResourceName}</code>
+                  <div className="text-[10.5px] text-zinc-700 dark:text-zinc-300 break-all">
+                    Provider Resource: <code className="text-blue-700 dark:text-blue-300">{wifResult.providerResourceName}</code>
                   </div>
                   {(wifResult.stepsCompleted || []).length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {wifResult.stepsCompleted.map((st, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px]"
+                          className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px]"
                         >
                           ✓ {st}
                         </span>
                       ))}
                     </div>
                   )}
-                  <pre className="p-2.5 rounded-lg bg-black/90 border border-zinc-800 text-[10.5px] text-emerald-200 overflow-x-auto">
+                  <pre className="p-2.5 rounded-lg bg-zinc-100 dark:bg-black/90 border border-zinc-200 dark:border-zinc-800 text-[10.5px] text-emerald-800 dark:text-emerald-200 overflow-x-auto">
                     {wifResult.githubActionsYaml}
                   </pre>
                 </div>
@@ -2120,14 +2120,14 @@ export default function SovereignTimeMachineIamStudio({
           {/* TWO-STEP IAM SURGERY APPROVAL & BEFORE/AFTER POLICY DIFF MODAL */}
           {pendingIamApproval && (
             <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="w-full max-w-2xl rounded-2xl border border-amber-500/40 bg-zinc-950 text-zinc-100 shadow-2xl p-5 space-y-4">
-                <div className="flex items-start justify-between gap-3 border-b border-zinc-800 pb-3">
+              <div className="w-full max-w-2xl rounded-2xl border border-amber-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 shadow-2xl p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
                   <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                       <AlertTriangle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                       <span>MANDATORY IAM CHANGE APPROVAL & IMPACT REVIEW</span>
                     </div>
-                    <h3 className="text-base font-extrabold text-white">
+                    <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">
                       {pendingIamApproval.payload.action === 'DOWNGRADE_ROLE'
                         ? 'Approve Scoping Down IAM Privilege (:setIamPolicy)'
                         : pendingIamApproval.payload.action ===
@@ -2151,21 +2151,21 @@ export default function SovereignTimeMachineIamStudio({
                   <button
                     type="button"
                     onClick={() => setPendingIamApproval(null)}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-mono cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-mono cursor-pointer"
                   >
                     ✕ Cancel
                   </button>
                 </div>
 
                 {/* Principal & Action Summary */}
-                <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1.5 text-xs font-mono">
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono">
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-400">Target GCP Project:</span>
                     <span className="font-bold text-amber-400">{projectId}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-400">Target Principal:</span>
-                    <span className="font-bold text-blue-300 break-all">
+                    <span className="font-bold text-blue-700 dark:text-blue-300 break-all">
                       {pendingIamApproval.payload.member ||
                         pendingIamApproval.payload.serviceAccountEmail ||
                         pendingIamApproval.meta?.serviceAccountEmail}
@@ -2177,11 +2177,11 @@ export default function SovereignTimeMachineIamStudio({
                 {pendingIamApproval.payload.action === 'DOWNGRADE_ROLE' ||
                 pendingIamApproval.payload.action === 'APPLY_JIT_CONDITION' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-                    <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/30 space-y-1">
+                    <div className="p-3 rounded-xl bg-red-500/10 dark:bg-red-950/30 border border-red-500/30 space-y-1">
                       <div className="text-[10px] font-bold text-red-400 uppercase">
                         BEFORE (Current IAM Binding)
                       </div>
-                      <div className="font-extrabold text-red-200">
+                      <div className="font-extrabold text-red-800 dark:text-red-200">
                         {pendingIamApproval.payload.role}
                       </div>
                       <div className="text-[10.5px] text-zinc-400">
@@ -2189,26 +2189,26 @@ export default function SovereignTimeMachineIamStudio({
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 space-y-1">
+                    <div className="p-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 space-y-1">
                       <div className="text-[10px] font-bold text-emerald-400 uppercase">
                         AFTER (Proposed IAM Binding)
                       </div>
                       {pendingIamApproval.payload.action === 'DOWNGRADE_ROLE' ? (
                         <>
-                          <div className="font-extrabold text-emerald-200">
+                          <div className="font-extrabold text-emerald-800 dark:text-emerald-200">
                             {approvalCustomRole ||
                               pendingIamApproval.payload.newRole}
                           </div>
-                          <div className="text-[10.5px] text-zinc-300">
+                          <div className="text-[10.5px] text-zinc-700 dark:text-zinc-300">
                             Scoped least-privilege role replacement
                           </div>
                         </>
                       ) : (
                         <>
-                          <div className="font-extrabold text-emerald-200">
+                          <div className="font-extrabold text-emerald-800 dark:text-emerald-200">
                             {pendingIamApproval.payload.role} (JIT Condition)
                           </div>
-                          <div className="text-[10.5px] text-zinc-300">
+                          <div className="text-[10.5px] text-zinc-700 dark:text-zinc-300">
                             Auto-expires after{' '}
                             {pendingIamApproval.payload.jitHours} hours via CEL
                             timestamp condition
@@ -2218,11 +2218,11 @@ export default function SovereignTimeMachineIamStudio({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/40 text-xs font-mono space-y-1">
-                    <div className="text-red-300 font-bold">
+                  <div className="p-3 rounded-xl bg-red-500/10 dark:bg-red-950/30 border border-red-500/40 text-xs font-mono space-y-1">
+                    <div className="text-red-700 dark:text-red-300 font-bold">
                       Security Credential Action Impact:
                     </div>
-                    <div className="text-zinc-300">
+                    <div className="text-zinc-700 dark:text-zinc-300">
                       {pendingIamApproval.payload.action === 'ROTATE_SA_KEY'
                         ? `A fresh RSA-2048 .json key will be minted and downloaded to your browser, and old key ${pendingIamApproval.payload.keyName} will be permanently deleted from IAM.`
                         : pendingIamApproval.payload.action === 'REVOKE_SA_TOKEN'
@@ -2257,7 +2257,7 @@ export default function SovereignTimeMachineIamStudio({
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-mono cursor-pointer border ${
                               approvalCustomRole === r
                                 ? 'bg-emerald-600 text-white border-emerald-400 font-bold'
-                                : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:border-emerald-500/40'
+                                : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-emerald-500/40'
                             }`}
                           >
                             {r}
@@ -2268,7 +2268,7 @@ export default function SovereignTimeMachineIamStudio({
                       type="text"
                       value={approvalCustomRole}
                       onChange={(e) => setApprovalCustomRole(e.target.value)}
-                      className="w-full h-[34px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 text-xs font-mono text-white"
+                      className="w-full h-[34px] bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 text-xs font-mono text-zinc-900 dark:text-white"
                       placeholder="roles/..."
                     />
                   </div>
@@ -2280,7 +2280,7 @@ export default function SovereignTimeMachineIamStudio({
                     <div className="text-[10.5px] font-mono text-zinc-400">
                       1-Command Instant Rollback (Save this if you ever want to restore the original role):
                     </div>
-                    <pre className="p-2.5 rounded-xl bg-black border border-zinc-800 text-[10.5px] font-mono text-blue-300 overflow-x-auto">
+                    <pre className="p-2.5 rounded-xl bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto">
                       {`gcloud projects add-iam-policy-binding ${projectId} --member="${pendingIamApproval.payload.member}" --role="${pendingIamApproval.payload.role}"`}
                     </pre>
                   </div>
@@ -2294,17 +2294,17 @@ export default function SovereignTimeMachineIamStudio({
                     onChange={(e) => setApprovalChecked(e.target.checked)}
                     className="mt-0.5 accent-amber-500 w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-xs text-amber-200 leading-snug">
+                  <span className="text-xs text-amber-800 dark:text-amber-200 leading-snug">
                     I have reviewed the IAM security impact above and explicitly approve applying this change to project{' '}
                     <strong className="font-mono">{projectId}</strong>.
                   </span>
                 </label>
 
-                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-800">
+                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
                   <button
                     type="button"
                     onClick={() => setPendingIamApproval(null)}
-                    className="px-4 py-2 rounded-xl text-xs font-mono border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-xs font-mono border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2482,7 +2482,7 @@ export default function SovereignTimeMachineIamStudio({
               {tmData.drifts.map((d) => (
                 <div
                   key={d.driftId}
-                  className="p-3.5 rounded-[10px] border border-red-500/35 bg-red-950/10 space-y-2"
+                  className="p-3.5 rounded-[10px] border border-red-500/35 bg-red-500/10 dark:bg-red-950/10 space-y-2"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -2501,7 +2501,7 @@ export default function SovereignTimeMachineIamStudio({
                       type="button"
                       onClick={() => handleCopy(d.healCli, 'Drift rollback CLI')}
                       title="Copy exact gcloud/bq command to roll this drifted property back to the signed baseline snapshot"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-zinc-900 text-zinc-200 border border-zinc-700 text-[11px] font-mono cursor-pointer hover:bg-zinc-800"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800"
                     >
                       {copiedText === d.healCli ? (
                         <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
@@ -2513,13 +2513,13 @@ export default function SovereignTimeMachineIamStudio({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
-                    <div className="p-2.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                    <div className="p-2.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
                       <div className="text-[10px] text-emerald-400 font-bold mb-0.5">
                         ✓ SIGNED SNAPSHOT BASELINE (EXPECTED)
                       </div>
                       <div className="break-all">{d.beforeValue}</div>
                     </div>
-                    <div className="p-2.5 rounded bg-red-500/10 border border-red-500/30 text-red-300">
+                    <div className="p-2.5 rounded bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300">
                       <div className="text-[10px] text-red-400 font-bold mb-0.5">
                         CURRENT LIVE GCP STATE (DRIFTED)
                       </div>
@@ -2530,7 +2530,7 @@ export default function SovereignTimeMachineIamStudio({
               ))}
             </div>
           ) : (
-            <div className="p-6 rounded-[10px] border border-emerald-500/30 bg-emerald-950/10 text-center space-y-2">
+            <div className="p-6 rounded-[10px] border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/10 text-center space-y-2">
               <ShieldCheck className="w-8 h-8 text-zinc-500 dark:text-zinc-400 mx-auto" />
               <div className="text-sm font-extrabold text-emerald-400">
                 100% Cryptographic Merkle State Integrity Verified
@@ -2950,7 +2950,7 @@ export default function SovereignTimeMachineIamStudio({
 
                 {/* Live Broken Cloud Run secretKeyRef Dependency Radar & 1-Click Healer */}
                 {(vaultData?.brokenSecretReferences || []).length > 0 && (
-                  <div className="p-3 rounded-[9px] bg-red-950/25 border border-red-500/50 space-y-2 text-xs font-mono">
+                  <div className="p-3 rounded-[9px] bg-red-500/10 dark:bg-red-950/25 border border-red-500/50 space-y-2 text-xs font-mono">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-extrabold text-red-400 flex items-center gap-1.5">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -2958,7 +2958,7 @@ export default function SovereignTimeMachineIamStudio({
                           LIVE BROKEN `secretKeyRef` RADAR ({vaultData.brokenSecretReferences.length} Cloud Run Binding(s) at Crash Risk!)
                         </span>
                       </span>
-                      <span className="text-[10px] text-red-300">
+                      <span className="text-[10px] text-red-700 dark:text-red-300">
                         Cloud Run v2 services referencing deleted, disabled, or destroyed Secret Manager versions
                       </span>
                     </div>
@@ -2966,13 +2966,13 @@ export default function SovereignTimeMachineIamStudio({
                       {vaultData.brokenSecretReferences.map((br, idx) => (
                         <div
                           key={`${br.serviceName}-${br.secretId}-${br.envKey}-${idx}`}
-                          className="p-2.5 rounded-lg bg-black/60 border border-red-500/40 flex flex-wrap items-center justify-between gap-2"
+                          className="p-2.5 rounded-lg bg-zinc-100 dark:bg-black/60 border border-red-500/40 flex flex-wrap items-center justify-between gap-2"
                         >
                           <div className="space-y-0.5 min-w-0">
-                            <div className="font-bold text-white">
+                            <div className="font-bold text-zinc-900 dark:text-white">
                               Cloud Run `{br.serviceName}` ({br.region}) → `{br.envKey}` → `{br.secretId}@${br.version}`
                             </div>
-                            <div className="text-[10.5px] text-red-300">
+                            <div className="text-[10.5px] text-red-700 dark:text-red-300">
                               [{br.status}] {br.reason}
                             </div>
                           </div>
@@ -3436,7 +3436,7 @@ export default function SovereignTimeMachineIamStudio({
                 <p className="text-[11px] text-zinc-500">
                   Synthesizes a complete Google Cloud Armor edge security policy blocking SQLi (`sqli-v33-stable`), XSS (`xss-v33-stable`), LFI/RCE scanners, and throttling abusive IPs at `100 req/min` (`429 Too Many Requests`).
                 </p>
-                <div className="p-2.5 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto">
+                <div className="p-2.5 rounded-[8px] bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 font-mono text-[10.5px] overflow-x-auto">
                   {`gcloud compute security-policies create cloudpulse-zero-trust-waf --project=${projectId} && \\
 gcloud compute security-policies rules create 1000 --security-policy=cloudpulse-zero-trust-waf --expression="evaluatePreconfiguredWaf('sqli-v33-stable') || evaluatePreconfiguredWaf('xss-v33-stable')" --action=deny-403 --project=${projectId} && \\
 gcloud compute security-policies rules create 2000 --security-policy=cloudpulse-zero-trust-waf --src-ip-ranges="*" --action=throttle --rate-limit-threshold-count=100 --rate-limit-threshold-interval-sec=60 --conform-action=allow --exceed-action=deny-429 --enforce-on-key=IP --project=${projectId}`}

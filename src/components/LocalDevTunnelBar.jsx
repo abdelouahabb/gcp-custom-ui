@@ -186,20 +186,20 @@ export default function LocalDevTunnelBar({
   const activeTunnels = tunnelsData.tunnels || [];
 
   return (
-    <div className="p-4 rounded-xl bg-zinc-950 border border-emerald-500/35 text-zinc-100 space-y-3.5 shadow-lg">
+    <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-emerald-500/35 text-zinc-900 dark:text-zinc-100 space-y-3.5 shadow-lg">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono font-extrabold">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[11px] font-mono font-extrabold">
             <Network className="w-3.5 h-3.5" />
             <span>127.0.0.1 ZERO-PUBLIC-IP DEVELOPER BRIDGE</span>
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold">
             <DollarSign className="w-3 h-3" />
             <span>Saves $7.30/mo per Private VM / DB (No Public IPv4 Needed)</span>
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 text-[10px] font-mono">
-            <Lock className="w-3 h-3 text-emerald-400" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono">
+            <Lock className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             <span>IAP TCP 35.235.240.0/20 + Automatic OIDC Bearer Injection</span>
           </span>
         </div>
@@ -209,7 +209,7 @@ export default function LocalDevTunnelBar({
             type="button"
             onClick={fetchTunnels}
             disabled={loading}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-[10.5px] font-mono cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono cursor-pointer"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh ({activeTunnels.length})</span>
@@ -218,7 +218,7 @@ export default function LocalDevTunnelBar({
             <button
               type="button"
               onClick={onClose}
-              className="text-xs font-mono text-zinc-400 hover:text-zinc-200 px-1.5 cursor-pointer"
+              className="text-xs font-mono text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 px-1.5 cursor-pointer"
             >
               Close
             </button>
@@ -226,15 +226,15 @@ export default function LocalDevTunnelBar({
         </div>
       </div>
 
-      <p className="text-[11px] text-zinc-400 leading-relaxed">
+      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
         Connect your local browser, IDE, Postman, or ORM (`Prisma`, `psql`, `mysql`, `curl`, `ssh`) directly to <strong>Private IAM-Locked Cloud Run services</strong>, <strong>Zero-External-IP Compute Engine VMs</strong>, or <strong>Private VPC Cloud SQL / AlloyDB</strong> over `127.0.0.1` without opening `0.0.0.0/0` firewall ports or paying `$7.30/mo` for static public IPv4 addresses.
       </p>
 
       {/* 1-Click Port-Forward Launcher Form */}
-      <div className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800 space-y-2.5">
+      <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
           <div>
-            <label className="block text-[10px] font-mono text-zinc-400 mb-1">
+            <label className="block text-[10px] font-mono text-zinc-600 dark:text-zinc-400 mb-1">
               1. Tunnel Engine Mode
             </label>
             <select
@@ -253,7 +253,7 @@ export default function LocalDevTunnelBar({
                   setPreferredLocalPort(5432);
                 }
               }}
-              className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-white"
+              className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
             >
               <option value="CLOUD_RUN_PROXY">
                 Cloud Run Auth Proxy (OIDC Bearer)
@@ -268,7 +268,7 @@ export default function LocalDevTunnelBar({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono text-zinc-400 mb-1">
+            <label className="block text-[10px] font-mono text-zinc-600 dark:text-zinc-400 mb-1">
               2. Target Resource Name
             </label>
             {availableResources.length > 0 ? (
@@ -284,7 +284,7 @@ export default function LocalDevTunnelBar({
                   if (chosen?.port) setRemotePort(chosen.port);
                   if (chosen?.dbEngine) setDbEngine(chosen.dbEngine);
                 }}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-white"
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
               >
                 {availableResources.map((r) => (
                   <option key={r.name} value={r.name}>
@@ -298,13 +298,13 @@ export default function LocalDevTunnelBar({
                 value={resourceName}
                 onChange={(e) => setResourceName(e.target.value)}
                 placeholder="e.g. api-gateway or prod-vm"
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-white"
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
               />
             )}
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono text-zinc-400 mb-1">
+            <label className="block text-[10px] font-mono text-zinc-600 dark:text-zinc-400 mb-1">
               3. {targetType === 'COMPUTE_IAP_TCP' ? 'GCP Zone' : 'GCP Region'}
             </label>
             <input
@@ -315,31 +315,31 @@ export default function LocalDevTunnelBar({
                   ? setZone(e.target.value)
                   : setRegion(e.target.value)
               }
-              className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-white"
+              className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-1.5">
             <div>
-              <label className="block text-[10px] font-mono text-zinc-400 mb-1">
+              <label className="block text-[10px] font-mono text-zinc-600 dark:text-zinc-400 mb-1">
                 Local 127.0.0.1
               </label>
               <input
                 type="number"
                 value={preferredLocalPort}
                 onChange={(e) => setPreferredLocalPort(Number(e.target.value))}
-                className="w-full bg-zinc-950 border border-emerald-500/40 rounded px-2 py-1.5 text-xs font-mono text-emerald-300 font-bold"
+                className="w-full bg-white dark:bg-zinc-950 border border-emerald-500/40 rounded px-2 py-1.5 text-xs font-mono text-emerald-700 dark:text-emerald-300 font-bold"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-mono text-zinc-400 mb-1">
+              <label className="block text-[10px] font-mono text-zinc-600 dark:text-zinc-400 mb-1">
                 Remote Port
               </label>
               <input
                 type="number"
                 value={remotePort}
                 onChange={(e) => setRemotePort(Number(e.target.value))}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-white"
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-white"
               />
             </div>
           </div>
@@ -374,7 +374,7 @@ export default function LocalDevTunnelBar({
                 setPreferredLocalPort(p.localPort);
                 setRemotePort(p.remotePort);
               }}
-              className="px-2 py-0.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-[10px] font-mono cursor-pointer"
+              className="px-2 py-0.5 rounded bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono cursor-pointer"
             >
               {p.label}
             </button>
@@ -385,7 +385,7 @@ export default function LocalDevTunnelBar({
       {/* Active Tunnels List */}
       {activeTunnels.length > 0 && (
         <div className="space-y-2">
-          <div className="text-[10.5px] font-mono font-extrabold uppercase tracking-wider text-emerald-400">
+          <div className="text-[10.5px] font-mono font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
             Active Local Developer Tunnels ({activeTunnels.length})
           </div>
           {activeTunnels.map((t) => {
@@ -393,18 +393,18 @@ export default function LocalDevTunnelBar({
             return (
               <div
                 key={t.tunnelId}
-                className="p-3 rounded-lg bg-zinc-900 border border-emerald-500/30 space-y-2"
+                className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-emerald-500/30 space-y-2"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10.5px] font-mono font-extrabold">
-                      ● 127.0.0.1:{t.localPort} ➔ {t.resourceName}:{t.remotePort}
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 text-[10.5px] font-mono font-extrabold">
+                      127.0.0.1:{t.localPort} -&gt; {t.resourceName}:{t.remotePort}
                     </span>
-                    <span className="text-[10px] font-mono text-zinc-400">
+                    <span className="text-[10px] font-mono text-zinc-600 dark:text-zinc-400">
                       {t.engine}
                     </span>
                     {t.pid && (
-                      <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[9.5px] font-mono">
+                      <span className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[9.5px] font-mono">
                         PID {t.pid}
                       </span>
                     )}
@@ -427,7 +427,7 @@ export default function LocalDevTunnelBar({
                       type="button"
                       disabled={probingId === t.tunnelId}
                       onClick={() => handleProbeTunnel(t.tunnelId)}
-                      className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-emerald-300 border border-emerald-500/30 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
                     >
                       <Zap className="w-3 h-3" />
                       <span>
@@ -442,11 +442,11 @@ export default function LocalDevTunnelBar({
                       onClick={() =>
                         handleCopy(t.cliCommand, `cli-${t.tunnelId}`)
                       }
-                      className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10.5px] font-mono inline-flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-[10.5px] font-mono inline-flex items-center gap-1 cursor-pointer"
                     >
                       {copiedKey === `cli-${t.tunnelId}` ? (
                         <>
-                          <Check className="w-3 h-3 text-emerald-400" />
+                          <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                           <span>Copied CLI</span>
                         </>
                       ) : (
@@ -460,7 +460,7 @@ export default function LocalDevTunnelBar({
                     <button
                       type="button"
                       onClick={() => handleStopTunnel(t.tunnelId)}
-                      className="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-700 dark:text-red-300 border border-red-500/30 text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
                     >
                       <Square className="w-3 h-3 fill-current" />
                       <span>Stop</span>
@@ -470,29 +470,29 @@ export default function LocalDevTunnelBar({
 
                 {/* CLI + Client Snippets */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800 font-mono text-[10px] text-emerald-300 overflow-x-auto">
+                  <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 font-mono text-[10px] text-emerald-700 dark:text-emerald-300 overflow-x-auto">
                     <div className="text-zinc-500 mb-0.5">
                       Underlying Zero-Trust Tunnel Command:
                     </div>
                     <code>{t.cliCommand}</code>
                   </div>
 
-                  <div className="p-2 rounded bg-zinc-950 border border-zinc-800 font-mono text-[10px] text-blue-300 space-y-1 overflow-x-auto">
+                  <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 font-mono text-[10px] text-blue-700 dark:text-blue-300 space-y-1 overflow-x-auto">
                     <div className="text-zinc-500">
                       Copy-Ready Local Client / ORM Connection:
                     </div>
                     {Object.entries(t.clientSnippets || {}).map(([k, val]) => (
                       <div
                         key={k}
-                        className="flex items-center justify-between gap-2 bg-zinc-900/80 px-2 py-0.5 rounded"
+                        className="flex items-center justify-between gap-2 bg-zinc-100 dark:bg-zinc-900/80 px-2 py-0.5 rounded"
                       >
                         <code className="truncate">{val}</code>
                         <button
                           type="button"
                           onClick={() => handleCopy(val, `snip-${t.tunnelId}-${k}`)}
-                          className="text-[9.5px] text-zinc-400 hover:text-white shrink-0 cursor-pointer"
+                          className="text-[9.5px] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shrink-0 cursor-pointer"
                         >
-                          {copiedKey === `snip-${t.tunnelId}-${k}` ? '✓' : 'Copy'}
+                          {copiedKey === `snip-${t.tunnelId}-${k}` ? 'Copied' : 'Copy'}
                         </button>
                       </div>
                     ))}
@@ -504,25 +504,25 @@ export default function LocalDevTunnelBar({
                   <div
                     className={`p-2 rounded border text-[10.5px] font-mono flex flex-wrap items-center justify-between gap-2 ${
                       probe.tcpReachable
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                        : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
                     }`}
                   >
                     <div>
                       <strong>
                         {probe.tcpReachable
-                          ? `✓ 127.0.0.1:${t.localPort} Socket Reachable (${probe.rttMs}ms)`
-                          : `ℹ Local Socket Info:`}
+                          ? `127.0.0.1:${t.localPort} Socket Reachable (${probe.rttMs}ms)`
+                          : `Local Socket Info:`}
                       </strong>{' '}
                       {probe.detail}
                       {probe.httpProbe?.statusCode && (
-                        <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-white">
+                        <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-white">
                           HTTP {probe.httpProbe.statusCode}
                         </span>
                       )}
                     </div>
                     {probe.httpProbe?.bodyPreview && (
-                      <code className="text-[10px] text-zinc-300 truncate max-w-md">
+                      <code className="text-[10px] text-zinc-700 dark:text-zinc-300 truncate max-w-md">
                         {probe.httpProbe.bodyPreview}
                       </code>
                     )}

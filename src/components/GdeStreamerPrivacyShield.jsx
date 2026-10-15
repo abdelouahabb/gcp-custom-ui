@@ -547,7 +547,7 @@ export default function GdeStreamerPrivacyShield({
               <button
                 type="button"
                 onClick={() => setPopoverOpen(false)}
-                className="px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold cursor-pointer"
+                className="px-2.5 py-1 rounded bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 font-bold cursor-pointer"
               >
                 Done
               </button>

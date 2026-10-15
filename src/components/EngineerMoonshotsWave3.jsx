@@ -1550,7 +1550,7 @@ CMD ["server/index.js"]`;
             ))}
           </div>
 
-          <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+          <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
             <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
               <span className="text-emerald-400 font-bold">
                 Synthesized Multi-Stage Distroless Container Diet Patch
@@ -1574,7 +1574,7 @@ CMD ["server/index.js"]`;
                 )}
               </button>
             </div>
-            <pre className="text-[11px] font-mono text-zinc-200 overflow-x-auto">
+            <pre className="text-[11px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto">
               {dockerfilePatch}
             </pre>
           </div>
@@ -1924,7 +1924,7 @@ CMD ["server/index.js"]`;
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
                 MOONSHOT X6 · OPTION 3 AES-256-GCM AI STUDIO BYOK VAULT
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-emerald-400 border border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 text-emerald-400 border border-emerald-500/30">
                 {vaultStatus.configured
                   ? `SEALED IN RAM (${vaultStatus.maskedKey} · ${vaultStatus.keyFingerprint})`
                   : 'ZERO-KEY DETERMINISTIC MODE (SEAL KEY TO UNLOCK LIVE GEMINI 3.8 FLASH / 3.1 PRO)'}
@@ -1984,7 +1984,7 @@ CMD ["server/index.js"]`;
         </div>
 
         {/* Anti-Sniffing Transport & Wire-Encryption Mode Selector */}
-        <div className="p-3 rounded-xl bg-zinc-900/95 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/95 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
           <div className="flex items-center gap-2 text-emerald-400">
             <Lock className="w-4 h-4 shrink-0" />
             <span className="font-bold">
@@ -2000,7 +2000,7 @@ CMD ["server/index.js"]`;
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
                 transportMode === 'BROWSER_DIRECT_TLS13'
                   ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                  : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-emerald-500/50'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-emerald-500/50'
               }`}
             >
               Mode 1: Direct Browser → Google HTTPS TLS 1.3 (0 Local HTTP
@@ -2013,7 +2013,7 @@ CMD ["server/index.js"]`;
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
                 transportMode === 'RSA_OAEP_SERVER_VAULT'
                   ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
-                  : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-blue-500/50'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-blue-500/50'
               }`}
             >
               Mode 2: Browser RSA-OAEP-256 Ciphertext → Server AES-256-GCM
@@ -2168,7 +2168,7 @@ CMD ["server/index.js"]`;
                 className={`flex-1 px-3 py-2 rounded-lg text-white text-xs font-mono font-bold cursor-pointer transition-all ${
                   apiKeyInput.trim()
                     ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20'
-                    : 'bg-zinc-700 hover:bg-zinc-600'
+                    : 'bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-600'
                 }`}
               >
                 {transportMode === 'BROWSER_DIRECT_TLS13'
@@ -2295,9 +2295,9 @@ CMD ["server/index.js"]`;
           </div>
 
           {aiResponse && (
-            <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               {!vaultStatus.configured && (
-                <div className="p-3 rounded-lg bg-amber-500/15 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-amber-300">
+                <div className="p-3 rounded-lg bg-amber-500/15 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-amber-700 dark:text-amber-300">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
                     <span>
@@ -2329,7 +2329,7 @@ CMD ["server/index.js"]`;
                       type="button"
                       onClick={focusAndHighlightKeyInput}
                       title="Scroll up and focus the encrypted API key input box"
-                      className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-amber-500/40 font-bold text-[11px] cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold text-[11px] cursor-pointer"
                     >
                       Paste Key Above
                     </button>
@@ -2337,7 +2337,7 @@ CMD ["server/index.js"]`;
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-emerald-400 pb-1 border-b border-zinc-800">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-emerald-400 pb-1 border-b border-zinc-200 dark:border-zinc-800">
                 <div className="flex flex-wrap items-center gap-2">
                   <span>
                     Engine: {aiResponse.source} · Cipher:{' '}
@@ -2347,8 +2347,8 @@ CMD ["server/index.js"]`;
                     <span
                       className={`px-1.5 py-0.5 rounded border ${
                         aiResponse.finishReason === 'STOP'
-                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
                       }`}
                     >
                       Status: {aiResponse.finishReason} (8,192 Token Budget)
@@ -2356,7 +2356,7 @@ CMD ["server/index.js"]`;
                   )}
                   {aiResponse.tokenUsage &&
                     aiResponse.tokenUsage.totalTokens > 0 && (
-                      <span className="px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
+                      <span className="px-1.5 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 text-zinc-400 border border-zinc-200 dark:border-zinc-800">
                         Out: {aiResponse.tokenUsage.outputTokens} tok
                         {aiResponse.tokenUsage.thoughtTokens > 0
                           ? ` · Thinking: ${aiResponse.tokenUsage.thoughtTokens} tok`
@@ -2368,7 +2368,7 @@ CMD ["server/index.js"]`;
                   type="button"
                   onClick={() => handleCopy(aiResponse.answer, 'ai-ans')}
                   title="Copy the entire Markdown SRE architecture response to your clipboard"
-                  className="px-2.5 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 cursor-pointer font-bold"
+                  className="px-2.5 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer font-bold"
                 >
                   {copiedKey === 'ai-ans'
                     ? '✓ Copied Full Answer!'
@@ -2393,9 +2393,9 @@ CMD ["server/index.js"]`;
                       return (
                         <div
                           key={blockKey}
-                          className="rounded-lg bg-zinc-900 border border-zinc-700/80 overflow-hidden"
+                          className="rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700/80 overflow-hidden"
                         >
-                          <div className="px-3 py-1 bg-zinc-800/90 border-b border-zinc-700/80 flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                          <div className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800/90 border-b border-zinc-300 dark:border-zinc-700/80 flex items-center justify-between text-[10px] font-mono text-zinc-400">
                             <span className="uppercase font-bold text-blue-400">
                               {lang}
                             </span>
@@ -2410,7 +2410,7 @@ CMD ["server/index.js"]`;
                                 : 'Copy Snippet'}
                             </button>
                           </div>
-                          <pre className="p-3 text-xs font-mono text-emerald-300 whitespace-pre-wrap overflow-x-auto leading-relaxed">
+                          <pre className="p-3 text-xs font-mono text-emerald-700 dark:text-emerald-300 whitespace-pre-wrap overflow-x-auto leading-relaxed">
                             {codeBody}
                           </pre>
                         </div>
@@ -2419,7 +2419,7 @@ CMD ["server/index.js"]`;
                     return (
                       <pre
                         key={`txt-${idx}`}
-                        className="text-xs font-mono text-zinc-200 whitespace-pre-wrap leading-relaxed"
+                        className="text-xs font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed"
                       >
                         {segment.trim()}
                       </pre>

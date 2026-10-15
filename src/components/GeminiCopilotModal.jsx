@@ -325,7 +325,7 @@ export default function GeminiCopilotModal({
               type="button"
               onClick={runLiveProjectAudit}
               disabled={loadingScan}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer hover:bg-zinc-700"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${
@@ -525,7 +525,7 @@ export default function GeminiCopilotModal({
                       type="button"
                       disabled={busyActionId === `dag-${rb.id}`}
                       onClick={() => handleExecuteRunbookDag(rb.id)}
-                      className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="w-full py-2 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <Zap className="w-3.5 h-3.5" />
                       <span>
@@ -620,7 +620,7 @@ export default function GeminiCopilotModal({
                   </button>
                 </div>
               </div>
-              <pre className="p-3 rounded-lg bg-zinc-950 text-zinc-200 text-[11px] overflow-x-auto max-h-44 leading-relaxed border border-zinc-800">
+              <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 text-[11px] overflow-x-auto max-h-44 leading-relaxed border border-zinc-200 dark:border-zinc-800">
                 {gitOpsViewMode === 'DIFF'
                   ? gitOpsBridge.unifiedDiff
                   : gitOpsBridge.importsTf}
@@ -708,7 +708,7 @@ export default function GeminiCopilotModal({
                                   onSwitchProject(row.projectId);
                                 }
                               }}
-                              className="px-2 py-1 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
+                              className="px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
                             >
                               Switch
                             </button>

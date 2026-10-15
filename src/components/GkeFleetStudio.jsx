@@ -805,7 +805,7 @@ spec:
               </label>
             </div>
 
-            <div className="p-2.5 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto">
+            <div className="p-2.5 rounded-[8px] bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 font-mono text-[10.5px] overflow-x-auto">
               {gkeCli}
             </div>
 
@@ -1283,7 +1283,7 @@ spec:
                 Copy YAML Manifest
               </button>
             </div>
-            <pre className="p-3 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto max-h-80">
+            <pre className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 font-mono text-[10.5px] overflow-x-auto max-h-80">
               {k8sYamlManifest}
             </pre>
           </div>

@@ -700,7 +700,7 @@ export default function EngineerWishlistWave2({
             </div>
 
             {/* Visual Request Waterfall / Cold-Start Histogram */}
-            <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2.5">
+            <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
               <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
                 <span>
                   Per-Request Latency Waterfall (#1 Cold-Start vs Subsequent Warm
@@ -721,7 +721,7 @@ export default function EngineerWishlistWave2({
                       className="flex items-center gap-2 text-[11px] font-mono"
                     >
                       <span className="w-8 text-zinc-500">#{s.index}</span>
-                      <div className="flex-1 h-4 bg-zinc-900 rounded overflow-hidden">
+                      <div className="flex-1 h-4 bg-zinc-50 dark:bg-zinc-900 rounded overflow-hidden">
                         <div
                           style={{ width: `${widthPct}%` }}
                           className={`h-full rounded ${
@@ -735,7 +735,7 @@ export default function EngineerWishlistWave2({
                       </div>
                       <span
                         className={`w-16 text-right font-bold ${
-                          isFirst ? 'text-amber-400' : 'text-zinc-200'
+                          isFirst ? 'text-amber-400' : 'text-zinc-800 dark:text-zinc-200'
                         }`}
                       >
                         {s.latencyMs}ms
@@ -748,18 +748,18 @@ export default function EngineerWishlistWave2({
 
             {/* Live HTTP Response Header X-Ray & Payload Preview */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+              <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
                 <div className="text-xs font-mono font-bold text-emerald-400 uppercase">
                   HTTP Response Headers X-Ray (Google Front End / Trace / TLS)
                 </div>
-                <div className="max-h-56 overflow-y-auto divide-y divide-zinc-800/70 text-[11px] font-mono">
+                <div className="max-h-56 overflow-y-auto divide-y divide-zinc-200 dark:divide-zinc-800/70 text-[11px] font-mono">
                   {Object.entries(benchResult.headers || {}).map(([k, v]) => (
                     <div
                       key={k}
                       className="py-1 flex items-start justify-between gap-3"
                     >
                       <span className="text-blue-400 shrink-0">{k}:</span>
-                      <span className="text-zinc-300 break-all text-right">
+                      <span className="text-zinc-700 dark:text-zinc-300 break-all text-right">
                         {String(v)}
                       </span>
                     </div>
@@ -767,11 +767,11 @@ export default function EngineerWishlistWave2({
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+              <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
                 <div className="text-xs font-mono font-bold text-blue-400 uppercase">
                   Live Response Payload Preview (First 800 Bytes)
                 </div>
-                <pre className="text-[11px] font-mono text-zinc-300 max-h-56 overflow-y-auto whitespace-pre-wrap break-all">
+                <pre className="text-[11px] font-mono text-zinc-700 dark:text-zinc-300 max-h-56 overflow-y-auto whitespace-pre-wrap break-all">
                   {benchResult.bodyPreview || '(Empty response body)'}
                 </pre>
               </div>
@@ -830,7 +830,7 @@ export default function EngineerWishlistWave2({
               type="button"
               onClick={() => fetchZombies(false)}
               disabled={loadingZombies}
-              className="inline-flex items-center gap-1.5 bg-zinc-900 text-white dark:bg-zinc-800 px-3 py-2 rounded-lg text-xs font-mono font-bold cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-800 px-3 py-2 rounded-lg text-xs font-mono font-bold cursor-pointer"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingZombies ? 'animate-spin' : ''}`}
@@ -881,7 +881,7 @@ export default function EngineerWishlistWave2({
 
                   {/* Live Real-Time GCP Zone Operation Progress Tracker */}
                   {tracker && (
-                    <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+                    <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                       <div className="flex items-center justify-between text-[10px] font-mono">
                         <span
                           className={`font-bold ${
@@ -902,7 +902,7 @@ export default function EngineerWishlistWave2({
                           {tracker.progress}%
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-zinc-50 dark:bg-zinc-900 rounded-full overflow-hidden">
                         <div
                           style={{ width: `${tracker.progress}%` }}
                           className={`h-full transition-all duration-300 rounded-full ${
@@ -914,7 +914,7 @@ export default function EngineerWishlistWave2({
                           }`}
                         />
                       </div>
-                      <div className="text-[10px] font-mono text-zinc-300 truncate">
+                      <div className="text-[10px] font-mono text-zinc-700 dark:text-zinc-300 truncate">
                         {tracker.stepLabel}
                       </div>
                     </div>
@@ -1178,7 +1178,7 @@ export default function EngineerWishlistWave2({
               <button
                 type="button"
                 onClick={() => setSimulateGpuWorkload(false)}
-                className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-bold cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
               >
                 Strip GPU & Deploy as CPU-Only in {evalResult.dst.name}
               </button>

@@ -308,7 +308,7 @@ export default function Lab2026QuantumNexus({
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-zinc-900 text-white dark:bg-zinc-800">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-800">
                       {node.category}
                     </span>
                     <span
@@ -797,7 +797,7 @@ export default function Lab2026QuantumNexus({
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                  <div className="p-2 rounded bg-zinc-950 text-emerald-400 font-mono text-[10px] overflow-x-auto">
+                  <div className="p-2 rounded bg-white dark:bg-zinc-950 text-emerald-400 font-mono text-[10px] overflow-x-auto">
                     {opp.command}
                   </div>
                   <button
@@ -1057,7 +1057,7 @@ export default function Lab2026QuantumNexus({
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 rounded bg-zinc-900 text-white dark:bg-zinc-800 font-mono text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-800 font-mono text-[10px] font-bold">
                       {t.type}
                     </span>
                     <span
@@ -1086,14 +1086,14 @@ export default function Lab2026QuantumNexus({
 
           {/* Deception Tripwire Incident Log */}
           {(data?.honeyGrid?.events || []).length > 0 && (
-            <div className="p-4 rounded-xl bg-red-950/30 border border-red-500/40 space-y-2">
+            <div className="p-4 rounded-xl bg-red-500/10 dark:bg-red-950/30 border border-red-500/40 space-y-2">
               <div className="text-xs font-extrabold text-red-400">
                 Automated Breach Deception &amp; Quarantine Execution Log
               </div>
               {data.honeyGrid.events.map((ev) => (
                 <div
                   key={ev.id}
-                  className="p-3 rounded-lg bg-zinc-950 border border-red-500/30 text-xs font-mono text-zinc-200 space-y-1"
+                  className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-red-500/30 text-xs font-mono text-zinc-800 dark:text-zinc-200 space-y-1"
                 >
                   <div className="flex items-center justify-between text-red-400 font-bold">
                     <span>

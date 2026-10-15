@@ -541,7 +541,7 @@ options:
                 className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold transition-all cursor-pointer border ${
                   active
                     ? 'bg-blue-600 text-white border-blue-400 shadow-md'
-                    : 'bg-zinc-900/80 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
+                    : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -549,7 +549,7 @@ options:
                   className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
                     active
                       ? 'bg-black/30 text-blue-100'
-                      : 'bg-zinc-800 text-zinc-400'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
                   }`}
                 >
                   {tab.badge}
@@ -933,7 +933,7 @@ options:
                 )}
               </div>
 
-              <div className="p-2.5 rounded-[8px] bg-zinc-950 border border-zinc-800 text-[10.5px] font-mono text-blue-300 flex items-center justify-between gap-2">
+              <div className="p-2.5 rounded-[8px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-blue-700 dark:text-blue-300 flex items-center justify-between gap-2">
                 <span className="truncate">
                   Output Image URI: {targetImageUriPreview}
                 </span>
@@ -942,7 +942,7 @@ options:
                   onClick={() =>
                     handleCopy(targetImageUriPreview, 'Artifact Registry Image URI')
                   }
-                  className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] shrink-0 cursor-pointer"
+                  className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] shrink-0 cursor-pointer"
                 >
                   Copy URI
                 </button>
@@ -996,7 +996,7 @@ options:
                               b.status === 'SUCCESS'
                                 ? 'bg-emerald-500/15 text-emerald-400'
                                 : b.status === 'WORKING' || b.status === 'QUEUED'
-                                ? 'bg-blue-500/20 text-blue-300 animate-pulse'
+                                ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300 animate-pulse'
                                 : 'bg-red-500/15 text-red-400'
                             }`}
                           >
@@ -1019,7 +1019,7 @@ options:
                                 onClick={() =>
                                   handleCopy(b.images[0], 'Built Image URI')
                                 }
-                                className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 text-[10px] cursor-pointer"
+                                className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 text-[10px] cursor-pointer"
                               >
                                 Copy Image URI
                               </button>
@@ -1029,7 +1029,7 @@ options:
                                 href={b.logUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px]"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px]"
                               >
                                 <span>Logs</span>
                                 <ExternalLink className="w-2.5 h-2.5" />
@@ -1059,7 +1059,7 @@ options:
                     onClick={() =>
                       handleCopy(cloudBuildYamlPreview, 'cloudbuild.yaml')
                     }
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-blue-300 text-[10px] font-mono cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-blue-700 dark:text-blue-300 text-[10px] font-mono cursor-pointer"
                   >
                     {copiedText === cloudBuildYamlPreview ? (
                       <Check className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
@@ -1069,7 +1069,7 @@ options:
                     <span>Copy YAML</span>
                   </button>
                 </div>
-                <pre className="p-2.5 rounded-[8px] bg-zinc-950 text-emerald-300 font-mono text-[10px] overflow-x-auto max-h-52">
+                <pre className="p-2.5 rounded-[8px] bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] overflow-x-auto max-h-52">
                   {cloudBuildYamlPreview}
                 </pre>
               </div>
@@ -1291,7 +1291,7 @@ options:
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {isDeletingRepo ? (
-                              <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
+                              <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
                                 Deleting in GCP...
                               </span>
                             ) : confirmRepoName === repo.name ? (
@@ -1309,7 +1309,7 @@ options:
                                 <button
                                   type="button"
                                   onClick={() => setConfirmRepoName(null)}
-                                  className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
+                                  className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] cursor-pointer"
                                 >
                                   Cancel
                                 </button>
@@ -1371,7 +1371,7 @@ options:
                         <button
                           type="button"
                           onClick={() => setConfirmSweepAll(false)}
-                          className="px-2 py-1.5 rounded-[8px] bg-zinc-700 text-zinc-200 text-[11px] cursor-pointer"
+                          className="px-2 py-1.5 rounded-[8px] bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -1465,7 +1465,7 @@ options:
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isDeletingThis ? (
-                          <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold">
+                          <span className="px-2 py-1 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-bold">
                             Deleting in GCP...
                           </span>
                         ) : (
@@ -1499,7 +1499,7 @@ options:
                                 <button
                                   type="button"
                                   onClick={() => setConfirmDigestName(null)}
-                                  className="px-2 py-1 rounded bg-zinc-700 text-zinc-200 text-[10px] cursor-pointer"
+                                  className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] cursor-pointer"
                                 >
                                   Cancel
                                 </button>
@@ -1516,7 +1516,7 @@ options:
                                 }
                                 className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold cursor-pointer border ${
                                   img.isOrphan
-                                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border-amber-500/40'
                                     : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
                                 }`}
                               >

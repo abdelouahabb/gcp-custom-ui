@@ -1721,7 +1721,7 @@ export default function VpcNetworksAndFirewalls({
                   setSimPort(22);
                   setSimProtocol('tcp');
                 }}
-                className="px-2.5 py-1 rounded bg-zinc-900 text-white text-[10px] font-mono cursor-pointer"
+                className="px-2.5 py-1 rounded bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white text-[10px] font-mono cursor-pointer"
               >
                 Test IAP SSH (35.235.240.12:22)
               </button>
@@ -1732,7 +1732,7 @@ export default function VpcNetworksAndFirewalls({
                   setSimPort(22);
                   setSimProtocol('tcp');
                 }}
-                className="px-2.5 py-1 rounded bg-zinc-900 text-white text-[10px] font-mono cursor-pointer"
+                className="px-2.5 py-1 rounded bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white text-[10px] font-mono cursor-pointer"
               >
                 Test Public SSH (203.0.113.99:22)
               </button>
@@ -1846,12 +1846,12 @@ export default function VpcNetworksAndFirewalls({
                   </div>
 
                   {tracker && (
-                    <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1">
+                    <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1">
                       <div className="flex justify-between text-[10px] font-mono text-blue-400">
                         <span>{tracker.stepLabel}</span>
                         <span>{tracker.progress}%</span>
                       </div>
-                      <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-zinc-50 dark:bg-zinc-900 rounded-full overflow-hidden">
                         <div
                           style={{ width: `${tracker.progress}%` }}
                           className="h-full bg-blue-500 transition-all duration-300"
@@ -2182,7 +2182,7 @@ export default function VpcNetworksAndFirewalls({
 
                     {/* Live GCP Global Operation Progress Bar per Firewall Card */}
                     {tracker && (
-                      <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+                      <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                         <div className="flex items-center justify-between text-[10px] font-mono">
                           <span
                             className={`font-bold ${
@@ -2195,11 +2195,11 @@ export default function VpcNetworksAndFirewalls({
                               ? '✓ GCP GLOBAL FIREWALL OPERATION DONE'
                               : `GCP GLOBAL OPERATION: ${tracker.status}`}
                           </span>
-                          <span className="text-zinc-300 font-bold">
+                          <span className="text-zinc-700 dark:text-zinc-300 font-bold">
                             {tracker.progress}%
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-zinc-50 dark:bg-zinc-900 rounded-full overflow-hidden">
                           <div
                             style={{ width: `${tracker.progress}%` }}
                             className={`h-full transition-all duration-300 rounded-full ${

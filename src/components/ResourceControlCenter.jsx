@@ -357,7 +357,7 @@ export default function ResourceControlCenter({
                           {/* Horizontal progress bar sparkline */}
                           <td className="py-3.5 px-4 min-w-[140px]">
                             <div className="flex items-center gap-2">
-                              <div className="w-24 h-2 bg-zinc-700 rounded-sm overflow-hidden">
+                              <div className="w-24 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-sm overflow-hidden">
                                 <div
                                   className={`h-full ${barColor} rounded-sm transition-all duration-300`}
                                   style={{ width: `${score}%` }}

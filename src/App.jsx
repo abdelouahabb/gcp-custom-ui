@@ -1764,16 +1764,16 @@ function CloudPulseCockpit() {
       <div
         className={
           mobilePreview
-            ? 'max-w-[430px] mx-auto my-4 border-[6px] border-zinc-800 dark:border-zinc-700 rounded-[40px] shadow-2xl overflow-hidden bg-zinc-50 dark:bg-[#131314] min-h-[860px] flex flex-col relative'
+            ? 'max-w-[430px] mx-auto my-4 border-[6px] border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 rounded-[40px] shadow-2xl overflow-hidden bg-zinc-50 dark:bg-[#131314] min-h-[860px] flex flex-col relative'
             : 'max-w-[1600px] mx-auto pb-20 md:pb-10'
         }
       >
         {mobilePreview && (
-          <div className="bg-[#131314] text-zinc-200 px-6 py-2 flex items-center justify-between text-[11px] font-mono border-b border-zinc-800">
+          <div className="bg-white dark:bg-[#131314] text-zinc-800 dark:text-zinc-200 px-6 py-2 flex items-center justify-between text-[11px] font-mono border-b border-zinc-200 dark:border-zinc-800">
             <span>
               {liveShortClockText} {shortTzName} · GCP 5G+
             </span>
-            <div className="w-20 h-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[9px] text-zinc-300">
+            <div className="w-20 h-4 rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-[9px] text-zinc-700 dark:text-zinc-300">
               LIVE OAUTH
             </div>
             <div className="flex items-center gap-1.5">
@@ -1909,7 +1909,7 @@ function CloudPulseCockpit() {
                 type="button"
                 onClick={() => handleOpenProvision('GCS_BUCKET')}
                 title="Provision a live GCP resource (Cloud Storage Bucket, Cloud Run Service, Compute Engine VM, VPC Network, Firewall Rule, BigQuery Dataset, or Enable API)"
-                className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-md cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-extrabold transition-all shadow-md cursor-pointer whitespace-nowrap"
               >
                 <PlusCircle className="w-4 h-4 shrink-0" />
                 <span>Provision Resource</span>
@@ -2953,7 +2953,7 @@ function MandatoryDeleteConfirmationModal({
       >
         {/* Top Hazard / Cost Gatekeeper Header */}
         <div
-          className={`bg-zinc-900 dark:bg-zinc-950 border-b ${
+          className={`bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-950 border-b ${
             isOneTapAction ? 'border-amber-500/40' : 'border-red-500/40'
           } px-5 py-3.5 flex items-center justify-between gap-3 text-white shrink-0`}
         >
@@ -2961,8 +2961,8 @@ function MandatoryDeleteConfirmationModal({
             <span
               className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${
                 isOneTapAction
-                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-                  : 'bg-red-500/15 border-red-500/40 text-red-300'
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300'
+                  : 'bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-300'
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
@@ -2981,12 +2981,12 @@ function MandatoryDeleteConfirmationModal({
                   </span>
                 )}
                 {normalizedTrack === 'BETA' && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
                     [BETA · PUBLIC PREVIEW]
                   </span>
                 )}
                 {normalizedTrack === 'GA' && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
                     [GA · LIVE GCP API]
                   </span>
                 )}
@@ -3285,7 +3285,7 @@ function GlobalInstantTooltipHud() {
         zIndex: 99999,
         pointerEvents: 'none',
       }}
-      className="max-w-[360px] px-3 py-1.5 rounded-lg bg-zinc-950/95 text-zinc-100 border border-emerald-500/40 shadow-xl shadow-black/50 backdrop-blur-md text-[11px] font-mono leading-snug transition-opacity duration-75"
+      className="max-w-[360px] px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-950/95 text-zinc-900 dark:text-zinc-100 border border-emerald-500/40 shadow-xl shadow-black/50 backdrop-blur-md text-[11px] font-mono leading-snug transition-opacity duration-75"
     >
       <div className="flex items-start gap-1.5">
         <span className="text-emerald-400 font-extrabold shrink-0">ℹ</span>

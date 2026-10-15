@@ -374,9 +374,9 @@ export default function XtermWebSshTerminal({
   const macrosToRender = isCloudRun ? CLOUD_RUN_PTY_MACROS : VM_PTY_MACROS;
 
   return (
-    <div className="bg-[#131314] border border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-full">
+    <div className="bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-full">
       {/* Top Terminal Window Bar */}
-      <div className="bg-zinc-900/95 border-b border-zinc-800 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-zinc-50 dark:bg-zinc-900/95 border-b border-zinc-200 dark:border-zinc-800 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex items-center gap-1.5 mr-1 shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
@@ -384,7 +384,7 @@ export default function XtermWebSshTerminal({
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
           </div>
           <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
-          <span className="font-mono text-xs font-bold text-zinc-100 truncate">
+          <span className="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
             {isCloudRun && cloudRunService
               ? `root@${cloudRunService.name} (${cloudRunService.region} · Cloud Run Container SSH)`
               : sshEngine === 'cloud_shell'
@@ -403,12 +403,12 @@ export default function XtermWebSshTerminal({
           <span
             className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border ${
               !isSessionEnabled
-                ? 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
+                ? 'bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 border-zinc-300 dark:border-zinc-700'
                 : connStatus.status === 'CONNECTED'
                 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                 : connStatus.status === 'CONNECTING'
                 ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
-                : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-300 dark:border-zinc-700'
             }`}
           >
             {isSessionEnabled ? (
@@ -434,7 +434,7 @@ export default function XtermWebSshTerminal({
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
                     showAuthModal
                       ? 'bg-blue-600 text-white border-blue-500'
-                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
+                      : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
                   }`}
                   title="Configure SSH Username, Port, Password, or Private Key PEM"
                 >
@@ -446,7 +446,7 @@ export default function XtermWebSshTerminal({
               <button
                 type="button"
                 onClick={() => setReconnectNonce((n) => n + 1)}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
                 title="Reconnect interactive Web-SSH PTY session"
               >
                 <RefreshCw className="w-3 h-3" />
@@ -462,7 +462,7 @@ export default function XtermWebSshTerminal({
                     }
                     onDisconnect();
                   }}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-red-600/20 hover:bg-red-600 text-red-700 dark:text-red-300 hover:text-white border border-red-500/40 transition-colors cursor-pointer"
                   title="Disconnect and turn off the active SSH session"
                 >
                   <PowerOff className="w-3 h-3" />
@@ -476,7 +476,7 @@ export default function XtermWebSshTerminal({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
               title={
                 isExpanded
                   ? 'Restore split-pane layout'
@@ -500,7 +500,7 @@ export default function XtermWebSshTerminal({
       </div>
 
       {/* Mode Switcher + SSH Engine Selector Bar */}
-      <div className="bg-zinc-950 border-b border-zinc-800/90 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/90 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
@@ -508,7 +508,7 @@ export default function XtermWebSshTerminal({
             className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
               viewMode === 'LIVE_SSH_PTY'
                 ? 'bg-emerald-600 text-white shadow'
-                : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800'
             }`}
           >
             <Terminal className="w-3 h-3" />
@@ -529,7 +529,7 @@ export default function XtermWebSshTerminal({
               className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                 viewMode === 'SERIAL_PORT_1'
                   ? 'bg-blue-600 text-white shadow'
-                  : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800'
               }`}
             >
               <FileText className="w-3 h-3" />
@@ -545,7 +545,7 @@ export default function XtermWebSshTerminal({
               <select
                 value={selectedRevision}
                 onChange={(e) => setSelectedRevision(e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-200"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-800 dark:text-zinc-200"
               >
                 <option value="LATEST">LATEST ({cloudRunService.latestReadyRevision || 'active'})</option>
                 {(cloudRunService.revisions || []).map((r) => (
@@ -559,14 +559,14 @@ export default function XtermWebSshTerminal({
                 value={selectedContainer}
                 onChange={(e) => setSelectedContainer(e.target.value)}
                 placeholder="--container (optional)"
-                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-200 w-36"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 w-36"
               />
               <input
                 type="text"
                 value={selectedInstanceId}
                 onChange={(e) => setSelectedInstanceId(e.target.value)}
                 placeholder="--instance ID (optional)"
-                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-200 w-36"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 w-36"
               />
             </div>
           )}
@@ -581,7 +581,7 @@ export default function XtermWebSshTerminal({
               <select
                 value={sshEngine}
                 onChange={(e) => setSshEngine(e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-emerald-500"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-emerald-500"
               >
                 <option value="cloudrun_ssh">
                   gcloud beta run services ssh (Container SSH PTY)
@@ -597,7 +597,7 @@ export default function XtermWebSshTerminal({
               <select
                 value={sshEngine}
                 onChange={(e) => setSshEngine(e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-emerald-500"
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-emerald-500"
               >
                 <option value="auto">
                   Auto (Native SSH2 + gcloud PTY Fallback)
@@ -622,7 +622,7 @@ export default function XtermWebSshTerminal({
 
       {/* Optional Custom SSH Credentials Drawer (for VM SSH2) */}
       {!isCloudRun && showAuthModal && isSessionEnabled && (
-        <div className="bg-zinc-900/95 border-b border-zinc-800 p-3.5 space-y-2.5 text-xs font-mono">
+        <div className="bg-zinc-50 dark:bg-zinc-900/95 border-b border-zinc-200 dark:border-zinc-800 p-3.5 space-y-2.5 text-xs font-mono">
           <div className="flex items-center justify-between">
             <span className="font-bold text-emerald-400 flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5" />
@@ -648,7 +648,7 @@ export default function XtermWebSshTerminal({
                 value={customUsername}
                 onChange={(e) => setCustomUsername(e.target.value)}
                 placeholder="ubuntu"
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-100"
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
               />
             </div>
             <div>
@@ -660,7 +660,7 @@ export default function XtermWebSshTerminal({
                 value={customPort}
                 onChange={(e) => setCustomPort(e.target.value)}
                 placeholder="22"
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-100"
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
               />
             </div>
             <div>
@@ -672,7 +672,7 @@ export default function XtermWebSshTerminal({
                 value={customPassword}
                 onChange={(e) => setCustomPassword(e.target.value)}
                 placeholder="Leave blank for SSH key auth"
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-100"
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
               />
             </div>
           </div>
@@ -685,7 +685,7 @@ export default function XtermWebSshTerminal({
               value={customPrivateKey}
               onChange={(e) => setCustomPrivateKey(e.target.value)}
               placeholder="-----BEGIN OPENSSH PRIVATE KEY----- ..."
-              className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-[11px] text-zinc-100 font-mono"
+              className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-[11px] text-zinc-900 dark:text-zinc-100 font-mono"
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -705,11 +705,11 @@ export default function XtermWebSshTerminal({
 
       {/* Main Content Area */}
       {!isSessionEnabled ? (
-        <div className="p-8 flex-1 flex flex-col items-center justify-center text-center min-h-[380px] bg-[#070709]">
-          <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-3 text-zinc-500">
+        <div className="p-8 flex-1 flex flex-col items-center justify-center text-center min-h-[380px] bg-white dark:bg-[#070709]">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center mb-3 text-zinc-500">
             <WifiOff className="w-6 h-6" />
           </div>
-          <h4 className="text-sm font-mono font-extrabold text-zinc-200 mb-1.5">
+          <h4 className="text-sm font-mono font-extrabold text-zinc-800 dark:text-zinc-200 mb-1.5">
             Web-SSH Client is Standby (Off by Default)
           </h4>
           <p className="text-xs font-mono text-zinc-400 max-w-md leading-relaxed mb-4">
@@ -727,8 +727,8 @@ export default function XtermWebSshTerminal({
         <div className="p-3 space-y-2.5 flex-1 flex flex-col">
           {/* CLI Copy Bar */}
           {displayCli && (
-            <div className="bg-zinc-900/90 border border-zinc-800 rounded-lg px-3 py-1.5 flex items-center justify-between gap-2">
-              <code className="text-[11px] font-mono text-zinc-300 truncate">
+            <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 flex items-center justify-between gap-2">
+              <code className="text-[11px] font-mono text-zinc-700 dark:text-zinc-300 truncate">
                 $ {displayCli}
               </code>
               <button
@@ -765,7 +765,7 @@ export default function XtermWebSshTerminal({
                 key={m.label}
                 type="button"
                 onClick={() => sendToPty(m.cmd)}
-                className="text-[10px] font-mono bg-zinc-900 hover:bg-emerald-500/15 text-zinc-300 hover:text-emerald-300 border border-zinc-800 hover:border-emerald-500/40 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                className="text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-emerald-500/15 text-zinc-700 dark:text-zinc-300 hover:text-emerald-300 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/40 px-2 py-0.5 rounded transition-colors cursor-pointer"
               >
                 {m.label}
               </button>
@@ -776,7 +776,7 @@ export default function XtermWebSshTerminal({
                 xtermRef.current?.clear();
                 xtermRef.current?.focus();
               }}
-              className="text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 px-2 py-0.5 rounded transition-colors cursor-pointer ml-auto"
+              className="text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 rounded transition-colors cursor-pointer ml-auto"
             >
               Clear Screen
             </button>
@@ -786,7 +786,7 @@ export default function XtermWebSshTerminal({
           <div
             ref={containerRef}
             onClick={() => xtermRef.current?.focus()}
-            className={`w-full flex-1 rounded-lg border border-zinc-800 bg-[#070709] p-1.5 overflow-hidden ${
+            className={`w-full flex-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#070709] p-1.5 overflow-hidden ${
               isExpanded ? 'min-h-[540px]' : 'min-h-[390px]'
             }`}
           />
@@ -803,7 +803,7 @@ export default function XtermWebSshTerminal({
       ) : (
         <div className="p-4 space-y-3 flex-1 flex flex-col">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-xs font-mono text-zinc-300 font-bold">
+            <div className="text-xs font-mono text-zinc-700 dark:text-zinc-300 font-bold">
               Compute Engine Serial Port 1 Output ({activeVm?.name || 'VM'})
             </div>
             <button
@@ -815,7 +815,7 @@ export default function XtermWebSshTerminal({
               {serialLoading ? 'Fetching...' : 'Refresh Serial Port 1'}
             </button>
           </div>
-          <pre className="flex-1 bg-black/80 border border-zinc-800 rounded-lg p-3.5 font-mono text-[11px] text-emerald-300 whitespace-pre-wrap break-words overflow-y-auto min-h-[380px] max-h-[520px]">
+          <pre className="flex-1 bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 rounded-lg p-3.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 whitespace-pre-wrap break-words overflow-y-auto min-h-[380px] max-h-[520px]">
             {serialConsoleOutput ||
               'Click "Refresh Serial Port 1" to read live kernel & systemd boot logs directly from the Compute Engine REST API without requiring port 22.'}
           </pre>

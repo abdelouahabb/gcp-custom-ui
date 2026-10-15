@@ -1033,7 +1033,7 @@ main:
               <button
                 type="button"
                 onClick={() => setIamDoctorReport(null)}
-                className="text-[10px] font-mono text-zinc-400 hover:text-zinc-200"
+                className="text-[10px] font-mono text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               >
                 Dismiss
               </button>
@@ -1042,17 +1042,17 @@ main:
               {(iamDoctorReport.bindings || []).map((b, i) => (
                 <div
                   key={i}
-                  className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800 text-[11px] font-mono flex items-center justify-between gap-2"
+                  className="p-2 rounded-lg bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono flex items-center justify-between gap-2"
                 >
                   <div className="min-w-0">
-                    <div className="text-emerald-300 font-bold truncate">
+                    <div className="text-emerald-700 dark:text-emerald-300 font-bold truncate">
                       {b.role}
                     </div>
                     <div className="text-[10px] text-zinc-400 truncate">
                       {b.label}
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/20 text-emerald-300 shrink-0">
+                  <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
                     {b.status}
                   </span>
                 </div>
@@ -1300,11 +1300,11 @@ main:
           </div>
 
           {/* Step 2: Interactive 4-Stage "How Eventarc Actually Works" Visual Pipeline X-Ray */}
-          <div className="p-4 rounded-2xl bg-zinc-950 border border-blue-500/30 space-y-3 text-zinc-100">
+          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-blue-500/30 space-y-3 text-zinc-900 dark:text-zinc-100">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <span className="text-xs font-extrabold font-mono uppercase tracking-wider text-amber-300">
+                <span className="text-xs font-extrabold font-mono uppercase tracking-wider text-amber-700 dark:text-amber-300">
                   Step 2 — Visual Eventarc X-Ray: How Your Trigger Actually Works Under the Hood
                 </span>
               </div>
@@ -1325,13 +1325,13 @@ main:
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {/* Stage 1: Producer */}
-              <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1.5">
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1.5">
                 <div className="flex items-center justify-between text-[10px] font-mono text-amber-400 font-bold">
                   <span>1. EVENT PRODUCER</span>
                   <span>CloudEvents v1.0</span>
                 </div>
                 <div
-                  className="text-xs font-bold font-mono text-white truncate"
+                  className="text-xs font-bold font-mono text-zinc-900 dark:text-white truncate"
                   title={
                     triggerCategory === 'UNIVERSAL_AUDIT'
                       ? `${auditServiceName} (${auditMethodName})`
@@ -1361,41 +1361,41 @@ main:
               <div
                 className={`p-3 rounded-xl border space-y-1.5 ${
                   activeRecipe.transportMode === 'CLOUD_AUDIT_LOGS'
-                    ? 'bg-amber-950/30 border-amber-500/40'
-                    : 'bg-emerald-950/25 border-emerald-500/30'
+                    ? 'bg-amber-500/10 dark:bg-amber-950/30 border-amber-500/40'
+                    : 'bg-emerald-500/10 dark:bg-emerald-950/25 border-emerald-500/30'
                 }`}
               >
                 <div className="flex items-center justify-between text-[10px] font-mono font-bold">
                   <span
                     className={
                       activeRecipe.transportMode === 'CLOUD_AUDIT_LOGS'
-                        ? 'text-amber-300'
-                        : 'text-emerald-300'
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-emerald-700 dark:text-emerald-300'
                     }
                   >
                     2. TRANSPORT & BILLING
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-black/40 text-[9.5px]">
+                  <span className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-black/40 text-[9.5px]">
                     {activeRecipe.transportMode === 'CLOUD_AUDIT_LOGS'
                       ? 'AUDIT LOG BUS'
                       : '$0 FREE BUS'}
                   </span>
                 </div>
-                <div className="text-xs font-bold font-mono text-white">
+                <div className="text-xs font-bold font-mono text-zinc-900 dark:text-white">
                   {activeRecipe.transportBadge}
                 </div>
-                <p className="text-[10.5px] text-zinc-300 leading-snug">
+                <p className="text-[10.5px] text-zinc-700 dark:text-zinc-300 leading-snug">
                   {activeRecipe.costNote}
                 </p>
               </div>
 
               {/* Stage 3: Eventarc Router & Hidden IAM Roles */}
-              <div className="p-3 rounded-xl bg-zinc-900/90 border border-blue-500/30 space-y-1.5">
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-blue-500/30 space-y-1.5">
                 <div className="flex items-center justify-between text-[10px] font-mono text-blue-400 font-bold">
                   <span>3. EVENTARC & IAM ROLES</span>
                   <span>{enableRetry ? 'Retry ON' : 'No Retry'}</span>
                 </div>
-                <div className="text-xs font-bold font-mono text-white truncate">
+                <div className="text-xs font-bold font-mono text-zinc-900 dark:text-white truncate">
                   {triggerCategory === 'GCS_OBJECT'
                     ? gcsEventType
                     : triggerCategory === 'UNIVERSAL_AUDIT'
@@ -1408,7 +1408,7 @@ main:
               </div>
 
               {/* Stage 4: Function Consumer */}
-              <div className="p-3 rounded-xl bg-zinc-900/90 border border-blue-500/30 space-y-1.5">
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-blue-500/30 space-y-1.5">
                 <div className="flex items-center justify-between text-[10px] font-mono text-blue-400 font-bold">
                   <span>4. FUNCTION RUNTIME</span>
                   <span>
@@ -1417,22 +1417,22 @@ main:
                       : '1x Legacy v1'}
                   </span>
                 </div>
-                <div className="text-xs font-bold font-mono text-white truncate">
+                <div className="text-xs font-bold font-mono text-zinc-900 dark:text-white truncate">
                   {fnName} ({fnRuntime} · {fnMemory})
                 </div>
                 <p className="text-[10.5px] text-zinc-400 leading-snug">
-                  Receives HTTP POST with <code className="text-blue-300">ce-id</code>,{' '}
-                  <code className="text-blue-300">ce-type</code>, and{' '}
-                  <code className="text-blue-300">ce-source</code> headers.
+                  Receives HTTP POST with <code className="text-blue-700 dark:text-blue-300">ce-id</code>,{' '}
+                  <code className="text-blue-700 dark:text-blue-300">ce-type</code>, and{' '}
+                  <code className="text-blue-700 dark:text-blue-300">ce-source</code> headers.
                 </p>
               </div>
             </div>
 
             {/* Live Synthetic CloudEvent Test Output */}
             {testEventResult && (
-              <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/40 space-y-2">
+              <div className="p-3 rounded-xl bg-blue-500/10 dark:bg-blue-950/30 border border-blue-500/40 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono text-blue-300">
+                  <span className="text-xs font-bold font-mono text-blue-700 dark:text-blue-300">
                     Synthetic CloudEvent Trace ({testEventResult.eventId}) — Total{' '}
                     {testEventResult.liveDelivery?.totalLatencyMs}ms (HTTP{' '}
                     {testEventResult.liveDelivery?.httpStatus})
@@ -1449,7 +1449,7 @@ main:
                   {(testEventResult.liveDelivery?.hops || []).map((h, i) => (
                     <div
                       key={i}
-                      className="p-2 rounded-lg bg-zinc-950/90 border border-zinc-800 text-[10.5px] font-mono"
+                      className="p-2 rounded-lg bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono"
                     >
                       <div className="flex items-center justify-between text-emerald-400 font-bold">
                         <span>{h.hop}</span>
@@ -1814,14 +1814,14 @@ main:
             </div>
 
             {/* Right Column: Auto-Generated CloudEvents Starter Code & CLI Preview */}
-            <div className="lg:col-span-5 p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3 text-zinc-100 flex flex-col justify-between">
+            <div className="lg:col-span-5 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3 text-zinc-900 dark:text-zinc-100 flex flex-col justify-between">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-mono text-amber-400 flex items-center gap-1.5">
                     <FileCode className="w-4 h-4" />
                     <span>CloudEvents v1.0 Handler Code</span>
                   </span>
-                  <div className="inline-flex rounded-lg bg-zinc-900 p-0.5 border border-zinc-800">
+                  <div className="inline-flex rounded-lg bg-zinc-50 dark:bg-zinc-900 p-0.5 border border-zinc-200 dark:border-zinc-800">
                     {['NODEJS', 'PYTHON', 'GO'].map((lang) => (
                       <button
                         key={lang}
@@ -1839,7 +1839,7 @@ main:
                   </div>
                 </div>
 
-                <pre className="p-3 rounded-xl bg-black/70 border border-zinc-800 text-[11px] font-mono text-emerald-300 overflow-x-auto max-h-48">
+                <pre className="p-3 rounded-xl bg-zinc-100 dark:bg-black/70 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto max-h-48">
                   {starterCode}
                 </pre>
               </div>
@@ -1848,7 +1848,7 @@ main:
                 <div className="text-[10.5px] font-mono text-zinc-400">
                   Synthesized Eventarc / Cloud Functions CLI Command:
                 </div>
-                <pre className="p-2.5 rounded-xl bg-black/70 border border-zinc-800 text-[10.5px] font-mono text-blue-300 overflow-x-auto">
+                <pre className="p-2.5 rounded-xl bg-zinc-100 dark:bg-black/70 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto">
                   {gcloudDeployCommand}
                 </pre>
               </div>
@@ -2249,7 +2249,7 @@ main:
               )}
             </div>
 
-            <div className="lg:col-span-7 p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
+            <div className="lg:col-span-7 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-blue-400">
                   Generated Cloud Workflows YAML ({workflowName}.yaml)
@@ -2267,13 +2267,13 @@ main:
                   <button
                     type="button"
                     onClick={() => copyText(workflowArtifacts.yaml, 'WF_YAML')}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                   >
                     {copiedKey === 'WF_YAML' ? 'Copied' : 'Copy YAML'}
                   </button>
                 </div>
               </div>
-              <pre className="p-3 rounded-xl bg-black/80 border border-zinc-800 text-[11px] font-mono text-blue-300 overflow-x-auto leading-relaxed max-h-80">
+              <pre className="p-3 rounded-xl bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto leading-relaxed max-h-80">
                 {workflowArtifacts.yaml}
               </pre>
             </div>

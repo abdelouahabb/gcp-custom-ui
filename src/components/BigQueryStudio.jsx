@@ -1056,7 +1056,7 @@ export default function BigQueryStudio({
                 rows={7}
                 value={sqlInput}
                 onChange={(e) => setSqlInput(e.target.value)}
-                className="w-full bg-zinc-950 text-emerald-300 border border-zinc-800 rounded-xl p-3 text-xs font-mono focus:outline-none focus:border-blue-500"
+                className="w-full bg-white dark:bg-zinc-950 text-emerald-700 dark:text-emerald-300 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-xs font-mono focus:outline-none focus:border-blue-500"
               />
 
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1196,7 +1196,7 @@ export default function BigQueryStudio({
                         ))}
                       </div>
 
-                      <pre className="p-3 rounded-lg bg-zinc-950 text-blue-300 text-[11px] font-mono overflow-x-auto">
+                      <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 text-[11px] font-mono overflow-x-auto">
                         {queryResult.optimizationReport.optimizedSql}
                       </pre>
                     </div>
@@ -1481,11 +1481,11 @@ export default function BigQueryStudio({
             ].map((card) => (
               <div
                 key={card.id}
-                className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2 flex flex-col justify-between"
+                className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2 flex flex-col justify-between"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold font-mono text-blue-300">
+                    <span className="text-xs font-bold font-mono text-blue-700 dark:text-blue-300">
                       {card.title}
                     </span>
                     <button
@@ -1507,7 +1507,7 @@ export default function BigQueryStudio({
                       )}
                     </button>
                   </div>
-                  <pre className="text-[11px] font-mono text-zinc-200 whitespace-pre-wrap break-all">
+                  <pre className="text-[11px] font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-all">
                     {card.sql}
                   </pre>
                 </div>
@@ -1519,7 +1519,7 @@ export default function BigQueryStudio({
                     setActiveSubTab('TABLES_SQL');
                   }}
                   title={`Load "${card.title}" into the SQL Pre-Crime X-Ray & Live Executor`}
-                  className="w-full mt-2 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                  className="w-full mt-2 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
                 >
                   Load into SQL X-Ray & Execute →
                 </button>

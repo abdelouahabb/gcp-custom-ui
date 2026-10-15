@@ -966,7 +966,7 @@ OPTIONS (
 
           {/* 3-Step Execution Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 pt-2">
-            <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold font-mono text-amber-400">
@@ -982,7 +982,7 @@ OPTIONS (
                     {copiedId === 'bl-step1' ? 'Copied' : 'Copy CLI'}
                   </button>
                 </div>
-                <pre className="text-[10.5px] font-mono text-zinc-200 bg-black/50 p-2.5 rounded-lg border border-zinc-800 whitespace-pre-wrap break-all">
+                <pre className="text-[10.5px] font-mono text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-black/50 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 whitespace-pre-wrap break-all">
                   {bigLakeArtifacts.step1ConnectionCli}
                 </pre>
               </div>
@@ -994,14 +994,14 @@ OPTIONS (
                       `bq mk --connection --connection_type=CLOUD_RESOURCE --project_id=${projectId} --location=${bigLakeLocation} ${bigLakeConnectionId}`
                     )
                   }
-                  className="w-full py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-mono font-bold cursor-pointer"
+                  className="w-full py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-mono font-bold cursor-pointer"
                 >
                   Run Step 1 in Cloud Shell →
                 </button>
               )}
             </div>
 
-            <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold font-mono text-emerald-400">
@@ -1017,7 +1017,7 @@ OPTIONS (
                     {copiedId === 'bl-step2' ? 'Copied' : 'Copy CLI'}
                   </button>
                 </div>
-                <pre className="text-[10.5px] font-mono text-zinc-200 bg-black/50 p-2.5 rounded-lg border border-zinc-800 whitespace-pre-wrap break-all">
+                <pre className="text-[10.5px] font-mono text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-black/50 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 whitespace-pre-wrap break-all">
                   {bigLakeArtifacts.step2BucketIamCli}
                 </pre>
               </div>
@@ -1025,17 +1025,17 @@ OPTIONS (
                 <button
                   type="button"
                   onClick={() => onRunInShell(bigLakeArtifacts.step2BucketIamCli)}
-                  className="w-full py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-mono font-bold cursor-pointer"
+                  className="w-full py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-mono font-bold cursor-pointer"
                 >
                   Run Step 2 in Cloud Shell →
                 </button>
               )}
             </div>
 
-            <div className="p-4 rounded-xl bg-zinc-950 border border-blue-500/40 flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-blue-500/40 flex flex-col justify-between space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold font-mono text-blue-300">
+                  <span className="text-xs font-extrabold font-mono text-blue-700 dark:text-blue-300">
                     STEP 3 ·{' '}
                     {bigLakeUseCase === 'ICEBERG_MANAGED'
                       ? 'BigLake Apache Iceberg DDL'
@@ -1051,7 +1051,7 @@ OPTIONS (
                     {copiedId === 'bl-step3' ? 'Copied' : 'Copy SQL'}
                   </button>
                 </div>
-                <pre className="text-[10.5px] font-mono text-blue-100 bg-black/50 p-2.5 rounded-lg border border-blue-500/30 whitespace-pre-wrap break-all">
+                <pre className="text-[10.5px] font-mono text-blue-100 bg-zinc-100 dark:bg-black/50 p-2.5 rounded-lg border border-blue-500/30 whitespace-pre-wrap break-all">
                   {bigLakeArtifacts.primaryDdl}
                 </pre>
               </div>
@@ -1068,7 +1068,7 @@ OPTIONS (
           </div>
 
           {/* Spark REST Catalog Interoperability */}
-          <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+          <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold font-mono text-emerald-400">
                 Zero-Copy Spark / Ray Read via BigLake Iceberg REST Catalog (`https://biglake.googleapis.com/iceberg/v1beta/restcatalog`)
@@ -1083,7 +1083,7 @@ OPTIONS (
                 {copiedId === 'bl-spark' ? 'Copied' : 'Copy PySpark'}
               </button>
             </div>
-            <pre className="text-[10.5px] font-mono text-zinc-300 bg-black/50 p-2.5 rounded-lg border border-zinc-800 overflow-x-auto">
+            <pre className="text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-black/50 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-x-auto">
               {bigLakeArtifacts.sparkReadSnippet}
             </pre>
           </div>
@@ -1209,7 +1209,7 @@ OPTIONS (
 
           {/* Right 7 Cols: BigQuery Metadata Export & Spark Iceberg Compaction Procedures */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-emerald-400">
                   BigQuery Managed Iceberg Snapshot Export (`EXPORT TABLE METADATA`)
@@ -1219,17 +1219,17 @@ OPTIONS (
                   onClick={() =>
                     copyText(compactionArtifacts.bqExportMetadataSql, 'EXP_META')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedId === 'EXP_META' ? 'Copied' : 'Copy SQL'}
                 </button>
               </div>
-              <pre className="p-3 rounded-xl bg-black/80 border border-zinc-800 text-[11px] font-mono text-emerald-300 overflow-x-auto">
+              <pre className="p-3 rounded-xl bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto">
                 {compactionArtifacts.bqExportMetadataSql}
               </pre>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-blue-400">
                   Iceberg `rewrite_data_files`, `expire_snapshots` &amp; `remove_orphan_files`
@@ -1239,12 +1239,12 @@ OPTIONS (
                   onClick={() =>
                     copyText(compactionArtifacts.sparkCompactionSql, 'COMPACT_SQL')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedId === 'COMPACT_SQL' ? 'Copied' : 'Copy Maintenance SQL'}
                 </button>
               </div>
-              <pre className="p-3 rounded-xl bg-black/80 border border-zinc-800 text-[11px] font-mono text-blue-300 overflow-x-auto leading-relaxed">
+              <pre className="p-3 rounded-xl bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto leading-relaxed">
                 {compactionArtifacts.sparkCompactionSql}
               </pre>
             </div>
@@ -1371,7 +1371,7 @@ OPTIONS (
 
           {/* Right 7 Cols: RLS/CLS SQL & BigLake Omni DDL */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-emerald-400">
                   1. BigLake Row Access Policy &amp; Column Data Masking DDL
@@ -1381,17 +1381,17 @@ OPTIONS (
                   onClick={() =>
                     copyText(omniAndGovernanceArtifacts.rlsDdl, 'RLS_DDL')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedId === 'RLS_DDL' ? 'Copied' : 'Copy Governance SQL'}
                 </button>
               </div>
-              <pre className="p-3 rounded-xl bg-black/80 border border-zinc-800 text-[11px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">
+              <pre className="p-3 rounded-xl bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto leading-relaxed">
                 {omniAndGovernanceArtifacts.rlsDdl}
               </pre>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-blue-400">
                   2. BigLake Omni Cross-Cloud Connection &amp; Iceberg Table (`{omniRegion}`)
@@ -1401,12 +1401,12 @@ OPTIONS (
                   onClick={() =>
                     copyText(omniAndGovernanceArtifacts.omniCliAndDdl, 'OMNI_DDL')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
                 >
                   {copiedId === 'OMNI_DDL' ? 'Copied' : 'Copy Omni Blueprint'}
                 </button>
               </div>
-              <pre className="p-3 rounded-xl bg-black/80 border border-zinc-800 text-[11px] font-mono text-blue-300 overflow-x-auto leading-relaxed">
+              <pre className="p-3 rounded-xl bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-blue-700 dark:text-blue-300 overflow-x-auto leading-relaxed">
                 {omniAndGovernanceArtifacts.omniCliAndDdl}
               </pre>
             </div>
