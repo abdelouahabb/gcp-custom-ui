@@ -602,39 +602,71 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
           </div>
         </div>
 
-        {/* 4 Focused Spanner Sub-Tabs */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+        {/* 4 Symmetrical Spanner Sub-Tabs (4-Column Equal-Sized Bento Grid) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-3 border-t border-zinc-200 dark:border-zinc-800">
           {[
             {
               id: 'SPANNER_FLEET_PU',
-              label: `1. Live Spanner Fleet & $65/mo Granular PU Sizer (${spannerInstances.length})`,
+              code: '01',
+              label: 'Live Spanner Fleet & $65/mo PU Sizer',
+              badge: `${spannerInstances.length} Live`,
             },
             {
               id: 'SPANNER_GRAPH_GQL',
-              label: '2. Spanner Graph (ISO GQL) & Interleaved Schema Architect',
+              code: '02',
+              label: 'Spanner Graph (ISO GQL) & Interleaved',
+              badge: 'ISO GQL',
             },
             {
               id: 'SPANNER_VECTOR_RAG',
-              label: '3. Spanner AI Vector Search (ScaNN) & Hybrid GraphRAG',
+              code: '03',
+              label: 'Spanner AI Vector Search (ScaNN) & RAG',
+              badge: '768-d ScaNN',
             },
             {
               id: 'SPANNER_TRUETIME_CDC',
-              label: '4. Multi-Region 99.999% TrueTime, Change Streams CDC & PGAdapter',
+              code: '04',
+              label: '99.999% TrueTime, Change Streams & PG',
+              badge: '5-Nines',
             },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                title={tab.label}
+                className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                  isActive
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
+                      isActive
+                        ? 'bg-black/25 text-white'
+                        : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
+                    }`}
+                  >
+                    {tab.code}
+                  </span>
+                  <span className="truncate">{tab.label}</span>
+                </div>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold shrink-0 ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
+                  }`}
+                >
+                  {tab.badge}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

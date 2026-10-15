@@ -931,72 +931,95 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
         </div>
       </div>
 
-      {/* 8 Friendly Sub-Studio Navigation Pills */}
-      <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-[#202124] p-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+      {/* 8 Symmetrical Sub-Studio Navigation Cards (2x4 Equal-Sized Bento Grid) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-white dark:bg-[#202124] p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
         {[
           {
             id: 'ICEBERG_50_MATRIX',
-            label: '1. 50-Playbook Borderless Iceberg Lakehouse Matrix',
-            badge: '50 Scenarios · 8 Domains',
+            code: '01',
+            label: '50-Playbook Iceberg Lakehouse Matrix',
+            badge: '50 Scenarios',
           },
           {
             id: 'MEDALLION_ELT',
-            label: '2. Medallion Pipeline Builder',
+            code: '02',
+            label: 'Medallion Pipeline Builder',
             badge: 'Source → Gold',
           },
           {
             id: 'DATAFORM_SQLX',
-            label: '3. Dataform & dbt Auto-Clean SQLX',
+            code: '03',
+            label: 'Dataform & dbt Auto-Clean SQLX',
             badge: 'QUALIFY Dedup',
           },
           {
             id: 'DATAPLEX_MESH',
-            label: '4. Dataplex Profiling & Data Products',
+            code: '04',
+            label: 'Dataplex Profiling & Data Products',
             badge: 'SDK 588.0.0',
           },
           {
             id: 'SCHEMA_CONTRACTS',
-            label: '5. Visual Schema Mapper & Contracts',
-            badge: 'Zero Broken Views',
+            code: '05',
+            label: 'Visual Schema Mapper & Contracts',
+            badge: 'Zero Breakage',
           },
           {
             id: 'SLOT_DOCTOR_DAGS',
-            label: '6. Slot/Skew Doctor & Serverless DAGs',
+            code: '06',
+            label: 'Slot/Skew Doctor & Serverless DAGs',
             badge: '-$348/mo',
           },
           {
             id: 'DATA_AGENT_KIT',
-            label: '7. Data Agent Kit (deployment.yaml & MCP URIs)',
-            badge: 'datacloud:antigravity',
+            code: '07',
+            label: 'Data Agent Kit (deployment.yaml & MCP)',
+            badge: 'MCP URIs',
           },
           {
             id: 'SERVERLESS_SPARK',
-            label: '8. Serverless Spark & BigLake Iceberg',
-            badge: '$0 Idle Cluster',
+            code: '08',
+            label: 'Serverless Spark & BigLake Iceberg',
+            badge: '$0 Idle',
           },
-        ].map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setActiveSubTab(t.id)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeSubTab === t.id
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-            }`}
-          >
-            <span>{t.label}</span>
-            <span
-              className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
-                activeSubTab === t.id
-                  ? 'bg-white/20 text-white'
-                  : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
+        ].map((t) => {
+          const isActive = activeSubTab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveSubTab(t.id)}
+              title={`${t.code}. ${t.label} (${t.badge})`}
+              className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                isActive
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             >
-              {t.badge}
-            </span>
-          </button>
-        ))}
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
+                    isActive
+                      ? 'bg-black/25 text-white'
+                      : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
+                  }`}
+                >
+                  {t.code}
+                </span>
+                <span className="truncate">{t.label}</span>
+              </div>
+              <span
+                className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
+                }`}
+              >
+                {t.badge}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* TAB 0: 50-PLAYBOOK BORDERLESS ICEBERG LAKEHOUSE MATRIX */}

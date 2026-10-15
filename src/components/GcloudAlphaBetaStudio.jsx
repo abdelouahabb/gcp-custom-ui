@@ -377,62 +377,55 @@ export default function GcloudAlphaBetaStudio({
         </div>
 
         {/* Wave + Release Track Filter Bar */}
-        <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="text-[11px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400 mr-1">
-                Wave:
-              </span>
-              {[
-                { id: 'ALL', label: 'ALL WAVES (10)' },
-                { id: 'WAVE_1', label: 'WAVE 1 (5)' },
-                { id: 'WAVE_2', label: 'WAVE 2 (5 · NEW)' },
-              ].map((w) => (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => setWaveFilter(w.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer ${
-                    waveFilter === w.id
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700'
-                  }`}
-                >
-                  {w.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="text-[11px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400 ml-2 mr-1">
-                Track:
-              </span>
-              {[
-                { id: 'ALL', label: 'ALL TRACKS' },
-                { id: 'BETA', label: '[BETA] ONLY' },
-                { id: 'ALPHA', label: '[ALPHA] ONLY' },
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setTrackFilter(f.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer ${
-                    trackFilter === f.id
-                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                      : 'bg-white/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+        <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-center">
+          <div className="lg:col-span-5 grid grid-cols-3 gap-1.5">
+            {[
+              { id: 'ALL', label: 'ALL WAVES (10)' },
+              { id: 'WAVE_1', label: 'WAVE 1 (5)' },
+              { id: 'WAVE_2', label: 'WAVE 2 (5 · NEW)' },
+            ].map((w) => (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => setWaveFilter(w.id)}
+                className={`w-full h-9 px-2.5 rounded-xl text-[11px] font-mono font-extrabold transition-all cursor-pointer flex items-center justify-center border truncate ${
+                  waveFilter === w.id
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                    : 'bg-white/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-indigo-500/50'
+                }`}
+              >
+                <span className="truncate">{w.label}</span>
+              </button>
+            ))}
           </div>
-          <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
-            Active Project:{' '}
+
+          <div className="lg:col-span-4 grid grid-cols-3 gap-1.5">
+            {[
+              { id: 'ALL', label: 'ALL TRACKS' },
+              { id: 'BETA', label: '[BETA] ONLY' },
+              { id: 'ALPHA', label: '[ALPHA] ONLY' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setTrackFilter(f.id)}
+                className={`w-full h-9 px-2.5 rounded-xl text-[11px] font-mono font-extrabold transition-all cursor-pointer flex items-center justify-center border truncate ${
+                  trackFilter === f.id
+                    ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
+                    : 'bg-white/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-zinc-500'
+                }`}
+              >
+                <span className="truncate">{f.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="lg:col-span-3 text-[11px] font-mono text-zinc-500 dark:text-zinc-400 lg:text-right truncate">
+            Project:{' '}
             <strong className="text-zinc-900 dark:text-zinc-100">
               {projectId}
             </strong>{' '}
-            · Region:{' '}
+            ·{' '}
             <strong className="text-zinc-900 dark:text-zinc-100">
               {region}
             </strong>
@@ -440,8 +433,8 @@ export default function GcloudAlphaBetaStudio({
         </div>
       </div>
 
-      {/* Sub-Tab Switcher with Explicit [BETA] and [ALPHA] Flags */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
+      {/* Sub-Tab Switcher with Explicit [BETA] and [ALPHA] Flags (Uniform h-24 2x5 Bento Grid) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5">
         {visibleTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -450,7 +443,7 @@ export default function GcloudAlphaBetaStudio({
               key={tab.id}
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
-              className={`text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+              className={`w-full h-24 text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                 isActive
                   ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-md'
                   : 'bg-white dark:bg-[#18181b] text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
@@ -471,8 +464,8 @@ export default function GcloudAlphaBetaStudio({
                 </span>
                 <ReleaseTrackBadge track={tab.track} />
               </div>
-              <div>
-                <div className="text-xs font-extrabold leading-snug">
+              <div className="min-w-0">
+                <div className="text-xs font-extrabold leading-snug truncate">
                   {tab.shortLabel}
                 </div>
                 <div

@@ -1012,44 +1012,86 @@ export default function Revolutionary2026Suite({
         </div>
       )}
 
-      {/* Category Filter Bar for 16 Lab Tools */}
+      {/* Category Filter Bar for 17 Lab Suites (Equal-Sized 7-Column Bento Grid) */}
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-mono text-zinc-400 px-1.5">
-              Lab Domain:
+        <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-mono font-bold uppercase text-zinc-400">
+              Lab Domain Filter (7 Equal Domains):
             </span>
+            <span className="text-[11px] font-mono text-zinc-500">
+              17 Specialized Cloud Labs
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2">
             {[
-              { id: 'ALL', label: 'All 17 Lab Suites' },
-              { id: 'ALPHA_BETA', label: '[ALPHA / BETA] gcloud 588 Frontier (5)' },
-              { id: 'QUANTUM', label: '2026 Quantum Nexus (5 Breakthroughs)' },
-              { id: 'FINOPS', label: 'FinOps, Sleep & Egress (4)' },
-              { id: 'PERF_TOPOLOGY', label: 'Topology, Cold-Start & Latency (4)' },
-              { id: 'SECURITY_DLP', label: 'DLP, Ransomware & Zero-Trust (3)' },
-              { id: 'AI_IAC', label: 'Model Armor, AI Vault & Terraform (4)' },
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => {
-                  setLabCategory(cat.id);
-                  if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
-                  if (cat.id === 'ALPHA_BETA') setSubTab('GCLOUD_ALPHA_BETA');
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
-                  labCategory === cat.id
-                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                    : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
+              { id: 'ALL', code: 'ALL', label: 'All 17 Lab Suites' },
+              {
+                id: 'ALPHA_BETA',
+                code: 'D01',
+                label: '[ALPHA/BETA] gcloud 588 (10)',
+              },
+              {
+                id: 'QUANTUM',
+                code: 'D02',
+                label: '2026 Quantum Nexus (5)',
+              },
+              {
+                id: 'FINOPS',
+                code: 'D03',
+                label: 'FinOps, Sleep & Egress (4)',
+              },
+              {
+                id: 'PERF_TOPOLOGY',
+                code: 'D04',
+                label: 'Topology & Cold-Start (4)',
+              },
+              {
+                id: 'SECURITY_DLP',
+                code: 'D05',
+                label: 'DLP, Ransomware & IAM (3)',
+              },
+              {
+                id: 'AI_IAC',
+                code: 'D06',
+                label: 'Model Armor & IaC (4)',
+              },
+            ].map((cat) => {
+              const active = labCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    setLabCategory(cat.id);
+                    if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
+                    if (cat.id === 'ALPHA_BETA') setSubTab('GCLOUD_ALPHA_BETA');
+                  }}
+                  title={cat.label}
+                  className={`w-full h-10 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-1.5 ${
+                    active
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                      : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                  }`}
+                >
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                      active
+                        ? 'bg-black/25 text-white'
+                        : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
+                    }`}
+                  >
+                    {cat.code}
+                  </span>
+                  <span className="truncate">{cat.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Categorized Sub-Navigation Pills */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+        {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
             {
               id: 'GCLOUD_ALPHA_BETA',
@@ -1199,7 +1241,7 @@ export default function Revolutionary2026Suite({
                   type="button"
                   onClick={() => setSubTab(t.id)}
                   title={t.tip}
-                  className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                  className={`w-full h-11 px-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-zinc-50 dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50'

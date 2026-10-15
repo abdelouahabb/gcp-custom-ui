@@ -58,47 +58,65 @@ export function LakehouseTrackBadge({ track = 'GA' }) {
 const LAKEHOUSE_DOMAINS = [
   {
     id: 'ALL',
+    code: 'ALL',
     shortLabel: 'All 8 Domains (50 Playbooks)',
+    subtitle: 'Full Multi-Engine Lakehouse Catalog',
     badge: '50 Scenarios',
   },
   {
     id: 'CATALOG_MIGRATION',
+    code: 'D01',
     shortLabel: '1. Iceberg REST Catalog & Migrations',
+    subtitle: 'HMS 100+ Tables · Delta · DIY Parquet',
     badge: '7 Playbooks',
   },
   {
     id: 'MULTI_ENGINE',
+    code: 'D02',
     shortLabel: '2. Engines & Interoperability (BQ / Spark / Trino)',
+    subtitle: 'Single Copy · Zero-Copy Sharing · TPC-DS',
     badge: '7 Playbooks',
   },
   {
     id: 'STREAMING_CDC_DML',
+    code: 'D03',
     shortLabel: '3. Advanced ETL, CDC & Streaming Lakehouse',
+    subtitle: 'Multi-Stmt ACID · Kafka · Beam · Debezium',
     badge: '7 Playbooks',
   },
   {
     id: 'STORAGE_PERF',
+    code: 'D04',
     shortLabel: '4. Storage Engineering, Caching & Compaction',
+    subtitle: 'GCS Prefix Hash · Autoclass · Spanner Meta',
     badge: '7 Playbooks',
   },
   {
     id: 'MULTI_CLOUD',
+    code: 'D05',
     shortLabel: '5. Borderless Multi-Cloud (S3 / ADLS / CCI)',
+    subtitle: 'BigQuery Omni · Glue & Unity · Zero-Egress',
     badge: '6 Playbooks',
   },
   {
     id: 'GOVERNANCE_SECURITY',
+    code: 'D06',
     shortLabel: '6. Unified Governance, RLS/CLS & WORM Vault',
+    subtitle: 'Row/Col Masking · CMEK · SEC 17a-4 Lock',
     badge: '6 Playbooks',
   },
   {
     id: 'HTAP_CONVERGENCE',
+    code: 'D07',
     shortLabel: '7. Operational DB Convergence & HTAP',
+    subtitle: 'Spanner · AlloyDB Columnar · Bigtable Zero-ETL',
     badge: '5 Playbooks',
   },
   {
     id: 'GENAI_AGENTS',
+    code: 'D08',
     shortLabel: '8. Agents, Semantic SQL & Vector Lakehouse',
+    subtitle: 'Conversational BI · AI.IF · Vector RAG · Feature Store',
     badge: '5 Playbooks',
   },
 ];
@@ -762,12 +780,17 @@ export default function IcebergLakehousePlaybookMatrix({
   const [catalogId, setCatalogId] = useState('cp_iceberg_rest_catalog');
   const [connectionId, setConnectionId] = useState('biglake-iceberg-conn');
 
+  // Workspace View Mode (SPLIT_WORKBENCH | BENTO_MATRIX_GRID | METADATA_XRAY)
+  const [viewMode, setViewMode] = useState('SPLIT_WORKBENCH');
+
   // Interactive Decision Simulators state
   const [simulatorTab, setSimulatorTab] = useState('MIGRATE_VS_FEDERATE');
   const [remoteDataTb, setRemoteDataTb] = useState(50);
   const [monthlyQueryScansTb, setMonthlyQueryScansTb] = useState(120);
   const [trinoNodesCount, setTrinoNodesCount] = useState(12);
   const [hmsTablesCount, setHmsTablesCount] = useState(150);
+  const [smallFilesCount, setSmallFilesCount] = useState(48000);
+  const [autoclassColdPct, setAutoclassColdPct] = useState(65);
 
   // Live probe & execution state
   const [probing, setProbing] = useState(false);
@@ -1240,224 +1263,673 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
         )}
       </div>
 
-      {/* Domain Filter Pills + Search + Track Filter */}
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="relative flex-1 min-w-[240px]">
+      {/* Domain Filter Matrix + Search + Equal-Sized Track & Workspace View Controls */}
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3.5 shadow-sm">
+        {/* Row 1: Search Input + Equal-Sized 4-Column Track Filter */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-center">
+          <div className="lg:col-span-5 relative">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search all 50 Iceberg playbooks (e.g. REST Catalog, Trino, Kafka, Debezium, Spanner, Omni, Vector, Gemini)..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono"
+              placeholder="Search all 50 Iceberg playbooks (REST Catalog, Trino, Kafka, Debezium, Spanner, Omni, Vector)..."
+              className="w-full h-10 pl-9 pr-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {['ALL', 'GA', 'BETA', 'ALPHA'].map((tr) => (
+          <div className="lg:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { id: 'ALL', label: 'ALL TRACKS (50)' },
+              { id: 'GA', label: '[GA · PROD]' },
+              { id: 'BETA', label: '[BETA · PREVIEW]' },
+              { id: 'ALPHA', label: '[ALPHA · LAB]' },
+            ].map((tr) => (
               <button
-                key={tr}
+                key={tr.id}
                 type="button"
-                onClick={() => setTrackFilter(tr)}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer ${
-                  trackFilter === tr
-                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700'
+                onClick={() => setTrackFilter(tr.id)}
+                className={`w-full h-10 px-2.5 rounded-xl text-[11px] font-mono font-extrabold transition-all cursor-pointer flex items-center justify-center border truncate ${
+                  trackFilter === tr.id
+                    ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-indigo-500/50'
                 }`}
               >
-                {tr === 'ALL' ? 'ALL TRACKS (50)' : `[${tr}]`}
+                <span className="truncate">{tr.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Equal-Sized 3-Column Workspace View Switcher */}
+          <div className="lg:col-span-3 grid grid-cols-3 gap-2">
+            {[
+              { id: 'SPLIT_WORKBENCH', label: '01 · Workbench' },
+              { id: 'BENTO_MATRIX_GRID', label: '02 · 50-Grid' },
+              { id: 'METADATA_XRAY', label: '03 · v2 X-Ray' },
+            ].map((vm) => (
+              <button
+                key={vm.id}
+                type="button"
+                onClick={() => setViewMode(vm.id)}
+                className={`w-full h-10 px-2.5 rounded-xl text-[11px] font-mono font-extrabold transition-all cursor-pointer flex items-center justify-center border truncate ${
+                  viewMode === vm.id
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-indigo-500/50'
+                }`}
+              >
+                <span className="truncate">{vm.label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {LAKEHOUSE_DOMAINS.map((dom) => (
-            <button
-              key={dom.id}
-              type="button"
-              onClick={() => setSelectedDomain(dom.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                selectedDomain === dom.id
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-              }`}
-            >
-              <span>{dom.shortLabel}</span>
-              <span
-                className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
-                  selectedDomain === dom.id
-                    ? 'bg-white/20 text-white'
-                    : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
-                }`}
-              >
-                {dom.badge}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Split View: Left Playbook Selector (50 Scenarios) | Right Workbench & Code Synthesizer */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left 5 Columns: Scrollable List of 50 Playbooks */}
-        <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-3 max-h-[720px] overflow-y-auto space-y-2">
-          <div className="px-2 py-1 flex items-center justify-between text-[11px] font-mono text-zinc-500">
-            <span>
-              SHOWING {filteredPlaybooks.length} OF {ICEBERG_PLAYBOOKS.length}{' '}
-              LAKEHOUSE PLAYBOOKS
-            </span>
-            <span>CLICK TO SYNTHESIZE</span>
-          </div>
-
-          {filteredPlaybooks.map((pb) => {
-            const isSelected = activePlaybook?.id === pb.id;
+        {/* Row 2: Symmetrical 3x3 Bento Grid for All 8 Domains (50 Playbooks) — Every Button Equally Sized */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {LAKEHOUSE_DOMAINS.map((dom) => {
+            const isSelected = selectedDomain === dom.id;
             return (
               <button
-                key={pb.id}
+                key={dom.id}
                 type="button"
-                onClick={() => setSelectedPlaybookId(pb.id)}
-                className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
+                onClick={() => setSelectedDomain(dom.id)}
+                title={`${dom.shortLabel} — ${dom.subtitle} (${dom.badge})`}
+                className={`w-full h-12 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2.5 ${
                   isSelected
-                    ? 'bg-indigo-600/10 dark:bg-indigo-500/15 border-indigo-500 shadow-sm'
-                    : 'bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
-                    #{String(pb.num).padStart(2, '0')}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={`w-8 h-7 rounded-lg text-[10px] font-mono font-extrabold flex items-center justify-center shrink-0 ${
+                      isSelected
+                        ? 'bg-black/25 text-white border border-white/20'
+                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400'
+                    }`}
+                  >
+                    {dom.code}
                   </span>
-                  <LakehouseTrackBadge track={pb.track} />
+                  <div className="min-w-0 text-left">
+                    <div className="truncate text-xs font-extrabold leading-tight">
+                      {dom.shortLabel}
+                    </div>
+                    <div
+                      className={`truncate text-[10px] font-normal leading-tight ${
+                        isSelected
+                          ? 'text-indigo-100'
+                          : 'text-zinc-500 dark:text-zinc-400'
+                      }`}
+                    >
+                      {dom.subtitle}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 leading-snug">
-                  {pb.title}
-                </div>
-                <div className="text-[10.5px] font-mono text-indigo-600 dark:text-indigo-400 truncate">
-                  {pb.persona} · {pb.stack}
-                </div>
-                <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2">
-                  {pb.angle}
-                </p>
+                <span
+                  className={`px-2 py-1 rounded-lg text-[10px] font-mono font-extrabold shrink-0 ${
+                    isSelected
+                      ? 'bg-white/20 text-white'
+                      : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                  }`}
+                >
+                  {dom.badge}
+                </span>
               </button>
             );
           })}
         </div>
+      </div>
 
-        {/* Right 7 Columns: Selected Playbook Deep-Dive, Target Config & Multi-Engine Code */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-mono font-extrabold">
-                    PLAYBOOK #{String(activePlaybook.num).padStart(2, '0')} OF 50
-                  </span>
-                  <LakehouseTrackBadge track={activePlaybook.track} />
-                  <span className="text-xs font-mono font-bold text-zinc-500">
-                    {activePlaybook.persona}
-                  </span>
-                </div>
-                <h3 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-zinc-100">
-                  {activePlaybook.title}
-                </h3>
-              </div>
-            </div>
+      {/* =================================================================== */}
+      {/* VIEW MODE 2: 50-PLAYBOOK SYMMETRICAL BENTO MATRIX GRID               */}
+      {/* =================================================================== */}
+      {viewMode === 'BENTO_MATRIX_GRID' && (
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-zinc-200 dark:border-zinc-800">
+            <span className="text-xs font-mono font-extrabold uppercase text-zinc-700 dark:text-zinc-300">
+              Symmetrical 3-Column Bento Matrix ({filteredPlaybooks.length} of{' '}
+              {ICEBERG_PLAYBOOKS.length} Playbooks Visible)
+            </span>
+            <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
+              Click any equal-sized card to open its Multi-Engine Code
+              Synthesizer
+            </span>
+          </div>
 
-            <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-1">
-              <div className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
-                Google Cloud Differentiation &amp; Core Architectural Angle ({activePlaybook.stack})
-              </div>
-              <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                {activePlaybook.angle}
-              </p>
-            </div>
-
-            {/* Target Lakehouse Parameters */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
-              <div>
-                <label className="block text-[10px] font-mono text-zinc-500 mb-1">
-                  BigQuery Dataset:
-                </label>
-                <input
-                  type="text"
-                  value={datasetId}
-                  onChange={(e) => setDatasetId(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 text-xs font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-mono text-zinc-500 mb-1">
-                  GCS Lakehouse Bucket:
-                </label>
-                <input
-                  type="text"
-                  value={bucketName}
-                  onChange={(e) => setBucketName(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 text-xs font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-mono text-zinc-500 mb-1">
-                  Iceberg REST Catalog ID:
-                </label>
-                <input
-                  type="text"
-                  value={catalogId}
-                  onChange={(e) => setCatalogId(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 text-xs font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-mono text-zinc-500 mb-1">
-                  Region:
-                </label>
-                <select
-                  value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 text-xs font-mono"
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {filteredPlaybooks.map((pb) => {
+              const isSelected = activePlaybook?.id === pb.id;
+              return (
+                <div
+                  key={pb.id}
+                  className={`h-52 p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+                    isSelected
+                      ? 'bg-indigo-600/10 dark:bg-indigo-500/15 border-indigo-500 shadow-sm'
+                      : 'bg-zinc-50/80 dark:bg-zinc-900/70 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50'
+                  }`}
                 >
-                  <option value="us-central1">us-central1</option>
-                  <option value="us-east1">us-east1</option>
-                  <option value="europe-west1">europe-west1</option>
-                  <option value="asia-east1">asia-east1</option>
-                </select>
+                  <div className="space-y-1.5 min-h-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
+                        PLAYBOOK #{String(pb.num).padStart(2, '0')}
+                      </span>
+                      <LakehouseTrackBadge track={pb.track} />
+                    </div>
+                    <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug">
+                      {pb.title}
+                    </div>
+                    <div className="text-[10.5px] font-mono text-indigo-600 dark:text-indigo-400 truncate">
+                      {pb.persona} · {pb.stack}
+                    </div>
+                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                      {pb.angle}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-200/80 dark:border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlaybookId(pb.id);
+                        setViewMode('SPLIT_WORKBENCH');
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-mono font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <span>Open Workbench</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlaybookId(pb.id);
+                        setViewMode('METADATA_XRAY');
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <span>Inspect v2 Meta</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* VIEW MODE 3: ICEBERG V2 METADATA, SNAPSHOT & GCS PREFIX HASH X-RAY   */}
+      {/* =================================================================== */}
+      {viewMode === 'METADATA_XRAY' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left 6 Columns: Live Synthesized Iceberg v2 Metadata JSON & Column-ID Lineage */}
+          <div className="lg:col-span-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+                  Apache Iceberg Spec v2 · Immutable Metadata &amp; Column-ID
+                  Schema Evolution
+                </div>
+                <h4 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                  gs://{bucketName.replace(/^gs:\/\//, '')}/
+                  {activePlaybook.tableName}/metadata/v4.metadata.json
+                </h4>
+              </div>
+              <LakehouseTrackBadge track={activePlaybook.track} />
+            </div>
+
+            <pre className="p-3.5 rounded-xl bg-zinc-950 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-80 whitespace-pre-wrap leading-relaxed border border-zinc-800">
+              {JSON.stringify(
+                {
+                  'format-version': 2,
+                  'table-uuid': `7f9c2a10-${String(activePlaybook.num).padStart(
+                    4,
+                    '0'
+                  )}-4e2b-9c8a-0192837465ab`,
+                  location: `gs://${bucketName.replace(/^gs:\/\//, '')}/${
+                    activePlaybook.id.toLowerCase()
+                  }`,
+                  'last-sequence-number': 42,
+                  'last-updated-ms': 1792082400000,
+                  'last-column-id': 4,
+                  'current-schema-id': 1,
+                  schemas: [
+                    {
+                      type: 'struct',
+                      'schema-id': 1,
+                      'identifier-field-ids': [1],
+                      fields: [
+                        {
+                          id: 1,
+                          name: 'record_id',
+                          required: true,
+                          type: 'string',
+                        },
+                        {
+                          id: 2,
+                          name: 'event_ts',
+                          required: true,
+                          type: 'timestamptz',
+                        },
+                        {
+                          id: 3,
+                          name: 'tenant_region',
+                          required: false,
+                          type: 'string',
+                        },
+                        {
+                          id: 4,
+                          name: 'payload_json',
+                          required: false,
+                          type: 'string',
+                        },
+                      ],
+                    },
+                  ],
+                  'default-spec-id': 0,
+                  'partition-specs': [
+                    {
+                      'spec-id': 0,
+                      fields: [
+                        {
+                          'source-id': 2,
+                          'field-id': 1000,
+                          name: 'event_ts_day',
+                          transform: 'day',
+                        },
+                        {
+                          'source-id': 3,
+                          'field-id': 1001,
+                          name: 'tenant_region',
+                          transform: 'identity',
+                        },
+                      ],
+                    },
+                  ],
+                  'current-snapshot-id': 84920194820192,
+                  snapshots: [
+                    {
+                      'sequence-number': 42,
+                      'snapshot-id': 84920194820192,
+                      'timestamp-ms': 1792082400000,
+                      summary: {
+                        operation: 'overwrite',
+                        'spark.app.id': `dataproc-serverless-p${activePlaybook.num}`,
+                        'added-data-files': '16',
+                        'added-position-delete-files': '2',
+                        'total-records': '14820900',
+                        'total-files-size': '8492019482',
+                      },
+                      'manifest-list': `gs://${bucketName.replace(
+                        /^gs:\/\//,
+                        ''
+                      )}/${activePlaybook.id.toLowerCase()}/metadata/snap-84920194820192-1.avro`,
+                    },
+                  ],
+                },
+                null,
+                2
+              )}
+            </pre>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode('SPLIT_WORKBENCH')}
+                className="w-full h-10 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Back to Split Playbook Workbench</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('BENTO_MATRIX_GRID')}
+                className="w-full h-10 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>View All 50 Bento Cards</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right 6 Columns: 64-Prefix GCS Entropy Distribution & Multi-Engine OCC Concurrency Matrix */}
+          <div className="lg:col-span-6 space-y-4">
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-3 shadow-sm">
+              <div className="text-[10px] font-mono font-extrabold uppercase text-emerald-600 dark:text-emerald-400">
+                Playbook #22 &amp; #24 · GCS Object Prefix Hash Distribution
+                (write.object-storage.enabled=true)
+              </div>
+              <h4 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                Zero HTTP 429 Throttling at 500,000+ Parquet Reads/Sec Across 16
+                Hex Prefixes
+              </h4>
+              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 font-mono text-[10px]">
+                {[
+                  '0x0f',
+                  '0x1a',
+                  '0x2c',
+                  '0x3e',
+                  '0x4b',
+                  '0x5d',
+                  '0x6a',
+                  '0x7f',
+                  '0x8c',
+                  '0x9e',
+                  '0xab',
+                  '0xbd',
+                  '0xca',
+                  '0xdf',
+                  '0xe4',
+                  '0xff',
+                ].map((pfx, idx) => (
+                  <div
+                    key={pfx}
+                    className="h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex flex-col items-center justify-center"
+                  >
+                    <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                      /{pfx}/
+                    </span>
+                    <span className="text-[9px] text-zinc-500">
+                      {32 + (idx % 5) * 3}k IOPS
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Multi-Engine Code Tabs */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-1.5">
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-3 shadow-sm">
+              <div className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+                Playbook #8, #15 &amp; #16 · Multi-Engine Optimistic Concurrency
+                Control (OCC) Matrix
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
+                {[
+                  {
+                    engine: 'BigQuery Lakehouse Engine',
+                    mode: 'Vectorized Parquet + Position Delete Merge-on-Read',
+                    badge: 'ACID SNAPSHOT ISOLATION',
+                  },
+                  {
+                    engine: 'Managed Spark 3.5 (REST 1.10)',
+                    mode: 'WAP Branching + Optimistic Commit Retry',
+                    badge: 'ZERO-LOCK DML',
+                  },
+                  {
+                    engine: 'Open-Source Trino / Starburst',
+                    mode: 'BigLake Iceberg REST v1 Token Vending',
+                    badge: 'OAUTH CREDENTIAL VENDING',
+                  },
+                  {
+                    engine: 'Apache Beam / Dataflow Streaming',
+                    mode: 'Micro-Batch 60s Manifest Append + Auto-Compaction',
+                    badge: 'EXACTLY-ONCE SINK',
+                  },
+                ].map((row) => (
+                  <div
+                    key={row.engine}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/70 flex flex-col justify-between gap-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                        {row.engine}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 text-[9px] font-extrabold shrink-0">
+                        {row.badge}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {row.mode}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* VIEW MODE 1: MAIN SPLIT WORKBENCH (DEFAULT)                         */}
+      {/* =================================================================== */}
+      {viewMode === 'SPLIT_WORKBENCH' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Left 5 Columns: Scrollable List of 50 Playbooks (Uniform Card Structure) */}
+          <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-3 max-h-[820px] overflow-y-auto space-y-2 shadow-sm">
+            <div className="px-2 py-1.5 flex items-center justify-between text-[11px] font-mono text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
+              <span>
+                SHOWING {filteredPlaybooks.length} OF {ICEBERG_PLAYBOOKS.length}{' '}
+                LAKEHOUSE PLAYBOOKS
+              </span>
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                SELECT SCENARIO
+              </span>
+            </div>
+
+            {filteredPlaybooks.map((pb) => {
+              const isSelected = activePlaybook?.id === pb.id;
+              return (
+                <button
+                  key={pb.id}
+                  type="button"
+                  onClick={() => setSelectedPlaybookId(pb.id)}
+                  className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
+                    isSelected
+                      ? 'bg-indigo-600/10 dark:bg-indigo-500/15 border-indigo-500 shadow-sm'
+                      : 'bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
+                      PLAYBOOK #{String(pb.num).padStart(2, '0')}
+                    </span>
+                    <LakehouseTrackBadge track={pb.track} />
+                  </div>
+                  <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2">
+                    {pb.title}
+                  </div>
+                  <div className="text-[10.5px] font-mono text-indigo-600 dark:text-indigo-400 truncate">
+                    {pb.persona} · {pb.stack}
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                    {pb.angle}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right 7 Columns: Selected Playbook Deep-Dive, 4-Stage Pipeline Ribbon, Target Config & Multi-Engine Code */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] font-mono font-extrabold">
+                      PLAYBOOK #{String(activePlaybook.num).padStart(2, '0')} OF
+                      50
+                    </span>
+                    <LakehouseTrackBadge track={activePlaybook.track} />
+                    <span className="text-xs font-mono font-bold text-zinc-500">
+                      {activePlaybook.persona}
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-zinc-100">
+                    {activePlaybook.title}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Equal-Sized 4-Stage Lakehouse Architecture Pipeline Ribbon */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+                {[
+                  {
+                    step: 'STAGE 01 · STORAGE',
+                    title: `gs://${bucketName
+                      .replace(/^gs:\/\//, '')
+                      .slice(0, 18)}`,
+                    meta: 'Parquet ZSTD + Hash Prefixes',
+                  },
+                  {
+                    step: 'STAGE 02 · CATALOG',
+                    title: catalogId,
+                    meta: 'Iceberg REST v1 Token Vending',
+                  },
+                  {
+                    step: 'STAGE 03 · COMPUTE',
+                    title: activePlaybook.stack.split(',')[0] || 'BigQuery + Spark',
+                    meta: 'Multi-Engine OCC Snapshot Isolation',
+                  },
+                  {
+                    step: 'STAGE 04 · GOVERNANCE',
+                    title: `${datasetId}.${activePlaybook.tableName}`,
+                    meta: `Dataplex RLS/CLS · [${activePlaybook.track}]`,
+                  },
+                ].map((st) => (
+                  <div
+                    key={st.step}
+                    className="h-16 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-900/80 flex flex-col justify-between"
+                  >
+                    <div className="text-[9.5px] font-mono font-extrabold text-indigo-600 dark:text-indigo-400 truncate">
+                      {st.step}
+                    </div>
+                    <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                      {st.title}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-500 truncate">
+                      {st.meta}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-1">
+                <div className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+                  Google Cloud Differentiation &amp; Core Architectural Angle (
+                  {activePlaybook.stack})
+                </div>
+                <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                  {activePlaybook.angle}
+                </p>
+              </div>
+
+              {/* Target Lakehouse Parameters (Equal 4-Column Inputs) */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                    BigQuery Dataset:
+                  </label>
+                  <input
+                    type="text"
+                    value={datasetId}
+                    onChange={(e) => setDatasetId(e.target.value)}
+                    className="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-2.5 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                    GCS Lakehouse Bucket:
+                  </label>
+                  <input
+                    type="text"
+                    value={bucketName}
+                    onChange={(e) => setBucketName(e.target.value)}
+                    className="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-2.5 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                    Iceberg REST Catalog ID:
+                  </label>
+                  <input
+                    type="text"
+                    value={catalogId}
+                    onChange={(e) => setCatalogId(e.target.value)}
+                    className="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-2.5 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono text-zinc-500 mb-1">
+                    Region:
+                  </label>
+                  <select
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    className="w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-2.5 text-xs font-mono"
+                  >
+                    <option value="us-central1">us-central1</option>
+                    <option value="us-east1">us-east1</option>
+                    <option value="europe-west1">europe-west1</option>
+                    <option value="asia-east1">asia-east1</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Equal-Sized 3-Column Multi-Engine Code Tabs */}
+              <div className="space-y-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
                     {
                       id: 'BIGQUERY_SQL',
-                      label: '1. BigQuery Lakehouse SQL / DDL',
+                      code: '01',
+                      label: 'BigQuery Lakehouse SQL / DDL',
+                      badge: 'BQ ENGINE',
                     },
                     {
                       id: 'PYSPARK_REST',
-                      label: '2. Serverless PySpark 3.5 (Iceberg REST 1.10)',
+                      code: '02',
+                      label: 'Serverless PySpark 3.5',
+                      badge: 'REST 1.10',
                     },
                     {
                       id: 'GCLOUD_CLI',
-                      label: `3. gcloud 588.0.0 CLI [${activePlaybook.track}]`,
+                      code: '03',
+                      label: 'gcloud 588.0.0 CLI',
+                      badge: `[${activePlaybook.track}]`,
                     },
-                  ].map((ct) => (
-                    <button
-                      key={ct.id}
-                      type="button"
-                      onClick={() => setCodeEngineTab(ct.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
-                        codeEngineTab === ct.id
-                          ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                          : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
-                      }`}
-                    >
-                      {ct.label}
-                    </button>
-                  ))}
+                  ].map((ct) => {
+                    const active = codeEngineTab === ct.id;
+                    return (
+                      <button
+                        key={ct.id}
+                        type="button"
+                        onClick={() => setCodeEngineTab(ct.id)}
+                        className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                          active
+                            ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
+                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
+                              active
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
+                            }`}
+                          >
+                            {ct.code}
+                          </span>
+                          <span className="truncate">{ct.label}</span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-extrabold shrink-0 ${
+                            active ? ' opacity-90' : 'text-zinc-400'
+                          }`}
+                        >
+                          {ct.badge}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
+                <pre className="p-3.5 rounded-xl bg-zinc-950 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-72 whitespace-pre-wrap leading-relaxed border border-zinc-800">
+                  {codeEngineTab === 'BIGQUERY_SQL'
+                    ? synthesizedCode.bqSql
+                    : codeEngineTab === 'PYSPARK_REST'
+                    ? synthesizedCode.pysparkCode
+                    : synthesizedCode.cliCode}
+                </pre>
+              </div>
+
+              {/* Equal-Sized 4-Column Action Bar (Copy + Open in BQ + Send to Shell + 1-Tap Cost Gatekeeper) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -1469,259 +1941,365 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
                         : synthesizedCode.cliCode;
                     copyText(txt, `${activePlaybook.id}_${codeEngineTab}`);
                   }}
-                  className="inline-flex items-center gap-1 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                  className="w-full h-11 px-3 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
                 >
                   {copiedKey === `${activePlaybook.id}_${codeEngineTab}` ? (
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   ) : (
-                    <Copy className="w-3.5 h-3.5" />
+                    <Copy className="w-3.5 h-3.5 shrink-0" />
                   )}
-                  <span>Copy Code</span>
+                  <span className="truncate">Copy Active Code</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenBigQuerySql) {
+                      onOpenBigQuerySql(synthesizedCode.bqSql);
+                    } else {
+                      copyText(
+                        synthesizedCode.bqSql,
+                        `${activePlaybook.id}_BQ_SQL`
+                      );
+                    }
+                  }}
+                  className="w-full h-11 px-3 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                >
+                  <Database className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <span className="truncate">Open DDL in BigQuery</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onRunInShell) {
+                      onRunInShell(synthesizedCode.cliCode);
+                    } else {
+                      copyText(
+                        synthesizedCode.cliCode,
+                        `${activePlaybook.id}_CLI`
+                      );
+                    }
+                  }}
+                  className="w-full h-11 px-3 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="truncate">Send CLI to Cloud Shell</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={executing}
+                  onClick={handleExecutePlaybook}
+                  className="w-full h-11 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold shadow-sm transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  <Play className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">
+                    {executing
+                      ? `Executing [${activePlaybook.track}]...`
+                      : `1-Tap Bootstrap #${activePlaybook.num} [${activePlaybook.track}]`}
+                  </span>
                 </button>
               </div>
-
-              <pre className="p-3.5 rounded-xl bg-zinc-950 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-72 whitespace-pre-wrap leading-relaxed border border-zinc-800">
-                {codeEngineTab === 'BIGQUERY_SQL'
-                  ? synthesizedCode.bqSql
-                  : codeEngineTab === 'PYSPARK_REST'
-                  ? synthesizedCode.pysparkCode
-                  : synthesizedCode.cliCode}
-              </pre>
             </div>
 
-            {/* Action Buttons (1-Tap Cloud Action protected by Cost Gatekeeper + Open in SQL / Shell) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-              <div className="flex flex-wrap items-center gap-2">
-                {onOpenBigQuerySql && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenBigQuerySql(synthesizedCode.bqSql)}
-                    className="px-3 py-2 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
-                  >
-                    Open DDL in BigQuery Studio
-                  </button>
-                )}
-                {onRunInShell && (
-                  <button
-                    type="button"
-                    onClick={() => onRunInShell(synthesizedCode.cliCode)}
-                    className="px-3 py-2 rounded-xl text-xs font-mono font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer"
-                  >
-                    Send CLI to Cloud Shell
-                  </button>
-                )}
+            {/* Equal-Sized 4-Column Interactive Architecture Decision Simulators */}
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-mono font-extrabold uppercase text-zinc-700 dark:text-zinc-300">
+                  Interactive Lakehouse TCO &amp; Architecture Decision
+                  Simulators
+                </span>
+                <span className="text-[11px] font-mono text-zinc-500">
+                  4 Live FinOps &amp; Performance Models
+                </span>
               </div>
 
-              <button
-                type="button"
-                disabled={executing}
-                onClick={handleExecutePlaybook}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-4 py-2.5 text-xs font-mono font-extrabold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <Play className="w-4 h-4" />
-                <span>
-                  {executing
-                    ? `Executing [${activePlaybook.track}] Playbook...`
-                    : `1-Tap Bootstrap Playbook #${activePlaybook.num} [${activePlaybook.track}] (Cost Gatekeeper)`}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Interactive Architecture Decision Simulators (Migrate vs Federate & BQ vs Trino 10TB+) */}
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-mono font-extrabold uppercase text-zinc-700 dark:text-zinc-300">
-                Interactive Lakehouse TCO &amp; Architecture Decision Simulators
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
                 {[
                   {
                     id: 'MIGRATE_VS_FEDERATE',
-                    label: 'Playbook #30: Migrate vs. Federate (S3/ADLS)',
+                    code: 'S1',
+                    label: '#30 Migrate vs. Federate',
                   },
                   {
                     id: 'BQ_VS_TRINO',
-                    label: 'Playbook #13: BigQuery vs. Trino (10TB+ TPC-DS)',
+                    code: 'S2',
+                    label: '#13 BigQuery vs. Trino',
                   },
                   {
                     id: 'HMS_100_MIGRATOR',
-                    label: 'Playbook #2/#5/#6: 100+ HMS/Delta to Iceberg',
+                    code: 'S3',
+                    label: '#2/#5 100+ HMS to Iceberg',
                   },
-                ].map((sim) => (
-                  <button
-                    key={sim.id}
-                    type="button"
-                    onClick={() => setSimulatorTab(sim.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold cursor-pointer ${
-                      simulatorTab === sim.id
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    {sim.label}
-                  </button>
-                ))}
+                  {
+                    id: 'COMPACTION_AUTOCLASS',
+                    code: 'S4',
+                    label: '#23/#25 Compaction & Autoclass',
+                  },
+                ].map((sim) => {
+                  const active = simulatorTab === sim.id;
+                  return (
+                    <button
+                      key={sim.id}
+                      type="button"
+                      onClick={() => setSimulatorTab(sim.id)}
+                      className={`w-full h-10 px-3 rounded-xl text-[11px] font-mono font-bold cursor-pointer border flex items-center justify-between gap-2 transition-all ${
+                        active
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40'
+                      }`}
+                    >
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                          active
+                            ? 'bg-black/25 text-white'
+                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
+                        }`}
+                      >
+                        {sim.code}
+                      </span>
+                      <span className="truncate">{sim.label}</span>
+                    </button>
+                  );
+                })}
               </div>
+
+              {simulatorTab === 'MIGRATE_VS_FEDERATE' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-mono text-zinc-500">
+                      AWS S3 / Azure ADLS Estate Size (TB):{' '}
+                      <strong>{remoteDataTb} TB</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min={5}
+                      max={500}
+                      step={5}
+                      value={remoteDataTb}
+                      onChange={(e) => setRemoteDataTb(Number(e.target.value))}
+                      className="w-full"
+                    />
+                    <label className="block text-[11px] font-mono text-zinc-500">
+                      Monthly Query Volume Scanned (TB/mo):{' '}
+                      <strong>{monthlyQueryScansTb} TB/mo</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min={10}
+                      max={1000}
+                      step={10}
+                      value={monthlyQueryScansTb}
+                      onChange={(e) =>
+                        setMonthlyQueryScansTb(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        One-Time S3/ADLS Egress to Migrate:
+                      </span>
+                      <span className="font-bold text-amber-600 dark:text-amber-400">
+                        $
+                        {migrateVsFederateAnalysis.oneTimeMigrationEgressUsd.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        BigQuery Omni Federated (With Cross-Cloud Cache):
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        $
+                        {migrateVsFederateAnalysis.netOmniMonthlyUsd.toLocaleString()}
+                        /mo ($0 Upfront Egress)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        Migration Egress Breakeven Horizon:
+                      </span>
+                      <span className="font-bold">
+                        ~{migrateVsFederateAnalysis.breakevenMonths} months
+                      </span>
+                    </div>
+                    <div className="pt-1 text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                      Verdict:{' '}
+                      {migrateVsFederateAnalysis.recommendation ===
+                      'FEDERATE_IN_PLACE_WITH_BQ_OMNI'
+                        ? 'Keep data in S3/ADLS & query in-place with BigQuery Omni + Cross-Cloud Caching ($0 migration egress).'
+                        : 'High scan-to-storage ratio justifies physical migration to GCS + BigLake Iceberg with Autoclass.'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {simulatorTab === 'BQ_VS_TRINO' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-mono text-zinc-500">
+                      24/7 Self-Managed Trino Worker Nodes (n2-highmem-16):{' '}
+                      <strong>{trinoNodesCount} nodes</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min={4}
+                      max={64}
+                      step={2}
+                      value={trinoNodesCount}
+                      onChange={(e) =>
+                        setTrinoNodesCount(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        24/7 Trino on GKE Cluster Cost:
+                      </span>
+                      <span className="font-bold text-rose-600 dark:text-rose-400">
+                        $
+                        {bqVsTrinoBenchmark.trinoMonthlyFixedCostUsd.toLocaleString()}
+                        /mo (P95 10TB Scan:{' '}
+                        {bqVsTrinoBenchmark.trinoP95LatencySec}s)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        BigQuery Lakehouse Engine (Scale-to-Zero Slots):
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        $
+                        {bqVsTrinoBenchmark.bqServerlessMonthlyEstUsd.toLocaleString()}
+                        /mo (P95 10TB Scan:{' '}
+                        {bqVsTrinoBenchmark.bqVectorizedP95LatencySec}s)
+                      </span>
+                    </div>
+                    <div className="pt-1 text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                      Result: -{bqVsTrinoBenchmark.tcoSavingsPct}% Lower TCO +
+                      2.9x Faster P95 Scan Latency via BigQuery Metadata Caching
+                      &amp; Vectorized Parquet Execution.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {simulatorTab === 'HMS_100_MIGRATOR' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-mono text-zinc-500">
+                      Legacy HMS / Delta / Raw Parquet Tables:{' '}
+                      <strong>{hmsTablesCount} tables</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min={10}
+                      max={1000}
+                      step={10}
+                      value={hmsTablesCount}
+                      onChange={(e) =>
+                        setHmsTablesCount(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        Parquet Data Bytes Rewritten (system.add_files):
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        0 Bytes (100% In-Place Metadata Upgrade)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        Estimated Metadata Registration Time ({hmsTablesCount}{' '}
+                        tables):
+                      </span>
+                      <span className="font-bold">
+                        ~{Math.max(1, Math.round(hmsTablesCount * 0.15))} mins
+                        via Managed Spark Parallel Pool
+                      </span>
+                    </div>
+                    <div className="pt-1 text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                      Zero-downtime dual-read active: Legacy Hive readers
+                      continue reading while BigQuery &amp; Spark 1.10 attach
+                      via Lakehouse Iceberg REST Catalog.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {simulatorTab === 'COMPACTION_AUTOCLASS' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-mono text-zinc-500">
+                      Uncompacted Streaming Small Files (&lt;16MB):{' '}
+                      <strong>{smallFilesCount.toLocaleString()} files</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min={5000}
+                      max={250000}
+                      step={5000}
+                      value={smallFilesCount}
+                      onChange={(e) =>
+                        setSmallFilesCount(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                    <label className="block text-[11px] font-mono text-zinc-500">
+                      Partitions Older Than 90 Days (Autoclass Coldline/Archive):{' '}
+                      <strong>{autoclassColdPct}%</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min={10}
+                      max={90}
+                      step={5}
+                      value={autoclassColdPct}
+                      onChange={(e) =>
+                        setAutoclassColdPct(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        After 512MB Bin-Packing (system.rewrite_data_files):
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        {Math.max(12, Math.round(smallFilesCount / 140))} files
+                        (-99.2% GCS Metadata RPCs)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">
+                        GCS Autoclass Tiering Savings ({autoclassColdPct}% Cold
+                        Snapshots):
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        -{Math.round(autoclassColdPct * 0.72)}% Monthly Storage
+                        Bill ($20/TB → $4/TB)
+                      </span>
+                    </div>
+                    <div className="pt-1 text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                      Playbook #23 &amp; #25: Z-Order compaction + GCS Autoclass
+                      cuts P95 small-file scan latency by 4.6x with zero manual
+                      lifecycle rules.
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-
-            {simulatorTab === 'MIGRATE_VS_FEDERATE' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-mono text-zinc-500">
-                    AWS S3 / Azure ADLS Estate Size (TB):{' '}
-                    <strong>{remoteDataTb} TB</strong>
-                  </label>
-                  <input
-                    type="range"
-                    min={5}
-                    max={500}
-                    step={5}
-                    value={remoteDataTb}
-                    onChange={(e) => setRemoteDataTb(Number(e.target.value))}
-                    className="w-full"
-                  />
-                  <label className="block text-[11px] font-mono text-zinc-500">
-                    Monthly Query Volume Scanned (TB/mo):{' '}
-                    <strong>{monthlyQueryScansTb} TB/mo</strong>
-                  </label>
-                  <input
-                    type="range"
-                    min={10}
-                    max={1000}
-                    step={10}
-                    value={monthlyQueryScansTb}
-                    onChange={(e) =>
-                      setMonthlyQueryScansTb(Number(e.target.value))
-                    }
-                    className="w-full"
-                  />
-                </div>
-                <div className="sm:col-span-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono">
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">
-                      One-Time S3/ADLS Egress to Migrate:
-                    </span>
-                    <span className="font-bold text-amber-600 dark:text-amber-400">
-                      ${migrateVsFederateAnalysis.oneTimeMigrationEgressUsd.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">
-                      BigQuery Omni Federated (With Cross-Cloud Cache):
-                    </span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      ${migrateVsFederateAnalysis.netOmniMonthlyUsd.toLocaleString()}
-                      /mo ($0 Upfront Egress)
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">
-                      Migration Egress Breakeven Horizon:
-                    </span>
-                    <span className="font-bold">
-                      ~{migrateVsFederateAnalysis.breakevenMonths} months
-                    </span>
-                  </div>
-                  <div className="pt-1 text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
-                    Verdict:{' '}
-                    {migrateVsFederateAnalysis.recommendation ===
-                    'FEDERATE_IN_PLACE_WITH_BQ_OMNI'
-                      ? 'Keep data in S3/ADLS & query in-place with BigQuery Omni + Cross-Cloud Caching ($0 migration egress).'
-                      : 'High scan-to-storage ratio justifies physical migration to GCS + BigLake Iceberg with Autoclass.'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {simulatorTab === 'BQ_VS_TRINO' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-mono text-zinc-500">
-                    24/7 Self-Managed Trino Worker Nodes (n2-highmem-16):{' '}
-                    <strong>{trinoNodesCount} nodes</strong>
-                  </label>
-                  <input
-                    type="range"
-                    min={4}
-                    max={64}
-                    step={2}
-                    value={trinoNodesCount}
-                    onChange={(e) => setTrinoNodesCount(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-                <div className="sm:col-span-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono">
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">
-                      24/7 Trino on GKE Cluster Cost:
-                    </span>
-                    <span className="font-bold text-rose-600 dark:text-rose-400">
-                      ${bqVsTrinoBenchmark.trinoMonthlyFixedCostUsd.toLocaleString()}
-                      /mo (P95 10TB Scan: {bqVsTrinoBenchmark.trinoP95LatencySec}s)
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">
-                      BigQuery Lakehouse Engine (Scale-to-Zero Slots):
-                    </span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      ${bqVsTrinoBenchmark.bqServerlessMonthlyEstUsd.toLocaleString()}
-                      /mo (P95 10TB Scan: {bqVsTrinoBenchmark.bqVectorizedP95LatencySec}s)
-                    </span>
-                  </div>
-                  <div className="pt-1 text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400">
-                    Result: -{bqVsTrinoBenchmark.tcoSavingsPct}% Lower TCO + 2.9x Faster P95 Scan Latency via BigQuery Metadata Caching &amp; Vectorized Parquet Execution.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {simulatorTab === 'HMS_100_MIGRATOR' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-mono text-zinc-500">
-                    Legacy HMS / Delta / Raw Parquet Tables:{' '}
-                    <strong>{hmsTablesCount} tables</strong>
-                  </label>
-                  <input
-                    type="range"
-                    min={10}
-                    max={1000}
-                    step={10}
-                    value={hmsTablesCount}
-                    onChange={(e) => setHmsTablesCount(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-                <div className="sm:col-span-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs font-mono">
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">
-                      Parquet Data Bytes Rewritten (system.add_files):
-                    </span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      0 Bytes (100% In-Place Metadata Upgrade)
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">
-                      Estimated Metadata Registration Time ({hmsTablesCount}{' '}
-                      tables):
-                    </span>
-                    <span className="font-bold">
-                      ~{Math.max(1, Math.round(hmsTablesCount * 0.15))} mins via
-                      Managed Spark Parallel Pool
-                    </span>
-                  </div>
-                  <div className="pt-1 text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
-                    Zero-downtime dual-read active: Legacy Hive readers continue reading while BigQuery &amp; Spark 1.10 attach via Lakehouse Iceberg REST Catalog.
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
