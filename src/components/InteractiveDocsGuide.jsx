@@ -42,10 +42,10 @@ const DOC_SECTIONS = [
     problemSolved:
       'Google Cloud hosts 48 official Remote Model Context Protocol (MCP) servers directly at https://<service>.googleapis.com/mcp speaking JSON-RPC 2.0 (2025-06-18), exposing 505 live tools (306 readOnlyHint=true and 98 destructiveHint=true), yet developers have no visual browser control plane to probe all 48 endpoints, inspect inputSchemas, execute tools safely, chain multiple MCP servers in parallel for SRE incident triage, or ground Gemini 2.5 Flash on real-time MCP responses.',
     howItWorks: [
-      'Tab 01 (48 Official Remote MCP Server Matrix & Live Probe): Catalogs all 48 official *.googleapis.com/mcp endpoints across 8 categories (Compute/Containers, Databases, Data/Analytics, Storage, Security/IAM, Operations/Observability, Networking/Delivery, AI/Developer) and probes all 48 servers concurrently via JSON-RPC 2.0 tools/list in ~2.4 seconds.',
-      'Tab 02 (Live JSON-RPC 2.0 Tool Explorer & Safe Executor): Fetches live tools/list from any selected *.googleapis.com/mcp endpoint, auto-populates projectId and region into the JSON-RPC inputSchema, enforces a mandatory confirmation gate on destructiveHint: true tools, and offers 1-click serviceusage.googleapis.com API activation if an endpoint returns HTTP 403 SERVICE_DISABLED.',
-      'Tab 03 (1-Click Parallel Multi-Server SRE & FinOps Triage Chains): Runs 4 pre-built parallel JSON-RPC 2.0 tool chains across multiple *.googleapis.com/mcp servers simultaneously: (1) Cloud Run 5xx & Cold-Start Forensics (run + logging + clouderrorreporting + servicehealth), (2) Zero-Trust IAM & 403 Blast-Radius Audit (iam + policytroubleshooter + storage + compute), (3) FinOps Burn, Billing & Recommender X-Ray (cloudbilling + recommender + bigquery + monitoring), and (4) Official Architecture & Live Estate Synthesis (developerknowledge + run + sqladmin + container).',
-      'Tab 04 (Gemini 2.5 Flash Official MCP Agent) & Tab 05 (1-Click IDE Config Exporter): Executes 5 read-only official MCP tools in parallel and grounds Vertex AI Gemini 2.5 Flash on the live JSON-RPC payloads, plus generates copy-ready mcpServers JSON blocks for Gemini CLI, Claude Code, Cursor, VS Code, and Antigravity.',
+      'Tab 01 (48 Official Remote MCP Server Matrix & Live Probe): Catalogs all 48 official *.googleapis.com/mcp endpoints across 6 categories (Compute/Serverless/GKE, FinOps/Billing/Quotas, Security/IAM/Policy, Databases/BigQuery/Streaming, Observability/Trace/SRE, AI Agents & Dev Knowledge) and probes all 48 servers concurrently via JSON-RPC 2.0 tools/list.',
+      'Tab 02 (Formatted GA & PREVIEW Tool Schema Inspector & Live tools/call Executor): Fetches live tools/list from any selected *.googleapis.com/mcp endpoint, automatically formats dense single-line GA and PREVIEW tool docstrings (such as run_gcloud_command and run_bq_command on cloudcli.googleapis.com/mcp) into Safety/Warning Callout Banners (**CRITICAL SAFETY WARNING**, **FORBIDDEN COMMANDS**, **STRICT EXECUTION RULES**), #1–#10 rule cards, inline code flag pills, and REQUIRED/OPTIONAL schema cards (McpFormattedMarkdown), and renders tools/call responses as structured tables/cards with a 1-click Formatted Review / Raw JSON-RPC toggle (McpStructuredPayloadView).',
+      'Tab 03 (1-Click Parallel Multi-Server SRE & FinOps Triage Chains): Runs 4 pre-built parallel JSON-RPC 2.0 tool chains across multiple *.googleapis.com/mcp servers simultaneously: (1) FinOps & Quota Burn Triage (cloudbilling + cloudquotas + recommender + monitoring), (2) Zero-Trust IAM & Perimeter Audit (iam + securitycenter + logging + storage), (3) SRE Incident & Trace Root-Cause (logging + clouderrorreporting + cloudtrace + servicehealth), and (4) Lakehouse & Database Discovery (bigquery + bigtable + spanner + dataplex).',
+      'Tab 04 (Gemini 2.5 Flash Live MCP Review & Tool-Calling Architect) & Tab 05 (1-Click IDE Config Exporter): Executes 5 read-only official MCP tools in parallel, grounds Vertex AI Gemini 2.5 Flash (maxOutputTokens: 2048) with 4 quick-select Review presets (Full Estate & FinOps, IAM & Zero-Trust, BigQuery & Storage Lakehouse, SRE Logs & Error Rate), renders formatted Markdown review tables/CLI blocks, and exports copy-ready mcpServers JSON blocks for Gemini CLI, Claude Code, Cursor, and VS Code Copilot.',
     ],
     apisUsed: [
       'GET /api/project/:id/mcp/catalog?probeAll=true, POST /api/project/:id/mcp/tools-list & POST /api/project/:id/mcp/call-tool (JSON-RPC 2.0 to https://*.googleapis.com/mcp)',
@@ -679,26 +679,26 @@ const DOC_SECTIONS = [
   },
   {
     id: 'gde-promotional-credit-guardian',
-    wave: 'CLOUD BILLING ACCOUNT · GDE PROMOTIONAL CREDIT GUARDIAN',
+    wave: 'CLOUD BILLING ACCOUNT · GDE PROMOTIONAL CREDIT GUARDIAN & ACTIVE-ONLY CSV HARVESTER',
     title:
-      'Cloud Billing Account & Google Developer Expert (GDE) Promotional Credit Expiration & Stranded Balance Guardian',
+      'Cloud Billing Account & Google Developer Expert (GDE) Promotional Credit Expiration, Strict Expired-Grant Filter & 6-Service Stranded Balance Harvester',
     badge: 'FINOPS TAB + TOP HEADER ALERT PILL',
     badgeColor: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
     icon: DollarSign,
     targetTab: 'FINOPS',
     problemSolved:
-      'Google Cloud Console Billing Budgets track gross/net spend, but fail to warn Google Developer Experts (GDEs) and credit holders when their promotional bonus grant is approaching its expiration cliff date OR when they still have hundreds of dollars inside a GDE bonus that will expire unspent at their current project burn rate.',
+      'Google Cloud Console Billing Budgets track gross/net spend, but fail to warn Google Developer Experts (GDEs) and credit holders when their promotional bonus grant is approaching its expiration cliff date OR when historical Expired grants in a exported Credits CSV could be confused with active available bonus credits.',
     howItWorks: [
-      'Live Cloud Billing Account Discovery: Queries cloudbilling.googleapis.com/v1/projects/:id/billingInfo to surface the linked billingAccounts/XXXXXX-XXXXXX-XXXXXX account and active status.',
-      'Dual-Risk GDE Bonus Alert Engine: Continuously compares each grant’s remaining balance ($) and expiration date against your live project daily burn ($/day) — warning both when free GDE bonus money will be stranded unspent at expiration and when a grant will exhaust early onto your personal credit card.',
+      '1-Click 9-Column Google Cloud Credits CSV Auto-Discovery & Strict Expired-Grant Filter (`computeGdeGrantMetrics` & `programmaticallyAggregateBillingData`): Scans `~/Downloads`, `~/Desktop`, and `/tmp` for the newest 9-column Billing Credits CSV (`Credit name,Status,Currency,Percent remaining,Remaining value,Original value,Start date,End date,Credit application type`), strictly excludes rows where `Status = Expired` (or past `End date`) from active `Bonus: $...` totals so expired historical grants never inflate your active remaining balance, while keeping them clearly labeled `Expired` in the ledger.',
+      'Dual-Risk GDE Bonus Alert Engine & 6-Service "Use-It-Or-Lose-It" Credit Harvester: Continuously compares each active grant’s remaining balance ($) and expiration countdown against your live project daily burn ($/day), and computes exact capacity across 6 GCP services (Spot VM / L4 GPU, Cloud Storage, GKE Autopilot, Cloud Run L4 GPU Jobs, Cloud SQL / AlloyDB, and BigQuery Gold Lakehouse) aligned to your project region.',
       'BigQuery Billing Export Credit Audit & Budget CLI: Generates 1-click UNNEST(credits) SQL for gcp_billing_export_v1_* and gcloud billing budgets create --credit-types-treatment=include-all-credits commands.',
     ],
     apisUsed: [
-      'GET /api/project/:id/billing-guardian → cloudbilling.googleapis.com/v1/projects/:id/billingInfo',
-      'POST /api/project/:id/billing-guardian/grants',
+      'GET /api/project/:id/billing-guardian → cloudbilling.googleapis.com/v1/projects/:id/billingInfo + Local CSV Auto-Discovery',
+      'POST /api/project/:id/billing-guardian/grants & POST /api/project/:id/billing-guardian/auto-export-csv',
     ],
     billingImpact:
-      'Prevents losing unused GDE promotional credit balances on expiration cliff dates and prevents surprise credit-card spillover.',
+      'Guarantees 100% accurate active remaining bonus calculation ($0 expired grant inflation), prevents losing unused GDE promotional credit balances on expiration cliff dates, and prevents surprise credit-card spillover.',
   },
   {
     id: 'gde-streamer-tutorial-privacy-shield',
