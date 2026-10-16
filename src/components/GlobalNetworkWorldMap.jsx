@@ -2328,10 +2328,11 @@ export default function GlobalNetworkWorldMap({
     });
   };
 
-  // Spawn a simulated packet based on current scenario mode (reroutes around Chaos-severed regions/zones)
+  // Spawn a deterministic firewall-evaluation probe packet against live GCP VPC firewall rules
   const spawnSimulatedPacket = useCallback(
     (overrideSpec = null) => {
-      const id = `pkt-${packetIdRef.current++}`;
+      const seq = packetIdRef.current++;
+      const id = `pkt-${seq}`;
       const survivingActiveIds = activeRegionIds.filter(
         (rid) => !severedRegions.includes(rid)
       );
@@ -2344,7 +2345,7 @@ export default function GlobalNetworkWorldMap({
 
       let targetRegionId =
         overrideSpec?.targetRegionId ||
-        candidatePool[Math.floor(Math.random() * candidatePool.length)] ||
+        candidatePool[seq % Math.max(candidatePool.length, 1)] ||
         'us-east1';
 
       let reroutedFrom = null;
@@ -2363,35 +2364,35 @@ export default function GlobalNetworkWorldMap({
       const healthyZones = targetReg.zones.filter(
         (z) => !severedZones.includes(z)
       );
-      const targetZone =
-        (healthyZones.length > 0 ? healthyZones : targetReg.zones)[
-          Math.floor(
-            Math.random() *
-              (healthyZones.length > 0 ? healthyZones : targetReg.zones).length
-          )
-        ];
+      const zonePool = healthyZones.length > 0 ? healthyZones : targetReg.zones;
+      const targetZone = zonePool[seq % Math.max(zonePool.length, 1)];
 
       // Scale step distance per tick so motion stays smooth at any refresh rate (100ms -> 2000ms)
       const tickScale = Math.max(0.6, Math.min(tickIntervalMs / 180, 4.5));
 
-      // 20% chance in LIVE_MIX of spawning an Inter-Region Google Fiber Backbone packet
+      // Every 5th probe in LIVE_MIX when multiple regions are active evaluates Inter-Region Google Fiber Backbone
       if (
         !overrideSpec &&
         simMode === 'LIVE_MIX' &&
         activeRegionIds.length > 1 &&
-        Math.random() < 0.22
+        seq % 5 === 0
       ) {
         const otherRegions = GCP_GLOBAL_REGIONS.filter(
           (r) => r.id !== targetReg.id
         );
         const sourceReg =
-          otherRegions[Math.floor(Math.random() * otherRegions.length)];
+          otherRegions[seq % Math.max(otherRegions.length, 1)];
         const arc = buildArcPath(
           sourceReg.x,
           sourceReg.y,
           targetReg.x,
           targetReg.y
         );
+        const fiberDistKm = Math.max(
+          120,
+          Math.round(Math.hypot(targetReg.x - sourceReg.x, targetReg.y - sourceReg.y) * 16.4)
+        );
+        const computedRttMs = Math.max(2, Math.round((fiberDistKm / 200) * 2 + 5));
         return {
           id,
           kind: 'BACKBONE',
@@ -2413,16 +2414,14 @@ export default function GlobalNetworkWorldMap({
           arcD: arc.d,
           progress: 0,
           speed: 0.085 * simSpeed * tickScale,
-          latencyMs: Math.floor(18 + Math.random() * 65),
+          latencyMs: computedRttMs,
         };
       }
 
-      // Pick origin & protocol/port based on simMode
+      // Deterministically cycle through origin & protocol/port based on simMode
       let origin =
         GLOBAL_CLIENT_ORIGINS.find((o) => o.id === overrideSpec?.originId) ||
-        GLOBAL_CLIENT_ORIGINS[
-          Math.floor(Math.random() * GLOBAL_CLIENT_ORIGINS.length)
-        ];
+        GLOBAL_CLIENT_ORIGINS[seq % GLOBAL_CLIENT_ORIGINS.length];
       let protocol = overrideSpec?.protocol || 'tcp';
       let port = overrideSpec?.port !== undefined ? Number(overrideSpec.port) : 443;
 
@@ -2431,11 +2430,11 @@ export default function GlobalNetworkWorldMap({
           const scanners = GLOBAL_CLIENT_ORIGINS.filter(
             (o) => o.kind === 'THREAT_SCANNER' || o.kind === 'PUBLIC_CLIENT'
           );
-          origin = scanners[Math.floor(Math.random() * scanners.length)];
+          origin = scanners[seq % Math.max(scanners.length, 1)];
           protocol = 'tcp';
-          port = Math.random() < 0.7 ? 22 : 3389;
+          port = seq % 3 === 0 ? 3389 : 22;
         } else if (simMode === 'IAP_ZERO_TRUST') {
-          if (Math.random() < 0.55) {
+          if (seq % 2 === 0) {
             origin = GLOBAL_CLIENT_ORIGINS[0]; // IAP 35.235.240.18
             protocol = 'tcp';
             port = 22;
@@ -2448,19 +2447,19 @@ export default function GlobalNetworkWorldMap({
           const clients = GLOBAL_CLIENT_ORIGINS.filter(
             (o) => o.kind === 'PUBLIC_CLIENT' || o.kind === 'GCLB_HEALTH'
           );
-          origin = clients[Math.floor(Math.random() * clients.length)];
+          origin = clients[seq % Math.max(clients.length, 1)];
           protocol = 'tcp';
-          port = Math.random() < 0.8 ? 443 : 80;
+          port = seq % 4 === 0 ? 80 : 443;
         } else {
-          // LIVE_MIX
-          const roll = Math.random();
-          if (roll < 0.35) {
+          // LIVE_MIX deterministic rotation across standard ports (443, ICMP, 22, 3306)
+          const slot = seq % 4;
+          if (slot === 0) {
             protocol = 'tcp';
             port = 443;
-          } else if (roll < 0.55) {
+          } else if (slot === 1) {
             protocol = 'icmp';
             port = 0;
-          } else if (roll < 0.78) {
+          } else if (slot === 2) {
             protocol = 'tcp';
             port = 22;
           } else {
@@ -2480,6 +2479,11 @@ export default function GlobalNetworkWorldMap({
       );
 
       const arc = buildArcPath(origin.x, origin.y, targetReg.x, targetReg.y);
+      const fiberDistKm = Math.max(
+        120,
+        Math.round(Math.hypot(targetReg.x - origin.x, targetReg.y - origin.y) * 16.4)
+      );
+      const computedRttMs = Math.max(4, Math.round((fiberDistKm / 200) * 2 + 5));
 
       return {
         id,
@@ -2502,8 +2506,8 @@ export default function GlobalNetworkWorldMap({
         cy: arc.cy,
         arcD: arc.d,
         progress: 0,
-        speed: (0.075 + Math.random() * 0.035) * simSpeed * tickScale,
-        latencyMs: Math.floor(14 + Math.random() * 88),
+        speed: 0.088 * simSpeed * tickScale,
+        latencyMs: computedRttMs,
       };
     },
     [
@@ -2570,11 +2574,7 @@ export default function GlobalNetworkWorldMap({
         });
 
         // Respect maxConcurrentPackets cap so large VM fleets never hang the UI
-        const spawnChance = Math.min(0.45 * simSpeed, 0.9);
-        if (
-          nextPackets.length < maxConcurrentPackets &&
-          Math.random() < spawnChance
-        ) {
+        if (nextPackets.length < maxConcurrentPackets) {
           nextPackets.push(spawnSimulatedPacket());
         }
 
