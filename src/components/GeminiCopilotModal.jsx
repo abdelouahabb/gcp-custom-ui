@@ -27,6 +27,7 @@ import {
   useLivePricingCatalog,
 } from './GlobalNetworkWorldMap';
 import EngineerMoonshotsWave3 from './EngineerMoonshotsWave3';
+import GoogleCloudRemoteMcpStudio from './GoogleCloudRemoteMcpStudio';
 
 const SENSITIVE_PORTS = ['22', '3389', '3306', '5432', '6379', '27017'];
 
@@ -890,7 +891,13 @@ export default function GeminiCopilotModal({
             )}
           </div>
 
-          {/* Section 4: Live Option 3 AES-256-GCM AI Studio BYOK Vault & SRE Co-Architect */}
+          {/* Section 4: 2026 Google Cloud Official Remote MCP Control Plane & Gemini MCP Tool-Calling Bridge */}
+          <GoogleCloudRemoteMcpStudio
+            projectId={projectId}
+            onShowToast={onShowToast}
+          />
+
+          {/* Section 5: Live Option 3 AES-256-GCM AI Studio BYOK Vault & SRE Co-Architect */}
           <EngineerMoonshotsWave3
             activeTab="X6"
             projectId={projectId}

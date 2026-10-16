@@ -19,6 +19,7 @@ import {
   FileCode2,
   Sparkles,
 } from 'lucide-react';
+import GoogleCloudRemoteMcpStudio from './GoogleCloudRemoteMcpStudio';
 
 export function ReleaseTrackBadge({ track = 'ALPHA' }) {
   const normalized = String(track || 'ALPHA').toUpperCase();
@@ -56,6 +57,14 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
 }
 
 const STUDIO_TABS = [
+  {
+    id: 'OFFICIAL_REMOTE_MCP_HUB',
+    wave: 'WAVE_2',
+    track: 'ALPHA_AND_BETA',
+    shortLabel: 'W3 · [2026 MCP] 48 Official *.googleapis.com/mcp Servers',
+    subtitle: 'Live JSON-RPC 2.0 tools/list · tools/call · 4-Server Triage Chains · Gemini MCP Agent',
+    icon: Sparkles,
+  },
   {
     id: 'BETA_CLOUD_RUN',
     wave: 'WAVE_1',
@@ -144,7 +153,7 @@ export default function GcloudAlphaBetaStudio({
   onShowToast,
   onOpenShellWithCommand,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('WAVE2_MODEL_ARMOR');
+  const [activeSubTab, setActiveSubTab] = useState('OFFICIAL_REMOTE_MCP_HUB');
   const [waveFilter, setWaveFilter] = useState('ALL');
   const [trackFilter, setTrackFilter] = useState('ALL');
   const [region, setRegion] = useState('us-central1');
@@ -841,7 +850,22 @@ export default function GcloudAlphaBetaStudio({
               </div>
             ))}
           </div>
+
+          <GoogleCloudRemoteMcpStudio
+            projectId={projectId}
+            region={region}
+            onShowToast={onShowToast}
+          />
         </div>
+      )}
+
+      {/* TAB 0: [2026 MCP MOONSHOT] 42 OFFICIAL GOOGLE CLOUD REMOTE MCP SERVERS */}
+      {activeSubTab === 'OFFICIAL_REMOTE_MCP_HUB' && (
+        <GoogleCloudRemoteMcpStudio
+          projectId={projectId}
+          region={region}
+          onShowToast={onShowToast}
+        />
       )}
 
       {/* TAB 3: [ALPHA] PAM JIT IAM & 403 POLICY TROUBLESHOOTER */}

@@ -37338,6 +37338,1410 @@ app.get('/api/project/:projectId/wave11/self-host-package', async (req, res) => 
   });
 });
 
+// ============================================================================
+// 2026 GOOGLE CLOUD OFFICIAL REMOTE MCP CONTROL PLANE & AGENTIC TOOL BRIDGE
+// Connects directly to Google-managed Remote MCP JSON-RPC 2.0 servers at
+// https://<service>.googleapis.com/mcp (https://docs.cloud.google.com/mcp/supported-products)
+// ============================================================================
+const GCP_OFFICIAL_REMOTE_MCP_SERVERS = [
+  // 1. Core Compute, Serverless & Infrastructure
+  {
+    id: 'run',
+    name: 'Cloud Run Remote MCP',
+    category: 'COMPUTE_INFRA',
+    stage: 'GA',
+    endpointUrl: 'https://run.googleapis.com/mcp',
+    serviceApi: 'run.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/run/docs/use-cloud-run-mcp',
+    description: 'Inspect Cloud Run services, URIs, revisions, and deploy container workloads via MCP.',
+    probeByDefault: true,
+  },
+  {
+    id: 'container',
+    name: 'Google Kubernetes Engine (GKE) MCP',
+    category: 'COMPUTE_INFRA',
+    stage: 'GA',
+    endpointUrl: 'https://container.googleapis.com/mcp',
+    serviceApi: 'container.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/kubernetes-engine/docs/how-to/use-gke-mcp',
+    description: '23+ Kubernetes & GKE cluster introspection, auth verification, and workload tools.',
+    probeByDefault: true,
+  },
+  {
+    id: 'compute',
+    name: 'Compute Engine (GCE) MCP',
+    category: 'COMPUTE_INFRA',
+    stage: 'GA',
+    endpointUrl: 'https://compute.googleapis.com/mcp',
+    serviceApi: 'compute.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/compute/docs/use-compute-engine-mcp',
+    description: '29+ VM instance lifecycle, disk, template, and zone inspection tools.',
+    probeByDefault: true,
+  },
+  {
+    id: 'storage',
+    name: 'Cloud Storage Remote MCP',
+    category: 'COMPUTE_INFRA',
+    stage: 'GA',
+    endpointUrl: 'https://storage.googleapis.com/storage/mcp',
+    serviceApi: 'storage.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/storage/docs/use-cloud-storage-mcp',
+    description: 'List buckets, inspect object metadata, read/write text objects, and manage storage.',
+    probeByDefault: true,
+  },
+  {
+    id: 'cloudresourcemanager',
+    name: 'Cloud Resource Manager MCP',
+    category: 'COMPUTE_INFRA',
+    stage: 'GA',
+    endpointUrl: 'https://cloudresourcemanager.googleapis.com/mcp',
+    serviceApi: 'cloudresourcemanager.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/resource-manager/docs/use-resourcemanager-mcp',
+    description: 'Search and discover active Google Cloud projects across the organization hierarchy.',
+    probeByDefault: true,
+  },
+  {
+    id: 'cloudcli',
+    name: 'Google Cloud CLI (gcloud) MCP',
+    category: 'COMPUTE_INFRA',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://cloudcli.googleapis.com/mcp',
+    serviceApi: 'cloudcli.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/sdk/use-gcloud-mcp',
+    description: 'Execute and synthesize Google Cloud CLI workflows via the remote gcloud MCP server.',
+    probeByDefault: false,
+  },
+  {
+    id: 'maintenance',
+    name: 'Unified Maintenance MCP',
+    category: 'COMPUTE_INFRA',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://maintenance.googleapis.com/mcp',
+    serviceApi: 'maintenance.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/unified-maintenance/docs/reference/mcp',
+    description: 'Inspect upcoming and active maintenance windows across GCE, GKE, and Cloud SQL.',
+    probeByDefault: false,
+  },
+  {
+    id: 'cloudlocationfinder',
+    name: 'Cloud Location Finder MCP',
+    category: 'COMPUTE_INFRA',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://cloudlocationfinder.googleapis.com/mcp',
+    serviceApi: 'cloudlocationfinder.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/location-finder/docs/use-cloud-location-finder-mcp',
+    description: 'Discover low-carbon, low-latency Google Cloud regions and zone availability.',
+    probeByDefault: false,
+  },
+
+  // 2. FinOps, Billing, Quotas & Optimization
+  {
+    id: 'cloudbilling',
+    name: 'Cloud Billing & Pricing API MCP',
+    category: 'FINOPS_OPTIMIZATION',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://cloudbilling.googleapis.com/mcp',
+    serviceApi: 'cloudbilling.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/billing/docs/reference/mcp',
+    description: '29 tools for project billing status, billing accounts, live SKU groups, and catalog prices.',
+    probeByDefault: true,
+  },
+  {
+    id: 'cloudquotas',
+    name: 'Cloud Quotas & Adjuster MCP',
+    category: 'FINOPS_OPTIMIZATION',
+    stage: 'GA',
+    endpointUrl: 'https://cloudquotas.googleapis.com/mcp',
+    serviceApi: 'cloudquotas.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/docs/quotas/use-cloudquotas-mcp',
+    description: 'Inspect quota infos, quota preferences, and Autonomous Quota Adjuster settings.',
+    probeByDefault: true,
+  },
+  {
+    id: 'recommender',
+    name: 'Active Assist Recommender MCP',
+    category: 'FINOPS_OPTIMIZATION',
+    stage: 'GA',
+    endpointUrl: 'https://recommender.googleapis.com/mcp',
+    serviceApi: 'recommender.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/recommender/docs/use-recommender-mcp',
+    description: 'List machine-type right-sizing, idle resource, and IAM least-privilege recommendations.',
+    probeByDefault: true,
+  },
+  {
+    id: 'appoptimize',
+    name: 'App Optimize API MCP',
+    category: 'FINOPS_OPTIMIZATION',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://appoptimize.googleapis.com/mcp',
+    serviceApi: 'appoptimize.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/app-optimize/use-app-optimize-mcp',
+    description: 'Generate and inspect application performance and cost optimization reports.',
+    probeByDefault: false,
+  },
+  {
+    id: 'apptopology',
+    name: 'App Topology MCP',
+    category: 'FINOPS_OPTIMIZATION',
+    stage: 'GA',
+    endpointUrl: 'https://apptopology.googleapis.com/mcp',
+    serviceApi: 'apptopology.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/app-topology/use-app-topology-mcp',
+    description: 'Discover service dependencies and architectural topology graphs across workloads.',
+    probeByDefault: false,
+  },
+
+  // 3. Security, Policy Intelligence & Compliance
+  {
+    id: 'iam',
+    name: 'Identity & Access Management (IAM) MCP',
+    category: 'SECURITY_COMPLIANCE',
+    stage: 'GA',
+    endpointUrl: 'https://iam.googleapis.com/mcp',
+    serviceApi: 'iam.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/iam/docs/use-iam-mcp',
+    description: '12 tools to inspect and manage IAM Deny Policies, roles, and access boundaries.',
+    probeByDefault: true,
+  },
+  {
+    id: 'policytroubleshooter',
+    name: 'IAM Policy Troubleshooter MCP',
+    category: 'SECURITY_COMPLIANCE',
+    stage: 'GA',
+    endpointUrl: 'https://policytroubleshooter.googleapis.com/mcp',
+    serviceApi: 'policytroubleshooter.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/policy-intelligence/docs/use-policy-troubleshooter-mcp',
+    description: 'Troubleshoot access tuples and 403 error IDs across allow/deny IAM bindings.',
+    probeByDefault: true,
+  },
+  {
+    id: 'cloudasset',
+    name: 'Cloud Asset Inventory & Policy Analyzer MCP',
+    category: 'SECURITY_COMPLIANCE',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://cloudasset.googleapis.com/mcp',
+    serviceApi: 'cloudasset.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/asset-inventory/docs/reference/mcp',
+    description: 'List project assets and execute deep IAM policy blast-radius analysis queries.',
+    probeByDefault: true,
+  },
+  {
+    id: 'orgpolicy',
+    name: 'Organization Policy Service MCP',
+    category: 'SECURITY_COMPLIANCE',
+    stage: 'GA',
+    endpointUrl: 'https://orgpolicy.googleapis.com/mcp',
+    serviceApi: 'orgpolicy.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/organization-policy/use-organization-policy-mcp',
+    description: 'Inspect organization policy constraints, custom constraints, and effective policies.',
+    probeByDefault: false,
+  },
+  {
+    id: 'securitycenter',
+    name: 'Security Command Center (SCC) Investigate MCP',
+    category: 'SECURITY_COMPLIANCE',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://securitycenter.googleapis.com/mcp/investigate',
+    serviceApi: 'securitycenter.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/security-command-center/docs/reference/mcp',
+    description: 'Investigate SCC security findings, vulnerability groups, and toxic attack paths.',
+    probeByDefault: false,
+  },
+  {
+    id: 'auditmanager',
+    name: 'Continuous Audit Manager MCP',
+    category: 'SECURITY_COMPLIANCE',
+    stage: 'GA',
+    endpointUrl: 'https://auditmanager.googleapis.com/mcp',
+    serviceApi: 'auditmanager.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/audit-manager/docs/use-audit-manager-mcp',
+    description: 'Automate compliance audit scope evaluations and evidence collection.',
+    probeByDefault: false,
+  },
+  {
+    id: 'policyassist',
+    name: 'Policy Assist MCP',
+    category: 'SECURITY_COMPLIANCE',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://policyassist.googleapis.com/mcp',
+    serviceApi: 'policyassist.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/policy-intelligence/docs/use-policy-assist-mcp',
+    description: 'AI-assisted least-privilege IAM policy authoring and role synthesis.',
+    probeByDefault: false,
+  },
+
+  // 4. Databases, Data Analytics & Streaming
+  {
+    id: 'bigquery',
+    name: 'BigQuery Analytics & SQL MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://bigquery.googleapis.com/mcp',
+    serviceApi: 'bigquery.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/bigquery/docs/use-bigquery-mcp',
+    description: 'List datasets/tables, inspect schemas, and run read-only or standard BigQuery SQL.',
+    probeByDefault: true,
+  },
+  {
+    id: 'sqladmin',
+    name: 'Cloud SQL (PostgreSQL / MySQL / SQL Server) MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://sqladmin.googleapis.com/mcp',
+    serviceApi: 'sqladmin.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/sql/docs/postgres/use-cloudsql-mcp',
+    description: '15 tools to inspect and manage Cloud SQL instances, backups, databases, and users.',
+    probeByDefault: false,
+  },
+  {
+    id: 'alloydb',
+    name: 'AlloyDB for PostgreSQL MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://alloydb.googleapis.com/mcp',
+    serviceApi: 'alloydb.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/alloydb/docs/ai/use-alloydb-mcp',
+    description: '17 tools to manage AlloyDB clusters, instances, backups, and pgvector workloads.',
+    probeByDefault: false,
+  },
+  {
+    id: 'spanner',
+    name: 'Cloud Spanner Distributed SQL & Graph MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://spanner.googleapis.com/mcp',
+    serviceApi: 'spanner.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/spanner/docs/use-spanner-mcp',
+    description: '16 tools for Spanner instances, database DDL, sessions, and distributed SQL queries.',
+    probeByDefault: false,
+  },
+  {
+    id: 'databasecenter',
+    name: 'Database Center Fleet Inventory & Health MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://databasecenter.googleapis.com/mcp',
+    serviceApi: 'databasecenter.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/database-center/docs/use-database-center-mcp',
+    description: 'Unified fleet inventory, health issues, and query stats across all GCP databases.',
+    probeByDefault: false,
+  },
+  {
+    id: 'databaseinsights',
+    name: 'Database Insights Slow-Query MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://databaseinsights.googleapis.com/mcp',
+    serviceApi: 'databaseinsights.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/sql/docs/sqlserver/reference/mcp/databaseinsights/mcp',
+    description: 'Analyze database wait events, execution plans, and slow-query bottlenecks.',
+    probeByDefault: false,
+  },
+  {
+    id: 'firestore',
+    name: 'Cloud Firestore Document NoSQL MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://firestore.googleapis.com/mcp',
+    serviceApi: 'firestore.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/firestore/native/docs/use-firestore-mcp',
+    description: 'Query collections, documents, indexes, and schemas in Cloud Firestore.',
+    probeByDefault: false,
+  },
+  {
+    id: 'bigtableadmin',
+    name: 'Cloud Bigtable Wide-Column MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://bigtableadmin.googleapis.com/mcp',
+    serviceApi: 'bigtableadmin.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/bigtable/docs/use-bigtable-mcp',
+    description: 'Manage Bigtable instances, clusters, column families, and low-latency tables.',
+    probeByDefault: false,
+  },
+  {
+    id: 'dataplex',
+    name: 'Dataplex Knowledge Catalog MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://dataplex.googleapis.com/mcp',
+    serviceApi: 'dataplex.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/dataplex/docs/use-remote-mcp',
+    description: 'Explore enterprise data catalog entries, governance zones, and data products.',
+    probeByDefault: false,
+  },
+  {
+    id: 'datalineage',
+    name: 'Dataplex Data Lineage MCP',
+    category: 'DATA_DATABASES',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://datalineage.googleapis.com/mcp',
+    serviceApi: 'datalineage.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/dataplex/docs/use-lineage-mcp',
+    description: 'Trace upstream and downstream table/column lineage across BigQuery and ELT jobs.',
+    probeByDefault: false,
+  },
+  {
+    id: 'dataform',
+    name: 'Dataform SQLX Pipeline MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://dataform.googleapis.com/mcp',
+    serviceApi: 'dataform.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/dataform/docs/use-dataform-mcp',
+    description: 'Manage Dataform repositories, workspaces, compilation results, and workflow runs.',
+    probeByDefault: false,
+  },
+  {
+    id: 'dataproc',
+    name: 'Managed Service for Apache Spark (Dataproc) MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://dataproc.googleapis.com/mcp',
+    serviceApi: 'dataproc.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/dataproc/docs/guides/use-dataproc-mcp',
+    description: 'Inspect and submit Serverless Spark batches, sessions, and Dataproc clusters.',
+    probeByDefault: false,
+  },
+  {
+    id: 'pubsub',
+    name: 'Cloud Pub/Sub Event Streaming MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://pubsub.googleapis.com/mcp',
+    serviceApi: 'pubsub.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/pubsub/docs/use-pubsub-mcp',
+    description: '15 tools to create/list topics, subscriptions, snapshots, and publish messages.',
+    probeByDefault: false,
+  },
+  {
+    id: 'managedkafka',
+    name: 'Managed Service for Apache Kafka MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://managedkafka.googleapis.com/mcp',
+    serviceApi: 'managedkafka.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/managed-service-for-apache-kafka/docs/use-managed-service-for-apache-kafka-mcp',
+    description: 'Manage Kafka clusters, topics, consumer groups, and partition configurations.',
+    probeByDefault: false,
+  },
+  {
+    id: 'redis',
+    name: 'Memorystore for Redis & Valkey MCP',
+    category: 'DATA_DATABASES',
+    stage: 'GA',
+    endpointUrl: 'https://redis.googleapis.com/mcp',
+    serviceApi: 'redis.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/memorystore/docs/redis/use-memorystore-mcp',
+    description: 'Inspect and manage low-latency Memorystore for Redis and Redis Cluster instances.',
+    probeByDefault: false,
+  },
+
+  // 5. Observability, SRE & Networking
+  {
+    id: 'logging',
+    name: 'Cloud Logging & Audit Log MCP',
+    category: 'OBSERVABILITY_SRE',
+    stage: 'GA',
+    endpointUrl: 'https://logging.googleapis.com/mcp',
+    serviceApi: 'logging.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/logging/docs/reference/v2_mcp/mcp',
+    description: 'Query live log entries, audit streams, log buckets, and analytical log views.',
+    probeByDefault: true,
+  },
+  {
+    id: 'monitoring',
+    name: 'Cloud Monitoring & Alerting MCP',
+    category: 'OBSERVABILITY_SRE',
+    stage: 'GA',
+    endpointUrl: 'https://monitoring.googleapis.com/mcp',
+    serviceApi: 'monitoring.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/monitoring/api/ref_v3_mcp/mcp',
+    description: '9 tools to query time-series metrics, PromQL range queries, and alert policies.',
+    probeByDefault: true,
+  },
+  {
+    id: 'cloudtrace',
+    name: 'Cloud Trace Distributed Latency MCP',
+    category: 'OBSERVABILITY_SRE',
+    stage: 'GA',
+    endpointUrl: 'https://cloudtrace.googleapis.com/mcp',
+    serviceApi: 'cloudtrace.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/trace/docs/reference/mcp/mcp',
+    description: 'List distributed request traces and inspect waterfall span latencies.',
+    probeByDefault: false,
+  },
+  {
+    id: 'clouderrorreporting',
+    name: 'Cloud Error Reporting Exception MCP',
+    category: 'OBSERVABILITY_SRE',
+    stage: 'GA',
+    endpointUrl: 'https://clouderrorreporting.googleapis.com/mcp',
+    serviceApi: 'clouderrorreporting.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/error-reporting/reference_mcp/mcp',
+    description: 'Retrieve grouped production stack traces and exception occurrence counts.',
+    probeByDefault: false,
+  },
+  {
+    id: 'servicehealth',
+    name: 'Personalized Service Health Outage MCP',
+    category: 'OBSERVABILITY_SRE',
+    stage: 'GA',
+    endpointUrl: 'https://servicehealth.googleapis.com/mcp',
+    serviceApi: 'servicehealth.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/service-health/docs/use-service-health-mcp',
+    description: 'Correlate workload anomalies with upstream Google Cloud regional outages.',
+    probeByDefault: false,
+  },
+  {
+    id: 'networkmanagement',
+    name: 'Network Intelligence Center Connectivity MCP',
+    category: 'OBSERVABILITY_SRE',
+    stage: 'GA',
+    endpointUrl: 'https://networkmanagement.googleapis.com/mcp',
+    serviceApi: 'networkmanagement.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/network-intelligence-center/docs/use-network-management-mcp',
+    description: 'Create and inspect VPC Connectivity Tests to debug firewall and routing drops.',
+    probeByDefault: false,
+  },
+  {
+    id: 'backupdr',
+    name: 'Backup and DR Service MCP',
+    category: 'OBSERVABILITY_SRE',
+    stage: 'GA',
+    endpointUrl: 'https://backupdr.googleapis.com/mcp',
+    serviceApi: 'backupdr.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/backup-disaster-recovery/docs/integrations/remote-mcp',
+    description: 'Inspect backup vaults, recovery points, and disaster recovery SLAs.',
+    probeByDefault: false,
+  },
+
+  // 6. AI Agents, Developer Knowledge & Ecosystem
+  {
+    id: 'developerknowledge',
+    name: 'Google Developer Knowledge RAG MCP',
+    category: 'AI_AGENT_PLATFORM',
+    stage: 'GA',
+    endpointUrl: 'https://developerknowledge.googleapis.com/mcp',
+    serviceApi: 'developerknowledge.googleapis.com',
+    docUrl: 'https://developers.google.com/knowledge/reference/mcp',
+    description: 'Search official Google Cloud & Developer documentation and answer technical queries.',
+    probeByDefault: true,
+  },
+  {
+    id: 'agentregistry',
+    name: 'Google Cloud Agent Registry MCP',
+    category: 'AI_AGENT_PLATFORM',
+    stage: 'GA',
+    endpointUrl: 'https://agentregistry.googleapis.com/mcp',
+    serviceApi: 'agentregistry.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/agent-registry/use-agentregistry-mcp',
+    description: 'Discover registered MCP servers, autonomous agents, and enterprise skills.',
+    probeByDefault: false,
+  },
+  {
+    id: 'geminicloudassist',
+    name: 'Gemini Cloud Assist Remote MCP',
+    category: 'AI_AGENT_PLATFORM',
+    stage: 'PREVIEW',
+    endpointUrl: 'https://geminicloudassist.googleapis.com/mcp',
+    serviceApi: 'geminicloudassist.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/cloud-assist/use-gemini-cloud-assist-mcp',
+    description: 'Invoke Gemini Cloud Assist investigations and cloud architecture synthesis.',
+    probeByDefault: false,
+  },
+  {
+    id: 'aiplatform_models',
+    name: 'Vertex AI Agent Platform (Models & Eval) MCP',
+    category: 'AI_AGENT_PLATFORM',
+    stage: 'GA',
+    endpointUrl: 'https://aiplatform.googleapis.com/mcp/models',
+    serviceApi: 'aiplatform.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/use-agent-platform-mcp',
+    description: 'Interact with Vertex AI models, endpoints, tuning, retrieval, and evaluations via MCP.',
+    probeByDefault: false,
+  },
+  {
+    id: 'discoveryengine',
+    name: 'Vertex AI Agent Search (Discovery Engine) MCP',
+    category: 'AI_AGENT_PLATFORM',
+    stage: 'GA',
+    endpointUrl: 'https://discoveryengine.googleapis.com/mcp',
+    serviceApi: 'discoveryengine.googleapis.com',
+    docUrl: 'https://docs.cloud.google.com/generative-ai-app-builder/docs/reference/mcp',
+    description: 'Query enterprise search datastores and grounded knowledge engines.',
+    probeByDefault: false,
+  },
+  {
+    id: 'mapstools',
+    name: 'Google Maps Grounding Lite MCP',
+    category: 'AI_AGENT_PLATFORM',
+    stage: 'GA',
+    endpointUrl: 'https://mapstools.googleapis.com/mcp',
+    serviceApi: 'mapstools.googleapis.com',
+    docUrl: 'https://developers.google.com/maps/ai/grounding-lite',
+    description: 'Ground AI agents with live geospatial places, routing, and location context.',
+    probeByDefault: false,
+  },
+];
+
+const mcpToolSchemaCache = new Map();
+const mcpInvocationLedgerStore = new Map();
+
+function getOrInitMcpLedger(projectId) {
+  if (!mcpInvocationLedgerStore.has(projectId)) {
+    mcpInvocationLedgerStore.set(projectId, []);
+  }
+  return mcpInvocationLedgerStore.get(projectId);
+}
+
+function synthesizeMcpDefaultArguments(tool, projectId, region = 'us-central1', serverId = '') {
+  const props = tool?.inputSchema?.properties || {};
+  const required = new Set(tool?.inputSchema?.required || []);
+  const args = {};
+  const nowIso = new Date().toISOString();
+  const oneHourAgoIso = new Date(Date.now() - 3600 * 1000).toISOString();
+
+  Object.entries(props).forEach(([key, schema]) => {
+    const desc = String(schema?.description || '').toLowerCase();
+    if (key === 'projectId' || key === 'project') {
+      args[key] = projectId;
+    } else if (key === 'projectName') {
+      args[key] = `projects/${projectId}`;
+    } else if (key === 'resourceNames') {
+      args[key] = [`projects/${projectId}`];
+    } else if (key === 'region' || key === 'location') {
+      args[key] = region;
+    } else if (key === 'zone') {
+      args[key] = `${region}-a`;
+    } else if (key === 'parent') {
+      if (serverId === 'recommender') {
+        args[key] = `projects/${projectId}/locations/${region}/recommenders/google.compute.instance.MachineTypeRecommender`;
+      } else if (serverId === 'cloudquotas') {
+        args[key] = `projects/${projectId}/locations/global/services/compute.googleapis.com`;
+      } else if (
+        serverId === 'servicehealth' ||
+        serverId === 'networkmanagement' ||
+        desc.includes('locations/global')
+      ) {
+        args[key] = `projects/${projectId}/locations/global`;
+      } else if (
+        serverId === 'alloydb' ||
+        serverId === 'dataproc' ||
+        serverId === 'dataform' ||
+        desc.includes('/locations/')
+      ) {
+        args[key] = `projects/${projectId}/locations/${region}`;
+      } else {
+        args[key] = `projects/${projectId}`;
+      }
+    } else if (key === 'name' && required.has('name')) {
+      if (tool.name === 'get_project_billing_info' || tool.name === 'list_project_billing_info') {
+        args[key] = `projects/${projectId}`;
+      } else if (tool.name === 'get_quota_adjuster_settings') {
+        args[key] = `projects/${projectId}/locations/global/quotaAdjusterSettings`;
+      } else {
+        args[key] = `projects/${projectId}`;
+      }
+    } else if (key === 'query') {
+      if (serverId === 'bigquery') {
+        args[key] = 'SELECT 1 AS health_check, CURRENT_TIMESTAMP() AS server_time';
+      } else if (serverId === 'developerknowledge') {
+        args[key] = 'Cloud Run Gen2 GPU and minimum instances configuration';
+      } else {
+        args[key] = '';
+      }
+    } else if (key === 'startTime' && required.has('startTime')) {
+      args[key] = oneHourAgoIso;
+    } else if (key === 'endTime' && required.has('endTime')) {
+      args[key] = nowIso;
+    } else if (key === 'accessTuple' && serverId === 'policytroubleshooter') {
+      args[key] = {
+        principal: `${projectId}@appspot.gserviceaccount.com`,
+        fullResourceName: `//cloudresourcemanager.googleapis.com/projects/${projectId}`,
+        permission: 'resourcemanager.projects.get',
+      };
+    } else if (key === 'pageSize') {
+      args[key] = 10;
+    }
+  });
+
+  return args;
+}
+
+async function invokeGoogleRemoteMcpJsonRpc({
+  endpointUrl,
+  method,
+  params = {},
+  token,
+  projectId,
+  timeoutMs = 10000,
+}) {
+  const t0 = Date.now();
+  const resp = await axios.post(
+    endpointUrl,
+    {
+      jsonrpc: '2.0',
+      id: Date.now(),
+      method,
+      params,
+    },
+    {
+      timeout: timeoutMs,
+      validateStatus: () => true,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        'x-goog-user-project': projectId,
+      },
+    }
+  );
+  const latencyMs = Date.now() - t0;
+  return {
+    httpStatus: resp.status,
+    latencyMs,
+    data: resp.data,
+  };
+}
+
+// 1. GET /api/project/:projectId/mcp/catalog
+app.get('/api/project/:projectId/mcp/catalog', async (req, res) => {
+  const { projectId } = req.params;
+  const region = String(req.query.region || 'us-central1').trim();
+  const probeAll = String(req.query.probeAll || 'false') === 'true';
+  const t0 = Date.now();
+
+  try {
+    const { token } = await getLocalOrMetadataAccessToken();
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const serversToProbe = GCP_OFFICIAL_REMOTE_MCP_SERVERS.filter(
+      (s) => probeAll || s.probeByDefault
+    );
+
+    const probeMap = new Map();
+    await Promise.all(
+      serversToProbe.map(async (srv) => {
+        try {
+          const rpcRes = await invokeGoogleRemoteMcpJsonRpc({
+            endpointUrl: srv.endpointUrl,
+            method: 'tools/list',
+            params: {},
+            token,
+            projectId,
+            timeoutMs: 6500,
+          });
+          const tools = rpcRes.data?.result?.tools || [];
+          if (tools.length > 0) {
+            mcpToolSchemaCache.set(`${srv.id}:${projectId}`, tools);
+          }
+          const readOnlyCount = tools.filter(
+            (t) => t.annotations?.readOnlyHint === true
+          ).length;
+          const destructiveCount = tools.filter(
+            (t) => t.annotations?.destructiveHint === true
+          ).length;
+          probeMap.set(srv.id, {
+            probed: true,
+            online: rpcRes.httpStatus === 200 && !rpcRes.data?.error,
+            httpStatus: rpcRes.httpStatus,
+            latencyMs: rpcRes.latencyMs,
+            toolCount: tools.length,
+            readOnlyCount,
+            destructiveCount,
+            sampleTools: tools.slice(0, 5).map((t) => t.name),
+            errorMessage: rpcRes.data?.error?.message || null,
+          });
+        } catch (err) {
+          probeMap.set(srv.id, {
+            probed: true,
+            online: false,
+            httpStatus: 500,
+            latencyMs: 0,
+            toolCount: 0,
+            readOnlyCount: 0,
+            destructiveCount: 0,
+            sampleTools: [],
+            errorMessage: err.message,
+          });
+        }
+      })
+    );
+
+    const enrichedServers = GCP_OFFICIAL_REMOTE_MCP_SERVERS.map((srv) => {
+      const liveProbe = probeMap.get(srv.id);
+      const cachedTools = mcpToolSchemaCache.get(`${srv.id}:${projectId}`) || [];
+      return {
+        ...srv,
+        probed: Boolean(liveProbe?.probed || cachedTools.length > 0),
+        online: liveProbe ? liveProbe.online : cachedTools.length > 0,
+        latencyMs: liveProbe?.latencyMs || null,
+        toolCount: liveProbe ? liveProbe.toolCount : cachedTools.length,
+        readOnlyCount: liveProbe
+          ? liveProbe.readOnlyCount
+          : cachedTools.filter((t) => t.annotations?.readOnlyHint === true).length,
+        destructiveCount: liveProbe
+          ? liveProbe.destructiveCount
+          : cachedTools.filter((t) => t.annotations?.destructiveHint === true).length,
+        sampleTools: liveProbe
+          ? liveProbe.sampleTools
+          : cachedTools.slice(0, 5).map((t) => t.name),
+        errorMessage: liveProbe?.errorMessage || null,
+      };
+    });
+
+    const totalToolsDiscovered = enrichedServers.reduce(
+      (sum, s) => sum + Number(s.toolCount || 0),
+      0
+    );
+    const totalReadOnlyTools = enrichedServers.reduce(
+      (sum, s) => sum + Number(s.readOnlyCount || 0),
+      0
+    );
+    const totalDestructiveTools = enrichedServers.reduce(
+      (sum, s) => sum + Number(s.destructiveCount || 0),
+      0
+    );
+
+    return res.json({
+      ok: true,
+      projectId,
+      region,
+      scannedAt: new Date().toISOString(),
+      scanWallTimeMs: Date.now() - t0,
+      totalServersInCatalog: enrichedServers.length,
+      probedServersCount: serversToProbe.length,
+      onlineServersCount: enrichedServers.filter((s) => s.online).length,
+      totalToolsDiscovered,
+      totalReadOnlyTools,
+      totalDestructiveTools,
+      servers: enrichedServers,
+      recentInvocations: getOrInitMcpLedger(projectId).slice(0, 25),
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. POST /api/project/:projectId/mcp/tools-list
+app.post('/api/project/:projectId/mcp/tools-list', async (req, res) => {
+  const { projectId } = req.params;
+  const { serverId, customEndpointUrl, region = 'us-central1' } = req.body || {};
+
+  try {
+    const { token } = await getLocalOrMetadataAccessToken();
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const catalogEntry = GCP_OFFICIAL_REMOTE_MCP_SERVERS.find(
+      (s) => s.id === serverId
+    );
+    const endpointUrl = String(
+      customEndpointUrl || catalogEntry?.endpointUrl || ''
+    ).trim();
+    if (!endpointUrl.startsWith('https://')) {
+      return res
+        .status(400)
+        .json({ error: 'Valid https://*.googleapis.com/mcp endpointUrl is required.' });
+    }
+
+    const rpcRes = await invokeGoogleRemoteMcpJsonRpc({
+      endpointUrl,
+      method: 'tools/list',
+      params: {},
+      token,
+      projectId,
+      timeoutMs: 10000,
+    });
+
+    const rawTools = rpcRes.data?.result?.tools || [];
+    if (serverId && rawTools.length > 0) {
+      mcpToolSchemaCache.set(`${serverId}:${projectId}`, rawTools);
+    }
+
+    const tools = rawTools.map((t) => ({
+      name: t.name,
+      description: t.description || '',
+      annotations: {
+        readOnlyHint: Boolean(t.annotations?.readOnlyHint),
+        destructiveHint: Boolean(t.annotations?.destructiveHint),
+        idempotentHint: Boolean(t.annotations?.idempotentHint),
+        openWorldHint: Boolean(t.annotations?.openWorldHint),
+      },
+      inputSchema: t.inputSchema || { type: 'object', properties: {} },
+      defaultArguments: synthesizeMcpDefaultArguments(
+        t,
+        projectId,
+        region,
+        serverId || ''
+      ),
+    }));
+
+    return res.json({
+      ok: rpcRes.httpStatus === 200 && !rpcRes.data?.error,
+      projectId,
+      serverId: serverId || 'custom',
+      endpointUrl,
+      httpStatus: rpcRes.httpStatus,
+      latencyMs: rpcRes.latencyMs,
+      toolCount: tools.length,
+      tools,
+      rpcError: rpcRes.data?.error || null,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. POST /api/project/:projectId/mcp/call-tool
+app.post('/api/project/:projectId/mcp/call-tool', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    serverId,
+    endpointUrl: rawEndpointUrl,
+    toolName,
+    arguments: toolArgs = {},
+    confirmDestructive = false,
+  } = req.body || {};
+
+  try {
+    const { token } = await getLocalOrMetadataAccessToken();
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const catalogEntry = GCP_OFFICIAL_REMOTE_MCP_SERVERS.find(
+      (s) => s.id === serverId
+    );
+    const endpointUrl = String(
+      rawEndpointUrl || catalogEntry?.endpointUrl || ''
+    ).trim();
+    if (!endpointUrl || !toolName) {
+      return res
+        .status(400)
+        .json({ error: 'Both endpointUrl and toolName are required.' });
+    }
+
+    // Check MCP tool annotations for destructiveHint safety gate
+    const cachedTools = mcpToolSchemaCache.get(`${serverId}:${projectId}`) || [];
+    const matchedTool = cachedTools.find((t) => t.name === toolName);
+    const isDestructive = Boolean(matchedTool?.annotations?.destructiveHint);
+
+    if (isDestructive && !confirmDestructive) {
+      return res.status(409).json({
+        ok: false,
+        requiresConfirmation: true,
+        toolName,
+        endpointUrl,
+        annotations: matchedTool?.annotations,
+        message: `Safety Gate: MCP tool "${toolName}" carries annotations.destructiveHint=true. Confirm execution to proceed.`,
+      });
+    }
+
+    const rpcRes = await invokeGoogleRemoteMcpJsonRpc({
+      endpointUrl,
+      method: 'tools/call',
+      params: {
+        name: toolName,
+        arguments: toolArgs,
+      },
+      token,
+      projectId,
+      timeoutMs: 15000,
+    });
+
+    const resultObj = rpcRes.data?.result || {};
+    const textContent = (resultObj.content || [])
+      .map((c) => c.text || '')
+      .filter(Boolean)
+      .join('\n');
+
+    let parsedContent = resultObj.structuredContent || null;
+    if (!parsedContent && textContent) {
+      try {
+        parsedContent = JSON.parse(textContent);
+      } catch {
+        parsedContent = null;
+      }
+    }
+
+    // Detect if the response indicates an unenabled Google Cloud Service API
+    let missingServiceApi = null;
+    const apiMatch = textContent.match(
+      /apis\/api\/([a-z0-9-]+\.googleapis\.com)\/overview/i
+    );
+    if (apiMatch && apiMatch[1]) {
+      missingServiceApi = apiMatch[1];
+    } else if (
+      resultObj.isError &&
+      catalogEntry?.serviceApi &&
+      /disabled|not been used/i.test(textContent)
+    ) {
+      missingServiceApi = catalogEntry.serviceApi;
+    }
+
+    const ledgerEntry = {
+      invocationId: `mcp-call-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      serverId: serverId || 'custom',
+      endpointUrl,
+      toolName,
+      arguments: toolArgs,
+      httpStatus: rpcRes.httpStatus,
+      latencyMs: rpcRes.latencyMs,
+      isError: Boolean(resultObj.isError || rpcRes.data?.error),
+      readOnlyHint: Boolean(matchedTool?.annotations?.readOnlyHint),
+      destructiveHint: isDestructive,
+      missingServiceApi,
+      preview: (textContent || JSON.stringify(rpcRes.data?.error || {})).slice(
+        0,
+        280
+      ),
+    };
+    const ledger = getOrInitMcpLedger(projectId);
+    ledger.unshift(ledgerEntry);
+    if (ledger.length > 60) ledger.length = 60;
+
+    return res.json({
+      ok:
+        rpcRes.httpStatus === 200 &&
+        !rpcRes.data?.error &&
+        !resultObj.isError,
+      projectId,
+      serverId: serverId || 'custom',
+      endpointUrl,
+      toolName,
+      httpStatus: rpcRes.httpStatus,
+      latencyMs: rpcRes.latencyMs,
+      isError: Boolean(resultObj.isError || rpcRes.data?.error),
+      missingServiceApi,
+      textContent,
+      parsedContent,
+      rawJsonRpc: rpcRes.data,
+      ledgerEntry,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. POST /api/project/:projectId/mcp/run-triage-chain
+app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
+  const { projectId } = req.params;
+  const { chainId = 'SRE_INCIDENT_ROOT_CAUSE', region = 'us-central1', customQuery = '' } =
+    req.body || {};
+  const t0 = Date.now();
+
+  try {
+    const { token } = await getLocalOrMetadataAccessToken();
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const chains = {
+      SRE_INCIDENT_ROOT_CAUSE: {
+        title: '360° Autonomous SRE Outage, Trace & Log Triage Chain',
+        steps: [
+          {
+            stepId: 'run_services',
+            serverId: 'run',
+            endpointUrl: 'https://run.googleapis.com/mcp',
+            toolName: 'list_services',
+            arguments: { project: projectId, region },
+          },
+          {
+            stepId: 'audit_logs',
+            serverId: 'logging',
+            endpointUrl: 'https://logging.googleapis.com/mcp',
+            toolName: 'list_log_entries',
+            arguments: {
+              resourceNames: [`projects/${projectId}`],
+              pageSize: 5,
+            },
+          },
+          {
+            stepId: 'error_groups',
+            serverId: 'clouderrorreporting',
+            endpointUrl: 'https://clouderrorreporting.googleapis.com/mcp',
+            toolName: 'list_group_stats',
+            arguments: {
+              projectName: `projects/${projectId}`,
+              pageSize: 5,
+            },
+          },
+          {
+            stepId: 'service_health',
+            serverId: 'servicehealth',
+            endpointUrl: 'https://servicehealth.googleapis.com/mcp',
+            toolName: 'list_project_events',
+            arguments: {
+              parent: `projects/${projectId}/locations/global`,
+              pageSize: 5,
+            },
+          },
+        ],
+      },
+      ZERO_TRUST_IAM_ASSET_AUDIT: {
+        title: 'Zero-Trust IAM Deny, Policy Troubleshooter & Storage Posture Chain',
+        steps: [
+          {
+            stepId: 'iam_deny_policies',
+            serverId: 'iam',
+            endpointUrl: 'https://iam.googleapis.com/mcp',
+            toolName: 'list_deny_policies',
+            arguments: {
+              parent: `policies/cloudresourcemanager.googleapis.com%2Fprojects%2F${projectId}/denypolicies`,
+            },
+          },
+          {
+            stepId: 'policy_troubleshoot',
+            serverId: 'policytroubleshooter',
+            endpointUrl: 'https://policytroubleshooter.googleapis.com/mcp',
+            toolName: 'troubleshoot_access',
+            arguments: {
+              accessTuple: {
+                principal: `${projectId}@appspot.gserviceaccount.com`,
+                fullResourceName: `//cloudresourcemanager.googleapis.com/projects/${projectId}`,
+                permission: 'resourcemanager.projects.get',
+              },
+            },
+          },
+          {
+            stepId: 'storage_buckets',
+            serverId: 'storage',
+            endpointUrl: 'https://storage.googleapis.com/storage/mcp',
+            toolName: 'list_buckets',
+            arguments: { projectId },
+          },
+          {
+            stepId: 'crm_projects',
+            serverId: 'cloudresourcemanager',
+            endpointUrl: 'https://cloudresourcemanager.googleapis.com/mcp',
+            toolName: 'search_projects',
+            arguments: { query: '' },
+          },
+        ],
+      },
+      FINOPS_QUOTA_DATABASE_PULSE: {
+        title: 'FinOps Billing Account, SKU Services, BigQuery & Quota Pulse Chain',
+        steps: [
+          {
+            stepId: 'billing_info',
+            serverId: 'cloudbilling',
+            endpointUrl: 'https://cloudbilling.googleapis.com/mcp',
+            toolName: 'get_project_billing_info',
+            arguments: { name: `projects/${projectId}` },
+          },
+          {
+            stepId: 'billing_services',
+            serverId: 'cloudbilling',
+            endpointUrl: 'https://cloudbilling.googleapis.com/mcp',
+            toolName: 'list_services',
+            arguments: { pageSize: 8 },
+          },
+          {
+            stepId: 'bigquery_datasets',
+            serverId: 'bigquery',
+            endpointUrl: 'https://bigquery.googleapis.com/mcp',
+            toolName: 'list_dataset_ids',
+            arguments: { projectId },
+          },
+          {
+            stepId: 'recommender_insights',
+            serverId: 'recommender',
+            endpointUrl: 'https://recommender.googleapis.com/mcp',
+            toolName: 'list_recommendations',
+            arguments: {
+              parent: `projects/${projectId}/locations/${region}/recommenders/google.compute.instance.MachineTypeRecommender`,
+            },
+          },
+        ],
+      },
+      GROUNDED_ARCH_KNOWLEDGE_COPILOT: {
+        title: 'Grounded Google Developer Knowledge RAG + Live Fleet Context Chain',
+        steps: [
+          {
+            stepId: 'dev_knowledge_search',
+            serverId: 'developerknowledge',
+            endpointUrl: 'https://developerknowledge.googleapis.com/mcp',
+            toolName: 'search_documents',
+            arguments: {
+              query:
+                customQuery ||
+                'Google Cloud Model Context Protocol MCP servers Cloud Run BigQuery GKE best practices',
+            },
+          },
+          {
+            stepId: 'storage_buckets',
+            serverId: 'storage',
+            endpointUrl: 'https://storage.googleapis.com/storage/mcp',
+            toolName: 'list_buckets',
+            arguments: { projectId },
+          },
+          {
+            stepId: 'bigquery_datasets',
+            serverId: 'bigquery',
+            endpointUrl: 'https://bigquery.googleapis.com/mcp',
+            toolName: 'list_dataset_ids',
+            arguments: { projectId },
+          },
+          {
+            stepId: 'billing_info',
+            serverId: 'cloudbilling',
+            endpointUrl: 'https://cloudbilling.googleapis.com/mcp',
+            toolName: 'get_project_billing_info',
+            arguments: { name: `projects/${projectId}` },
+          },
+        ],
+      },
+    };
+
+    const selectedChain = chains[chainId] || chains.SRE_INCIDENT_ROOT_CAUSE;
+
+    const stepResults = await Promise.all(
+      selectedChain.steps.map(async (step) => {
+        try {
+          const rpcRes = await invokeGoogleRemoteMcpJsonRpc({
+            endpointUrl: step.endpointUrl,
+            method: 'tools/call',
+            params: {
+              name: step.toolName,
+              arguments: step.arguments,
+            },
+            token,
+            projectId,
+            timeoutMs: 12000,
+          });
+          const resultObj = rpcRes.data?.result || {};
+          const textContent = (resultObj.content || [])
+            .map((c) => c.text || '')
+            .filter(Boolean)
+            .join('\n');
+          return {
+            ...step,
+            ok:
+              rpcRes.httpStatus === 200 &&
+              !rpcRes.data?.error &&
+              !resultObj.isError,
+            httpStatus: rpcRes.httpStatus,
+            latencyMs: rpcRes.latencyMs,
+            isError: Boolean(resultObj.isError || rpcRes.data?.error),
+            outputPreview: (
+              textContent || JSON.stringify(rpcRes.data?.error || {})
+            ).slice(0, 600),
+          };
+        } catch (err) {
+          return {
+            ...step,
+            ok: false,
+            httpStatus: 500,
+            latencyMs: 0,
+            isError: true,
+            outputPreview: err.message,
+          };
+        }
+      })
+    );
+
+    const ledger = getOrInitMcpLedger(projectId);
+    stepResults.forEach((sr) => {
+      ledger.unshift({
+        invocationId: `mcp-chain-${Date.now()}-${sr.stepId}`,
+        timestamp: new Date().toISOString(),
+        serverId: sr.serverId,
+        endpointUrl: sr.endpointUrl,
+        toolName: sr.toolName,
+        arguments: sr.arguments,
+        httpStatus: sr.httpStatus,
+        latencyMs: sr.latencyMs,
+        isError: sr.isError,
+        readOnlyHint: true,
+        destructiveHint: false,
+        preview: sr.outputPreview.slice(0, 240),
+      });
+    });
+    if (ledger.length > 60) ledger.length = 60;
+
+    return res.json({
+      ok: true,
+      projectId,
+      chainId,
+      title: selectedChain.title,
+      totalWallTimeMs: Date.now() - t0,
+      passedSteps: stepResults.filter((s) => s.ok).length,
+      totalSteps: stepResults.length,
+      steps: stepResults,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. POST /api/project/:projectId/mcp/agent-chat
+// Executes live Google Cloud Remote MCP tools (readOnlyHint=true) and synthesizes
+// the grounded response with Vertex AI Gemini 2.5 Flash
+app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    prompt = 'Audit my live project storage buckets, BigQuery datasets, billing status, and recent audit logs via Google Cloud Remote MCP servers and recommend next steps.',
+    region = 'us-central1',
+  } = req.body || {};
+  const t0 = Date.now();
+
+  try {
+    const { token } = await getLocalOrMetadataAccessToken();
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    // 1. Execute parallel read-only MCP tool calls to gather live ground truth
+    const mcpCalls = [
+      {
+        serverId: 'cloudbilling',
+        endpointUrl: 'https://cloudbilling.googleapis.com/mcp',
+        toolName: 'get_project_billing_info',
+        arguments: { name: `projects/${projectId}` },
+      },
+      {
+        serverId: 'storage',
+        endpointUrl: 'https://storage.googleapis.com/storage/mcp',
+        toolName: 'list_buckets',
+        arguments: { projectId },
+      },
+      {
+        serverId: 'bigquery',
+        endpointUrl: 'https://bigquery.googleapis.com/mcp',
+        toolName: 'list_dataset_ids',
+        arguments: { projectId },
+      },
+      {
+        serverId: 'logging',
+        endpointUrl: 'https://logging.googleapis.com/mcp',
+        toolName: 'list_log_entries',
+        arguments: { resourceNames: [`projects/${projectId}`], pageSize: 4 },
+      },
+      {
+        serverId: 'developerknowledge',
+        endpointUrl: 'https://developerknowledge.googleapis.com/mcp',
+        toolName: 'search_documents',
+        arguments: { query: String(prompt).slice(0, 140) },
+      },
+    ];
+
+    const mcpTraces = await Promise.all(
+      mcpCalls.map(async (c) => {
+        try {
+          const rpcRes = await invokeGoogleRemoteMcpJsonRpc({
+            endpointUrl: c.endpointUrl,
+            method: 'tools/call',
+            params: { name: c.toolName, arguments: c.arguments },
+            token,
+            projectId,
+            timeoutMs: 9000,
+          });
+          const resultObj = rpcRes.data?.result || {};
+          const textContent = (resultObj.content || [])
+            .map((item) => item.text || '')
+            .filter(Boolean)
+            .join('\n');
+          return {
+            ...c,
+            ok:
+              rpcRes.httpStatus === 200 &&
+              !rpcRes.data?.error &&
+              !resultObj.isError,
+            latencyMs: rpcRes.latencyMs,
+            output: (
+              textContent || JSON.stringify(rpcRes.data?.error || {})
+            ).slice(0, 800),
+          };
+        } catch (e) {
+          return {
+            ...c,
+            ok: false,
+            latencyMs: 0,
+            output: e.message,
+          };
+        }
+      })
+    );
+
+    // 2. Call Vertex AI Gemini 2.5 Flash with the live MCP tool outputs
+    const groundingContext = mcpTraces
+      .map(
+        (t) =>
+          `[MCP Tool: ${t.endpointUrl} -> ${t.toolName} (${t.latencyMs}ms, ok=${t.ok})]\n${t.output}`
+      )
+      .join('\n\n');
+
+    let geminiSynthesis = '';
+    let geminiModelUsed = 'gemini-2.5-flash (Vertex AI + Official MCP Grounding)';
+    try {
+      const vertexUrl = `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/gemini-2.5-flash:generateContent`;
+      const vertexRes = await gcpApiRequest({
+        method: 'POST',
+        url: vertexUrl,
+        token,
+        quotaProject: projectId,
+        timeout: 14000,
+        data: {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `You are the CloudPulse 2026 Principal SRE & Cloud Architect Agent connected to Google Cloud's Official Remote MCP Servers (JSON-RPC 2.0) for project "${projectId}".\n\nUser Request:\n${prompt}\n\nLive JSON-RPC 2.0 MCP Tool Execution Ground Truth:\n${groundingContext}\n\nProvide a concise, high-signal, markdown-formatted architectural analysis based strictly on the live MCP tool responses above, including concrete gcloud or MCP tool follow-up recommendations.`,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 700,
+          },
+        },
+      });
+      geminiSynthesis =
+        vertexRes?.candidates?.[0]?.content?.parts
+          ?.map((p) => p.text || '')
+          .join('') || '';
+    } catch {
+      // Fallback deterministic synthesis from the live MCP tool outputs if Vertex AI API is not enabled in region
+      geminiModelUsed = 'Deterministic MCP Telemetry Synthesizer (Live JSON-RPC Ground Truth)';
+    }
+
+    if (!geminiSynthesis) {
+      const okCount = mcpTraces.filter((t) => t.ok).length;
+      geminiSynthesis = [
+        `### Live Google Cloud Remote MCP Grounded Synthesis (\`${projectId}\`)`,
+        `- **MCP JSON-RPC 2.0 Tools Executed**: **${okCount} / ${mcpTraces.length}** live official \`*.googleapis.com/mcp\` endpoints responded.`,
+        ...mcpTraces.map(
+          (t) =>
+            `- **\`${t.serverId}\` (\`${t.toolName}\` · ${t.latencyMs}ms)**: \`${t.output
+              .replace(/\s+/g, ' ')
+              .slice(0, 220)}\``
+        ),
+      ].join('\n');
+    }
+
+    return res.json({
+      ok: true,
+      projectId,
+      prompt,
+      modelUsed: geminiModelUsed,
+      totalWallTimeMs: Date.now() - t0,
+      mcpTraces,
+      synthesis: geminiSynthesis,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Serve static production frontend (dist/) when in production / Cloud Run, or proxy to Vite in local dev!
 const distPath = path.join(__dirname, '../dist');
 const staticDistMiddleware = express.static(distPath, {
