@@ -1976,15 +1976,19 @@ export default function AwsAzureEnvySuiteStudio({
   const aliyunNacosConfigs = data?.aliyunNacosHigress?.configs || [];
   const aliyunHologresTables = data?.aliyunHologresOlap?.tables || [];
   const huaweiDataVNoc = data?.huaweiDataVNoc || {
-    screenTitle: 'Global 11.11 & Multi-Region Digital-Twin Command Wall',
-    globalLiveGmvUsd: 14892400,
-    globalIngressQps: 68400,
-    activeRegionsHealthy: '40 / 40 Regions Green',
-    apakToEuFiberRttMs: 74,
-    apakToUsFiberRttMs: 92,
-    autoMitigatedAnomaliesToday: 14,
+    screenTitle: `Live GCP Multi-Region Fleet & Backbone NOC Command Wall (${projectId})`,
+    globalLiveGmvUsd: 0,
+    globalIngressQps: unifiedResources.length,
+    liveResourceCount: unifiedResources.length,
+    liveAuditEventsWindow: 0,
+    monthlyFleetBurnUsd: 0,
+    activeRegionsHealthy: 'Probing GCP Regions...',
+    apakToEuFiberRttMs: 0,
+    apakToUsFiberRttMs: 0,
+    overviewScanLatencyMs: 0,
+    autoMitigatedAnomaliesToday: 0,
     lastDrillScenario:
-      'Subsea Cable Cut (APAC-to-EU) Auto-Rerouted via CEN in 1.2s',
+      'Ready to execute live multi-API GCP backbone latency & posture probe',
   };
   const activePreviewBrand =
     (multiBrandOAuth.brands || []).find(
@@ -2165,7 +2169,7 @@ export default function AwsAzureEnvySuiteStudio({
     {
       id: 'HUAWEI_DATAV_NOC_COMMAND_WALL',
       label: '8. DataV / Huawei Astro NOC Wall',
-      badge: `${Number(huaweiDataVNoc.globalIngressQps || 68400).toLocaleString()} QPS`,
+      badge: `${huaweiDataVNoc.apakToEuFiberRttMs || 0}ms RTT`,
       icon: Radar,
     },
   ];
@@ -8315,6 +8319,7 @@ export default function AwsAzureEnvySuiteStudio({
                     </div>
                     <div className="text-[11px] text-zinc-500">
                       Scheduler: {pool.schedulerType} · Slice: <strong>{pool.fractionalVgpuSlice}</strong>
+                      {pool.targetGkeCluster ? ` · Target GKE: ${pool.targetGkeCluster}` : ''}
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-[11px]">
                       <div className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/70">
@@ -8336,6 +8341,24 @@ export default function AwsAzureEnvySuiteStudio({
                         </div>
                       </div>
                     </div>
+                    {pool.gcloudCli && (
+                      <div className="p-2.5 rounded-lg bg-zinc-900 text-emerald-300 text-[10px] font-mono overflow-x-auto border border-zinc-800">
+                        <div className="text-zinc-400 font-bold mb-1">
+                          GKE Node-Pool GPU Time-Sharing Provisioning CLI:
+                        </div>
+                        <code>{pool.gcloudCli}</code>
+                      </div>
+                    )}
+                    {pool.gkeTimeSlicingYaml && (
+                      <details className="text-[10px] font-mono bg-zinc-950/90 text-zinc-200 rounded-lg border border-zinc-800 p-2.5">
+                        <summary className="cursor-pointer font-extrabold text-rose-400">
+                          View Compiled GKE NVIDIA Time-Slicing ConfigMap + CNCF Volcano PodGroup YAML
+                        </summary>
+                        <pre className="mt-2 overflow-x-auto text-[10px] text-cyan-300 whitespace-pre">
+                          {pool.gkeTimeSlicingYaml}
+                        </pre>
+                      </details>
+                    )}
                   </div>
                 ))}
               </div>
@@ -8733,34 +8756,46 @@ export default function AwsAzureEnvySuiteStudio({
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
               <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-zinc-400">Live Global Checkout Volume</div>
+                <div className="text-zinc-400">Annualized GCP Fleet Run-Rate</div>
                 <div className="text-xl font-extrabold text-orange-400 mt-1">
-                  ${Number(huaweiDataVNoc.globalLiveGmvUsd || 0).toLocaleString()}
+                  ${Number(huaweiDataVNoc.globalLiveGmvUsd || 0).toLocaleString()}/yr
+                </div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">
+                  ${Number(huaweiDataVNoc.monthlyFleetBurnUsd || 0).toLocaleString()}/mo across {huaweiDataVNoc.liveResourceCount ?? unifiedResources.length} live assets
                 </div>
               </div>
               <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-zinc-400">Global Edge Ingress QPS</div>
+                <div className="text-zinc-400">Live Audit &amp; Asset Telemetry</div>
                 <div className="text-xl font-extrabold text-emerald-400 mt-1">
-                  {Number(huaweiDataVNoc.globalIngressQps || 0).toLocaleString()} QPS
+                  {Number(huaweiDataVNoc.globalIngressQps || 0).toLocaleString()} Ops
+                </div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">
+                  {huaweiDataVNoc.liveAuditEventsWindow ?? cloudTrailEvents.length} Cloud Audit logs · {huaweiDataVNoc.liveResourceCount ?? unifiedResources.length} resources
                 </div>
               </div>
               <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-zinc-400">CEN Backbone Latency</div>
+                <div className="text-zinc-400">Measured GCP Backbone RTT</div>
                 <div className="text-xl font-extrabold text-cyan-400 mt-1">
-                  APAC-EU {huaweiDataVNoc.apakToEuFiberRttMs}ms / US {huaweiDataVNoc.apakToUsFiberRttMs}ms
+                  GCS {huaweiDataVNoc.apakToEuFiberRttMs}ms / BQ {huaweiDataVNoc.apakToUsFiberRttMs}ms
+                </div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">
+                  Full 8-API Discovery Scan: {huaweiDataVNoc.overviewScanLatencyMs || 0}ms
                 </div>
               </div>
               <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-zinc-400">Autonomous Mitigations Today</div>
+                <div className="text-zinc-400">Posture Checks &amp; Remediations</div>
                 <div className="text-xl font-extrabold text-purple-400 mt-1">
-                  {huaweiDataVNoc.autoMitigatedAnomaliesToday} Self-Healed
+                  {huaweiDataVNoc.autoMitigatedAnomaliesToday} Healthy / Healed
+                </div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">
+                  Well-Architected Score: {trustedAdvisor.overallScore || 91}/100
                 </div>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs text-orange-200 flex flex-wrap items-center justify-between gap-2">
+            <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs text-orange-700 dark:text-orange-200 flex flex-wrap items-center justify-between gap-2">
               <span>
-                Latest Autonomous Drill Telemetry: <strong>{huaweiDataVNoc.lastDrillScenario}</strong>
+                Latest Live GCP Backbone &amp; Failover Probe: <strong>{huaweiDataVNoc.lastDrillScenario}</strong>
               </span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
                 {huaweiDataVNoc.activeRegionsHealthy}
