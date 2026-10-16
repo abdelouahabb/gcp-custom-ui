@@ -64,9 +64,22 @@ export function computeGdeGrantMetrics(grant, dailyBurnUsd = 0) {
   const remainingPct =
     initial > 0 ? Math.min(100, Math.max(0, (remaining / initial) * 100)) : 0;
   const displayPct = Math.round(remainingPct);
-  const daysLeft = getDaysUntil(grant.expirationDate);
+
+  const rawStatusLabel = String(grant.statusLabel || '').trim();
+  const statusSaysExpired = /^expired\b/i.test(rawStatusLabel);
+  const statusSaysDepleted = /^depleted\b/i.test(rawStatusLabel);
+  const statusExpiringMatch = rawStatusLabel.match(/expiring\s+in\s+(\d+)\s+day/i);
+
+  let daysLeft = getDaysUntil(grant.expirationDate);
+  if (daysLeft === null && statusExpiringMatch) {
+    daysLeft = Number(statusExpiringMatch[1]);
+  } else if (statusSaysExpired && (daysLeft === null || daysLeft > 0)) {
+    daysLeft = 0;
+  }
+
   const alertThreshold = Math.max(1, Number(grant.alertDaysThreshold) || 30);
-  const isExpired = daysLeft !== null && daysLeft <= 0;
+  const isExpired =
+    statusSaysExpired || (daysLeft !== null && daysLeft <= 0);
 
   const safeDailyBurn = Math.max(0, Number(dailyBurnUsd) || 0);
   const projectedSpendUntilExpiry =
@@ -89,11 +102,11 @@ export function computeGdeGrantMetrics(grant, dailyBurnUsd = 0) {
     daysUntilExhausted < daysLeft;
 
   let status = 'AVAILABLE';
-  let consoleStatusLabel = 'Available';
+  let consoleStatusLabel = rawStatusLabel || 'Available';
   if (isExpired) {
     status = 'EXPIRED';
     consoleStatusLabel = 'Expired';
-  } else if (remaining <= 0) {
+  } else if (remaining <= 0 || statusSaysDepleted) {
     status = 'DEPLETED';
     consoleStatusLabel = 'Depleted';
   } else if (daysLeft !== null && daysLeft <= alertThreshold) {
@@ -350,15 +363,28 @@ export function programmaticallyAggregateBillingData({
   // 1. Use the exact Remaining Bonus grants from the user's uploaded/pasted CSV without automatic balance modification, while calculating expiration countdowns dynamically
   if (consoleCredits.length > 0) {
     consoleCredits.forEach((c, idx) => {
+      const rawStatus = String(c.statusLabel || c.status || '').trim();
+      const isRowExpired = /^expired\b/i.test(rawStatus);
+      const expInDaysMatch = rawStatus.match(/expiring\s+in\s+(\d+)\s+day/i);
+      let effectiveExpDate = c.expirationDate || null;
+      if (!effectiveExpDate && expInDaysMatch) {
+        const d = new Date(
+          now.getTime() + Number(expInDaysMatch[1]) * 24 * 60 * 60 * 1000
+        );
+        effectiveExpDate = d.toISOString().slice(0, 10);
+      } else if (!effectiveExpDate && !isRowExpired) {
+        effectiveExpDate = temporalWindow.derivedAnnualEndDate;
+      }
       grants.push({
         id: c.id || `console-${c.creditCode || idx}`,
         name: c.name || 'Promotional Credit',
+        statusLabel: rawStatus || (isRowExpired ? 'Expired' : 'Available'),
         grantType: c.grantType || 'PROMOTIONAL',
         creditCode: c.creditCode || c.creditId || '',
         initialAmountUsd: Math.max(0, Number(c.initialAmountUsd ?? 0)),
         remainingAmountUsd: Math.max(0, Number(c.remainingAmountUsd ?? 0)),
         startDate: c.startDate || temporalWindow.derivedStartDate,
-        expirationDate: c.expirationDate || temporalWindow.derivedAnnualEndDate,
+        expirationDate: effectiveExpDate,
         creditApplication:
           c.creditApplication ||
           `${c.grantType || 'PROMOTIONAL'} · ${c.scope || 'Billing account'}`,

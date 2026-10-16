@@ -24631,11 +24631,19 @@ async function fetchBillingBudgetsForAccounts(token, projectId, accountNames = [
 
 function normalizeIsoDateString(rawDateStr) {
   if (!rawDateStr) return null;
-  const cleaned = String(rawDateStr).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned;
-  const parsed = new Date(`${cleaned} 12:00:00 UTC`);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10);
+  const cleaned = String(rawDateStr)
+    .replace(/[\u00a0\u202f]/g, ' ')
+    .trim();
+  if (!cleaned || cleaned === '—' || cleaned === '-') return null;
+  const isoPrefix = cleaned.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoPrefix) return isoPrefix[1];
+  const parsedWithNoon = new Date(`${cleaned} 12:00:00 UTC`);
+  if (!Number.isNaN(parsedWithNoon.getTime())) {
+    return parsedWithNoon.toISOString().slice(0, 10);
+  }
+  const parsedDirect = new Date(cleaned);
+  if (!Number.isNaN(parsedDirect.getTime())) {
+    return parsedDirect.toISOString().slice(0, 10);
   }
   return null;
 }
@@ -24737,7 +24745,15 @@ function parseConsoleCreditsText(rawText = '') {
           String(cols[origIdx] || '0').replace(/[,$]/g, '')
         );
         const startDate = normalizeIsoDateString(cols[startIdx]);
-        const expirationDate = normalizeIsoDateString(cols[endIdx]);
+        let expirationDate = normalizeIsoDateString(cols[endIdx]);
+        const expDaysMatch = String(cStatus || '').match(/expiring\s+in\s+(\d+)\s+day/i);
+        if (!expirationDate && expDaysMatch) {
+          expirationDate = new Date(
+            Date.now() + Number(expDaysMatch[1]) * 86400000
+          )
+            .toISOString()
+            .slice(0, 10);
+        }
         const creditApplication =
           String(cols[appIdx] || 'Net pricing').trim() || 'Net pricing';
 
