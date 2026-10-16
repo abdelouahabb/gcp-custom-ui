@@ -841,10 +841,14 @@ function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/aws-azure-parity/action') &&
         [
           'SIMULATE_IAM_POLICY',
+          'SIMULATE_SWITCH_ROLE',
           'DETECT_STACK_DRIFT',
           'QUERY_CLOUDTRAIL_AUDIT_LAKE',
+          'RUN_CLOUDTRAIL_PRESET',
           'TEST_EVENT_PIPE',
           'TEST_AI_GATEWAY_PROMPT',
+          'RUN_BEDROCK_FOUNDRY_EVAL',
+          'TRIGGER_DATAV_NOC_DRILL',
         ].includes(String(body.action || '').toUpperCase())) ||
       (rawUrl.includes('/alpha-beta/action') &&
         [
@@ -861,6 +865,10 @@ function classifyDestructiveAxiosConfig(config) {
         ].includes(String(body.action || '').toUpperCase())) ||
       (rawUrl.includes('/data-engineer/iceberg-matrix/probe') &&
         Boolean(body.autoRefresh)) ||
+      rawUrl.includes('/mcp/tools-list') ||
+      rawUrl.includes('/mcp/run-triage-chain') ||
+      rawUrl.includes('/mcp/agent-chat') ||
+      rawUrl.includes('/mcp/call-tool') ||
       rawUrl.includes('/wave11/stress-audit');
 
     if (isReadOnlyOrDryRun) {
