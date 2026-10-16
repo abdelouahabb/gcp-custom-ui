@@ -31,6 +31,30 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'google-cloud-official-remote-mcp-control-plane-48-servers-505-tools',
+    wave: '2026 GOOGLE CLOUD OFFICIAL REMOTE MCP CONTROL PLANE · 48 *.GOOGLEAPIS.COM/MCP SERVERS & 505 LIVE JSON-RPC 2.0 TOOLS',
+    title:
+      '2026 Google Cloud Official Remote MCP Servers Hub — 48 Live *.googleapis.com/mcp Endpoints, 505 JSON-RPC 2.0 Tools, 4 Parallel Multi-Server SRE Triage Chains, Gemini 2.5 Flash MCP Agent & 1-Click IDE Config Exporter',
+    badge: 'DEDICATED MAIN MENU TAB -> MCP SERVERS ★',
+    badgeColor: 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40',
+    icon: Sparkles,
+    targetTab: 'MCP_HUB',
+    problemSolved:
+      'Google Cloud hosts 48 official Remote Model Context Protocol (MCP) servers directly at https://<service>.googleapis.com/mcp speaking JSON-RPC 2.0 (2025-06-18), exposing 505 live tools (306 readOnlyHint=true and 98 destructiveHint=true), yet developers have no visual browser control plane to probe all 48 endpoints, inspect inputSchemas, execute tools safely, chain multiple MCP servers in parallel for SRE incident triage, or ground Gemini 2.5 Flash on real-time MCP responses.',
+    howItWorks: [
+      'Tab 01 (48 Official Remote MCP Server Matrix & Live Probe): Catalogs all 48 official *.googleapis.com/mcp endpoints across 8 categories (Compute/Containers, Databases, Data/Analytics, Storage, Security/IAM, Operations/Observability, Networking/Delivery, AI/Developer) and probes all 48 servers concurrently via JSON-RPC 2.0 tools/list in ~2.4 seconds.',
+      'Tab 02 (Live JSON-RPC 2.0 Tool Explorer & Safe Executor): Fetches live tools/list from any selected *.googleapis.com/mcp endpoint, auto-populates projectId and region into the JSON-RPC inputSchema, enforces a mandatory confirmation gate on destructiveHint: true tools, and offers 1-click serviceusage.googleapis.com API activation if an endpoint returns HTTP 403 SERVICE_DISABLED.',
+      'Tab 03 (1-Click Parallel Multi-Server SRE & FinOps Triage Chains): Runs 4 pre-built parallel JSON-RPC 2.0 tool chains across multiple *.googleapis.com/mcp servers simultaneously: (1) Cloud Run 5xx & Cold-Start Forensics (run + logging + clouderrorreporting + servicehealth), (2) Zero-Trust IAM & 403 Blast-Radius Audit (iam + policytroubleshooter + storage + compute), (3) FinOps Burn, Billing & Recommender X-Ray (cloudbilling + recommender + bigquery + monitoring), and (4) Official Architecture & Live Estate Synthesis (developerknowledge + run + sqladmin + container).',
+      'Tab 04 (Gemini 2.5 Flash Official MCP Agent) & Tab 05 (1-Click IDE Config Exporter): Executes 5 read-only official MCP tools in parallel and grounds Vertex AI Gemini 2.5 Flash on the live JSON-RPC payloads, plus generates copy-ready mcpServers JSON blocks for Gemini CLI, Claude Code, Cursor, VS Code, and Antigravity.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/mcp/catalog?probeAll=true, POST /api/project/:id/mcp/tools-list & POST /api/project/:id/mcp/call-tool (JSON-RPC 2.0 to https://*.googleapis.com/mcp)',
+      'POST /api/project/:id/mcp/run-triage-chain & POST /api/project/:id/mcp/agent-chat (Parallel MCP Tool-Calling + Vertex AI Gemini 2.5 Flash)',
+    ],
+    billingImpact:
+      '100% $0.00/mo for JSON-RPC 2.0 tools/list discovery and readOnlyHint=true tool calls across all 48 *.googleapis.com/mcp servers; destructiveHint=true mutations are explicitly gated.',
+  },
+  {
     id: 'wave11-moonshot-studio-multi-project-cloudrun-self-host',
     wave: 'WAVE 11 MOONSHOT SUITE · CLOUD DEPLOY, FIRESTORE NATIVE, ACTIVE ASSIST, MULTI-PROJECT MATRIX, 18-STUDIO AUDIT, CLIENT DOSSIER & CLOUD RUN SELF-HOST',
     title:

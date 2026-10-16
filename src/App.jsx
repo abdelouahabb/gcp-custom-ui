@@ -2401,7 +2401,7 @@ function CloudPulseCockpit() {
                         </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
-                        5 DOMAINS · 18 DEDICATED STUDIOS · ZERO DUPLICATES
+                        5 DOMAINS · 19 DEDICATED STUDIOS · ZERO DUPLICATES
                       </span>
                     </div>
 
@@ -2445,7 +2445,7 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'SOVEREIGN_STUDIO', label: 'IAM', meta: 'SA Key Kill-Switch, JIT & Drift' },
-                            { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: '16-in-1 Multi-Cloud Bridge & OAuth' },
+                            { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: '28-in-1 AWS, Azure, Alibaba & Huawei Bridge' },
                             { id: 'SRE_WAR_ROOM', label: 'SRE War-room', meta: '14.4x SLO Burn & VPC-SC Perimeter' },
                           ],
                         },
