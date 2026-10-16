@@ -191,29 +191,55 @@ function McpFormattedMarkdown({ content, onCopy }) {
           );
         }
 
-        const lines = seg.text.split('\n');
+        const normalizedText = seg.text
+          .replace(/([.!?`])\s+(\*\*[A-Z][^*]{2,70}\*\*)/g, '$1\n$2')
+          .replace(/([.!?`)])\s+(\d{1,2}\.\s+)/g, '$1\n$2')
+          .replace(/:\s+(\d{1,2}\.\s+)/g, ':\n$1');
+
+        const lines = normalizedText.split('\n');
         const blocks = [];
         let listItems = [];
         let tableRows = [];
+
+        const formatListItemLead = (rawItemText) => {
+          const leadMatch = rawItemText.match(/^([A-Za-z0-9_-][A-Za-z0-9_ -]{1,34}):\s+(.*)$/);
+          if (leadMatch && !leadMatch[1].includes('**') && !leadMatch[1].includes('`')) {
+            return `**${leadMatch[1]}:** ${leadMatch[2]}`;
+          }
+          return rawItemText;
+        };
 
         const flushList = (keyBase) => {
           if (listItems.length > 0) {
             blocks.push(
               <ul
                 key={`list-${keyBase}`}
-                className="space-y-1.5 pl-1"
+                className="space-y-2 pl-0.5"
               >
-                {listItems.map((item, lIdx) => (
-                  <li
-                    key={`li-${keyBase}-${lIdx}`}
-                    className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-200"
-                  >
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      {renderInlineMarkdownNodes(item, `li-${keyBase}-${lIdx}`)}
-                    </div>
-                  </li>
-                ))}
+                {listItems.map((entry, lIdx) => {
+                  const isNumbered = /^\d+\.$/.test(entry.marker);
+                  const cleanNumber = entry.marker.replace('.', '');
+                  return (
+                    <li
+                      key={`li-${keyBase}-${lIdx}`}
+                      className="flex items-start gap-2.5 p-2 rounded-lg bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/70 text-xs text-zinc-700 dark:text-zinc-200"
+                    >
+                      {isNumbered ? (
+                        <span className="mt-0.5 px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-mono text-[10px] font-extrabold shrink-0">
+                          #{cleanNumber}
+                        </span>
+                      ) : (
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1 leading-relaxed">
+                        {renderInlineMarkdownNodes(
+                          formatListItemLead(entry.text),
+                          `li-${keyBase}-${lIdx}`
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             );
             listItems = [];
@@ -316,11 +342,36 @@ function McpFormattedMarkdown({ content, onCopy }) {
 
           const bulletMatch = line.match(/^([-*•]|\d+\.)\s+(.*)$/);
           if (bulletMatch) {
-            listItems.push(bulletMatch[2]);
+            listItems.push({
+              marker: bulletMatch[1],
+              text: bulletMatch[2],
+            });
             return;
           }
 
           flushList(`${sIdx}-${lIdx}`);
+
+          const isDangerCallout =
+            /^\*\*(CRITICAL|WARNING|FORBIDDEN|DANGER|DESTRUCTIVE)/i.test(line);
+          const isRuleCallout =
+            /^\*\*(STRICT|EXECUTION|NOTE|IMPORTANT|REQUIRED)/i.test(line);
+
+          if (isDangerCallout || isRuleCallout) {
+            blocks.push(
+              <div
+                key={`callout-${sIdx}-${lIdx}`}
+                className={`p-2.5 rounded-xl border text-xs leading-relaxed ${
+                  isDangerCallout
+                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-200'
+                    : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-950 dark:text-indigo-200'
+                }`}
+              >
+                {renderInlineMarkdownNodes(line, `callout-${sIdx}-${lIdx}`)}
+              </div>
+            );
+            return;
+          }
+
           blocks.push(
             <p
               key={`p-${sIdx}-${lIdx}`}
@@ -1238,32 +1289,64 @@ export default function GoogleCloudRemoteMcpStudio({
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-300">
-                    {activeToolObj.description}
-                  </p>
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950/80 border border-zinc-200/80 dark:border-zinc-800/80 max-h-80 overflow-y-auto">
+                    <McpFormattedMarkdown
+                      content={activeToolObj.description}
+                      onCopy={copyToClipboard}
+                    />
+                  </div>
 
-                  {/* Input Schema Properties Summary */}
+                  {/* Input Schema Properties Summary & Formatted Parameter Docs */}
                   {activeToolObj.inputSchema?.properties && (
-                    <div className="text-[10.5px] font-mono text-zinc-500">
-                      Schema Fields:{' '}
-                      {Object.keys(activeToolObj.inputSchema.properties).map((propKey) => {
-                        const isReq = (activeToolObj.inputSchema.required || []).includes(
-                          propKey
-                        );
-                        return (
-                          <span
-                            key={propKey}
-                            className={`inline-block mr-1.5 mb-1 px-1.5 py-0.5 rounded ${
-                              isReq
-                                ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold'
-                                : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                            }`}
-                          >
-                            {propKey}
-                            {isReq ? '*' : ''}
-                          </span>
-                        );
-                      })}
+                    <div className="space-y-2">
+                      <div className="text-[10.5px] font-mono font-bold text-zinc-600 dark:text-zinc-400">
+                        Schema Parameters ({Object.keys(activeToolObj.inputSchema.properties).length}):
+                      </div>
+                      <div className="grid grid-cols-1 gap-1.5 max-h-52 overflow-y-auto pr-1">
+                        {Object.entries(activeToolObj.inputSchema.properties).map(
+                          ([propKey, propSchema]) => {
+                            const isReq = (
+                              activeToolObj.inputSchema.required || []
+                            ).includes(propKey);
+                            return (
+                              <div
+                                key={propKey}
+                                className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/60 border border-zinc-200/70 dark:border-zinc-800/80 space-y-1"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-extrabold text-indigo-600 dark:text-indigo-300">
+                                      {propKey}
+                                    </span>
+                                    {propSchema?.type && (
+                                      <span className="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[9.5px] text-zinc-600 dark:text-zinc-400">
+                                        {String(propSchema.type)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                                      isReq
+                                        ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300'
+                                        : 'bg-zinc-200/60 dark:bg-zinc-800 text-zinc-500'
+                                    }`}
+                                  >
+                                    {isReq ? 'REQUIRED' : 'OPTIONAL'}
+                                  </span>
+                                </div>
+                                {propSchema?.description && (
+                                  <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                                    <McpFormattedMarkdown
+                                      content={propSchema.description}
+                                      onCopy={copyToClipboard}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
                     </div>
                   )}
 
