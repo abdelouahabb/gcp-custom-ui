@@ -283,7 +283,7 @@
   - **Wave 5 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity (Modules 21–28)**: Alibaba PTS + MSE 11.11 Surge (`01`), Alibaba CEN & GA QoS Slicer (`02`), PolarDB / GaussDB HTAP & Clone (`03`), Huawei Volcano / PAI vGPU Pool (`04`), RocketMQ 5.0 2PC & Delay Queue (`05`), Nacos + Higress Config & Wasm (`06`), Hologres + MaxCompute Sub-s OLAP (`07`), and DataV / Huawei Astro NOC Wall (`08`).
 
 - **Cloud Functions (`v1` & `v2`) & Eventarc Trigger Studio (`cloudfunctions.googleapis.com/v2` + `eventarc.googleapis.com/v1`)**
-  - Plain-English Eventarc trigger wizard, 4-stage visual Eventarc transport & billing X-Ray, 1-Tap Eventarc IAM Auto-Doctor, synthetic CloudEvent v1.0 tester, and 1-Click `v1 → v2` concurrency upgrader (`-78%` compute cost).
+  - Plain-English Eventarc trigger wizard, 4-stage visual Eventarc transport & billing X-Ray, 1-Tap Eventarc IAM Auto-Doctor, live CloudEvent v1.0 tester (`targetUri` HTTP POST, `pubsub.googleapis.com/v1` publish, or `logging.googleapis.com/v2/entries:write` with real round-trip latency), and 1-Click `v1 → v2` concurrency upgrader (`-78%` compute cost).
 
 - ** Google Kubernetes Engine (GKE) Studio (`container.googleapis.com/v1`)**
   - Dedicated GKE Autopilot & Standard Spot GPU cluster provisioner with SEC/GDPR/HIPAA compliance locks, Workload YAML Composer, GitHub-to-GKE Cloud Build integration, and 1-tap `kubeconfig` / `kubectl` commands.

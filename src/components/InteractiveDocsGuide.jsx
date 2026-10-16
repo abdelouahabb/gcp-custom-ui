@@ -40,7 +40,7 @@ const DOC_SECTIONS = [
     icon: Terminal,
     targetTab: 'LOGS_SHELL',
     problemSolved:
-      'Legacy Cloud Logging consoles force SREs to dig through deeply nested JSON trees without correlated container CPU/RAM metrics, deployment markers, instant field cardinality facets, service-level P50/P90/P99 latency heatmaps, live Grok virtual field extraction, source-code Git blame + unified diff patches, multi-window SLO burn-rate alerts, kernel eBPF TCP/DNS telemetry, or synthetic canary log replay.',
+      'Legacy Cloud Logging consoles force SREs to dig through deeply nested JSON trees without correlated container CPU/RAM metrics, deployment markers, instant field cardinality facets, service-level P50/P90/P99 latency heatmaps, live Grok virtual field extraction, source-code Git blame + unified diff patches, multi-window SLO burn-rate alerts, kernel /proc/net/snmp TCP/TLS telemetry, or live Cloud Logging canary injection.',
     howItWorks: [
       '100% Live Execution (Zero Simulated Entries): Streams exclusively from live logging.googleapis.com/v2/entries:list and computes the 24-bucket histogram, anomaly baseline diff, and FinOps byte breakdown directly from real project logs and live host CPU/RAM telemetry.',
       'VictoriaLogs / OpenObserve Field Facet Sidebar + Cards vs. Columnar Table View + JSON Key-Value Pill Flattener (Tab 01): Inspect live field cardinality and filter in 1 click (+ = include / - != exclude), toggle between Cards View and High-Density Columnar Table View, or bookmark and diff any two log payloads side by side.',
@@ -504,7 +504,7 @@ const DOC_SECTIONS = [
       'When Google Cloud moved from 1st Gen (v1) to 2nd Gen (v2 + Eventarc), newcomers stayed stuck on v1 because Eventarc hid 3 required service-agent IAM roles, demanded raw CloudEvents strings, and mixed free direct Pub/Sub triggers with paid Cloud Audit Log (DATA_WRITE) triggers.',
     howItWorks: [
       'Plain-English Eventarc Trigger Wizard ("v1 Simplicity with v2 Power"): Pick "When a file is uploaded to Bucket X", "When a Pub/Sub message arrives", "When a BigQuery job finishes", or "On a Cron Schedule" without memorizing CloudEvents filter syntax.',
-      '4-Stage Visual Eventarc Pipeline X-Ray & Synthetic CloudEvent Tester: Shows Producer → Transport Bus ($0 Free Direct Pub/Sub vs Cloud Audit Logs) → Eventarc Filter & IAM → Function Handler, and lets you fire a synthetic CloudEvent v1.0 payload in 1 click.',
+      '4-Stage Visual Eventarc Pipeline X-Ray & Live CloudEvent Tester: Shows Producer → Transport Bus ($0 Free Direct Pub/Sub vs Cloud Audit Logs) → Eventarc Filter & IAM → Function Handler, and lets you fire a live CloudEvent v1.0 payload via HTTP POST, Pub/Sub publish, or Cloud Logging entries:write with real round-trip latency measurement.',
       '1-Tap Eventarc IAM Auto-Doctor + 1-Click v1 → v2 Upgrader: Automatically binds roles/pubsub.publisher on the GCS Service Agent, roles/eventarc.eventReceiver, and roles/run.invoker, and upgrades legacy v1 functions (1 req/instance) to v2 (up to 1,000 req/instance, saving up to 78%).',
     ],
     apisUsed: [
