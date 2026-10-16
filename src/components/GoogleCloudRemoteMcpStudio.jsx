@@ -62,6 +62,544 @@ const TRIAGE_CHAINS = [
   },
 ];
 
+const REVIEW_PRESET_PROMPTS = [
+  {
+    id: 'ESTATE_FINOPS',
+    label: 'Review Full Estate & FinOps',
+    prompt:
+      'Review my live Cloud Billing status, Cloud Storage buckets, BigQuery datasets, and recent Cloud Audit logs via official Google Cloud Remote MCP servers, and recommend FinOps & security actions.',
+  },
+  {
+    id: 'ZERO_TRUST_SECURITY',
+    label: 'Review IAM & Zero-Trust Posture',
+    prompt:
+      'Review my project IAM posture, public bucket exposure risks, and audit log anomalies via official Google Cloud Remote MCP servers and provide gcloud remediation commands.',
+  },
+  {
+    id: 'DATA_LAKEHOUSE',
+    label: 'Review BigQuery & Storage Lakehouse',
+    prompt:
+      'Review my BigQuery datasets, Cloud Storage buckets, and partitioning/lifecycle best practices using official Google Cloud Remote MCP servers.',
+  },
+  {
+    id: 'SRE_RELIABILITY',
+    label: 'Review SRE Logs & Error Rate',
+    prompt:
+      'Review recent Cloud Logging entries, error patterns, and service health telemetry via official Google Cloud Remote MCP servers and suggest SRE reliability improvements.',
+  },
+];
+
+function renderInlineMarkdownNodes(text, keyPrefix = 'inl') {
+  if (!text) return null;
+  const tokenRegex = /(\*\*[^*]+\*\*|`[^`]+`|https?:\/\/[^\s)]+)/g;
+  const parts = String(text).split(tokenRegex);
+  return parts.map((part, idx) => {
+    if (!part) return null;
+    const key = `${keyPrefix}-${idx}`;
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return (
+        <strong key={key} className="font-extrabold text-zinc-900 dark:text-white">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+      return (
+        <code
+          key={key}
+          className="px-1.5 py-0.5 mx-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 font-mono text-[11px]"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    if (/^https?:\/\/[^\s)]+$/.test(part)) {
+      return (
+        <a
+          key={key}
+          href={part}
+          target="_blank"
+          rel="noreferrer"
+          className="underline text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-mono text-[11px]"
+        >
+          {part}
+        </a>
+      );
+    }
+    return <React.Fragment key={key}>{part}</React.Fragment>;
+  });
+}
+
+function McpFormattedMarkdown({ content, onCopy }) {
+  if (!content) return null;
+  const raw = String(content).replace(/\r\n/g, '\n');
+
+  // Split by fenced code blocks ```lang ... ```
+  const segments = [];
+  const fenceRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = fenceRegex.exec(raw)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({
+        type: 'markdown',
+        text: raw.slice(lastIndex, match.index),
+      });
+    }
+    segments.push({
+      type: 'code',
+      lang: (match[1] || 'bash').trim(),
+      code: match[2].trim(),
+    });
+    lastIndex = fenceRegex.lastIndex;
+  }
+  if (lastIndex < raw.length) {
+    segments.push({
+      type: 'markdown',
+      text: raw.slice(lastIndex),
+    });
+  }
+
+  return (
+    <div className="space-y-3 text-xs leading-relaxed text-zinc-700 dark:text-zinc-200">
+      {segments.map((seg, sIdx) => {
+        if (seg.type === 'code') {
+          return (
+            <div
+              key={`code-${sIdx}`}
+              className="rounded-xl border border-zinc-800 bg-zinc-950 overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 text-[10px] font-mono text-zinc-400">
+                <span className="uppercase font-bold text-indigo-300">
+                  {seg.lang || 'CLI / Code'}
+                </span>
+                {onCopy && (
+                  <button
+                    type="button"
+                    onClick={() => onCopy(seg.code, `${seg.lang || 'code'} snippet`)}
+                    className="inline-flex items-center gap-1 text-zinc-300 hover:text-white cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy</span>
+                  </button>
+                )}
+              </div>
+              <pre className="p-3 text-[11px] font-mono text-emerald-300 overflow-x-auto whitespace-pre-wrap">
+                {seg.code}
+              </pre>
+            </div>
+          );
+        }
+
+        const lines = seg.text.split('\n');
+        const blocks = [];
+        let listItems = [];
+        let tableRows = [];
+
+        const flushList = (keyBase) => {
+          if (listItems.length > 0) {
+            blocks.push(
+              <ul
+                key={`list-${keyBase}`}
+                className="space-y-1.5 pl-1"
+              >
+                {listItems.map((item, lIdx) => (
+                  <li
+                    key={`li-${keyBase}-${lIdx}`}
+                    className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-200"
+                  >
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      {renderInlineMarkdownNodes(item, `li-${keyBase}-${lIdx}`)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            );
+            listItems = [];
+          }
+        };
+
+        const flushTable = (keyBase) => {
+          if (tableRows.length > 0) {
+            const dataRows = tableRows.filter(
+              (r) => !r.every((cell) => cell.replace(/[-: ]/g, '').trim() === '')
+            );
+            if (dataRows.length > 0) {
+              const header = dataRows[0];
+              const body = dataRows.slice(1);
+              blocks.push(
+                <div
+                  key={`tbl-${keyBase}`}
+                  className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800"
+                >
+                  <table className="w-full text-left border-collapse text-[11px]">
+                    <thead>
+                      <tr className="bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+                        {header.map((h, hIdx) => (
+                          <th
+                            key={`th-${hIdx}`}
+                            className="py-2 px-2.5 font-mono font-extrabold text-zinc-800 dark:text-zinc-200"
+                          >
+                            {renderInlineMarkdownNodes(h, `th-${keyBase}-${hIdx}`)}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                      {body.map((row, rIdx) => (
+                        <tr
+                          key={`tr-${rIdx}`}
+                          className="bg-white dark:bg-zinc-950/60"
+                        >
+                          {row.map((cell, cIdx) => (
+                            <td
+                              key={`td-${cIdx}`}
+                              className="py-1.5 px-2.5 text-zinc-700 dark:text-zinc-300"
+                            >
+                              {renderInlineMarkdownNodes(
+                                cell,
+                                `td-${keyBase}-${rIdx}-${cIdx}`
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            }
+            tableRows = [];
+          }
+        };
+
+        lines.forEach((rawLine, lIdx) => {
+          const line = rawLine.trim();
+          if (!line) {
+            flushList(`${sIdx}-${lIdx}`);
+            flushTable(`${sIdx}-${lIdx}`);
+            return;
+          }
+
+          if (line.startsWith('|') && line.endsWith('|') && line.length > 2) {
+            flushList(`${sIdx}-${lIdx}`);
+            const cells = line
+              .slice(1, -1)
+              .split('|')
+              .map((c) => c.trim());
+            tableRows.push(cells);
+            return;
+          }
+          flushTable(`${sIdx}-${lIdx}`);
+
+          const headingMatch = line.match(/^(#{1,4})\s+(.*)$/);
+          if (headingMatch) {
+            flushList(`${sIdx}-${lIdx}`);
+            const level = headingMatch[1].length;
+            const titleText = headingMatch[2];
+            blocks.push(
+              <div
+                key={`hd-${sIdx}-${lIdx}`}
+                className={`pt-2 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2 ${
+                  level <= 2 ? 'text-sm' : 'text-xs'
+                } font-extrabold text-zinc-900 dark:text-white`}
+              >
+                <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                <span>
+                  {renderInlineMarkdownNodes(titleText, `hd-${sIdx}-${lIdx}`)}
+                </span>
+              </div>
+            );
+            return;
+          }
+
+          const bulletMatch = line.match(/^([-*•]|\d+\.)\s+(.*)$/);
+          if (bulletMatch) {
+            listItems.push(bulletMatch[2]);
+            return;
+          }
+
+          flushList(`${sIdx}-${lIdx}`);
+          blocks.push(
+            <p
+              key={`p-${sIdx}-${lIdx}`}
+              className="text-xs text-zinc-700 dark:text-zinc-200 leading-relaxed"
+            >
+              {renderInlineMarkdownNodes(line, `p-${sIdx}-${lIdx}`)}
+            </p>
+          );
+        });
+
+        flushList(`${sIdx}-end`);
+        flushTable(`${sIdx}-end`);
+
+        return (
+          <div key={`md-seg-${sIdx}`} className="space-y-2.5">
+            {blocks}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function McpStructuredPayloadView({
+  parsedContent,
+  textContent,
+  rawJsonRpc,
+  onCopy,
+  compact = false,
+}) {
+  const [viewMode, setViewMode] = useState('FORMATTED'); // 'FORMATTED' | 'RAW'
+
+  const effectiveParsed = useMemo(() => {
+    if (parsedContent && typeof parsedContent === 'object') return parsedContent;
+    if (textContent) {
+      const trimmed = String(textContent).trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          return JSON.parse(trimmed);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  }, [parsedContent, textContent]);
+
+  const rawString = useMemo(() => {
+    if (effectiveParsed) return JSON.stringify(effectiveParsed, null, 2);
+    if (textContent) return String(textContent);
+    if (rawJsonRpc) return JSON.stringify(rawJsonRpc, null, 2);
+    return '';
+  }, [effectiveParsed, textContent, rawJsonRpc]);
+
+  // Extract array of items if the JSON object wraps a list (e.g. buckets, items, datasets, entries, results, services, recommendations)
+  const structuredSummary = useMemo(() => {
+    if (!effectiveParsed) return null;
+    if (Array.isArray(effectiveParsed)) {
+      return { kind: 'ARRAY', label: 'Items', items: effectiveParsed, scalarPairs: [] };
+    }
+    const entries = Object.entries(effectiveParsed);
+    const arrayEntry = entries.find(([, v]) => Array.isArray(v));
+    const scalarPairs = entries.filter(
+      ([, v]) => v === null || typeof v !== 'object'
+    );
+    const nestedObjects = entries.filter(
+      ([, v]) => v && typeof v === 'object' && !Array.isArray(v)
+    );
+    return {
+      kind: 'OBJECT',
+      label: arrayEntry ? arrayEntry[0] : null,
+      items: arrayEntry ? arrayEntry[1] : [],
+      scalarPairs,
+      nestedObjects,
+    };
+  }, [effectiveParsed]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('FORMATTED')}
+            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+              viewMode === 'FORMATTED'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+            }`}
+          >
+            Formatted Review
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('RAW')}
+            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+              viewMode === 'RAW'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+            }`}
+          >
+            Raw JSON-RPC
+          </button>
+        </div>
+        {onCopy && rawString && (
+          <button
+            type="button"
+            onClick={() => onCopy(rawString, 'MCP response payload')}
+            className="inline-flex items-center gap-1 text-[10px] font-mono text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
+          >
+            <Copy className="w-3 h-3" />
+            <span>Copy</span>
+          </button>
+        )}
+      </div>
+
+      {viewMode === 'RAW' ? (
+        <pre
+          className={`p-3 rounded-xl bg-zinc-950 text-cyan-300 border border-zinc-800 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap ${
+            compact ? 'max-h-44' : 'max-h-72'
+          }`}
+        >
+          {rawString}
+        </pre>
+      ) : structuredSummary ? (
+        <div
+          className={`p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2.5 overflow-y-auto ${
+            compact ? 'max-h-48' : 'max-h-80'
+          }`}
+        >
+          {/* Scalar Key-Value Grid */}
+          {structuredSummary.scalarPairs.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {structuredSummary.scalarPairs.map(([k, v]) => (
+                <div
+                  key={k}
+                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between gap-2 text-[11px] font-mono"
+                >
+                  <span className="text-zinc-500 truncate">{k}</span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[65%]">
+                    {String(v)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Nested Objects (e.g. error or metadata) */}
+          {structuredSummary.nestedObjects?.map(([objKey, objVal]) => (
+            <div
+              key={objKey}
+              className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1 text-[11px] font-mono"
+            >
+              <div className="text-[10px] font-extrabold uppercase text-indigo-600 dark:text-indigo-400">
+                {objKey}
+              </div>
+              {Object.entries(objVal)
+                .slice(0, 6)
+                .map(([subK, subV]) => (
+                  <div
+                    key={subK}
+                    className="flex items-start justify-between gap-2 text-[11px]"
+                  >
+                    <span className="text-zinc-500 shrink-0">{subK}:</span>
+                    <span className="text-zinc-800 dark:text-zinc-200 text-right break-all">
+                      {typeof subV === 'object'
+                        ? JSON.stringify(subV)
+                        : String(subV)}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          ))}
+
+          {/* Array Items Cards (buckets, datasets, services, docs, log entries) */}
+          {structuredSummary.items.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-mono uppercase font-extrabold text-emerald-600 dark:text-emerald-400">
+                <span>
+                  {structuredSummary.label || 'Records'} (
+                  {structuredSummary.items.length})
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5">
+                {structuredSummary.items.slice(0, 12).map((item, idx) => {
+                  if (item === null || typeof item !== 'object') {
+                    return (
+                      <div
+                        key={`scalar-item-${idx}`}
+                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-300"
+                      >
+                        {String(item)}
+                      </div>
+                    );
+                  }
+                  const titleField =
+                    item.name ||
+                    item.title ||
+                    item.id ||
+                    item.datasetId ||
+                    item.serviceId ||
+                    item.logName ||
+                    item.parent ||
+                    `Item #${idx + 1}`;
+                  const descField =
+                    item.description ||
+                    item.content ||
+                    item.snippet ||
+                    item.textPayload ||
+                    item.uri ||
+                    item.location ||
+                    item.storageClass ||
+                    '';
+                  const metaEntries = Object.entries(item)
+                    .filter(
+                      ([k, v]) =>
+                        !['name', 'title', 'description', 'content', 'snippet', 'textPayload'].includes(k) &&
+                        (typeof v === 'string' ||
+                          typeof v === 'number' ||
+                          typeof v === 'boolean')
+                    )
+                    .slice(0, 4);
+                  return (
+                    <div
+                      key={`obj-item-${idx}`}
+                      className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-1.5">
+                        <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 break-all">
+                          {String(titleField)}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {metaEntries.map(([mk, mv]) => (
+                            <span
+                              key={mk}
+                              className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 text-[10px] font-mono"
+                            >
+                              {mk}: {String(mv).slice(0, 28)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {descField && (
+                        <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                          <McpFormattedMarkdown
+                            content={String(descField).slice(0, 500)}
+                            onCopy={onCopy}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {structuredSummary.scalarPairs.length === 0 &&
+            structuredSummary.items.length === 0 &&
+            (!structuredSummary.nestedObjects ||
+              structuredSummary.nestedObjects.length === 0) && (
+              <div className="text-xs font-mono text-zinc-500">
+                Empty JSON result (`{}`) returned by MCP endpoint.
+              </div>
+            )}
+        </div>
+      ) : (
+        <div
+          className={`p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 overflow-y-auto ${
+            compact ? 'max-h-48' : 'max-h-80'
+          }`}
+        >
+          <McpFormattedMarkdown content={rawString} onCopy={onCopy} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GoogleCloudRemoteMcpStudio({
   projectId,
   region = 'us-central1',
@@ -448,8 +986,8 @@ export default function GoogleCloudRemoteMcpStudio({
               <Activity className="w-3.5 h-3.5" />
               <span>
                 {loadingCatalog
-                  ? 'Probing All 42 *.googleapis.com/mcp Endpoints...'
-                  : 'Probe All 42 Official MCP Servers Live'}
+                  ? 'Probing All 48 *.googleapis.com/mcp Endpoints...'
+                  : 'Probe All 48 Official MCP Servers Live'}
               </span>
             </button>
           </div>
@@ -460,7 +998,7 @@ export default function GoogleCloudRemoteMcpStudio({
           <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800">
             <div className="text-zinc-500">Official Remote MCP Catalog</div>
             <div className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">
-              {catalog?.totalServersInCatalog || 42} Endpoints
+              {catalog?.totalServersInCatalog || 48} Endpoints
             </div>
             <div className="text-[10px] text-zinc-500">
               {catalog?.onlineServersCount || 0} Probed Online ({catalog?.scanWallTimeMs || 0}ms scan)
@@ -496,7 +1034,7 @@ export default function GoogleCloudRemoteMcpStudio({
         </div>
       </div>
 
-      {/* SECTION 1: LIVE 42-SERVER REMOTE MCP MATRIX & INTERACTIVE JSON-RPC WORKBENCH */}
+      {/* SECTION 1: LIVE 48-SERVER REMOTE MCP MATRIX & INTERACTIVE JSON-RPC WORKBENCH */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left 5 Cols: Official Remote MCP Server Directory */}
         <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 flex flex-col space-y-3">
@@ -832,20 +1370,20 @@ export default function GoogleCloudRemoteMcpStudio({
 
               {/* Live Tool Call Output */}
               {toolCallResult && (
-                <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 text-zinc-100 font-mono text-xs space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
                     <div className="flex items-center gap-2">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
                           toolCallResult.ok
-                            ? 'bg-emerald-500/20 text-emerald-300'
-                            : 'bg-amber-500/20 text-amber-300'
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                         }`}
                       >
                         HTTP {toolCallResult.httpStatus} ·{' '}
                         {toolCallResult.ok ? 'JSON-RPC RESULT OK' : 'MCP TOOL NOTICE'}
                       </span>
-                      <span className="text-zinc-400 text-[11px]">
+                      <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">
                         Latency: <strong>{toolCallResult.latencyMs}ms</strong>
                       </span>
                     </div>
@@ -867,12 +1405,12 @@ export default function GoogleCloudRemoteMcpStudio({
                       </button>
                     )}
                   </div>
-                  <pre className="text-[11px] text-cyan-300 overflow-x-auto max-h-64 whitespace-pre-wrap">
-                    {toolCallResult.parsedContent
-                      ? JSON.stringify(toolCallResult.parsedContent, null, 2)
-                      : toolCallResult.textContent ||
-                        JSON.stringify(toolCallResult.rawJsonRpc, null, 2)}
-                  </pre>
+                  <McpStructuredPayloadView
+                    parsedContent={toolCallResult.parsedContent}
+                    textContent={toolCallResult.textContent}
+                    rawJsonRpc={toolCallResult.rawJsonRpc}
+                    onCopy={copyToClipboard}
+                  />
                 </div>
               )}
             </>
@@ -960,25 +1498,28 @@ export default function GoogleCloudRemoteMcpStudio({
               {(chainResult.steps || []).map((st) => (
                 <div
                   key={st.stepId}
-                  className="p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 font-mono text-xs space-y-1.5"
+                  className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-2"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-extrabold text-indigo-300">
+                  <div className="flex items-center justify-between gap-2 font-mono text-xs">
+                    <span className="font-extrabold text-indigo-600 dark:text-indigo-300">
                       {st.serverId}.googleapis.com/mcp &rarr; {st.toolName}
                     </span>
                     <span
                       className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                         st.ok
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : 'bg-amber-500/20 text-amber-300'
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                       }`}
                     >
                       {st.latencyMs}ms · HTTP {st.httpStatus}
                     </span>
                   </div>
-                  <pre className="text-[10.5px] text-cyan-300 overflow-x-auto max-h-36 whitespace-pre-wrap">
-                    {st.outputPreview}
-                  </pre>
+                  <McpStructuredPayloadView
+                    parsedContent={st.parsedContent}
+                    textContent={st.textContent || st.outputPreview}
+                    onCopy={copyToClipboard}
+                    compact
+                  />
                 </div>
               ))}
             </div>
@@ -995,7 +1536,7 @@ export default function GoogleCloudRemoteMcpStudio({
               ZERO-HALLUCINATION AGENTIC SRE · VERTEX AI GEMINI + 5 REMOTE MCP SERVERS
             </div>
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-              4. Gemini 2.5 Flash Live MCP Tool-Calling Architect
+              4. Gemini 2.5 Flash Live MCP Review &amp; Tool-Calling Architect
             </h3>
             <p className="text-xs text-zinc-500">
               Autonomously invokes <code className="font-mono">cloudbilling</code>,{' '}
@@ -1005,6 +1546,19 @@ export default function GoogleCloudRemoteMcpStudio({
               <code className="font-mono">developerknowledge</code> Remote MCP servers via
               JSON-RPC 2.0 and grounds Gemini on the live outputs.
             </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {REVIEW_PRESET_PROMPTS.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => setAgentPrompt(preset.prompt(projectId))}
+                className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
+              >
+                {preset.label}
+              </button>
+            ))}
           </div>
 
           <form onSubmit={handleRunAgentChat} className="space-y-2">
@@ -1023,7 +1577,7 @@ export default function GoogleCloudRemoteMcpStudio({
               <span>
                 {runningAgent
                   ? 'Calling 5 Official *.googleapis.com/mcp Servers + Gemini...'
-                  : 'Execute Grounded Multi-MCP Agent Turn'}
+                  : 'Execute Grounded Multi-MCP Review'}
               </span>
             </button>
           </form>
@@ -1032,7 +1586,19 @@ export default function GoogleCloudRemoteMcpStudio({
             <div className="space-y-3 pt-2">
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
                 <span>Engine: {agentResult.modelUsed}</span>
-                <span>Total Turn Latency: {agentResult.totalWallTimeMs}ms</span>
+                <div className="flex items-center gap-2">
+                  <span>Total Turn Latency: {agentResult.totalWallTimeMs}ms</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      copyToClipboard(agentResult.synthesis, 'MCP Review Report')
+                    }
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Review</span>
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {(agentResult.mcpTraces || []).map((tr) => (
@@ -1048,8 +1614,11 @@ export default function GoogleCloudRemoteMcpStudio({
                   </span>
                 ))}
               </div>
-              <div className="p-3.5 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 text-xs font-mono whitespace-pre-wrap max-h-72 overflow-y-auto">
-                {agentResult.synthesis}
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 max-h-[460px] overflow-y-auto">
+                <McpFormattedMarkdown
+                  content={agentResult.synthesis}
+                  onCopy={copyToClipboard}
+                />
               </div>
             </div>
           )}

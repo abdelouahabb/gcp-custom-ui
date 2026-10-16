@@ -38537,6 +38537,17 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
             .map((c) => c.text || '')
             .filter(Boolean)
             .join('\n');
+          let parsedContent = resultObj.structuredContent || null;
+          if (!parsedContent && textContent) {
+            try {
+              parsedContent = JSON.parse(textContent);
+            } catch {
+              parsedContent = null;
+            }
+          }
+          const formattedPreview = parsedContent
+            ? JSON.stringify(parsedContent, null, 2)
+            : textContent || JSON.stringify(rpcRes.data?.error || {}, null, 2);
           return {
             ...step,
             ok:
@@ -38546,9 +38557,9 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
             httpStatus: rpcRes.httpStatus,
             latencyMs: rpcRes.latencyMs,
             isError: Boolean(resultObj.isError || rpcRes.data?.error),
-            outputPreview: (
-              textContent || JSON.stringify(rpcRes.data?.error || {})
-            ).slice(0, 600),
+            parsedContent,
+            textContent,
+            outputPreview: formattedPreview.slice(0, 2400),
           };
         } catch (err) {
           return {
@@ -38557,6 +38568,8 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
             httpStatus: 500,
             latencyMs: 0,
             isError: true,
+            parsedContent: null,
+            textContent: err.message,
             outputPreview: err.message,
           };
         }
@@ -38664,6 +38677,17 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
             .map((item) => item.text || '')
             .filter(Boolean)
             .join('\n');
+          let parsedOutput = resultObj.structuredContent || null;
+          if (!parsedOutput && textContent) {
+            try {
+              parsedOutput = JSON.parse(textContent);
+            } catch {
+              parsedOutput = null;
+            }
+          }
+          const formattedOutput = parsedOutput
+            ? JSON.stringify(parsedOutput, null, 2)
+            : textContent || JSON.stringify(rpcRes.data?.error || {}, null, 2);
           return {
             ...c,
             ok:
@@ -38671,15 +38695,15 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
               !rpcRes.data?.error &&
               !resultObj.isError,
             latencyMs: rpcRes.latencyMs,
-            output: (
-              textContent || JSON.stringify(rpcRes.data?.error || {})
-            ).slice(0, 800),
+            parsedOutput,
+            output: formattedOutput.slice(0, 1600),
           };
         } catch (e) {
           return {
             ...c,
             ok: false,
             latencyMs: 0,
+            parsedOutput: null,
             output: e.message,
           };
         }
@@ -38703,21 +38727,21 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
         url: vertexUrl,
         token,
         quotaProject: projectId,
-        timeout: 14000,
+        timeout: 16000,
         data: {
           contents: [
             {
               role: 'user',
               parts: [
                 {
-                  text: `You are the CloudPulse 2026 Principal SRE & Cloud Architect Agent connected to Google Cloud's Official Remote MCP Servers (JSON-RPC 2.0) for project "${projectId}".\n\nUser Request:\n${prompt}\n\nLive JSON-RPC 2.0 MCP Tool Execution Ground Truth:\n${groundingContext}\n\nProvide a concise, high-signal, markdown-formatted architectural analysis based strictly on the live MCP tool responses above, including concrete gcloud or MCP tool follow-up recommendations.`,
+                  text: `You are the CloudPulse 2026 Principal SRE & Cloud Architect Agent connected to Google Cloud's Official Remote MCP Servers (JSON-RPC 2.0) for project "${projectId}".\n\nUser Request:\n${prompt}\n\nLive JSON-RPC 2.0 MCP Tool Execution Ground Truth:\n${groundingContext}\n\nStructure your response in clean Markdown with:\n1. ### Executive Estate & FinOps Summary\n2. ### Live Findings by Official MCP Server\n3. ### Recommended Remediation & Next-Step Commands (with \`\`\`bash code blocks)`,
                 },
               ],
             },
           ],
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 700,
+            maxOutputTokens: 2048,
           },
         },
       });
@@ -38732,15 +38756,78 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
 
     if (!geminiSynthesis) {
       const okCount = mcpTraces.filter((t) => t.ok).length;
+      const billingTrace = mcpTraces.find((t) => t.serverId === 'cloudbilling');
+      const storageTrace = mcpTraces.find((t) => t.serverId === 'storage');
+      const bqTrace = mcpTraces.find((t) => t.serverId === 'bigquery');
+      const logTrace = mcpTraces.find((t) => t.serverId === 'logging');
+      const docTrace = mcpTraces.find((t) => t.serverId === 'developerknowledge');
+
+      const billingInfo = billingTrace?.parsedOutput || {};
+      const bucketsList =
+        storageTrace?.parsedOutput?.items ||
+        storageTrace?.parsedOutput?.buckets ||
+        [];
+      const datasetsList =
+        bqTrace?.parsedOutput?.datasetIds ||
+        bqTrace?.parsedOutput?.datasets ||
+        (Array.isArray(bqTrace?.parsedOutput) ? bqTrace.parsedOutput : []);
+      const logEntries = logTrace?.parsedOutput?.entries || [];
+      const docResults = docTrace?.parsedOutput?.results || [];
+
       geminiSynthesis = [
-        `### Live Google Cloud Remote MCP Grounded Synthesis (\`${projectId}\`)`,
-        `- **MCP JSON-RPC 2.0 Tools Executed**: **${okCount} / ${mcpTraces.length}** live official \`*.googleapis.com/mcp\` endpoints responded.`,
-        ...mcpTraces.map(
-          (t) =>
-            `- **\`${t.serverId}\` (\`${t.toolName}\` · ${t.latencyMs}ms)**: \`${t.output
-              .replace(/\s+/g, ' ')
-              .slice(0, 220)}\``
-        ),
+        `### 1. Executive Estate & FinOps Summary (\`${projectId}\`)`,
+        `- **Official MCP JSON-RPC 2.0 Coverage**: **${okCount} / ${mcpTraces.length}** Google-managed \`*.googleapis.com/mcp\` endpoints responded live.`,
+        `- **Cloud Billing Status (\`cloudbilling.googleapis.com/mcp\`)**: Billing Enabled = **\`${Boolean(
+          billingInfo.billingEnabled
+        )}\`** · Account = **\`${
+          billingInfo.billingAccountName || 'Linked Billing Account'
+        }\`** (${billingTrace?.latencyMs || 0}ms).`,
+        `- **Cloud Storage Posture (\`storage.googleapis.com/storage/mcp\`)**: Discovered **${
+          Array.isArray(bucketsList) ? bucketsList.length : 0
+        }** bucket(s)${
+          Array.isArray(bucketsList) && bucketsList.length > 0
+            ? ` (${bucketsList
+                .slice(0, 5)
+                .map((b) => `\`${b.name || b.id || b}\``)
+                .join(', ')})`
+            : ''
+        } (${storageTrace?.latencyMs || 0}ms).`,
+        `- **BigQuery Lakehouse (\`bigquery.googleapis.com/mcp\`)**: Discovered **${
+          Array.isArray(datasetsList) ? datasetsList.length : 0
+        }** dataset(s)${
+          Array.isArray(datasetsList) && datasetsList.length > 0
+            ? ` (${datasetsList
+                .slice(0, 6)
+                .map((d) => `\`${typeof d === 'string' ? d : d.datasetId || d.id || JSON.stringify(d)}\``)
+                .join(', ')})`
+            : ''
+        } (${bqTrace?.latencyMs || 0}ms).`,
+        `- **Cloud Audit & Operations Logs (\`logging.googleapis.com/mcp\`)**: Sampled **${
+          Array.isArray(logEntries) ? logEntries.length : 0
+        }** recent log entries (${logTrace?.latencyMs || 0}ms).`,
+        '',
+        `### 2. Grounded Google Developer Knowledge (\`developerknowledge.googleapis.com/mcp\`)`,
+        ...(Array.isArray(docResults) && docResults.length > 0
+          ? docResults
+              .slice(0, 3)
+              .map(
+                (doc, idx) =>
+                  `${idx + 1}. **${
+                    doc.title || doc.parent || `Official Doc Reference #${idx + 1}`
+                  }** — ${String(doc.content || doc.snippet || '')
+                    .replace(/\s+/g, ' ')
+                    .slice(0, 220)}...`
+              )
+          : [
+              `- Queried \`developerknowledge.googleapis.com/mcp\` (${docTrace?.latencyMs || 0}ms): Enforce least-privilege IAM roles and \`readOnlyHint=true\` annotations for autonomous MCP agents.`,
+            ]),
+        '',
+        `### 3. Recommended Follow-Up Commands`,
+        '```bash',
+        `# Verify active MCP-managed services and IAM policy bindings on ${projectId}`,
+        `gcloud services list --enabled --project=${projectId} --filter="name:(run OR bigquery OR storage OR aiplatform)"`,
+        `gcloud projects get-iam-policy ${projectId} --format="table(bindings.role,bindings.members)"`,
+        '```',
       ].join('\n');
     }
 
