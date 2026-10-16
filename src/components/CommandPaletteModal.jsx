@@ -577,6 +577,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-mcp-servers-hub',
+        category: 'AI & Developer Tools',
+        title: 'Open 2026 Google Cloud Official Remote MCP Servers Hub (48 Endpoints · 505 Tools)',
+        subtitle: 'Live JSON-RPC 2.0 tools/list & tools/call workbench, 4-server triage chains, Gemini MCP Agent & 1-click IDE config exporter',
+        keywords: 'mcp model context protocol servers json-rpc tools list call gemini claude cursor bigquery gke run',
+        badge: '48 MCP SERVERS',
+        badgeColor: 'text-indigo-700 dark:text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+        icon: Cpu,
+        run: () => {
+          onSelectTab('MCP_HUB');
+          onClose();
+        }
+      },
+      {
         id: 'open-cloudrun-time-machine',
         category: '2026 SRE & Developer Velocity',
         title: 'Open Cloud Run Revision Time-Machine, Crash-Loop Autopsy & 1-Click Rollback',

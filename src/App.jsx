@@ -82,6 +82,7 @@ import GdeStreamerPrivacyShield, {
   redactTextForGdeMode,
 } from './components/GdeStreamerPrivacyShield';
 import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
+import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -1730,6 +1731,14 @@ function CloudPulseCockpit() {
       icon: Sparkles,
     },
     {
+      id: 'MCP_HUB',
+      group: 'COMMAND',
+      label: 'MCP Servers',
+      isStar: true,
+      tip: '2026 Google Cloud Official Remote MCP Control Plane: 48 *.googleapis.com/mcp Servers, 505 Live JSON-RPC 2.0 Tools, 4-Server Autonomous Triage Chains, Gemini 2.5 Flash MCP Tool-Calling Agent & 1-Click IDE Config Exporter',
+      icon: Cpu,
+    },
+    {
       id: 'GLOBAL_MAP',
       group: 'COMMAND',
       label: 'Global Map',
@@ -2403,6 +2412,7 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '18 Categorized Beyond-Console Labs' },
+                            { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                             { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
                           ],
@@ -2541,6 +2551,13 @@ function CloudPulseCockpit() {
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'MCP_HUB' && (
+                <GoogleCloudRemoteMcpStudio
+                  projectId={selectedProjectId}
+                  onShowToast={showToast}
                 />
               )}
 

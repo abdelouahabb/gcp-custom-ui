@@ -27,7 +27,6 @@ import {
   useLivePricingCatalog,
 } from './GlobalNetworkWorldMap';
 import EngineerMoonshotsWave3 from './EngineerMoonshotsWave3';
-import GoogleCloudRemoteMcpStudio from './GoogleCloudRemoteMcpStudio';
 
 const SENSITIVE_PORTS = ['22', '3389', '3306', '5432', '6379', '27017'];
 
@@ -891,11 +890,36 @@ export default function GeminiCopilotModal({
             )}
           </div>
 
-          {/* Section 4: 2026 Google Cloud Official Remote MCP Control Plane & Gemini MCP Tool-Calling Bridge */}
-          <GoogleCloudRemoteMcpStudio
-            projectId={projectId}
-            onShowToast={onShowToast}
-          />
+          {/* Section 4: 2026 Google Cloud Official Remote MCP Control Plane Shortcut */}
+          <div className="bg-zinc-900/90 border border-indigo-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                  Dedicated Main Menu Tab · MCP Servers
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  48 *.googleapis.com/mcp Endpoints · 505 Live Tools
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-white">
+                Google Cloud Official Remote MCP Servers Hub
+              </h3>
+              <p className="text-xs text-zinc-400">
+                Launch the dedicated <span className="text-indigo-300 font-semibold">MCP Servers</span> workspace in the main navigation bar for live JSON-RPC 2.0 tool execution, 1-click multi-server SRE triage chains, and Gemini 2.5 Flash grounded on official MCP telemetry.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (onSelectTab) onSelectTab('MCP_HUB');
+                if (onClose) onClose();
+              }}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm flex items-center gap-2 shrink-0 cursor-pointer transition-colors"
+            >
+              <span>Open MCP Servers Tab</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
           {/* Section 5: Live Option 3 AES-256-GCM AI Studio BYOK Vault & SRE Co-Architect */}
           <EngineerMoonshotsWave3
