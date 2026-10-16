@@ -474,3 +474,21 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
 - **Where to find it**: Toggle between **Light Mode** and **Dark Mode** in the top cockpit header (`Sun` / `Moon` theme switcher).
 - **How it Works**:
   - Every card, table, code drawer, terminal wrapper, modal, and interactive control across all studios uses explicit dual-theme Tailwind pairs (`bg-white dark:bg-...`, `bg-zinc-50 dark:bg-[#131314]`, `text-zinc-900 dark:text-zinc-100`, `border-zinc-200 dark:border-zinc-800`) paired with `.gcp-studio-shell` CSS variable overrides in `src/index.css` so White/Light Mode never leaves stray dark-only surfaces or unreadable low-contrast text.
+
+### 48. Wave 11 Moonshot Suite — Cloud Deploy Canary Pipelines, Firestore Native CRUD, Active Assist Recommender, Multi-Project Estate Matrix, 18-Studio Stress Audit, Client Dossier & 1-Click Cloud Run Self-Hosting (`src/components/Wave11MoonshotStudio.jsx`, `Dockerfile`, `cloudbuild.yaml`, `deploy-cloudrun.sh`)
+- **Where to find it**: Open **`2026 Innovation`** (`Revolutionary2026Suite.jsx`) -> **`01 · Wave 11: Moonshot Studio`** (also under `D01: [ALPHA/BETA] & W11 (15)` or via `⌘K` -> *"Wave 11 Moonshot Studio"*).
+- **How it Works**:
+  - **1. Tab 01 — Cloud Deploy Canary Pipelines & Cloud Firestore Native Studio (`GET /api/project/:id/wave11/overview`)**:
+    - Queries live `clouddeploy.googleapis.com/v1` delivery pipelines and targets alongside `firestore.googleapis.com/v1` databases and collection documents.
+    - **1-Tap 3-Stage Canary Pipeline Provisioner (`POST /api/project/:id/wave11/clouddeploy/pipeline`)**: Enables `clouddeploy.googleapis.com`, provisions `-dev`, `-staging`, and `-prod` Cloud Run targets, and creates a progressive Canary (`25% -> 50% -> 100%`) delivery pipeline.
+    - **Live Firestore Native Database & Document CRUD (`POST /api/project/:id/wave11/firestore/database`, `POST & DELETE /api/project/:id/wave11/firestore/documents`)**: Provisions Firestore Native databases with Point-in-Time Recovery (PITR) and performs live typed document writes/deletes.
+  - **2. Tab 02 — Active Assist Recommender & Regional Quota Saturation Radar**:
+    - Queries `recommender.googleapis.com/v1` (`google.compute.instance.MachineTypeRecommender`, `google.compute.disk.IdleResourceRecommender`, `google.compute.address.IdleResourceRecommender`, `google.iam.policy.Recommender`) and `compute.googleapis.com/compute/v1/projects/:id/regions` to rank regional quotas by live utilization percentage.
+  - **3. Tab 03 — Multi-Project Estate Comparison Matrix (`GET /api/multi-project/compare`)**:
+    - Scans all active GCP projects on your account in parallel (`cloudresourcemanager.googleapis.com/v1/projects`) and compares VMs, Cloud Run services, GCS buckets, BigQuery datasets, Firestore DBs, Service Accounts, Hourly/Monthly Burn (`$/hr` & `$/mo`), and Security Posture Score (`0–100`) with 1-click project context switching.
+  - **4. Tab 04 — 18-Studio Live Stress Audit & P95 Latency Certifier (`POST /api/project/:id/wave11/stress-audit`)**:
+    - Fires concurrent live probes against all 18 backend studio endpoints and reports pass/fail verification (`18/18 LIVE_VERIFIED`), HTTP status, payload size, and `Avg` / `P50` / `P95` / `Max` response latency.
+  - **5. Tab 05 — 1-Click Cloud Run Self-Hosting Package & Executive Client HTML/PDF Dossier (`GET /api/project/:id/wave11/self-host-package`)**:
+    - Generates a standalone, print-ready **Executive Client HTML / PDF Infrastructure Dossier** covering live inventory, multi-project posture, regional quotas, Active Assist recommendations, and 18-studio stress audit certification.
+    - Serves live copy-ready contents of [`Dockerfile`](../Dockerfile), [`cloudbuild.yaml`](../cloudbuild.yaml), and [`deploy-cloudrun.sh`](../deploy-cloudrun.sh) so teams can self-host CloudPulse 2026 on Google Cloud Run (`min-instances=0`, scale-to-zero) in 1 command.
+

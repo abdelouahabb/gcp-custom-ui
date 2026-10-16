@@ -277,6 +277,21 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    if (rawUrl.includes('/wave11/firestore/documents')) {
+      const colId = params.collectionId || body.collectionId || 'cloudpulse_deployments';
+      const docId = params.documentId || body.documentId || 'selected-doc';
+      return {
+        title: 'Permanently Delete Cloud Firestore Document',
+        resourceKind: 'Firestore NoSQL Document',
+        targetName: `${colId}/${docId}`,
+        location: params.databaseId || '(default)',
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        impactWarning: `This will permanently delete document "${colId}/${docId}" from Cloud Firestore database "${params.databaseId || '(default)'}" in project "${projectId}".`,
+      };
+    }
+
     // Cloud Functions delete (/functions/:region/:name)
     const fnMatch = rawUrl.match(/\/functions\/([^/]+)\/([^/?]+)/);
     if (fnMatch) {
@@ -308,6 +323,25 @@ function classifyDestructiveAxiosConfig(config) {
         method: 'DELETE',
         endpoint: rawUrl,
         impactWarning: `This will permanently delete the ${kind} "${target}" (${region}) from project "${projectId}".`,
+      };
+    }
+
+    // Wave 11 Firestore Document Deletion (/wave11/firestore/documents)
+    if (rawUrl.includes('/wave11/firestore/documents')) {
+      const dbId = body.databaseId || params.databaseId || '(default)';
+      const colId = body.collectionId || params.collectionId || 'cloudpulse_ops';
+      const docId = body.documentId || params.documentId || 'doc';
+      return {
+        title: `Permanently Delete Firestore Document "${colId}/${docId}"?`,
+        resourceKind: 'Cloud Firestore Native Document (firestore.googleapis.com/v1)',
+        targetName: `${dbId} / ${colId} / ${docId}`,
+        location: dbId,
+        projectId,
+        method: 'DELETE DOCUMENT',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Delete Document "${docId}"`,
+        cancelToast: `Deletion of Firestore document "${colId}/${docId}" cancelled.`,
+        impactWarning: `This permanently deletes document "${docId}" from collection "${colId}" in Firestore database "${dbId}" on project "${projectId}".`,
       };
     }
 
@@ -826,7 +860,8 @@ function classifyDestructiveAxiosConfig(config) {
           'SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE',
         ].includes(String(body.action || '').toUpperCase())) ||
       (rawUrl.includes('/data-engineer/iceberg-matrix/probe') &&
-        Boolean(body.autoRefresh));
+        Boolean(body.autoRefresh)) ||
+      rawUrl.includes('/wave11/stress-audit');
 
     if (isReadOnlyOrDryRun) {
       return null;
@@ -1112,6 +1147,80 @@ function classifyDestructiveAxiosConfig(config) {
           ? `RESIDUAL DISK & STATIC IP BILLING WARNING: Stopping "${vmName}" halts vCPU/RAM charges ($0/hr compute), but its attached Boot Persistent Disk ($0.04–$0.17/GB-mo) and any reserved Static External IP ($7.30/mo) CONTINUE billing while stopped!`
           : `Changing machine type or deletion protection updates the VM's hardware billing rate or termination lock in "${zone}".`,
         impactWarning: `This mutates the live state of Compute Engine VM "${vmName}" in "${zone}".`,
+      };
+    }
+
+    // 3G-1. Wave 11 Cloud Deploy Delivery Pipeline & 3-Stage Targets (/wave11/clouddeploy/pipeline)
+    if (rawUrl.includes('/wave11/clouddeploy/pipeline')) {
+      const pipeId = body.pipelineId || 'cloudpulse-canary-pipeline';
+      const reg = body.region || 'us-central1';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm 1-Tap Cloud Deploy Pipeline ("${pipeId}")?`,
+        headerBadge: 'Wave 11 Cloud Deploy & Canary Delivery Gatekeeper',
+        targetLabel: 'Cloud Deploy Delivery Pipeline & 3 Cloud Run Targets',
+        resourceKind: 'Cloud Deploy Pipeline + 3 Targets (clouddeploy.googleapis.com/v1)',
+        targetName: `${pipeId} (${pipeId}-dev → ${pipeId}-staging → ${pipeId}-prod)`,
+        location: reg,
+        projectId,
+        method: '1-TAP CLOUD DEPLOY',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Provision "${pipeId}"`,
+        cancelToast: `Cloud Deploy pipeline "${pipeId}" cancelled.`,
+        whatHappensNext: `1. Enables clouddeploy.googleapis.com on project "${projectId}" if not yet active.\n2. Provisions 3 Cloud Run delivery targets (${pipeId}-dev, ${pipeId}-staging, ${pipeId}-prod) in ${reg}.\n3. Creates the serial + Canary (25% → 50% → 100%) DeliveryPipeline via clouddeploy.googleapis.com/v1.`,
+        costWarning: `CLOUD DEPLOY FREE-TIER & PRICING NOTICE: Your first 1 active Delivery Pipeline per billing account is FREE ($0.00/mo). Each additional active Delivery Pipeline costs $18.00/mo, plus standard Cloud Build minutes (2,500 build-min/mo Always Free) when releases are promoted.`,
+        impactWarning: `This provisions a live Cloud Deploy delivery pipeline and 3 delivery targets in "${projectId}" (${reg}).`,
+      };
+    }
+
+    // 3G-2. Wave 11 Cloud Firestore Native Database Provisioner (/wave11/firestore/database)
+    if (rawUrl.includes('/wave11/firestore/database')) {
+      const dbId = body.databaseId || '(default)';
+      const locId = body.locationId || 'nam5';
+      const dbType = body.type || 'FIRESTORE_NATIVE';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm 1-Tap Firestore Database Provisioning ("${dbId}")?`,
+        headerBadge: 'Wave 11 Cloud Firestore Native & Free-Tier Gatekeeper',
+        targetLabel: 'Cloud Firestore Database Instance',
+        resourceKind: `Cloud Firestore (${dbType} · firestore.googleapis.com/v1)`,
+        targetName: `${dbId} (${locId})`,
+        location: locId,
+        projectId,
+        method: '1-TAP CREATE FIRESTORE DB',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Provision Firestore "${dbId}"`,
+        cancelToast: `Firestore database "${dbId}" provisioning cancelled.`,
+        whatHappensNext: `1. Enables firestore.googleapis.com on project "${projectId}".\n2. Calls POST https://firestore.googleapis.com/v1/projects/${projectId}/databases?databaseId=${dbId} with locationId="${locId}", type="${dbType}", and pointInTimeRecoveryEnablement="POINT_IN_TIME_RECOVERY_ENABLED".`,
+        costWarning: `FIRESTORE ALWAYS FREE TIER & BILLING NOTICE: The "(default)" Firestore database includes 1 GiB storage, 50,000 document reads/day, 20,000 writes/day, and 20,000 deletes/day for $0.00/mo Always Free. Named non-default databases and usage above the daily free tier are billed per GiB and per 100k operations.`,
+        impactWarning: `This creates a live Cloud Firestore database "${dbId}" in location "${locId}" on project "${projectId}".`,
+      };
+    }
+
+    // 3G-3. Wave 11 Cloud Firestore Live Document Write (/wave11/firestore/documents)
+    if (rawUrl.includes('/wave11/firestore/documents')) {
+      const dbId = body.databaseId || '(default)';
+      const colId = body.collectionId || 'cloudpulse_ops';
+      const docId = body.documentId || 'auto-id';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm Live Firestore Document Write ("${colId}/${docId}")?`,
+        headerBadge: 'Wave 11 Cloud Firestore Document Mutation Gatekeeper',
+        targetLabel: 'Target Firestore Collection & Document Path',
+        resourceKind: 'Cloud Firestore Document (firestore.googleapis.com/v1)',
+        targetName: `${dbId} / ${colId} / ${docId}`,
+        location: dbId,
+        projectId,
+        method: 'WRITE FIRESTORE DOC',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Write Document "${docId}"`,
+        cancelToast: `Firestore document write to "${colId}/${docId}" cancelled.`,
+        whatHappensNext: `1. Encodes your JSON payload into typed Firestore Value fields (stringValue, integerValue, doubleValue, booleanValue, mapValue, arrayValue).\n2. Calls PATCH https://firestore.googleapis.com/v1/projects/${projectId}/databases/${dbId}/documents/${colId}/${docId} to upsert the live document.`,
+        costWarning: `FIRESTORE WRITE QUOTA NOTICE: Counts as 1 document write operation against your 20,000 FREE writes/day Always Free allowance ($0.00 within Free Tier; $0.18 per 100,000 writes beyond Free Tier).`,
+        impactWarning: `This writes live document "${colId}/${docId}" into Firestore database "${dbId}" on project "${projectId}".`,
       };
     }
 
@@ -2247,6 +2356,15 @@ function CloudPulseCockpit() {
                     onOpenProvision={handleOpenProvision}
                     onDeleteResource={handleDeleteResource}
                     onSelectStudioTab={(tabId) => setActiveTab(tabId)}
+                    onSelectProject={(pid) => {
+                      sessionStorage.setItem(
+                        'cloudpulse_project_explicit',
+                        'true'
+                      );
+                      setSelectedProjectId(pid);
+                      showToast(`Switched active project to ${pid}`);
+                    }}
+                    onRunInShell={handleRunInShell}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
@@ -2276,7 +2394,7 @@ function CloudPulseCockpit() {
                           domain: 'I. Innovation & Global Edge',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '14 Categorized Beyond-Console Tools' },
+                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '18 Categorized Beyond-Console Labs' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                             { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
                           ],
@@ -2404,6 +2522,15 @@ function CloudPulseCockpit() {
                   onOpenProvision={handleOpenProvision}
                   onDeleteResource={handleDeleteResource}
                   onSelectStudioTab={(tabId) => setActiveTab(tabId)}
+                  onSelectProject={(pid) => {
+                    sessionStorage.setItem(
+                      'cloudpulse_project_explicit',
+                      'true'
+                    );
+                    setSelectedProjectId(pid);
+                    showToast(`Switched active project to ${pid}`);
+                  }}
+                  onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />

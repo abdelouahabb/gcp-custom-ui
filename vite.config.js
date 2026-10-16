@@ -208,7 +208,8 @@ export default defineConfig(({ mode }) => {
               id.includes('src/components/Revolutionary2026Suite') ||
               id.includes('src/components/EngineerWishlistWave2') ||
               id.includes('src/components/AutonomousCloudBrain') ||
-              id.includes('src/components/Lab2026QuantumNexus')
+              id.includes('src/components/Lab2026QuantumNexus') ||
+              id.includes('src/components/Wave11MoonshotStudio')
             ) {
               return 'studio-innovation-lab';
             }

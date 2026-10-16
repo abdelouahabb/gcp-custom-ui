@@ -31,6 +31,31 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'wave11-moonshot-studio-multi-project-cloudrun-self-host',
+    wave: 'WAVE 11 MOONSHOT SUITE · CLOUD DEPLOY, FIRESTORE NATIVE, ACTIVE ASSIST, MULTI-PROJECT MATRIX, 18-STUDIO AUDIT, CLIENT DOSSIER & CLOUD RUN SELF-HOST',
+    title:
+      'Wave 11 Moonshot Studio — Cloud Deploy Canary Pipelines, Firestore Native CRUD, Active Assist Recommender & Quota Radar, Multi-Project Estate Matrix, 18-Studio Stress Audit, Client HTML/PDF Dossier & 1-Click Cloud Run Self-Hosting',
+    badge: '2026 INNOVATION LAB (WAVE 11 · #1)',
+    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    icon: Rocket,
+    targetTab: 'INNOVATION_LAB',
+    targetSubTab: 'WAVE11_MOONSHOT',
+    problemSolved:
+      'Architects and SREs need a unified production-grade control plane inside the 2026 Innovation Lab to manage progressive Cloud Deploy canary pipelines, inspect and mutate live Firestore Native documents, view real Recommender API & regional quota utilization, compare all active GCP projects side-by-side in one matrix, stress-test all 18 backend studios concurrently, export a client-ready HTML/Print-to-PDF infrastructure dossier, and self-host CloudPulse 2026 on Google Cloud Run in 1 command.',
+    howItWorks: [
+      'Tab 01 (Cloud Deploy & Canary CD + Firestore Native CRUD): Queries live clouddeploy.googleapis.com/v1 pipelines/targets and firestore.googleapis.com/v1 databases/documents; provisions 3-stage Canary pipelines (dev -> staging -> prod) and executes typed Firestore document upserts/deletes behind the Cost Gatekeeper.',
+      'Tab 02 (Active Assist Recommender & Regional Quota Radar): Queries recommender.googleapis.com/v1 (VM rightsizing, idle disks, unattached static IPs, IAM least-privilege insights) and compute.googleapis.com/compute/v1/projects/:id/regions to rank regional quotas by live utilization %.',
+      'Tab 03 (Multi-Project Estate Comparison Matrix): Calls GET /api/multi-project/compare to fan out across all active GCP projects on your account in parallel, comparing VMs, Cloud Run services, GCS buckets, BigQuery datasets, Firestore DBs, Service Accounts, $/hr burn, and Security Score (0–100) with 1-click project switching.',
+      'Tab 04 (18-Studio Live Stress Audit) & Tab 05 (1-Click Cloud Run Self-Hosting + Executive HTML/PDF Dossier): Fires concurrent probes against all 18 backend studio endpoints (POST /api/project/:id/wave11/stress-audit) measuring P50/P95/Max latency, generates a standalone Executive HTML/Print-to-PDF Dossier, and serves the multi-stage Dockerfile, cloudbuild.yaml, and ./deploy-cloudrun.sh self-hosting bundle.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/wave11/overview, POST /api/project/:id/wave11/clouddeploy/pipeline, POST & DELETE /api/project/:id/wave11/firestore/documents',
+      'GET /api/multi-project/compare, POST /api/project/:id/wave11/stress-audit & GET /api/project/:id/wave11/self-host-package',
+    ],
+    billingImpact:
+      '100% $0.00/mo read-only multi-project comparison, recommender discovery, and 18-studio stress auditing; Cloud Deploy includes 1 Free active pipeline/mo and Firestore Native includes 1 GiB + 50k reads/day + 20k writes/day Always Free.',
+  },
+  {
     id: 'open-source-2026-sre-log-explorer-wave1-wave2-wave3',
     wave: 'SRE LOG INTELLIGENCE · 2026 OPEN-SOURCE LOG EXPLORER SUITE (WAVE 1 + WAVE 2 + WAVE 3 · 12-TAB BENTO WORKBENCH)',
     title:

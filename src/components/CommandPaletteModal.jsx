@@ -121,6 +121,20 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-wave11-moonshot',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open Wave 11 Moonshot Studio (Cloud Deploy Canary, Firestore NoSQL, Quota Optimizer & Multi-Project Matrix)',
+        subtitle: 'Live clouddeploy.googleapis.com, firestore.googleapis.com, Active Assist Recommender, 18-Studio Stress Audit & Executive HTML Dossier',
+        keywords: 'wave 11 moonshot cloud deploy canary pipeline firestore nosql document recommender quota multi project compare stress audit dossier dockerfile',
+        badge: 'WAVE 11 MOONSHOT',
+        badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+        icon: Rocket,
+        run: () => {
+          onSelectTab('INNOVATION_LAB', 'WAVE11_MOONSHOT');
+          onClose();
+        }
+      },
+      {
         id: 'open-quantum-nexus',
         category: '2026 Innovation Lab (Star)',
         title: 'Open 2026 Quantum Nexus (Causal Blast-Radius, State Rollback, FinOps, PR Mirror & Honey-Grid)',

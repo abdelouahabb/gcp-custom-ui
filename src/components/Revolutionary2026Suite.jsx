@@ -30,6 +30,7 @@ import AutonomousCloudBrain from './AutonomousCloudBrain';
 import EngineerMoonshotsWave3 from './EngineerMoonshotsWave3';
 import Lab2026QuantumNexus from './Lab2026QuantumNexus';
 import GcloudAlphaBetaStudio from './GcloudAlphaBetaStudio';
+import Wave11MoonshotStudio from './Wave11MoonshotStudio';
 import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
@@ -198,6 +199,8 @@ export default function Revolutionary2026Suite({
   onOpenProvision,
   onDeleteResource,
   onSelectStudioTab,
+  onSelectProject,
+  onRunInShell,
   onShowToast,
   onShowError,
 }) {
@@ -1025,11 +1028,11 @@ export default function Revolutionary2026Suite({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2">
             {[
-              { id: 'ALL', code: 'ALL', label: 'All 17 Lab Suites' },
+              { id: 'ALL', code: 'ALL', label: 'All 18 Lab Suites' },
               {
                 id: 'ALPHA_BETA',
                 code: 'D01',
-                label: '[ALPHA/BETA] gcloud 588 (10)',
+                label: '[ALPHA/BETA] & W11 (15)',
               },
               {
                 id: 'QUANTUM',
@@ -1065,7 +1068,7 @@ export default function Revolutionary2026Suite({
                   onClick={() => {
                     setLabCategory(cat.id);
                     if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
-                    if (cat.id === 'ALPHA_BETA') setSubTab('GCLOUD_ALPHA_BETA');
+                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE11_MOONSHOT');
                   }}
                   title={cat.label}
                   className={`w-full h-10 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-1.5 ${
@@ -1093,6 +1096,15 @@ export default function Revolutionary2026Suite({
         {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
+            {
+              id: 'WAVE11_MOONSHOT',
+              category: 'ALPHA_BETA',
+              badge: 'WAVE 11 MOONSHOT',
+              label:
+                'Wave 11 Moonshot (Cloud Deploy, Firestore, Quotas, Multi-Project & Self-Host)',
+              tip: 'Live Google Cloud Deploy Canary Pipelines, Cloud Firestore NoSQL Document CRUD, Active Assist Recommender & Regional Quotas, Multi-Project Estate Matrix, 18-Studio Stress Audit & 1-Click Cloud Run Self-Hosting',
+              icon: Rocket,
+            },
             {
               id: 'GCLOUD_ALPHA_BETA',
               category: 'ALPHA_BETA',
@@ -1267,6 +1279,19 @@ export default function Revolutionary2026Suite({
             })}
         </div>
       </div>
+
+      {/* FLAGSHIP WAVE 11 MOONSHOT STUDIO */}
+      {subTab === 'WAVE11_MOONSHOT' && (
+        <Wave11MoonshotStudio
+          projectId={projectId}
+          overview={overview}
+          liveBurn={burn}
+          onSelectProject={onSelectProject}
+          onRunInShell={onRunInShell}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
+      )}
 
       {/* FLAGSHIP WAVE 1: [ALPHA / BETA] GCLOUD 588.0.0 FRONTIER STUDIO */}
       {subTab === 'GCLOUD_ALPHA_BETA' && (
