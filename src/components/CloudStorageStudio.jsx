@@ -943,7 +943,7 @@ export default function CloudStorageStudio({
                 onClick={() => setActiveSubTab(t.id)}
                 className={`px-3 py-1.5 rounded-xl font-bold border transition-all cursor-pointer ${
                   activeSubTab === t.id
-                    ? 'bg-zinc-50 dark:bg-zinc-900 text-white dark:bg-blue-500 dark:text-zinc-950 border-blue-500 shadow-sm'
+                    ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-zinc-950 border-blue-500 shadow-sm'
                     : 'bg-white/70 dark:bg-zinc-900/70 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                 }`}
               >

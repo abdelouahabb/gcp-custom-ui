@@ -4097,7 +4097,7 @@ export default function AwsAzureEnvySuiteStudio({
                 type="button"
                 onClick={handleSaveSpendFuse}
                 disabled={actionBusy === 'SAVE_FUSE'}
-                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-zinc-900 dark:text-white dark:text-zinc-950 cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-mono font-extrabold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -7194,7 +7194,7 @@ export default function AwsAzureEnvySuiteStudio({
                 type="button"
                 onClick={() => handleQueryCloudTrailLake()}
                 disabled={actionBusy === 'CLOUDTRAIL_QUERY'}
-                className="px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-950 cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 cursor-pointer"
               >
                 {actionBusy === 'CLOUDTRAIL_QUERY'
                   ? 'Scanning Audit Lake...'
@@ -7607,7 +7607,7 @@ export default function AwsAzureEnvySuiteStudio({
                   <button
                     type="submit"
                     disabled={actionBusy === 'AI_GW_TEST'}
-                    className="px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-950 cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-xs font-mono font-extrabold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 cursor-pointer"
                   >
                     {actionBusy === 'AI_GW_TEST'
                       ? 'Evaluating Guardrails...'
@@ -7821,7 +7821,7 @@ export default function AwsAzureEnvySuiteStudio({
                   <button
                     type="submit"
                     disabled={actionBusy === 'ALIYUN_PTS_DRILL'}
-                    className="px-3 py-1.5 rounded-xl font-extrabold bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-950 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl font-extrabold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 cursor-pointer"
                   >
                     {actionBusy === 'ALIYUN_PTS_DRILL'
                       ? 'Running PTS Surge...'

@@ -4353,7 +4353,7 @@ spec:
                                       }
                                       className={`text-[10.5px] font-mono font-bold px-2.5 py-1 rounded border transition-colors cursor-pointer ${
                                         isSelectedForAutopsy
-                                          ? 'bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                                          ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
                                           : 'bg-white dark:bg-zinc-950 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
                                       }`}
                                     >

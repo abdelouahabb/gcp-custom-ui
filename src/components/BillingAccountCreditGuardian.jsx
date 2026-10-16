@@ -1258,7 +1258,7 @@ ORDER BY
             </span>
           </button>
 
-          <label className="h-9 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all">
+          <label className="h-9 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all">
             <Database className="w-3.5 h-3.5 shrink-0" />
             <span>Upload Remaining Bonus CSV</span>
             <input
@@ -1370,7 +1370,7 @@ ORDER BY
                     'Console Download CSV Auto-Clicker JS'
                   )
                 }
-                className="h-8 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
                 title="Copies JS snippet targeting button[id$='billingtest-download-credits-csv']"
               >
                 {copiedId === 'dom-auto-click-csv' ? (
@@ -1786,7 +1786,7 @@ ORDER BY
                   <button
                     type="button"
                     onClick={() => onOpenBigQuerySql(bqCreditExportSql)}
-                    className="h-8 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
+                    className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all"
                   >
                     <Database className="w-3.5 h-3.5 shrink-0" />
                     <span>Audit Credits in BigQuery</span>
@@ -2106,7 +2106,7 @@ ORDER BY
                                     bp.cliLabel
                                   )
                                 }
-                                className="h-7 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                                className="h-7 px-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
                               >
                                 {copiedId === bp.cliId
                                   ? 'Copied!'
@@ -2162,7 +2162,7 @@ ORDER BY
                                 'Pre-Expiry Auto-Shutdown CLI'
                               )
                             }
-                            className="h-8 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold cursor-pointer"
+                            className="h-8 px-3 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold cursor-pointer"
                           >
                             {copiedId === 'harvester-cutoff'
                               ? 'Copied Guard CLI'
@@ -2548,7 +2548,7 @@ ORDER BY
             type="button"
             onClick={scanEgressAndLeftovers}
             disabled={loadingEgressRadar}
-            className="h-8 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+            className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${
@@ -2601,7 +2601,7 @@ ORDER BY
                           'Leftover Cleanup CLI'
                         )
                       }
-                      className="h-7 px-2.5 rounded bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                      className="h-7 px-2.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
                     >
                       {copiedId === item.id ? 'Copied CLI' : 'Copy Cleanup CLI'}
                     </button>
@@ -2702,7 +2702,7 @@ ORDER BY
               type="button"
               onClick={scanAlwaysFreeAuditor}
               disabled={loadingAlwaysFree}
-              className="h-7 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              className="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[10.5px] font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw
                 className={`w-3 h-3 ${loadingAlwaysFree ? 'animate-spin' : ''}`}
@@ -2869,7 +2869,7 @@ ORDER BY
                           `${item.product} $0/mo CLI`
                         )
                       }
-                      className="h-7 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
+                      className="h-7 px-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-bold cursor-pointer"
                     >
                       {copiedId === `free-cli-${item.id}`
                         ? '✓ Copied $0 CLI'

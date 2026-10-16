@@ -525,7 +525,7 @@ export default function GeminiCopilotModal({
                       type="button"
                       disabled={busyActionId === `dag-${rb.id}`}
                       onClick={() => handleExecuteRunbookDag(rb.id)}
-                      className="w-full py-2 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-zinc-900 dark:text-white dark:text-zinc-900 text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <Zap className="w-3.5 h-3.5" />
                       <span>
@@ -708,7 +708,7 @@ export default function GeminiCopilotModal({
                                   onSwitchProject(row.projectId);
                                 }
                               }}
-                              className="px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-900 dark:bg-zinc-100 text-zinc-900 dark:text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
+                              className="px-2 py-1 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
                             >
                               Switch
                             </button>
