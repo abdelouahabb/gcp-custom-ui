@@ -4323,6 +4323,25 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
       });
     }
 
+    if (
+      resolvedType === 'Secret Manager Secret' ||
+      resolvedType === 'SECRET_MANAGER'
+    ) {
+      const shortName = String(name).split('/').pop();
+      await gcpFetch(
+        `https://secretmanager.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/secrets/${encodeURIComponent(shortName)}`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 8000 }
+      );
+      return res.json({
+        ok: true,
+        message: `Deleted Secret Manager secret "${shortName}" from project ${projectId}.`,
+      });
+    }
+
     res
       .status(400)
       .json({ error: `Deletion not supported for type: ${resolvedType}` });
@@ -41424,88 +41443,16 @@ app.post('/api/project/:projectId/wave14/bigquery-time-travel', async (req, res)
     }
     const headers = getAttributionHeaders(token, projectId);
 
-    let targetDataset = String(datasetId || '').trim() || 'wave14_timetravel_forensics';
-    let targetTable = String(tableId || '').trim() || 'temporal_state_events';
+    const targetDataset = String(datasetId || '').trim();
+    const targetTable = String(tableId || '').trim();
+    if (!targetDataset || !targetTable) {
+      return res.status(400).json({
+        error: 'Please select or enter a BigQuery Dataset ID and Table ID to run Time-Travel SQL.',
+      });
+    }
     let targetLoc = String(location || 'US').trim().toUpperCase();
     if (!['US', 'EU'].includes(targetLoc) && !targetLoc.includes('-')) {
       targetLoc = 'US';
-    }
-
-    // Ensure dataset and table exist ONLY when user explicitly clicks Mutate & Prove
-    if (injectMutationBeforeDiff) {
-      await axios
-        .post(
-          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
-          {
-            datasetReference: { projectId, datasetId: targetDataset },
-            location: targetLoc,
-            description: 'Wave 14 Live BigQuery Time-Travel Forensics Dataset',
-            labels: {
-              managed_by: 'cloudpulse_wave14',
-              sre_self_healed: 'true',
-              zero_trust_tier: 'enforced',
-            },
-          },
-          { headers, timeout: 12000 }
-        )
-        .catch(() => null);
-
-      if (targetTable === 'temporal_state_events') {
-        const createdNewTable = await axios
-          .post(
-            `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets/${encodeURIComponent(targetDataset)}/tables`,
-            {
-              tableReference: {
-                projectId,
-                datasetId: targetDataset,
-                tableId: targetTable,
-              },
-              schema: {
-                fields: [
-                  { name: 'event_id', type: 'STRING', mode: 'REQUIRED' },
-                  { name: 'recorded_at', type: 'TIMESTAMP', mode: 'REQUIRED' },
-                  { name: 'mutation_actor', type: 'STRING', mode: 'NULLABLE' },
-                  { name: 'mutation_note', type: 'STRING', mode: 'NULLABLE' },
-                  { name: 'merkle_hash', type: 'STRING', mode: 'NULLABLE' },
-                ],
-              },
-            },
-            { headers, timeout: 12000 }
-          )
-          .then(() => true)
-          .catch(() => false);
-
-        if (createdNewTable) {
-          // Wait 1.5s so BigQuery storage registers the table creation timestamp
-          await new Promise((r) => setTimeout(r, 1500));
-          // Seed initial baseline row if newly created
-          await axios
-            .post(
-              `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets/${encodeURIComponent(targetDataset)}/tables/${encodeURIComponent(targetTable)}/insertAll`,
-              {
-                rows: [
-                  {
-                    insertId: `seed-${Date.now()}`,
-                    json: {
-                      event_id: `seed-${Date.now()}`,
-                      recorded_at: new Date().toISOString(),
-                      mutation_actor: 'cloudpulse-genesis-baseline',
-                      mutation_note: 'Baseline state before temporal diff',
-                      merkle_hash: crypto
-                        .createHash('sha256')
-                        .update(`seed-${projectId}`)
-                        .digest('hex')
-                        .slice(0, 24),
-                    },
-                  },
-                ],
-              },
-              { headers, timeout: 10000 }
-            )
-            .catch(() => null);
-          await new Promise((r) => setTimeout(r, 1200));
-        }
-      }
     }
 
     let snapshotIsoUsed = null;
