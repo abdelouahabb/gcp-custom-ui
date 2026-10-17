@@ -872,10 +872,62 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/mcp/call-tool') ||
       rawUrl.includes('/wave11/stress-audit') ||
       rawUrl.includes('/wave12/ludicrous-megacast') ||
-      rawUrl.includes('/wave12/flight-director');
+      rawUrl.includes('/wave12/flight-director') ||
+      rawUrl.includes('/wave13/starlink-orbital-probe') ||
+      rawUrl.includes('/wave13/neuralink-compile') ||
+      rawUrl.includes('/wave13/optimus-swarm-debate') ||
+      rawUrl.includes('/wave13/blackbox-seal');
 
     if (isReadOnlyOrDryRun) {
       return null;
+    }
+
+    // 3A-000a. Wave 13 Starlink Orbital Geo-Failover Standby (/wave13/starlink-failover-execute)
+    if (rawUrl.includes('/wave13/starlink-failover-execute')) {
+      const corridorId = body.corridorId || 'corridor-us-eu';
+      const targetReg = body.targetRegion || 'US';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm Starlink Orbital Geo-Standby Failover (${targetReg})?`,
+        headerBadge: 'Wave 13 Starlink Orbital Mesh Gatekeeper',
+        targetLabel: 'Intercontinental Corridor & Geo-Standby Jurisdiction',
+        resourceKind: `BigQuery Geo-Failover Dataset (${corridorId})`,
+        targetName: `${projectId}:starlink_orbital_failover_${String(targetReg).toLowerCase()}`,
+        location: targetReg,
+        projectId,
+        method: 'STARLINK GEO-FAILOVER',
+        endpoint: rawUrl,
+        confirmLabel: `Engage Orbital Geo-Standby in ${targetReg} ($0.00)`,
+        cancelToast: 'Starlink Orbital Geo-Standby cancelled.',
+        whatHappensNext: `1. Provisions or synchronizes standby BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in "${targetReg}" via bigquery.googleapis.com/bigquery/v2.\n2. Binds corridor failover metadata for "${corridorId}".\n3. Signs and appends an Ed25519 (RFC 8032) cryptographic block to the Wave 13 Black-Box Flight Recorder.`,
+        costWarning: `ZERO IDLE COST ($0.00/MO): Creating or updating a BigQuery dataset container incurs $0.00/mo in Google Cloud charges.`,
+        impactWarning: `Provisions/updates live BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in project "${projectId}".`,
+      };
+    }
+
+    // 3A-000b. Wave 13 Neuralink 4-Node DAG Materializer (/wave13/neuralink-materialize)
+    if (rawUrl.includes('/wave13/neuralink-materialize')) {
+      const slug = body.stackSlug || 'neuralink_singularity_2026';
+      const loc = body.location || 'US';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm Neuralink 4-Node DAG Materialization ("${slug}")?`,
+        headerBadge: 'Wave 13 Neuralink Thought-to-Cloud Gatekeeper',
+        targetLabel: '4-Node Parallel Cloud Architecture DAG',
+        resourceKind: 'GCS Hardened Bucket + BigQuery Dataset + Typed Table + Secret Manager Vault',
+        targetName: `${projectId} · ${slug} (${loc})`,
+        location: loc,
+        projectId,
+        method: 'NEURALINK 4-NODE DAG',
+        endpoint: rawUrl,
+        confirmLabel: `Materialize 4-Node DAG on ${projectId}`,
+        cancelToast: 'Neuralink 4-Node DAG materialization cancelled.',
+        whatHappensNext: `1. Node 01: Provisions hardened Cloud Storage bucket (Public Access Prevention + Uniform IAM + 7d Soft-Delete) via storage.googleapis.com/storage/v1.\n2. Node 02 & 03: Provisions BigQuery dataset "${slug}_lakehouse" and 5-column typed table "neural_telemetry_events" via bigquery.googleapis.com/bigquery/v2.\n3. Node 04: Provisions AES-256 hardware-encrypted Secret Manager container via secretmanager.googleapis.com/v1.\n4. Seals the 4-node execution receipt in the Ed25519 Black-Box Ledger.`,
+        costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 INITIAL COST): Empty GCS buckets, BigQuery dataset/table metadata, and up to 6 Secret Manager versions per month fall within Google Cloud's Always-Free Tier ($0.00/mo).`,
+        impactWarning: `Provisions/verifies 4 live Google Cloud resources in project "${projectId}" (${loc}).`,
+      };
     }
 
     // 3A-00a. Wave 12 Closed-Loop FSD Cloud Autopilot Maneuver (/wave12/autopilot-execute)

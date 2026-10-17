@@ -121,6 +121,20 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-wave13-starlink-neuralink',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity',
+        subtitle: '6-Corridor Subsea vs. 550km Vacuum Laser Probe, Neuralink 1-Sentence 4-Node DAG Executor, Optimus 3-Agent Council & Ed25519 Black-Box Ledger',
+        keywords: 'wave 13 starlink orbital laser subsea fiber neuralink thought to cloud dag compiler optimus 3 agent council ed25519 blackbox signature',
+        badge: 'WAVE 13 SINGULARITY',
+        badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        icon: Globe,
+        run: () => {
+          onSelectTab('INNOVATION_LAB', 'WAVE13_STARLINK_NEURALINK');
+          onClose();
+        }
+      },
+      {
         id: 'open-wave12-roadster',
         category: '2026 Innovation Lab (Star)',
         title: 'Open Wave 12 SpaceX Roadster Autopilot & Zero-Gravity Flight Deck',

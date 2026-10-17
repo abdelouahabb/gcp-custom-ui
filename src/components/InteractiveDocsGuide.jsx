@@ -31,6 +31,32 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'wave13-starlink-orbital-mesh-neuralink-cloud-singularity',
+    wave: 'WAVE 13 STARLINK ORBITAL MESH & NEURALINK CLOUD SINGULARITY · LEO LASER PROBE, 4-NODE DAG COMPILER, OPTIMUS 3-AGENT COUNCIL & Ed25519 BLACK-BOX',
+    title:
+      'Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity — 6-Corridor Subsea vs. 550km Vacuum Laser Probe, 1-Sentence Thought-to-Cloud 4-Node DAG Executor, Optimus 3-Agent Council Debate & Ed25519 Signed Black-Box Ledger',
+    badge: '2026 INNOVATION LAB (WAVE 13 · #1)',
+    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    icon: Globe,
+    targetTab: 'INNOVATION_LAB',
+    targetSubTab: 'WAVE13_STARLINK_NEURALINK',
+    problemSolved:
+      'Intercontinental cloud architectures suffer from refractive submarine glass latency (204.2 km/ms) and cable-cut blackouts, manual multi-service provisioning friction, conflicting FinOps vs. Security vs. SRE priorities, and unsigned audit logs that lack cryptographic non-repudiation.',
+    howItWorks: [
+      'Module 01 (Starlink Orbital Laser & Subsea Fiber Blackout Rerouter): Probes 6 intercontinental corridors via live Node.js dns.promises.lookup and tls.connect TLS 1.3 handshakes, compares subsea fiber RTT vs. 550km LEO vacuum laser propagation (299.79 km/ms), simulates subsea cable cuts, and provisions live Geo-Failover Standby datasets.',
+      'Module 02 (Neuralink Thought-to-Cloud 4-Node DAG Executor): Compiles a 1-sentence architecture intent into a deterministic 4-node DAG (Hardened GCS Bucket + BigQuery Dataset + 5-Column Typed Table + Secret Manager Vault) with a SHA-256 DAG digest and materializes all 4 live GCP resources in parallel.',
+      'Module 03 (Optimus 3-Agent Autonomous Council): Convene a structured 3-agent debate (Optimus FinOps Hawk, Optimus Zero-Trust Sentinel, Optimus SRE Reliability Prime) over your live project state to synthesize a formatted Markdown Consensus Resolution & gcloud runbook.',
+      'Module 04 (Cryptographic Ed25519 & SHA-256 Hash-Chained Black-Box Ledger): Generates an in-memory Ed25519 asymmetric keypair (RFC 8032), chains every block via prevBlockHash -> blockHash, signs and verifies every mutation using crypto.sign and crypto.verify, and exports signed compliance bundles.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/wave13/starlink-orbital-probe & POST /api/project/:id/wave13/starlink-failover-execute',
+      'POST /api/project/:id/wave13/neuralink-compile & POST /api/project/:id/wave13/neuralink-materialize',
+      'POST /api/project/:id/wave13/optimus-swarm-debate, GET /api/project/:id/wave13/blackbox-ledger & POST /api/project/:id/wave13/blackbox-seal',
+    ],
+    billingImpact:
+      '100% $0.00/mo for TLS 1.3 orbital probes, DAG compilation, 3-agent council synthesis, and Ed25519 ledger verification; all 4 materialized DAG nodes fall within Google Cloud Always-Free Tier allowances.',
+  },
+  {
     id: 'wave12-spacex-roadster-autopilot-zero-gravity-flight-deck',
     wave: 'WAVE 12 SPACEX ROADSTER FLIGHT DECK · FSD CLOUD AUTOPILOT, CROSS-PROJECT TELEPORTER, 12-WAY MCP MEGACAST & GEMINI 2.5 FLIGHT DIRECTOR',
     title:

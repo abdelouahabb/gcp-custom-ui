@@ -32,6 +32,7 @@ import Lab2026QuantumNexus from './Lab2026QuantumNexus';
 import GcloudAlphaBetaStudio from './GcloudAlphaBetaStudio';
 import Wave11MoonshotStudio from './Wave11MoonshotStudio';
 import Wave12RoadsterFlightDeckStudio from './Wave12RoadsterFlightDeckStudio';
+import Wave13StarlinkNeuralinkStudio from './Wave13StarlinkNeuralinkStudio';
 import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
@@ -207,7 +208,7 @@ export default function Revolutionary2026Suite({
 }) {
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
   const [subTab, setSubTab] = useState(
-    initialSubTab === 'TOPOLOGY' ? 'WAVE12_ROADSTER' : initialSubTab || 'WAVE12_ROADSTER'
+    initialSubTab === 'TOPOLOGY' ? 'WAVE13_STARLINK_NEURALINK' : initialSubTab || 'WAVE13_STARLINK_NEURALINK'
   );
   const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState([]);
@@ -1016,7 +1017,7 @@ export default function Revolutionary2026Suite({
         </div>
       )}
 
-      {/* Category Filter Bar for 19 Lab Suites (Equal-Sized 7-Column Bento Grid) */}
+      {/* Category Filter Bar for 20 Lab Suites (Equal-Sized 7-Column Bento Grid) */}
       <div className="space-y-3">
         <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-2">
           <div className="flex items-center justify-between px-1">
@@ -1024,16 +1025,16 @@ export default function Revolutionary2026Suite({
               Lab Domain Filter (7 Equal Domains):
             </span>
             <span className="text-[11px] font-mono text-zinc-500">
-              19 Specialized Cloud Labs
+              20 Specialized Cloud Labs
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2">
             {[
-              { id: 'ALL', code: 'ALL', label: 'All 19 Lab Suites' },
+              { id: 'ALL', code: 'ALL', label: 'All 20 Lab Suites' },
               {
                 id: 'ALPHA_BETA',
                 code: 'D01',
-                label: 'W12 Roadster, W11 & [ALPHA]',
+                label: 'W13 Starlink, W12 & W11',
               },
               {
                 id: 'QUANTUM',
@@ -1069,7 +1070,7 @@ export default function Revolutionary2026Suite({
                   onClick={() => {
                     setLabCategory(cat.id);
                     if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
-                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE12_ROADSTER');
+                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE13_STARLINK_NEURALINK');
                   }}
                   title={cat.label}
                   className={`w-full h-10 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-1.5 ${
@@ -1097,6 +1098,15 @@ export default function Revolutionary2026Suite({
         {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
+            {
+              id: 'WAVE13_STARLINK_NEURALINK',
+              category: 'ALPHA_BETA',
+              badge: 'WAVE 13 SINGULARITY',
+              label:
+                'Wave 13 Starlink & Neuralink (Orbital Laser, Thought-to-Cloud DAG, Optimus & Ed25519)',
+              tip: 'Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity: 6-Corridor Subsea vs. 550km Vacuum Laser Probe + Geo-Failover, Neuralink 1-Sentence Thought-to-Cloud 4-Node DAG Executor, Optimus 3-Agent Council Debate & Ed25519 Signed Black-Box Flight Recorder',
+              icon: Globe,
+            },
             {
               id: 'WAVE12_ROADSTER',
               category: 'ALPHA_BETA',
@@ -1289,6 +1299,15 @@ export default function Revolutionary2026Suite({
             })}
         </div>
       </div>
+
+      {/* FLAGSHIP WAVE 13 STARLINK ORBITAL MESH & NEURALINK SINGULARITY STUDIO */}
+      {subTab === 'WAVE13_STARLINK_NEURALINK' && (
+        <Wave13StarlinkNeuralinkStudio
+          projectId={projectId}
+          onShowToast={onShowToast}
+          onRefreshOverview={onRefreshOverview}
+        />
+      )}
 
       {/* FLAGSHIP WAVE 12 ROADSTER FLIGHT DECK STUDIO */}
       {subTab === 'WAVE12_ROADSTER' && (
