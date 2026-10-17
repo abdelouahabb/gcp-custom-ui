@@ -31,6 +31,32 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'wave15-dyson-vector-sql-slsa-provenance-logging-surgeon-tls-x509',
+    wave: 'WAVE 15 MOONSHOT · BIGQUERY Z-SCORE & COSINE VECTOR SQL, SLSA v1.0 DSSE PROVENANCE, CLOUD LOGGING SURGEON & LIVE TLS 1.3 X.509 INSPECTOR',
+    title:
+      'Wave 15 Moonshot — Live BigQuery Statistical Z-Score & Cosine Vector SQL CTE, Cloud Build + Artifact Registry SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 2.5 Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
+    badge: '2026 INNOVATION LAB (WAVE 15 · #1)',
+    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    icon: Database,
+    targetTab: 'INNOVATION_LAB',
+    targetSubTab: 'WAVE15_DYSON_MOONSHOT',
+    problemSolved:
+      'Modern cloud SRE and security teams need on-demand statistical anomaly detection and semantic vector search directly inside BigQuery SQL without external vector databases, cryptographic SLSA v1.0 provenance signing over live Cloud Build and Artifact Registry SHA-256 digests, real-time Cloud Logging correlation with AI root-cause remediation, and live TLS 1.3 X.509 certificate chain & expiration forensics.',
+    howItWorks: [
+      'Module 01 (Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine): Inspects your existing BigQuery table schema via bigquery.googleapis.com and executes a live Standard SQL CTE computing sample mean, standard deviation, per-row Z-scores, and normalized token cosine similarity with zero auto-provisioning.',
+      'Module 02 (SLSA v1.0 Supply-Chain Provenance & Artifact Digest Verifier): Queries cloudbuild.googleapis.com, artifactregistry.googleapis.com, and run.googleapis.com to correlate deployed containers with immutable @sha256 digests and signs an Ed25519 DSSE (Dead Simple Signing Envelope) SLSA v1.0 In-Toto statement.',
+      'Module 03 (Live Cloud Logging Root-Cause Correlator & Gemini 2.5 Surgeon): Queries logging.googleapis.com/v2/entries:list across customizable severity, resource.type, and temporal windows, and streams a grounded Vertex AI Gemini 2.5 Flash Root-Cause Analysis & gcloud logging runbook.',
+      'Module 04 (Live TLS 1.3 X.509 Certificate & Cipher Inspector): Performs real Node tls.connect socket handshakes against your live Cloud Run .run.app services and GCP regional endpoints, extracting leaf X.509 SHA-256 fingerprints, SANs, negotiated AEAD ciphers, ALPN protocol, and days remaining until certificate expiration.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/wave15/bigquery-anomaly-vector',
+      'GET /api/project/:id/wave15/supply-chain-provenance & POST /api/project/:id/wave15/attest-slsa-provenance',
+      'POST /api/project/:id/wave15/logging-correlator, POST /api/project/:id/wave15/logging-ai-surgeon & POST /api/project/:id/wave15/tls-x509-inspector',
+    ],
+    billingImpact:
+      '100% $0.00/mo for TLS 1.3 X.509 handshakes, Artifact Registry/Cloud Build metadata discovery, and Ed25519 DSSE signing; on-demand BigQuery CTEs and Cloud Logging queries fall within Always-Free Tier allowances.',
+  },
+  {
     id: 'wave14-quantum-envelope-bigquery-time-travel-self-healing-doctor',
     wave: 'WAVE 14 QUANTUM ENVELOPE VAULT, BIGQUERY TIME-TRAVEL SQL, SELF-HEALING CLOUD DOCTOR & IAM BLAST-RADIUS GRAPH (100% LIVE)',
     title:

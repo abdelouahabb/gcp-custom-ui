@@ -121,6 +121,20 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-wave15-dyson-moonshot',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open Wave 15 Moonshot: BigQuery Vector/Z-Score SQL, SLSA v1.0 DSSE Provenance, Cloud Logging Surgeon & TLS 1.3 X.509 Inspector',
+        subtitle: 'Live BigQuery Standard SQL Z-Score & Cosine Vector CTE, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Attestor, Live logging.googleapis.com Correlator + Gemini 2.5 RCA & Real TLS 1.3 X.509 Handshake Inspector',
+        keywords: 'wave 15 moonshot bigquery vector cosine similarity zscore anomaly sql slsa provenance in-toto dsse artifact registry cloud build logging entries list gemini surgeon tls 1.3 x509 certificate cipher',
+        badge: 'WAVE 15 MOONSHOT',
+        badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab('INNOVATION_LAB', 'WAVE15_DYSON_MOONSHOT');
+          onClose();
+        }
+      },
+      {
         id: 'open-wave14-quantum-doctor',
         category: '2026 Innovation Lab (Star)',
         title: 'Open Wave 14 Quantum Envelope Vault, BigQuery Time-Travel SQL, Self-Healing Doctor & IAM Blast-Radius',

@@ -75,8 +75,10 @@ function cloudpulseBackendWatchdogPlugin({ backendHost, backendPort, enabled }) 
       }
       restartBackendProcess();
       const timer = setInterval(ensureBackendRunning, 4000);
-      fs.watchFile(serverScript, { interval: 1500 }, () => {
-        restartBackendProcess();
+      fs.watchFile(serverScript, { interval: 1000 }, (curr, prev) => {
+        if (curr.mtimeMs !== prev.mtimeMs) {
+          restartBackendProcess();
+        }
       });
       server.httpServer?.once('close', () => {
         clearInterval(timer);
@@ -212,7 +214,8 @@ export default defineConfig(({ mode }) => {
               id.includes('src/components/Wave11MoonshotStudio') ||
               id.includes('src/components/Wave12RoadsterFlightDeckStudio') ||
               id.includes('src/components/Wave13StarlinkNeuralinkStudio') ||
-              id.includes('src/components/Wave14QuantumTimeTravelDoctorStudio')
+              id.includes('src/components/Wave14QuantumTimeTravelDoctorStudio') ||
+              id.includes('src/components/Wave15DysonSupplyLoggingTlsStudio')
             ) {
               return 'studio-innovation-lab';
             }

@@ -34,6 +34,7 @@ import Wave11MoonshotStudio from './Wave11MoonshotStudio';
 import Wave12RoadsterFlightDeckStudio from './Wave12RoadsterFlightDeckStudio';
 import Wave13StarlinkNeuralinkStudio from './Wave13StarlinkNeuralinkStudio';
 import Wave14QuantumTimeTravelDoctorStudio from './Wave14QuantumTimeTravelDoctorStudio';
+import Wave15DysonSupplyLoggingTlsStudio from './Wave15DysonSupplyLoggingTlsStudio';
 import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
@@ -1026,16 +1027,16 @@ export default function Revolutionary2026Suite({
               Lab Domain Filter (7 Equal Domains):
             </span>
             <span className="text-[11px] font-mono text-zinc-500">
-              21 Specialized Cloud Labs
+              22 Specialized Cloud Labs
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2">
             {[
-              { id: 'ALL', code: 'ALL', label: 'All 21 Lab Suites' },
+              { id: 'ALL', code: 'ALL', label: 'All 22 Lab Suites' },
               {
                 id: 'ALPHA_BETA',
                 code: 'D01',
-                label: 'W14, W13, W12 & W11',
+                label: 'W15, W14, W13, W12 & W11',
               },
               {
                 id: 'QUANTUM',
@@ -1071,7 +1072,7 @@ export default function Revolutionary2026Suite({
                   onClick={() => {
                     setLabCategory(cat.id);
                     if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
-                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE14_QUANTUM_DOCTOR');
+                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE15_DYSON_MOONSHOT');
                   }}
                   title={cat.label}
                   className={`w-full h-10 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-1.5 ${
@@ -1099,6 +1100,15 @@ export default function Revolutionary2026Suite({
         {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
+            {
+              id: 'WAVE15_DYSON_MOONSHOT',
+              category: 'ALPHA_BETA',
+              badge: 'WAVE 15 MOONSHOT',
+              label:
+                'Wave 15 Moonshot (BQ Vector/Z-Score SQL, SLSA v1.0 DSSE, Log Surgeon & TLS 1.3 X.509)',
+              tip: 'Wave 15 Moonshot: Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 2.5 Root-Cause Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
+              icon: Database,
+            },
             {
               id: 'WAVE14_QUANTUM_DOCTOR',
               category: 'ALPHA_BETA',
@@ -1309,6 +1319,14 @@ export default function Revolutionary2026Suite({
             })}
         </div>
       </div>
+
+      {/* FLAGSHIP WAVE 15 DYSON VECTOR SQL, SLSA v1.0 PROVENANCE, LOGGING SURGEON & TLS 1.3 X.509 STUDIO */}
+      {subTab === 'WAVE15_DYSON_MOONSHOT' && (
+        <Wave15DysonSupplyLoggingTlsStudio
+          projectId={projectId}
+          onShowToast={onShowToast}
+        />
+      )}
 
       {/* FLAGSHIP WAVE 14 QUANTUM VAULT, BIGQUERY TIME-TRAVEL & SELF-HEALING DOCTOR STUDIO */}
       {subTab === 'WAVE14_QUANTUM_DOCTOR' && (
