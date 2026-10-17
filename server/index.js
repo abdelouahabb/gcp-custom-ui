@@ -39949,7 +39949,11 @@ app.post('/api/project/:projectId/wave12/flight-director', async (req, res) => {
               ],
             },
           ],
-          generationConfig: { temperature: 0.15, maxOutputTokens: 2048 },
+          generationConfig: {
+            temperature: 0.15,
+            maxOutputTokens: 8192,
+            thinkingConfig: { thinkingBudget: 512 },
+          },
         },
         {
           headers: {
@@ -40847,7 +40851,8 @@ app.post('/api/project/:projectId/wave13/optimus-swarm-debate', async (req, res)
           ],
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 1536,
+            maxOutputTokens: 8192,
+            thinkingConfig: { thinkingBudget: 512 },
           },
         },
         {
@@ -40856,14 +40861,15 @@ app.post('/api/project/:projectId/wave13/optimus-swarm-debate', async (req, res)
             'Content-Type': 'application/json',
             'x-goog-user-project': projectId,
           },
-          timeout: 14000,
+          timeout: 18000,
         }
       );
       const text =
         vertexRes.data?.candidates?.[0]?.content?.parts
+          ?.filter((p) => !p.thought)
           ?.map((p) => p.text || '')
           .join('\n') || '';
-      if (text.trim()) {
+      if (text.trim().length > 350) {
         consensusMarkdown = text.trim();
         engineUsed = 'VERTEX_AI_GEMINI_2_5_FLASH_COUNCIL';
       }
