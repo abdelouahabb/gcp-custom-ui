@@ -1106,7 +1106,7 @@ export default function Revolutionary2026Suite({
               badge: 'WAVE 15 MOONSHOT',
               label:
                 'Wave 15 Moonshot (BQ Vector/Z-Score SQL, SLSA v1.0 DSSE, Log Surgeon & TLS 1.3 X.509)',
-              tip: 'Wave 15 Moonshot: Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 2.5 Root-Cause Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
+              tip: 'Wave 15 Moonshot: Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 3.8 Flash Root-Cause Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
               icon: Database,
             },
             {
@@ -1133,7 +1133,7 @@ export default function Revolutionary2026Suite({
               badge: 'WAVE 12 ROADSTER',
               label:
                 'Wave 12 Roadster (FSD Autopilot, Cross-Project Teleport & 12-Way Megacast)',
-              tip: 'SpaceX Roadster Zero-Gravity Flight Deck: Closed-Loop FSD Cloud Autopilot with SHA-256 Merkle proofs, Zero-Gravity Cross-Project Live Resource Teleporter (BigQuery + GCS + Secrets), Ludicrous-Mode 12-Way Parallel MCP Megacast & Grounded Gemini 2.5 Flash Flight Director',
+              tip: 'SpaceX Roadster Zero-Gravity Flight Deck: Closed-Loop FSD Cloud Autopilot with SHA-256 Merkle proofs, Zero-Gravity Cross-Project Live Resource Teleporter (BigQuery + GCS + Secrets), Ludicrous-Mode 12-Way Parallel MCP Megacast & Grounded Gemini 3.8 Flash Flight Director',
               icon: Rocket,
             },
             {

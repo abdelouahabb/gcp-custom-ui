@@ -692,18 +692,6 @@ US_TAXPAYER_SSN=123-45-6789
       id: 'gemini-3.1-pro',
       label: 'gemini-3.1-pro (2026 Deep Architecture & Security Reasoning)',
     },
-    {
-      id: 'gemini-3.1-flash-lite',
-      label: 'gemini-3.1-flash-lite (Sub-Second Telemetry Triage)',
-    },
-    {
-      id: 'gemini-2.5-pro',
-      label: 'gemini-2.5-pro (Legacy Long-Context Fallback)',
-    },
-    {
-      id: 'gemini-2.5-flash',
-      label: 'gemini-2.5-flash (Legacy Fast Fallback)',
-    },
   ]);
   const [discoveringModels, setDiscoveringModels] = useState(false);
   const [aiPrompt, setAiPrompt] = useState(
@@ -1102,8 +1090,6 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
             activeModel,
             'gemini-3.8-flash',
             'gemini-3.1-pro',
-            'gemini-2.5-flash',
-            'gemini-2.0-flash',
           ])
         );
 
@@ -2143,7 +2129,7 @@ CMD ["server/index.js"]`;
               <select
                 value={selectedGeminiModel}
                 onChange={(e) => setSelectedGeminiModel(e.target.value)}
-                title="Choose which Gemini model powers the SRE Co-Architect (gemini-3.8-flash, gemini-3.1-pro, gemini-3.1-flash-lite, or any custom model ID)"
+                title="Choose which Gemini model powers the SRE Co-Architect (gemini-3.8-flash or gemini-3.1-pro)"
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-2 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
               >
                 {availableModels.map((m) => (
@@ -2205,11 +2191,6 @@ CMD ["server/index.js"]`;
                   badge: 'gemini-3.1-pro (Deep Architecture)',
                   tip: 'Switch to gemini-3.1-pro: Deep multi-layer cloud architecture, IAM security & compliance reasoning',
                 },
-                {
-                  id: 'gemini-3.1-flash-lite',
-                  badge: 'gemini-3.1-flash-lite (Sub-Second)',
-                  tip: 'Switch to gemini-3.1-flash-lite: Ultra-low-latency telemetry triage and rapid command generation',
-                },
               ].map((preset) => (
                 <button
                   key={preset.id}
@@ -2233,7 +2214,7 @@ CMD ["server/index.js"]`;
                 value={customModelId}
                 onChange={(e) => setCustomModelId(e.target.value)}
                 title="Enter any custom or newly released Google AI Studio Gemini model identifier"
-                placeholder="Enter custom model ID (e.g. gemini-4.0-ultra-exp)"
+                placeholder="Enter custom model ID (e.g. gemini-3.8-flash)"
                 className="w-72 bg-zinc-50 dark:bg-zinc-950 border border-blue-500/50 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               />
             )}

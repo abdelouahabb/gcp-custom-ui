@@ -43,7 +43,7 @@ const FLIGHT_DECK_TABS = [
   {
     id: 'FLIGHT_DIRECTOR',
     step: '04',
-    title: 'Gemini 2.5 Flash Grounded Flight Director',
+    title: 'Gemini 3.8 Flash Grounded Flight Director',
     subtitle: 'Live Autopilot + Developer Knowledge MCP Mission Briefing',
     icon: Sparkles,
   },
@@ -1167,12 +1167,12 @@ export default function Wave12RoadsterFlightDeckStudio({
         </div>
       )}
 
-      {/* TAB 04: GEMINI 2.5 FLASH GROUNDED FLIGHT DIRECTOR */}
+      {/* TAB 04: GEMINI 3.8 FLASH GROUNDED FLIGHT DIRECTOR */}
       {activeTab === 'FLIGHT_DIRECTOR' && (
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4">
           <div>
             <div className="text-[10px] font-mono font-extrabold uppercase text-purple-600 dark:text-purple-400">
-              VERTEX AI GEMINI 2.5 FLASH + DEVELOPER KNOWLEDGE MCP + AUTOPILOT SHA-256
+              VERTEX AI GEMINI 3.8 FLASH + DEVELOPER KNOWLEDGE MCP + AUTOPILOT SHA-256
             </div>
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               Grounded Flight Director Mission Briefing

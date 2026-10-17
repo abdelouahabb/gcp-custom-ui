@@ -7404,7 +7404,7 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
 
   if (apiKey) {
     try {
-      const modelId = encryptedAiStudioVault?.model || 'gemini-2.5-flash';
+      const modelId = encryptedAiStudioVault?.model || 'gemini-3.8-flash';
       const resp = await gcpHttp.post(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
           modelId
@@ -7461,7 +7461,7 @@ Return ONLY a compact JSON object with keys: {"lql": "...", "explanation": "..."
   // Tier 2: Vertex AI Gemini via Active gcloud ADC Access Token (only when user explicitly opted in)
   if (accessToken && rawQuery.trim().split(/\s+/).length >= 2) {
     try {
-      const selectedModelId = encryptedAiStudioVault?.model || 'gemini-2.5-flash';
+      const selectedModelId = encryptedAiStudioVault?.model || 'gemini-3.8-flash';
       const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
         projectId
       )}/locations/us-central1/publishers/google/models/${encodeURIComponent(
@@ -10318,7 +10318,7 @@ Answer the operator's question concisely in markdown with exact gcloud/bq remedi
 
     try {
       if (vaultEntry?.apiKey) {
-        const chosenModel = vaultEntry.model || 'gemini-2.5-flash';
+        const chosenModel = vaultEntry.model || 'gemini-3.8-flash';
         const gemRes = await axios.post(
           `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
             chosenModel
@@ -13435,18 +13435,6 @@ const DEFAULT_2026_GEMINI_MODELS = [
     id: 'gemini-3.1-pro',
     label: ' gemini-3.1-pro (2026 Deep Architecture & Security Reasoning)',
   },
-  {
-    id: 'gemini-3.1-flash-lite',
-    label: ' gemini-3.1-flash-lite (Sub-Second Telemetry Triage)',
-  },
-  {
-    id: 'gemini-2.5-pro',
-    label: ' gemini-2.5-pro (Legacy Long-Context Fallback)',
-  },
-  {
-    id: 'gemini-2.5-flash',
-    label: ' gemini-2.5-flash (Legacy Fast Fallback)',
-  },
 ];
 
 app.get('/api/ai-vault/status', (req, res) => {
@@ -13616,8 +13604,6 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
         primaryModel,
         'gemini-3.8-flash',
         'gemini-3.1-pro',
-        'gemini-2.5-flash',
-        'gemini-2.0-flash',
       ])
     );
 
@@ -31982,10 +31968,10 @@ app.post(
           body.routeName || 'enterprise-rag-ai-gateway'
         ).trim();
         const primaryModel = String(
-          body.primaryModel || 'gemini-2.5-pro'
+          body.primaryModel || 'gemini-3.1-pro'
         ).trim();
         const fallbackModel = String(
-          body.fallbackModel || 'gemini-2.5-flash'
+          body.fallbackModel || 'gemini-3.8-flash'
         ).trim();
         const thirdFallbackModel = String(
           body.thirdFallbackModel || 'claude-3-7-sonnet@20250219'
@@ -32067,8 +32053,8 @@ app.post(
           lower.includes('bypass guardrail');
 
         const selectedModel = simulatePrimaryOutage
-          ? activeRoute?.fallbackModel || 'gemini-2.5-flash'
-          : activeRoute?.primaryModel || 'gemini-2.5-pro';
+          ? activeRoute?.fallbackModel || 'gemini-3.8-flash'
+          : activeRoute?.primaryModel || 'gemini-3.1-pro';
 
         let liveModelResponseText = null;
         if (!injectionDetected) {
@@ -32078,7 +32064,7 @@ app.post(
               url: `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
                 projectId
               )}/locations/us-central1/publishers/google/models/${encodeURIComponent(
-                selectedModel.startsWith('gemini') ? selectedModel : 'gemini-2.5-flash'
+                selectedModel.startsWith('gemini') ? selectedModel : 'gemini-3.8-flash'
               )}:generateContent`,
               token,
               quotaProject: projectId,
@@ -38631,7 +38617,7 @@ app.post('/api/project/:projectId/mcp/run-triage-chain', async (req, res) => {
 
 // 5. POST /api/project/:projectId/mcp/agent-chat
 // Executes live Google Cloud Remote MCP tools (readOnlyHint=true) and synthesizes
-// the grounded response with Vertex AI Gemini 2.5 Flash
+// the grounded response with Vertex AI Gemini 3.8 Flash
 app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
   const { projectId } = req.params;
   const {
@@ -38729,7 +38715,7 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
       })
     );
 
-    // 2. Call Vertex AI Gemini 2.5 Flash with the live MCP tool outputs
+    // 2. Call Vertex AI Gemini 3.8 Flash with the live MCP tool outputs
     const groundingContext = mcpTraces
       .map(
         (t) =>
@@ -38738,9 +38724,9 @@ app.post('/api/project/:projectId/mcp/agent-chat', async (req, res) => {
       .join('\n\n');
 
     let geminiSynthesis = '';
-    let geminiModelUsed = 'gemini-2.5-flash (Vertex AI + Official MCP Grounding)';
+    let geminiModelUsed = 'gemini-3.8-flash (Vertex AI + Official MCP Grounding)';
     try {
-      const vertexUrl = `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/gemini-2.5-flash:generateContent`;
+      const vertexUrl = `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/gemini-3.8-flash:generateContent`;
       const vertexRes = await gcpApiRequest({
         method: 'POST',
         url: vertexUrl,
@@ -39936,11 +39922,11 @@ app.post('/api/project/:projectId/wave12/flight-director', async (req, res) => {
       .slice(0, 1500);
 
     let briefingMarkdown = '';
-    let engineUsed = 'Vertex AI Gemini 2.5 Flash + Autopilot Telemetry Grounding';
+    let engineUsed = 'Vertex AI Gemini 3.8 Flash + Autopilot Telemetry Grounding';
 
     try {
       const vertexRes = await axios.post(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent`,
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/gemini-3.8-flash:generateContent`,
         {
           contents: [
             {
@@ -41133,7 +41119,7 @@ app.post('/api/project/:projectId/wave13/optimus-swarm-debate', async (req, res)
 
     try {
       const vertexRes = await axios.post(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent`,
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/gemini-3.8-flash:generateContent`,
         {
           contents: [
             {
@@ -41179,7 +41165,7 @@ app.post('/api/project/:projectId/wave13/optimus-swarm-debate', async (req, res)
           .join('\n') || '';
       if (text.trim().length > 350) {
         consensusMarkdown = text.trim();
-        engineUsed = 'VERTEX_AI_GEMINI_2_5_FLASH_COUNCIL';
+        engineUsed = 'VERTEX_AI_GEMINI_3_8_FLASH_COUNCIL';
       }
     } catch {
       // Deterministic fallback below
@@ -42015,7 +42001,7 @@ app.get('/api/project/:projectId/wave14/iam-blast-radius', async (req, res) => {
 });
 
 // 6. POST /api/project/:projectId/wave14/iam-ai-hardening
-// Uses live Vertex AI Gemini 2.5 Flash grounded on the real project IAM bindings
+// Uses live Vertex AI Gemini 3.8 Flash grounded on the real project IAM bindings
 app.post('/api/project/:projectId/wave14/iam-ai-hardening', async (req, res) => {
   const { projectId } = req.params;
   const { focusPrincipal = '' } = req.body || {};
@@ -42049,10 +42035,10 @@ Produce a concise, actionable Markdown report with:
 Do NOT use any emojis.`;
 
     let markdown = '';
-    let engineUsed = 'vertex-ai-gemini-2.5-flash';
+    let engineUsed = 'vertex-ai-gemini-3.8-flash';
     try {
       const vRes = await axios.post(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent`,
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/gemini-3.8-flash:generateContent`,
         {
           contents: [{ role: 'user', parts: [{ text: promptText }] }],
           generationConfig: {
@@ -42984,7 +42970,7 @@ app.post('/api/project/:projectId/wave15/logging-correlator', async (req, res) =
 });
 
 // 5. POST /api/project/:projectId/wave15/logging-ai-surgeon
-// Streams a live Vertex AI Gemini 2.5 Flash Root-Cause Analysis & Remediation Plan from correlated Cloud Logging entries
+// Streams a live Vertex AI Gemini 3.8 Flash Root-Cause Analysis & Remediation Plan from correlated Cloud Logging entries
 app.post('/api/project/:projectId/wave15/logging-ai-surgeon', async (req, res) => {
   const { projectId } = req.params;
   const { entries = [], filterExecuted = '' } = req.body || {};
@@ -43019,12 +43005,12 @@ app.post('/api/project/:projectId/wave15/logging-ai-surgeon', async (req, res) =
 
     const headers = getAttributionHeaders(token, projectId);
     let analysisMarkdown = '';
-    let modelUsed = 'vertex-ai-gemini-2.5-flash';
+    let modelUsed = 'vertex-ai-gemini-3.8-flash';
     try {
       const vRes = await axios.post(
         `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
           projectId
-        )}/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent`,
+        )}/locations/us-central1/publishers/google/models/gemini-3.8-flash:generateContent`,
         {
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {

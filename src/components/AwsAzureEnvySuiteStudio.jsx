@@ -252,8 +252,8 @@ export default function AwsAzureEnvySuiteStudio({
 
   // Module 20: AWS Bedrock Guardrails & Azure AI Foundry Multi-Model Gateway state
   const [aiGwName, setAiGwName] = useState('enterprise-rag-ai-gateway');
-  const [aiPrimaryModel, setAiPrimaryModel] = useState('gemini-2.5-pro');
-  const [aiFallbackModel, setAiFallbackModel] = useState('gemini-2.5-flash');
+  const [aiPrimaryModel, setAiPrimaryModel] = useState('gemini-3.1-pro');
+  const [aiFallbackModel, setAiFallbackModel] = useState('gemini-3.8-flash');
   const [aiThirdModel, setAiThirdModel] = useState(
     'claude-3-7-sonnet@20250219'
   );
@@ -2713,7 +2713,7 @@ export default function AwsAzureEnvySuiteStudio({
           BEDROCK_FOUNDRY_AI_GATEWAY: {
             sourceFeature: 'AWS Bedrock Guardrails & Azure AI Foundry Multi-Model Gateway',
             whatGcpCreatesOrMutates:
-              'Configures a multi-model Vertex AI Model Garden router (`Gemini 2.5 Pro -> Gemini 2.5 Flash -> Claude 3.7 Sonnet on Vertex AI`), runs Cloud Data Loss Prevention (Sensitive Data Protection / DLP) PII redaction + Prompt-Injection interception before model invocation, and enforces a daily USD token spend cap.',
+              'Configures a multi-model Vertex AI Model Garden router (`Gemini 3.1 Pro -> Gemini 3.8 Flash -> Claude 3.7 Sonnet on Vertex AI`), runs Cloud Data Loss Prevention (Sensitive Data Protection / DLP) PII redaction + Prompt-Injection interception before model invocation, and enforces a daily USD token spend cap.',
             gcpServicesInvolved: [
               { name: 'Vertex AI & Model Garden Studio', tab: 'WAVE9_STUDIO' },
               { name: 'Cloud Run AI Gateway Endpoint', tab: 'CLOUD_RUN' },
@@ -7478,7 +7478,7 @@ export default function AwsAzureEnvySuiteStudio({
                 </span>
               </div>
               <p className="text-xs text-zinc-500">
-                Configures a unified Vertex AI multi-model router (`Gemini 2.5 Pro -&gt; Gemini 2.5 Flash -&gt; Claude 3.7 Sonnet`) with automatic Cloud DLP PII redaction, prompt-injection shields, and daily token spend fuses.
+                Configures a unified Vertex AI multi-model router (`Gemini 3.1 Pro -&gt; Gemini 3.8 Flash -&gt; Claude 3.7 Sonnet`) with automatic Cloud DLP PII redaction, prompt-injection shields, and daily token spend fuses.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

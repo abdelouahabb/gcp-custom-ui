@@ -34,7 +34,7 @@ const DOC_SECTIONS = [
     id: 'wave15-dyson-vector-sql-slsa-provenance-logging-surgeon-tls-x509',
     wave: 'WAVE 15 MOONSHOT · BIGQUERY Z-SCORE & COSINE VECTOR SQL, SLSA v1.0 DSSE PROVENANCE, CLOUD LOGGING SURGEON & LIVE TLS 1.3 X.509 INSPECTOR',
     title:
-      'Wave 15 Moonshot — Live BigQuery Statistical Z-Score & Cosine Vector SQL CTE, Cloud Build + Artifact Registry SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 2.5 Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
+      'Wave 15 Moonshot — Live BigQuery Statistical Z-Score & Cosine Vector SQL CTE, Cloud Build + Artifact Registry SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 3.8 Flash Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
     badge: '2026 INNOVATION LAB (WAVE 15 · #1)',
     badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
     icon: Database,
@@ -45,7 +45,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       'Module 01 (Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine): Inspects your existing BigQuery table schema via bigquery.googleapis.com and executes a live Standard SQL CTE computing sample mean, standard deviation, per-row Z-scores, and normalized token cosine similarity with zero auto-provisioning.',
       'Module 02 (SLSA v1.0 Supply-Chain Provenance & Artifact Digest Verifier): Queries cloudbuild.googleapis.com, artifactregistry.googleapis.com, and run.googleapis.com to correlate deployed containers with immutable @sha256 digests and signs an Ed25519 DSSE (Dead Simple Signing Envelope) SLSA v1.0 In-Toto statement.',
-      'Module 03 (Live Cloud Logging Root-Cause Correlator & Gemini 2.5 Surgeon): Queries logging.googleapis.com/v2/entries:list across customizable severity, resource.type, and temporal windows, and streams a grounded Vertex AI Gemini 2.5 Flash Root-Cause Analysis & gcloud logging runbook.',
+      'Module 03 (Live Cloud Logging Root-Cause Correlator & Gemini 3.8 Flash Surgeon): Queries logging.googleapis.com/v2/entries:list across customizable severity, resource.type, and temporal windows, and streams a grounded Vertex AI Gemini 3.8 Flash Root-Cause Analysis & gcloud logging runbook.',
       'Module 04 (Live TLS 1.3 X.509 Certificate & Cipher Inspector): Performs real Node tls.connect socket handshakes against your live Cloud Run .run.app services and GCP regional endpoints, extracting leaf X.509 SHA-256 fingerprints, SANs, negotiated AEAD ciphers, ALPN protocol, and days remaining until certificate expiration.',
     ],
     apisUsed: [
@@ -71,7 +71,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       'Module 01 (Live BigQuery Time-Travel FOR SYSTEM_TIME AS OF Engine): Discovers all live BigQuery tables in your project, executes parallel SQL queries at CURRENT_TIMESTAMP() vs. FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(...), and provides a 1-Click Mutate & Prove Time-Travel Diff Live button that inserts a live row via tabledata.insertAll and proves the exact temporal row delta.',
       'Module 02 (Autonomous Self-Healing Cloud Doctor): Audits real GCS buckets, BigQuery datasets, and Secret Manager containers against Zero-Trust SLO invariants (Uniform Bucket-Level Access, Public Access Prevention, Governance Labels, and ENABLED SecretVersions) and heals drifted resources via live REST PATCH/POST calls.',
-      'Module 03 (Live IAM Policy Blast-Radius Graph Inspector): Calls cloudresourcemanager.googleapis.com/v1/projects/:id:getIamPolicy and iam.googleapis.com/v1/projects/:id/serviceAccounts live, scores each principal’s blast radius, and synthesizes a grounded Gemini 2.5 Flash Least-Privilege Refactoring Plan.',
+      'Module 03 (Live IAM Policy Blast-Radius Graph Inspector): Calls cloudresourcemanager.googleapis.com/v1/projects/:id:getIamPolicy and iam.googleapis.com/v1/projects/:id/serviceAccounts live, scores each principal’s blast radius, and synthesizes a grounded Gemini 3.8 Flash Least-Privilege Refactoring Plan.',
       'Module 04 (Hybrid Post-Quantum & Envelope Cryptography Vault): Executes real ephemeral X25519 ECDH key agreement mixed with a 512-bit SHAKE256 Post-Quantum Lattice salt via HKDF-SHA512, encrypts payloads with AES-256-GCM, signs the canonical envelope with Ed25519 (RFC 8032), seals it as a real SecretVersion in Secret Manager (:addVersion), and fetches/decrypts it live (:access).',
     ],
     apisUsed: [
@@ -97,7 +97,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       'Module 01 (100% Live 6-Region Google Cloud Socket Matrix & BigQuery Heartbeat Streamer): Probes 6 regional Google Cloud endpoints (us-central1, us-east1, europe-west1, europe-west4, asia-northeast1, southamerica-east1 via *-aiplatform.googleapis.com) using real DNS lookup, TLS 1.3 handshake, and HTTPS REST discovery, and streams live failover heartbeat rows into BigQuery via tabledata.insertAll.',
       'Module 02 (Dynamic Prompt-Driven Schema Compiler & Live 4-Node DAG Executor): Dynamically extracts custom BigQuery schema columns from your natural-language prompt, creates the GCS bucket + uploads neuralink-dag-manifest.json, creates the BigQuery dataset + custom-schema table, streams a live row via insertAll, queries the rows back via BigQuery SQL (SELECT * FROM ... LIMIT 5), and seals a real SecretVersion.',
-      'Module 03 (Optimus 3-Agent Autonomous Council): Convene a live Vertex AI Gemini 2.5 Flash 3-agent debate (Optimus FinOps Hawk, Optimus Zero-Trust Sentinel, Optimus SRE Reliability Prime) grounded on your live project inventory.',
+      'Module 03 (Optimus 3-Agent Autonomous Council): Convene a live Vertex AI Gemini 3.8 Flash 3-agent debate (Optimus FinOps Hawk, Optimus Zero-Trust Sentinel, Optimus SRE Reliability Prime) grounded on your live project inventory.',
       'Module 04 (Cryptographic Ed25519 & SHA-256 Hash-Chained Black-Box Ledger): Persists an Ed25519 asymmetric keypair (RFC 8032) and hash-chained flight recorder to disk, signing and verifying every live cloud mutation via crypto.sign and crypto.verify.',
     ],
     apisUsed: [
@@ -110,21 +110,21 @@ const DOC_SECTIONS = [
   },
   {
     id: 'wave12-spacex-roadster-autopilot-zero-gravity-flight-deck',
-    wave: 'WAVE 12 SPACEX ROADSTER FLIGHT DECK · FSD CLOUD AUTOPILOT, CROSS-PROJECT TELEPORTER, 12-WAY MCP MEGACAST & GEMINI 2.5 FLIGHT DIRECTOR',
+    wave: 'WAVE 12 SPACEX ROADSTER FLIGHT DECK · FSD CLOUD AUTOPILOT, CROSS-PROJECT TELEPORTER, 12-WAY MCP MEGACAST & GEMINI 3.8 FLASH FLIGHT DIRECTOR',
     title:
-      'Wave 12 SpaceX Roadster Autopilot & Zero-Gravity Flight Deck — Closed-Loop FSD Reconciler (SHA-256 Merkle), Cross-Project Live Resource Teleporter (BQ / GCS / Secrets), 12-Way Parallel MCP Megacast & Grounded Gemini 2.5 Flash Flight Director',
+      'Wave 12 SpaceX Roadster Autopilot & Zero-Gravity Flight Deck — Closed-Loop FSD Reconciler (SHA-256 Merkle), Cross-Project Live Resource Teleporter (BQ / GCS / Secrets), 12-Way Parallel MCP Megacast & Grounded Gemini 3.8 Flash Flight Director',
     badge: '2026 INNOVATION LAB (WAVE 12 · #1)',
     badgeColor: 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40',
     icon: Rocket,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'WAVE12_ROADSTER',
     problemSolved:
-      'Cloud architects and SREs need an autonomous, cryptographically verifiable flight deck that continuously measures security and FinOps drag across 6 telemetry vectors, executes 1-click self-healing maneuvers with before/after SHA-256 Merkle proofs, clones live BigQuery datasets, GCS buckets, and Secret Manager vaults directly across GCP projects over Google’s internal Jupiter backbone, fans out 12 concurrent official *.googleapis.com/mcp requests in a single Sonic-Boom waterfall, and synthesizes grounded Gemini 2.5 Flash mission briefings.',
+      'Cloud architects and SREs need an autonomous, cryptographically verifiable flight deck that continuously measures security and FinOps drag across 6 telemetry vectors, executes 1-click self-healing maneuvers with before/after SHA-256 Merkle proofs, clones live BigQuery datasets, GCS buckets, and Secret Manager vaults directly across GCP projects over Google’s internal Jupiter backbone, fans out 12 concurrent official *.googleapis.com/mcp requests in a single Sonic-Boom waterfall, and synthesizes grounded Gemini 3.8 Flash mission briefings.',
     howItWorks: [
       'Module 01 (FSD Cloud Autopilot & Closed-Loop Reconciler): Probes 9 Google Cloud control planes in parallel to compute a 6-vector telemetry score (Hull Integrity, Aerodynamic Drag, Data-Gravity Shield, Thruster Scale-to-Zero Efficiency, Cryptographic Vault & IAM Identity, Avionics Telemetry & API Mesh), generates a canonical SHA-256 Merkle state digest, and executes 1-click self-healing flight maneuvers (LOCK_FIREWALL_TO_IAP, HARDEN_STORAGE_BUCKET, RELEASE_IDLE_STATIC_IP, DELETE_UNATTACHED_DISK, CALIBRATE_AUTOPILOT_DATASET) with cryptographic beforeSha256 -> afterSha256 receipts.',
       'Module 02 (Zero-Gravity Cross-Project Live Resource Teleporter): Discovers all active GCP projects on your account and clones live BigQuery Datasets + Tables (jobs.insert copy jobs), Cloud Storage Buckets + Objects (rewriteTo over Google’s Jupiter fiber backbone), and Secret Manager Vaults + Encrypted Versions (:access -> :addVersion) from your source project into any destination GCP project with zero local downloads.',
       'Module 03 (Ludicrous-Mode 12-Way Parallel MCP & REST Megacast): Fires 12 concurrent JSON-RPC 2.0 and REST lanes across official *.googleapis.com/mcp servers (cloudbilling, storage, bigquery, compute, run, container, iam, logging, monitoring, recommender, cloudresourcemanager, developerknowledge), rendering a Sonic-Boom Waterfall Gantt chart and parallel speedup multiplier (sequentialSumMs / wallClockMs).',
-      'Module 04 (Grounded Gemini 2.5 Flash Flight Director): Combines live Autopilot SHA-256 telemetry + official developerknowledge.googleapis.com/mcp documentation chunks + Vertex AI Gemini 2.5 Flash into a formatted Markdown mission briefing (RoadsterMarkdownView).',
+      'Module 04 (Grounded Gemini 3.8 Flash Flight Director): Combines live Autopilot SHA-256 telemetry + official developerknowledge.googleapis.com/mcp documentation chunks + Vertex AI Gemini 3.8 Flash into a formatted Markdown mission briefing (RoadsterMarkdownView).',
     ],
     apisUsed: [
       'GET /api/project/:id/wave12/autopilot-radar & POST /api/project/:id/wave12/autopilot-execute',
@@ -138,22 +138,22 @@ const DOC_SECTIONS = [
     id: 'google-cloud-official-remote-mcp-control-plane-48-servers-505-tools',
     wave: '2026 GOOGLE CLOUD OFFICIAL REMOTE MCP CONTROL PLANE · 48 *.GOOGLEAPIS.COM/MCP SERVERS & 505 LIVE JSON-RPC 2.0 TOOLS',
     title:
-      '2026 Google Cloud Official Remote MCP Servers Hub — 48 Live *.googleapis.com/mcp Endpoints, 505 JSON-RPC 2.0 Tools, 4 Parallel Multi-Server SRE Triage Chains, Gemini 2.5 Flash MCP Agent & 1-Click IDE Config Exporter',
+      '2026 Google Cloud Official Remote MCP Servers Hub — 48 Live *.googleapis.com/mcp Endpoints, 505 JSON-RPC 2.0 Tools, 4 Parallel Multi-Server SRE Triage Chains, Gemini 3.8 Flash MCP Agent & 1-Click IDE Config Exporter',
     badge: 'DEDICATED MAIN MENU TAB -> MCP SERVERS ★',
     badgeColor: 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40',
     icon: Sparkles,
     targetTab: 'MCP_HUB',
     problemSolved:
-      'Google Cloud hosts 48 official Remote Model Context Protocol (MCP) servers directly at https://<service>.googleapis.com/mcp speaking JSON-RPC 2.0 (2025-06-18), exposing 505 live tools (306 readOnlyHint=true and 98 destructiveHint=true), yet developers have no visual browser control plane to probe all 48 endpoints, inspect inputSchemas, execute tools safely, chain multiple MCP servers in parallel for SRE incident triage, or ground Gemini 2.5 Flash on real-time MCP responses.',
+      'Google Cloud hosts 48 official Remote Model Context Protocol (MCP) servers directly at https://<service>.googleapis.com/mcp speaking JSON-RPC 2.0 (2025-06-18), exposing 505 live tools (306 readOnlyHint=true and 98 destructiveHint=true), yet developers have no visual browser control plane to probe all 48 endpoints, inspect inputSchemas, execute tools safely, chain multiple MCP servers in parallel for SRE incident triage, or ground Gemini 3.8 Flash on real-time MCP responses.',
     howItWorks: [
       'Tab 01 (48 Official Remote MCP Server Matrix & Live Probe): Catalogs all 48 official *.googleapis.com/mcp endpoints across 6 categories (Compute/Serverless/GKE, FinOps/Billing/Quotas, Security/IAM/Policy, Databases/BigQuery/Streaming, Observability/Trace/SRE, AI Agents & Dev Knowledge) and probes all 48 servers concurrently via JSON-RPC 2.0 tools/list.',
       'Tab 02 (Formatted GA & PREVIEW Tool Schema Inspector & Live tools/call Executor): Fetches live tools/list from any selected *.googleapis.com/mcp endpoint, automatically formats dense single-line GA and PREVIEW tool docstrings (such as run_gcloud_command and run_bq_command on cloudcli.googleapis.com/mcp) into Safety/Warning Callout Banners (**CRITICAL SAFETY WARNING**, **FORBIDDEN COMMANDS**, **STRICT EXECUTION RULES**), #1–#10 rule cards, inline code flag pills, and REQUIRED/OPTIONAL schema cards (McpFormattedMarkdown), and renders tools/call responses as structured tables/cards with a 1-click Formatted Review / Raw JSON-RPC toggle (McpStructuredPayloadView).',
       'Tab 03 (1-Click Parallel Multi-Server SRE & FinOps Triage Chains): Runs 4 pre-built parallel JSON-RPC 2.0 tool chains across multiple *.googleapis.com/mcp servers simultaneously: (1) FinOps & Quota Burn Triage (cloudbilling + cloudquotas + recommender + monitoring), (2) Zero-Trust IAM & Perimeter Audit (iam + securitycenter + logging + storage), (3) SRE Incident & Trace Root-Cause (logging + clouderrorreporting + cloudtrace + servicehealth), and (4) Lakehouse & Database Discovery (bigquery + bigtable + spanner + dataplex).',
-      'Tab 04 (Gemini 2.5 Flash Live MCP Review & Tool-Calling Architect) & Tab 05 (1-Click IDE Config Exporter): Executes 5 read-only official MCP tools in parallel, grounds Vertex AI Gemini 2.5 Flash (maxOutputTokens: 2048) with 4 quick-select Review presets (Full Estate & FinOps, IAM & Zero-Trust, BigQuery & Storage Lakehouse, SRE Logs & Error Rate), renders formatted Markdown review tables/CLI blocks, and exports copy-ready mcpServers JSON blocks for Gemini CLI, Claude Code, Cursor, and VS Code Copilot.',
+      'Tab 04 (Gemini 3.8 Flash Live MCP Review & Tool-Calling Architect) & Tab 05 (1-Click IDE Config Exporter): Executes 5 read-only official MCP tools in parallel, grounds Vertex AI Gemini 3.8 Flash (maxOutputTokens: 2048) with 4 quick-select Review presets (Full Estate & FinOps, IAM & Zero-Trust, BigQuery & Storage Lakehouse, SRE Logs & Error Rate), renders formatted Markdown review tables/CLI blocks, and exports copy-ready mcpServers JSON blocks for Gemini CLI, Claude Code, Cursor, and VS Code Copilot.',
     ],
     apisUsed: [
       'GET /api/project/:id/mcp/catalog?probeAll=true, POST /api/project/:id/mcp/tools-list & POST /api/project/:id/mcp/call-tool (JSON-RPC 2.0 to https://*.googleapis.com/mcp)',
-      'POST /api/project/:id/mcp/run-triage-chain & POST /api/project/:id/mcp/agent-chat (Parallel MCP Tool-Calling + Vertex AI Gemini 2.5 Flash)',
+      'POST /api/project/:id/mcp/run-triage-chain & POST /api/project/:id/mcp/agent-chat (Parallel MCP Tool-Calling + Vertex AI Gemini 3.8 Flash)',
     ],
     billingImpact:
       '100% $0.00/mo for JSON-RPC 2.0 tools/list discovery and readOnlyHint=true tool calls across all 48 *.googleapis.com/mcp servers; destructiveHint=true mutations are explicitly gated.',

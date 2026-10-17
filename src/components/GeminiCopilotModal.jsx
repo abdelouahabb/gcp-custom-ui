@@ -905,7 +905,7 @@ export default function GeminiCopilotModal({
                 Google Cloud Official Remote MCP Servers Hub
               </h3>
               <p className="text-xs text-zinc-400">
-                Launch the dedicated <span className="text-indigo-300 font-semibold">MCP Servers</span> workspace in the main navigation bar for live JSON-RPC 2.0 tool execution, 1-click multi-server SRE triage chains, and Gemini 2.5 Flash grounded on official MCP telemetry.
+                Launch the dedicated <span className="text-indigo-300 font-semibold">MCP Servers</span> workspace in the main navigation bar for live JSON-RPC 2.0 tool execution, 1-click multi-server SRE triage chains, and Gemini 3.8 Flash grounded on official MCP telemetry.
               </p>
             </div>
             <button

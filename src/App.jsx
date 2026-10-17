@@ -1840,7 +1840,7 @@ function CloudPulseCockpit() {
       group: 'COMMAND',
       label: 'MCP Servers',
       isStar: true,
-      tip: '2026 Google Cloud Official Remote MCP Control Plane: 48 *.googleapis.com/mcp Servers, 505 Live JSON-RPC 2.0 Tools, 4-Server Autonomous Triage Chains, Gemini 2.5 Flash MCP Tool-Calling Agent & 1-Click IDE Config Exporter',
+      tip: '2026 Google Cloud Official Remote MCP Control Plane: 48 *.googleapis.com/mcp Servers, 505 Live JSON-RPC 2.0 Tools, 4-Server Autonomous Triage Chains, Gemini 3.8 Flash MCP Tool-Calling Agent & 1-Click IDE Config Exporter',
       icon: Cpu,
     },
     {

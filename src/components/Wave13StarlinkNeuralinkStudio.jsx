@@ -564,7 +564,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               Global Regional TLS 1.3 Control-Plane Matrix, Prompt-Driven DAG Materializer, Optimus 3-Agent Council & Ed25519 Black-Box
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
-              Execute real DNS + TLS 1.3 + HTTPS REST probes across 6 regional Google Cloud control planes, stream live failover heartbeats into BigQuery, compile custom prompts into live GCS objects + SecretVersions + BigQuery SQL rows, convene a 3-agent Gemini 2.5 Flash council, and seal every mutation with RFC 8032 Ed25519 signatures.
+              Execute real DNS + TLS 1.3 + HTTPS REST probes across 6 regional Google Cloud control planes, stream live failover heartbeats into BigQuery, compile custom prompts into live GCS objects + SecretVersions + BigQuery SQL rows, convene a 3-agent Gemini 3.8 Flash council, and seal every mutation with RFC 8032 Ed25519 signatures.
             </p>
           </div>
 

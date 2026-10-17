@@ -35,7 +35,7 @@ const WAVE15_TABS = [
     id: 'LOGGING_CORRELATOR',
     step: '03',
     title: 'Cloud Logging Root-Cause Surgeon',
-    subtitle: 'Live entries:list + Gemini 2.5 RCA',
+    subtitle: 'Live entries:list + Gemini 3.8 Flash RCA',
     icon: FileSearch,
   },
   {
@@ -258,7 +258,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
   const [slsaAttestation, setSlsaAttestation] = useState(null);
   const [signingSlsa, setSigningSlsa] = useState(false);
 
-  // Module 03: Live Cloud Logging Root-Cause Correlator + Gemini 2.5 Surgeon
+  // Module 03: Live Cloud Logging Root-Cause Correlator + Gemini 3.8 Flash Surgeon
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [resourceTypeFilter, setResourceTypeFilter] = useState('ALL');
   const [logSearchQuery, setLogSearchQuery] = useState('');
@@ -437,7 +437,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
       );
       setLogAiReport(res.data);
       notify(
-        `Generated live Gemini 2.5 Flash Root-Cause & Remediation Report (${res.data?.latencyMs}ms)!`
+        `Generated live Gemini 3.8 Flash Root-Cause & Remediation Report (${res.data?.latencyMs}ms)!`
       );
     } catch (err) {
       notify(
@@ -494,7 +494,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
               BigQuery Statistical/Vector Anomaly SQL, SLSA v1.0 Supply-Chain Attestor, Cloud Logging Root-Cause Surgeon & Live TLS 1.3 X.509 Inspector
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
-              Execute real BigQuery Standard SQL CTEs computing statistical Z-scores and token cosine similarity on your live tables, inspect Cloud Build &amp; Artifact Registry container SHA-256 digests to sign Ed25519 DSSE SLSA v1.0 provenance statements, correlate live <code>logging.googleapis.com/v2/entries:list</code> streams with Gemini 2.5 Flash, and perform real TCP/TLS 1.3 X.509 certificate handshakes.
+              Execute real BigQuery Standard SQL CTEs computing statistical Z-scores and token cosine similarity on your live tables, inspect Cloud Build &amp; Artifact Registry container SHA-256 digests to sign Ed25519 DSSE SLSA v1.0 provenance statements, correlate live <code>logging.googleapis.com/v2/entries:list</code> streams with Gemini 3.8 Flash, and perform real TCP/TLS 1.3 X.509 certificate handshakes.
             </p>
           </div>
 
@@ -1068,7 +1068,7 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Streams real project audit &amp; service logs directly from Google Cloud Logging, correlates severity &amp; resource bursts, and dispatches Vertex AI Gemini 2.5 Flash to synthesize a Root-Cause Analysis and copy-ready <code>gcloud logging</code> runbook.
+                  Streams real project audit &amp; service logs directly from Google Cloud Logging, correlates severity &amp; resource bursts, and dispatches Vertex AI Gemini 3.8 Flash to synthesize a Root-Cause Analysis and copy-ready <code>gcloud logging</code> runbook.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -1092,8 +1092,8 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
                     {runningLogAi
-                      ? 'Synthesizing Gemini 2.5 RCA...'
-                      : 'Run Gemini 2.5 Root-Cause Surgeon'}
+                      ? 'Synthesizing Gemini 3.8 Flash RCA...'
+                      : 'Run Gemini 3.8 Flash Root-Cause Surgeon'}
                   </span>
                 </button>
               </div>

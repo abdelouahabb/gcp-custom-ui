@@ -364,7 +364,7 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     - **`17` Route 53 / Front Door DNS (`PROVISION_DNS_ROUTING_POLICY`, `SIMULATE_DNS_FAILOVER`)**: Weighted, geo-proximity, and 10s health-check failover DNS routing policies (`dns.googleapis.com/dns/v1`).
     - **`18` CloudTrail / Activity Detective (`QUERY_CLOUDTRAIL_AUDIT_LAKE`)**: "Who-Did-What" SQL audit time-detective with Before/After diff and 1-click Undo CLI generation.
     - **`19` AWS RAM / Azure Lighthouse (`CREATE_RAM_LIGHTHOUSE_SHARE`, `REVOKE_RAM_LIGHTHOUSE_SHARE`)**: Cross-project resource sharing hub (Shared VPC Subnets, BigQuery Analytics Hub & KMS Delegation with zero JSON keys).
-    - **`20` Bedrock / AI Foundry Gateway (`PROVISION_AI_GATEWAY_ROUTE`, `TEST_AI_GATEWAY_PROMPT`)**: Multi-model Vertex AI router (`Gemini 2.5 Pro -> Flash -> Claude 3.7 Sonnet`), Cloud DLP PII redaction shield, and per-team daily token spend fuse.
+    - **`20` Bedrock / AI Foundry Gateway (`PROVISION_AI_GATEWAY_ROUTE`, `TEST_AI_GATEWAY_PROMPT`)**: Multi-model Vertex AI router (`Gemini 3.1 Pro -> Gemini 3.8 Flash -> Claude 3.7 Sonnet`), Cloud DLP PII redaction shield, and per-team daily token spend fuse.
 
 ### 40.  8-in-1 Alibaba Cloud (Aliyun) & Huawei Cloud Hyperscale Parity Super-Studio (`AwsAzureEnvySuiteStudio.jsx`)
 - **Where to find it**: Top navigation tab **`Alibaba & Huawei `** (or toggle **`Alibaba / Huawei (8)`** inside the Multi-Cloud Parity header).
@@ -502,8 +502,8 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     - Renders live `tools/call` responses (`POST /api/project/:id/mcp/call-tool`) as structured tables and key-value cards with a 1-click **`Formatted Review` / `Raw JSON-RPC`** toggle, Human-in-the-Loop `destructiveHint` safety gate, and **`1-Click Enable <service>.googleapis.com & Retry`** auto-remediation.
   - **3. 4 Autonomous Multi-Server MCP Triage Chains (`POST /api/project/:id/mcp/run-triage-chain`)**:
     - Executes coordinated JSON-RPC 2.0 `tools/call` fans across 4 official `*.googleapis.com/mcp` servers in parallel (`FinOps & Quota Burn Triage`, `Zero-Trust IAM & Perimeter Audit`, `SRE Incident & Trace Root-Cause`, and `Lakehouse & Database Discovery`) and renders each step's structured payload card.
-  - **4. Gemini 2.5 Flash Live MCP Review & Tool-Calling Architect (`POST /api/project/:id/mcp/agent-chat`) + 1-Click IDE Config Exporter (`GET /api/project/:id/mcp/ide-config`)**:
-    - Invokes 5 official Remote MCP servers (`cloudbilling`, `storage`, `bigquery`, `logging`, `developerknowledge`) in parallel, grounds **Vertex AI Gemini 2.5 Flash** (`maxOutputTokens: 2048`), and renders a formatted Markdown review report with 4 quick-select review presets and 1-click IDE MCP config export for **Gemini CLI / Cloud Code**, **Claude Code / Desktop**, **Cursor**, and **VS Code Copilot**.
+  - **4. Gemini 3.8 Flash Live MCP Review & Tool-Calling Architect (`POST /api/project/:id/mcp/agent-chat`) + 1-Click IDE Config Exporter (`GET /api/project/:id/mcp/ide-config`)**:
+    - Invokes 5 official Remote MCP servers (`cloudbilling`, `storage`, `bigquery`, `logging`, `developerknowledge`) in parallel, grounds **Vertex AI Gemini 3.8 Flash** (`maxOutputTokens: 2048`), and renders a formatted Markdown review report with 4 quick-select review presets and 1-click IDE MCP config export for **Gemini CLI / Cloud Code**, **Claude Code / Desktop**, **Cursor**, and **VS Code Copilot**.
 
 ### 50. Wave 12 SpaceX Roadster Autopilot & Zero-Gravity Flight Deck (`src/components/Wave12RoadsterFlightDeckStudio.jsx` & `server/index.js`)
 - **Where to find it**: Open **`2026 Innovation`** (`Revolutionary2026Suite.jsx`) -> **`Wave 12 Roadster (FSD Autopilot, Cross-Project Teleport & 12-Way Megacast)`** (default flagship sub-tab in the 2026 Innovation Lab, or via `⌘K` -> *"Open Wave 12 SpaceX Roadster Autopilot & Zero-Gravity Flight Deck"*).
@@ -517,8 +517,8 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
     - Teleports live **BigQuery Datasets + Tables** (`jobs.insert` copy jobs), **Cloud Storage Buckets + Objects** (`rewriteTo` across Google's Jupiter backbone), and **Secret Manager Vaults + Encrypted Versions** (`:access` -> `:addVersion`) into any destination project without local browser/proxy downloads.
   - **3. Module 03 — Ludicrous-Mode 12-Way Parallel MCP & REST Megacast (`POST /api/project/:id/wave12/ludicrous-megacast`)**:
     - Fires 12 concurrent JSON-RPC 2.0 and REST calls across official `*.googleapis.com/mcp` endpoints (`cloudbilling`, `storage`, `bigquery`, `compute`, `run`, `container`, `iam`, `logging`, `monitoring`, `recommender`, `cloudresourcemanager`, `developerknowledge`), rendering a **Sonic-Boom Waterfall Gantt Chart** and computing the exact parallel speedup multiplier (`sequentialSumMs / wallClockMs`).
-  - **4. Module 04 — Grounded Gemini 2.5 Flash Flight Director (`POST /api/project/:id/wave12/flight-director`)**:
-    - Combines live Autopilot `SHA-256` telemetry, official `developerknowledge.googleapis.com/mcp` documentation chunks, and **Vertex AI Gemini 2.5 Flash** (`aiplatform.googleapis.com`) into a formatted Markdown mission briefing (`RoadsterMarkdownView`).
+  - **4. Module 04 — Grounded Gemini 3.8 Flash Flight Director (`POST /api/project/:id/wave12/flight-director`)**:
+    - Combines live Autopilot `SHA-256` telemetry, official `developerknowledge.googleapis.com/mcp` documentation chunks, and **Vertex AI Gemini 3.8 Flash** (`aiplatform.googleapis.com`) into a formatted Markdown mission briefing (`RoadsterMarkdownView`).
 
 ### 51. Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity (`src/components/Wave13StarlinkNeuralinkStudio.jsx` & `server/index.js`)
 - **Where to find it**: Open **`2026 Innovation`** (`Revolutionary2026Suite.jsx`) -> **`Wave 13 Starlink & Neuralink (Orbital Laser, Thought-to-Cloud DAG, Optimus & Ed25519)`** (default #1 flagship sub-tab in the 2026 Innovation Lab, or via `⌘K` -> *"Open Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity"*).

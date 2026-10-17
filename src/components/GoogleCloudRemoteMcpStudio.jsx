@@ -1610,7 +1610,7 @@ export default function GoogleCloudRemoteMcpStudio({
         )}
       </div>
 
-      {/* SECTION 3: GEMINI 2.5 FLASH + OFFICIAL REMOTE MCP TOOL-CALLING AGENT & IDE CONFIG EXPORTER */}
+      {/* SECTION 3: GEMINI 3.8 FLASH + OFFICIAL REMOTE MCP TOOL-CALLING AGENT & IDE CONFIG EXPORTER */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left 7 Cols: Gemini Agentic MCP Tool-Calling Console */}
         <div className="lg:col-span-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-3">
@@ -1619,7 +1619,7 @@ export default function GoogleCloudRemoteMcpStudio({
               ZERO-HALLUCINATION AGENTIC SRE · VERTEX AI GEMINI + 5 REMOTE MCP SERVERS
             </div>
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-              4. Gemini 2.5 Flash Live MCP Review &amp; Tool-Calling Architect
+              4. Gemini 3.8 Flash Live MCP Review &amp; Tool-Calling Architect
             </h3>
             <p className="text-xs text-zinc-500">
               Autonomously invokes <code className="font-mono">cloudbilling</code>,{' '}

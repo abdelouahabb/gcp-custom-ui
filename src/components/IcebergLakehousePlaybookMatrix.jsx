@@ -712,7 +712,7 @@ const ICEBERG_PLAYBOOKS = [
     track: 'GA',
     title: 'Semantic SQL: Running Gemini Models Directly Over Apache Iceberg Data in BigQuery',
     persona: 'Analytics Engineers, AI Developers',
-    stack: 'BigQuery ML.GENERATE_TEXT, Vertex AI Gemini 2.5 Flash / Pro Remote Model',
+    stack: 'BigQuery ML.GENERATE_TEXT, Vertex AI Gemini 3.8 Flash / 3.1 Pro Remote Model',
     angle:
       'Running zero-ETL LLM inference, structured JSON entity extraction, and sentiment classification directly inside SQL queries over Iceberg tables.',
     tableName: 'semantic_sql_enriched_reviews_iceberg',
@@ -948,13 +948,13 @@ WHERE metric_value < 0.0 AND event_timestamp < TIMESTAMP_SUB(CURRENT_TIMESTAMP()
 
 COMMIT TRANSACTION;`;
     } else if (p.id === 'SEMANTIC_SQL_GEMINI_OVER_ICEBERG') {
-      bqSql += `\n\n-- 2. Semantic SQL: Run Vertex AI Gemini 2.5 Flash Directly Over Open Iceberg Rows
+      bqSql += `\n\n-- 2. Semantic SQL: Run Vertex AI Gemini 3.8 Flash Directly Over Open Iceberg Rows
 SELECT
   record_id,
   tenant_region,
   ml_generate_text_llm_result AS gemini_structured_summary
 FROM ML.GENERATE_TEXT(
-  MODEL \`${projectId}.${datasetId}.gemini_2_5_flash_endpoint\`,
+  MODEL \`${projectId}.${datasetId}.gemini_3_8_flash_endpoint\`,
   (
     SELECT
       record_id,

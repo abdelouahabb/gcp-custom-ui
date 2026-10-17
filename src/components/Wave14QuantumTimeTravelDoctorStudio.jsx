@@ -424,7 +424,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
       );
       setIamAiPlan(res.data);
       notify(
-        `Generated live Gemini 2.5 Flash IAM Least-Privilege Plan (${res.data?.latencyMs}ms)`
+        `Generated live Gemini 3.8 Flash IAM Least-Privilege Plan (${res.data?.latencyMs}ms)`
       );
     } catch (err) {
       notify(`IAM AI notice: ${err.response?.data?.error || err.message}`);
@@ -1037,7 +1037,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Reads every real IAM role binding and service account on <code>{projectId}</code>, scores each principal&apos;s blast radius based on primitive/admin privileges, and synthesizes a live Gemini 2.5 Flash Least-Privilege Refactoring Plan.
+                  Reads every real IAM role binding and service account on <code>{projectId}</code>, scores each principal&apos;s blast radius based on primitive/admin privileges, and synthesizes a live Gemini 3.8 Flash Least-Privilege Refactoring Plan.
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -1062,7 +1062,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
                   <span>
                     {generatingIamPlan
                       ? 'Synthesizing Least-Privilege Plan...'
-                      : 'Generate Gemini 2.5 Least-Privilege Plan'}
+                      : 'Generate Gemini 3.8 Flash Least-Privilege Plan'}
                   </span>
                 </button>
               </div>
@@ -1154,7 +1154,7 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
               <div className="p-5 rounded-2xl border border-violet-500/40 bg-white dark:bg-zinc-900/95 space-y-3">
                 <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
                   <div className="text-xs font-mono font-extrabold uppercase text-violet-700 dark:text-violet-300">
-                    LIVE GEMINI 2.5 FLASH LEAST-PRIVILEGE IAM REFACTORING PLAN ({iamAiPlan.latencyMs}ms)
+                    LIVE GEMINI 3.8 FLASH LEAST-PRIVILEGE IAM REFACTORING PLAN ({iamAiPlan.latencyMs}ms)
                   </div>
                   <button
                     type="button"
