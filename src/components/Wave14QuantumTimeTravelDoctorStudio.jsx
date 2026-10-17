@@ -244,10 +244,8 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
 
   // Module 01: Live BigQuery Time-Travel (`FOR SYSTEM_TIME AS OF`) State
   const [availableTables, setAvailableTables] = useState([]);
-  const [selectedDataset, setSelectedDataset] = useState(
-    'wave14_timetravel_forensics'
-  );
-  const [selectedTable, setSelectedTable] = useState('temporal_state_events');
+  const [selectedDataset, setSelectedDataset] = useState('');
+  const [selectedTable, setSelectedTable] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('US');
   const [secondsAgo, setSecondsAgo] = useState(60);
   const [mutationNote, setMutationNote] = useState(
@@ -301,7 +299,13 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
       const res = await axios.get(
         `/api/project/${encodeURIComponent(projectId)}/wave14/time-travel-tables`
       );
-      setAvailableTables(res.data?.tables || []);
+      const discovered = res.data?.tables || [];
+      setAvailableTables(discovered);
+      if (discovered.length > 0) {
+        setSelectedDataset((prev) => prev || discovered[0].datasetId);
+        setSelectedTable((prev) => prev || discovered[0].tableId);
+        setSelectedLocation((prev) => prev || discovered[0].location || 'US');
+      }
     } catch {
       // ignore initial discovery notice
     }
@@ -485,7 +489,6 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
 
   useEffect(() => {
     fetchTimeTravelTables();
-    executeTimeTravelQuery(false);
     fetchSelfHealingAudit();
     fetchIamBlastRadius();
   }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -209,7 +209,7 @@ export default function Revolutionary2026Suite({
 }) {
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
   const [subTab, setSubTab] = useState(
-    initialSubTab === 'TOPOLOGY' ? 'WAVE14_QUANTUM_DOCTOR' : initialSubTab || 'WAVE14_QUANTUM_DOCTOR'
+    initialSubTab || 'TOPOLOGY'
   );
   const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState([]);

@@ -41431,11 +41431,8 @@ app.post('/api/project/:projectId/wave14/bigquery-time-travel', async (req, res)
       targetLoc = 'US';
     }
 
-    // Ensure dataset and table exist if using default or if user clicks Mutate & Prove
-    if (
-      targetDataset === 'wave14_timetravel_forensics' ||
-      injectMutationBeforeDiff
-    ) {
+    // Ensure dataset and table exist ONLY when user explicitly clicks Mutate & Prove
+    if (injectMutationBeforeDiff) {
       await axios
         .post(
           `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
