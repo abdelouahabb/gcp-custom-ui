@@ -31,6 +31,32 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'wave12-spacex-roadster-autopilot-zero-gravity-flight-deck',
+    wave: 'WAVE 12 SPACEX ROADSTER FLIGHT DECK · FSD CLOUD AUTOPILOT, CROSS-PROJECT TELEPORTER, 12-WAY MCP MEGACAST & GEMINI 2.5 FLIGHT DIRECTOR',
+    title:
+      'Wave 12 SpaceX Roadster Autopilot & Zero-Gravity Flight Deck — Closed-Loop FSD Reconciler (SHA-256 Merkle), Cross-Project Live Resource Teleporter (BQ / GCS / Secrets), 12-Way Parallel MCP Megacast & Grounded Gemini 2.5 Flash Flight Director',
+    badge: '2026 INNOVATION LAB (WAVE 12 · #1)',
+    badgeColor: 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40',
+    icon: Rocket,
+    targetTab: 'INNOVATION_LAB',
+    targetSubTab: 'WAVE12_ROADSTER',
+    problemSolved:
+      'Cloud architects and SREs need an autonomous, cryptographically verifiable flight deck that continuously measures security and FinOps drag across 6 telemetry vectors, executes 1-click self-healing maneuvers with before/after SHA-256 Merkle proofs, clones live BigQuery datasets, GCS buckets, and Secret Manager vaults directly across GCP projects over Google’s internal Jupiter backbone, fans out 12 concurrent official *.googleapis.com/mcp requests in a single Sonic-Boom waterfall, and synthesizes grounded Gemini 2.5 Flash mission briefings.',
+    howItWorks: [
+      'Module 01 (FSD Cloud Autopilot & Closed-Loop Reconciler): Probes 9 Google Cloud control planes in parallel to compute a 6-vector telemetry score (Hull Integrity, Aerodynamic Drag, Data-Gravity Shield, Thruster Scale-to-Zero Efficiency, Cryptographic Vault & IAM Identity, Avionics Telemetry & API Mesh), generates a canonical SHA-256 Merkle state digest, and executes 1-click self-healing flight maneuvers (LOCK_FIREWALL_TO_IAP, HARDEN_STORAGE_BUCKET, RELEASE_IDLE_STATIC_IP, DELETE_UNATTACHED_DISK, CALIBRATE_AUTOPILOT_DATASET) with cryptographic beforeSha256 -> afterSha256 receipts.',
+      'Module 02 (Zero-Gravity Cross-Project Live Resource Teleporter): Discovers all active GCP projects on your account and clones live BigQuery Datasets + Tables (jobs.insert copy jobs), Cloud Storage Buckets + Objects (rewriteTo over Google’s Jupiter fiber backbone), and Secret Manager Vaults + Encrypted Versions (:access -> :addVersion) from your source project into any destination GCP project with zero local downloads.',
+      'Module 03 (Ludicrous-Mode 12-Way Parallel MCP & REST Megacast): Fires 12 concurrent JSON-RPC 2.0 and REST lanes across official *.googleapis.com/mcp servers (cloudbilling, storage, bigquery, compute, run, container, iam, logging, monitoring, recommender, cloudresourcemanager, developerknowledge), rendering a Sonic-Boom Waterfall Gantt chart and parallel speedup multiplier (sequentialSumMs / wallClockMs).',
+      'Module 04 (Grounded Gemini 2.5 Flash Flight Director): Combines live Autopilot SHA-256 telemetry + official developerknowledge.googleapis.com/mcp documentation chunks + Vertex AI Gemini 2.5 Flash into a formatted Markdown mission briefing (RoadsterMarkdownView).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/wave12/autopilot-radar & POST /api/project/:id/wave12/autopilot-execute',
+      'GET /api/project/:id/wave12/teleport-inventory & POST /api/project/:id/wave12/cross-project-teleport',
+      'POST /api/project/:id/wave12/ludicrous-megacast & POST /api/project/:id/wave12/flight-director',
+    ],
+    billingImpact:
+      '100% $0.00/mo for 6-vector Autopilot telemetry radar, 12-way MCP Megacast discovery, and GCS/Firewall hardening; Cross-Project Teleportation uses native server-to-server Google Cloud copy/rewrite APIs guarded by the 1-Tap Cloud Action Gatekeeper.',
+  },
+  {
     id: 'google-cloud-official-remote-mcp-control-plane-48-servers-505-tools',
     wave: '2026 GOOGLE CLOUD OFFICIAL REMOTE MCP CONTROL PLANE · 48 *.GOOGLEAPIS.COM/MCP SERVERS & 505 LIVE JSON-RPC 2.0 TOOLS',
     title:

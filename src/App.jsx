@@ -870,10 +870,63 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/mcp/run-triage-chain') ||
       rawUrl.includes('/mcp/agent-chat') ||
       rawUrl.includes('/mcp/call-tool') ||
-      rawUrl.includes('/wave11/stress-audit');
+      rawUrl.includes('/wave11/stress-audit') ||
+      rawUrl.includes('/wave12/ludicrous-megacast') ||
+      rawUrl.includes('/wave12/flight-director');
 
     if (isReadOnlyOrDryRun) {
       return null;
+    }
+
+    // 3A-00a. Wave 12 Closed-Loop FSD Cloud Autopilot Maneuver (/wave12/autopilot-execute)
+    if (rawUrl.includes('/wave12/autopilot-execute')) {
+      const mId = String(body.maneuverType || body.maneuverId || 'CALIBRATE_AUTOPILOT_DATASET').toUpperCase();
+      const targetName = body.targetResource || body.targetName || 'All Eligible Project Resources';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm FSD Autopilot Maneuver: "${mId}"?`,
+        headerBadge: 'Wave 12 SpaceX Roadster FSD Autopilot Gatekeeper',
+        targetLabel: 'Autopilot Maneuver & Target Fleet',
+        resourceKind: `Closed-Loop Reconciler (${mId})`,
+        targetName: `${projectId} · ${targetName}`,
+        location: 'Global / Multi-Region',
+        projectId,
+        method: `FSD AUTOPILOT (${mId})`,
+        endpoint: rawUrl,
+        confirmLabel: `Engage FSD Autopilot Maneuver (${mId})`,
+        cancelToast: `FSD Autopilot maneuver ${mId} aborted.`,
+        whatHappensNext: `1. Computes pre-flight SHA-256 Merkle state digest across your live GCP project.\n2. Executes "${mId}" (${body.title || targetName}) via live Google Cloud REST APIs.\n3. Re-runs the 6-vector telemetry radar and verifies the post-flight SHA-256 digest.`,
+        costWarning: `ZERO EXTRA CHARGE ($0.00): Hardening GCS buckets (Uniform Bucket-Level Access + 7-day Soft Delete), locking firewall rules to IAP, or calibrating the Autopilot dataset incurs $0.00 in API charges and reduces ongoing FinOps burn.`,
+        impactWarning: `Mutates live configuration on target resource "${targetName}" in project "${projectId}".`,
+      };
+    }
+
+    // 3A-00b. Wave 12 Zero-Gravity Cross-Project Live Resource Teleporter (/wave12/cross-project-teleport)
+    if (rawUrl.includes('/wave12/cross-project-teleport')) {
+      const kind = String(body.teleportKind || body.resourceKind || 'BIGQUERY_DATASET_CLONE').toUpperCase();
+      const srcName = body.sourceResourceName || body.sourceName || 'source-resource';
+      const dstProj = body.destProjectId || body.targetProjectId || projectId;
+      const dstName = body.destResourceName || body.targetName || srcName;
+      const dstLoc = body.location || body.targetLocation || 'US';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm Zero-Gravity Cross-Project Teleport (${kind})?`,
+        headerBadge: 'Wave 12 Cross-Project Live Resource Teleporter',
+        targetLabel: 'Source → Destination GCP Project Teleportation',
+        resourceKind: kind,
+        targetName: `${projectId}:${srcName} → ${dstProj}:${dstName}`,
+        location: dstLoc,
+        projectId: dstProj,
+        method: `CROSS-PROJECT TELEPORT (${kind})`,
+        endpoint: rawUrl,
+        confirmLabel: `Engage Zero-Gravity Teleport to "${dstProj}"`,
+        cancelToast: 'Cross-project teleportation cancelled.',
+        whatHappensNext: `1. Verifies or provisions target container "${dstName}" in destination project "${dstProj}" (${dstLoc}).\n2. Clones live ${kind} metadata and payloads directly across Google Cloud's internal Jupiter backbone without local browser/proxy downloads.\n3. Returns a cryptographic SHA-256 teleportation receipt.`,
+        costWarning: `STANDARD DESTINATION STORAGE & NETWORK NOTICE: Creating datasets or secrets incurs $0.00–$0.06/secret-mo. Cloning objects/tables into "${dstProj}" incurs standard destination storage rates ($0.020/GB-mo) and cross-region replication fees if source and destination locations differ.`,
+        impactWarning: `Creates/updates live ${kind} "${dstName}" inside destination project "${dstProj}".`,
+      };
     }
 
     // 3A-0a. Probe Live Iceberg Estate (Read-Only 5-Service Lakehouse Discovery Modal)

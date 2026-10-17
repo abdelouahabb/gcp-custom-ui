@@ -121,6 +121,20 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-wave12-roadster',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open Wave 12 SpaceX Roadster Autopilot & Zero-Gravity Flight Deck',
+        subtitle: 'Closed-Loop FSD Cloud Autopilot (SHA-256 Merkle), Cross-Project Live Teleporter (BQ/GCS/Secrets), 12-Way Parallel MCP Megacast & Gemini 2.5 Flight Director',
+        keywords: 'wave 12 roadster tesla spacex fsd autopilot self healing merkle sha256 cross project teleport clone bigquery bucket secreticrous megacast 12 way mcp flight director',
+        badge: 'WAVE 12 ROADSTER',
+        badgeColor: 'text-red-700 dark:text-red-300 bg-red-500/15 border-red-500/30',
+        icon: Rocket,
+        run: () => {
+          onSelectTab('INNOVATION_LAB', 'WAVE12_ROADSTER');
+          onClose();
+        }
+      },
+      {
         id: 'open-wave11-moonshot',
         category: '2026 Innovation Lab (Star)',
         title: 'Open Wave 11 Moonshot Studio (Cloud Deploy Canary, Firestore NoSQL, Quota Optimizer & Multi-Project Matrix)',

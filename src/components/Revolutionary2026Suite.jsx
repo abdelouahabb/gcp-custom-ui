@@ -31,6 +31,7 @@ import EngineerMoonshotsWave3 from './EngineerMoonshotsWave3';
 import Lab2026QuantumNexus from './Lab2026QuantumNexus';
 import GcloudAlphaBetaStudio from './GcloudAlphaBetaStudio';
 import Wave11MoonshotStudio from './Wave11MoonshotStudio';
+import Wave12RoadsterFlightDeckStudio from './Wave12RoadsterFlightDeckStudio';
 import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
@@ -206,7 +207,7 @@ export default function Revolutionary2026Suite({
 }) {
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
   const [subTab, setSubTab] = useState(
-    initialSubTab === 'TOPOLOGY' ? 'QUANTUM_NEXUS' : initialSubTab || 'QUANTUM_NEXUS'
+    initialSubTab === 'TOPOLOGY' ? 'WAVE12_ROADSTER' : initialSubTab || 'WAVE12_ROADSTER'
   );
   const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState([]);
@@ -1097,6 +1098,15 @@ export default function Revolutionary2026Suite({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
             {
+              id: 'WAVE12_ROADSTER',
+              category: 'ALPHA_BETA',
+              badge: 'WAVE 12 ROADSTER',
+              label:
+                'Wave 12 Roadster (FSD Autopilot, Cross-Project Teleport & 12-Way Megacast)',
+              tip: 'SpaceX Roadster Zero-Gravity Flight Deck: Closed-Loop FSD Cloud Autopilot with SHA-256 Merkle proofs, Zero-Gravity Cross-Project Live Resource Teleporter (BigQuery + GCS + Secrets), Ludicrous-Mode 12-Way Parallel MCP Megacast & Grounded Gemini 2.5 Flash Flight Director',
+              icon: Rocket,
+            },
+            {
               id: 'WAVE11_MOONSHOT',
               category: 'ALPHA_BETA',
               badge: 'WAVE 11 MOONSHOT',
@@ -1279,6 +1289,15 @@ export default function Revolutionary2026Suite({
             })}
         </div>
       </div>
+
+      {/* FLAGSHIP WAVE 12 ROADSTER FLIGHT DECK STUDIO */}
+      {subTab === 'WAVE12_ROADSTER' && (
+        <Wave12RoadsterFlightDeckStudio
+          projectId={projectId}
+          onShowToast={onShowToast}
+          onRefreshOverview={onRefreshOverview}
+        />
+      )}
 
       {/* FLAGSHIP WAVE 11 MOONSHOT STUDIO */}
       {subTab === 'WAVE11_MOONSHOT' && (
