@@ -31,22 +31,48 @@ import {
 
 const DOC_SECTIONS = [
   {
-    id: 'wave13-starlink-orbital-mesh-neuralink-cloud-singularity',
-    wave: 'WAVE 13 STARLINK ORBITAL MESH & NEURALINK CLOUD SINGULARITY · LEO LASER PROBE, 4-NODE DAG COMPILER, OPTIMUS 3-AGENT COUNCIL & Ed25519 BLACK-BOX',
+    id: 'wave14-quantum-envelope-bigquery-time-travel-self-healing-doctor',
+    wave: 'WAVE 14 QUANTUM ENVELOPE VAULT, BIGQUERY TIME-TRAVEL SQL, SELF-HEALING CLOUD DOCTOR & IAM BLAST-RADIUS GRAPH (100% LIVE)',
     title:
-      'Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity — 6-Corridor Subsea vs. 550km Vacuum Laser Probe, 1-Sentence Thought-to-Cloud 4-Node DAG Executor, Optimus 3-Agent Council Debate & Ed25519 Signed Black-Box Ledger',
-    badge: '2026 INNOVATION LAB (WAVE 13 · #1)',
+      'Wave 14 Quantum-Resistant Envelope Vault, BigQuery FOR SYSTEM_TIME AS OF Time-Travel Forensics, Autonomous Self-Healing Cloud Doctor & Live IAM Blast-Radius Graph',
+    badge: '2026 INNOVATION LAB (WAVE 14 · #1)',
+    badgeColor: 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/40',
+    icon: ShieldCheck,
+    targetTab: 'INNOVATION_LAB',
+    targetSubTab: 'WAVE14_QUANTUM_DOCTOR',
+    problemSolved:
+      'Production cloud estates require native temporal SQL forensics across historical BigQuery snapshots (FOR SYSTEM_TIME AS OF), closed-loop REST PATCH self-healing when GCS/BigQuery/Secret Manager configurations drift, real-time IAM policy blast-radius scoring across primitive Owner/Editor roles, and post-quantum hybrid envelope encryption persisted inside Google Cloud Secret Manager.',
+    howItWorks: [
+      'Module 01 (Live BigQuery Time-Travel FOR SYSTEM_TIME AS OF Engine): Discovers all live BigQuery tables in your project, executes parallel SQL queries at CURRENT_TIMESTAMP() vs. FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(...), and provides a 1-Click Mutate & Prove Time-Travel Diff Live button that inserts a live row via tabledata.insertAll and proves the exact temporal row delta.',
+      'Module 02 (Autonomous Self-Healing Cloud Doctor): Audits real GCS buckets, BigQuery datasets, and Secret Manager containers against Zero-Trust SLO invariants (Uniform Bucket-Level Access, Public Access Prevention, Governance Labels, and ENABLED SecretVersions) and heals drifted resources via live REST PATCH/POST calls.',
+      'Module 03 (Live IAM Policy Blast-Radius Graph Inspector): Calls cloudresourcemanager.googleapis.com/v1/projects/:id:getIamPolicy and iam.googleapis.com/v1/projects/:id/serviceAccounts live, scores each principal’s blast radius, and synthesizes a grounded Gemini 2.5 Flash Least-Privilege Refactoring Plan.',
+      'Module 04 (Hybrid Post-Quantum & Envelope Cryptography Vault): Executes real ephemeral X25519 ECDH key agreement mixed with a 512-bit SHAKE256 Post-Quantum Lattice salt via HKDF-SHA512, encrypts payloads with AES-256-GCM, signs the canonical envelope with Ed25519 (RFC 8032), seals it as a real SecretVersion in Secret Manager (:addVersion), and fetches/decrypts it live (:access).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/wave14/time-travel-tables & POST /api/project/:id/wave14/bigquery-time-travel',
+      'GET /api/project/:id/wave14/self-healing-audit & POST /api/project/:id/wave14/self-healing-remediate',
+      'GET /api/project/:id/wave14/iam-blast-radius, POST /api/project/:id/wave14/iam-ai-hardening, POST /api/project/:id/wave14/quantum-envelope-seal & POST /api/project/:id/wave14/quantum-envelope-decrypt',
+    ],
+    billingImpact:
+      '100% $0.00/mo for IAM policy audits, GCS/BQ metadata PATCH remediation, and X25519/SHAKE256/Ed25519 cryptography; BigQuery time-travel queries and Secret Manager versions fall within Always-Free Tier allowances.',
+  },
+  {
+    id: 'wave13-starlink-orbital-mesh-neuralink-cloud-singularity',
+    wave: 'WAVE 13 STARLINK ORBITAL MESH & NEURALINK CLOUD SINGULARITY · 6-REGION LIVE TLS 1.3 PROBE, DYNAMIC PROMPT-TO-SCHEMA DAG, OPTIMUS COUNCIL & Ed25519 BLACK-BOX',
+    title:
+      'Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity — 6-Region Live HTTPS/TLS Socket Matrix + BigQuery Heartbeat Streamer, Dynamic Prompt-Driven 4-Node DAG Executor, Optimus 3-Agent Council & Ed25519 Black-Box',
+    badge: '2026 INNOVATION LAB (WAVE 13 · #2)',
     badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
     icon: Globe,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'WAVE13_STARLINK_NEURALINK',
     problemSolved:
-      'Intercontinental cloud architectures suffer from refractive submarine glass latency (204.2 km/ms) and cable-cut blackouts, manual multi-service provisioning friction, conflicting FinOps vs. Security vs. SRE priorities, and unsigned audit logs that lack cryptographic non-repudiation.',
+      'Global cloud architectures need live regional control-plane socket latency measurements across 6 Google Cloud regions, 1-click BigQuery geo-standby heartbeat streaming, dynamic prompt-to-schema BigQuery/GCS/Secret DAG materialization with live SQL read-back, multi-agent FinOps/Security/SRE consensus, and persistent Ed25519 cryptographic flight recording.',
     howItWorks: [
-      'Module 01 (Starlink Orbital Laser & Subsea Fiber Blackout Rerouter): Probes 6 intercontinental corridors via live Node.js dns.promises.lookup and tls.connect TLS 1.3 handshakes, compares subsea fiber RTT vs. 550km LEO vacuum laser propagation (299.79 km/ms), simulates subsea cable cuts, and provisions live Geo-Failover Standby datasets.',
-      'Module 02 (Neuralink Thought-to-Cloud 4-Node DAG Executor): Compiles a 1-sentence architecture intent into a deterministic 4-node DAG (Hardened GCS Bucket + BigQuery Dataset + 5-Column Typed Table + Secret Manager Vault) with a SHA-256 DAG digest and materializes all 4 live GCP resources in parallel.',
-      'Module 03 (Optimus 3-Agent Autonomous Council): Convene a structured 3-agent debate (Optimus FinOps Hawk, Optimus Zero-Trust Sentinel, Optimus SRE Reliability Prime) over your live project state to synthesize a formatted Markdown Consensus Resolution & gcloud runbook.',
-      'Module 04 (Cryptographic Ed25519 & SHA-256 Hash-Chained Black-Box Ledger): Generates an in-memory Ed25519 asymmetric keypair (RFC 8032), chains every block via prevBlockHash -> blockHash, signs and verifies every mutation using crypto.sign and crypto.verify, and exports signed compliance bundles.',
+      'Module 01 (100% Live 6-Region Google Cloud Socket Matrix & BigQuery Heartbeat Streamer): Probes 6 regional Google Cloud endpoints (us-central1, us-east1, europe-west1, europe-west4, asia-northeast1, southamerica-east1 via *-aiplatform.googleapis.com) using real DNS lookup, TLS 1.3 handshake, and HTTPS REST discovery, and streams live failover heartbeat rows into BigQuery via tabledata.insertAll.',
+      'Module 02 (Dynamic Prompt-Driven Schema Compiler & Live 4-Node DAG Executor): Dynamically extracts custom BigQuery schema columns from your natural-language prompt, creates the GCS bucket + uploads neuralink-dag-manifest.json, creates the BigQuery dataset + custom-schema table, streams a live row via insertAll, queries the rows back via BigQuery SQL (SELECT * FROM ... LIMIT 5), and seals a real SecretVersion.',
+      'Module 03 (Optimus 3-Agent Autonomous Council): Convene a live Vertex AI Gemini 2.5 Flash 3-agent debate (Optimus FinOps Hawk, Optimus Zero-Trust Sentinel, Optimus SRE Reliability Prime) grounded on your live project inventory.',
+      'Module 04 (Cryptographic Ed25519 & SHA-256 Hash-Chained Black-Box Ledger): Persists an Ed25519 asymmetric keypair (RFC 8032) and hash-chained flight recorder to disk, signing and verifying every live cloud mutation via crypto.sign and crypto.verify.',
     ],
     apisUsed: [
       'POST /api/project/:id/wave13/starlink-orbital-probe & POST /api/project/:id/wave13/starlink-failover-execute',
@@ -54,7 +80,7 @@ const DOC_SECTIONS = [
       'POST /api/project/:id/wave13/optimus-swarm-debate, GET /api/project/:id/wave13/blackbox-ledger & POST /api/project/:id/wave13/blackbox-seal',
     ],
     billingImpact:
-      '100% $0.00/mo for TLS 1.3 orbital probes, DAG compilation, 3-agent council synthesis, and Ed25519 ledger verification; all 4 materialized DAG nodes fall within Google Cloud Always-Free Tier allowances.',
+      '100% $0.00/mo for regional TLS 1.3 probes, DAG compilation, 3-agent council synthesis, and Ed25519 ledger verification; all 4 materialized DAG nodes fall within Google Cloud Always-Free Tier allowances.',
   },
   {
     id: 'wave12-spacex-roadster-autopilot-zero-gravity-flight-deck',

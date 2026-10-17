@@ -33,6 +33,7 @@ import GcloudAlphaBetaStudio from './GcloudAlphaBetaStudio';
 import Wave11MoonshotStudio from './Wave11MoonshotStudio';
 import Wave12RoadsterFlightDeckStudio from './Wave12RoadsterFlightDeckStudio';
 import Wave13StarlinkNeuralinkStudio from './Wave13StarlinkNeuralinkStudio';
+import Wave14QuantumTimeTravelDoctorStudio from './Wave14QuantumTimeTravelDoctorStudio';
 import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
@@ -208,7 +209,7 @@ export default function Revolutionary2026Suite({
 }) {
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
   const [subTab, setSubTab] = useState(
-    initialSubTab === 'TOPOLOGY' ? 'WAVE13_STARLINK_NEURALINK' : initialSubTab || 'WAVE13_STARLINK_NEURALINK'
+    initialSubTab === 'TOPOLOGY' ? 'WAVE14_QUANTUM_DOCTOR' : initialSubTab || 'WAVE14_QUANTUM_DOCTOR'
   );
   const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState([]);
@@ -1025,16 +1026,16 @@ export default function Revolutionary2026Suite({
               Lab Domain Filter (7 Equal Domains):
             </span>
             <span className="text-[11px] font-mono text-zinc-500">
-              20 Specialized Cloud Labs
+              21 Specialized Cloud Labs
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2">
             {[
-              { id: 'ALL', code: 'ALL', label: 'All 20 Lab Suites' },
+              { id: 'ALL', code: 'ALL', label: 'All 21 Lab Suites' },
               {
                 id: 'ALPHA_BETA',
                 code: 'D01',
-                label: 'W13 Starlink, W12 & W11',
+                label: 'W14, W13, W12 & W11',
               },
               {
                 id: 'QUANTUM',
@@ -1070,7 +1071,7 @@ export default function Revolutionary2026Suite({
                   onClick={() => {
                     setLabCategory(cat.id);
                     if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
-                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE13_STARLINK_NEURALINK');
+                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE14_QUANTUM_DOCTOR');
                   }}
                   title={cat.label}
                   className={`w-full h-10 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-1.5 ${
@@ -1099,12 +1100,21 @@ export default function Revolutionary2026Suite({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
             {
+              id: 'WAVE14_QUANTUM_DOCTOR',
+              category: 'ALPHA_BETA',
+              badge: 'WAVE 14 TEMPORAL & PQC',
+              label:
+                'Wave 14 Quantum Vault, BQ Time-Travel SQL, Self-Healing Doctor & IAM Blast-Radius',
+              tip: 'Wave 14 Live BigQuery FOR SYSTEM_TIME AS OF Time-Travel SQL Engine, Autonomous Self-Healing Cloud Doctor (Live GCS/BQ/Secret PATCH), Live IAM Policy Blast-Radius Graph & Hybrid X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
+              icon: ShieldCheck,
+            },
+            {
               id: 'WAVE13_STARLINK_NEURALINK',
               category: 'ALPHA_BETA',
               badge: 'WAVE 13 SINGULARITY',
               label:
                 'Wave 13 Starlink & Neuralink (Orbital Laser, Thought-to-Cloud DAG, Optimus & Ed25519)',
-              tip: 'Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity: 6-Corridor Subsea vs. 550km Vacuum Laser Probe + Geo-Failover, Neuralink 1-Sentence Thought-to-Cloud 4-Node DAG Executor, Optimus 3-Agent Council Debate & Ed25519 Signed Black-Box Flight Recorder',
+              tip: 'Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity: 6-Region Live HTTPS/TLS Probe + BigQuery Heartbeat Streamer, Dynamic Prompt-to-Schema DAG Executor, Optimus 3-Agent Council Debate & Ed25519 Signed Black-Box Flight Recorder',
               icon: Globe,
             },
             {
@@ -1299,6 +1309,15 @@ export default function Revolutionary2026Suite({
             })}
         </div>
       </div>
+
+      {/* FLAGSHIP WAVE 14 QUANTUM VAULT, BIGQUERY TIME-TRAVEL & SELF-HEALING DOCTOR STUDIO */}
+      {subTab === 'WAVE14_QUANTUM_DOCTOR' && (
+        <Wave14QuantumTimeTravelDoctorStudio
+          projectId={projectId}
+          onShowToast={onShowToast}
+          onRefreshOverview={onRefreshOverview}
+        />
+      )}
 
       {/* FLAGSHIP WAVE 13 STARLINK ORBITAL MESH & NEURALINK SINGULARITY STUDIO */}
       {subTab === 'WAVE13_STARLINK_NEURALINK' && (

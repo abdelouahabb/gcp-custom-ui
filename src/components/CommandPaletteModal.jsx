@@ -121,10 +121,24 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-wave14-quantum-doctor',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open Wave 14 Quantum Envelope Vault, BigQuery Time-Travel SQL, Self-Healing Doctor & IAM Blast-Radius',
+        subtitle: 'Live BigQuery FOR SYSTEM_TIME AS OF SQL Diff, Autonomous GCS/BQ/Secret REST PATCH Remediation, Live getIamPolicy Blast-Radius & X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
+        keywords: 'wave 14 quantum pqc x25519 shake256 hkdf aes-256-gcm secret manager bigquery time travel for system_time as of self healing cloud doctor iam blast radius getiampolicy',
+        badge: 'WAVE 14 TEMPORAL & PQC',
+        badgeColor: 'text-violet-700 dark:text-violet-300 bg-violet-500/15 border-violet-500/30',
+        icon: Key,
+        run: () => {
+          onSelectTab('INNOVATION_LAB', 'WAVE14_QUANTUM_DOCTOR');
+          onClose();
+        }
+      },
+      {
         id: 'open-wave13-starlink-neuralink',
         category: '2026 Innovation Lab (Star)',
         title: 'Open Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity',
-        subtitle: '6-Corridor Subsea vs. 550km Vacuum Laser Probe, Neuralink 1-Sentence 4-Node DAG Executor, Optimus 3-Agent Council & Ed25519 Black-Box Ledger',
+        subtitle: '6-Region Live HTTPS/TLS Probe + BigQuery Heartbeat Streamer, Dynamic Prompt-to-Schema 4-Node DAG Executor, Optimus 3-Agent Council & Ed25519 Black-Box Ledger',
         keywords: 'wave 13 starlink orbital laser subsea fiber neuralink thought to cloud dag compiler optimus 3 agent council ed25519 blackbox signature',
         badge: 'WAVE 13 SINGULARITY',
         badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',

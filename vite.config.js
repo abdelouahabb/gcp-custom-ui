@@ -209,7 +209,10 @@ export default defineConfig(({ mode }) => {
               id.includes('src/components/EngineerWishlistWave2') ||
               id.includes('src/components/AutonomousCloudBrain') ||
               id.includes('src/components/Lab2026QuantumNexus') ||
-              id.includes('src/components/Wave11MoonshotStudio')
+              id.includes('src/components/Wave11MoonshotStudio') ||
+              id.includes('src/components/Wave12RoadsterFlightDeckStudio') ||
+              id.includes('src/components/Wave13StarlinkNeuralinkStudio') ||
+              id.includes('src/components/Wave14QuantumTimeTravelDoctorStudio')
             ) {
               return 'studio-innovation-lab';
             }
