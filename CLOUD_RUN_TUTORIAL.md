@@ -53,8 +53,9 @@ Once your CloudPulse 2026 cockpit opens, try these key workflows:
    - Select any `GA` or `PREVIEW` server (e.g., `Google Cloud CLI (gcloud) MCP`, `BigQuery Remote MCP`, or `Cloud Storage Remote MCP`) to inspect formatted tool safety callouts, `#1`–`#10` execution rules, and `REQUIRED`/`OPTIONAL` schema parameters, execute live `tools/call` operations, or run a grounded **Gemini 2.5 Flash Live MCP Review**.
 2. **`FinOps & Credits` Tab (`Active-Only CSV Bonus Credit Guardian & 6-Service Harvester`)**:
    - Open **`FinOps & Credits`** to auto-import your 9-column Google Cloud Billing Credits CSV (`~/Downloads` / `~/Desktop`). Historical `Status = Expired` rows are strictly excluded from active `Bonus: $...` totals while remaining visible in the ledger, and the 6-service Harvester shows how much Spot VM, L4 GPU, GKE, Cloud Run, Cloud SQL, or BigQuery capacity your active expiring bonus buys.
-3. **`2026 Innovation` -> `01 · Wave 11: Moonshot Studio`**:
-   - Manage **Cloud Deploy 3-Stage Canary Pipelines**, **Firestore Native CRUD**, **Active Assist Recommender**, the **Multi-Project Estate Comparison Matrix**, and the **18-Studio Live Stress Audit**.
+3. **`2026 Innovation` -> `Wave 12 Roadster (FSD Autopilot, Cross-Project Teleport & 12-Way Megacast)` & `Wave 11: Moonshot Studio`**:
+   - **Wave 12 SpaceX Roadster Flight Deck**: Run the 6-vector **FSD Cloud Autopilot & Closed-Loop Reconciler** with `SHA-256` Merkle receipts, clone live BigQuery datasets, GCS buckets, and Secret Manager vaults across GCP projects via the **Zero-Gravity Cross-Project Live Teleporter**, fire a **Ludicrous-Mode 12-Way Parallel MCP Megacast**, and generate a grounded **Gemini 2.5 Flash Flight Director** mission briefing.
+   - **Wave 11 Moonshot Studio**: Manage **Cloud Deploy 3-Stage Canary Pipelines**, **Firestore Native CRUD**, **Active Assist Recommender**, the **Multi-Project Estate Comparison Matrix**, and the **18-Studio Live Stress Audit**.
 
 ---
 

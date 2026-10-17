@@ -1016,7 +1016,7 @@ export default function Revolutionary2026Suite({
         </div>
       )}
 
-      {/* Category Filter Bar for 17 Lab Suites (Equal-Sized 7-Column Bento Grid) */}
+      {/* Category Filter Bar for 19 Lab Suites (Equal-Sized 7-Column Bento Grid) */}
       <div className="space-y-3">
         <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-2">
           <div className="flex items-center justify-between px-1">
@@ -1024,16 +1024,16 @@ export default function Revolutionary2026Suite({
               Lab Domain Filter (7 Equal Domains):
             </span>
             <span className="text-[11px] font-mono text-zinc-500">
-              17 Specialized Cloud Labs
+              19 Specialized Cloud Labs
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2">
             {[
-              { id: 'ALL', code: 'ALL', label: 'All 18 Lab Suites' },
+              { id: 'ALL', code: 'ALL', label: 'All 19 Lab Suites' },
               {
                 id: 'ALPHA_BETA',
                 code: 'D01',
-                label: '[ALPHA/BETA] & W11 (15)',
+                label: 'W12 Roadster, W11 & [ALPHA]',
               },
               {
                 id: 'QUANTUM',
@@ -1069,7 +1069,7 @@ export default function Revolutionary2026Suite({
                   onClick={() => {
                     setLabCategory(cat.id);
                     if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
-                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE11_MOONSHOT');
+                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE12_ROADSTER');
                   }}
                   title={cat.label}
                   className={`w-full h-10 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-1.5 ${
