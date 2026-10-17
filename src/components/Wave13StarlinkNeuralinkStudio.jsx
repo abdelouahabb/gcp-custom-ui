@@ -316,10 +316,9 @@ export default function Wave13StarlinkNeuralinkStudio({
 }) {
   const [activeTab, setActiveTab] = useState('STARLINK_ORBITAL_MESH');
 
-  // Module 01: Starlink Orbital Mesh State
+  // Module 01: Starlink Orbital & Global Regional Control-Plane State
   const [orbitalData, setOrbitalData] = useState(null);
   const [probingOrbital, setProbingOrbital] = useState(false);
-  const [simulatedCutCorridorId, setSimulatedCutCorridorId] = useState('');
   const [executingFailover, setExecutingFailover] = useState(false);
   const [failoverReceipt, setFailoverReceipt] = useState(null);
 
@@ -362,26 +361,23 @@ export default function Wave13StarlinkNeuralinkStudio({
     [notify]
   );
 
-  const runStarlinkProbe = useCallback(
-    async (cutCorridor = simulatedCutCorridorId) => {
-      if (!projectId) return;
-      setProbingOrbital(true);
-      try {
-        const res = await axios.post(
-          `/api/project/${encodeURIComponent(projectId)}/wave13/starlink-orbital-probe`,
-          { simulatedCutCorridorId: cutCorridor }
-        );
-        setOrbitalData(res.data);
-      } catch (err) {
-        notify(
-          `Orbital probe notice: ${err.response?.data?.error || err.message}`
-        );
-      } finally {
-        setProbingOrbital(false);
-      }
-    },
-    [projectId, simulatedCutCorridorId, notify]
-  );
+  const runStarlinkProbe = useCallback(async () => {
+    if (!projectId) return;
+    setProbingOrbital(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave13/starlink-orbital-probe`,
+        {}
+      );
+      setOrbitalData(res.data);
+    } catch (err) {
+      notify(
+        `Orbital probe notice: ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setProbingOrbital(false);
+    }
+  }, [projectId, notify]);
 
   const runNeuralinkCompile = useCallback(
     async (promptVal = thoughtPrompt, slugVal = stackSlug, regVal = dagRegion) => {
@@ -426,7 +422,7 @@ export default function Wave13StarlinkNeuralinkStudio({
   }, [projectId, notify]);
 
   useEffect(() => {
-    runStarlinkProbe('');
+    runStarlinkProbe();
     runNeuralinkCompile(
       NEURALINK_INTENT_PRESETS[0].prompt,
       NEURALINK_INTENT_PRESETS[0].slug,
@@ -435,29 +431,24 @@ export default function Wave13StarlinkNeuralinkStudio({
     fetchBlackBoxLedger();
   }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSimulateSubseaCut = (corridorId) => {
-    const nextCut = simulatedCutCorridorId === corridorId ? '' : corridorId;
-    setSimulatedCutCorridorId(nextCut);
-    runStarlinkProbe(nextCut);
-  };
-
   const handleEngageOrbitalFailover = async (corridor) => {
     if (!projectId) return;
     setExecutingFailover(true);
     try {
-      const targetReg = corridor?.id?.includes('eu') ? 'EU' : 'US';
+      const targetReg = corridor?.bqMultiRegion || (corridor?.id?.includes('eu') ? 'EU' : 'US');
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/wave13/starlink-failover-execute`,
         {
-          corridorId: corridor?.id || 'corridor-us-eu',
+          corridorId: corridor?.id || 'corridor-us-central1',
           targetRegion: targetReg,
           failoverMode: 'BIGQUERY_GEO_BEACON',
         }
       );
       setFailoverReceipt(res.data);
+      runStarlinkProbe();
       fetchBlackBoxLedger();
       if (onRefreshOverview) onRefreshOverview();
-      notify(res.data?.actionDetail || 'Starlink Orbital Geo-Failover engaged');
+      notify(res.data?.actionDetail || 'Live Geo-Standby provisioned & heartbeat row streamed');
     } catch (err) {
       if (err?.message && err.message.includes('cancelled')) return;
       notify(
@@ -484,7 +475,7 @@ export default function Wave13StarlinkNeuralinkStudio({
       fetchBlackBoxLedger();
       if (onRefreshOverview) onRefreshOverview();
       notify(
-        `Neuralink 4-Node DAG materialized in ${res.data?.wallClockMs}ms and sealed with Ed25519 signature!`
+        `Neuralink 4-Node DAG materialized + GCS object uploaded + BQ row queried in ${res.data?.wallClockMs}ms!`
       );
     } catch (err) {
       if (err?.message && err.message.includes('cancelled')) return;
@@ -570,35 +561,35 @@ export default function Wave13StarlinkNeuralinkStudio({
               )}
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              Starlink LEO Optical Laser Mesh, Neuralink Thought-to-Cloud DAG Materializer, Optimus 3-Agent Council & Ed25519 Black-Box
+              Global Regional TLS 1.3 Control-Plane Matrix, Prompt-Driven DAG Materializer, Optimus 3-Agent Council & Ed25519 Black-Box
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
-              Compare subsea silica fiber vs. 550km vacuum laser propagation with live TLS 1.3 probes, compile 1-sentence intents into 4-node live Google Cloud DAGs, convene a 3-agent FinOps/Security/SRE council debate, and seal every cloud mutation in an Ed25519 hash-chained flight recorder.
+              Execute real DNS + TLS 1.3 + HTTPS REST probes across 6 regional Google Cloud control planes, stream live failover heartbeats into BigQuery, compile custom prompts into live GCS objects + SecretVersions + BigQuery SQL rows, convene a 3-agent Gemini 2.5 Flash council, and seal every mutation with RFC 8032 Ed25519 signatures.
             </p>
           </div>
 
           <div className="grid grid-cols-3 gap-2.5 shrink-0">
             <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
               <div className="text-[10px] font-mono uppercase text-zinc-400">
-                LEO Laser Gain
+                Fastest Region
               </div>
-              <div className="text-base font-mono font-extrabold text-cyan-600 dark:text-cyan-400">
-                {orbitalData ? `-${orbitalData.avgSpeedupPct}% RTT` : '31.4%'}
+              <div className="text-sm font-mono font-extrabold text-cyan-600 dark:text-cyan-400">
+                {orbitalData?.fastestRegion || 'Probing...'}
               </div>
             </div>
             <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
               <div className="text-[10px] font-mono uppercase text-zinc-400">
-                Neuralink DAG
+                Dynamic Schema
               </div>
-              <div className="text-base font-mono font-extrabold text-indigo-600 dark:text-indigo-400">
-                4 Live Nodes
+              <div className="text-sm font-mono font-extrabold text-indigo-600 dark:text-indigo-400">
+                {compiledDag?.schemaFields?.length || 5} Live Columns
               </div>
             </div>
             <div className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 text-center">
               <div className="text-[10px] font-mono uppercase text-zinc-400">
                 Ed25519 Blocks
               </div>
-              <div className="text-base font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+              <div className="text-sm font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
                 {ledgerData?.chainLength || 1} Verified
               </div>
             </div>
@@ -650,7 +641,7 @@ export default function Wave13StarlinkNeuralinkStudio({
       </div>
 
       {/* =================================================================== */}
-      {/* MODULE 01: STARLINK ORBITAL LASER & SUBSEA FIBER BLACKOUT REROUTER  */}
+      {/* MODULE 01: LIVE 6-REGION HTTPS/TLS CONTROL-PLANE & FAILOVER STREAM  */}
       {/* =================================================================== */}
       {activeTab === 'STARLINK_ORBITAL_MESH' && (
         <div className="space-y-5">
@@ -659,16 +650,16 @@ export default function Wave13StarlinkNeuralinkStudio({
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Globe className="w-4 h-4 text-cyan-500" />
                 <span>
-                  Starlink 550km LEO Vacuum Optical Inter-Satellite Link (ISL) vs. Subsea Silica Fiber Matrix
+                  100% Live 6-Region Google Cloud Control-Plane Socket Matrix & BigQuery Heartbeat Streamer
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Light travels at 299.79 km/ms in orbital vacuum vs. 204.2 km/ms inside refractive submarine glass (n=1.468). Click &ldquo;Simulate Subsea Cable Cut&rdquo; or &ldquo;Engage Geo-Standby&rdquo; on any corridor.
+                Every latency number below is measured live from your machine via real DNS lookup, TLS 1.3 socket handshake, and regional HTTPS REST round-trip to <code>*-aiplatform.googleapis.com</code>. Click <strong>Stream Live Heartbeat</strong> to provision the geo-standby dataset, create <code>live_failover_heartbeats</code>, and insert a real row via <code>tabledata.insertAll</code>.
               </p>
             </div>
             <button
               type="button"
-              onClick={() => runStarlinkProbe(simulatedCutCorridorId)}
+              onClick={() => runStarlinkProbe()}
               disabled={probingOrbital}
               className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-mono font-bold flex items-center gap-2 shrink-0 cursor-pointer"
             >
@@ -677,8 +668,8 @@ export default function Wave13StarlinkNeuralinkStudio({
               />
               <span>
                 {probingOrbital
-                  ? 'Firing Orbital TLS 1.3 Probes...'
-                  : 'Re-Probe 6 Global Anycast Corridors'}
+                  ? 'Probing 6 Regional Control Planes...'
+                  : 'Re-Probe 6 Regional Endpoints Live'}
               </span>
             </button>
           </div>
@@ -693,10 +684,10 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
                   Ed25519 Signature:{' '}
                   <code>
-                    {failoverReceipt.ledgerBlock?.ed25519SignatureHex?.slice(0, 36)}
+                    {failoverReceipt.ledgerBlock?.ed25519SignatureHex?.slice(0, 32)}
                     ...
                   </code>{' '}
-                  · Latency: {failoverReceipt.latencyMs}ms
+                  · Execution: {failoverReceipt.latencyMs}ms
                 </div>
               </div>
               <button
@@ -710,14 +701,15 @@ export default function Wave13StarlinkNeuralinkStudio({
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(orbitalData?.corridors || []).map((c) => {
-              const isCut = c.corridorStatus === 'SUBSEA_FIBER_SEVERED_REROUTED_LEO';
+            {(orbitalData?.corridors || []).map((c, idx) => {
+              const isDeployed = c.standbyStatus === 'LIVE_STANDBY_DEPLOYED_IN_GCP';
+              const isFastest = idx === 0 && Boolean(orbitalData?.fastestRegion);
               return (
                 <div
                   key={c.id}
                   className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 transition-all ${
-                    isCut
-                      ? 'border-amber-500/60 bg-amber-500/5 dark:bg-amber-950/20'
+                    isFastest
+                      ? 'border-cyan-500/60 bg-cyan-500/5 dark:bg-cyan-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90'
                   }`}
                 >
@@ -725,15 +717,15 @@ export default function Wave13StarlinkNeuralinkStudio({
                     <div className="flex items-center justify-between gap-2">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold ${
-                          isCut
-                            ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                          isDeployed
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
                             : 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300'
                         }`}
                       >
-                        {c.activeTransport}
+                        {isDeployed ? 'STANDBY DEPLOYED IN GCP' : c.activeTransport}
                       </span>
-                      <span className="text-[11px] font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                        -{c.latencySavedMs}ms ({c.speedupPct}% faster)
+                      <span className="text-[11px] font-mono font-extrabold text-cyan-600 dark:text-cyan-400">
+                        {isFastest ? 'FASTEST CONTROL PLANE' : `HTTP ${c.httpStatus}`}
                       </span>
                     </div>
 
@@ -741,41 +733,38 @@ export default function Wave13StarlinkNeuralinkStudio({
                       {c.label}
                     </div>
                     <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      Cable: {c.subseaCableName} ({c.greatCircleKm.toLocaleString()} km geodesic)
+                      Corridor: {c.subseaCableName} ({c.greatCircleKm.toLocaleString()} km)
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
                         <div className="text-[10px] font-mono text-zinc-400">
-                          Subsea Glass RTT
+                          Live TLS 1.3 Socket
                         </div>
-                        <div
-                          className={`text-sm font-mono font-extrabold ${
-                            isCut
-                              ? 'line-through text-red-500'
-                              : 'text-zinc-800 dark:text-zinc-200'
-                          }`}
-                        >
-                          {c.subseaFiberRttMs} ms
+                        <div className="text-sm font-mono font-extrabold text-zinc-800 dark:text-zinc-200">
+                          {c.tlsSocketMs} ms
                         </div>
                       </div>
                       <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
                         <div className="text-[10px] font-mono text-cyan-700 dark:text-cyan-300">
-                          Starlink Vacuum Laser
+                          Live HTTPS REST RTT
                         </div>
                         <div className="text-sm font-mono font-extrabold text-cyan-700 dark:text-cyan-300">
-                          {c.starlinkVacuumLaserRttMs} ms
+                          {c.httpsRttMs} ms
                         </div>
                       </div>
                     </div>
 
                     <div className="p-2 rounded-xl bg-zinc-100/80 dark:bg-zinc-950/90 text-[10px] font-mono text-zinc-600 dark:text-zinc-400 space-y-0.5">
-                      <div>
-                        Live Anycast Host: <strong className="text-zinc-900 dark:text-white">{c.endpointHost}</strong> ({c.liveProbe?.resolvedIp})
+                      <div className="truncate">
+                        Host: <strong className="text-zinc-900 dark:text-white">{c.endpointHost}</strong> ({c.liveProbe?.resolvedIp})
                       </div>
                       <div>
-                        DNS: <strong>{c.liveProbe?.dnsMs}ms</strong> · TLS 1.3 Handshake:{' '}
-                        <strong>{c.liveProbe?.tlsHandshakeMs}ms</strong> ({c.liveProbe?.tlsProtocol})
+                        DNS: <strong>{c.dnsMs}ms</strong> · Cipher:{' '}
+                        <strong>{c.liveProbe?.tlsProtocol}</strong>
+                      </div>
+                      <div className="truncate">
+                        BQ Standby Dataset: <strong className="text-zinc-900 dark:text-white">{c.standbyDatasetId}</strong> ({c.bqMultiRegion})
                       </div>
                     </div>
                   </div>
@@ -783,14 +772,11 @@ export default function Wave13StarlinkNeuralinkStudio({
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => handleSimulateSubseaCut(c.id)}
-                      className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-mono font-bold cursor-pointer ${
-                        isCut
-                          ? 'bg-amber-600 text-white border-amber-500'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:border-amber-500/50'
-                      }`}
+                      onClick={() => runStarlinkProbe()}
+                      disabled={probingOrbital}
+                      className="px-2.5 py-1.5 rounded-xl border bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:border-cyan-500/50 text-[11px] font-mono font-bold cursor-pointer"
                     >
-                      {isCut ? 'Restore Subsea Cable' : 'Simulate Cable Cut'}
+                      Re-Probe Region
                     </button>
                     <button
                       type="button"
@@ -798,7 +784,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                       disabled={executingFailover}
                       className="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-[11px] font-mono font-bold cursor-pointer"
                     >
-                      Engage Geo-Standby
+                      Stream Live Heartbeat
                     </button>
                   </div>
                 </div>
@@ -819,11 +805,11 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-indigo-500" />
                   <span>
-                    Neuralink &ldquo;Thought-to-Cloud&rdquo; Architecture Compiler & Parallel 4-Node DAG Executor
+                    Neuralink &ldquo;Thought-to-Cloud&rdquo; Dynamic Schema Compiler & Live 4-Node DAG Executor
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Express your cloud architecture in 1 sentence or pick a preset below. Compiles a deterministic 4-node DAG and provisions all 4 resources in parallel on {projectId}.
+                  Type any natural-language sentence below: the compiler dynamically extracts custom BigQuery columns from your words, uploads a real JSON manifest object to GCS, seals a real SecretVersion, streams a live BigQuery row via <code>insertAll</code>, and queries the row back via SQL.
                 </p>
               </div>
               {compiledDag?.dagSha256 && (
@@ -859,7 +845,7 @@ export default function Wave13StarlinkNeuralinkStudio({
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
               <div className="lg:col-span-2">
                 <label className="block text-[11px] font-mono font-bold text-zinc-500 dark:text-zinc-400 mb-1">
-                  Natural-Language Architecture Intent
+                  Natural-Language Architecture Intent (Dynamically Parsed into Columns)
                 </label>
                 <input
                   type="text"
@@ -906,6 +892,29 @@ export default function Wave13StarlinkNeuralinkStudio({
               </div>
             </div>
 
+            {/* Dynamic Prompt-Extracted Schema Columns */}
+            {compiledDag?.schemaFields && (
+              <div className="p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 space-y-1.5">
+                <div className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                  Prompt-Compiled BigQuery Schema Columns ({compiledDag.schemaFields.length} Fields)
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {compiledDag.schemaFields.map((f) => (
+                    <span
+                      key={f.name}
+                      className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-indigo-500/30 text-[10px] font-mono text-zinc-800 dark:text-zinc-200"
+                    >
+                      <strong>{f.name}</strong>:{' '}
+                      <span className="text-indigo-600 dark:text-indigo-400">
+                        {f.type}
+                      </span>{' '}
+                      ({f.mode})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 4-Node Compiled DAG Cards */}
             {compiledDag?.dagNodes && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
@@ -941,6 +950,11 @@ export default function Wave13StarlinkNeuralinkStudio({
                         <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
                           {node.specSummary}
                         </div>
+                        {receipt?.detail && (
+                          <div className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 pt-1">
+                            Live: {receipt.detail}
+                          </div>
+                        )}
                       </div>
                       <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] font-mono">
                         <span className="text-emerald-600 dark:text-emerald-400 font-bold">
@@ -961,9 +975,50 @@ export default function Wave13StarlinkNeuralinkStudio({
               </div>
             )}
 
+            {/* Live BigQuery SQL Read-Back Verification Table */}
+            {materializedResult?.queriedRows?.length > 0 && (
+              <div className="p-3.5 rounded-2xl border border-emerald-500/40 bg-emerald-500/5 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-mono font-extrabold text-emerald-800 dark:text-emerald-300">
+                    LIVE BIGQUERY SQL READ-BACK (SELECT * FROM {projectId} LIMIT 5)
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
+                    {materializedResult.queriedRows.length} Live Row(s) Returned from BigQuery Engine
+                  </span>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                  <table className="w-full text-left border-collapse text-[11px] font-mono">
+                    <thead>
+                      <tr className="bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+                        {Object.keys(materializedResult.queriedRows[0] || {}).map((col) => (
+                          <th key={col} className="px-3 py-1.5">
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                      {materializedResult.queriedRows.map((r, idx) => (
+                        <tr key={r.event_id || r.row_id || idx}>
+                          {Object.keys(materializedResult.queriedRows[0] || {}).map((col) => (
+                            <td
+                              key={col}
+                              className="px-3 py-1.5 text-zinc-800 dark:text-zinc-200 truncate max-w-xs"
+                            >
+                              {String(r[col] ?? '')}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                All 4 DAG nodes fall inside Google Cloud&apos;s Always-Free Tier ($0.00/mo metadata &amp; initial containers) and are idempotent on re-run.
+                Creates the GCS bucket + uploads <code>neuralink-dag-manifest.json</code>, creates the BigQuery dataset + custom-schema table, streams a live row via <code>insertAll</code>, queries it back via SQL, and seals a SecretVersion.
               </div>
               <button
                 type="button"
@@ -974,7 +1029,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <Play className="w-3.5 h-3.5" />
                 <span>
                   {materializingDag
-                    ? 'Materializing 4-Node DAG on GCP...'
+                    ? 'Materializing DAG + Streaming BQ Row + Uploading GCS Object...'
                     : `Materialize 4-Node DAG Live on ${projectId}`}
                 </span>
               </button>
