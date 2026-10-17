@@ -864,8 +864,13 @@ function classifyDestructiveAxiosConfig(config) {
           'SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST',
           'SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE',
         ].includes(String(body.action || '').toUpperCase())) ||
-      (rawUrl.includes('/data-engineer/iceberg-matrix/probe') &&
-        Boolean(body.autoRefresh)) ||
+      rawUrl.includes('/data-engineer/iceberg-matrix/probe') ||
+      (rawUrl.includes('/data-engineer/action') &&
+        ['SEARCH_DATAPLEX_SEMANTIC_CATALOG', 'RUN_SPARK_LOG_RCA_DOCTOR'].includes(
+          String(body.action || '').toUpperCase()
+        )) ||
+      (rawUrl.includes('/wave10/action') &&
+        String(body.action || '').toUpperCase() === 'SCAN_MODEL_ARMOR') ||
       rawUrl.includes('/mcp/tools-list') ||
       rawUrl.includes('/mcp/run-triage-chain') ||
       rawUrl.includes('/mcp/agent-chat') ||
@@ -876,10 +881,114 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/wave13/starlink-orbital-probe') ||
       rawUrl.includes('/wave13/neuralink-compile') ||
       rawUrl.includes('/wave13/optimus-swarm-debate') ||
-      rawUrl.includes('/wave13/blackbox-seal');
+      rawUrl.includes('/wave13/blackbox-seal') ||
+      (rawUrl.includes('/wave14/bigquery-time-travel') &&
+        !body.injectMutationBeforeDiff &&
+        !body.insertLiveTestRow) ||
+      rawUrl.includes('/wave14/iam-ai-hardening') ||
+      rawUrl.includes('/wave14/quantum-envelope-decrypt') ||
+      rawUrl.includes('/wave15/bigquery-anomaly-vector') ||
+      (rawUrl.includes('/wave15/attest-slsa-provenance') &&
+        !body.uploadToBucket) ||
+      rawUrl.includes('/wave15/logging-correlator') ||
+      rawUrl.includes('/wave15/logging-ai-surgeon') ||
+      rawUrl.includes('/wave15/tls-x509-inspector');
 
     if (isReadOnlyOrDryRun) {
       return null;
+    }
+
+    // 3A-0000a. Wave 15 SLSA v1.0 DSSE Provenance Upload to GCS (/wave15/attest-slsa-provenance with uploadToBucket)
+    if (rawUrl.includes('/wave15/attest-slsa-provenance')) {
+      const targetBkt = String(body.uploadToBucket || '').replace(/^gs:\/\//, '');
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm SLSA v1.0 DSSE Attestation Upload to "${targetBkt}"?`,
+        headerBadge: 'Wave 15 SLSA v1.0 Provenance Gatekeeper',
+        targetLabel: 'Target Cloud Storage Attestation Bucket',
+        resourceKind: 'SLSA v1.0 In-Toto DSSE Envelope (.intoto.jsonl)',
+        targetName: `gs://${targetBkt}/slsa-provenance/`,
+        location: 'Multi-Region / Regional',
+        projectId,
+        method: 'UPLOAD SLSA DSSE',
+        endpoint: rawUrl,
+        confirmLabel: `Sign & Upload DSSE Envelope to gs://${targetBkt}`,
+        cancelToast: 'SLSA v1.0 GCS upload cancelled.',
+        whatHappensNext: `1. Signs the SLSA v1.0 In-Toto Provenance statement using Ed25519 (RFC 8032).\n2. Uploads the signed DSSE JSON bundle to gs://${targetBkt}/slsa-provenance/ via storage.googleapis.com/upload/storage/v1.`,
+        costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00): Storing a ~2 KB JSON attestation object in an existing Cloud Storage bucket incurs negligible ($0.00) storage cost.`,
+        impactWarning: `Writes a new SLSA v1.0 attestation object into bucket "${targetBkt}" on project "${projectId}".`,
+      };
+    }
+
+    // 3A-0000b. Wave 14 BigQuery Time-Travel Live Row Injection (/wave14/bigquery-time-travel with injectMutationBeforeDiff)
+    if (rawUrl.includes('/wave14/bigquery-time-travel')) {
+      const ds = body.datasetId || 'existing_dataset';
+      const tbl = body.tableId || 'existing_table';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm Live Row Insertion into "${ds}.${tbl}" for Time-Travel Diff?`,
+        headerBadge: 'Wave 14 BigQuery Time-Travel Gatekeeper',
+        targetLabel: 'Target BigQuery Dataset & Table',
+        resourceKind: 'BigQuery Streaming Row Insert (tabledata.insertAll)',
+        targetName: `${projectId}:${ds}.${tbl}`,
+        location: body.location || 'US',
+        projectId,
+        method: 'BQ TIME-TRAVEL INSERT',
+        endpoint: rawUrl,
+        confirmLabel: `Insert 1 Row & Prove FOR SYSTEM_TIME AS OF Diff`,
+        cancelToast: 'BigQuery Time-Travel row insertion cancelled.',
+        whatHappensNext: `1. Streams 1 row into existing table "${ds}.${tbl}" via bigquery.googleapis.com/bigquery/v2.\n2. Executes parallel Standard SQL queries at CURRENT_TIMESTAMP() and FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(...) to prove the temporal row delta.`,
+        costWarning: `MINIMAL COST ($0.00): Inserting 1 test row and running an on-demand metadata/time-travel SELECT query falls within the 1 TiB/mo BigQuery Always-Free query tier.`,
+        impactWarning: `Appends 1 row into existing BigQuery table "${ds}.${tbl}" in project "${projectId}".`,
+      };
+    }
+
+    // 3A-0000c. Wave 14 Autonomous Self-Healing Cloud Doctor Remediation (/wave14/self-healing-remediate)
+    if (rawUrl.includes('/wave14/self-healing-remediate')) {
+      const targetId = body.targetResourceId || 'ALL';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm Autonomous Self-Healing Remediation (${targetId})?`,
+        headerBadge: 'Wave 14 Self-Healing Cloud Doctor Gatekeeper',
+        targetLabel: 'Target Drifted GCP Resource(s)',
+        resourceKind: 'GCS Uniform IAM + Soft-Delete / BigQuery Governance Labels / SecretVersion',
+        targetName: `${projectId} · ${targetId}`,
+        location: 'Global / Multi-Region',
+        projectId,
+        method: 'SELF-HEAL REMEDIATE',
+        endpoint: rawUrl,
+        confirmLabel: `Heal Drifted Resource(s) (${targetId})`,
+        cancelToast: 'Self-healing remediation cancelled.',
+        whatHappensNext: `1. Executes live REST PATCH/POST calls on drifted resource(s) (${targetId}) to enforce Uniform Bucket-Level Access, Public Access Prevention, 7-day Soft Delete, BigQuery governance labels, or an enabled SecretVersion.\n2. Re-audits the project fleet and returns cryptographic remediation receipts.`,
+        costWarning: `ZERO EXTRA CHARGE ($0.00): Hardening GCS bucket IAM/Soft-Delete policies and patching BigQuery dataset labels incur $0.00 in Google Cloud charges.`,
+        impactWarning: `Updates security/governance metadata on drifted resource(s) (${targetId}) in project "${projectId}".`,
+      };
+    }
+
+    // 3A-0000d. Wave 14 Hybrid Post-Quantum Envelope Seal (/wave14/quantum-envelope-seal)
+    if (rawUrl.includes('/wave14/quantum-envelope-seal')) {
+      const secName = body.secretName || 'wave14-quantum-envelope-vault';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm Hybrid PQC Envelope Seal to Secret "${secName}"?`,
+        headerBadge: 'Wave 14 Post-Quantum Envelope Vault Gatekeeper',
+        targetLabel: 'Target Secret Manager Container',
+        resourceKind: 'X25519 + SHAKE256 + AES-256-GCM + Ed25519 SecretVersion',
+        targetName: `projects/${projectId}/secrets/${secName}`,
+        location: 'Automatic Global Replication',
+        projectId,
+        method: 'PQC ENVELOPE SEAL',
+        endpoint: rawUrl,
+        confirmLabel: `Seal Hybrid PQC Envelope to "${secName}"`,
+        cancelToast: 'Post-Quantum Envelope seal cancelled.',
+        whatHappensNext: `1. Performs ephemeral X25519 ECDH + 512-bit SHAKE256 Post-Quantum Lattice salt derivation + AES-256-GCM authenticated encryption + Ed25519 signature.\n2. Creates or appends a new SecretVersion inside Secret Manager secret "${secName}" via secretmanager.googleapis.com/v1.`,
+        costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 WITHIN FREE TIER): Google Cloud Secret Manager includes 6 active secret versions and 10,000 access operations per month for $0.00/mo ($0.06/version-month beyond Free Tier).`,
+        impactWarning: `Creates/adds a live encrypted SecretVersion to "${secName}" in project "${projectId}".`,
+      };
     }
 
     // 3A-000a. Wave 13 Starlink Orbital Geo-Failover Standby (/wave13/starlink-failover-execute)

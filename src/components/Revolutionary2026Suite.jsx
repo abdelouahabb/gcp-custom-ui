@@ -1072,7 +1072,19 @@ export default function Revolutionary2026Suite({
                   onClick={() => {
                     setLabCategory(cat.id);
                     if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
-                    if (cat.id === 'ALPHA_BETA') setSubTab('WAVE15_DYSON_MOONSHOT');
+                    if (
+                      cat.id === 'ALPHA_BETA' &&
+                      ![
+                        'WAVE15_DYSON_MOONSHOT',
+                        'WAVE14_QUANTUM_DOCTOR',
+                        'WAVE13_STARLINK_NEURALINK',
+                        'WAVE12_ROADSTER',
+                        'WAVE11_MOONSHOT',
+                        'GCLOUD_ALPHA_BETA',
+                      ].includes(subTab)
+                    ) {
+                      setSubTab('WAVE15_DYSON_MOONSHOT');
+                    }
                   }}
                   title={cat.label}
                   className={`w-full h-10 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-1.5 ${
