@@ -1160,10 +1160,10 @@ export default function Revolutionary2026Suite({
             {
               id: 'GCLOUD_ALPHA_BETA',
               category: 'ALPHA_BETA',
-              badge: '[ALPHA / BETA]',
+              badge: '[ALPHA / BETA] 590.0.0',
               label:
-                '[ALPHA/BETA] gcloud 588 Frontier (Worker Pools, MCP, PAM, Fault-Test)',
-              tip: 'Pre-GA Google Cloud [ALPHA] and [BETA] capabilities: Cloud Run Worker Pools & Multi-Region Services [BETA], Agent Registry & MCP Servers [ALPHA], PAM JIT IAM & 403 Policy Troubleshooter [ALPHA], Service Health & Fault-Testing [ALPHA], and App Optimize [BETA]',
+                '[ALPHA/BETA] gcloud 590.0.0 Frontier (Wave 1–3: Worker Pools, Cluster Director, NetApp, Quotas)',
+              tip: 'Pre-GA Google Cloud SDK 590.0.0 [ALPHA] and [BETA] capabilities across Wave 1–3: Cloud Run Worker Pools & Multi-Region Services [BETA], Agent Registry & MCP [ALPHA], PAM JIT IAM [ALPHA], Vertex AI Model Armor [ALPHA], Cluster Director & Lustre [ALPHA], NetApp Storage QoS [BETA], Database Center [ALPHA], Cloud Quotas Adjuster [BETA] & Audit Manager [ALPHA]',
               icon: Rocket,
             },
             {
@@ -1380,7 +1380,7 @@ export default function Revolutionary2026Suite({
         />
       )}
 
-      {/* FLAGSHIP WAVE 1: [ALPHA / BETA] GCLOUD 588.0.0 FRONTIER STUDIO */}
+      {/* FLAGSHIP WAVE 1–3: [ALPHA / BETA] GCLOUD 590.0.0 FRONTIER STUDIO */}
       {subTab === 'GCLOUD_ALPHA_BETA' && (
         <GcloudAlphaBetaStudio
           projectId={projectId}

@@ -121,6 +121,48 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-appengine-exterminator-neutralizer',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open App Engine Service Exterminator, default $0.00/mo Neutralizer & 1-Click Cloud Run Migrator',
+        subtitle: 'Delete non-default App Engine services via REST v1 (missing from GCP Console UI), neutralize the non-deletable default service to $0.00/mo, or migrate to Cloud Run',
+        keywords: 'app engine delete service default neutralize 0/mo user_disabled zombie versions appspot migrate cloud run exterminator',
+        badge: 'APP ENGINE FIX',
+        badgeColor: 'text-red-700 dark:text-red-300 bg-red-500/15 border-red-500/30',
+        icon: PowerOff,
+        run: () => {
+          onSelectTab('CLOUD_RUN');
+          onClose();
+        }
+      },
+      {
+        id: 'open-cloudrun-direct-iap-zero-lb',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open App Engine-Style 1-Click Direct Cloud Run IAP Control Plane ($0.00/mo · Zero Load Balancer)',
+        subtitle: 'Enable Google Sign-In on any Cloud Run .run.app URL without an $18.25/mo Load Balancer + custom OAuth 2.0 Client binder for standalone @gmail.com projects',
+        keywords: 'cloud run iap identity aware proxy google sign in zero load balancer 0/mo oauth client id secret iapenabled app engine',
+        badge: 'CLOUD RUN IAP ($0/MO)',
+        badgeColor: 'text-violet-700 dark:text-violet-300 bg-violet-500/15 border-violet-500/30',
+        icon: Key,
+        run: () => {
+          onSelectTab('CLOUD_RUN');
+          onClose();
+        }
+      },
+      {
+        id: 'open-gcloud-590-wave3-frontier',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open [ALPHA/BETA] Google Cloud SDK 590.0.0 Frontier Lab (Wave 1–3: Cluster Director, NetApp QoS, Database Center, Quotas & Audit Manager)',
+        subtitle: 'Execute 5-Pillar Wave 3 Frontier Scan across AI Hypercomputer Cluster Director, NetApp Storage QoS, Database Center, Cloud Quotas & Audit Manager + SDK 588→590 Promotion Ledger',
+        keywords: 'gcloud 590 590.0.0 alpha beta wave 3 cluster director lustre netapp storage qos database center cloud quotas adjuster preferences audit manager worker pools',
+        badge: 'GCLOUD 590.0.0',
+        badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
+        icon: Cpu,
+        run: () => {
+          onSelectTab('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA');
+          onClose();
+        }
+      },
+      {
         id: 'open-wave15-dyson-moonshot',
         category: '2026 Innovation Lab (Star)',
         title: 'Open Wave 15 Moonshot: BigQuery Vector/Z-Score SQL, SLSA v1.0 DSSE Provenance, Cloud Logging Surgeon & TLS 1.3 X.509 Inspector',
@@ -249,9 +291,9 @@ export default function CommandPaletteModal({
       {
         id: 'open-data-engineer-studio',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open 2026 Data Engineering Studio (Medallion ELT, Dataform/dbt SQLX & Dataplex 588.0.0)',
+        title: 'Open 2026 Data Engineering Studio (Medallion ELT, Dataform/dbt SQLX & Dataplex 590.0.0)',
         subtitle: '1-Canvas Bronze→Silver→Gold Pipeline Builder, Auto-Clean QUALIFY Dedup, Dataplex Profiling/Products & -$348/mo Serverless DAGs',
-        keywords: 'data engineer medallion bronze silver gold dataform dbt sqlx dataplex profile qualitycomposer airflow dag skew slot',
+        keywords: 'data engineer medallion bronze silver gold dataform dbt sqlx dataplex profile qualitycomposer airflow dag skew slot 590.0.0',
         badge: 'DATA ENGINEER',
         badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,

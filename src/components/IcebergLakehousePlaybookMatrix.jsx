@@ -1207,7 +1207,7 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
               Every scenario across all <strong>8 Lakehouse Domains (50 Playbooks)</strong> synthesizes live{' '}
               <code className="font-mono">BigQuery Lakehouse SQL</code>,{' '}
               <code className="font-mono">Serverless PySpark 3.5 (Iceberg REST Catalog 1.10)</code>, and{' '}
-              <code className="font-mono">gcloud 588.0.0 CLI</code> commands with explicit{' '}
+              <code className="font-mono">gcloud 590.0.0 CLI</code> commands with explicit{' '}
               <strong className="font-mono text-amber-600 dark:text-amber-400">[BETA]</strong> and{' '}
               <strong className="font-mono text-rose-600 dark:text-rose-400">[ALPHA]</strong> flags and 1-Tap Cost Gatekeeper protection.
             </p>
@@ -1885,7 +1885,7 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
                     {
                       id: 'GCLOUD_CLI',
                       code: '03',
-                      label: 'gcloud 588.0.0 CLI',
+                      label: 'gcloud 590.0.0 CLI',
                       badge: `[${activePlaybook.track}]`,
                     },
                   ].map((ct) => {

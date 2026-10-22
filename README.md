@@ -214,7 +214,7 @@
       2. **Google Cloud Billing & Cost Impact Warning (`FINOPS GUARDRAIL` · `costWarning`)**: Detailed breakdown of compute, storage, slot, network egress, or API SKU billing impact.
       3. **Explicit Release Channel Badge (`[GA · PRODUCTION]`, `[BETA · PUBLIC PREVIEW]`, or `[ALPHA · EARLY ACCESS]`)**: Clear disclosure whenever an action invokes `gcloud beta` / `v1beta` or `gcloud alpha` / `v1alpha` APIs.
 
-42. **`[ALPHA / BETA]` gcloud `588.0.0` Frontier Lab — Wave 1 & Wave 2 (10 Pre-GA Capabilities) (`src/components/GcloudAlphaBetaStudio.jsx` & `server/index.js`)**
+42. **`[ALPHA / BETA]` gcloud `590.0.0` Frontier Lab — Wave 1, Wave 2 & Wave 3 (15 Pre-GA Capabilities + SDK `588.0.0 → 590.0.0` Promotion Ledger) (`src/components/GcloudAlphaBetaStudio.jsx` & `server/index.js`)**
     - **Equal-Sized 2x5 Bento Navigation Grid & Wave/Track Filters**: Filter across `ALL WAVES (10)`, `WAVE 1 (5)`, or `WAVE 2 (5 · NEW)` and `ALL TRACKS`, `[BETA] ONLY`, or `[ALPHA] ONLY`, with every capability explicitly badged `[BETA · PUBLIC PREVIEW]` or `[ALPHA · EARLY ACCESS]`.
     - **Wave 1 Capabilities (`01`–`05`)**:
       1. **`[BETA]` Cloud Run Worker Pools (`gcloud beta run worker-pools`) & Multi-Region Services (`gcloud beta run multi-region-services`)**: Non-HTTP pull-based background compute pools (`$0` ingress endpoint overhead) and active-active global serverless replication.

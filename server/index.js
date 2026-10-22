@@ -24617,7 +24617,7 @@ app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
 
     res.json({
       projectId,
-      gcloudSdkVersion: '588.0.0 (2026.10.02)',
+      gcloudSdkVersion: '590.0.0 (2026.10.16)',
       dakAttributionEnv: 'CLOUDSDK_METRICS_ENVIRONMENT="datacloud.antigravity"',
       dakMandatoryLabel: 'datacloud:antigravity',
       datasets,
@@ -24635,27 +24635,27 @@ app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
         {
           cli: 'gcloud dataplex datascans create data-profile / data-quality',
           feature: 'Automated Dataplex Profiling & Quality Gatekeeper',
-          status: 'GA (SDK 588.0.0)',
+          status: 'GA (SDK 590.0.0)',
         },
         {
           cli: 'gcloud dataplex data-products create',
           feature: 'Dataplex Data Mesh Products & SLA Contracts',
-          status: 'GA (SDK 588.0.0)',
+          status: 'GA (SDK 590.0.0)',
         },
         {
           cli: 'gcloud dataplex dbt metadata-jobs',
           feature: 'Native dbt-core Manifest -> Dataplex Lineage Sync',
-          status: 'GA (SDK 588.0.0)',
+          status: 'GA (SDK 590.0.0)',
         },
         {
           cli: 'gcloud beta orchestration-pipelines',
           feature: 'Data Agent Kit Declarative deployment.yaml & Pipeline Orchestrator',
-          status: 'DAK + SDK 588.0.0',
+          status: 'DAK + SDK 590.0.0',
         },
         {
           cli: 'gcloud dataplex entries search --semantic-search',
           feature: 'Data Agent Kit Natural-Language & Keyword Universal Catalog Discovery',
-          status: 'DAK + SDK 588.0.0',
+          status: 'DAK + SDK 590.0.0',
         },
       ],
     });
@@ -38739,8 +38739,13 @@ app.post('/api/project/:projectId/wave11/stress-audit', async (req, res) => {
     },
     {
       studioId: 'ALPHA_BETA_LAB',
-      studioName: '[ALPHA/BETA] gcloud 588.0.0 Frontier Lab',
+      studioName: '[ALPHA/BETA] gcloud 590.0.0 Frontier Lab (Wave 1–3)',
       endpoint: `/api/project/${encProj}/alpha-beta/overview`,
+    },
+    {
+      studioId: 'APP_ENGINE_EXTERMINATOR',
+      studioName: 'App Engine Service Exterminator & $0/mo Default Neutralizer',
+      endpoint: `/api/project/${encProj}/appengine/overview`,
     },
     {
       studioId: 'FINOPS_CREDITS',

@@ -547,4 +547,27 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   - **Step 5 (`IAP_CUSTOM_OAUTH_CLIENT` — Optional for Standalone / Org-Less `@gmail.com` Projects)**: Binds a custom OAuth 2.0 Web Client ID & Secret via `PATCH https://iap.googleapis.com/v1/projects/:projectNumber/iap_web/cloud_run-:region/services/:name:iapSettings?updateMask=accessSettings.oauthSettings` and displays the exact Authorized Redirect URI (`https://iap.googleapis.com/v1/oauth/clientIds/<CLIENT_ID>:handleRedirect`).
 - **Billing Impact**: **`$0.00/mo` fixed cost** — saves `~$18.25+/mo` (`$219+/yr`) per service by eliminating the External Application Load Balancer while preserving Cloud Run scale-to-zero (`minInstances: 0`).
 
+### 53. App Engine Service & Version Exterminator, `default` Service `$0.00/mo` Neutralizer & 1-Click Cloud Run Migrator (`src/components/CloudRunFleetManager.jsx` & `server/index.js`)
+- **Where to find it**: Open the **`Cloud Run ★`** tab -> click **`App Engine Exterminator & $0/mo Neutralizer`** in the top header bar (or via `⌘K` -> *"Open App Engine Service Exterminator, default $0.00/mo Neutralizer & 1-Click Cloud Run Migrator"*).
+- **Why We Built This (Two Major Google Cloud Pain Points)**:
+  1. **Missing Delete Button in the GCP Console UI**: In `App Engine -> Services`, the official Google Cloud Console UI omits the **Delete Service** button for non-`default` services, even though `DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/{serviceId}` supports deleting any non-`default` service directly.
+  2. **API-Level Lock on the `default` Service**: Google Cloud permanently blocks deleting the `default` App Engine service at the REST & CLI level (`INVALID_ARGUMENT: Cannot delete the default service`), leaving legacy App Engine projects trapped with resident Flex/Manual/Basic instances, 0%-traffic zombie versions, and `*.appspot.com` Cloud Storage buckets.
+- **How It Works (`GET /api/project/:id/appengine/overview` & `POST /api/project/:id/appengine/action`)**:
+  - **`DELETE_SERVICE`**: Calls `DELETE https://appengine.googleapis.com/v1/apps/:id/services/:serviceId` directly from the UI to permanently delete any non-`default` App Engine service and all of its versions.
+  - **`NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO`**: Automatically deletes all 0%-traffic zombie versions inside `default`, stops active `MANUAL`/`BASIC`/`FLEX` versions, and patches `apps/:id?updateMask=servingStatus` to `USER_DISABLED` (`$0.00/mo`).
+  - **`TOGGLE_APP_SERVING_STATUS`**: 1-click kill-switch (`USER_DISABLED` vs `SERVING`) for the entire App Engine application.
+  - **`DELETE_VERSION` & `STOP_OR_START_VERSION`**: Stop/start individual versions (`STOPPED` / `SERVING`) or delete 0%-traffic zombie versions.
+  - **`MIGRATE_TO_CLOUD_RUN`**: Migrates any App Engine service into a scale-to-zero Cloud Run Gen2 service (`ae-<serviceId>`, `minInstanceCount: 0`, `cpuIdle: true`) with optional **Direct Cloud Run IAP (`$0.00/mo`)**.
+
+### 54. Google Cloud SDK `590.0.0` (`2026.10.16`) Wave 3 Frontier Scan & CLI Track Promotion Ledger (`src/components/GcloudAlphaBetaStudio.jsx` & `server/index.js`)
+- **Where to find it**: Click **`[ALPHA/BETA] Lab`** in the top-right header (or open **`2026 Innovation`** -> **`[ALPHA/BETA] gcloud 590.0.0 Frontier`**) -> select **`WAVE 3 (590.0.0 · NEW)`** -> click **`11 · [ALPHA/BETA] Wave 3: gcloud 590.0.0 Frontier`** -> **`Run 5-Pillar Frontier Scan`**.
+- **What Was Audited & Upgraded for `gcloud 590.0.0` (`2026.10.16`)**:
+  - **5-Pillar Parallel Frontier Scan (`SCAN_WAVE3_GCLOUD_590_FRONTIER`)**: Probes (1) **AI Hypercomputer Cluster Director & Lustre** (`cluster-director clusters list`, `lustre instances list`), (2) **Google Cloud NetApp Volumes & Storage Pools QoS** (`netapp volumes list`, `netapp storage-pools list`), (3) **Database Center Fleet Health** (`database-center fleet-health`), (4) **Cloud Quotas Adjuster & Preferences** (`quotas preferences list`, `quotas info list`), and (5) **Sovereign Audit Manager** (`audit-manager audit-reports`, `enrollments`).
+  - **Verified SDK `588.0.0 → 590.0.0` Flag & Track Promotion Ledger**:
+    - `gcloud run services update --iap` promoted from `BETA` to **`GA`** in `gcloud 590.0.0`.
+    - `gcloud beta quotas adjuster settings update` updated to require `--project=<PROJECT_ID>` instead of `--organization`.
+    - `gcloud alpha audit-manager audit-reports generate` updated to require `--framework` + `--output-directory-uri` + `--output-FileName`.
+    - `gcloud alpha cluster-director clusters create` updated to `--config-from-file=cluster.json` and `gcloud alpha lustre instances create` updated to `--per-unit-storage-throughput=1000`.
+
+
 

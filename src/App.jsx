@@ -2114,7 +2114,7 @@ function CloudPulseCockpit() {
       id: 'CLOUD_RUN',
       group: 'INFRA_COMPUTE',
       label: 'Cloud Run',
-      tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, tune min/max autoscaling, and switch Request vs Instance billing',
+      tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, 1-Click Direct Cloud IAP ($0/mo Zero-LB), App Engine Service Exterminator & $0/mo Default Neutralizer, and Request vs Instance billing',
       icon: Rocket,
     },
     {
@@ -2151,7 +2151,7 @@ function CloudPulseCockpit() {
       id: 'DATA_ENGINEER_STUDIO',
       group: 'DATA_AI',
       label: 'Data Engineer',
-      tip: '2026 Data Engineering Studio (GCloud SDK 588.0.0 & Data Agent Kit): Medallion Builder, Dataform/dbt SQLX, Dataplex Profiling, Schema Mapper, Serverless DAGs & Zero-Cluster Serverless Spark on BigLake Iceberg',
+      tip: '2026 Data Engineering Studio (GCloud SDK 590.0.0 & Data Agent Kit): Medallion Builder, Dataform/dbt SQLX, Dataplex Profiling, Schema Mapper, Serverless DAGs & Zero-Cluster Serverless Spark on BigLake Iceberg',
       icon: Layers,
     },
     {
@@ -2302,14 +2302,14 @@ function CloudPulseCockpit() {
 
             {/* Top-Right Cluster: [ALPHA/BETA] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
             <div className="flex items-center gap-2.5 shrink-0">
-              {/* 1-Click [ALPHA/BETA] gcloud 588.0.0 Frontier Lab Launcher */}
+              {/* 1-Click [ALPHA/BETA] gcloud 590.0.0 Frontier Lab Launcher */}
               <button
                 type="button"
                 onClick={() => {
                   setInnovationSubTab('GCLOUD_ALPHA_BETA');
                   setActiveTab('INNOVATION_LAB');
                 }}
-                title="Open [ALPHA/BETA] gcloud 588.0.0 Frontier Lab (Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP Servers [ALPHA], PAM JIT IAM & 403 Policy Troubleshooter [ALPHA], Service Health & Fault-Testing [ALPHA])"
+                title="Open [ALPHA/BETA] gcloud 590.0.0 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [ALPHA], PAM JIT IAM [ALPHA], Cluster Director & Lustre [ALPHA], NetApp QoS [BETA], Database Center [ALPHA], Cloud Quotas Adjuster [BETA] & Audit Manager [ALPHA])"
                 className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 rounded-xl px-3 py-2.5 text-xs font-mono font-extrabold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
