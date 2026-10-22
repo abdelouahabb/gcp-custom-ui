@@ -35900,46 +35900,173 @@ app.get('/api/fleet/matrix', async (req, res) => {
 // ============================================================================
 const execFileAsyncAlphaBeta = promisify(execFile);
 
-async function runGcloudAlphaBetaJson(args = [], timeoutMs = 9500) {
-  const fullArgs = [...args, '--quiet'];
-  const startedAt = Date.now();
-  try {
-    const { stdout, stderr } = await execFileAsyncAlphaBeta('gcloud', fullArgs, {
-      timeout: timeoutMs,
-      maxBuffer: 8 * 1024 * 1024,
-      env: {
-        ...process.env,
-        CLOUDSDK_CORE_DISABLE_PROMPTS: '1',
-        CLOUDSDK_METRICS_ENVIRONMENT: 'datacloud.antigravity',
-      },
-    });
-    let parsed = null;
-    const trimmed = String(stdout || '').trim();
-    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+// Cache of enabled APIs per project so we don't re-enable on every call
+const alphaBetaEnabledApisCache = new Map();
+
+async function ensureAlphaBetaApisEnabled(projectId, token, requiredServices = []) {
+  if (!projectId || !token || !Array.isArray(requiredServices) || requiredServices.length === 0) {
+    return { checkedApis: requiredServices, alreadyEnabledApis: [], autoEnabledApis: [], restrictedAlphaApis: [] };
+  }
+  const cacheKey = `${projectId}`;
+  let enabledSet = alphaBetaEnabledApisCache.get(cacheKey);
+  if (!enabledSet) {
+    enabledSet = new Set();
+    try {
+      const listRes = await gcpFetch(
+        `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/services?filter=state:ENABLED&pageSize=200`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      );
+      for (const svc of listRes?.services || []) {
+        const svcName = String(svc.name || '').split('/').pop();
+        if (svcName) enabledSet.add(svcName);
+      }
+      alphaBetaEnabledApisCache.set(cacheKey, enabledSet);
+    } catch {
+      // ignore list error and attempt direct enable
+    }
+  }
+
+  const alreadyEnabledApis = [];
+  const autoEnabledApis = [];
+  const restrictedAlphaApis = [];
+
+  const toEnable = requiredServices.filter((s) => {
+    if (enabledSet.has(s)) {
+      alreadyEnabledApis.push(s);
+      return false;
+    }
+    return true;
+  });
+
+  if (toEnable.length > 0) {
+    await Promise.all(
+      toEnable.map(async (serviceName) => {
+        try {
+          await gcpFetch(
+            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/services/${encodeURIComponent(serviceName)}:enable`,
+            token,
+            projectId,
+            { method: 'POST', data: {}, timeout: 10000 }
+          );
+          enabledSet.add(serviceName);
+          autoEnabledApis.push(serviceName);
+        } catch (err) {
+          const msg = err?.response?.data?.error?.message || err?.message || '';
+          restrictedAlphaApis.push({ service: serviceName, reason: msg });
+        }
+      })
+    );
+    if (autoEnabledApis.length > 0) {
+      await new Promise((r) => setTimeout(r, 2200));
+    }
+  }
+
+  return {
+    checkedApis: requiredServices,
+    alreadyEnabledApis,
+    autoEnabledApis,
+    restrictedAlphaApis,
+  };
+}
+
+async function runGcloudAlphaBetaJson(args = [], timeoutMs = 9500, token = null) {
+  const projArg = args.find((a) => String(a).startsWith('--project='));
+  const targetProjectId = projArg ? String(projArg).split('=')[1].trim() : '';
+  const hasBillingProjFlag = args.some((a) => String(a).startsWith('--billing-project='));
+  const isVersionCmd = args[0] === 'version';
+
+  const fullArgs = [
+    ...args,
+    ...(targetProjectId && !hasBillingProjFlag && !isVersionCmd
+      ? [`--billing-project=${targetProjectId}`]
+      : []),
+    '--quiet',
+  ];
+
+  const execOnce = async () => {
+    const startedAt = Date.now();
+    try {
+      const { stdout, stderr } = await execFileAsyncAlphaBeta('gcloud', fullArgs, {
+        timeout: timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+        env: {
+          ...process.env,
+          ...(targetProjectId
+            ? {
+                CLOUDSDK_CORE_PROJECT: targetProjectId,
+                CLOUDSDK_BILLING_QUOTA_PROJECT: targetProjectId,
+              }
+            : {}),
+          CLOUDSDK_CORE_DISABLE_PROMPTS: '1',
+          CLOUDSDK_COMPONENT_MANAGER_DISABLE_UPDATE_CHECK: '1',
+          CLOUDSDK_METRICS_ENVIRONMENT: 'datacloud.antigravity',
+        },
+      });
+      let parsed = null;
+      const trimmed = String(stdout || '').trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          parsed = JSON.parse(trimmed);
+        } catch {
+          parsed = null;
+        }
+      }
+      return {
+        ok: true,
+        durationMs: Date.now() - startedAt,
+        command: `gcloud ${args.join(' ')}`,
+        stdout: trimmed,
+        stderr: String(stderr || '').trim(),
+        data: parsed,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        durationMs: Date.now() - startedAt,
+        command: `gcloud ${args.join(' ')}`,
+        stdout: String(err?.stdout || '').trim(),
+        stderr: String(err?.stderr || err?.message || '').trim(),
+        data: null,
+      };
+    }
+  };
+
+  let res = await execOnce();
+
+  // Auto-detect SERVICE_DISABLED in stderr, enable the missing API on targetProjectId, and retry once!
+  if (
+    !res.ok &&
+    targetProjectId &&
+    /SERVICE_DISABLED|has not been used in project|is disabled/i.test(res.stderr)
+  ) {
+    const svcMatch = res.stderr.match(/([a-z0-9-]+\.googleapis\.com)/i);
+    const disabledApi = svcMatch ? svcMatch[1] : null;
+    if (disabledApi) {
       try {
-        parsed = JSON.parse(trimmed);
+        let authToken = token;
+        if (!authToken) {
+          const tObj = await getLocalOrMetadataAccessToken();
+          authToken = tObj?.token;
+        }
+        if (authToken) {
+          await ensureAlphaBetaApisEnabled(targetProjectId, authToken, [disabledApi]);
+          const retryRes = await execOnce();
+          retryRes.autoEnabledApi = disabledApi;
+          return retryRes;
+        }
       } catch {
-        parsed = null;
+        // fall through to original result
       }
     }
-    return {
-      ok: true,
-      durationMs: Date.now() - startedAt,
-      command: `gcloud ${args.join(' ')}`,
-      stdout: trimmed,
-      stderr: String(stderr || '').trim(),
-      data: parsed,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      durationMs: Date.now() - startedAt,
-      command: `gcloud ${args.join(' ')}`,
-      stdout: String(err?.stdout || '').trim(),
-      stderr: String(err?.stderr || err?.message || '').trim(),
-      data: null,
-    };
   }
+
+  return res;
 }
 
 app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
@@ -36363,6 +36490,77 @@ app.post('/api/project/:projectId/alpha-beta/action', async (req, res) => {
 
   try {
     const token = await resolveRequestToken(req);
+
+    // Pre-Flight API Enablement Map: check & auto-enable required Google Cloud APIs on `projectId` BEFORE running `gcloud`!
+    const REQUIRED_APIS_BY_ACTION = {
+      DEPLOY_BETA_WORKER_POOL: ['run.googleapis.com'],
+      DEPLOY_BETA_MULTI_REGION_SERVICE: ['run.googleapis.com'],
+      INSPECT_BETA_RUN_INSTANCES: ['run.googleapis.com'],
+      SCAN_ALPHA_AGENT_REGISTRY: ['apphub.googleapis.com'],
+      TROUBLESHOOT_ALPHA_IAM_POLICY: [
+        'policytroubleshooter.googleapis.com',
+        'iam.googleapis.com',
+      ],
+      CHECK_OR_CREATE_ALPHA_PAM_JIT: ['privilegedaccessmanager.googleapis.com'],
+      SCAN_ALPHA_SERVICE_HEALTH_AND_FAULT_TESTING: [
+        'servicehealth.googleapis.com',
+      ],
+      RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE: [
+        'cloudlocationfinder.googleapis.com',
+        'appoptimize.googleapis.com',
+        'apphub.googleapis.com',
+        'cloudasset.googleapis.com',
+      ],
+      SCAN_ALPHA_MODEL_ARMOR_AND_SANITIZE: ['modelarmor.googleapis.com'],
+      DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE: ['modelarmor.googleapis.com'],
+      QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY: [
+        'developerknowledge.googleapis.com',
+        'apphub.googleapis.com',
+      ],
+      SCAN_BETA_CLOUD_QUOTAS: ['cloudquotas.googleapis.com'],
+      APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER: ['cloudquotas.googleapis.com'],
+      SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST: [
+        'auditmanager.googleapis.com',
+        'binaryauthorization.googleapis.com',
+      ],
+      GENERATE_ALPHA_AUDIT_OR_TRUST_POLICY: [
+        'auditmanager.googleapis.com',
+        'binaryauthorization.googleapis.com',
+      ],
+      SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE: [
+        'hypercomputecluster.googleapis.com',
+        'lustre.googleapis.com',
+      ],
+      PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT: [
+        'hypercomputecluster.googleapis.com',
+        'lustre.googleapis.com',
+      ],
+      SCAN_WAVE3_GCLOUD_590_FRONTIER: [
+        'cloudaicompanion.googleapis.com',
+        'parametermanager.googleapis.com',
+        'vectorsearch.googleapis.com',
+      ],
+    };
+
+    const requiredApis = REQUIRED_APIS_BY_ACTION[action] || [];
+    const apiPreFlight = await ensureAlphaBetaApisEnabled(
+      projectId,
+      token,
+      requiredApis
+    );
+
+    // Attach `apiPreFlight` to every JSON response from `/alpha-beta/action`
+    const origJson = res.json.bind(res);
+    res.json = (payload) => {
+      if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+        return origJson({
+          apiPreFlight,
+          quotaProjectEnforced: projectId,
+          ...payload,
+        });
+      }
+      return origJson(payload);
+    };
 
     // ------------------------------------------------------------------------
     // 1. [BETA] DEPLOY CLOUD RUN WORKER POOL (gcloud beta run worker-pools deploy)
@@ -36818,8 +37016,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 8. [BETA / ALPHA] APP OPTIMIZE REPORTS, CLOUD LOCATION FINDER & TERRAFORM VET
-    //    (gcloud beta app-optimize, gcloud alpha cloudlocationfinder, gcloud alpha terraform vet)
+    // 8. [BETA / ALPHA] APP OPTIMIZE REPORTS, CLOUD LOCATION FINDER & CLOUD ASSET INVENTORY
+    //    (gcloud beta app-optimize, gcloud alpha cloudlocationfinder, gcloud asset list)
     // ------------------------------------------------------------------------
     if (action === 'RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE') {
       const [locRes, appOptRes, resTypesRes] = await Promise.all([
@@ -36834,7 +37032,8 @@ spec:
             '--page-size=25',
             '--format=json',
           ],
-          8500
+          9500,
+          token
         ),
         runGcloudAlphaBetaJson(
           [
@@ -36843,39 +37042,47 @@ spec:
             'reports',
             'list',
             `--project=${projectId}`,
-            `--location=${region}`,
+            '--location=global',
             '--format=json',
           ],
-          8500
+          9500,
+          token
         ),
         runGcloudAlphaBetaJson(
           [
-            'alpha',
-            'resource-config',
-            'list-resource-types',
+            'asset',
+            'list',
             `--project=${projectId}`,
+            '--page-size=25',
             '--format=json',
           ],
-          8500
+          9500,
+          token
         ),
       ]);
+
+      const assetTypes = Array.isArray(resTypesRes.data)
+        ? Array.from(
+            new Set(
+              resTypesRes.data
+                .map((a) => a.assetType)
+                .filter(Boolean)
+            )
+          )
+        : [];
 
       return res.json({
         success: true,
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[BETA] app-optimize + [ALPHA] cloudlocationfinder & resource-config',
+          '[BETA] app-optimize + [ALPHA] cloudlocationfinder & cloudasset inventory',
         preGaNotice:
-          'Combines Public Preview [BETA] `gcloud beta app-optimize reports` with Early Access [ALPHA] `gcloud alpha cloudlocationfinder`, `gcloud alpha resource-config bulk-export`, and `gcloud alpha terraform vet`.',
+          'Pre-flight verifies & auto-enables `cloudlocationfinder.googleapis.com`, `appoptimize.googleapis.com`, and `cloudasset.googleapis.com` on your active project (enforcing `--billing-project` so ADC quota projects never leak), then runs `gcloud alpha cloudlocationfinder`, `gcloud beta app-optimize reports list --location=global`, and `gcloud asset list` (zero 143 MiB `config-connector` binary download!).',
         executedCommand: `${locRes.command} && ${appOptRes.command} && ${resTypesRes.command}`,
         cloudLocations: Array.isArray(locRes.data) ? locRes.data : [],
         appOptimizeReports: Array.isArray(appOptRes.data) ? appOptRes.data : [],
-        declarableResourceTypesCount: Array.isArray(resTypesRes.data)
-          ? resTypesRes.data.length
-          : 0,
-        declarableResourceTypesSample: Array.isArray(resTypesRes.data)
-          ? resTypesRes.data.slice(0, 18)
-          : [],
+        declarableResourceTypesCount: assetTypes.length,
+        declarableResourceTypesSample: assetTypes.slice(0, 18),
         stdout:
           locRes.stdout || appOptRes.stdout || resTypesRes.stdout,
         stderr: [locRes.stderr, appOptRes.stderr, resTypesRes.stderr]

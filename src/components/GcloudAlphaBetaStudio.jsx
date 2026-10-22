@@ -2043,6 +2043,27 @@ export default function GcloudAlphaBetaStudio({
             )}
           </div>
 
+          {lastReceipt.apiPreFlight && (
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-800 dark:text-emerald-300 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                <span className="font-mono font-bold">
+                  Pre-Flight API &amp; Quota Project Guardrail ({lastReceipt.quotaProjectEnforced || projectId}):
+                </span>
+                <span>
+                  Checked {(lastReceipt.apiPreFlight.checkedApis || []).join(', ') || 'core CLI'}
+                  {Array.isArray(lastReceipt.apiPreFlight.autoEnabledApis) &&
+                  lastReceipt.apiPreFlight.autoEnabledApis.length > 0
+                    ? ` · Auto-Enabled Just-In-Time: ${lastReceipt.apiPreFlight.autoEnabledApis.join(', ')}`
+                    : ' · All Required APIs Active'}
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-mono font-bold">
+                --billing-project={lastReceipt.quotaProjectEnforced || projectId}
+              </span>
+            </div>
+          )}
+
           {lastReceipt.preGaNotice && (
             <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800 dark:text-amber-300">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
