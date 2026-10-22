@@ -532,3 +532,19 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   - **4. Module 04 — Cryptographic Ed25519 (RFC 8032) & SHA-256 Hash-Chained Black-Box Flight Recorder (`GET /api/project/:id/wave13/blackbox-ledger` & `POST /api/project/:id/wave13/blackbox-seal`)**:
     - Generates an in-memory Ed25519 asymmetric keypair (`crypto.generateKeyPairSync('ed25519')`), chains every block via `prevBlockHash` -> `blockHash`, signs and verifies every mutation using `crypto.sign` and `crypto.verify`, and exports signed compliance bundles.
 
+### 52. App Engine-Style 1-Click Direct Cloud Run Identity-Aware Proxy (IAP) Control Plane (`$0.00/mo` · Zero Load Balancer Required) (`src/components/CloudRunFleetManager.jsx`, `src/components/ResourceProvisionModal.jsx` & `server/index.js`)
+- **Where to find it**:
+  1. Open the **`Cloud Run ★`** tab -> click **`Cloud IAP ($0/mo)`** (`CLOUD IAP ON ($0/mo)` when active) on any Cloud Run service card.
+  2. Open **`+ Provision Resource`** -> **`Cloud Run Service`** -> select **`Direct Cloud IAP ($0/mo Sign-In)`** from the **`Auth & Direct Cloud IAP`** dropdown.
+- **Why We Built This (The GCP Console Pain Point)**:
+  - On Google App Engine, enabling Identity-Aware Proxy (IAP) Google Sign-In was a 1-click toggle. Historically on Cloud Run, putting Google Sign-In in front of a `.run.app` service forced engineers to either pay **`$18.25+/mo` (`$219+/yr`)** for an External Application Load Balancer + Forwarding Rule + Serverless NEG, or manually run 5 separate IAM, Service Identity, Cloud Run v2, and IAP Web REST operations.
+  - Furthermore, standalone `@gmail.com` projects outside a Google Workspace Organization fail with `Invalid IAP credentials: empty client_id` unless a custom OAuth 2.0 Web Client ID & Secret is bound via `iapSettings`.
+- **How It Works Under the Hood (`GET & POST /api/project/:id/cloudrun/:region/:serviceName/iap`)**:
+  - **Step 1 (`IAP_SERVICE_AGENT`)**: Calls `POST https://serviceusage.googleapis.com/v1beta1/projects/:id/services/iap.googleapis.com:generateServiceIdentity` to provision `service-<PROJECT_NUMBER>@gcp-sa-iap.iam.gserviceaccount.com`.
+  - **Step 2 (`CLOUD_RUN_IAP_ANNOTATION`)**: Calls `PATCH https://run.googleapis.com/v2/projects/:id/locations/:region/services/:name?updateMask=iapEnabled,annotations,template.annotations` to set top-level `iapEnabled: true` and `run.googleapis.com/iap-enabled: "true"`, while removing public `allUsers` from the Cloud Run invoker IAM policy.
+  - **Step 3 (`CLOUD_RUN_INVOKER_BINDING`)**: Binds `roles/run.invoker` on the Cloud Run service to `serviceAccount:service-<PROJECT_NUMBER>@gcp-sa-iap.iam.gserviceaccount.com` so only Google's IAP edge proxy can invoke the container.
+  - **Step 4 (`IAP_WEB_ACCESSORS`)**: Calls `POST https://iap.googleapis.com/v1/projects/:projectNumber/iap_web/cloud_run-:region/services/:name:setIamPolicy` to grant `roles/iap.httpsResourceAccessor` to your authenticated email and any comma-separated `user:`, `group:`, or `domain:` principals.
+  - **Step 5 (`IAP_CUSTOM_OAUTH_CLIENT` — Optional for Standalone / Org-Less `@gmail.com` Projects)**: Binds a custom OAuth 2.0 Web Client ID & Secret via `PATCH https://iap.googleapis.com/v1/projects/:projectNumber/iap_web/cloud_run-:region/services/:name:iapSettings?updateMask=accessSettings.oauthSettings` and displays the exact Authorized Redirect URI (`https://iap.googleapis.com/v1/oauth/clientIds/<CLIENT_ID>:handleRedirect`).
+- **Billing Impact**: **`$0.00/mo` fixed cost** — saves `~$18.25+/mo` (`$219+/yr`) per service by eliminating the External Application Load Balancer while preserving Cloud Run scale-to-zero (`minInstances: 0`).
+
+

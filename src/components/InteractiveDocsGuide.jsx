@@ -31,6 +31,32 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'cloudrun-direct-iap-zero-lb-app-engine-parity',
+    wave: 'CLOUD RUN 2026 INNOVATION · APP ENGINE-STYLE 1-CLICK DIRECT CLOUD IAP ($0.00/MO · ZERO LOAD BALANCER)',
+    title:
+      'App Engine-Style 1-Click Direct Cloud Run Identity-Aware Proxy (IAP) Control Plane — $0.00/Mo Google Sign-In with Zero Load Balancer',
+    badge: 'CLOUD RUN TAB (CLOUD IAP DRAWER) + PROVISION MODAL',
+    badgeColor: 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/40',
+    icon: ShieldCheck,
+    targetTab: 'CLOUD_RUN',
+    problemSolved:
+      'On Google App Engine, enabling Identity-Aware Proxy (IAP) Google Sign-In was a simple 1-click toggle. Historically on Cloud Run, putting Google Sign-In in front of a .run.app service forced engineers to provision an External Application Load Balancer + Forwarding Rule + Serverless NEG ($18.25+/mo fixed tax) OR run 5 scattered gcloud beta / IAM / IAP REST commands manually—and standalone @gmail.com projects outside a Google Cloud Organization hit "Invalid IAP credentials: empty client_id" unless a custom OAuth 2.0 Client ID/Secret is bound via iapSettings.',
+    howItWorks: [
+      '4-Step Automated Direct Cloud Run IAP Pipeline (POST /api/project/:id/cloudrun/:region/:name/iap): (1) Provisions the project IAP Service Agent (service-PROJECT_NUMBER@gcp-sa-iap.iam.gserviceaccount.com via services/iap.googleapis.com:generateServiceIdentity), (2) Patches the Cloud Run v2 service top-level iapEnabled: true field (and run.googleapis.com/iap-enabled="true" annotation) while removing public allUsers invoker access, (3) Binds roles/run.invoker exclusively to the IAP Service Agent so only verified IAP traffic can invoke the container, and (4) Grants roles/iap.httpsResourceAccessor on the IAP Web Cloud Run resource to your authenticated email and any comma-separated authorized users/groups/domains.',
+      'Step 5 Standalone / Org-Less @gmail.com Project OAuth Bridge (IAP_CUSTOM_OAUTH_CLIENT): Google Cloud only auto-generates managed IAP OAuth clients for projects inside a Google Workspace Organization. For standalone @gmail.com projects, the Cloud IAP drawer provides optional OAuth 2.0 Client ID & Secret inputs (with the exact Authorized Redirect URI https://iap.googleapis.com/v1/oauth/clientIds/<CLIENT_ID>:handleRedirect) and patches accessSettings.oauthSettings directly via PATCH https://iap.googleapis.com/v1/...:iapSettings.',
+      'Auth & Direct Cloud IAP Select Dropdown in "+ Provision Resource" Modal: Choose between "Public HTTPS (allUsers)", "Direct Cloud IAP ($0/mo Sign-In)", or "Private (IAM Auth Only)" right at initial deployment—or toggle Direct Cloud IAP on/off at any time from the "Cloud IAP ($0/mo)" button on every Cloud Run service card.',
+      'Injected Identity Headers & Copy-Ready Verification Commands: Displays the exact X-Goog-Authenticated-User-Email, X-Goog-Authenticated-User-Id, and X-Goog-IAP-JWT-Assertion headers injected into your container plus copy-ready curl -i (HTTP 302 accounts.google.com redirect proof) and gcloud iap web get-iam-policy commands.',
+    ],
+    apisUsed: [
+      'GET & POST /api/project/:id/cloudrun/:region/:serviceName/iap',
+      'POST https://serviceusage.googleapis.com/v1beta1/projects/:id/services/iap.googleapis.com:generateServiceIdentity',
+      'PATCH https://run.googleapis.com/v2/projects/:id/locations/:region/services/:name?updateMask=iapEnabled,annotations,template.annotations',
+      'POST https://iap.googleapis.com/v1/projects/:projectNumber/iap_web/cloud_run-:region/services/:name:setIamPolicy & PATCH ...:iapSettings',
+    ],
+    billingImpact:
+      '100% $0.00/mo fixed cost — saves ~$18.25+/mo ($219+/yr) per service by completely eliminating the External Application Load Balancer and Serverless NEG while preserving scale-to-zero (minInstances: 0).',
+  },
+  {
     id: 'wave15-dyson-vector-sql-slsa-provenance-logging-surgeon-tls-x509',
     wave: 'WAVE 15 MOONSHOT · BIGQUERY Z-SCORE & COSINE VECTOR SQL, SLSA v1.0 DSSE PROVENANCE, CLOUD LOGGING SURGEON & LIVE TLS 1.3 X.509 INSPECTOR',
     title:
@@ -534,7 +560,7 @@ const DOC_SECTIONS = [
     howItWorks: [
       ' Cloud Run Revision Time-Machine, Crash-Loop Autopsy & 1-Click Instant Rollback: Automatically detects crashed revisions (`HEALTHY` vs `CRASHED` / `ContainerMissing` / `HealthCheckContainerError`), runs a live Crash-Loop Autopsy via `logging.googleapis.com/v2` + side-by-side Config/Env/Secret Diff against the last healthy revision, classifies root causes (`PORT_LISTEN_TIMEOUT`, `SECRET_MANAGER_REF_ERROR`, `OUT_OF_MEMORY_OOM`, `APPLICATION_STARTUP_CRASH`), and offers 3 1-click actions: (1) `<2s` Instant 100% Traffic Pin Rollback (`INSTANT_TRAFFIC_PIN`), (2) Clone Historical Revision Spec as New LATEST (`CLONE_REVISION_SPEC`), or (3) 1-Click Auto-Fix OOM / Startup Crash (`AUTO_FIX_CRASH`: upgrades RAM tier + enables `startupCpuBoost`).',
       'Interactive Cloud Run Container SSH (@xterm/xterm + gcloud beta run services ssh): Click "SSH / Container Shell" on any Cloud Run service card (default OFF; toggle off with "SSH Active (Turn Off)") to open a real browser PTY shell inside the running container (~ #). Automatically enables --ssh and --execution-environment=gen2 (>=512Mi) if missing, warms up the active revision, and also supports gcloud beta run services proxy.',
-      'Accurate Public (allUsers / invokerIamDisabled) vs. Private (IAM Auth) State & Gatekeeper: Detects both IAM allUsers bindings and Cloud Run v2 invokerIamDisabled state, displays "PUBLIC (Unauthenticated) · Switch to Private" vs. "PRIVATE (IAM Auth) · Switch to Public", and requires explicit confirmation before switching access modes.',
+      'Accurate Public (allUsers / invokerIamDisabled), Direct Cloud IAP ($0/mo Google Sign-In · Zero-LB) & Private (IAM Auth) State + Gatekeeper: Detects IAM allUsers bindings, Cloud Run v2 invokerIamDisabled state, and top-level iapEnabled Direct Cloud IAP status, displays live status badges, and requires explicit confirmation before switching access modes.',
       '2026 Direct VPC Egress Network (template.vpcAccess) & Beta Storage Volume Mounts (GCS FUSE / RAM Disk / Filestore NFS): Attach revisions directly to any VPC/Subnet ($0 Serverless VPC Connector tax) and mount stateful or RAM-disk volumes.',
       '1-Click Cloud Run → GKE Kubernetes 6-Manifest Transpiler & Live Cluster Migrator: Converts any running Cloud Run service into a 6-resource production Kubernetes bundle and deploys it directly to your live GKE cluster in 1 click.',
     ],
