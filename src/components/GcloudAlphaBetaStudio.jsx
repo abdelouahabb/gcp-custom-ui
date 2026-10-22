@@ -66,6 +66,14 @@ const STUDIO_TABS = [
     icon: Sparkles,
   },
   {
+    id: 'WAVE3_GCLOUD_590_SUITE',
+    wave: 'WAVE_3',
+    track: 'ALPHA_AND_BETA',
+    shortLabel: 'W3 · [SDK 590.0.0] Gemini Assist, Param Mgr, Vector & IPAM',
+    subtitle: 'gemini cloud-assist · parametermanager · vector-search · number-registry · mldiagnostics',
+    icon: Terminal,
+  },
+  {
     id: 'BETA_CLOUD_RUN',
     wave: 'WAVE_1',
     track: 'BETA',
@@ -320,20 +328,20 @@ export default function GcloudAlphaBetaStudio({
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-mono font-extrabold">
                 <Terminal className="w-3.5 h-3.5" />
                 <span>
-                  GCLOUD {overview?.sdk?.coreVersion || '588.0.0'} FRONTIER LAB
-                  (WAVE 1 + WAVE 2)
+                  GCLOUD {overview?.sdk?.coreVersion || '590.0.0'} FRONTIER LAB
+                  (WAVE 1 + WAVE 2 + WAVE 3)
                 </span>
               </span>
               <ReleaseTrackBadge track="BETA" />
               <ReleaseTrackBadge track="ALPHA" />
               <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
-                alpha={overview?.sdk?.alphaVersion || '2026.10.02'} · beta=
-                {overview?.sdk?.betaVersion || '2026.10.02'}
+                alpha={overview?.sdk?.alphaVersion || '2026.10.16'} · beta=
+                {overview?.sdk?.betaVersion || '2026.10.16'}
               </span>
             </div>
             <h2 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-zinc-100">
               Pre-GA Google Cloud [ALPHA] &amp; [BETA] Underground Capabilities
-              — Wave 1 &amp; Wave 2 Suite
+              — SDK {overview?.sdk?.coreVersion || '590.0.0'} Suite
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
               Every capability across Wave 1 and Wave 2 is explicitly badged
@@ -387,11 +395,12 @@ export default function GcloudAlphaBetaStudio({
 
         {/* Wave + Release Track Filter Bar */}
         <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-center">
-          <div className="lg:col-span-5 grid grid-cols-3 gap-1.5">
+          <div className="lg:col-span-5 grid grid-cols-4 gap-1.5">
             {[
-              { id: 'ALL', label: 'ALL WAVES (10)' },
+              { id: 'ALL', label: 'ALL WAVES (12)' },
               { id: 'WAVE_1', label: 'WAVE 1 (5)' },
-              { id: 'WAVE_2', label: 'WAVE 2 (5 · NEW)' },
+              { id: 'WAVE_2', label: 'WAVE 2 (6)' },
+              { id: 'WAVE_3', label: 'WAVE 3 (590.0)' },
             ].map((w) => (
               <button
                 key={w.id}
@@ -1822,10 +1831,184 @@ export default function GcloudAlphaBetaStudio({
               <Play className="w-4 h-4" />
               <span>
                 {actionRunning === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT'
-                  ? 'Executing [ALPHA] Cluster Director...'
-                  : '1-Tap Provision [ALPHA] AI Hypercomputer Cluster (Cost Gatekeeper)'}
+                  ? 'Executing [BETA] Cluster Director...'
+                  : '1-Tap Provision [BETA] AI Hypercomputer Cluster (Cost Gatekeeper)'}
               </span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* WAVE 3: GCLOUD 590.0.0 (2026.10.16) NEW FRONTIER & PROMOTION MATRIX */}
+      {/* ==================================================================== */}
+      {activeSubTab === 'WAVE3_GCLOUD_590_SUITE' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left 7 Cols: 5-Pillar Live SDK 590.0.0 Probe */}
+          <div className="lg:col-span-7 rounded-2xl border border-indigo-500/40 bg-white dark:bg-[#18181b] p-4 sm:p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ReleaseTrackBadge track="ALPHA_AND_BETA" />
+                <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                  Google Cloud SDK 590.0.0 (2026.10.16) — 5-Pillar Live CLI Probe
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={actionRunning === 'SCAN_WAVE3_GCLOUD_590_FRONTIER'}
+                onClick={() =>
+                  executeAlphaBetaAction('SCAN_WAVE3_GCLOUD_590_FRONTIER')
+                }
+                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>
+                  {actionRunning === 'SCAN_WAVE3_GCLOUD_590_FRONTIER'
+                    ? 'Probing SDK 590.0.0...'
+                    : 'Run 5-Pillar SDK 590.0.0 Live Scan'}
+                </span>
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Executes 5 parallel CLI probes introduced or promoted in{' '}
+              <code className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                Google Cloud SDK 590.0.0 (2026.10.16 · Python 3.14.8 · kubectl 1.35.3)
+              </code>
+              : Gemini Cloud Assist SRE Investigations, Parameter Manager, Vector
+              Search Collections, Cloud Number Registry (CNR IPAM), and ML
+              Diagnostics.
+            </p>
+
+            <div className="space-y-2.5">
+              {[
+                {
+                  badge: '[BETA / GA]',
+                  title: '1. Gemini Cloud Assist SRE Investigations',
+                  cmd: `gcloud beta gemini cloud-assist investigations list --project=${projectId} --location=global --format=json`,
+                  desc: 'Lists active and historical AI root-cause investigations managed by Gemini Cloud Assist.',
+                },
+                {
+                  badge: '[GA / BETA]',
+                  title: '2. Parameter Manager Centralized Config Store',
+                  cmd: `gcloud parametermanager parameters list --project=${projectId} --location=global --format=json`,
+                  desc: 'Single source of truth for typed application parameters and regional/global configuration templates.',
+                },
+                {
+                  badge: '[GA / BETA]',
+                  title: '3. Vector Search Data Collections',
+                  cmd: `gcloud vector-search collections list --project=${projectId} --location=${region} --format=json`,
+                  desc: 'Inspects managed Vector Search embedding collections and index operations.',
+                },
+                {
+                  badge: '[ALPHA]',
+                  title: '4. Cloud Number Registry (CNR) Enterprise IPAM',
+                  cmd: `gcloud alpha number-registry discovered-ranges list --project=${projectId} --location=global --format=json`,
+                  desc: 'Discovers VPC/hybrid IP ranges, IPAM admin scopes, realms, and free CIDR allocations.',
+                },
+                {
+                  badge: '[ALPHA]',
+                  title: '5. ML Diagnostics & XLA/GPU Profiler Sessions',
+                  cmd: `gcloud alpha mldiagnostics machine-learning-run list --project=${projectId} --location=${region} --format=json`,
+                  desc: 'Tracks AI training/inference runs, monitored hardware events, and XLA profiler targets.',
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-mono font-extrabold">
+                        {item.badge}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                        {item.title}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyText(item.cmd, item.title)}
+                      className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      Copy CLI
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                    {item.desc}
+                  </p>
+                  <div className="p-2 rounded-lg bg-zinc-900 text-emerald-400 font-mono text-[11px] break-all">
+                    $ {item.cmd}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right 5 Cols: SDK 588.0.0 -> 590.0.0 Promotion & Flag Audit Ledger */}
+          <div className="lg:col-span-5 rounded-2xl border border-emerald-500/40 bg-white dark:bg-[#18181b] p-4 sm:p-5 space-y-3.5">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+              <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                SDK 588.0.0 → 590.0.0 Verified Flag &amp; Track Promotions
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Live audit of existing commands updated in CloudPulse for{' '}
+              <code className="font-mono font-bold">gcloud 590.0.0</code>:
+            </p>
+            <div className="space-y-2 text-xs font-mono">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
+                <div className="font-bold text-emerald-700 dark:text-emerald-300">
+                  1. Direct Cloud Run IAP Promoted to GA (--iap)
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  Promoted from <code className="font-mono">gcloud beta run</code>{' '}
+                  to GA:{' '}
+                  <code className="font-mono text-emerald-600 dark:text-emerald-400">
+                    gcloud run services update &lt;svc&gt; --iap
+                  </code>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
+                <div className="font-bold text-emerald-700 dark:text-emerald-300">
+                  2. Audit Manager Promoted to GA + Subcommand Update
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  Promoted to <code className="font-mono">gcloud audit-manager</code>;
+                  updated to{' '}
+                  <code className="font-mono">audit-schedules list</code> and{' '}
+                  <code className="font-mono">--compliance-framework</code> +{' '}
+                  <code className="font-mono">--report-format=odf</code>.
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
+                <div className="font-bold text-amber-700 dark:text-amber-300">
+                  3. Cloud Quotas CLI Flag Hygiene (SDK 590.0.0)
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  Removed deprecated <code className="font-mono">--location=global</code>{' '}
+                  from <code className="font-mono">quotas preferences/adjuster/info</code>{' '}
+                  and updated to <code className="font-mono">--dimensions</code> &amp;{' '}
+                  <code className="font-mono">--email</code>.
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-1">
+                <div className="font-bold text-indigo-700 dark:text-indigo-300">
+                  4. Model Armor, Managed Lustre &amp; Cluster Director Promotions
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  <code className="font-mono">gcloud model-armor</code> &amp;{' '}
+                  <code className="font-mono">gcloud lustre</code> promoted to GA;{' '}
+                  <code className="font-mono">gcloud beta cluster-director</code>,{' '}
+                  <code className="font-mono">developer-knowledge</code> &amp;{' '}
+                  <code className="font-mono">app-topology</code> promoted to BETA.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

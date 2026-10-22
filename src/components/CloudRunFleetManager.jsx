@@ -3435,12 +3435,12 @@ spec:
                         </div>
                       )}
 
-                      {/* Equivalent gcloud 588.0.0 CLI Commands */}
+                      {/* Equivalent gcloud 590.0.0 GA CLI Commands */}
                       {iapData.cliCommands && (
                         <div className="p-3 rounded-xl bg-zinc-900 text-zinc-100 font-mono text-[11px] space-y-1.5 border border-zinc-800">
                           <div className="flex items-center justify-between text-[10px] text-zinc-400">
                             <span>
-                              EQUIVALENT GCLOUD 588.0.0 DIRECT CLOUD RUN IAP COMMANDS (AUTOMATED ABOVE):
+                              EQUIVALENT GCLOUD 590.0.0 GA DIRECT CLOUD RUN IAP COMMANDS (AUTOMATED ABOVE):
                             </span>
                             <button
                               type="button"
