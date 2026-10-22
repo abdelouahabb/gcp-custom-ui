@@ -31,6 +31,32 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'appengine-service-exterminator-and-default-neutralizer',
+    wave: 'CLOUD RUN & APP ENGINE 2026 INNOVATION · APP ENGINE SERVICE EXTERMINATOR & $0.00/MO DEFAULT NEUTRALIZER',
+    title:
+      'App Engine Service & Version Exterminator, Non-Deletable default Service $0.00/Mo Neutralizer & 1-Click Cloud Run Migrator',
+    badge: 'CLOUD RUN TAB (APP ENGINE EXTERMINATOR)',
+    badgeColor: 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40',
+    icon: PowerOff,
+    targetTab: 'CLOUD_RUN',
+    problemSolved:
+      'In the official Google Cloud Console UI, the App Engine -> Services table famously omits a "Delete Service" button—forcing engineers into the CLI just to delete non-default services. Even worse, Google Cloud permanently blocks deleting the "default" App Engine service at the REST API level ("INVALID_ARGUMENT: Cannot delete the default service"), leaving legacy App Engine projects trapped with resident instances, zombie versions, and *.appspot.com storage bills.',
+    howItWorks: [
+      'Direct REST v1 Service Deletion for Non-default Services (DELETE_SERVICE): Calls DELETE https://appengine.googleapis.com/v1/apps/:projectId/services/:serviceId directly from the UI to permanently delete any non-default App Engine service and all of its versions in 1 click.',
+      '1-Click $0.00/mo Default Service Neutralizer (NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO): Because Google Cloud forbids deleting the "default" service, this pipeline automatically deletes all 0%-traffic zombie versions inside default, stops any active MANUAL/BASIC/FLEX versions, and patches apps/:projectId?updateMask=servingStatus to USER_DISABLED so the entire App Engine application is frozen at $0.00/mo.',
+      'Granular Version Stop/Start & Zombie Version Exterminator (STOP_OR_START_VERSION & DELETE_VERSION): Inspect every version across every App Engine service with live traffic-split percentages, runtime/environment metadata, and estimated $/mo burn, and stop or delete individual versions directly.',
+      '1-Click App Engine -> Cloud Run v2 Migrator (MIGRATE_TO_CLOUD_RUN): Migrates any App Engine service into a true scale-to-zero Cloud Run Gen2 service (ae-<serviceId>, minInstanceCount: 0, cpuIdle: true) with optional 1-click Direct Cloud Run IAP ($0.00/mo Google Sign-In without a Load Balancer).',
+    ],
+    apisUsed: [
+      'GET & POST /api/project/:id/appengine/overview & /api/project/:id/appengine/action',
+      'DELETE https://appengine.googleapis.com/v1/apps/:id/services/:serviceId',
+      'DELETE & PATCH https://appengine.googleapis.com/v1/apps/:id/services/:serviceId/versions/:versionId',
+      'PATCH https://appengine.googleapis.com/v1/apps/:id?updateMask=servingStatus (USER_DISABLED | SERVING)',
+    ],
+    billingImpact:
+      'Eliminates $18–$150+/mo in hidden App Engine Flex/Manual/Basic resident instance and zombie version charges, reducing legacy App Engine footprint to $0.00/mo.',
+  },
+  {
     id: 'cloudrun-direct-iap-zero-lb-app-engine-parity',
     wave: 'CLOUD RUN 2026 INNOVATION · APP ENGINE-STYLE 1-CLICK DIRECT CLOUD IAP ($0.00/MO · ZERO LOAD BALANCER)',
     title:

@@ -118,6 +118,15 @@ export default function CloudRunFleetManager({
   const [artifactOnlyDead, setArtifactOnlyDead] = useState(false);
   const [artifactActionBusy, setArtifactActionBusy] = useState(null);
   const [deletingArtifactsMap, setDeletingArtifactsMap] = useState({});
+  // App Engine Service & Version Exterminator + Default Service $0/mo Neutralizer state
+  const [showAppEngineExterminator, setShowAppEngineExterminator] = useState(false);
+  const [appEngineState, setAppEngineState] = useState({
+    loading: false,
+    data: null,
+    error: null,
+  });
+  const [appEngineActionBusy, setAppEngineActionBusy] = useState(null);
+  const [appEngineMigrateIapMap, setAppEngineMigrateIapMap] = useState({});
 
   useEffect(() => {
     if (Array.isArray(initialServices) && initialServices.length > 0 && services.length === 0) {
@@ -1526,6 +1535,76 @@ spec:
     }
   };
 
+  const handleFetchAppEngineOverview = useCallback(
+    async (silent = false) => {
+      if (!projectId) return;
+      if (!silent) {
+        setAppEngineState((prev) => ({ ...prev, loading: true, error: null }));
+      }
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/appengine/overview`
+        );
+        setAppEngineState({
+          loading: false,
+          data: res.data,
+          error: null,
+        });
+      } catch (err) {
+        setAppEngineState((prev) => ({
+          ...prev,
+          loading: false,
+          error:
+            err.response?.data?.error ||
+            err.message ||
+            'Failed to inspect App Engine application & services.',
+        }));
+      }
+    },
+    [projectId]
+  );
+
+  const handleToggleAppEngineExterminator = () => {
+    setShowAppEngineExterminator((prev) => {
+      const next = !prev;
+      if (next && !appEngineState.data && !appEngineState.loading) {
+        handleFetchAppEngineOverview(false);
+      }
+      return next;
+    });
+  };
+
+  const handleExecuteAppEngineAction = async (actionKey, payload) => {
+    setAppEngineActionBusy(actionKey);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/appengine/action`,
+        payload
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Executed App Engine action ${payload?.action} on ${projectId}.`
+        );
+      }
+      await handleFetchAppEngineOverview(true);
+      if (payload?.action === 'MIGRATE_TO_CLOUD_RUN') {
+        await fetchCloudRunFleet(true);
+      }
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      if (!err?.__cancelledByUser && onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to execute App Engine action (${payload?.action}).`
+        );
+      }
+    } finally {
+      setAppEngineActionBusy(null);
+    }
+  };
+
   const selfDeployCmd = `gcloud run deploy cloudpulse-2026 --source . --project=${projectId} --region=us-east1 --allow-unauthenticated`;
 
   return (
@@ -1556,6 +1635,26 @@ spec:
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleAppEngineExterminator}
+            title="Delete non-default App Engine services directly (missing from GCP Console UI), neutralize the non-deletable default service to $0.00/mo, or migrate App Engine services to Cloud Run in 1 click"
+            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+              showAppEngineExterminator
+                ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                : 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/35'
+            }`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>App Engine Exterminator & $0/mo Neutralizer</span>
+            {appEngineState.data?.summary && (
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-50 dark:bg-zinc-900/80 text-red-700 dark:text-red-300 text-[10px] font-mono">
+                {appEngineState.data.summary.totalServicesCount} Svc ·{' '}
+                {appEngineState.data.summary.totalVersionsCount} Ver
+              </span>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={handleToggleArtifactHunter}
@@ -1614,6 +1713,467 @@ spec:
           </button>
         </div>
       </div>
+
+      {/* APP ENGINE SERVICE & VERSION EXTERMINATOR + DEFAULT SERVICE $0.00/MO NEUTRALIZER */}
+      {showAppEngineExterminator && (() => {
+        const aeData = appEngineState.data;
+        const appInfo = aeData?.app;
+        const aeServices = aeData?.services || [];
+        const aeBuckets = aeData?.appspotBuckets || [];
+        const aeSummary = aeData?.summary || {
+          totalServicesCount: 0,
+          deletableServicesCount: 0,
+          totalVersionsCount: 0,
+          zombieVersionsCount: 0,
+          totalEstimatedMonthlyUsd: 0,
+          appServingStatus: 'NOT_INITIALIZED',
+        };
+        const isAppServing = aeSummary.appServingStatus === 'SERVING';
+
+        return (
+          <div className="p-4 rounded-xl border border-red-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-400/40 text-red-700 dark:text-red-300 text-[10px] font-mono font-extrabold">
+                    <Trash2 className="w-3 h-3" />
+                    <span>APP ENGINE SERVICE & VERSION EXTERMINATOR (MISSING FROM GCP CONSOLE UI)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Direct REST v1 Service Delete + Default Service $0.00/mo Neutralizer</span>
+                  </span>
+                </div>
+                <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
+                  Why Can&apos;t You Delete an App Engine Service in the GCP Console UI? We Fixed Both the UI Gap & the API Lock
+                </h4>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  1) The Google Cloud Console UI omits the <strong>Delete Service</strong> button for non-<code>default</code> App Engine services even though{' '}
+                  <code className="text-red-600 dark:text-red-300">DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/:serviceId</code> supports it directly.{' '}
+                  2) Google Cloud API permanently blocks deleting the <code>default</code> service (<code>Cannot delete the default service</code>) — so we built a{' '}
+                  <strong className="text-emerald-600 dark:text-emerald-400">1-Click $0.00/mo Default Service Neutralizer</strong> (purges zombie versions, stops active versions & sets <code>servingStatus: USER_DISABLED</code>) plus a{' '}
+                  <strong className="text-blue-600 dark:text-blue-400">1-Click App Engine → Cloud Run Migrator</strong>.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {aeData?.appInitialized && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleExecuteAppEngineAction('TOGGLE_APP_STATUS', {
+                        action: 'TOGGLE_APP_SERVING_STATUS',
+                        servingStatus: isAppServing ? 'USER_DISABLED' : 'SERVING',
+                      })
+                    }
+                    disabled={Boolean(appEngineActionBusy)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50 ${
+                      isAppServing
+                        ? 'bg-red-600 hover:bg-red-500 text-white'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    }`}
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>
+                      {appEngineActionBusy === 'TOGGLE_APP_STATUS'
+                        ? 'Updating App Status...'
+                        : isAppServing
+                        ? 'Disable Entire App Engine ($0.00/mo Kill-Switch)'
+                        : 'Re-Enable App Engine (SERVING)'}
+                    </span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleFetchAppEngineOverview(false)}
+                  disabled={appEngineState.loading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      appEngineState.loading ? 'animate-spin' : ''
+                    }`}
+                  />
+                  <span>
+                    {appEngineState.loading ? 'Scanning App Engine...' : 'Rescan App Engine'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAppEngineExterminator(false)}
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {appEngineState.error && (
+              <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/40 text-xs text-red-800 dark:text-red-200 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{appEngineState.error}</span>
+              </div>
+            )}
+
+            {/* 4 Live KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] font-mono text-zinc-400">
+                  1. App Engine Application Status
+                </div>
+                <div
+                  className={`text-base font-extrabold mt-0.5 ${
+                    !aeData?.appInitialized
+                      ? 'text-emerald-400'
+                      : isAppServing
+                      ? 'text-amber-400'
+                      : 'text-emerald-400'
+                  }`}
+                >
+                  {!aeData?.appInitialized
+                    ? 'NOT INITIALIZED ($0.00/mo)'
+                    : `${aeSummary.appServingStatus} (${appInfo?.locationId || 'regional'})`}
+                </div>
+                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  {appInfo?.defaultHostname || 'No *.appspot.com hostname provisioned'}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] font-mono text-zinc-400">
+                  2. Services (Direct REST Deletable vs Default)
+                </div>
+                <div className="text-base font-extrabold text-red-400 mt-0.5">
+                  {aeSummary.totalServicesCount} Total · {aeSummary.deletableServicesCount} Direct-Deletable
+                </div>
+                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  Non-default services delete via REST v1 · Default neutralizes to $0/mo
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] font-mono text-zinc-400">
+                  3. Deployed Versions & 0%-Traffic Zombies
+                </div>
+                <div className="text-base font-extrabold text-amber-400 mt-0.5">
+                  {aeSummary.totalVersionsCount} Version(s) · {aeSummary.zombieVersionsCount} Zombie(s)
+                </div>
+                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  0%-traffic versions can be deleted directly even inside default
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] font-mono text-zinc-400">
+                  4. Estimated App Engine Burn & Staging Buckets
+                </div>
+                <div className="text-base font-extrabold text-emerald-400 mt-0.5">
+                  ${Number(aeSummary.totalEstimatedMonthlyUsd || 0).toFixed(2)}/mo · {aeBuckets.length} Bucket(s)
+                </div>
+                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  Includes Flex/Manual/Basic resident instances & *.appspot.com GCS
+                </div>
+              </div>
+            </div>
+
+            {!aeData?.appInitialized && !appEngineState.loading ? (
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-800 dark:text-emerald-200 flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-extrabold text-sm">
+                    Clean Slate: No App Engine Application Initialized in {projectId} ($0.00/mo)
+                  </div>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+                    This project does not have a legacy App Engine application or permanent <code>default</code> service. All serverless workloads are running cleanly on Cloud Run v2!
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 font-mono font-bold text-[11px] shrink-0">
+                  $0.00/mo App Engine Burn
+                </span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {aeServices.map((svc) => {
+                  const isDefault = Boolean(svc.isDefaultService);
+                  const migrateIap = Boolean(appEngineMigrateIapMap[svc.id]);
+                  return (
+                    <div
+                      key={svc.id}
+                      className={`p-3.5 rounded-xl border space-y-3 ${
+                        isDefault
+                          ? 'border-amber-500/40 bg-amber-500/5'
+                          : 'border-red-500/35 bg-zinc-50 dark:bg-zinc-900/70'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-sm font-extrabold text-zinc-900 dark:text-white">
+                              service/{svc.id}
+                            </span>
+                            {isDefault ? (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold">
+                                DEFAULT SERVICE (API-LOCKED FROM DIRECT DELETE · USE $0/MO NEUTRALIZER)
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-mono font-bold">
+                                NON-DEFAULT SERVICE (DIRECT REST DELETE UNLOCKED)
+                              </span>
+                            )}
+                            <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono">
+                              {svc.versionsCount} Version(s) · {svc.zombieVersionsCount} Zombie(s) · ${Number(svc.estimatedMonthlyUsd || 0).toFixed(2)}/mo
+                            </span>
+                            {svc.iapEnabled && (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-300 text-[10px] font-mono font-bold">
+                                App Engine IAP Enabled
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
+                            {svc.deleteExplanation}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* 1-Click Migrate to Cloud Run */}
+                          <div className="inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 rounded-lg px-2.5 py-1">
+                            <label className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-700 dark:text-blue-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={migrateIap}
+                                onChange={(e) =>
+                                  setAppEngineMigrateIapMap((prev) => ({
+                                    ...prev,
+                                    [svc.id]: e.target.checked,
+                                  }))
+                                }
+                                className="rounded border-blue-400"
+                              />
+                              <span>+ Direct Cloud Run IAP ($0 LB)</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleExecuteAppEngineAction(`MIGRATE:${svc.id}`, {
+                                  action: 'MIGRATE_TO_CLOUD_RUN',
+                                  serviceId: svc.id,
+                                  targetCloudRunServiceName: `ae-${svc.id}`
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9-]/g, '-')
+                                    .slice(0, 45),
+                                  region: 'us-east1',
+                                  iapEnabled: migrateIap,
+                                })
+                              }
+                              disabled={Boolean(appEngineActionBusy)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              <Rocket className="w-3 h-3" />
+                              <span>
+                                {appEngineActionBusy === `MIGRATE:${svc.id}`
+                                  ? 'Migrating...'
+                                  : `1-Click Migrate → Cloud Run (ae-${svc.id})`}
+                              </span>
+                            </button>
+                          </div>
+
+                          {/* Direct Delete (Non-default) OR $0.00/mo Neutralizer (Default) */}
+                          {isDefault ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleExecuteAppEngineAction(`NEUTRALIZE:${svc.id}`, {
+                                  action: 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO',
+                                  disableEntireApp: true,
+                                })
+                              }
+                              disabled={Boolean(appEngineActionBusy)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              <Zap className="w-3.5 h-3.5" />
+                              <span>
+                                {appEngineActionBusy === `NEUTRALIZE:${svc.id}`
+                                  ? 'Neutralizing default...'
+                                  : 'Neutralize default Service to $0.00/mo'}
+                              </span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleExecuteAppEngineAction(`DELETE_SVC:${svc.id}`, {
+                                  action: 'DELETE_SERVICE',
+                                  serviceId: svc.id,
+                                })
+                              }
+                              disabled={Boolean(appEngineActionBusy)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>
+                                {appEngineActionBusy === `DELETE_SVC:${svc.id}`
+                                  ? 'Deleting Service...'
+                                  : `Delete Service "${svc.id}" (REST v1)`}
+                              </span>
+                            </button>
+                          )}
+
+                          {onRunInShell && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRunInShell(
+                                  isDefault
+                                    ? `gcloud app versions list --service=default --project=${projectId}`
+                                    : `gcloud app services delete ${svc.id} --project=${projectId} --quiet`
+                                )
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                            >
+                              <Terminal className="w-3 h-3" />
+                              <span>CLI</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Versions Table inside Service */}
+                      {Array.isArray(svc.versions) && svc.versions.length > 0 && (
+                        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                          <table className="w-full text-left border-collapse text-xs">
+                            <thead>
+                              <tr className="border-b border-zinc-200 dark:border-zinc-800 text-[10px] font-mono uppercase text-zinc-400">
+                                <th className="py-2 px-3">Version ID</th>
+                                <th className="py-2 px-3">Runtime / Env</th>
+                                <th className="py-2 px-3">Serving Status</th>
+                                <th className="py-2 px-3">Traffic Share</th>
+                                <th className="py-2 px-3">Scaling / Est. Burn</th>
+                                <th className="py-2 px-3 text-right">Version Controls</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/70">
+                              {svc.versions.map((ver) => {
+                                const verBusyKey = `VER:${svc.id}/${ver.id}`;
+                                return (
+                                  <tr key={ver.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
+                                    <td className="py-2 px-3 font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                                      {ver.id}
+                                    </td>
+                                    <td className="py-2 px-3 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
+                                      {ver.runtime} · {ver.env} ({ver.instanceClass})
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      <span
+                                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                          ver.servingStatus === 'SERVING'
+                                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
+                                            : 'bg-zinc-500/20 text-zinc-500 dark:text-zinc-400 border border-zinc-500/30'
+                                        }`}
+                                      >
+                                        {ver.servingStatus}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3 font-mono text-[11px]">
+                                      <span
+                                        className={
+                                          ver.trafficPercent > 0
+                                            ? 'text-blue-600 dark:text-blue-400 font-bold'
+                                            : 'text-amber-600 dark:text-amber-400'
+                                        }
+                                      >
+                                        {ver.trafficPercent}%{' '}
+                                        {ver.trafficPercent === 0 ? '(Zombie)' : '(Live Traffic)'}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
+                                      {ver.scalingType} · ${Number(ver.estimatedMonthlyUsd || 0).toFixed(2)}/mo
+                                    </td>
+                                    <td className="py-2 px-3 text-right">
+                                      <div className="inline-flex items-center gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleExecuteAppEngineAction(
+                                              `STOP_START:${svc.id}/${ver.id}`,
+                                              {
+                                                action: 'STOP_OR_START_VERSION',
+                                                serviceId: svc.id,
+                                                versionId: ver.id,
+                                                servingStatus:
+                                                  ver.servingStatus === 'SERVING'
+                                                    ? 'STOPPED'
+                                                    : 'SERVING',
+                                              }
+                                            )
+                                          }
+                                          disabled={Boolean(appEngineActionBusy)}
+                                          className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer disabled:opacity-50"
+                                        >
+                                          {ver.servingStatus === 'SERVING' ? 'Stop Version' : 'Start Version'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleExecuteAppEngineAction(verBusyKey, {
+                                              action: 'DELETE_VERSION',
+                                              serviceId: svc.id,
+                                              versionId: ver.id,
+                                            })
+                                          }
+                                          disabled={Boolean(appEngineActionBusy) || !ver.canDeleteVersion}
+                                          title={
+                                            ver.canDeleteVersion
+                                              ? `Delete version ${ver.id} from service ${svc.id}`
+                                              : 'Cannot delete the only version receiving 100% traffic on the default service; neutralize or deploy another version first'
+                                          }
+                                          className="px-2 py-1 rounded bg-red-600/90 hover:bg-red-500 text-white text-[10px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                                        >
+                                          {appEngineActionBusy === verBusyKey ? 'Deleting...' : 'Delete Version'}
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* *.appspot.com Staging / Default GCS Buckets */}
+            {aeBuckets.length > 0 && (
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs text-zinc-600 dark:text-zinc-300">
+                  <span className="font-bold text-zinc-900 dark:text-white">
+                    App Engine Staging & Default GCS Buckets ({aeBuckets.length}):
+                  </span>{' '}
+                  {aeBuckets.map((b) => `gs://${b.name}`).join(', ')}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {aeBuckets.map((b) => (
+                    <button
+                      key={b.name}
+                      type="button"
+                      onClick={() => handleEmptyAndDeleteStagingBucket(b.name)}
+                      disabled={Boolean(artifactActionBusy)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-500/35 text-red-700 dark:text-red-300 text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Empty & Delete gs://{b.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* DEAD CONTAINER (ARTIFACT REGISTRY) & CLOUD STORAGE ARTIFACT HUNTER STUDIO */}
       {showArtifactHunter && (() => {

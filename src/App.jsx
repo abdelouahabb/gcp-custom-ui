@@ -1349,8 +1349,71 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // 3D-bis. App Engine Service & Version Exterminator, `default` $0/mo Neutralizer & Migrator (/appengine/action)
+    if (rawUrl.includes('/appengine/action')) {
+      const act = String(body.action || '').toUpperCase();
+      const svcId = body.serviceId || 'default';
+      const verId = body.versionId || '';
+      return {
+        gateType:
+          act === 'DELETE_SERVICE' ||
+          act === 'DELETE_VERSION' ||
+          act === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO' ||
+          act === 'TOGGLE_APP_SERVING_STATUS'
+            ? 'DELETE'
+            : 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title:
+          act === 'DELETE_SERVICE'
+            ? `Permanently Delete App Engine Service "${svcId}"?`
+            : act === 'DELETE_VERSION'
+            ? `Permanently Delete App Engine Version "${svcId}/${verId}"?`
+            : act === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO'
+            ? `Neutralize Un-Deletable App Engine "default" Service to $0.00/mo?`
+            : act === 'TOGGLE_APP_SERVING_STATUS'
+            ? `${body.targetStatus === 'SERVING' ? 'Re-Enable' : 'Disable'} Entire App Engine Application (${projectId}.appspot.com)?`
+            : act === 'MIGRATE_TO_CLOUD_RUN'
+            ? `Migrate App Engine Service "${svcId}" to Scale-to-Zero Cloud Run?`
+            : `Confirm App Engine Action (${act}) on "${svcId}"?`,
+        headerBadge: 'App Engine Service Exterminator & $0/mo Neutralizer Gatekeeper',
+        targetLabel: 'Target App Engine Resource',
+        resourceKind: 'Google App Engine Admin REST API (appengine.googleapis.com/v1)',
+        targetName: verId ? `${projectId}/${svcId}/${verId}` : `${projectId}/${svcId}`,
+        location: body.region || 'global',
+        projectId,
+        method: `APPENGINE ${act}`,
+        endpoint: rawUrl,
+        confirmLabel:
+          act === 'DELETE_SERVICE'
+            ? `Delete App Engine Service "${svcId}"`
+            : act === 'DELETE_VERSION'
+            ? `Delete Version "${verId}"`
+            : act === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO'
+            ? `Neutralize "default" Service to $0.00/mo`
+            : act === 'TOGGLE_APP_SERVING_STATUS'
+            ? `${body.targetStatus === 'SERVING' ? 'Re-Enable' : 'Disable'} App Engine (${body.targetStatus || 'USER_DISABLED'})`
+            : `Execute ${act}`,
+        cancelToast: `App Engine action (${act}) cancelled.`,
+        whatHappensNext:
+          act === 'DELETE_SERVICE'
+            ? `1. Calls DELETE https://appengine.googleapis.com/v1/apps/${projectId}/services/${svcId} directly (bypassing the missing Delete button in the GCP Console UI).\n2. Permanently deletes service "${svcId}" and all of its deployed versions.`
+            : act === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO'
+            ? `1. Because Google Cloud forbids deleting the "default" service at the API level, this deletes all non-traffic-receiving zombie versions in "default".\n2. Stops active manual/basic/Flex versions and sets the App Engine application servingStatus to USER_DISABLED so instance billing drops to $0.00/mo.`
+            : act === 'TOGGLE_APP_SERVING_STATUS'
+            ? `1. Calls PATCH https://appengine.googleapis.com/v1/apps/${projectId}?updateMask=servingStatus with servingStatus="${body.targetStatus || 'USER_DISABLED'}".\n2. Immediately stops or resumes all App Engine traffic and instance billing across the project.`
+            : act === 'MIGRATE_TO_CLOUD_RUN'
+            ? `1. Deploys a new scale-to-zero Cloud Run v2 service ("ae-${svcId}") in ${body.region || 'us-central1'} with minInstanceCount=0 and cpuIdle=true ($0.00/mo idle).`
+            : `1. Executes ${act} on App Engine service "${svcId}"${verId ? ` (version "${verId}")` : ''} via appengine.googleapis.com/v1.`,
+        costWarning:
+          act === 'MIGRATE_TO_CLOUD_RUN'
+            ? `SCALE-TO-ZERO ($0.00/MO IDLE): The migrated Cloud Run v2 service is configured with minInstanceCount=0 and request-only CPU billing.`
+            : `FINOPS SAVINGS ($0.00/MO): Deleting non-default App Engine services, purging zombie versions, or disabling the App Engine application (USER_DISABLED) immediately halts ongoing App Engine Flexible/Standard instance charges.`,
+        impactWarning: `Mutates live App Engine state (${act}) in project "${projectId}".`,
+      };
+    }
+
     // 3E. 1-Tap Resource Control Center Actions (/api/project/:id/action)
-    if (rawUrl.endsWith('/action') && !rawUrl.includes('/quantum-nexus/action') && !rawUrl.includes('/wave10/action') && !rawUrl.includes('/data-engineer/action') && !rawUrl.includes('/aws-azure-parity/action') && !rawUrl.includes('/alpha-beta/action') && !rawUrl.includes('/secrets-kms/action') && !rawUrl.includes('/credentials/action')) {
+    if (rawUrl.endsWith('/action') && !rawUrl.includes('/quantum-nexus/action') && !rawUrl.includes('/wave10/action') && !rawUrl.includes('/data-engineer/action') && !rawUrl.includes('/aws-azure-parity/action') && !rawUrl.includes('/alpha-beta/action') && !rawUrl.includes('/appengine/action') && !rawUrl.includes('/secrets-kms/action') && !rawUrl.includes('/credentials/action')) {
       const act = String(body.actionType || body.action || '').toUpperCase();
       const resId = body.resourceId || body.resourceName || 'target-resource';
       return {
