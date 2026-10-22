@@ -2035,7 +2035,7 @@ spec:
                                     .replace(/[^a-z0-9-]/g, '-')
                                     .slice(0, 45),
                                   region:
-                                    appEngineOverview?.app?.cloudRunRegion ||
+                                    appInfo?.cloudRunRegion ||
                                     'us-central1',
                                   iapEnabled: migrateIap,
                                 })
@@ -2065,7 +2065,7 @@ spec:
                           {/* Direct Delete (Non-default) OR Neutralize Default to $0.00/mo Floor */}
                           {isDefault ? (
                             !(
-                              appEngineOverview?.app?.servingStatus === 'USER_DISABLED' &&
+                              !isAppServing &&
                               svc.versionsCount === 1 &&
                               svc.servingVersionCount === 0
                             ) && (
