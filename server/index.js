@@ -3193,10 +3193,6 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
           ? {
               iapEnabled: true,
               invokerIamDisabled: false,
-              launchStage: 'BETA',
-              annotations: {
-                'run.googleapis.com/iap-enabled': 'true',
-              },
             }
           : {}),
         template: {
@@ -5577,33 +5573,16 @@ app.post(
         });
       }
 
-      // Step 2: Patch Cloud Run v2 Service (iapEnabled + run.googleapis.com/iap-enabled annotation + invokerIamDisabled=false)
+      // Step 2: Patch Cloud Run v2 Service (iapEnabled=true/false + invokerIamDisabled=false)
       let servicePatched = false;
       try {
-        const existing = await gcpFetch(serviceUrl, token, projectId, {
-          timeout: 8000,
-        });
-        const nextAnnotations = { ...(existing.annotations || {}) };
-        if (targetEnabled) {
-          nextAnnotations['run.googleapis.com/iap-enabled'] = 'true';
-        } else {
-          delete nextAnnotations['run.googleapis.com/iap-enabled'];
-        }
-
         const patchPayload = {
-          annotations: nextAnnotations,
           iapEnabled: targetEnabled,
-          ...(targetEnabled
-            ? {
-                invokerIamDisabled: false,
-                launchStage:
-                  existing.launchStage === 'ALPHA' ? 'ALPHA' : 'BETA',
-              }
-            : {}),
+          ...(targetEnabled ? { invokerIamDisabled: false } : {}),
         };
         const maskFields = targetEnabled
-          ? 'annotations,iapEnabled,invokerIamDisabled,launchStage'
-          : 'annotations,iapEnabled';
+          ? 'iapEnabled,invokerIamDisabled'
+          : 'iapEnabled';
 
         await gcpFetch(
           `${serviceUrl}?updateMask=${maskFields}`,
@@ -5621,59 +5600,22 @@ app.post(
           step: 2,
           id: 'CLOUD_RUN_IAP_ANNOTATION',
           title: targetEnabled
-            ? 'Set Direct Cloud Run IAP (iapEnabled=true & run.googleapis.com/iap-enabled)'
-            : 'Remove Direct Cloud Run IAP Annotation (iapEnabled=false)',
+            ? 'Enable Native Cloud Run v2 IAP (iapEnabled=true & invokerIamDisabled=false)'
+            : 'Disable Native Cloud Run v2 IAP (iapEnabled=false)',
           status: 'COMPLETED',
           detail: targetEnabled
-            ? `Patched ${serviceName} with iapEnabled=true, annotations["run.googleapis.com/iap-enabled"]="true", invokerIamDisabled=false`
-            : `Removed run.googleapis.com/iap-enabled annotation on ${serviceName}`,
+            ? `Patched ${serviceName} via Cloud Run v2 REST API with iapEnabled=true, invokerIamDisabled=false`
+            : `Patched ${serviceName} via Cloud Run v2 REST API with iapEnabled=false`,
         });
       } catch (patchErr) {
-        // Fallback: try updating only annotations or via gcloud beta run services update
-        try {
-          const existing = await gcpFetch(serviceUrl, token, projectId, {
-            timeout: 6000,
-          });
-          const nextAnnotations = { ...(existing.annotations || {}) };
-          if (targetEnabled) {
-            nextAnnotations['run.googleapis.com/iap-enabled'] = 'true';
-          } else {
-            delete nextAnnotations['run.googleapis.com/iap-enabled'];
-          }
-          await gcpFetch(
-            `${serviceUrl}?updateMask=annotations${
-              targetEnabled ? ',invokerIamDisabled' : ''
-            }`,
-            token,
-            projectId,
-            {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: {
-                annotations: nextAnnotations,
-                ...(targetEnabled ? { invokerIamDisabled: false } : {}),
-              },
-              timeout: 10000,
-            }
-          );
-          servicePatched = true;
-          steps.push({
-            step: 2,
-            id: 'CLOUD_RUN_IAP_ANNOTATION',
-            title: 'Patch run.googleapis.com/iap-enabled Service Annotation',
-            status: 'COMPLETED',
-            detail: `Applied run.googleapis.com/iap-enabled="${targetEnabled}" on ${serviceName}`,
-          });
-        } catch {
-          steps.push({
-            step: 2,
-            id: 'CLOUD_RUN_IAP_ANNOTATION',
-            title: 'Patch run.googleapis.com/iap-enabled Service Annotation',
-            status: 'WARNING',
-            detail:
-              patchErr.response?.data?.error?.message || patchErr.message,
-          });
-        }
+        steps.push({
+          step: 2,
+          id: 'CLOUD_RUN_IAP_ANNOTATION',
+          title: 'Patch Cloud Run v2 iapEnabled Field',
+          status: 'WARNING',
+          detail:
+            patchErr.response?.data?.error?.message || patchErr.message,
+        });
       }
 
       // Step 3: Update Cloud Run Service IAM Policy (Grant/Revoke roles/run.invoker for IAP Service Agent & remove allUsers when enabling IAP)
