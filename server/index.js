@@ -6124,6 +6124,13 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
             Number(v.automaticScaling?.minIdleInstances || 0) > 0 ||
             Number(v.manualScaling?.instances || 0) > 0 ||
             Boolean(v.basicScaling);
+          const scalingType = isFlex
+            ? 'FLEXIBLE'
+            : v.manualScaling
+            ? `MANUAL (${v.manualScaling.instances || 1} inst)`
+            : v.basicScaling
+            ? 'BASIC'
+            : 'AUTOMATIC (F1 Standard)';
           const estHourlyUsd = !isServing
             ? 0
             : isFlex
@@ -6131,6 +6138,9 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
             : hasMinIdle
             ? 0.05
             : 0;
+          const estMonthlyUsd = Number((estHourlyUsd * 730).toFixed(2));
+          const isLockedByTrafficOnDefault =
+            svcId === 'default' && trafficShare > 0;
           return {
             id: vId,
             name: v.name,
@@ -6138,9 +6148,13 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
             runtime: v.runtime || 'nodejs20',
             env: v.env || 'standard',
             instanceClass: v.instanceClass || (isFlex ? 'Flex-VM' : 'F1'),
+            scalingType,
             trafficPercent: Math.round(trafficShare * 1000) / 10,
             receivesTraffic: trafficShare > 0,
             canDeleteVersionDirectly: trafficShare === 0,
+            canDeleteVersion: true, // Always actionable in CloudPulse: direct delete if 0% traffic, or 1-Click Stub Swap + Delete if >0% traffic!
+            isLockedByTrafficOnDefault,
+            isNoopStub: vId === 'noop-zero-stub',
             createTime: v.createTime || null,
             createdBy: v.createdBy || '',
             versionUrl:
@@ -6149,7 +6163,8 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
                 ? `https://${vId}-dot-${projectId}.appspot.com`
                 : `https://${vId}-dot-${svcId}-dot-${projectId}.appspot.com`),
             estHourlyUsd,
-            estMonthlyUsd: Number((estHourlyUsd * 730).toFixed(2)),
+            estMonthlyUsd,
+            estimatedMonthlyUsd: estMonthlyUsd,
           };
         });
 
@@ -6157,30 +6172,39 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
           (sum, v) => sum + v.estMonthlyUsd,
           0
         );
+        const zombieCount = mappedVersions.filter(
+          (v) => !v.receivesTraffic
+        ).length;
 
         return {
           id: svcId,
           name: svc.name,
           isDefaultService: svcId === 'default',
           canDeleteServiceDirectly: svcId !== 'default',
+          deleteExplanation:
+            svcId === 'default'
+              ? 'Google Cloud permanently blocks deleting the `default` service AND blocks deleting its 100%-traffic version directly—even when disabled (`USER_DISABLED`). Use "Hollow-Out & Purge Real Versions ($0/mo)" to swap 100% traffic to a 0-instance static stub, delete your real version(s), and lock App Engine to USER_DISABLED.'
+              : 'Even if a version inside this non-default service has 100% traffic, you can delete this entire service and all its versions in 1 click via DELETE /v1/apps/:id/services/:serviceId (missing from the GCP Console UI).',
           whyCannotDeleteInConsole:
             svcId === 'default'
-              ? 'Google Cloud API forbids deleting the `default` App Engine service (`INVALID_ARGUMENT: Cannot delete the default service`). Use 1-Click Neutralize to $0.00/mo or Disable App Engine Application below.'
+              ? 'Google Cloud API forbids deleting the `default` App Engine service (`INVALID_ARGUMENT: Cannot delete the default service`) and forbids deleting its 100%-traffic version. Use 1-Click Hollow-Out & Neutralize to $0.00/mo below.'
               : 'Google Cloud Console hides the Delete Service button in the web UI. Use 1-Click Delete Service below to call DELETE /v1/apps/:id/services/:serviceId directly.',
           trafficSplit: allocations,
           versionCount: mappedVersions.length,
+          versionsCount: mappedVersions.length,
           servingVersionCount: mappedVersions.filter(
             (v) => v.servingStatus === 'SERVING'
           ).length,
-          zombieVersionCount: mappedVersions.filter(
-            (v) => !v.receivesTraffic
-          ).length,
+          zombieVersionCount: zombieCount,
+          zombieVersionsCount: zombieCount,
           estMonthlyUsd: Number(totalServiceMonthlyUsd.toFixed(2)),
+          estimatedMonthlyUsd: Number(totalServiceMonthlyUsd.toFixed(2)),
+          iapEnabled: Boolean(appInfo?.iapEnabled),
           versions: mappedVersions,
           cliCommands: {
             deleteService:
               svcId === 'default'
-                ? `# Cannot delete 'default' service directly; disable app or stop versions:\ngcloud app versions stop $(gcloud app versions list --service=default --format="value(version.id)") --service=default --project=${projectId} --quiet`
+                ? `# 'default' service cannot be deleted directly; deploy noop-zero-stub to take 100% traffic, then delete old versions:\ngcloud app versions list --service=default --project=${projectId}`
                 : `gcloud app services delete ${svcId} --project=${projectId} --quiet`,
             listVersions: `gcloud app versions list --service=${svcId} --project=${projectId}`,
           },
@@ -6204,16 +6228,42 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
         timeCreated: b.timeCreated,
       }));
 
+    const totalVersionsCount = servicesWithVersions.reduce(
+      (sum, s) => sum + s.versionsCount,
+      0
+    );
+    const zombieVersionsCount = servicesWithVersions.reduce(
+      (sum, s) => sum + s.zombieVersionsCount,
+      0
+    );
+    const totalEstimatedMonthlyUsd = Number(
+      servicesWithVersions
+        .reduce((sum, s) => sum + s.estimatedMonthlyUsd, 0)
+        .toFixed(2)
+    );
+
     return res.json({
       projectId,
       scannedAt: new Date().toISOString(),
       appInitialized,
+      app: appInfo,
       appInfo,
       apiError,
+      summary: {
+        totalServicesCount: servicesWithVersions.length,
+        deletableServicesCount: servicesWithVersions.filter(
+          (s) => s.canDeleteServiceDirectly
+        ).length,
+        totalVersionsCount,
+        zombieVersionsCount,
+        totalEstimatedMonthlyUsd,
+        appServingStatus: appInfo?.servingStatus || 'NOT_INITIALIZED',
+      },
       services: servicesWithVersions,
+      appspotBuckets: appEngineBuckets,
       appEngineBuckets,
       consoleLimitationNote:
-        'Google Cloud Console removes the Delete action on App Engine services and permanently blocks deleting the `default` service at the API level. CloudPulse exposes direct REST service deletion for non-default services, 1-Click $0.00/mo Neutralization for the `default` service, 1-Click Application Disable (`USER_DISABLED`), and 1-Click Migration to Scale-to-Zero Cloud Run.',
+        'Google Cloud Console removes the Delete action on App Engine services and permanently blocks deleting the `default` service or its 100%-traffic version at the API level. CloudPulse exposes direct REST service deletion for non-default services, 1-Click Hollow-Out Stub Swap to delete 100%-traffic versions on `default`, 1-Click Application Disable (`USER_DISABLED`), and 1-Click Migration to Scale-to-Zero Cloud Run.',
     });
   } catch (err) {
     return res.status(400).json({
@@ -6231,10 +6281,15 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
     action,
     serviceId = 'default',
     versionId = '',
-    targetStatus = 'STOPPED',
+    targetStatus,
+    servingStatus,
     region = 'us-central1',
-    enableDirectIap = false,
+    enableDirectIap,
+    iapEnabled,
+    targetCloudRunServiceName,
   } = req.body || {};
+  const effectiveStatus = servingStatus || targetStatus || 'STOPPED';
+  const effectiveIap = Boolean(enableDirectIap ?? iapEnabled ?? false);
 
   try {
     const { token } = await resolveRequestAuth(req);
@@ -6243,12 +6298,136 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
     const encProj = encodeURIComponent(projectId);
     const encSvc = encodeURIComponent(serviceId);
 
+    // Helper: Deploys a 48-byte static-only 0-instance `noop-zero-stub` version into `services/default`
+    // and shifts 100% of `default` traffic to `noop-zero-stub` so that previously 100%-traffic real versions
+    // drop to 0% traffic and can be deleted via DELETE /v1/apps/:id/services/default/versions/:v!
+    const ensureNoopZeroStubHoldsDefaultTraffic = async () => {
+      const stubId = 'noop-zero-stub';
+      const appObj = await gcpFetch(
+        `https://appengine.googleapis.com/v1/apps/${encProj}`,
+        token,
+        projectId,
+        { timeout: 7000 }
+      ).catch(() => ({}));
+      const codeBucket =
+        appObj?.codeBucket ||
+        appObj?.defaultBucket ||
+        `staging.${projectId}.appspot.com`;
+
+      // Check if `noop-zero-stub` already exists in `default`
+      const vListObj = await gcpFetch(
+        `https://appengine.googleapis.com/v1/apps/${encProj}/services/default/versions?view=BASIC`,
+        token,
+        projectId,
+        { timeout: 7000 }
+      ).catch(() => ({ versions: [] }));
+      const existingVersions = Array.isArray(vListObj?.versions)
+        ? vListObj.versions
+        : [];
+      const hasStub = existingVersions.some(
+        (v) => (v.id || String(v.name || '').split('/').pop()) === stubId
+      );
+
+      if (!hasStub) {
+        // 1. Upload 48-byte static placeholder into App Engine staging bucket
+        const objectPath = 'cloudpulse-noop/index.html';
+        const staticBody =
+          '<!doctype html><title>Decommissioned ($0/mo)</title>';
+        await axios.post(
+          `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+            codeBucket
+          )}/o?uploadType=media&name=${encodeURIComponent(objectPath)}`,
+          staticBody,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'text/html; charset=utf-8',
+            },
+            timeout: 10000,
+          }
+        );
+
+        // 2. Create static-only F1 version `noop-zero-stub` (0 dynamic instances, $0.00/mo)
+        const createOp = await gcpFetch(
+          `https://appengine.googleapis.com/v1/apps/${encProj}/services/default/versions`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            data: {
+              id: stubId,
+              runtime: 'python312',
+              env: 'standard',
+              instanceClass: 'F1',
+              automaticScaling: {
+                maxIdleInstances: 0,
+                minIdleInstances: 0,
+              },
+              deployment: {
+                files: {
+                  'index.html': {
+                    sourceUrl: `https://storage.googleapis.com/${codeBucket}/${objectPath}`,
+                  },
+                },
+              },
+              handlers: [
+                {
+                  urlRegex: '/.*',
+                  staticFiles: {
+                    path: 'index.html',
+                    uploadPathRegex: 'index\\.html',
+                  },
+                },
+              ],
+            },
+            timeout: 15000,
+          }
+        );
+
+        // Poll LRO until `noop-zero-stub` is created (up to ~24s)
+        const opName = createOp?.name;
+        if (opName) {
+          for (let attempt = 0; attempt < 12; attempt += 1) {
+            await new Promise((r) => setTimeout(r, 2000));
+            const opStatus = await gcpFetch(
+              `https://appengine.googleapis.com/v1/${opName}`,
+              token,
+              projectId,
+              { timeout: 6000 }
+            ).catch(() => null);
+            if (opStatus?.done) break;
+          }
+        }
+      }
+
+      // 3. Shift 100% traffic on `default` to `noop-zero-stub`
+      await gcpFetch(
+        `https://appengine.googleapis.com/v1/apps/${encProj}/services/default?updateMask=split`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          data: {
+            split: {
+              shardBy: 'IP',
+              allocations: {
+                [stubId]: 1,
+              },
+            },
+          },
+          timeout: 12000,
+        }
+      );
+
+      return stubId;
+    };
+
     // 1. DELETE NON-DEFAULT APP ENGINE SERVICE (DELETE /v1/apps/:id/services/:serviceId)
     if (action === 'DELETE_SERVICE') {
       if (serviceId === 'default') {
         return res.status(400).json({
           error:
-            'Google Cloud API does not allow deleting the `default` service directly. Use "Neutralize `default` Service to $0.00/mo" or "Disable App Engine Application" instead.',
+            'Google Cloud API permanently forbids deleting the `default` service (`Cannot delete the default service`). Use "Hollow-Out & Purge Real Versions in default ($0.00/mo)" instead.',
         });
       }
       const op = await gcpFetch(
@@ -6273,34 +6452,75 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       });
     }
 
-    // 2. DELETE INDIVIDUAL APP ENGINE VERSION (DELETE /v1/apps/:id/services/:svc/versions/:v)
+    // 2. DELETE INDIVIDUAL APP ENGINE VERSION (Automatically bypasses 100%-traffic lock via Hollow Stub Swap if needed!)
     if (action === 'DELETE_VERSION') {
       if (!versionId) {
         return res.status(400).json({ error: 'versionId is required.' });
       }
-      const op = await gcpFetch(
-        `https://appengine.googleapis.com/v1/apps/${encProj}/services/${encSvc}/versions/${encodeURIComponent(
-          versionId
-        )}`,
-        token,
-        projectId,
-        { method: 'DELETE', timeout: 15000 }
-      );
-      recordFlightEvent(projectId, {
-        action: 'APPENGINE_DELETE_VERSION',
-        resourceType: 'APP_ENGINE_VERSION',
-        resourceName: `${serviceId}/${versionId}`,
-        region: 'global',
-        details: `Deleted App Engine version "${versionId}" in service "${serviceId}"`,
-      });
-      return res.json({
-        success: true,
-        action,
-        serviceId,
-        versionId,
-        operation: op,
-        message: `Deleted version "${versionId}" from App Engine service "${serviceId}".`,
-      });
+      let swappedToStub = false;
+      try {
+        const op = await gcpFetch(
+          `https://appengine.googleapis.com/v1/apps/${encProj}/services/${encSvc}/versions/${encodeURIComponent(
+            versionId
+          )}`,
+          token,
+          projectId,
+          { method: 'DELETE', timeout: 15000 }
+        );
+        recordFlightEvent(projectId, {
+          action: 'APPENGINE_DELETE_VERSION',
+          resourceType: 'APP_ENGINE_VERSION',
+          resourceName: `${serviceId}/${versionId}`,
+          region: 'global',
+          details: `Deleted App Engine version "${versionId}" in service "${serviceId}"`,
+        });
+        return res.json({
+          success: true,
+          action,
+          serviceId,
+          versionId,
+          operation: op,
+          message: `Deleted version "${versionId}" from App Engine service "${serviceId}".`,
+        });
+      } catch (directErr) {
+        const errMsg =
+          directErr?.response?.data?.error?.message || directErr?.message || '';
+        // If blocked because this version holds 100% traffic on `default`, perform Hollow No-Op Stub Swap & retry DELETE!
+        if (
+          serviceId === 'default' &&
+          versionId !== 'noop-zero-stub' &&
+          /traffic|all traffic|default|cannot delete/i.test(errMsg)
+        ) {
+          const stubId = await ensureNoopZeroStubHoldsDefaultTraffic();
+          swappedToStub = true;
+          const retryOp = await gcpFetch(
+            `https://appengine.googleapis.com/v1/apps/${encProj}/services/default/versions/${encodeURIComponent(
+              versionId
+            )}`,
+            token,
+            projectId,
+            { method: 'DELETE', timeout: 15000 }
+          );
+          recordFlightEvent(projectId, {
+            action: 'APPENGINE_BYPASS_100_TRAFFIC_AND_DELETE_VERSION',
+            resourceType: 'APP_ENGINE_VERSION',
+            resourceName: `default/${versionId}`,
+            region: 'global',
+            details: `Shifted 100% traffic to 0-instance "${stubId}" and deleted previously 100%-traffic version "${versionId}" on default service`,
+          });
+          return res.json({
+            success: true,
+            action,
+            serviceId,
+            versionId,
+            swappedToStub,
+            stubId,
+            operation: retryOp,
+            message: `Bypassed 100%-traffic lock: shifted traffic to 0-instance "${stubId}" ($0.00/mo) and permanently deleted version "${versionId}" from default!`,
+          });
+        }
+        throw directErr;
+      }
     }
 
     // 3. STOP OR START APP ENGINE VERSION (PATCH .../versions/:v?updateMask=servingStatus)
@@ -6309,7 +6529,7 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
         return res.status(400).json({ error: 'versionId is required.' });
       }
       const cleanStatus =
-        String(targetStatus).toUpperCase() === 'SERVING'
+        String(effectiveStatus).toUpperCase() === 'SERVING'
           ? 'SERVING'
           : 'STOPPED';
       const op = await gcpFetch(
@@ -6345,7 +6565,7 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
     // 4. DISABLE OR RE-ENABLE ENTIRE APP ENGINE APPLICATION (PATCH /v1/apps/:id?updateMask=servingStatus)
     if (action === 'TOGGLE_APP_SERVING_STATUS') {
       const cleanAppStatus =
-        String(targetStatus).toUpperCase() === 'SERVING'
+        String(effectiveStatus).toUpperCase() === 'SERVING'
           ? 'SERVING'
           : 'USER_DISABLED';
       const op = await gcpFetch(
@@ -6377,8 +6597,20 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       });
     }
 
-    // 5. NEUTRALIZE `default` SERVICE TO $0.00/MO (Purges zombie versions + stops active versions + optional app disable)
-    if (action === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO') {
+    // 5. HOLLOW-OUT & NEUTRALIZE `default` SERVICE TO $0.00/MO
+    //    (Swaps 100% traffic to 0-instance static `noop-zero-stub` so ALL real versions—including the 100%-traffic version—can be deleted!)
+    if (
+      action === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO' ||
+      action === 'HOLLOW_OUT_DEFAULT_SERVICE'
+    ) {
+      let stubDeployed = false;
+      try {
+        await ensureNoopZeroStubHoldsDefaultTraffic();
+        stubDeployed = true;
+      } catch {
+        stubDeployed = false;
+      }
+
       const svcRes = await gcpFetch(
         `https://appengine.googleapis.com/v1/apps/${encProj}/services/default`,
         token,
@@ -6400,6 +6632,7 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       const stoppedVersions = [];
       for (const v of versions) {
         const vId = v.id || String(v.name || '').split('/').pop();
+        if (vId === 'noop-zero-stub') continue;
         const share = Number(allocations[vId] || 0);
         if (share === 0) {
           try {
@@ -6431,13 +6664,13 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
             );
             stoppedVersions.push(vId);
           } catch {
-            // Automatic scaling F1 versions cannot be STOPPED individually unless app is disabled; fall back to disabling app if requested
+            // Automatic scaling F1 versions cannot be STOPPED individually unless app is disabled
           }
         }
       }
 
       let appDisabled = false;
-      if (req.body?.disableAppToo !== false) {
+      if (req.body?.disableAppToo !== false && req.body?.disableEntireApp !== false) {
         try {
           await gcpFetch(
             `https://appengine.googleapis.com/v1/apps/${encProj}?updateMask=servingStatus`,
@@ -6460,17 +6693,24 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
         resourceType: 'APP_ENGINE_SERVICE',
         resourceName: 'default',
         region: 'global',
-        details: `Neutralized default App Engine service to $0.00/mo (deleted ${deletedVersions.length} non-traffic versions, stopped ${stoppedVersions.length} versions, appDisabled=${appDisabled})`,
+        details: `Hollowed out & neutralized default App Engine service to $0.00/mo (stubDeployed=${stubDeployed}, deleted ${deletedVersions.length} real version(s), stopped ${stoppedVersions.length} version(s), appDisabled=${appDisabled})`,
       });
 
       return res.json({
         success: true,
         action,
+        stubDeployed,
         deletedVersions,
         stoppedVersions,
         appDisabled,
-        message: `Neutralized App Engine 'default' service to $0.00/mo: deleted ${deletedVersions.length} zombie version(s), stopped ${stoppedVersions.length} active version(s)${
-          appDisabled ? ', and set App Engine to USER_DISABLED ($0.00/mo)' : ''
+        message: `Hollowed out & neutralized App Engine 'default' service to $0.00/mo: ${
+          stubDeployed
+            ? 'shifted 100% traffic to 0-instance noop-zero-stub, '
+            : ''
+        }deleted ${deletedVersions.length} real version(s) [${deletedVersions.join(
+          ', '
+        )}]${
+          appDisabled ? ', and locked App Engine to USER_DISABLED ($0.00/mo)' : ''
         }!`,
       });
     }
@@ -6478,7 +6718,7 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
     // 6. 1-CLICK MIGRATE APP ENGINE SERVICE TO SCALE-TO-ZERO CLOUD RUN v2
     if (action === 'MIGRATE_TO_CLOUD_RUN') {
       const targetRunName =
-        `ae-${serviceId}`
+        (targetCloudRunServiceName || `ae-${serviceId}`)
           .toLowerCase()
           .replace(/[^a-z0-9-]/g, '-')
           .replace(/^-+|-+$/g, '')
@@ -6486,8 +6726,8 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
 
       const createPayload = {
         ingress: 'INGRESS_TRAFFIC_ALL',
-        iapEnabled: Boolean(enableDirectIap),
-        annotations: enableDirectIap
+        iapEnabled: effectiveIap,
+        annotations: effectiveIap
           ? { 'run.googleapis.com/iap-enabled': 'true' }
           : {},
         template: {

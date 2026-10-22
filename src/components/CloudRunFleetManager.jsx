@@ -1745,14 +1745,13 @@ spec:
                   </span>
                 </div>
                 <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
-                  Why Can&apos;t You Delete an App Engine Service in the GCP Console UI? We Fixed Both the UI Gap & the API Lock
+                  Why Can&apos;t You Delete an App Engine Service or Its 100%-Traffic Version? The Two GCP API Locks & How We Bypass Them
                 </h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  1) The Google Cloud Console UI omits the <strong>Delete Service</strong> button for non-<code>default</code> App Engine services even though{' '}
-                  <code className="text-red-600 dark:text-red-300">DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/:serviceId</code> supports it directly.{' '}
-                  2) Google Cloud API permanently blocks deleting the <code>default</code> service (<code>Cannot delete the default service</code>) — so we built a{' '}
-                  <strong className="text-emerald-600 dark:text-emerald-400">1-Click $0.00/mo Default Service Neutralizer</strong> (purges zombie versions, stops active versions & sets <code>servingStatus: USER_DISABLED</code>) plus a{' '}
-                  <strong className="text-blue-600 dark:text-blue-400">1-Click App Engine → Cloud Run Migrator</strong>.
+                  1) <strong>Non-<code>default</code> services</strong> CAN be deleted completely via{' '}
+                  <code className="text-red-600 dark:text-red-300">DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/:serviceId</code> even when receiving 100% traffic (a button Google omits from the Console UI).{' '}
+                  2) <strong>The <code>default</code> service & 100%-Traffic Lock</strong>: Google Cloud permanently forbids deleting the <code>default</code> service (<code>Cannot delete the default service</code>) AND forbids deleting whichever version holds <code>100%</code> traffic in <code>default</code>—even when disabled (<code>USER_DISABLED</code>)! To delete your real 100%-traffic version in <code>default</code>, our{' '}
+                  <strong className="text-amber-600 dark:text-amber-400">1-Click Hollow-Out Stub Swap</strong> deploys a 48-byte static-only <code>noop-zero-stub</code> (0 instances, $0.00/mo), shifts 100% traffic to the stub so your real version drops to 0% traffic, <strong>deletes your real version via REST v1</strong>, and locks the app to <code>USER_DISABLED</code> ($0.00/mo).
                 </p>
               </div>
 
@@ -1978,7 +1977,7 @@ spec:
                             </button>
                           </div>
 
-                          {/* Direct Delete (Non-default) OR $0.00/mo Neutralizer (Default) */}
+                          {/* Direct Delete (Non-default) OR Hollow-Out & $0.00/mo Neutralizer (Default) */}
                           {isDefault ? (
                             <button
                               type="button"
@@ -1989,13 +1988,14 @@ spec:
                                 })
                               }
                               disabled={Boolean(appEngineActionBusy)}
+                              title="Deploys a 48-byte static-only noop-zero-stub (0 instances, $0/mo) to take 100% traffic, deletes ALL your real versions (including the 100%-traffic version), and locks App Engine to USER_DISABLED ($0.00/mo)"
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
                             >
                               <Zap className="w-3.5 h-3.5" />
                               <span>
                                 {appEngineActionBusy === `NEUTRALIZE:${svc.id}`
-                                  ? 'Neutralizing default...'
-                                  : 'Neutralize default Service to $0.00/mo'}
+                                  ? 'Swapping 100% Traffic to 0-Inst Stub & Deleting Real Versions...'
+                                  : 'Hollow-Out & Purge Real Versions in default ($0.00/mo)'}
                               </span>
                             </button>
                           ) : (
@@ -2055,10 +2055,20 @@ spec:
                             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/70">
                               {svc.versions.map((ver) => {
                                 const verBusyKey = `VER:${svc.id}/${ver.id}`;
+                                const isStub = ver.id === 'noop-zero-stub' || ver.isNoopStub;
+                                const needsStubSwapToDelete =
+                                  isDefault && ver.trafficPercent > 0 && !isStub;
                                 return (
                                   <tr key={ver.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
                                     <td className="py-2 px-3 font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                                      {ver.id}
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span>{ver.id}</span>
+                                        {isStub && (
+                                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-300 text-[9px] font-mono font-bold">
+                                            0-INSTANCE STATIC STUB ($0.00/MO)
+                                          </span>
+                                        )}
+                                      </div>
                                     </td>
                                     <td className="py-2 px-3 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
                                       {ver.runtime} · {ver.env} ({ver.instanceClass})
@@ -2083,7 +2093,11 @@ spec:
                                         }
                                       >
                                         {ver.trafficPercent}%{' '}
-                                        {ver.trafficPercent === 0 ? '(Zombie)' : '(Live Traffic)'}
+                                        {ver.trafficPercent === 0
+                                          ? '(0% Zombie · Direct Delete)'
+                                          : isDefault
+                                          ? '(100% Traffic Lock on default)'
+                                          : '(Live Traffic)'}
                                       </span>
                                     </td>
                                     <td className="py-2 px-3 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
@@ -2112,25 +2126,40 @@ spec:
                                         >
                                           {ver.servingStatus === 'SERVING' ? 'Stop Version' : 'Start Version'}
                                         </button>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            handleExecuteAppEngineAction(verBusyKey, {
-                                              action: 'DELETE_VERSION',
-                                              serviceId: svc.id,
-                                              versionId: ver.id,
-                                            })
-                                          }
-                                          disabled={Boolean(appEngineActionBusy) || !ver.canDeleteVersion}
-                                          title={
-                                            ver.canDeleteVersion
-                                              ? `Delete version ${ver.id} from service ${svc.id}`
-                                              : 'Cannot delete the only version receiving 100% traffic on the default service; neutralize or deploy another version first'
-                                          }
-                                          className="px-2 py-1 rounded bg-red-600/90 hover:bg-red-500 text-white text-[10px] font-mono font-bold cursor-pointer disabled:opacity-40"
-                                        >
-                                          {appEngineActionBusy === verBusyKey ? 'Deleting...' : 'Delete Version'}
-                                        </button>
+                                        {isStub && ver.trafficPercent === 100 ? (
+                                          <span
+                                            title="Google Cloud API requires at least 1 version in the default service to hold 100% traffic at all times. This 48-byte static stub uses 0 instances and costs $0.00/mo."
+                                            className="px-2 py-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold"
+                                          >
+                                            Mandatory $0/mo Slot Holder
+                                          </span>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handleExecuteAppEngineAction(verBusyKey, {
+                                                action: 'DELETE_VERSION',
+                                                serviceId: svc.id,
+                                                versionId: ver.id,
+                                              })
+                                            }
+                                            disabled={Boolean(appEngineActionBusy)}
+                                            title={
+                                              needsStubSwapToDelete
+                                                ? `Bypass 100%-Traffic Lock: Deploys 0-instance noop-zero-stub to take 100% traffic, then deletes version ${ver.id}`
+                                                : `Delete version ${ver.id} from service ${svc.id}`
+                                            }
+                                            className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-mono font-bold cursor-pointer disabled:opacity-40"
+                                          >
+                                            {appEngineActionBusy === verBusyKey
+                                              ? needsStubSwapToDelete
+                                                ? 'Swapping Stub & Deleting...'
+                                                : 'Deleting...'
+                                              : needsStubSwapToDelete
+                                              ? 'Swap to $0 Stub & Delete Version'
+                                              : 'Delete Version'}
+                                          </button>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>
