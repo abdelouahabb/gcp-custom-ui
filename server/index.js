@@ -5363,6 +5363,11 @@ app.get(
         projRes.status === 'fulfilled'
           ? String(projRes.value?.projectNumber || '')
           : '';
+      const parentType =
+        projRes.status === 'fulfilled'
+          ? String(projRes.value?.parent?.type || '')
+          : '';
+      const isOrglessProject = parentType !== 'organization';
       const srv = srvRes.status === 'fulfilled' ? srvRes.value || {} : {};
       const runBindings =
         runIamRes.status === 'fulfilled'
@@ -5388,7 +5393,30 @@ app.get(
           'true';
 
       let iapAccessors = [];
+      let oauthClientId = '';
+      let oauthClientConfigured = false;
       if (projectNumber) {
+        try {
+          const iapSettingsRes = await gcpFetch(
+            `https://iap.googleapis.com/v1/projects/${encodeURIComponent(
+              projectNumber
+            )}/iap_web:iapSettings`,
+            token,
+            projectId,
+            { timeout: 5000 }
+          ).catch(() => null);
+          const oauthCfg =
+            iapSettingsRes?.accessSettings?.oauthSettings || {};
+          if (oauthCfg.clientId) {
+            oauthClientId = String(oauthCfg.clientId);
+            oauthClientConfigured = Boolean(
+              oauthCfg.clientId && oauthCfg.clientSecretSha256
+            );
+          }
+        } catch {
+          // ignore
+        }
+
         try {
           const iapPolicy = await gcpFetch(
             `https://iap.googleapis.com/v1/projects/${encodeURIComponent(
@@ -5447,6 +5475,12 @@ app.get(
         ok: true,
         projectId,
         projectNumber,
+        isOrglessProject,
+        oauthClientConfigured,
+        oauthClientId,
+        requiredRedirectUri: `https://iap.googleapis.com/v1/oauth/clientIds/${
+          oauthClientId || '<YOUR_OAUTH_CLIENT_ID>'
+        }:handleRedirect`,
         region,
         serviceName,
         iapEnabled: Boolean(annotationEnabled || iapServiceAgentHasInvoker),
@@ -5481,7 +5515,12 @@ app.post(
   '/api/project/:projectId/cloudrun/:region/:serviceName/iap',
   async (req, res) => {
     const { projectId, region, serviceName } = req.params;
-    const { enabled = true, accessors = [] } = req.body || {};
+    const {
+      enabled = true,
+      accessors = [],
+      oauthClientId = '',
+      oauthClientSecret = '',
+    } = req.body || {};
     const targetEnabled = Boolean(enabled);
 
     try {
@@ -5497,6 +5536,11 @@ app.post(
 
       // Step 1: Resolve projectNumber & ensure iap.googleapis.com + IAP Service Agent exist
       let projectNumber = '';
+      let isOrglessProject = true;
+      let oauthClientConfigured = Boolean(
+        String(oauthClientId || '').trim() &&
+          String(oauthClientSecret || '').trim()
+      );
       try {
         const projData = await gcpFetch(
           `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
@@ -5507,6 +5551,8 @@ app.post(
           { timeout: 6000 }
         );
         projectNumber = String(projData?.projectNumber || '');
+        isOrglessProject =
+          String(projData?.parent?.type || '') !== 'organization';
       } catch {
         projectNumber = '';
       }
@@ -5873,10 +5919,66 @@ app.post(
         });
       }
 
+      // Optional Step 5: Configure Custom OAuth 2.0 Client ID & Secret for Org-less (@gmail.com) projects via iap_web:iapSettings
+      if (
+        targetEnabled &&
+        projectNumber &&
+        String(oauthClientId || '').trim() &&
+        String(oauthClientSecret || '').trim()
+      ) {
+        try {
+          await gcpFetch(
+            `https://iap.googleapis.com/v1/projects/${encodeURIComponent(
+              projectNumber
+            )}/iap_web:iapSettings?updateMask=accessSettings.oauthSettings`,
+            token,
+            projectId,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: {
+                name: `projects/${projectNumber}/iap_web`,
+                accessSettings: {
+                  oauthSettings: {
+                    clientId: String(oauthClientId).trim(),
+                    clientSecret: String(oauthClientSecret).trim(),
+                  },
+                },
+              },
+              timeout: 8000,
+            }
+          );
+          steps.push({
+            step: 5,
+            id: 'IAP_CUSTOM_OAUTH_CLIENT',
+            title:
+              'Bind Custom OAuth 2.0 Client ID & Secret (Org-Less Project iapSettings)',
+            status: 'COMPLETED',
+            detail: `Bound OAuth 2.0 Client ID ${String(oauthClientId).trim()} on projects/${projectNumber}/iap_web:iapSettings`,
+          });
+        } catch (oauthErr) {
+          steps.push({
+            step: 5,
+            id: 'IAP_CUSTOM_OAUTH_CLIENT',
+            title:
+              'Bind Custom OAuth 2.0 Client ID & Secret (Org-Less Project iapSettings)',
+            status: 'WARNING',
+            detail:
+              oauthErr.response?.data?.error?.message || oauthErr.message,
+          });
+        }
+      }
+
       res.json({
         ok: true,
         projectId,
         projectNumber,
+        isOrglessProject,
+        oauthClientConfigured,
+        oauthClientId,
+        requiredRedirectUri: `https://iap.googleapis.com/v1/oauth/clientIds/${
+          oauthClientId || '<YOUR_OAUTH_CLIENT_ID>'
+        }:handleRedirect`,
         region,
         serviceName,
         iapEnabled: targetEnabled,

@@ -1074,6 +1074,8 @@ spec:
         {
           enabled: Boolean(targetEnabled),
           accessors,
+          oauthClientId: iapStateMap[srv.id]?.oauthClientId || '',
+          oauthClientSecret: iapStateMap[srv.id]?.oauthClientSecret || '',
         }
       );
       if (onShowToast && res.data?.message) {
@@ -3335,6 +3337,70 @@ spec:
                           )}
                         </div>
                       </div>
+
+                      {/* Org-Less (@gmail.com) Project Custom OAuth 2.0 Client Binder (accessSettings.oauthSettings) */}
+                      {iapData.isOrglessProject !== false && (
+                        <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-[11px] font-mono font-bold text-amber-700 dark:text-amber-300">
+                              Org-Less (@gmail.com) Project OAuth 2.0 Client Binder (projects/{iapData.projectNumber || '<PROJECT_NUMBER>'}/iap_web:iapSettings)
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                iapData.oauthClientConfigured
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                  : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                              }`}
+                            >
+                              {iapData.oauthClientConfigured
+                                ? `OAuth Client Bound (${iapData.oauthClientId.slice(0, 18)}...)`
+                                : 'Optional: Bind Web OAuth 2.0 Client ID & Secret for Non-Org Projects'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                            Standalone personal projects outside a Google Workspace Organization require a custom Web Application OAuth 2.0 Client ID &amp; Secret bound to <code className="font-mono">iap_web:iapSettings</code> (otherwise Google Frontend returns <code className="font-mono">Empty Google Account OAuth client ID(s)/secret(s)</code>). Add Authorized Redirect URI:{' '}
+                            <code className="font-mono text-violet-600 dark:text-violet-300">
+                              https://iap.googleapis.com/v1/oauth/clientIds/{iapEntry.oauthClientId || iapData.oauthClientId || '<CLIENT_ID>'}:handleRedirect
+                            </code>
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            <input
+                              type="text"
+                              value={
+                                iapEntry.oauthClientId !== undefined
+                                  ? iapEntry.oauthClientId
+                                  : iapData.oauthClientId || ''
+                              }
+                              onChange={(e) =>
+                                setIapStateMap((prev) => ({
+                                  ...prev,
+                                  [srv.id]: {
+                                    ...(prev[srv.id] || {}),
+                                    oauthClientId: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="OAuth 2.0 Client ID (e.g. 386324601185-xxxx.apps.googleusercontent.com)"
+                              className="px-3 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                            />
+                            <input
+                              type="password"
+                              value={iapEntry.oauthClientSecret || ''}
+                              onChange={(e) =>
+                                setIapStateMap((prev) => ({
+                                  ...prev,
+                                  [srv.id]: {
+                                    ...(prev[srv.id] || {}),
+                                    oauthClientSecret: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="OAuth 2.0 Client Secret (GOCSPX-...)"
+                              className="px-3 py-1.5 rounded-lg text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {/* 4-Step Orchestration Receipt (if executed) */}
                       {steps.length > 0 && (
