@@ -6298,136 +6298,12 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
     const encProj = encodeURIComponent(projectId);
     const encSvc = encodeURIComponent(serviceId);
 
-    // Helper: Deploys a 48-byte static-only 0-instance `noop-zero-stub` version into `services/default`
-    // and shifts 100% of `default` traffic to `noop-zero-stub` so that previously 100%-traffic real versions
-    // drop to 0% traffic and can be deleted via DELETE /v1/apps/:id/services/default/versions/:v!
-    const ensureNoopZeroStubHoldsDefaultTraffic = async () => {
-      const stubId = 'noop-zero-stub';
-      const appObj = await gcpFetch(
-        `https://appengine.googleapis.com/v1/apps/${encProj}`,
-        token,
-        projectId,
-        { timeout: 7000 }
-      ).catch(() => ({}));
-      const codeBucket =
-        appObj?.codeBucket ||
-        appObj?.defaultBucket ||
-        `staging.${projectId}.appspot.com`;
-
-      // Check if `noop-zero-stub` already exists in `default`
-      const vListObj = await gcpFetch(
-        `https://appengine.googleapis.com/v1/apps/${encProj}/services/default/versions?view=BASIC`,
-        token,
-        projectId,
-        { timeout: 7000 }
-      ).catch(() => ({ versions: [] }));
-      const existingVersions = Array.isArray(vListObj?.versions)
-        ? vListObj.versions
-        : [];
-      const hasStub = existingVersions.some(
-        (v) => (v.id || String(v.name || '').split('/').pop()) === stubId
-      );
-
-      if (!hasStub) {
-        // 1. Upload 48-byte static placeholder into App Engine staging bucket
-        const objectPath = 'cloudpulse-noop/index.html';
-        const staticBody =
-          '<!doctype html><title>Decommissioned ($0/mo)</title>';
-        await axios.post(
-          `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
-            codeBucket
-          )}/o?uploadType=media&name=${encodeURIComponent(objectPath)}`,
-          staticBody,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'text/html; charset=utf-8',
-            },
-            timeout: 10000,
-          }
-        );
-
-        // 2. Create static-only F1 version `noop-zero-stub` (0 dynamic instances, $0.00/mo)
-        const createOp = await gcpFetch(
-          `https://appengine.googleapis.com/v1/apps/${encProj}/services/default/versions`,
-          token,
-          projectId,
-          {
-            method: 'POST',
-            data: {
-              id: stubId,
-              runtime: 'python312',
-              env: 'standard',
-              instanceClass: 'F1',
-              automaticScaling: {
-                maxIdleInstances: 0,
-                minIdleInstances: 0,
-              },
-              deployment: {
-                files: {
-                  'index.html': {
-                    sourceUrl: `https://storage.googleapis.com/${codeBucket}/${objectPath}`,
-                  },
-                },
-              },
-              handlers: [
-                {
-                  urlRegex: '/.*',
-                  staticFiles: {
-                    path: 'index.html',
-                    uploadPathRegex: 'index\\.html',
-                  },
-                },
-              ],
-            },
-            timeout: 15000,
-          }
-        );
-
-        // Poll LRO until `noop-zero-stub` is created (up to ~24s)
-        const opName = createOp?.name;
-        if (opName) {
-          for (let attempt = 0; attempt < 12; attempt += 1) {
-            await new Promise((r) => setTimeout(r, 2000));
-            const opStatus = await gcpFetch(
-              `https://appengine.googleapis.com/v1/${opName}`,
-              token,
-              projectId,
-              { timeout: 6000 }
-            ).catch(() => null);
-            if (opStatus?.done) break;
-          }
-        }
-      }
-
-      // 3. Shift 100% traffic on `default` to `noop-zero-stub`
-      await gcpFetch(
-        `https://appengine.googleapis.com/v1/apps/${encProj}/services/default?updateMask=split`,
-        token,
-        projectId,
-        {
-          method: 'PATCH',
-          data: {
-            split: {
-              shardBy: 'IP',
-              allocations: {
-                [stubId]: 1,
-              },
-            },
-          },
-          timeout: 12000,
-        }
-      );
-
-      return stubId;
-    };
-
     // 1. DELETE NON-DEFAULT APP ENGINE SERVICE (DELETE /v1/apps/:id/services/:serviceId)
     if (action === 'DELETE_SERVICE') {
       if (serviceId === 'default') {
         return res.status(400).json({
           error:
-            'Google Cloud API permanently forbids deleting the `default` service (`Cannot delete the default service`). Use "Hollow-Out & Purge Real Versions in default ($0.00/mo)" instead.',
+            'Google Cloud Platform permanently forbids deleting the `default` service (`Cannot delete the default service`) once App Engine is initialized in a project. Use "Neutralize default to $0.00/mo" to delete all extra versions, stop the last required version, and lock the app to USER_DISABLED ($0.00/mo).',
         });
       }
       const op = await gcpFetch(
@@ -6452,12 +6328,11 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       });
     }
 
-    // 2. DELETE INDIVIDUAL APP ENGINE VERSION (Automatically bypasses 100%-traffic lock via Hollow Stub Swap if needed!)
+    // 2. DELETE INDIVIDUAL APP ENGINE VERSION
     if (action === 'DELETE_VERSION') {
       if (!versionId) {
         return res.status(400).json({ error: 'versionId is required.' });
       }
-      let swappedToStub = false;
       try {
         const op = await gcpFetch(
           `https://appengine.googleapis.com/v1/apps/${encProj}/services/${encSvc}/versions/${encodeURIComponent(
@@ -6485,38 +6360,12 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       } catch (directErr) {
         const errMsg =
           directErr?.response?.data?.error?.message || directErr?.message || '';
-        // If blocked because this version holds 100% traffic on `default`, perform Hollow No-Op Stub Swap & retry DELETE!
         if (
           serviceId === 'default' &&
-          versionId !== 'noop-zero-stub' &&
           /traffic|all traffic|default|cannot delete/i.test(errMsg)
         ) {
-          const stubId = await ensureNoopZeroStubHoldsDefaultTraffic();
-          swappedToStub = true;
-          const retryOp = await gcpFetch(
-            `https://appengine.googleapis.com/v1/apps/${encProj}/services/default/versions/${encodeURIComponent(
-              versionId
-            )}`,
-            token,
-            projectId,
-            { method: 'DELETE', timeout: 15000 }
-          );
-          recordFlightEvent(projectId, {
-            action: 'APPENGINE_BYPASS_100_TRAFFIC_AND_DELETE_VERSION',
-            resourceType: 'APP_ENGINE_VERSION',
-            resourceName: `default/${versionId}`,
-            region: 'global',
-            details: `Shifted 100% traffic to 0-instance "${stubId}" and deleted previously 100%-traffic version "${versionId}" on default service`,
-          });
-          return res.json({
-            success: true,
-            action,
-            serviceId,
-            versionId,
-            swappedToStub,
-            stubId,
-            operation: retryOp,
-            message: `Bypassed 100%-traffic lock: shifted traffic to 0-instance "${stubId}" ($0.00/mo) and permanently deleted version "${versionId}" from default!`,
+          return res.status(400).json({
+            error: `Google Cloud API Lock: "${versionId}" holds 100% traffic on the "default" service. Google Cloud permanently forbids leaving "default" with 0 versions ("Cannot delete the version receiving all traffic on the default service") — even if you deploy a new dummy version and shift traffic to it, that new version then holds 100% traffic and cannot be deleted. When "${versionId}" is STOPPED and the app is USER_DISABLED with 0 buckets, it is a $0.00/mo dead metadata shell.`,
           });
         }
         throw directErr;
@@ -6597,20 +6446,12 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       });
     }
 
-    // 5. HOLLOW-OUT & NEUTRALIZE `default` SERVICE TO $0.00/MO
-    //    (Swaps 100% traffic to 0-instance static `noop-zero-stub` so ALL real versions—including the 100%-traffic version—can be deleted!)
+    // 5. NEUTRALIZE `default` SERVICE TO GOOGLE CLOUD'S ABSOLUTE MINIMUM FLOOR ($0.00/MO)
+    //    (Deletes all 0%-traffic versions, stops the 1 required version in `default`, and locks App Engine to USER_DISABLED)
     if (
       action === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO' ||
       action === 'HOLLOW_OUT_DEFAULT_SERVICE'
     ) {
-      let stubDeployed = false;
-      try {
-        await ensureNoopZeroStubHoldsDefaultTraffic();
-        stubDeployed = true;
-      } catch {
-        stubDeployed = false;
-      }
-
       const svcRes = await gcpFetch(
         `https://appengine.googleapis.com/v1/apps/${encProj}/services/default`,
         token,
@@ -6632,7 +6473,6 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       const stoppedVersions = [];
       for (const v of versions) {
         const vId = v.id || String(v.name || '').split('/').pop();
-        if (vId === 'noop-zero-stub') continue;
         const share = Number(allocations[vId] || 0);
         if (share === 0) {
           try {
@@ -6693,25 +6533,16 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
         resourceType: 'APP_ENGINE_SERVICE',
         resourceName: 'default',
         region: 'global',
-        details: `Hollowed out & neutralized default App Engine service to $0.00/mo (stubDeployed=${stubDeployed}, deleted ${deletedVersions.length} real version(s), stopped ${stoppedVersions.length} version(s), appDisabled=${appDisabled})`,
+        details: `Neutralized default App Engine service to Google Cloud's minimum floor ($0.00/mo): deleted ${deletedVersions.length} extra version(s), stopped ${stoppedVersions.length} version(s), appDisabled=${appDisabled}`,
       });
 
       return res.json({
         success: true,
         action,
-        stubDeployed,
         deletedVersions,
         stoppedVersions,
         appDisabled,
-        message: `Hollowed out & neutralized App Engine 'default' service to $0.00/mo: ${
-          stubDeployed
-            ? 'shifted 100% traffic to 0-instance noop-zero-stub, '
-            : ''
-        }deleted ${deletedVersions.length} real version(s) [${deletedVersions.join(
-          ', '
-        )}]${
-          appDisabled ? ', and locked App Engine to USER_DISABLED ($0.00/mo)' : ''
-        }!`,
+        message: `Neutralized App Engine 'default' service to Google Cloud's absolute minimum floor ($0.00/mo): deleted ${deletedVersions.length} extra version(s), stopped ${stoppedVersions.length} version(s), and locked App Engine to USER_DISABLED!`,
       });
     }
 

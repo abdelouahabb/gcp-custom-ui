@@ -1745,13 +1745,12 @@ spec:
                   </span>
                 </div>
                 <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
-                  Why Can&apos;t You Delete an App Engine Service or Its 100%-Traffic Version? The Two GCP API Locks & How We Bypass Them
+                  The Architectural Truth About Deleting App Engine Services (`default` vs Non-`default`)
                 </h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  1) <strong>Non-<code>default</code> services</strong> CAN be deleted completely via{' '}
-                  <code className="text-red-600 dark:text-red-300">DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/:serviceId</code> even when receiving 100% traffic (a button Google omits from the Console UI).{' '}
-                  2) <strong>The <code>default</code> service & 100%-Traffic Lock</strong>: Google Cloud permanently forbids deleting the <code>default</code> service (<code>Cannot delete the default service</code>) AND forbids deleting whichever version holds <code>100%</code> traffic in <code>default</code>—even when disabled (<code>USER_DISABLED</code>)! To delete your real 100%-traffic version in <code>default</code>, our{' '}
-                  <strong className="text-amber-600 dark:text-amber-400">1-Click Hollow-Out Stub Swap</strong> deploys a 48-byte static-only <code>noop-zero-stub</code> (0 instances, $0.00/mo), shifts 100% traffic to the stub so your real version drops to 0% traffic, <strong>deletes your real version via REST v1</strong>, and locks the app to <code>USER_DISABLED</code> ($0.00/mo).
+                  1) <strong>Non-<code>default</code> services</strong> (e.g., <code>api</code>, <code>worker</code>) CAN be deleted via{' '}
+                  <code className="text-red-600 dark:text-red-300">DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/:serviceId</code>, and extra <code>0%</code>-traffic versions can be deleted via <code>DELETE .../versions/:v</code>.{' '}
+                  2) <strong>Why <code>default</code> &amp; Its Last 100%-Traffic Version Can NEVER Be Deleted</strong>: Once App Engine is initialized in a GCP project, Google Cloud hard-codes an unbreakable invariant: the <code>default</code> service can <strong>never</strong> be deleted, and <code>default</code> can <strong>never have 0 versions</strong> (at least 1 version must hold <code>100%</code> traffic forever, even when the app is <code>USER_DISABLED</code>). The only way to reach <strong>$0.00/mo</strong> on <code>default</code> is to delete all extra 0%-traffic versions, set the remaining version to <code>STOPPED</code>, delete the <code>*.appspot.com</code> GCS buckets, and set the app to <code>USER_DISABLED</code>.
                 </p>
               </div>
 
@@ -1896,15 +1895,37 @@ spec:
                 {aeServices.map((svc) => {
                   const isDefault = Boolean(svc.isDefaultService);
                   const migrateIap = Boolean(appEngineMigrateIapMap[svc.id]);
+                  const isAlreadyMinimalFloor =
+                    isDefault &&
+                    svc.versionsCount <= 1 &&
+                    !isAppServing &&
+                    aeBuckets.length === 0;
                   return (
                     <div
                       key={svc.id}
                       className={`p-3.5 rounded-xl border space-y-3 ${
-                        isDefault
+                        isAlreadyMinimalFloor
+                          ? 'border-emerald-500/40 bg-emerald-500/5'
+                          : isDefault
                           ? 'border-amber-500/40 bg-amber-500/5'
                           : 'border-red-500/35 bg-zinc-50 dark:bg-zinc-900/70'
                       }`}
                     >
+                      {isAlreadyMinimalFloor && (
+                        <div className="p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-xs text-emerald-900 dark:text-emerald-200 flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <div className="font-extrabold">
+                              Already at Google Cloud&apos;s Absolute Minimum Floor ($0.00/mo Guaranteed)
+                            </div>
+                            <div className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">
+                              <code>service/default</code> has only 1 stopped version holding the mandatory 100% traffic slot, 0 extra versions, 0 <code>*.appspot.com</code> buckets, and the App Engine application is <code>USER_DISABLED</code>. Google Cloud&apos;s API makes it impossible to delete <code>default</code> or reduce it to 0 versions without deleting the entire GCP project, but this dead shell is 100% disabled and costs <strong>$0.00/mo forever</strong>.
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/25 border border-emerald-500/40 font-mono font-extrabold text-[10px] shrink-0">
+                            DEAD SHELL · $0.00/MO
+                          </span>
+                        </div>
+                      )}
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -2126,12 +2147,12 @@ spec:
                                         >
                                           {ver.servingStatus === 'SERVING' ? 'Stop Version' : 'Start Version'}
                                         </button>
-                                        {isStub && ver.trafficPercent === 100 ? (
+                                        {isDefault && ver.trafficPercent === 100 && svc.versionsCount === 1 ? (
                                           <span
-                                            title="Google Cloud API requires at least 1 version in the default service to hold 100% traffic at all times. This 48-byte static stub uses 0 instances and costs $0.00/mo."
-                                            className="px-2 py-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold"
+                                            title="Google Cloud API permanently forbids deleting the sole 100%-traffic version inside the default service (default can never have 0 versions). Because the version is STOPPED and the app is USER_DISABLED, it costs $0.00/mo."
+                                            className="px-2 py-1 rounded bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold"
                                           >
-                                            Mandatory $0/mo Slot Holder
+                                            GCP API Lock (Last Version in default · $0/mo)
                                           </span>
                                         ) : (
                                           <button
@@ -2144,19 +2165,11 @@ spec:
                                               })
                                             }
                                             disabled={Boolean(appEngineActionBusy)}
-                                            title={
-                                              needsStubSwapToDelete
-                                                ? `Bypass 100%-Traffic Lock: Deploys 0-instance noop-zero-stub to take 100% traffic, then deletes version ${ver.id}`
-                                                : `Delete version ${ver.id} from service ${svc.id}`
-                                            }
+                                            title={`Delete version ${ver.id} from service ${svc.id}`}
                                             className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-mono font-bold cursor-pointer disabled:opacity-40"
                                           >
                                             {appEngineActionBusy === verBusyKey
-                                              ? needsStubSwapToDelete
-                                                ? 'Swapping Stub & Deleting...'
-                                                : 'Deleting...'
-                                              : needsStubSwapToDelete
-                                              ? 'Swap to $0 Stub & Delete Version'
+                                              ? 'Deleting...'
                                               : 'Delete Version'}
                                           </button>
                                         )}
