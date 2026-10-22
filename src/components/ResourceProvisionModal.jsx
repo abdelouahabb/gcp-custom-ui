@@ -4610,22 +4610,28 @@ export default function ResourceProvisionModal({
                   >
                     Auth &amp; Direct Cloud IAP
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (runAllowUnauth && !runEnableIap) {
+                  <select
+                    value={
+                      runEnableIap
+                        ? 'DIRECT_CLOUD_IAP'
+                        : runAllowUnauth
+                        ? 'PUBLIC_ALL_USERS'
+                        : 'PRIVATE_IAM'
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'DIRECT_CLOUD_IAP') {
                         setRunAllowUnauth(false);
                         setRunEnableIap(true);
-                      } else if (runEnableIap) {
-                        setRunEnableIap(false);
-                        setRunAllowUnauth(false);
-                      } else {
+                      } else if (val === 'PUBLIC_ALL_USERS') {
                         setRunAllowUnauth(true);
+                        setRunEnableIap(false);
+                      } else {
+                        setRunAllowUnauth(false);
                         setRunEnableIap(false);
                       }
                     }}
-                    title="Click to cycle: Public HTTPS (allUsers) → Direct Cloud IAP (Google Sign-In · $0/mo Zero-LB) → Private (IAM Auth Only)"
-                    className={`w-full h-[34px] rounded-[8px] px-3 text-xs font-mono border text-left transition-colors flex items-center truncate cursor-pointer ${
+                    className={`w-full h-[34px] rounded-[8px] px-2.5 text-xs font-mono border transition-colors cursor-pointer ${
                       runEnableIap
                         ? 'bg-violet-500/15 border-violet-500/50 text-violet-600 dark:text-violet-300 font-bold'
                         : runAllowUnauth
@@ -4633,12 +4639,16 @@ export default function ResourceProvisionModal({
                         : 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
                     }`}
                   >
-                    {runEnableIap
-                      ? 'Direct Cloud IAP ($0/mo Sign-In)'
-                      : runAllowUnauth
-                      ? 'Public HTTPS (allUsers)'
-                      : 'Private (IAM Auth Only)'}
-                  </button>
+                    <option value="PUBLIC_ALL_USERS" className="bg-white dark:bg-[#131314] text-zinc-950 dark:text-zinc-100">
+                      Public HTTPS (allUsers)
+                    </option>
+                    <option value="DIRECT_CLOUD_IAP" className="bg-white dark:bg-[#131314] text-zinc-950 dark:text-zinc-100">
+                      Direct Cloud IAP ($0/mo Sign-In)
+                    </option>
+                    <option value="PRIVATE_IAM" className="bg-white dark:bg-[#131314] text-zinc-950 dark:text-zinc-100">
+                      Private (IAM Auth Only)
+                    </option>
+                  </select>
                 </div>
 
                 <div className="min-w-0">
