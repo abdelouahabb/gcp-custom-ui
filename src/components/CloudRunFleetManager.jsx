@@ -128,6 +128,54 @@ export default function CloudRunFleetManager({
   const [appEngineActionBusy, setAppEngineActionBusy] = useState(null);
   const [appEngineMigrateIapMap, setAppEngineMigrateIapMap] = useState({});
 
+  // Google Cloud SDK 590.0.0 GA `gcloud run compose up` Multi-Container & Sidecar Studio state
+  const [showComposeStudio, setShowComposeStudio] = useState(false);
+  const [composeYamlText, setComposeYamlText] = useState(`name: cloudpulse-compose-stack
+services:
+  web:
+    image: us-docker.pkg.dev/cloudrun/container/hello:latest
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_HOST: "127.0.0.1"
+      REDIS_PORT: "6379"
+      STACK_MODE: "gcloud-run-compose-ga"
+    depends_on:
+      - redis-cache
+    volumes:
+      - shared-ram:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512Mi"
+    x-google-cloudrun:
+      ingress-container: true
+
+  redis-cache:
+    image: mirror.gcr.io/library/redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - shared-ram:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512Mi"
+
+volumes:
+  shared-ram:`);
+  const [composeRegion, setComposeRegion] = useState('us-central1');
+  const [composeAllowUnauthenticated, setComposeAllowUnauthenticated] = useState(true);
+  const [composeEnableDirectIap, setComposeEnableDirectIap] = useState(false);
+  const [composeMinInstances, setComposeMinInstances] = useState(0);
+  const [composeMaxInstances, setComposeMaxInstances] = useState(10);
+  const [composeExportServiceId, setComposeExportServiceId] = useState('');
+  const [composeActionBusy, setComposeActionBusy] = useState(null);
+  const [composeResult, setComposeResult] = useState(null);
+  const [composeError, setComposeError] = useState(null);
+
   useEffect(() => {
     if (Array.isArray(initialServices) && initialServices.length > 0 && services.length === 0) {
       setServices(initialServices);
@@ -1605,6 +1653,51 @@ spec:
     }
   };
 
+  const handleExecuteComposeAction = async (action, extraPayload = {}) => {
+    setComposeActionBusy(action);
+    setComposeError(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/cloudrun/compose`,
+        {
+          action,
+          composeYaml: composeYamlText,
+          region: composeRegion,
+          allowUnauthenticated: composeAllowUnauthenticated,
+          enableDirectIap: composeEnableDirectIap,
+          minInstances: composeMinInstances,
+          maxInstances: composeMaxInstances,
+          ...extraPayload,
+        }
+      );
+      if (action === 'EXPORT_SERVICE_TO_COMPOSE' && res.data?.exportedComposeYaml) {
+        setComposeYamlText(res.data.exportedComposeYaml);
+      }
+      setComposeResult(res.data);
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Executed Cloud Run Compose action (${action}) on ${projectId}.`
+        );
+      }
+      if (action === 'DEPLOY_COMPOSE_UP') {
+        await fetchCloudRunFleet(true);
+        if (onRefreshOverview) onRefreshOverview();
+      }
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.error ||
+        err.message ||
+        `Failed to execute Cloud Run Compose action (${action}).`;
+      setComposeError(errMsg);
+      if (!err?.__cancelledByUser && onShowError) {
+        onShowError(errMsg);
+      }
+    } finally {
+      setComposeActionBusy(null);
+    }
+  };
+
   const selfDeployCmd = `gcloud run deploy cloudpulse-2026 --source . --project=${projectId} --region=us-east1 --allow-unauthenticated`;
 
   return (
@@ -1635,6 +1728,20 @@ spec:
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowComposeStudio((v) => !v)}
+            title="Google Cloud SDK 590.0.0 GA: Deploy multi-container Docker Compose (compose.yaml with x-google-cloudrun: ingress-container: true) stacks to Cloud Run v2 or export live Cloud Run services to compose.yaml"
+            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+              showComposeStudio
+                ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/35'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Docker Compose (gcloud run compose up GA)</span>
+          </button>
+
           <button
             type="button"
             onClick={handleToggleAppEngineExterminator}
@@ -1713,6 +1820,416 @@ spec:
           </button>
         </div>
       </div>
+
+      {/* GOOGLE CLOUD SDK 590.0.0 GA `gcloud run compose up` MULTI-CONTAINER & SIDECAR STUDIO */}
+      {showComposeStudio && (
+        <div className="p-4 rounded-xl border border-emerald-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-extrabold">
+                  <Layers className="w-3 h-3" />
+                  <span>GCLOUD 590.0.0 GA · GCLOUD RUN COMPOSE UP STUDIO</span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-500 bg-blue-500/10 border border-blue-500/30 px-2 py-0.5 rounded">
+                  <span>x-google-cloudrun: ingress-container: true · Multi-Container Sidecars · Shared RAM Volumes</span>
+                </span>
+              </div>
+              <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
+                Docker Compose (`compose.yaml`) ↔ Cloud Run v2 Multi-Container Sidecar Deployer & Reverse Exporter
+              </h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Promoted to <strong>GA</strong> in Google Cloud SDK <code>590.0.0</code>: deploy multi-service <code>compose.yaml</code> files into a single scale-to-zero Cloud Run v2 revision where your primary service (marked with <code>x-google-cloudrun: ingress-container: true</code>) receives HTTPS traffic and sidecar services (e.g. Redis, OTel Collector) communicate over <code>127.0.0.1</code> with automatic <code>dependsOn</code> TCP <code>startupProbe</code> synthesis and shared in-memory volumes—or reverse-export any live Cloud Run service into a <code>compose.yaml</code> file.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowComposeStudio(false)}
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+
+          {/* Preset Compose Blueprints + Reverse Export from Live Service */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 rounded-lg p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-mono font-bold text-zinc-500 dark:text-zinc-400">
+                Blueprints:
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setComposeYamlText(`name: cloudpulse-compose-stack
+services:
+  web:
+    image: us-docker.pkg.dev/cloudrun/container/hello:latest
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_HOST: "127.0.0.1"
+      REDIS_PORT: "6379"
+      STACK_MODE: "gcloud-run-compose-ga"
+    depends_on:
+      - redis-cache
+    volumes:
+      - shared-ram:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512Mi"
+    x-google-cloudrun:
+      ingress-container: true
+
+  redis-cache:
+    image: mirror.gcr.io/library/redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - shared-ram:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512Mi"
+
+volumes:
+  shared-ram:`)
+                }
+                className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono font-bold cursor-pointer"
+              >
+                1. Web Ingress + Redis 7 Sidecar + Shared RAM
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setComposeYamlText(`name: otel-instrumented-service
+services:
+  api-gateway:
+    image: us-docker.pkg.dev/cloudrun/container/hello:latest
+    ports:
+      - "8080:8080"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://127.0.0.1:4318"
+    depends_on:
+      - otel-collector
+    x-google-cloudrun:
+      ingress-container: true
+
+  otel-collector:
+    image: mirror.gcr.io/otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4318:4318"`)
+                }
+                className="px-2.5 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[11px] font-mono font-bold cursor-pointer"
+              >
+                2. API Ingress + OTel Collector Sidecar
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setComposeYamlText(`name: single-compose-app
+services:
+  app:
+    image: us-docker.pkg.dev/cloudrun/container/hello:latest
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: "production"
+    x-google-cloudrun:
+      ingress-container: true`)
+                }
+                className="px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-bold cursor-pointer"
+              >
+                3. Single-Container Scale-to-Zero
+              </button>
+            </div>
+
+            {services.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={composeExportServiceId || services[0]?.id || ''}
+                  onChange={(e) => setComposeExportServiceId(e.target.value)}
+                  className="bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                >
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.region})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const chosen =
+                      services.find(
+                        (s) => s.id === (composeExportServiceId || services[0]?.id)
+                      ) || services[0];
+                    if (!chosen) return;
+                    setComposeRegion(chosen.region || 'us-central1');
+                    handleExecuteComposeAction('EXPORT_SERVICE_TO_COMPOSE', {
+                      serviceName: chosen.name,
+                      region: chosen.region || 'us-central1',
+                    });
+                  }}
+                  disabled={Boolean(composeActionBusy)}
+                  className="px-2.5 py-1 rounded bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {composeActionBusy === 'EXPORT_SERVICE_TO_COMPOSE'
+                    ? 'Exporting...'
+                    : 'Export Live Service → compose.yaml'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {composeError && (
+            <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/40 text-xs text-red-800 dark:text-red-200 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{composeError}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Left Column: compose.yaml Editor + Deployment Controls */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                  compose.yaml Specification (x-google-cloudrun)
+                </label>
+                <span className="text-[10px] font-mono text-zinc-400">
+                  managed-by: runcompose
+                </span>
+              </div>
+              <textarea
+                rows={16}
+                value={composeYamlText}
+                onChange={(e) => setComposeYamlText(e.target.value)}
+                spellCheck={false}
+                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/90 p-3 font-mono text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-500"
+              />
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div>
+                  <label className="block text-[10px] font-mono text-zinc-400 mb-1">
+                    Target Region
+                  </label>
+                  <select
+                    value={composeRegion}
+                    onChange={(e) => setComposeRegion(e.target.value)}
+                    className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-xs font-mono"
+                  >
+                    <option value="us-central1">us-central1</option>
+                    <option value="us-east1">us-east1</option>
+                    <option value="us-west1">us-west1</option>
+                    <option value="europe-west1">europe-west1</option>
+                    <option value="asia-northeast1">asia-northeast1</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono text-zinc-400 mb-1">
+                    Min Instances
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={composeMinInstances}
+                    onChange={(e) => setComposeMinInstances(Number(e.target.value || 0))}
+                    className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono text-zinc-400 mb-1">
+                    Max Instances
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={composeMaxInstances}
+                    onChange={(e) => setComposeMaxInstances(Number(e.target.value || 10))}
+                    className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-xs font-mono"
+                  />
+                </div>
+                <div className="flex flex-col justify-end gap-1">
+                  <label className="inline-flex items-center gap-1.5 text-[11px] font-mono cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={composeAllowUnauthenticated}
+                      onChange={(e) => {
+                        setComposeAllowUnauthenticated(e.target.checked);
+                        if (e.target.checked) setComposeEnableDirectIap(false);
+                      }}
+                    />
+                    <span>--allow-unauthenticated</span>
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 text-[11px] font-mono text-violet-600 dark:text-violet-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={composeEnableDirectIap}
+                      onChange={(e) => {
+                        setComposeEnableDirectIap(e.target.checked);
+                        if (e.target.checked) setComposeAllowUnauthenticated(false);
+                      }}
+                    />
+                    <span>+ Direct Cloud IAP ($0/mo)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleExecuteComposeAction('VALIDATE_DRY_RUN')}
+                  disabled={Boolean(composeActionBusy)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>
+                    {composeActionBusy === 'VALIDATE_DRY_RUN'
+                      ? 'Validating (--dry-run)...'
+                      : 'Validate compose.yaml (--dry-run)'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExecuteComposeAction('DEPLOY_COMPOSE_UP')}
+                  disabled={Boolean(composeActionBusy)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  <Rocket className="w-3.5 h-3.5" />
+                  <span>
+                    {composeActionBusy === 'DEPLOY_COMPOSE_UP'
+                      ? 'Deploying Multi-Container Stack...'
+                      : 'Deploy to Cloud Run (gcloud run compose up)'}
+                  </span>
+                </button>
+
+                {onRunInShell && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRunInShell(
+                        `gcloud run compose up compose.yaml --project=${projectId} --region=${composeRegion}${
+                          composeAllowUnauthenticated
+                            ? ' --allow-unauthenticated'
+                            : ' --no-allow-unauthenticated'
+                        }`
+                      )
+                    }
+                    className="inline-flex items-center gap-1 px-2.5 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                  >
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>Run CLI in Shell</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Live Multi-Container Sidecar Breakdown & Cloud Run v2 Spec */}
+            <div className="space-y-3">
+              <div className="text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                Multi-Container Sidecar Architecture & Translated Cloud Run v2 Spec
+              </div>
+
+              {!composeResult ? (
+                <div className="p-4 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 space-y-2">
+                  <p>
+                    Click <strong>Validate compose.yaml (--dry-run)</strong> to inspect how CloudPulse &amp; <code>gcloud run compose up</code> translate your Docker Compose services into a Cloud Run Gen2 multi-container revision:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-[11px]">
+                    <li>
+                      <strong>Ingress Container</strong>: The service marked with <code>x-google-cloudrun.ingress-container: true</code> receives public/IAP HTTPS traffic on its declared containerPort.
+                    </li>
+                    <li>
+                      <strong>Sidecar Containers</strong>: All other services in <code>compose.yaml</code> run in the same Cloud Run instance and bind to <code>127.0.0.1:&lt;port&gt;</code> with automatic TCP <code>startupProbe</code> synthesis when referenced in <code>depends_on</code>.
+                    </li>
+                    <li>
+                      <strong>Shared Volumes</strong>: Named volumes mount across containers as shared in-memory <code>emptyDir</code> RAM disks.
+                    </li>
+                  </ul>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-800 dark:text-emerald-200 font-mono">
+                    {composeResult.message}
+                  </div>
+
+                  {Array.isArray(composeResult.parsedServices) &&
+                    composeResult.parsedServices.length > 0 && (
+                      <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+                        <table className="w-full text-left border-collapse text-[11px] font-mono">
+                          <thead>
+                            <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-400 text-[10px] uppercase">
+                              <th className="py-1.5 px-2.5">Service</th>
+                              <th className="py-1.5 px-2.5">Role</th>
+                              <th className="py-1.5 px-2.5">Port</th>
+                              <th className="py-1.5 px-2.5">DependsOn / Probe</th>
+                              <th className="py-1.5 px-2.5">Limits</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                            {composeResult.parsedServices.map((ps) => (
+                              <tr key={ps.name}>
+                                <td className="py-1.5 px-2.5 font-bold">
+                                  {ps.name}
+                                  <div className="text-[10px] text-zinc-400 truncate max-w-[180px]">
+                                    {ps.image}
+                                  </div>
+                                </td>
+                                <td className="py-1.5 px-2.5">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                      ps.role === 'INGRESS_CONTAINER'
+                                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
+                                        : 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30'
+                                    }`}
+                                  >
+                                    {ps.role}
+                                  </span>
+                                </td>
+                                <td className="py-1.5 px-2.5">{ps.port}</td>
+                                <td className="py-1.5 px-2.5">
+                                  {ps.dependsOn?.length > 0
+                                    ? `-> ${ps.dependsOn.join(', ')}`
+                                    : ps.hasStartupProbe
+                                    ? 'TCP startupProbe (Auto)'
+                                    : '—'}
+                                </td>
+                                <td className="py-1.5 px-2.5">
+                                  {ps.cpu} vCPU / {ps.memory}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                  {composeResult.gcloudCliCommand && (
+                    <div className="p-2.5 rounded-lg bg-zinc-900 text-emerald-300 font-mono text-[11px] overflow-x-auto">
+                      $ {composeResult.gcloudCliCommand}
+                    </div>
+                  )}
+
+                  {composeResult.translatedCloudRunV2Spec && (
+                    <pre className="p-3 rounded-lg bg-zinc-900 text-zinc-200 font-mono text-[10px] max-h-56 overflow-auto border border-zinc-800">
+                      {JSON.stringify(
+                        composeResult.translatedCloudRunV2Spec,
+                        null,
+                        2
+                      )}
+                    </pre>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* APP ENGINE SERVICE & VERSION EXTERMINATOR + DEFAULT SERVICE $0.00/MO NEUTRALIZER */}
       {showAppEngineExterminator && (() => {

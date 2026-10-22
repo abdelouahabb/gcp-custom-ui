@@ -703,16 +703,16 @@ export default function GcloudAlphaBetaStudio({
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
               [BETA] Direct Instance Control &amp; Compose (
               <code className="font-mono text-xs">
-                gcloud beta run instances / compose
+                gcloud beta run instances &amp; gcloud run compose up [GA]
               </code>
               )
             </h3>
             <p className="text-xs text-zinc-600 dark:text-zinc-400">
               Inspect, SSH, or restart individual container instances via{' '}
               <code className="font-mono">gcloud beta run instances</code>, or
-              deploy a <code className="font-mono">docker-compose.yaml</code>{' '}
+              deploy a <code className="font-mono">compose.yaml</code>{' '}
               straight to Cloud Run via{' '}
-              <code className="font-mono">gcloud beta run compose up</code>.
+              <code className="font-mono">gcloud run compose up</code> (promoted to GA in SDK 590.0.0).
             </p>
 
             <div className="space-y-2 pt-1">

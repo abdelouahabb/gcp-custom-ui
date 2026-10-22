@@ -7015,6 +7015,623 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
   }
 });
 
+// 10g-compose. POST /api/project/:projectId/cloudrun/compose -> Google Cloud SDK 590.0.0 GA `gcloud run compose up` Studio
+// Supports:
+//  - VALIDATE_DRY_RUN: Parses `compose.yaml`, validates `x-google-cloudrun.ingress-container: true`, synthesizes sidecar `startupProbe` for `depends_on`, and returns the Cloud Run v2 Multi-Container spec.
+//  - DEPLOY_COMPOSE_UP: Deploys the multi-container `compose.yaml` stack directly to Cloud Run v2 (`run.googleapis.com/v2`) with official `managed-by: runcompose` labels + optional `--allow-unauthenticated` or Direct Cloud Run IAP ($0/mo).
+//  - EXPORT_SERVICE_TO_COMPOSE: Reverse-compiles any live Cloud Run v2 service (ingress + sidecars, ports, env, dependsOn, volumes) into a standard `compose.yaml` with `x-google-cloudrun: ingress-container: true`.
+function parseDockerComposeYaml(yamlStr) {
+  const rawLines = String(yamlStr || '').split(/\r?\n/);
+  const lines = [];
+  for (const raw of rawLines) {
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    let clean = raw;
+    let inSingle = false;
+    let inDouble = false;
+    for (let i = 0; i < raw.length; i += 1) {
+      const ch = raw[i];
+      if (ch === "'" && !inDouble) inSingle = !inSingle;
+      else if (ch === '"' && !inSingle) inDouble = !inDouble;
+      else if (
+        ch === '#' &&
+        !inSingle &&
+        !inDouble &&
+        (i === 0 || /\s/.test(raw[i - 1]))
+      ) {
+        clean = raw.slice(0, i);
+        break;
+      }
+    }
+    if (!clean.trim()) continue;
+    const indent = clean.match(/^(\s*)/)[1].length;
+    lines.push({ indent, text: clean.trim() });
+  }
+
+  function parseScalar(val) {
+    const s = String(val).trim();
+    if (
+      (s.startsWith('"') && s.endsWith('"')) ||
+      (s.startsWith("'") && s.endsWith("'"))
+    ) {
+      return s.slice(1, -1);
+    }
+    if (s === 'true') return true;
+    if (s === 'false') return false;
+    if (s === 'null' || s === '~') return null;
+    if (s === '[]') return [];
+    if (s === '{}') return {};
+    if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+    return s;
+  }
+
+  function parseBlock(startIdx, minIndent) {
+    if (startIdx >= lines.length) return [{}, startIdx];
+    const first = lines[startIdx];
+    if (first.indent < minIndent) return [{}, startIdx];
+
+    if (first.text.startsWith('- ')) {
+      const arr = [];
+      let idx = startIdx;
+      const baseIndent = first.indent;
+      while (
+        idx < lines.length &&
+        lines[idx].indent === baseIndent &&
+        lines[idx].text.startsWith('- ')
+      ) {
+        const itemText = lines[idx].text.slice(2).trim();
+        idx += 1;
+        if (!itemText) {
+          const [nested, nextIdx] = parseBlock(idx, baseIndent + 1);
+          arr.push(nested);
+          idx = nextIdx;
+        } else {
+          arr.push(parseScalar(itemText));
+        }
+      }
+      return [arr, idx];
+    }
+
+    const obj = {};
+    let idx = startIdx;
+    const baseIndent = first.indent;
+    while (idx < lines.length && lines[idx].indent >= baseIndent) {
+      if (lines[idx].indent > baseIndent) {
+        idx += 1;
+        continue;
+      }
+      const lineText = lines[idx].text;
+      if (lineText.startsWith('- ')) break;
+      const colonIdx = lineText.indexOf(':');
+      if (colonIdx === -1) {
+        idx += 1;
+        continue;
+      }
+      const key = lineText.slice(0, colonIdx).trim();
+      const rest = lineText.slice(colonIdx + 1).trim();
+      idx += 1;
+      if (!rest) {
+        if (idx < lines.length && lines[idx].indent > baseIndent) {
+          const [nested, nextIdx] = parseBlock(idx, lines[idx].indent);
+          obj[key] = nested;
+          idx = nextIdx;
+        } else {
+          obj[key] = {};
+        }
+      } else {
+        obj[key] = parseScalar(rest);
+      }
+    }
+    return [obj, idx];
+  }
+
+  return parseBlock(0, 0)[0];
+}
+
+app.post('/api/project/:projectId/cloudrun/compose', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action = 'VALIDATE_DRY_RUN',
+    composeYaml = '',
+    serviceName = '',
+    region = 'us-central1',
+    allowUnauthenticated = true,
+    enableDirectIap = false,
+    minInstances = 0,
+    maxInstances = 10,
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const encProj = encodeURIComponent(projectId);
+    const encReg = encodeURIComponent(region);
+
+    // ACTION 1: REVERSE-EXPORT LIVE CLOUD RUN v2 SERVICE TO `compose.yaml` (`x-google-cloudrun`)
+    if (action === 'EXPORT_SERVICE_TO_COMPOSE') {
+      if (!serviceName) {
+        return res
+          .status(400)
+          .json({ error: 'serviceName is required to export to compose.yaml.' });
+      }
+      const svcObj = await gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encProj}/locations/${encReg}/services/${encodeURIComponent(
+          serviceName
+        )}`,
+        token,
+        projectId,
+        { timeout: 10000 }
+      );
+
+      const rawContainers = Array.isArray(svcObj?.template?.containers)
+        ? svcObj.template.containers
+        : [];
+      const rawVolumes = Array.isArray(svcObj?.template?.volumes)
+        ? svcObj.template.volumes
+        : [];
+      const lines = [
+        `# Generated by CloudPulse 2026 from live Cloud Run v2 service: ${serviceName} (${region})`,
+        `# Deploy back to Cloud Run with GA CLI: gcloud run compose up compose.yaml --project=${projectId} --region=${region}`,
+        `name: ${serviceName}`,
+        `services:`,
+      ];
+
+      rawContainers.forEach((c, idx) => {
+        const cName =
+          c.name ||
+          (idx === 0 ? serviceName.replace(/[^a-z0-9-]/gi, '-') : `sidecar-${idx}`);
+        const isIngress =
+          (Array.isArray(c.ports) && c.ports.length > 0) || idx === 0;
+        const cPort = c.ports?.[0]?.containerPort || (isIngress ? 8080 : null);
+        lines.push(`  ${cName}:`);
+        lines.push(`    image: ${c.image}`);
+        if (cPort) {
+          lines.push(`    ports:`);
+          lines.push(`      - "${cPort}:${cPort}"`);
+        }
+        const envItems = Array.isArray(c.env)
+          ? c.env.filter((e) => e.name && e.value !== undefined)
+          : [];
+        if (envItems.length > 0) {
+          lines.push(`    environment:`);
+          for (const e of envItems) {
+            lines.push(
+              `      ${e.name}: "${String(e.value).replace(/"/g, '\\"')}"`
+            );
+          }
+        }
+        if (Array.isArray(c.dependsOn) && c.dependsOn.length > 0) {
+          lines.push(`    depends_on:`);
+          for (const dep of c.dependsOn) {
+            lines.push(`      - ${dep}`);
+          }
+        }
+        if (Array.isArray(c.volumeMounts) && c.volumeMounts.length > 0) {
+          lines.push(`    volumes:`);
+          for (const vm of c.volumeMounts) {
+            lines.push(`      - ${vm.name}:${vm.mountPath}`);
+          }
+        }
+        if (c.resources?.limits?.cpu || c.resources?.limits?.memory) {
+          lines.push(`    deploy:`);
+          lines.push(`      resources:`);
+          lines.push(`        limits:`);
+          if (c.resources.limits.cpu) {
+            lines.push(`          cpus: "${c.resources.limits.cpu}"`);
+          }
+          if (c.resources.limits.memory) {
+            lines.push(`          memory: "${c.resources.limits.memory}"`);
+          }
+        }
+        if (isIngress) {
+          lines.push(`    x-google-cloudrun:`);
+          lines.push(`      ingress-container: true`);
+        }
+      });
+
+      if (rawVolumes.length > 0) {
+        lines.push(`volumes:`);
+        for (const v of rawVolumes) {
+          lines.push(`  ${v.name}:`);
+        }
+      }
+
+      return res.json({
+        success: true,
+        action,
+        serviceName,
+        region,
+        containersCount: rawContainers.length,
+        exportedComposeYaml: lines.join('\n'),
+        gcloudCliCommand: `gcloud run compose up compose.yaml --project=${projectId} --region=${region} --allow-unauthenticated`,
+        message: `Exported live Cloud Run service "${serviceName}" (${rawContainers.length} container(s)) to Docker Compose specification (compose.yaml)!`,
+      });
+    }
+
+    // ACTION 2 & 3: PARSE, VALIDATE (`--dry-run`) & DEPLOY `compose.yaml` TO CLOUD RUN v2 (`gcloud run compose up`)
+    if (!String(composeYaml || '').trim()) {
+      return res.status(400).json({ error: 'composeYaml is required.' });
+    }
+
+    const parsed = parseDockerComposeYaml(composeYaml);
+    const servicesMap =
+      parsed?.services && typeof parsed.services === 'object'
+        ? parsed.services
+        : null;
+
+    if (!servicesMap || Object.keys(servicesMap).length === 0) {
+      return res.status(400).json({
+        error:
+          'Invalid compose.yaml: missing top-level `services:` block with at least one container service.',
+      });
+    }
+
+    const svcEntries = Object.entries(servicesMap);
+    // Identify ingress container via `x-google-cloudrun.ingress-container: true`
+    const explicitIngressEntries = svcEntries.filter(
+      ([, def]) =>
+        def?.['x-google-cloudrun']?.['ingress-container'] === true ||
+        String(def?.['x-google-cloudrun']?.['ingress-container']) === 'true'
+    );
+
+    if (explicitIngressEntries.length > 1) {
+      return res.status(400).json({
+        error: `gcloud run compose validation error: Only one service can be designated as the ingress container via 'x-google-cloudrun.ingress-container: true' (found ${explicitIngressEntries
+          .map(([k]) => k)
+          .join(', ')}).`,
+      });
+    }
+
+    let ingressName = explicitIngressEntries[0]?.[0] || '';
+    if (!ingressName) {
+      const withPorts = svcEntries.find(
+        ([, def]) => Array.isArray(def?.ports) && def.ports.length > 0
+      );
+      ingressName = withPorts?.[0] || svcEntries[0][0];
+    }
+
+    const rawProjectName =
+      serviceName || parsed?.name || ingressName || 'compose-stack';
+    const targetServiceName =
+      String(rawProjectName)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48) || 'compose-stack';
+
+    // Track which sidecars are depended on so we synthesize the mandatory Cloud Run v2 `startupProbe`
+    const dependedOnNames = new Set();
+    for (const [, def] of svcEntries) {
+      const deps = def?.depends_on;
+      if (Array.isArray(deps)) {
+        deps.forEach((d) => dependedOnNames.add(String(d)));
+      } else if (deps && typeof deps === 'object') {
+        Object.keys(deps).forEach((d) => dependedOnNames.add(String(d)));
+      }
+    }
+
+    const extractPortNumber = (portsField, fallback = 8080) => {
+      if (!Array.isArray(portsField) || portsField.length === 0) return fallback;
+      const first = String(portsField[0]);
+      const parts = first.split(':');
+      const target = Number(parts[parts.length - 1].replace(/\/.*$/, ''));
+      return Number.isFinite(target) && target > 0 ? target : fallback;
+    };
+
+    const volumeDefsMap = new Map();
+    const cloudRunContainers = [];
+    const parsedServicesSummary = [];
+
+    // Order containers so ingress container is first
+    const orderedEntries = [
+      ...svcEntries.filter(([k]) => k === ingressName),
+      ...svcEntries.filter(([k]) => k !== ingressName),
+    ];
+
+    for (const [svcKey, def] of orderedEntries) {
+      const isIngress = svcKey === ingressName;
+      const image = String(def?.image || '').trim();
+      if (!image) {
+        return res.status(400).json({
+          error: `Service "${svcKey}" in compose.yaml is missing an "image:" URI. Specify a container image (e.g. us-docker.pkg.dev/cloudrun/container/hello:latest or redis:7-alpine).`,
+        });
+      }
+
+      const detectedPort = extractPortNumber(
+        def?.ports,
+        isIngress ? 8080 : 6379
+      );
+
+      // Parse environment (supports both object map and array ["KEY=VAL"])
+      const envList = [];
+      if (Array.isArray(def?.environment)) {
+        for (const item of def.environment) {
+          const str = String(item);
+          const eqIdx = str.indexOf('=');
+          if (eqIdx > 0) {
+            envList.push({
+              name: str.slice(0, eqIdx).trim(),
+              value: str.slice(eqIdx + 1).trim(),
+            });
+          }
+        }
+      } else if (def?.environment && typeof def.environment === 'object') {
+        for (const [k, v] of Object.entries(def.environment)) {
+          envList.push({
+            name: String(k),
+            value: String(v ?? ''),
+          });
+        }
+      }
+
+      // Parse depends_on
+      const dependsOnList = [];
+      if (Array.isArray(def?.depends_on)) {
+        def.depends_on.forEach((d) => dependsOnList.push(String(d)));
+      } else if (def?.depends_on && typeof def.depends_on === 'object') {
+        Object.keys(def.depends_on).forEach((d) =>
+          dependsOnList.push(String(d))
+        );
+      }
+
+      // Parse volumes (`volName:/mount/path`)
+      const volumeMounts = [];
+      if (Array.isArray(def?.volumes)) {
+        for (const vStr of def.volumes) {
+          const parts = String(vStr).split(':');
+          if (parts.length >= 2) {
+            const volName = parts[0]
+              .toLowerCase()
+              .replace(/[^a-z0-9-]/g, '-')
+              .replace(/^-+|-+$/g, '');
+            const mountPath = parts[1];
+            if (volName && mountPath.startsWith('/')) {
+              volumeMounts.push({ name: volName, mountPath });
+              if (!volumeDefsMap.has(volName)) {
+                volumeDefsMap.set(volName, {
+                  name: volName,
+                  emptyDir: { medium: 'MEMORY', sizeLimit: '256Mi' },
+                });
+              }
+            }
+          }
+        }
+      }
+
+      const rawLimits = def?.deploy?.resources?.limits || {};
+      const cpuLimit = String(
+        rawLimits.cpus || def?.['x-google-cloudrun']?.cpu || '1'
+      );
+      let memLimit = String(
+        rawLimits.memory || def?.['x-google-cloudrun']?.memory || '512Mi'
+      );
+      if (/^\d+[Mm]$/.test(memLimit)) memLimit = `${memLimit.slice(0, -1)}Mi`;
+      if (/^\d+[Gg]$/.test(memLimit)) memLimit = `${memLimit.slice(0, -1)}Gi`;
+
+      const containerObj = {
+        name: svcKey
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .slice(0, 48),
+        image,
+        resources: {
+          cpuIdle: true,
+          startupCpuBoost: true,
+          limits: {
+            cpu: cpuLimit,
+            memory: memLimit,
+          },
+        },
+      };
+
+      if (isIngress) {
+        containerObj.ports = [
+          {
+            name: 'http1',
+            containerPort: detectedPort,
+          },
+        ];
+      }
+
+      if (envList.length > 0) {
+        containerObj.env = envList;
+      }
+      if (dependsOnList.length > 0) {
+        containerObj.dependsOn = dependsOnList.map((d) =>
+          d.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+        );
+      }
+      if (volumeMounts.length > 0) {
+        containerObj.volumeMounts = volumeMounts;
+      }
+
+      // Cloud Run v2 requires any sidecar referenced in `dependsOn` to define a `startupProbe`
+      let synthesizedStartupProbe = null;
+      if (!isIngress && dependedOnNames.has(svcKey)) {
+        synthesizedStartupProbe = {
+          tcpSocket: { port: detectedPort },
+          initialDelaySeconds: 0,
+          periodSeconds: 3,
+          timeoutSeconds: 2,
+          failureThreshold: 10,
+        };
+        containerObj.startupProbe = synthesizedStartupProbe;
+      }
+
+      cloudRunContainers.push(containerObj);
+      parsedServicesSummary.push({
+        name: svcKey,
+        role: isIngress ? 'INGRESS_CONTAINER' : 'SIDECAR_CONTAINER',
+        image,
+        port: isIngress ? detectedPort : `${detectedPort} (localhost sidecar)`,
+        envCount: envList.length,
+        dependsOn: dependsOnList,
+        volumeMounts: volumeMounts.map((vm) => `${vm.name}:${vm.mountPath}`),
+        cpu: cpuLimit,
+        memory: memLimit,
+        hasStartupProbe: Boolean(synthesizedStartupProbe),
+      });
+    }
+
+    const sanitizeLabel = (val) =>
+      String(val || 'compose')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '-')
+        .slice(0, 63);
+
+    const translatedCloudRunV2Spec = {
+      ingress: 'INGRESS_TRAFFIC_ALL',
+      iapEnabled: Boolean(enableDirectIap),
+      labels: {
+        'managed-by': 'runcompose',
+        'run-compose-project': sanitizeLabel(rawProjectName),
+        'run-compose-region': sanitizeLabel(region),
+      },
+      annotations: enableDirectIap
+        ? { 'run.googleapis.com/iap-enabled': 'true' }
+        : {},
+      template: {
+        scaling: {
+          minInstanceCount: Math.max(0, Number(minInstances || 0)),
+          maxInstanceCount: Math.max(1, Number(maxInstances || 10)),
+        },
+        containers: cloudRunContainers,
+        ...(volumeDefsMap.size > 0
+          ? { volumes: Array.from(volumeDefsMap.values()) }
+          : {}),
+      },
+    };
+
+    const gcloudCliCommand = `gcloud run compose up compose.yaml --project=${projectId} --region=${region}${
+      allowUnauthenticated ? ' --allow-unauthenticated' : ' --no-allow-unauthenticated'
+    }`;
+
+    if (action === 'VALIDATE_DRY_RUN') {
+      return res.json({
+        success: true,
+        valid: true,
+        action,
+        composeProjectName: rawProjectName,
+        targetServiceName,
+        region,
+        ingressContainerName: ingressName,
+        sidecarCount: Math.max(0, parsedServicesSummary.length - 1),
+        volumesCount: volumeDefsMap.size,
+        parsedServices: parsedServicesSummary,
+        translatedCloudRunV2Spec,
+        gcloudCliCommand: `${gcloudCliCommand} --dry-run`,
+        message: `Validated compose.yaml (--dry-run): 1 Ingress Container (${ingressName}) + ${Math.max(
+          0,
+          parsedServicesSummary.length - 1
+        )} Sidecar Container(s) ready for Cloud Run v2 (${region})!`,
+      });
+    }
+
+    if (action === 'DEPLOY_COMPOSE_UP') {
+      const serviceUrl = `https://run.googleapis.com/v2/projects/${encProj}/locations/${encReg}/services/${encodeURIComponent(
+        targetServiceName
+      )}`;
+      let exists = false;
+      try {
+        await gcpFetch(serviceUrl, token, projectId, { timeout: 6000 });
+        exists = true;
+      } catch {
+        exists = false;
+      }
+
+      const deployOp = exists
+        ? await gcpFetch(serviceUrl, token, projectId, {
+            method: 'PATCH',
+            data: translatedCloudRunV2Spec,
+            timeout: 25000,
+          })
+        : await gcpFetch(
+            `https://run.googleapis.com/v2/projects/${encProj}/locations/${encReg}/services?serviceId=${encodeURIComponent(
+              targetServiceName
+            )}`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              data: translatedCloudRunV2Spec,
+              timeout: 25000,
+            }
+          );
+
+      // If allowUnauthenticated is requested and Direct IAP is not enabled, bind allUsers roles/run.invoker
+      let publicInvokerBound = false;
+      if (allowUnauthenticated && !enableDirectIap) {
+        try {
+          await gcpFetch(
+            `${serviceUrl}:setIamPolicy`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              data: {
+                policy: {
+                  bindings: [
+                    {
+                      role: 'roles/run.invoker',
+                      members: ['allUsers'],
+                    },
+                  ],
+                },
+              },
+              timeout: 10000,
+            }
+          );
+          publicInvokerBound = true;
+        } catch {
+          publicInvokerBound = false;
+        }
+      }
+
+      recordFlightEvent(projectId, {
+        action: 'CLOUD_RUN_COMPOSE_UP',
+        resourceType: 'CLOUD_RUN_V2_COMPOSE',
+        resourceName: targetServiceName,
+        region,
+        details: `Deployed compose.yaml stack "${targetServiceName}" (${cloudRunContainers.length} container(s): ingress=${ingressName}, managed-by=runcompose, iap=${Boolean(
+          enableDirectIap
+        )}) to Cloud Run v2 (${region})`,
+      });
+
+      return res.json({
+        success: true,
+        action,
+        updatedExisting: exists,
+        targetServiceName,
+        region,
+        ingressContainerName: ingressName,
+        containersCount: cloudRunContainers.length,
+        parsedServices: parsedServicesSummary,
+        publicInvokerBound,
+        enableDirectIap: Boolean(enableDirectIap),
+        gcloudCliCommand,
+        operation: deployOp,
+        message: `${
+          exists ? 'Updated' : 'Deployed'
+        } Docker Compose stack "${targetServiceName}" (${
+          cloudRunContainers.length
+        } container(s), ingress="${ingressName}", managed-by=runcompose) on Cloud Run v2 in ${region}!`,
+      });
+    }
+
+    return res.status(400).json({
+      error: `Unsupported Cloud Run Compose action: ${action}`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        `Failed to execute Cloud Run Compose action (${action}).`,
+    });
+  }
+});
+
 // 10h. POST /api/project/:projectId/cloudrun/:region/:serviceName/traffic -> Live Traffic Splitting & 1-Tap Revision Rollback
 app.post(
   '/api/project/:projectId/cloudrun/:region/:serviceName/traffic',
