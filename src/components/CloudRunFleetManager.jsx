@@ -1953,10 +1953,61 @@ spec:
                           <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
                             {svc.deleteExplanation}
                           </p>
+                          {svc.migrationReadiness && (
+                            <div
+                              className={`mt-2 p-2.5 rounded-lg border text-[11px] font-mono ${
+                                svc.migrationReadiness.canMigrateAutomatically
+                                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-200'
+                                  : 'bg-zinc-200/70 dark:bg-zinc-800/70 border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+                              }`}
+                            >
+                              <div className="flex flex-wrap items-center gap-2 font-bold">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                    svc.migrationReadiness.canMigrateAutomatically
+                                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                      : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                  }`}
+                                >
+                                  view=FULL Spec: {svc.migrationReadiness.migrationMode}
+                                </span>
+                                <span>
+                                  Source Files: {svc.migrationReadiness.sourceFilesCount || 0}
+                                  {Array.isArray(svc.migrationReadiness.sourceFilesSample) &&
+                                  svc.migrationReadiness.sourceFilesSample.length > 0
+                                    ? ` (${svc.migrationReadiness.sourceFilesSample.slice(0, 4).join(', ')})`
+                                    : ''}
+                                </span>
+                                <span>·</span>
+                                <span>
+                                  Staging Bucket: {svc.migrationReadiness.sourceBucket || 'n/a'} (
+                                  {svc.migrationReadiness.sourceBucketExists ? 'INTACT' : 'DELETED'})
+                                </span>
+                                <span>·</span>
+                                <span>
+                                  Env Vars: {svc.migrationReadiness.envVariablesCount || 0}
+                                </span>
+                                {svc.migrationReadiness.mappedCloudRunLimits && (
+                                  <>
+                                    <span>·</span>
+                                    <span>
+                                      Target Sizing: {svc.migrationReadiness.mappedCloudRunLimits.cpu} vCPU /{' '}
+                                      {svc.migrationReadiness.mappedCloudRunLimits.memory}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              {svc.migrationReadiness.migrationBlockReason && (
+                                <div className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">
+                                  {svc.migrationReadiness.migrationBlockReason}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                          {/* 1-Click Migrate to Cloud Run */}
+                          {/* 1-Click Migrate to Cloud Run (Real view=FULL container or Cloud Build Buildpacks from GCS source) */}
                           <div className="inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 rounded-lg px-2.5 py-1">
                             <label className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-700 dark:text-blue-300 cursor-pointer">
                               <input
@@ -1978,47 +2029,66 @@ spec:
                                 handleExecuteAppEngineAction(`MIGRATE:${svc.id}`, {
                                   action: 'MIGRATE_TO_CLOUD_RUN',
                                   serviceId: svc.id,
+                                  versionId: svc.primaryVersionId || undefined,
                                   targetCloudRunServiceName: `ae-${svc.id}`
                                     .toLowerCase()
                                     .replace(/[^a-z0-9-]/g, '-')
                                     .slice(0, 45),
-                                  region: 'us-east1',
+                                  region:
+                                    appEngineOverview?.app?.cloudRunRegion ||
+                                    'us-central1',
                                   iapEnabled: migrateIap,
                                 })
                               }
-                              disabled={Boolean(appEngineActionBusy)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                              disabled={
+                                Boolean(appEngineActionBusy) ||
+                                svc.migrationReadiness?.canMigrateAutomatically === false
+                              }
+                              title={
+                                svc.migrationReadiness?.canMigrateAutomatically === false
+                                  ? svc.migrationReadiness.migrationBlockReason
+                                  : 'Migrates real container image or builds real GCS staging source files via Cloud Build Buildpacks into Cloud Run v2 with all envVariables, serviceAccount, and VPC connector settings'
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Rocket className="w-3 h-3" />
                               <span>
                                 {appEngineActionBusy === `MIGRATE:${svc.id}`
-                                  ? 'Migrating...'
+                                  ? 'Building & Migrating...'
+                                  : svc.migrationReadiness?.canMigrateAutomatically === false
+                                  ? 'Migration Blocked (Source Blobs Deleted)'
                                   : `1-Click Migrate → Cloud Run (ae-${svc.id})`}
                               </span>
                             </button>
                           </div>
 
-                          {/* Direct Delete (Non-default) OR Hollow-Out & $0.00/mo Neutralizer (Default) */}
+                          {/* Direct Delete (Non-default) OR Neutralize Default to $0.00/mo Floor */}
                           {isDefault ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleExecuteAppEngineAction(`NEUTRALIZE:${svc.id}`, {
-                                  action: 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO',
-                                  disableEntireApp: true,
-                                })
-                              }
-                              disabled={Boolean(appEngineActionBusy)}
-                              title="Deploys a 48-byte static-only noop-zero-stub (0 instances, $0/mo) to take 100% traffic, deletes ALL your real versions (including the 100%-traffic version), and locks App Engine to USER_DISABLED ($0.00/mo)"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
-                            >
-                              <Zap className="w-3.5 h-3.5" />
-                              <span>
-                                {appEngineActionBusy === `NEUTRALIZE:${svc.id}`
-                                  ? 'Swapping 100% Traffic to 0-Inst Stub & Deleting Real Versions...'
-                                  : 'Hollow-Out & Purge Real Versions in default ($0.00/mo)'}
-                              </span>
-                            </button>
+                            !(
+                              appEngineOverview?.app?.servingStatus === 'USER_DISABLED' &&
+                              svc.versionsCount === 1 &&
+                              svc.servingVersionCount === 0
+                            ) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleExecuteAppEngineAction(`NEUTRALIZE:${svc.id}`, {
+                                    action: 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO',
+                                    disableEntireApp: true,
+                                  })
+                                }
+                                disabled={Boolean(appEngineActionBusy)}
+                                title="Deletes all 0%-traffic versions in default, stops the remaining required version, and locks App Engine to USER_DISABLED ($0.00/mo)"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                <Zap className="w-3.5 h-3.5" />
+                                <span>
+                                  {appEngineActionBusy === `NEUTRALIZE:${svc.id}`
+                                    ? 'Neutralizing default to $0.00/mo...'
+                                    : 'Neutralize default to $0.00/mo Floor'}
+                                </span>
+                              </button>
+                            )
                           ) : (
                             <button
                               type="button"

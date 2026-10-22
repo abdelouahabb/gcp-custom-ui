@@ -6090,7 +6090,38 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
         ? servicesRes.value.services
         : [];
 
-    // Fetch versions for each discovered App Engine service in parallel
+    const allBuckets =
+      bucketsRes.status === 'fulfilled' &&
+      Array.isArray(bucketsRes.value?.items)
+        ? bucketsRes.value.items
+        : [];
+    const existingBucketNames = new Set(
+      allBuckets.map((b) => String(b.name || '')).filter(Boolean)
+    );
+    const appEngineBuckets = allBuckets
+      .filter((b) => /appspot\.com$/i.test(String(b.name || '')))
+      .map((b) => ({
+        name: b.name,
+        location: b.location,
+        storageClass: b.storageClass || 'STANDARD',
+        timeCreated: b.timeCreated,
+      }));
+
+    const mapInstanceClassToCloudRun = (instanceClass, resources) => {
+      const cls = String(instanceClass || 'F1').toUpperCase();
+      if (resources?.cpu && resources?.memoryGb) {
+        return {
+          cpu: String(Math.max(1, Math.round(Number(resources.cpu)))),
+          memory: `${Math.max(512, Math.round(Number(resources.memoryGb) * 1024))}Mi`,
+        };
+      }
+      if (cls === 'F4_1G' || cls === 'B4_1G') return { cpu: '2', memory: '2Gi' };
+      if (cls === 'F4' || cls === 'B4') return { cpu: '2', memory: '1Gi' };
+      if (cls === 'B8') return { cpu: '4', memory: '2Gi' };
+      return { cpu: '1', memory: '512Mi' };
+    };
+
+    // Fetch versions with view=FULL for each discovered App Engine service in parallel
     const servicesWithVersions = await Promise.all(
       rawServices.slice(0, 12).map(async (svc) => {
         const svcId =
@@ -6101,16 +6132,30 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
           const vRes = await gcpFetch(
             `https://appengine.googleapis.com/v1/apps/${encProj}/services/${encodeURIComponent(
               svcId
-            )}/versions?view=BASIC`,
+            )}/versions?view=FULL`,
             token,
             projectId,
-            { timeout: 6000 }
+            { timeout: 8000 }
           );
           if (Array.isArray(vRes?.versions)) {
             rawVersions = vRes.versions;
           }
         } catch {
-          rawVersions = [];
+          try {
+            const fallbackRes = await gcpFetch(
+              `https://appengine.googleapis.com/v1/apps/${encProj}/services/${encodeURIComponent(
+                svcId
+              )}/versions?view=BASIC`,
+              token,
+              projectId,
+              { timeout: 6000 }
+            );
+            if (Array.isArray(fallbackRes?.versions)) {
+              rawVersions = fallbackRes.versions;
+            }
+          } catch {
+            rawVersions = [];
+          }
         }
 
         const mappedVersions = rawVersions.map((v) => {
@@ -6141,6 +6186,80 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
           const estMonthlyUsd = Number((estHourlyUsd * 730).toFixed(2));
           const isLockedByTrafficOnDefault =
             svcId === 'default' && trafficShare > 0;
+
+          // Deep view=FULL migration readiness & artifact extraction
+          const containerImage = v.deployment?.container?.image || null;
+          const filesObj =
+            v.deployment?.files && typeof v.deployment.files === 'object'
+              ? v.deployment.files
+              : {};
+          const filePaths = Object.keys(filesObj);
+          const firstSourceUrl =
+            (filePaths.length > 0 ? filesObj[filePaths[0]]?.sourceUrl : '') ||
+            v.deployment?.zip?.sourceUrl ||
+            '';
+          const bucketMatch = String(firstSourceUrl).match(
+            /^https?:\/\/storage\.googleapis\.com\/([^/]+)\//i
+          );
+          const sourceBucket =
+            bucketMatch?.[1] ||
+            appInfo?.codeBucket ||
+            `staging.${projectId}.appspot.com`;
+          const sourceBucketExists = existingBucketNames.has(sourceBucket);
+          const envVariables =
+            v.envVariables && typeof v.envVariables === 'object'
+              ? v.envVariables
+              : {};
+          const envKeys = Object.keys(envVariables);
+          const versionServiceAccount =
+            v.serviceAccount || appInfo?.serviceAccount || null;
+          const vpcConnector = v.vpcAccessConnector?.name || null;
+          const vpcEgress = v.vpcAccessConnector?.egressSetting || null;
+          const entrypointShell = v.entrypoint?.shell || null;
+          const handlers = Array.isArray(v.handlers) ? v.handlers : [];
+          const staticHandlersCount = handlers.filter(
+            (h) => h.staticFiles || h.staticDir
+          ).length;
+          const usesLegacyBundledApis = Boolean(
+            v.appEngineApis ||
+              v.betaSettings?.enable_app_engine_apis ||
+              /^(python27|php55|java7|go111)$/i.test(String(v.runtime || ''))
+          );
+          const mappedCloudRunLimits = mapInstanceClassToCloudRun(
+            v.instanceClass,
+            v.resources
+          );
+
+          let migrationMode = 'BLOCKED_NO_DEPLOYMENT_ARTIFACTS';
+          let canMigrateAutomatically = false;
+          let migrationBlockReason = null;
+
+          if (containerImage) {
+            migrationMode = 'DIRECT_CONTAINER_IMAGE';
+            canMigrateAutomatically = true;
+          } else if (
+            (filePaths.length > 0 || v.deployment?.zip?.sourceUrl) &&
+            sourceBucketExists
+          ) {
+            migrationMode = 'CLOUD_BUILD_BUILDPACKS_FROM_GCS_SOURCE';
+            canMigrateAutomatically = true;
+          } else if (
+            (filePaths.length > 0 || v.deployment?.zip?.sourceUrl) &&
+            !sourceBucketExists
+          ) {
+            migrationMode = 'BLOCKED_STAGING_BUCKET_DELETED';
+            canMigrateAutomatically = false;
+            migrationBlockReason = `Staging bucket "${sourceBucket}" was deleted from Cloud Storage, so the ${
+              filePaths.length || v.deployment?.zip?.filesCount || 0
+            } source file blob(s) (${
+              filePaths.slice(0, 4).join(', ') || 'source archive'
+            }) for version "${vId}" (${v.runtime}) no longer exist in GCP and cannot be built into a Cloud Run container.`;
+          } else {
+            migrationMode = 'BLOCKED_NO_DEPLOYMENT_ARTIFACTS';
+            canMigrateAutomatically = false;
+            migrationBlockReason = `Version "${vId}" (${v.runtime}) has no container image or GCS source file manifest in the App Engine Admin API.`;
+          }
+
           return {
             id: vId,
             name: v.name,
@@ -6152,9 +6271,8 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
             trafficPercent: Math.round(trafficShare * 1000) / 10,
             receivesTraffic: trafficShare > 0,
             canDeleteVersionDirectly: trafficShare === 0,
-            canDeleteVersion: true, // Always actionable in CloudPulse: direct delete if 0% traffic, or 1-Click Stub Swap + Delete if >0% traffic!
+            canDeleteVersion: trafficShare === 0 || svcId !== 'default',
             isLockedByTrafficOnDefault,
-            isNoopStub: vId === 'noop-zero-stub',
             createTime: v.createTime || null,
             createdBy: v.createdBy || '',
             versionUrl:
@@ -6165,6 +6283,26 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
             estHourlyUsd,
             estMonthlyUsd,
             estimatedMonthlyUsd: estMonthlyUsd,
+            migrationReadiness: {
+              canMigrateAutomatically,
+              migrationMode,
+              migrationBlockReason,
+              containerImage,
+              sourceBucket,
+              sourceBucketExists,
+              sourceFilesCount:
+                filePaths.length || Number(v.deployment?.zip?.filesCount || 0),
+              sourceFilesSample: filePaths.slice(0, 8),
+              envVariablesCount: envKeys.length,
+              envVariablesKeys: envKeys,
+              serviceAccount: versionServiceAccount,
+              vpcConnector,
+              vpcEgress,
+              entrypoint: entrypointShell,
+              staticHandlersCount,
+              usesLegacyBundledApis,
+              mappedCloudRunLimits,
+            },
           };
         });
 
@@ -6175,6 +6313,10 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
         const zombieCount = mappedVersions.filter(
           (v) => !v.receivesTraffic
         ).length;
+        const primaryVersion =
+          mappedVersions.find((v) => v.receivesTraffic) ||
+          mappedVersions[0] ||
+          null;
 
         return {
           id: svcId,
@@ -6183,11 +6325,11 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
           canDeleteServiceDirectly: svcId !== 'default',
           deleteExplanation:
             svcId === 'default'
-              ? 'Google Cloud permanently blocks deleting the `default` service AND blocks deleting its 100%-traffic version directly—even when disabled (`USER_DISABLED`). Use "Hollow-Out & Purge Real Versions ($0/mo)" to swap 100% traffic to a 0-instance static stub, delete your real version(s), and lock App Engine to USER_DISABLED.'
+              ? 'Google Cloud permanently blocks deleting the `default` service AND blocks leaving `default` with 0 versions (`Cannot delete the version receiving all traffic on the default service`). Use "Neutralize default to $0.00/mo" to delete all extra versions, stop the last required version, and lock App Engine to USER_DISABLED.'
               : 'Even if a version inside this non-default service has 100% traffic, you can delete this entire service and all its versions in 1 click via DELETE /v1/apps/:id/services/:serviceId (missing from the GCP Console UI).',
           whyCannotDeleteInConsole:
             svcId === 'default'
-              ? 'Google Cloud API forbids deleting the `default` App Engine service (`INVALID_ARGUMENT: Cannot delete the default service`) and forbids deleting its 100%-traffic version. Use 1-Click Hollow-Out & Neutralize to $0.00/mo below.'
+              ? 'Google Cloud API permanently forbids deleting the `default` App Engine service (`INVALID_ARGUMENT: Cannot delete the default service`) and requires 1 version to remain. When stopped + USER_DISABLED with 0 buckets, it is a $0.00/mo dead metadata shell.'
               : 'Google Cloud Console hides the Delete Service button in the web UI. Use 1-Click Delete Service below to call DELETE /v1/apps/:id/services/:serviceId directly.',
           trafficSplit: allocations,
           versionCount: mappedVersions.length,
@@ -6200,33 +6342,19 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
           estMonthlyUsd: Number(totalServiceMonthlyUsd.toFixed(2)),
           estimatedMonthlyUsd: Number(totalServiceMonthlyUsd.toFixed(2)),
           iapEnabled: Boolean(appInfo?.iapEnabled),
+          primaryVersionId: primaryVersion?.id || null,
+          migrationReadiness: primaryVersion?.migrationReadiness || null,
           versions: mappedVersions,
           cliCommands: {
             deleteService:
               svcId === 'default'
-                ? `# 'default' service cannot be deleted directly; deploy noop-zero-stub to take 100% traffic, then delete old versions:\ngcloud app versions list --service=default --project=${projectId}`
+                ? `# 'default' service cannot be deleted in GCP; delete all 0%-traffic versions and disable App Engine:\ngcloud app versions list --service=default --project=${projectId}`
                 : `gcloud app services delete ${svcId} --project=${projectId} --quiet`,
             listVersions: `gcloud app versions list --service=${svcId} --project=${projectId}`,
           },
         };
       })
     );
-
-    const allBuckets =
-      bucketsRes.status === 'fulfilled' &&
-      Array.isArray(bucketsRes.value?.items)
-        ? bucketsRes.value.items
-        : [];
-    const appEngineBuckets = allBuckets
-      .filter((b) =>
-        /appspot\.com$/i.test(String(b.name || ''))
-      )
-      .map((b) => ({
-        name: b.name,
-        location: b.location,
-        storageClass: b.storageClass || 'STANDARD',
-        timeCreated: b.timeCreated,
-      }));
 
     const totalVersionsCount = servicesWithVersions.reduce(
       (sum, s) => sum + s.versionsCount,
@@ -6263,7 +6391,7 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
       appspotBuckets: appEngineBuckets,
       appEngineBuckets,
       consoleLimitationNote:
-        'Google Cloud Console removes the Delete action on App Engine services and permanently blocks deleting the `default` service or its 100%-traffic version at the API level. CloudPulse exposes direct REST service deletion for non-default services, 1-Click Hollow-Out Stub Swap to delete 100%-traffic versions on `default`, 1-Click Application Disable (`USER_DISABLED`), and 1-Click Migration to Scale-to-Zero Cloud Run.',
+        'Google Cloud Console removes the Delete action on App Engine services and permanently blocks deleting the `default` service or leaving `default` with 0 versions at the API level. CloudPulse exposes direct REST service deletion for non-default services, 1-Click Default Service Neutralization (`USER_DISABLED` + `$0.00/mo` floor), and `view=FULL` App Engine-to-Cloud Run migration.',
     });
   } catch (err) {
     return res.status(400).json({
@@ -6546,7 +6674,8 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       });
     }
 
-    // 6. 1-CLICK MIGRATE APP ENGINE SERVICE TO SCALE-TO-ZERO CLOUD RUN v2
+    // 6. REAL `view=FULL` MIGRATE APP ENGINE SERVICE TO SCALE-TO-ZERO CLOUD RUN v2
+    //    (Zero fake placeholder containers! Uses real deployment.container.image or builds real deployment.files via Cloud Build Buildpacks)
     if (action === 'MIGRATE_TO_CLOUD_RUN') {
       const targetRunName =
         (targetCloudRunServiceName || `ae-${serviceId}`)
@@ -6555,41 +6684,279 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
           .replace(/^-+|-+$/g, '')
           .slice(0, 45) || 'ae-migrated-svc';
 
+      // Step 1: Resolve active version in `serviceId` and fetch its full specification (?view=FULL)
+      const svcInfo = await gcpFetch(
+        `https://appengine.googleapis.com/v1/apps/${encProj}/services/${encSvc}`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      );
+      const allocations = svcInfo?.split?.allocations || {};
+      let targetVerId =
+        versionId ||
+        Object.keys(allocations).find((k) => Number(allocations[k]) > 0) ||
+        '';
+
+      const vListFull = await gcpFetch(
+        `https://appengine.googleapis.com/v1/apps/${encProj}/services/${encSvc}/versions?view=FULL`,
+        token,
+        projectId,
+        { timeout: 10000 }
+      );
+      const fullVersions = Array.isArray(vListFull?.versions)
+        ? vListFull.versions
+        : [];
+      if (!targetVerId && fullVersions.length > 0) {
+        targetVerId =
+          fullVersions[0].id ||
+          String(fullVersions[0].name || '').split('/').pop();
+      }
+      const vFull =
+        fullVersions.find(
+          (v) => (v.id || String(v.name || '').split('/').pop()) === targetVerId
+        ) || fullVersions[0];
+
+      if (!vFull) {
+        return res.status(400).json({
+          error: `No App Engine version found in service "${serviceId}" to migrate.`,
+        });
+      }
+
+      const resolvedVerId =
+        vFull.id || String(vFull.name || '').split('/').pop() || targetVerId;
+      let resolvedImage = vFull.deployment?.container?.image || null;
+      let migrationMethod = 'DIRECT_CONTAINER_IMAGE';
+      let cloudBuildId = null;
+
+      // Step 2: If no direct container image, inspect GCS source manifest (`deployment.files` / `deployment.zip`)
+      if (!resolvedImage) {
+        const filesMap =
+          vFull.deployment?.files && typeof vFull.deployment.files === 'object'
+            ? vFull.deployment.files
+            : {};
+        const fileEntries = Object.entries(filesMap);
+        const zipSourceUrl = vFull.deployment?.zip?.sourceUrl || '';
+
+        if (fileEntries.length === 0 && !zipSourceUrl) {
+          return res.status(400).json({
+            error: `Cannot migrate "${serviceId}/${resolvedVerId}" (${vFull.runtime}): App Engine API returned neither a container image (deployment.container.image) nor a source file manifest (deployment.files). CloudPulse refuses to deploy a fake placeholder container.`,
+          });
+        }
+
+        const sampleUrl =
+          (fileEntries.length > 0 ? fileEntries[0][1]?.sourceUrl : '') ||
+          zipSourceUrl;
+        const bucketMatch = String(sampleUrl).match(
+          /^https?:\/\/storage\.googleapis\.com\/([^/]+)\/(.+)$/i
+        );
+        const sourceBucket =
+          bucketMatch?.[1] || `staging.${projectId}.appspot.com`;
+
+        // Verify the source staging bucket still exists in Cloud Storage
+        try {
+          await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              sourceBucket
+            )}`,
+            token,
+            projectId,
+            { timeout: 6000 }
+          );
+        } catch {
+          return res.status(400).json({
+            error: `Cannot migrate "${serviceId}/${resolvedVerId}" (${
+              vFull.runtime
+            }): its App Engine staging bucket "${sourceBucket}" was already deleted from Cloud Storage, so its ${
+              fileEntries.length || vFull.deployment?.zip?.filesCount || 0
+            } source code blob(s) (${fileEntries
+              .slice(0, 5)
+              .map(([k]) => k)
+              .join(
+                ', '
+              )}) no longer exist in GCP. Re-upload your source code or deploy directly to Cloud Run.`,
+          });
+        }
+
+        // Reconstruct the exact App Engine directory tree from GCS SHA1 objects and build container via Google Cloud Buildpacks (`gcr.io/k8s-skaffold/pack`)
+        migrationMethod = 'CLOUD_BUILD_BUILDPACKS_FROM_GCS_SOURCE';
+        const targetImageUri = `gcr.io/${projectId}/appengine-migrated/${targetRunName}:${resolvedVerId}`;
+        const copyCommands = fileEntries
+          .slice(0, 250)
+          .map(([relPath, meta]) => {
+            const m = String(meta?.sourceUrl || '').match(
+              /^https?:\/\/storage\.googleapis\.com\/([^/]+)\/(.+)$/i
+            );
+            if (!m) return null;
+            const safeRel = String(relPath).replace(/(["$`\\])/g, '\\$1');
+            const gsUri = `gs://${m[1]}/${m[2]}`;
+            return `mkdir -p "$(dirname "/workspace/${safeRel}")" && gsutil -q cp "${gsUri}" "/workspace/${safeRel}"`;
+          })
+          .filter(Boolean);
+
+        const buildpackEnvArgs = [
+          `--env=GOOGLE_RUNTIME=${vFull.runtime || 'python312'}`,
+        ];
+        if (vFull.entrypoint?.shell) {
+          buildpackEnvArgs.push(
+            `--env=GOOGLE_ENTRYPOINT=${vFull.entrypoint.shell}`
+          );
+        }
+
+        const buildOp = await gcpFetch(
+          `https://cloudbuild.googleapis.com/v1/projects/${encProj}/builds`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            data: {
+              steps: [
+                {
+                  name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim',
+                  entrypoint: 'bash',
+                  args: ['-c', copyCommands.join(' && ')],
+                },
+                {
+                  name: 'gcr.io/k8s-skaffold/pack',
+                  args: [
+                    'build',
+                    targetImageUri,
+                    '--builder=gcr.io/buildpacks/builder:latest',
+                    '--path=/workspace',
+                    '--publish',
+                    ...buildpackEnvArgs,
+                  ],
+                },
+              ],
+              images: [targetImageUri],
+              timeout: '600s',
+            },
+            timeout: 15000,
+          }
+        );
+
+        cloudBuildId =
+          buildOp?.metadata?.build?.id ||
+          String(buildOp?.name || '').split('/').pop() ||
+          null;
+
+        // Poll Cloud Build up to ~60s for fast builds
+        if (cloudBuildId) {
+          for (let poll = 0; poll < 20; poll += 1) {
+            await new Promise((r) => setTimeout(r, 3000));
+            const bStatus = await gcpFetch(
+              `https://cloudbuild.googleapis.com/v1/projects/${encProj}/builds/${encodeURIComponent(
+                cloudBuildId
+              )}`,
+              token,
+              projectId,
+              { timeout: 6000 }
+            ).catch(() => null);
+            if (bStatus?.status === 'SUCCESS') {
+              resolvedImage = targetImageUri;
+              break;
+            }
+            if (
+              bStatus?.status === 'FAILURE' ||
+              bStatus?.status === 'TIMEOUT' ||
+              bStatus?.status === 'CANCELLED'
+            ) {
+              return res.status(400).json({
+                error: `Cloud Build Buildpack containerization for "${serviceId}/${resolvedVerId}" (${vFull.runtime}) ended with status ${bStatus.status} (Build ID: ${cloudBuildId}). Check Cloud Build logs for runtime compatibility details.`,
+              });
+            }
+          }
+        }
+
+        if (!resolvedImage) {
+          return res.status(202).json({
+            success: true,
+            status: 'BUILDING_IN_CLOUD_BUILD',
+            cloudBuildId,
+            targetImageUri,
+            message: `Started Google Cloud Build (${cloudBuildId}) to package ${fileEntries.length} App Engine source files from gs://${sourceBucket} using Cloud Buildpacks into ${targetImageUri}. Once the build completes, re-run Migrate to deploy the built image to Cloud Run.`,
+          });
+        }
+      }
+
+      // Step 3: Map real App Engine `envVariables`, `serviceAccount`, `vpcAccessConnector`, `entrypoint`, and `instanceClass` CPU/Memory limits into Cloud Run v2
+      const rawEnv =
+        vFull.envVariables && typeof vFull.envVariables === 'object'
+          ? vFull.envVariables
+          : {};
+      const containerEnv = [
+        ...Object.entries(rawEnv).map(([k, val]) => ({
+          name: String(k),
+          value: String(val ?? ''),
+        })),
+        {
+          name: 'MIGRATED_FROM_APP_ENGINE',
+          value: `${serviceId}/${resolvedVerId}`,
+        },
+      ];
+
+      const cls = String(vFull.instanceClass || 'F1').toUpperCase();
+      const cpuLimit =
+        vFull.resources?.cpu
+          ? String(Math.max(1, Math.round(Number(vFull.resources.cpu))))
+          : cls === 'B8'
+          ? '4'
+          : cls === 'F4' || cls === 'F4_1G' || cls === 'B4' || cls === 'B4_1G'
+          ? '2'
+          : '1';
+      const memoryLimit =
+        vFull.resources?.memoryGb
+          ? `${Math.max(512, Math.round(Number(vFull.resources.memoryGb) * 1024))}Mi`
+          : cls === 'F4_1G' || cls === 'B4_1G' || cls === 'B8'
+          ? '2Gi'
+          : cls === 'F4' || cls === 'B4'
+          ? '1Gi'
+          : '512Mi';
+
+      const templateSpec = {
+        scaling: {
+          minInstanceCount: 0,
+          maxInstanceCount: Number(
+            vFull.automaticScaling?.maxTotalInstances ||
+              vFull.basicScaling?.maxInstances ||
+              10
+          ),
+        },
+        containers: [
+          {
+            image: resolvedImage,
+            resources: {
+              cpuIdle: true,
+              startupCpuBoost: true,
+              limits: {
+                cpu: cpuLimit,
+                memory: memoryLimit,
+              },
+            },
+            env: containerEnv,
+          },
+        ],
+      };
+
+      if (vFull.serviceAccount) {
+        templateSpec.serviceAccount = vFull.serviceAccount;
+      }
+      if (vFull.vpcAccessConnector?.name) {
+        templateSpec.vpcAccess = {
+          connector: vFull.vpcAccessConnector.name,
+          egress:
+            vFull.vpcAccessConnector.egressSetting === 'ALL_TRAFFIC'
+              ? 'ALL_TRAFFIC'
+              : 'PRIVATE_RANGES_ONLY',
+        };
+      }
+
       const createPayload = {
         ingress: 'INGRESS_TRAFFIC_ALL',
         iapEnabled: effectiveIap,
         annotations: effectiveIap
           ? { 'run.googleapis.com/iap-enabled': 'true' }
           : {},
-        template: {
-          scaling: {
-            minInstanceCount: 0,
-            maxInstanceCount: 10,
-          },
-          containers: [
-            {
-              image: 'us-docker.pkg.dev/cloudrun/container/hello:latest',
-              resources: {
-                cpuIdle: true,
-                startupCpuBoost: true,
-                limits: {
-                  cpu: '1',
-                  memory: '512Mi',
-                },
-              },
-              env: [
-                {
-                  name: 'MIGRATED_FROM_APP_ENGINE_SERVICE',
-                  value: String(serviceId),
-                },
-                {
-                  name: 'GCP_PROJECT_ID',
-                  value: String(projectId),
-                },
-              ],
-            },
-          ],
-        },
+        template: templateSpec,
       };
 
       const op = await gcpFetch(
@@ -6610,20 +6977,28 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
         resourceType: 'CLOUD_RUN_V2',
         resourceName: targetRunName,
         region,
-        details: `Migrated App Engine service "${serviceId}" to scale-to-zero Cloud Run v2 service "${targetRunName}" (${region}, iapEnabled=${Boolean(
-          enableDirectIap
-        )})`,
+        details: `Migrated App Engine "${serviceId}/${resolvedVerId}" (${migrationMethod}, image=${resolvedImage}, envVars=${Object.keys(rawEnv).length}) to Cloud Run v2 "${targetRunName}" (${region})`,
       });
 
       return res.json({
         success: true,
         action,
         serviceId,
+        versionId: resolvedVerId,
+        migrationMethod,
+        cloudBuildId,
+        deployedImage: resolvedImage,
+        migratedEnvVarsCount: Object.keys(rawEnv).length,
+        migratedServiceAccount: vFull.serviceAccount || null,
+        migratedVpcConnector: vFull.vpcAccessConnector?.name || null,
+        mappedLimits: { cpu: cpuLimit, memory: memoryLimit },
         cloudRunServiceName: targetRunName,
         region,
         enableDirectIap: Boolean(enableDirectIap),
         operation: op,
-        message: `Migrated App Engine service "${serviceId}" to scale-to-zero Cloud Run service "${targetRunName}" (${region}, $0.00/mo idle)!`,
+        message: `Migrated App Engine "${serviceId}/${resolvedVerId}" (${migrationMethod}) with image "${resolvedImage}", ${
+          Object.keys(rawEnv).length
+        } env var(s), and ${cpuLimit} vCPU / ${memoryLimit} RAM to scale-to-zero Cloud Run service "${targetRunName}" (${region})!`,
       });
     }
 
