@@ -2146,19 +2146,11 @@ spec:
                             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/70">
                               {svc.versions.map((ver) => {
                                 const verBusyKey = `VER:${svc.id}/${ver.id}`;
-                                const isStub = ver.id === 'noop-zero-stub' || ver.isNoopStub;
-                                const needsStubSwapToDelete =
-                                  isDefault && ver.trafficPercent > 0 && !isStub;
                                 return (
                                   <tr key={ver.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
                                     <td className="py-2 px-3 font-mono font-bold text-zinc-900 dark:text-zinc-100">
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <span>{ver.id}</span>
-                                        {isStub && (
-                                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-300 text-[9px] font-mono font-bold">
-                                            0-INSTANCE STATIC STUB ($0.00/MO)
-                                          </span>
-                                        )}
                                       </div>
                                     </td>
                                     <td className="py-2 px-3 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
