@@ -770,6 +770,60 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // Cloud Run App Engine-Style 1-Click Direct IAP Toggle (/cloudrun/:region/:serviceName/iap)
+    const cloudRunIapMatch = rawUrl.match(
+      /\/cloudrun\/([^/]+)\/([^/]+)\/iap(?:\?|$)/
+    );
+    if (cloudRunIapMatch) {
+      const region = decodeURIComponent(cloudRunIapMatch[1]);
+      const serviceName = decodeURIComponent(cloudRunIapMatch[2]);
+      const enableIap = body.enabled !== false;
+      const accessorsList = Array.isArray(body.accessors)
+        ? body.accessors.filter(Boolean).join(', ')
+        : '';
+      if (enableIap) {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'BETA',
+          title: `Enable 1-Click Direct Cloud IAP on "${serviceName}" ($0.00/mo · Zero-LB)?`,
+          headerBadge: 'App Engine-Style 1-Click Cloud Run IAP Gatekeeper',
+          targetLabel: 'Target Cloud Run Service & IAP Web Resource',
+          resourceKind:
+            'Direct Cloud Run IAP (run.googleapis.com/iap-enabled + roles/iap.httpsResourceAccessor)',
+          targetName: `${serviceName} (${region} · Direct Zero-LB IAP)`,
+          location: region,
+          projectId,
+          method: 'ENABLE CLOUD IAP',
+          endpoint: rawUrl,
+          confirmLabel: `Enable 1-Click Cloud IAP on "${serviceName}" ($0.00/mo)`,
+          cancelToast: `Cloud IAP activation on "${serviceName}" cancelled.`,
+          whatHappensNext: `1. Enables iap.googleapis.com and provisions the project IAP Service Agent (service-<PROJECT_NUMBER>@gcp-sa-iap.iam.gserviceaccount.com).\n2. Patches Cloud Run service "${serviceName}" with iapEnabled=true, run.googleapis.com/iap-enabled="true", and invokerIamDisabled=false.\n3. Removes allUsers bypass and grants roles/run.invoker to the IAP Service Agent.\n4. Grants roles/iap.httpsResourceAccessor on iap_web/cloud_run-${region}/services/${serviceName} to ${
+            accessorsList || 'your active Google account'
+          }.`,
+          costWarning: `ZERO LOAD BALANCER COST ($0.00/MO): Direct Cloud Run IAP protects your .run.app endpoint natively without requiring an $18+/mo Global External Application Load Balancer or Serverless NEG.`,
+          impactWarning: `Enforces Google Sign-In Identity-Aware Proxy in front of "${serviceName}" (${region}). Only principals with roles/iap.httpsResourceAccessor will be allowed through.`,
+        };
+      }
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'BETA',
+        title: `Disable Direct Cloud IAP on "${serviceName}"?`,
+        headerBadge: 'App Engine-Style 1-Click Cloud Run IAP Gatekeeper',
+        targetLabel: 'Target Cloud Run Service',
+        resourceKind: 'Direct Cloud Run IAP (run.googleapis.com/iap-enabled=false)',
+        targetName: `${serviceName} (${region} · Disable Direct IAP)`,
+        location: region,
+        projectId,
+        method: 'DISABLE CLOUD IAP',
+        endpoint: rawUrl,
+        confirmLabel: `Disable Direct Cloud IAP on "${serviceName}"`,
+        cancelToast: `Cloud IAP remains enabled on "${serviceName}".`,
+        whatHappensNext: `1. Patches "${serviceName}" with iapEnabled=false and removes annotation run.googleapis.com/iap-enabled.\n2. Removes the IAP Service Agent from roles/run.invoker on "${serviceName}".`,
+        costWarning: `ZERO COST IMPACT ($0.00/MO): Disabling Direct Cloud Run IAP incurs $0.00 in charges.`,
+        impactWarning: `Removes Google Sign-In IAP enforcement from "${serviceName}" (${region}). The service will remain Private IAM Authenticated unless you explicitly grant allUsers.`,
+      };
+    }
+
     // Cloud Run Revision Time-Machine Rollback / Spec Redeploy
     const timeMachineMatch = rawUrl.match(
       /\/cloudrun\/([^/]+)\/([^/]+)\/time-machine-restore(?:\?|$)/

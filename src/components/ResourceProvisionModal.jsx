@@ -412,6 +412,7 @@ export default function ResourceProvisionModal({
   const [runTimeout, setRunTimeout] = useState(300);
   const [runIngress, setRunIngress] = useState('INGRESS_TRAFFIC_ALL');
   const [runAllowUnauth, setRunAllowUnauth] = useState(true);
+  const [runEnableIap, setRunEnableIap] = useState(false);
   // 2026 Billing Mode: 'REQUEST_BASED' (cpuIdle: true) vs 'INSTANCE_BASED' (cpuIdle: false)
   const [runBillingMode, setRunBillingMode] = useState('REQUEST_BASED');
   const [runStartupBoost, setRunStartupBoost] = useState(true);
@@ -1103,13 +1104,16 @@ export default function ResourceProvisionModal({
             }`
           : '';
       const cmdPrefix =
-        runStorageVolumeType !== 'NONE' || runEnableDirectVpc
+        runStorageVolumeType !== 'NONE' || runEnableDirectVpc || runEnableIap
           ? 'gcloud beta run deploy'
           : 'gcloud run deploy';
-      return `${cmdPrefix} ${clean} --project=${projectId} --region=${region}${saFlag} --image=${containerImage} --port=${runPort} --cpu=${runCpu} --memory=${runMemory}${gpuFlags}${vpcFlags}${volFlags} --min-instances=${runMinInstances} --max-instances=${runMaxInstances} --concurrency=${runConcurrency} --timeout=${runTimeout}s --ingress=${ingressFlag} --execution-environment=${
+      const iapFlag = runEnableIap ? ' --iap' : '';
+      return `${cmdPrefix} ${clean} --project=${projectId} --region=${region}${saFlag} --image=${containerImage} --port=${runPort} --cpu=${runCpu} --memory=${runMemory}${gpuFlags}${vpcFlags}${volFlags}${iapFlag} --min-instances=${runMinInstances} --max-instances=${runMaxInstances} --concurrency=${runConcurrency} --timeout=${runTimeout}s --ingress=${ingressFlag} --execution-environment=${
         runExecEnv === 'EXECUTION_ENVIRONMENT_GEN2' ? 'gen2' : 'gen1'
       } ${billingFlag} ${
-        runAllowUnauth ? '--allow-unauthenticated' : '--no-allow-unauthenticated'
+        runAllowUnauth && !runEnableIap
+          ? '--allow-unauthenticated'
+          : '--no-allow-unauthenticated'
       }`;
     }
     if (serviceType === 'CLOUD_SQL') {
@@ -1231,6 +1235,7 @@ export default function ResourceProvisionModal({
     runGpuAccelerator,
     runGpuZonalRedundancy,
     runAllowUnauth,
+    runEnableIap,
     runEnableDirectVpc,
     runVpcNetwork,
     runVpcSubnetwork,
@@ -1686,7 +1691,8 @@ export default function ResourceProvisionModal({
             concurrency: runConcurrency,
             timeoutSeconds: runTimeout,
             ingress: runIngress,
-            allowUnauthenticated: runAllowUnauth,
+            allowUnauthenticated: runEnableIap ? false : runAllowUnauth,
+            iapEnabled: runEnableIap,
             billingMode: hasGpu ? 'INSTANCE_BASED' : runBillingMode,
             cpuIdle: runBillingMode === 'REQUEST_BASED' && !hasGpu,
             gpuCount: hasGpu ? 1 : 0,
@@ -4599,21 +4605,37 @@ export default function ResourceProvisionModal({
 
                 <div className="min-w-0">
                   <label
-                    title="Authentication (IAM Invoker Policy)"
+                    title="Authentication & Direct Cloud IAP (App Engine-Style Google Sign-In · $0/mo Zero-LB)"
                     className="block text-[11px] font-medium text-zinc-500 mb-1 truncate whitespace-nowrap"
                   >
-                    Authentication (IAM)
+                    Auth &amp; Direct Cloud IAP
                   </label>
                   <button
                     type="button"
-                    onClick={() => setRunAllowUnauth((v) => !v)}
-                    className={`w-full h-[34px] rounded-[8px] px-3 text-xs font-mono border text-left transition-colors flex items-center truncate ${
-                      runAllowUnauth
+                    onClick={() => {
+                      if (runAllowUnauth && !runEnableIap) {
+                        setRunAllowUnauth(false);
+                        setRunEnableIap(true);
+                      } else if (runEnableIap) {
+                        setRunEnableIap(false);
+                        setRunAllowUnauth(false);
+                      } else {
+                        setRunAllowUnauth(true);
+                        setRunEnableIap(false);
+                      }
+                    }}
+                    title="Click to cycle: Public HTTPS (allUsers) → Direct Cloud IAP (Google Sign-In · $0/mo Zero-LB) → Private (IAM Auth Only)"
+                    className={`w-full h-[34px] rounded-[8px] px-3 text-xs font-mono border text-left transition-colors flex items-center truncate cursor-pointer ${
+                      runEnableIap
+                        ? 'bg-violet-500/15 border-violet-500/50 text-violet-600 dark:text-violet-300 font-bold'
+                        : runAllowUnauth
                         ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
                         : 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
                     }`}
                   >
-                    {runAllowUnauth
+                    {runEnableIap
+                      ? 'Direct Cloud IAP ($0/mo Sign-In)'
+                      : runAllowUnauth
                       ? 'Public HTTPS (allUsers)'
                       : 'Private (IAM Auth Only)'}
                   </button>

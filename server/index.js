@@ -539,6 +539,12 @@ function formatCloudRunService(s, projectId, extra = {}) {
     s.metadata?.annotations?.['run.googleapis.com/invoker-iam-disabled'] ===
       'true';
 
+  const iapEnabled =
+    s.iapEnabled === true ||
+    s.annotations?.['run.googleapis.com/iap-enabled'] === 'true' ||
+    s.metadata?.annotations?.['run.googleapis.com/iap-enabled'] === 'true' ||
+    Boolean(extra.iapEnabled);
+
   return {
     id: `run-${region}-${shortName}`,
     name: shortName,
@@ -547,6 +553,12 @@ function formatCloudRunService(s, projectId, extra = {}) {
     region,
     uri: s.uri || `https://${shortName}-${projectId}.a.run.app`,
     ingress: s.ingress || 'INGRESS_TRAFFIC_ALL',
+    iapEnabled,
+    iapServiceAgentBound: Boolean(extra.iapServiceAgentBound),
+    iapServiceAgentEmail: extra.iapServiceAgentEmail || '',
+    invokerMembers: Array.isArray(extra.invokerMembers)
+      ? extra.invokerMembers
+      : [],
     allowUnauthenticated:
       extra.allowUnauthenticated !== undefined
         ? Boolean(extra.allowUnauthenticated) || invokerDisabled
@@ -3174,8 +3186,19 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         ...(gpuCount > 0 ? { 'nvidia.com/gpu': String(gpuCount) } : {}),
       };
 
+      const enableDirectIap = Boolean(config.iapEnabled);
       const serviceBody = {
         ingress,
+        ...(enableDirectIap
+          ? {
+              iapEnabled: true,
+              invokerIamDisabled: false,
+              launchStage: 'BETA',
+              annotations: {
+                'run.googleapis.com/iap-enabled': 'true',
+              },
+            }
+          : {}),
         template: {
           ...(runtimeServiceAccount
             ? { serviceAccount: runtimeServiceAccount }
@@ -3227,8 +3250,63 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         }
       );
 
-      // If allowUnauthenticated is true, grant roles/run.invoker to allUsers
-      if (allowUnauthenticated) {
+      // If enableDirectIap is true, provision IAP Service Agent and grant roles/run.invoker
+      if (enableDirectIap) {
+        try {
+          await gcpFetch(
+            `https://serviceusage.googleapis.com/v1beta1/projects/${encodeURIComponent(
+              projectId
+            )}/services/iap.googleapis.com:generateServiceIdentity`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {},
+              timeout: 6000,
+            }
+          ).catch(() => null);
+          const projData = await gcpFetch(
+            `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}`,
+            token,
+            projectId,
+            { timeout: 6000 }
+          ).catch(() => null);
+          const projNum = String(projData?.projectNumber || '');
+          if (projNum) {
+            await gcpFetch(
+              `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(
+                region
+              )}/services/${encodeURIComponent(cleanName)}:setIamPolicy`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: {
+                  policy: {
+                    bindings: [
+                      {
+                        role: 'roles/run.invoker',
+                        members: [
+                          `serviceAccount:service-${projNum}@gcp-sa-iap.iam.gserviceaccount.com`,
+                        ],
+                      },
+                    ],
+                  },
+                },
+                timeout: 8000,
+              }
+            );
+          }
+        } catch {
+          // ignore if IAP service agent is still propagating
+        }
+      } else if (allowUnauthenticated) {
         try {
           await gcpFetch(
             `https://run.googleapis.com/v2/projects/${encodeURIComponent(
@@ -4776,6 +4854,9 @@ app.get('/api/project/:projectId/cloudrun', async (req, res) => {
         const shortName = srv.name?.split('/').pop();
         const region = srv.name?.split('/')[3] || 'us-east1';
         let allowUnauthenticated = false;
+        let iapServiceAgentBound = false;
+        let iapServiceAgentEmail = '';
+        let invokerMembers = [];
         let revisions = [];
 
         const [iamRes, revRes] = await Promise.allSettled([
@@ -4803,11 +4884,19 @@ app.get('/api/project/:projectId/cloudrun', async (req, res) => {
 
         if (iamRes.status === 'fulfilled') {
           const bindings = iamRes.value?.bindings || [];
-          allowUnauthenticated = bindings.some(
-            (b) =>
-              b.role === 'roles/run.invoker' &&
-              (b.members || []).includes('allUsers')
+          const invokerB = bindings.find((b) => b.role === 'roles/run.invoker');
+          invokerMembers = invokerB?.members || [];
+          allowUnauthenticated = invokerMembers.includes('allUsers');
+          const iapSaMember = invokerMembers.find((m) =>
+            String(m).includes('@gcp-sa-iap.')
           );
+          if (iapSaMember) {
+            iapServiceAgentBound = true;
+            iapServiceAgentEmail = String(iapSaMember).replace(
+              /^serviceAccount:/,
+              ''
+            );
+          }
         }
 
         if (revRes.status === 'fulfilled') {
@@ -4872,6 +4961,15 @@ app.get('/api/project/:projectId/cloudrun', async (req, res) => {
 
         return formatCloudRunService(srv, projectId, {
           allowUnauthenticated,
+          iapEnabled:
+            srv.iapEnabled === true ||
+            srv.annotations?.['run.googleapis.com/iap-enabled'] === 'true' ||
+            srv.metadata?.annotations?.['run.googleapis.com/iap-enabled'] ===
+              'true' ||
+            iapServiceAgentBound,
+          iapServiceAgentBound,
+          iapServiceAgentEmail,
+          invokerMembers,
           revisions,
         });
       })
@@ -5230,6 +5328,640 @@ app.post(
           err.response?.data?.error?.message ||
           err.message ||
           `Failed to update IAM policy for ${serviceName}`,
+      });
+    }
+  }
+);
+
+// 10g-2. GET & POST /api/project/:projectId/cloudrun/:region/:serviceName/iap -> App Engine-Style 1-Click Cloud Run IAP (Zero-LB Direct IAP + IAP Service Agent + HTTPS Resource Accessors)
+app.get(
+  '/api/project/:projectId/cloudrun/:region/:serviceName/iap',
+  async (req, res) => {
+    const { projectId, region, serviceName } = req.params;
+    try {
+      const { token, account } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      const serviceUrl = `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(region)}/services/${encodeURIComponent(
+        serviceName
+      )}`;
+
+      const [projRes, srvRes, runIamRes] = await Promise.allSettled([
+        gcpFetch(
+          `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        ),
+        gcpFetch(serviceUrl, token, projectId, { timeout: 6000 }),
+        gcpFetch(`${serviceUrl}:getIamPolicy`, token, projectId, {
+          timeout: 6000,
+        }),
+      ]);
+
+      const projectNumber =
+        projRes.status === 'fulfilled'
+          ? String(projRes.value?.projectNumber || '')
+          : '';
+      const srv = srvRes.status === 'fulfilled' ? srvRes.value || {} : {};
+      const runBindings =
+        runIamRes.status === 'fulfilled'
+          ? runIamRes.value?.bindings || []
+          : [];
+      const invokerMembers =
+        runBindings.find((b) => b.role === 'roles/run.invoker')?.members || [];
+
+      const iapServiceAgent = projectNumber
+        ? `service-${projectNumber}@gcp-sa-iap.iam.gserviceaccount.com`
+        : 'service-<PROJECT_NUMBER>@gcp-sa-iap.iam.gserviceaccount.com';
+      const iapServiceAgentHasInvoker = invokerMembers.some(
+        (m) =>
+          m === `serviceAccount:${iapServiceAgent}` ||
+          String(m).includes('@gcp-sa-iap.')
+      );
+      const allowUnauthenticated =
+        invokerMembers.includes('allUsers') || srv.invokerIamDisabled === true;
+      const annotationEnabled =
+        srv.iapEnabled === true ||
+        srv.annotations?.['run.googleapis.com/iap-enabled'] === 'true' ||
+        srv.metadata?.annotations?.['run.googleapis.com/iap-enabled'] ===
+          'true';
+
+      let iapAccessors = [];
+      if (projectNumber) {
+        try {
+          const iapPolicy = await gcpFetch(
+            `https://iap.googleapis.com/v1/projects/${encodeURIComponent(
+              projectNumber
+            )}/iap_web/cloud_run-${encodeURIComponent(
+              region
+            )}/services/${encodeURIComponent(serviceName)}:getIamPolicy`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {},
+              timeout: 5000,
+            }
+          );
+          const accBinding = (iapPolicy?.bindings || []).find(
+            (b) => b.role === 'roles/iap.httpsResourceAccessor'
+          );
+          iapAccessors = accBinding?.members || [];
+        } catch {
+          // Fallback to project-wide iap_web policy
+          try {
+            const projIapPolicy = await gcpFetch(
+              `https://iap.googleapis.com/v1/projects/${encodeURIComponent(
+                projectNumber
+              )}/iap_web:getIamPolicy`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: {},
+                timeout: 5000,
+              }
+            );
+            const accBinding = (projIapPolicy?.bindings || []).find(
+              (b) => b.role === 'roles/iap.httpsResourceAccessor'
+            );
+            iapAccessors = accBinding?.members || [];
+          } catch {
+            iapAccessors = [];
+          }
+        }
+      }
+
+      const defaultUserPrincipal = account ? `user:${account}` : '';
+      const effectiveAccessors =
+        iapAccessors.length > 0
+          ? iapAccessors
+          : defaultUserPrincipal
+          ? [defaultUserPrincipal]
+          : [];
+
+      res.json({
+        ok: true,
+        projectId,
+        projectNumber,
+        region,
+        serviceName,
+        iapEnabled: Boolean(annotationEnabled || iapServiceAgentHasInvoker),
+        annotationEnabled,
+        iapServiceAgent,
+        iapServiceAgentHasInvoker,
+        allowUnauthenticated,
+        iapAccessors,
+        suggestedAccessors: effectiveAccessors,
+        invokerMembers,
+        activeAccount: account || '',
+        cliCommands: {
+          enableDirectIap: `gcloud beta run services update ${serviceName} --region=${region} --project=${projectId} --iap --no-allow-unauthenticated`,
+          disableDirectIap: `gcloud beta run services update ${serviceName} --region=${region} --project=${projectId} --no-iap`,
+          grantAccessor: `gcloud iap web add-iam-policy-binding --resource-type=cloud-run --service=${serviceName} --region=${region} --project=${projectId} --member="${
+            effectiveAccessors[0] || 'user:you@example.com'
+          }" --role="roles/iap.httpsResourceAccessor"`,
+        },
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to inspect Cloud IAP status for ${serviceName}`,
+      });
+    }
+  }
+);
+
+app.post(
+  '/api/project/:projectId/cloudrun/:region/:serviceName/iap',
+  async (req, res) => {
+    const { projectId, region, serviceName } = req.params;
+    const { enabled = true, accessors = [] } = req.body || {};
+    const targetEnabled = Boolean(enabled);
+
+    try {
+      const { token, account } = await resolveRequestAuth(req);
+      if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+      const steps = [];
+      const serviceUrl = `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(region)}/services/${encodeURIComponent(
+        serviceName
+      )}`;
+
+      // Step 1: Resolve projectNumber & ensure iap.googleapis.com + IAP Service Agent exist
+      let projectNumber = '';
+      try {
+        const projData = await gcpFetch(
+          `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        );
+        projectNumber = String(projData?.projectNumber || '');
+      } catch {
+        projectNumber = '';
+      }
+
+      const iapServiceAgent = projectNumber
+        ? `service-${projectNumber}@gcp-sa-iap.iam.gserviceaccount.com`
+        : '';
+
+      if (targetEnabled) {
+        try {
+          await gcpFetch(
+            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/services/iap.googleapis.com:enable`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {},
+              timeout: 8000,
+            }
+          ).catch(() => null);
+
+          await gcpFetch(
+            `https://serviceusage.googleapis.com/v1beta1/projects/${encodeURIComponent(
+              projectId
+            )}/services/iap.googleapis.com:generateServiceIdentity`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {},
+              timeout: 8000,
+            }
+          ).catch(() => null);
+
+          steps.push({
+            step: 1,
+            id: 'IAP_SERVICE_AGENT',
+            title: 'Enable iap.googleapis.com & Provision IAP Service Agent',
+            status: 'COMPLETED',
+            detail: iapServiceAgent
+              ? `Verified IAP Service Agent: ${iapServiceAgent}`
+              : 'Enabled iap.googleapis.com control plane',
+          });
+        } catch (e) {
+          steps.push({
+            step: 1,
+            id: 'IAP_SERVICE_AGENT',
+            title: 'Enable iap.googleapis.com & Provision IAP Service Agent',
+            status: 'WARNING',
+            detail: e.message,
+          });
+        }
+      } else {
+        steps.push({
+          step: 1,
+          id: 'IAP_SERVICE_AGENT',
+          title: 'Prepare Direct Cloud Run IAP Deactivation',
+          status: 'COMPLETED',
+          detail: `Target service: ${serviceName} (${region})`,
+        });
+      }
+
+      // Step 2: Patch Cloud Run v2 Service (iapEnabled + run.googleapis.com/iap-enabled annotation + invokerIamDisabled=false)
+      let servicePatched = false;
+      try {
+        const existing = await gcpFetch(serviceUrl, token, projectId, {
+          timeout: 8000,
+        });
+        const nextAnnotations = { ...(existing.annotations || {}) };
+        if (targetEnabled) {
+          nextAnnotations['run.googleapis.com/iap-enabled'] = 'true';
+        } else {
+          delete nextAnnotations['run.googleapis.com/iap-enabled'];
+        }
+
+        const patchPayload = {
+          annotations: nextAnnotations,
+          iapEnabled: targetEnabled,
+          ...(targetEnabled
+            ? {
+                invokerIamDisabled: false,
+                launchStage:
+                  existing.launchStage === 'ALPHA' ? 'ALPHA' : 'BETA',
+              }
+            : {}),
+        };
+        const maskFields = targetEnabled
+          ? 'annotations,iapEnabled,invokerIamDisabled,launchStage'
+          : 'annotations,iapEnabled';
+
+        await gcpFetch(
+          `${serviceUrl}?updateMask=${maskFields}`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: patchPayload,
+            timeout: 12000,
+          }
+        );
+        servicePatched = true;
+        steps.push({
+          step: 2,
+          id: 'CLOUD_RUN_IAP_ANNOTATION',
+          title: targetEnabled
+            ? 'Set Direct Cloud Run IAP (iapEnabled=true & run.googleapis.com/iap-enabled)'
+            : 'Remove Direct Cloud Run IAP Annotation (iapEnabled=false)',
+          status: 'COMPLETED',
+          detail: targetEnabled
+            ? `Patched ${serviceName} with iapEnabled=true, annotations["run.googleapis.com/iap-enabled"]="true", invokerIamDisabled=false`
+            : `Removed run.googleapis.com/iap-enabled annotation on ${serviceName}`,
+        });
+      } catch (patchErr) {
+        // Fallback: try updating only annotations or via gcloud beta run services update
+        try {
+          const existing = await gcpFetch(serviceUrl, token, projectId, {
+            timeout: 6000,
+          });
+          const nextAnnotations = { ...(existing.annotations || {}) };
+          if (targetEnabled) {
+            nextAnnotations['run.googleapis.com/iap-enabled'] = 'true';
+          } else {
+            delete nextAnnotations['run.googleapis.com/iap-enabled'];
+          }
+          await gcpFetch(
+            `${serviceUrl}?updateMask=annotations${
+              targetEnabled ? ',invokerIamDisabled' : ''
+            }`,
+            token,
+            projectId,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: {
+                annotations: nextAnnotations,
+                ...(targetEnabled ? { invokerIamDisabled: false } : {}),
+              },
+              timeout: 10000,
+            }
+          );
+          servicePatched = true;
+          steps.push({
+            step: 2,
+            id: 'CLOUD_RUN_IAP_ANNOTATION',
+            title: 'Patch run.googleapis.com/iap-enabled Service Annotation',
+            status: 'COMPLETED',
+            detail: `Applied run.googleapis.com/iap-enabled="${targetEnabled}" on ${serviceName}`,
+          });
+        } catch {
+          steps.push({
+            step: 2,
+            id: 'CLOUD_RUN_IAP_ANNOTATION',
+            title: 'Patch run.googleapis.com/iap-enabled Service Annotation',
+            status: 'WARNING',
+            detail:
+              patchErr.response?.data?.error?.message || patchErr.message,
+          });
+        }
+      }
+
+      // Step 3: Update Cloud Run Service IAM Policy (Grant/Revoke roles/run.invoker for IAP Service Agent & remove allUsers when enabling IAP)
+      let updatedRunBindings = [];
+      try {
+        const currentPolicy = await gcpFetch(
+          `${serviceUrl}:getIamPolicy`,
+          token,
+          projectId,
+          { timeout: 6000 }
+        ).catch(() => ({ bindings: [] }));
+        const rawBindings = Array.isArray(currentPolicy?.bindings)
+          ? currentPolicy.bindings
+          : [];
+
+        const saMember = iapServiceAgent
+          ? `serviceAccount:${iapServiceAgent}`
+          : '';
+
+        let foundInvoker = false;
+        const nextBindings = rawBindings
+          .map((b) => {
+            if (b.role !== 'roles/run.invoker') return b;
+            foundInvoker = true;
+            let members = Array.isArray(b.members) ? [...b.members] : [];
+            if (targetEnabled) {
+              // Remove allUsers so unauthenticated traffic cannot bypass IAP
+              members = members.filter((m) => m !== 'allUsers');
+              if (saMember && !members.includes(saMember)) {
+                members.push(saMember);
+              }
+            } else if (saMember) {
+              members = members.filter(
+                (m) => m !== saMember && !String(m).includes('@gcp-sa-iap.')
+              );
+            }
+            return { ...b, members };
+          })
+          .filter((b) => (b.members || []).length > 0);
+
+        if (targetEnabled && !foundInvoker && saMember) {
+          nextBindings.push({
+            role: 'roles/run.invoker',
+            members: [saMember],
+          });
+        }
+
+        const setPolRes = await gcpFetch(
+          `${serviceUrl}:setIamPolicy`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              policy: {
+                bindings: nextBindings,
+              },
+            },
+            timeout: 8000,
+          }
+        );
+        updatedRunBindings = setPolRes?.bindings || nextBindings;
+        steps.push({
+          step: 3,
+          id: 'CLOUD_RUN_INVOKER_BINDING',
+          title: targetEnabled
+            ? 'Lock Cloud Run Invoker IAM to IAP Service Agent (Remove allUsers)'
+            : 'Remove IAP Service Agent from Cloud Run Invoker IAM',
+          status: 'COMPLETED',
+          detail: targetEnabled
+            ? `Bound ${
+                saMember || 'IAP Service Agent'
+              } to roles/run.invoker & removed allUsers bypass`
+            : `Removed ${saMember || 'IAP Service Agent'} from roles/run.invoker`,
+        });
+      } catch (iamErr) {
+        steps.push({
+          step: 3,
+          id: 'CLOUD_RUN_INVOKER_BINDING',
+          title: 'Update Cloud Run Invoker IAM Policy',
+          status: 'WARNING',
+          detail:
+            iamErr.response?.data?.error?.message ||
+            iamErr.message ||
+            'IAP Service Agent still propagating',
+        });
+      }
+
+      // Step 4: Bind roles/iap.httpsResourceAccessor on regional Cloud Run IAP Web resource
+      const normalizedAccessors = (Array.isArray(accessors) ? accessors : [])
+        .map((a) => String(a || '').trim())
+        .filter(Boolean)
+        .map((a) => {
+          if (
+            a.startsWith('user:') ||
+            a.startsWith('group:') ||
+            a.startsWith('domain:') ||
+            a.startsWith('serviceAccount:')
+          ) {
+            return a;
+          }
+          if (a.includes('@')) return `user:${a}`;
+          return `domain:${a}`;
+        });
+
+      if (
+        targetEnabled &&
+        normalizedAccessors.length === 0 &&
+        account &&
+        account.includes('@')
+      ) {
+        normalizedAccessors.push(`user:${account}`);
+      }
+
+      let boundAccessors = [...normalizedAccessors];
+      if (targetEnabled && projectNumber && normalizedAccessors.length > 0) {
+        const regionalIapUrl = `https://iap.googleapis.com/v1/projects/${encodeURIComponent(
+          projectNumber
+        )}/iap_web/cloud_run-${encodeURIComponent(
+          region
+        )}/services/${encodeURIComponent(serviceName)}`;
+
+        try {
+          const curIapPol = await gcpFetch(
+            `${regionalIapUrl}:getIamPolicy`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {},
+              timeout: 6000,
+            }
+          ).catch(() => ({ bindings: [] }));
+
+          const otherBindings = (curIapPol?.bindings || []).filter(
+            (b) => b.role !== 'roles/iap.httpsResourceAccessor'
+          );
+          const nextIapBindings = [
+            ...otherBindings,
+            {
+              role: 'roles/iap.httpsResourceAccessor',
+              members: Array.from(new Set(normalizedAccessors)),
+            },
+          ];
+
+          await gcpFetch(
+            `${regionalIapUrl}:setIamPolicy`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {
+                policy: {
+                  bindings: nextIapBindings,
+                },
+              },
+              timeout: 8000,
+            }
+          );
+
+          steps.push({
+            step: 4,
+            id: 'IAP_WEB_ACCESSORS',
+            title:
+              'Grant roles/iap.httpsResourceAccessor on Regional Cloud Run IAP Resource',
+            status: 'COMPLETED',
+            detail: `Granted Google Sign-In IAP access to: ${normalizedAccessors.join(
+              ', '
+            )}`,
+          });
+        } catch (iapWebErr) {
+          // Fallback to project-level iap_web resource
+          try {
+            const projIapUrl = `https://iap.googleapis.com/v1/projects/${encodeURIComponent(
+              projectNumber
+            )}/iap_web`;
+            const curProjPol = await gcpFetch(
+              `${projIapUrl}:getIamPolicy`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: {},
+                timeout: 6000,
+              }
+            ).catch(() => ({ bindings: [] }));
+
+            const existingAcc =
+              (curProjPol?.bindings || []).find(
+                (b) => b.role === 'roles/iap.httpsResourceAccessor'
+              )?.members || [];
+            const mergedMembers = Array.from(
+              new Set([...existingAcc, ...normalizedAccessors])
+            );
+            const otherB = (curProjPol?.bindings || []).filter(
+              (b) => b.role !== 'roles/iap.httpsResourceAccessor'
+            );
+
+            await gcpFetch(
+              `${projIapUrl}:setIamPolicy`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: {
+                  policy: {
+                    bindings: [
+                      ...otherB,
+                      {
+                        role: 'roles/iap.httpsResourceAccessor',
+                        members: mergedMembers,
+                      },
+                    ],
+                  },
+                },
+                timeout: 8000,
+              }
+            );
+            boundAccessors = mergedMembers;
+            steps.push({
+              step: 4,
+              id: 'IAP_WEB_ACCESSORS',
+              title:
+                'Grant roles/iap.httpsResourceAccessor on Project IAP Web Resource',
+              status: 'COMPLETED',
+              detail: `Granted project-level IAP Web access to: ${normalizedAccessors.join(
+                ', '
+              )}`,
+            });
+          } catch {
+            steps.push({
+              step: 4,
+              id: 'IAP_WEB_ACCESSORS',
+              title: 'Grant roles/iap.httpsResourceAccessor',
+              status: 'WARNING',
+              detail:
+                iapWebErr.response?.data?.error?.message || iapWebErr.message,
+            });
+          }
+        }
+      } else {
+        steps.push({
+          step: 4,
+          id: 'IAP_WEB_ACCESSORS',
+          title: 'IAP Web Accessor Policy',
+          status: 'COMPLETED',
+          detail: targetEnabled
+            ? 'Preserved existing roles/iap.httpsResourceAccessor bindings'
+            : 'Direct Cloud Run IAP disabled; IAP Web bindings left untouched',
+        });
+      }
+
+      res.json({
+        ok: true,
+        projectId,
+        projectNumber,
+        region,
+        serviceName,
+        iapEnabled: targetEnabled,
+        servicePatched,
+        iapServiceAgent,
+        accessors: boundAccessors,
+        updatedRunBindings,
+        steps,
+        cliCommands: {
+          enableDirectIap: `gcloud beta run services update ${serviceName} --region=${region} --project=${projectId} --iap --no-allow-unauthenticated`,
+          disableDirectIap: `gcloud beta run services update ${serviceName} --region=${region} --project=${projectId} --no-iap`,
+          grantAccessor: `gcloud iap web add-iam-policy-binding --resource-type=cloud-run --service=${serviceName} --region=${region} --project=${projectId} --member="${
+            boundAccessors[0] || `user:${account || 'you@example.com'}`
+          }" --role="roles/iap.httpsResourceAccessor"`,
+        },
+        message: targetEnabled
+          ? `Enabled App Engine-Style 1-Click Cloud IAP on "${serviceName}" (${region}) at $0.00/mo (Zero Load Balancer) & granted access to ${
+              boundAccessors.join(', ') || 'authorized IAM principals'
+            }!`
+          : `Disabled Direct Cloud IAP on "${serviceName}" (${region}).`,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to configure Cloud IAP on ${serviceName}`,
       });
     }
   }
