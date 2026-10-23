@@ -127,6 +127,7 @@ export default function CloudRunFleetManager({
   });
   const [appEngineActionBusy, setAppEngineActionBusy] = useState(null);
   const [appEngineMigrateIapMap, setAppEngineMigrateIapMap] = useState({});
+  const [showRawTombstoneMetadata, setShowRawTombstoneMetadata] = useState(false);
 
   // Google Cloud SDK 590.0.0 GA `gcloud run compose up` Multi-Container & Sidecar Studio state
   const [showComposeStudio, setShowComposeStudio] = useState(false);
@@ -1745,19 +1746,31 @@ spec:
           <button
             type="button"
             onClick={handleToggleAppEngineExterminator}
-            title="Delete non-default App Engine services directly (missing from GCP Console UI), neutralize the non-deletable default service to $0.00/mo, or migrate App Engine services to Cloud Run in 1 click"
+            title="Delete non-default App Engine services directly (missing from GCP Console UI), Tombstone the non-deletable default service to Unavailable ($0.00/mo), or migrate App Engine services to Cloud Run in 1 click"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
               showAppEngineExterminator
                 ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                : appEngineState.data?.summary?.activeServicesCount === 0
+                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/35'
                 : 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/35'
             }`}
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>App Engine Exterminator & $0/mo Neutralizer</span>
             {appEngineState.data?.summary && (
-              <span className="px-1.5 py-0.2 rounded-full bg-zinc-50 dark:bg-zinc-900/80 text-red-700 dark:text-red-300 text-[10px] font-mono">
-                {appEngineState.data.summary.totalServicesCount} Svc ·{' '}
-                {appEngineState.data.summary.totalVersionsCount} Ver
+              <span
+                className={`px-1.5 py-0.2 rounded-full bg-zinc-50 dark:bg-zinc-900/80 text-[10px] font-mono ${
+                  appEngineState.data.summary.activeServicesCount === 0
+                    ? 'text-emerald-600 dark:text-emerald-300'
+                    : 'text-red-700 dark:text-red-300'
+                }`}
+              >
+                {appEngineState.data.summary.activeServicesCount === 0
+                  ? '0 Active Svc (default Unavailable · $0/mo)'
+                  : `${
+                      appEngineState.data.summary.activeServicesCount ??
+                      appEngineState.data.summary.totalServicesCount
+                    } Active Svc · ${appEngineState.data.summary.totalVersionsCount} Ver`}
               </span>
             )}
           </button>
@@ -2358,25 +2371,43 @@ services:
 
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
-                  2. Services (Direct REST Deletable vs Default)
+                  2. Active Services vs Tombstoned Default Shell
                 </div>
-                <div className="text-base font-extrabold text-red-400 mt-0.5">
-                  {aeSummary.totalServicesCount} Total · {aeSummary.deletableServicesCount} Direct-Deletable
+                <div
+                  className={`text-base font-extrabold mt-0.5 ${
+                    (aeSummary.activeServicesCount ?? aeSummary.totalServicesCount) === 0
+                      ? 'text-emerald-400'
+                      : 'text-red-400'
+                  }`}
+                >
+                  {aeSummary.activeServicesCount ?? aeSummary.totalServicesCount} Active ·{' '}
+                  {aeSummary.unavailableServicesCount || 0} Unavailable
                 </div>
                 <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                  Non-default services delete via REST v1 · Default neutralizes to $0/mo
+                  {(aeSummary.activeServicesCount ?? aeSummary.totalServicesCount) === 0
+                    ? '0 Active App Engine services (default buried & unavailable)'
+                    : 'Non-default services delete via REST v1 · Default tombstones to $0/mo'}
                 </div>
               </div>
 
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
-                  3. Deployed Versions & 0%-Traffic Zombies
+                  3. Edge Firewall & Serving Versions
                 </div>
-                <div className="text-base font-extrabold text-amber-400 mt-0.5">
-                  {aeSummary.totalVersionsCount} Version(s) · {aeSummary.zombieVersionsCount} Zombie(s)
+                <div
+                  className={`text-base font-extrabold mt-0.5 ${
+                    aeSummary.edgeFirewallDenyAll && !isAppServing
+                      ? 'text-emerald-400'
+                      : 'text-amber-400'
+                  }`}
+                >
+                  {isAppServing ? `${aeSummary.totalVersionsCount} Serving` : '0 Active Ver'} ·{' '}
+                  Firewall: {aeSummary.edgeFirewallDefaultAction || 'ALLOW'} *
                 </div>
                 <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                  0%-traffic versions can be deleted directly even inside default
+                  {aeSummary.edgeFirewallDenyAll
+                    ? 'Edge Firewall default rule (*) is DENY (100% ingress blocked)'
+                    : '0%-traffic versions delete directly · Lock Edge Firewall to DENY *'}
                 </div>
               </div>
 
@@ -2415,8 +2446,7 @@ services:
                   const isAlreadyMinimalFloor =
                     isDefault &&
                     svc.versionsCount <= 1 &&
-                    !isAppServing &&
-                    aeBuckets.length === 0;
+                    !isAppServing;
                   return (
                     <div
                       key={svc.id}
@@ -2429,29 +2459,108 @@ services:
                       }`}
                     >
                       {isAlreadyMinimalFloor && (
-                        <div className="p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-xs text-emerald-900 dark:text-emerald-200 flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <div className="font-extrabold">
-                              Already at Google Cloud&apos;s Absolute Minimum Floor ($0.00/mo Guaranteed)
+                        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-xs text-emerald-900 dark:text-emerald-200 space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-500/50 font-mono font-extrabold text-[11px]">
+                                0 ACTIVE APP ENGINE SERVICES
+                              </span>
+                              <span className="font-mono text-xs line-through opacity-60">
+                                service/default ({svc.primaryVersionId || 'last-version'})
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-zinc-900/80 text-emerald-300 font-mono font-bold text-[10px]">
+                                UNAVAILABLE · TOMBSTONED ($0.00/MO)
+                              </span>
                             </div>
-                            <div className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">
-                              <code>service/default</code> has only 1 stopped version holding the mandatory 100% traffic slot, 0 extra versions, 0 <code>*.appspot.com</code> buckets, and the App Engine application is <code>USER_DISABLED</code>. Google Cloud&apos;s API makes it impossible to delete <code>default</code> or reduce it to 0 versions without deleting the entire GCP project, but this dead shell is 100% disabled and costs <strong>$0.00/mo forever</strong>.
+                            <div className="flex items-center gap-2">
+                              {!aeSummary.edgeFirewallDenyAll && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleExecuteAppEngineAction(`TOMBSTONE:${svc.id}`, {
+                                      action: 'TOMBSTONE_DEFAULT_SERVICE',
+                                      disableEntireApp: true,
+                                    })
+                                  }
+                                  disabled={Boolean(appEngineActionBusy)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                                >
+                                  <Lock className="w-3 h-3" />
+                                  <span>
+                                    {appEngineActionBusy === `TOMBSTONE:${svc.id}`
+                                      ? 'Locking Edge Firewall (*) -> DENY...'
+                                      : 'Lock Edge Firewall (*) -> DENY ALL'}
+                                  </span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setShowRawTombstoneMetadata((v) => !v)}
+                                className="px-2.5 py-1 rounded-lg bg-zinc-900/20 dark:bg-zinc-900/70 hover:bg-zinc-900/30 border border-emerald-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                              >
+                                {showRawTombstoneMetadata
+                                  ? 'Hide Raw GCP API Tombstone Shell'
+                                  : 'Inspect Raw GCP API Metadata Shell (Hidden)'}
+                              </button>
                             </div>
                           </div>
-                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/25 border border-emerald-500/40 font-mono font-extrabold text-[10px] shrink-0">
-                            DEAD SHELL · $0.00/MO
-                          </span>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-[11px]">
+                            <div className="p-2 rounded bg-white/60 dark:bg-zinc-950/70 border border-emerald-500/30 flex items-center justify-between">
+                              <span className="text-zinc-500">1. App Serving:</span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-300">
+                                USER_DISABLED (HTTP 404)
+                              </span>
+                            </div>
+                            <div className="p-2 rounded bg-white/60 dark:bg-zinc-950/70 border border-emerald-500/30 flex items-center justify-between">
+                              <span className="text-zinc-500">2. Edge Firewall (*):</span>
+                              <span
+                                className={`font-bold ${
+                                  aeSummary.edgeFirewallDenyAll
+                                    ? 'text-emerald-600 dark:text-emerald-300'
+                                    : 'text-amber-600 dark:text-amber-300'
+                                }`}
+                              >
+                                {aeSummary.edgeFirewallDenyAll
+                                  ? 'DENY ALL (0.0.0.0/0 Blocked)'
+                                  : 'ALLOW (Click Lock Above -> DENY)'}
+                              </span>
+                            </div>
+                            <div className="p-2 rounded bg-white/60 dark:bg-zinc-950/70 border border-emerald-500/30 flex items-center justify-between">
+                              <span className="text-zinc-500">3. Compute & Storage:</span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-300">
+                                0 Instances · {aeBuckets.length} Buckets ($0/mo)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-[11px] text-emerald-800 dark:text-emerald-300">
+                            Because Google Cloud&apos;s API permanently forbids deleting <code>service/default</code> or reducing it to 0 versions, CloudPulse has <strong>Tombstoned &amp; Buried</strong> it as <strong>Unavailable (`0 Active Services`)</strong>. Its raw GCP API metadata shell is hidden from your active workspace unless you click <em>Inspect Raw GCP API Metadata Shell</em> above.
+                          </div>
                         </div>
                       )}
+
+                      {(!isAlreadyMinimalFloor || showRawTombstoneMetadata) && (
+                        <>
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-sm font-extrabold text-zinc-900 dark:text-white">
+                            <span
+                              className={`font-mono text-sm font-extrabold ${
+                                isAlreadyMinimalFloor
+                                  ? 'line-through text-zinc-400 dark:text-zinc-500'
+                                  : 'text-zinc-900 dark:text-white'
+                              }`}
+                            >
                               service/{svc.id}
                             </span>
-                            {isDefault ? (
+                            {isAlreadyMinimalFloor ? (
+                              <span className="px-2 py-0.5 rounded bg-zinc-800 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold">
+                                TOMBSTONED · UNAVAILABLE IN GCP ($0.00/MO)
+                              </span>
+                            ) : isDefault ? (
                               <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold">
-                                DEFAULT SERVICE (API-LOCKED FROM DIRECT DELETE · USE $0/MO NEUTRALIZER)
+                                DEFAULT SERVICE (API-LOCKED FROM DIRECT DELETE · USE $0/MO TOMBSTONE)
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-700 dark:text-red-300 text-[10px] font-mono font-bold">
@@ -2760,6 +2869,8 @@ services:
                             </tbody>
                           </table>
                         </div>
+                      )}
+                        </>
                       )}
                     </div>
                   );

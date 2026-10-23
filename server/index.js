@@ -1039,10 +1039,12 @@ async function resolveRequestAuth(req) {
 }
 
 async function gcpFetch(url, token, projectId, options = {}) {
+  const rawBody =
+    options.body !== undefined ? options.body : options.data;
   const parsedData =
-    typeof options.body === 'string'
-      ? JSON.parse(options.body)
-      : options.body;
+    typeof rawBody === 'string'
+      ? JSON.parse(rawBody)
+      : rawBody;
   const reqTimeout = options.timeout || 4500;
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -6023,26 +6025,45 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
 
     const encProj = encodeURIComponent(projectId);
-    const [appRes, servicesRes, bucketsRes] = await Promise.allSettled([
-      gcpFetch(
-        `https://appengine.googleapis.com/v1/apps/${encProj}`,
-        token,
-        projectId,
-        { timeout: 6500 }
-      ),
-      gcpFetch(
-        `https://appengine.googleapis.com/v1/apps/${encProj}/services`,
-        token,
-        projectId,
-        { timeout: 6500 }
-      ),
-      gcpFetch(
-        `https://storage.googleapis.com/storage/v1/b?project=${encProj}`,
-        token,
-        projectId,
-        { timeout: 5500 }
-      ),
-    ]);
+    const [appRes, servicesRes, bucketsRes, firewallRes] =
+      await Promise.allSettled([
+        gcpFetch(
+          `https://appengine.googleapis.com/v1/apps/${encProj}`,
+          token,
+          projectId,
+          { timeout: 6500 }
+        ),
+        gcpFetch(
+          `https://appengine.googleapis.com/v1/apps/${encProj}/services`,
+          token,
+          projectId,
+          { timeout: 6500 }
+        ),
+        gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encProj}`,
+          token,
+          projectId,
+          { timeout: 5500 }
+        ),
+        gcpFetch(
+          `https://appengine.googleapis.com/v1/apps/${encProj}/firewall/ingressRules`,
+          token,
+          projectId,
+          { timeout: 5500 }
+        ),
+      ]);
+
+    const firewallRules =
+      firewallRes.status === 'fulfilled' &&
+      Array.isArray(firewallRes.value?.ingressRules)
+        ? firewallRes.value.ingressRules
+        : [];
+    const defaultFirewallRule =
+      firewallRules.find(
+        (r) => r.sourceRange === '*' || Number(r.priority) === 2147483647
+      ) || null;
+    const edgeFirewallDefaultAction = defaultFirewallRule?.action || 'ALLOW';
+    const edgeFirewallDenyAll = edgeFirewallDefaultAction === 'DENY';
 
     let appInitialized = false;
     let appInfo = null;
@@ -6317,26 +6338,44 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
           mappedVersions.find((v) => v.receivesTraffic) ||
           mappedVersions[0] ||
           null;
+        const servingVerCount = mappedVersions.filter(
+          (v) => v.servingStatus === 'SERVING'
+        ).length;
+        const isDefaultDeadShell =
+          svcId === 'default' &&
+          appInfo?.servingStatus === 'USER_DISABLED' &&
+          servingVerCount === 0 &&
+          mappedVersions.length <= 1;
+        const isTombstonedUnavailable =
+          isDefaultDeadShell && edgeFirewallDenyAll;
+        const availabilityStatus = isTombstonedUnavailable
+          ? 'TOMBSTONED_UNAVAILABLE'
+          : isDefaultDeadShell
+          ? 'DISABLED_DEAD_SHELL'
+          : 'ACTIVE';
 
         return {
           id: svcId,
           name: svc.name,
           isDefaultService: svcId === 'default',
           canDeleteServiceDirectly: svcId !== 'default',
+          availabilityStatus,
+          isUnavailable: isDefaultDeadShell,
+          isTombstonedUnavailable,
+          edgeFirewallDenyAll,
+          edgeFirewallDefaultAction,
           deleteExplanation:
             svcId === 'default'
-              ? 'Google Cloud permanently blocks deleting the `default` service AND blocks leaving `default` with 0 versions (`Cannot delete the version receiving all traffic on the default service`). Use "Neutralize default to $0.00/mo" to delete all extra versions, stop the last required version, and lock App Engine to USER_DISABLED.'
+              ? 'Google Cloud permanently blocks deleting the `default` service AND blocks leaving `default` with 0 versions (`Cannot delete the version receiving all traffic on the default service`). Use "Tombstone & Lock default Unavailable ($0.00/mo)" to delete extra versions, stop the last version, lock App Engine to USER_DISABLED, and set the Edge Firewall default rule (*) to DENY so `default` becomes 100% unavailable and hidden from active services.'
               : 'Even if a version inside this non-default service has 100% traffic, you can delete this entire service and all its versions in 1 click via DELETE /v1/apps/:id/services/:serviceId (missing from the GCP Console UI).',
           whyCannotDeleteInConsole:
             svcId === 'default'
-              ? 'Google Cloud API permanently forbids deleting the `default` App Engine service (`INVALID_ARGUMENT: Cannot delete the default service`) and requires 1 version to remain. When stopped + USER_DISABLED with 0 buckets, it is a $0.00/mo dead metadata shell.'
+              ? 'Google Cloud API permanently forbids deleting the `default` App Engine service (`INVALID_ARGUMENT: Cannot delete the default service`) and requires 1 version to remain. When Tombstoned (STOPPED + USER_DISABLED + Edge Firewall DENY * + 0 buckets), it is 100% unavailable and buried as a $0.00/mo dead metadata shell.'
               : 'Google Cloud Console hides the Delete Service button in the web UI. Use 1-Click Delete Service below to call DELETE /v1/apps/:id/services/:serviceId directly.',
           trafficSplit: allocations,
           versionCount: mappedVersions.length,
           versionsCount: mappedVersions.length,
-          servingVersionCount: mappedVersions.filter(
-            (v) => v.servingStatus === 'SERVING'
-          ).length,
+          servingVersionCount: servingVerCount,
           zombieVersionCount: zombieCount,
           zombieVersionsCount: zombieCount,
           estMonthlyUsd: Number(totalServiceMonthlyUsd.toFixed(2)),
@@ -6348,7 +6387,7 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
           cliCommands: {
             deleteService:
               svcId === 'default'
-                ? `# 'default' service cannot be deleted in GCP; delete all 0%-traffic versions and disable App Engine:\ngcloud app versions list --service=default --project=${projectId}`
+                ? `# 'default' service cannot be deleted in GCP; Tombstone it via USER_DISABLED + Edge Firewall DENY *:\ngcloud app firewall-rules update default --action=DENY --project=${projectId}`
                 : `gcloud app services delete ${svcId} --project=${projectId} --quiet`,
             listVersions: `gcloud app versions list --service=${svcId} --project=${projectId}`,
           },
@@ -6369,16 +6408,36 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
         .reduce((sum, s) => sum + s.estimatedMonthlyUsd, 0)
         .toFixed(2)
     );
+    const activeServicesCount = servicesWithVersions.filter(
+      (s) => !s.isUnavailable
+    ).length;
+    const unavailableServicesCount = servicesWithVersions.filter(
+      (s) => s.isUnavailable
+    ).length;
 
     return res.json({
       projectId,
       scannedAt: new Date().toISOString(),
       appInitialized,
-      app: appInfo,
-      appInfo,
+      app: appInfo
+        ? {
+            ...appInfo,
+            edgeFirewallDefaultAction,
+            edgeFirewallDenyAll,
+          }
+        : null,
+      appInfo: appInfo
+        ? {
+            ...appInfo,
+            edgeFirewallDefaultAction,
+            edgeFirewallDenyAll,
+          }
+        : null,
       apiError,
       summary: {
         totalServicesCount: servicesWithVersions.length,
+        activeServicesCount,
+        unavailableServicesCount,
         deletableServicesCount: servicesWithVersions.filter(
           (s) => s.canDeleteServiceDirectly
         ).length,
@@ -6386,12 +6445,14 @@ app.get('/api/project/:projectId/appengine/overview', async (req, res) => {
         zombieVersionsCount,
         totalEstimatedMonthlyUsd,
         appServingStatus: appInfo?.servingStatus || 'NOT_INITIALIZED',
+        edgeFirewallDefaultAction,
+        edgeFirewallDenyAll,
       },
       services: servicesWithVersions,
       appspotBuckets: appEngineBuckets,
       appEngineBuckets,
       consoleLimitationNote:
-        'Google Cloud Console removes the Delete action on App Engine services and permanently blocks deleting the `default` service or leaving `default` with 0 versions at the API level. CloudPulse exposes direct REST service deletion for non-default services, 1-Click Default Service Neutralization (`USER_DISABLED` + `$0.00/mo` floor), and `view=FULL` App Engine-to-Cloud Run migration.',
+        'Google Cloud Console removes the Delete action on App Engine services and permanently blocks deleting the `default` service or leaving `default` with 0 versions at the API level. CloudPulse exposes direct REST service deletion for non-default services, 1-Click Default Service Tombstoning (`USER_DISABLED` + Edge Firewall `DENY *` + `$0.00/mo` Unavailable Vault), and `view=FULL` App Engine-to-Cloud Run migration.',
     });
   } catch (err) {
     return res.status(400).json({
@@ -6431,7 +6492,7 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
       if (serviceId === 'default') {
         return res.status(400).json({
           error:
-            'Google Cloud Platform permanently forbids deleting the `default` service (`Cannot delete the default service`) once App Engine is initialized in a project. Use "Neutralize default to $0.00/mo" to delete all extra versions, stop the last required version, and lock the app to USER_DISABLED ($0.00/mo).',
+            'Google Cloud Platform permanently forbids deleting the `default` service (`Cannot delete the default service`) once App Engine is initialized in a project. Use "Tombstone & Lock default Unavailable ($0.00/mo)" to delete all extra versions, stop the last required version, lock the app to USER_DISABLED, and set the Edge Firewall to DENY *.',
         });
       }
       const op = await gcpFetch(
@@ -6493,7 +6554,7 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
           /traffic|all traffic|default|cannot delete/i.test(errMsg)
         ) {
           return res.status(400).json({
-            error: `Google Cloud API Lock: "${versionId}" holds 100% traffic on the "default" service. Google Cloud permanently forbids leaving "default" with 0 versions ("Cannot delete the version receiving all traffic on the default service") — even if you deploy a new dummy version and shift traffic to it, that new version then holds 100% traffic and cannot be deleted. When "${versionId}" is STOPPED and the app is USER_DISABLED with 0 buckets, it is a $0.00/mo dead metadata shell.`,
+            error: `Google Cloud API Lock: "${versionId}" holds 100% traffic on the "default" service. Google Cloud permanently forbids leaving "default" with 0 versions ("Cannot delete the version receiving all traffic on the default service") — even if you deploy a new dummy version and shift traffic to it, that new version then holds 100% traffic and cannot be deleted. When "${versionId}" is STOPPED and the app is USER_DISABLED + Edge Firewall DENY * with 0 buckets, it is Tombstoned as a $0.00/mo Unavailable Shell.`,
           });
         }
         throw directErr;
@@ -6555,6 +6616,21 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
           timeout: 15000,
         }
       );
+      // If re-enabling to SERVING, also restore Edge Firewall default rule (*) to ALLOW if requested
+      if (cleanAppStatus === 'SERVING') {
+        await gcpFetch(
+          `https://appengine.googleapis.com/v1/apps/${encProj}/firewall/ingressRules/2147483647?updateMask=action`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            data: {
+              action: 'ALLOW',
+            },
+            timeout: 10000,
+          }
+        ).catch(() => null);
+      }
       recordFlightEvent(projectId, {
         action: 'APPENGINE_APP_SERVING_STATUS',
         resourceType: 'APP_ENGINE_APPLICATION',
@@ -6570,15 +6646,16 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
         message:
           cleanAppStatus === 'USER_DISABLED'
             ? `Disabled App Engine application (${projectId}.appspot.com -> USER_DISABLED). All serving and instance billing is now halted ($0.00/mo)!`
-            : `Re-enabled App Engine application (${projectId}.appspot.com -> SERVING).`,
+            : `Re-enabled App Engine application (${projectId}.appspot.com -> SERVING) and restored Edge Firewall default rule to ALLOW.`,
       });
     }
 
-    // 5. NEUTRALIZE `default` SERVICE TO GOOGLE CLOUD'S ABSOLUTE MINIMUM FLOOR ($0.00/MO)
-    //    (Deletes all 0%-traffic versions, stops the 1 required version in `default`, and locks App Engine to USER_DISABLED)
+    // 5. TOMBSTONE & NEUTRALIZE `default` SERVICE TO UNAVAILABLE ($0.00/MO)
+    //    (Deletes all 0%-traffic versions, stops the 1 required version in `default`, locks App Engine to USER_DISABLED, AND sets Edge Firewall default rule (*) to DENY!)
     if (
       action === 'NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO' ||
-      action === 'HOLLOW_OUT_DEFAULT_SERVICE'
+      action === 'HOLLOW_OUT_DEFAULT_SERVICE' ||
+      action === 'TOMBSTONE_DEFAULT_SERVICE'
     ) {
       const svcRes = await gcpFetch(
         `https://appengine.googleapis.com/v1/apps/${encProj}/services/default`,
@@ -6656,12 +6733,32 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
         }
       }
 
+      // Lock App Engine Edge Firewall catch-all rule (priority 2147483647, sourceRange '*') to DENY
+      let edgeFirewallLockedDeny = false;
+      try {
+        await gcpFetch(
+          `https://appengine.googleapis.com/v1/apps/${encProj}/firewall/ingressRules/2147483647?updateMask=action`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            data: {
+              action: 'DENY',
+            },
+            timeout: 10000,
+          }
+        );
+        edgeFirewallLockedDeny = true;
+      } catch {
+        edgeFirewallLockedDeny = false;
+      }
+
       recordFlightEvent(projectId, {
-        action: 'APPENGINE_NEUTRALIZE_DEFAULT_TO_ZERO',
+        action: 'APPENGINE_TOMBSTONE_DEFAULT_SERVICE',
         resourceType: 'APP_ENGINE_SERVICE',
         resourceName: 'default',
         region: 'global',
-        details: `Neutralized default App Engine service to Google Cloud's minimum floor ($0.00/mo): deleted ${deletedVersions.length} extra version(s), stopped ${stoppedVersions.length} version(s), appDisabled=${appDisabled}`,
+        details: `Tombstoned default App Engine service to UNAVAILABLE ($0.00/mo): deleted ${deletedVersions.length} extra version(s), stopped ${stoppedVersions.length} version(s), appDisabled=${appDisabled}, edgeFirewallDenyAll=${edgeFirewallLockedDeny}`,
       });
 
       return res.json({
@@ -6670,7 +6767,8 @@ app.post('/api/project/:projectId/appengine/action', async (req, res) => {
         deletedVersions,
         stoppedVersions,
         appDisabled,
-        message: `Neutralized App Engine 'default' service to Google Cloud's absolute minimum floor ($0.00/mo): deleted ${deletedVersions.length} extra version(s), stopped ${stoppedVersions.length} version(s), and locked App Engine to USER_DISABLED!`,
+        edgeFirewallLockedDeny,
+        message: `Tombstoned App Engine 'default' service to UNAVAILABLE ($0.00/mo): deleted ${deletedVersions.length} extra version(s), locked App Engine to USER_DISABLED, and set Edge Firewall default rule (*) to DENY! 'default' is now buried as 0 Active Services.`,
       });
     }
 
