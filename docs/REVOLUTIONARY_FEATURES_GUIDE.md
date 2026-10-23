@@ -547,15 +547,15 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   - **Step 5 (`IAP_CUSTOM_OAUTH_CLIENT` — Optional for Standalone / Org-Less `@gmail.com` Projects)**: Binds a custom OAuth 2.0 Web Client ID & Secret via `PATCH https://iap.googleapis.com/v1/projects/:projectNumber/iap_web/cloud_run-:region/services/:name:iapSettings?updateMask=accessSettings.oauthSettings` and displays the exact Authorized Redirect URI (`https://iap.googleapis.com/v1/oauth/clientIds/<CLIENT_ID>:handleRedirect`).
 - **Billing Impact**: **`$0.00/mo` fixed cost** — saves `~$18.25+/mo` (`$219+/yr`) per service by eliminating the External Application Load Balancer while preserving Cloud Run scale-to-zero (`minInstances: 0`).
 
-### 53. App Engine Service & Version Exterminator, `default` Service `$0.00/mo` Neutralizer & `view=FULL` Cloud Run Migrator (`src/components/CloudRunFleetManager.jsx` & `server/index.js`)
+### 53. App Engine Service & Version Exterminator, `default` Service `$0.00/mo` Tombstone Vault (`0 Active Services` + Edge Firewall `DENY *` + Muted Gray UI) & `view=FULL` Cloud Run Migrator (`src/components/CloudRunFleetManager.jsx` & `server/index.js`)
 - **Where to find it**: Open the **`Cloud Run ★`** tab -> click **`App Engine Exterminator & $0/mo Neutralizer`** in the top header bar (or via `⌘K` -> *"Open App Engine Service Exterminator, default $0.00/mo Neutralizer & 1-Click Cloud Run Migrator"*).
 - **Why We Built This (Two Major Google Cloud Pain Points)**:
   1. **Missing Delete Button in the GCP Console UI (Non-`default` Services)**: In `App Engine -> Services`, the official Google Cloud Console UI omits the **Delete Service** button for non-`default` services, even though `DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/{serviceId}` supports deleting any non-`default` service directly (even when its version has 100% of that service's traffic).
   2. **The `default` Service & 1-Version Floor Invariant (Even When `USER_DISABLED`!)**: Once App Engine is initialized in a GCP project, Google Cloud permanently forbids deleting the `default` service (`INVALID_ARGUMENT: Cannot delete the default service`) **AND** permanently forbids leaving `default` with `0` versions (`Cannot delete the version receiving all traffic on the default service`)—even when the App Engine application is disabled (`USER_DISABLED`).
 - **How It Works (`GET /api/project/:id/appengine/overview` & `POST /api/project/:id/appengine/action`)**:
   - **`DELETE_SERVICE`**: Calls `DELETE https://appengine.googleapis.com/v1/apps/:id/services/:serviceId` directly from the UI to permanently delete any non-`default` App Engine service and all of its versions.
-  - **`NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO` & Dead-Shell Floor Detector**: Deletes all extra (`0%`-traffic) versions in `default`, stops the 1 required version in `default`, and locks the App Engine application to `USER_DISABLED` (`$0.00/mo` compute + `$0.00/mo` storage once `*.appspot.com` buckets are purged).
-  - **`TOGGLE_APP_SERVING_STATUS`**: 1-click kill-switch (`USER_DISABLED` vs `SERVING`) for the entire App Engine application.
+  - **`TOMBSTONE_DEFAULT_SERVICE` & `NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO` (`DISABLED · 0 Active Services` + Edge Firewall `DENY *` Lock)**: Deletes all extra (`0%`-traffic) versions in `default`, stops the 1 required version in `default`, locks the App Engine application to `USER_DISABLED` (`$0.00/mo`), AND patches the **App Engine Edge Firewall catch-all ingress rule (`PATCH https://appengine.googleapis.com/v1/apps/:id/firewall/ingressRules/2147483647?updateMask=action` -> `DENY`)** so 100% of external ingress (`*`) is blocked at Google's edge. In the UI, `service/default` is styled in muted gray (`DISABLED · 0 Active Svc ($0/mo)`), struck through, and collapsed into a hidden Tombstone Vault unless you click `Inspect Raw GCP API Metadata Shell`.
+  - **`TOGGLE_APP_SERVING_STATUS`**: 1-click kill-switch (`USER_DISABLED` vs `SERVING`) for the entire App Engine application (and restores Edge Firewall `*` to `ALLOW` when re-enabling).
   - **`MIGRATE_TO_CLOUD_RUN` (`?view=FULL` Spec Extractor & Cloud Build Buildpacks Containerizer)**: Inspects `GET /v1/apps/:id/services/:svc/versions?view=FULL` to extract `deployment.container.image` or reconstructs the real source files from `deployment.files` in `gs://staging.<PROJECT_ID>.appspot.com` via Google Cloud Buildpacks (`gcr.io/k8s-skaffold/pack`), migrating `envVariables`, `serviceAccount`, `vpcAccessConnector`, and mapped CPU/Memory limits into a scale-to-zero Cloud Run Gen2 service (`ae-<serviceId>`)—while refusing to deploy fake placeholder containers if the staging bucket was already deleted.
 
 ### 54. Google Cloud SDK `590.0.0` (`2026.10.16`) Wave 3 Frontier Scan & CLI Track Promotion Ledger (`src/components/GcloudAlphaBetaStudio.jsx` & `server/index.js`)
@@ -564,9 +564,21 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   - **5-Pillar Parallel Frontier Scan (`SCAN_WAVE3_GCLOUD_590_FRONTIER`)**: Probes (1) **AI Hypercomputer Cluster Director & Lustre** (`cluster-director clusters list`, `lustre instances list`), (2) **Google Cloud NetApp Volumes & Storage Pools QoS** (`netapp volumes list`, `netapp storage-pools list`), (3) **Database Center Fleet Health** (`database-center fleet-health`), (4) **Cloud Quotas Adjuster & Preferences** (`quotas preferences list`, `quotas info list`), and (5) **Sovereign Audit Manager** (`audit-manager audit-reports`, `enrollments`).
   - **Verified SDK `588.0.0 → 590.0.0` Flag & Track Promotion Ledger**:
     - `gcloud run services update --iap` promoted from `BETA` to **`GA`** in `gcloud 590.0.0`.
+    - `gcloud run compose up` promoted to **`GA`** in `gcloud 590.0.0`.
     - `gcloud beta quotas adjuster settings update` updated to require `--project=<PROJECT_ID>` instead of `--organization`.
     - `gcloud alpha audit-manager audit-reports generate` updated to require `--framework` + `--output-directory-uri` + `--output-FileName`.
     - `gcloud alpha cluster-director clusters create` updated to `--config-from-file=cluster.json` and `gcloud alpha lustre instances create` updated to `--per-unit-storage-throughput=1000`.
+
+### 55. Google Cloud SDK `590.0.0` GA Cloud Run Compose (`gcloud run compose up`) Multi-Container & Sidecar Studio + Reverse Exporter (`src/components/CloudRunFleetManager.jsx` & `server/index.js`)
+- **Where to find it**: Open the **`Cloud Run ★`** tab -> click **`Compose Up Studio (gcloud 590.0.0 GA)`** in the top header bar.
+- **How It Works (`POST /api/project/:id/cloudrun/compose`)**:
+  - **4 Production Multi-Container Blueprints**:
+    1. *Web API + Redis In-Memory Sidecar + OpenTelemetry Collector*
+    2. *LLM Gateway + vLLM Sidecar + GCS FUSE Model Volume*
+    3. *App + Cloud SQL Auth Proxy Sidecar (`127.0.0.1:5432`)*
+    4. *Full-Stack NGINX Reverse Proxy + Node.js API + Shared RAM Disk (`/var/run/shared`)*
+  - **Live `compose.yaml` -> Cloud Run v2 Multi-Container Spec Compiler (`VALIDATE_DRY_RUN`)**: Parses `services`, `ports` (designating the primary ingress container vs. internal `127.0.0.1` sidecars), `depends_on` (`container.dependsOn` startup ordering + automatic TCP `startupProbe`), `environment`, `volumes` (mapped to `emptyDir` RAM disks or `gcs` FUSE buckets via `x-google-gcs-bucket`), and `secrets` (`x-google-secret` -> `valueSource.secretKeyRef`).
+  - **1-Click Deploy & Reverse-Exporter (`DEPLOY_COMPOSE_UP` & `EXPORT_SERVICE_TO_COMPOSE`)**: Deploys the compiled multi-container `containers[]` pod directly via `run.googleapis.com/v2` (`GEN2` execution environment) with optional 1-click Direct Cloud IAP (`$0/mo`), or reverse-exports any running Cloud Run v2 service into a portable `compose.yaml`.
 
 
 

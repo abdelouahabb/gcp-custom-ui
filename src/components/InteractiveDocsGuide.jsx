@@ -31,30 +31,55 @@ import {
 
 const DOC_SECTIONS = [
   {
-    id: 'appengine-service-exterminator-and-default-neutralizer',
-    wave: 'CLOUD RUN & APP ENGINE 2026 INNOVATION · APP ENGINE SERVICE EXTERMINATOR & $0.00/MO DEFAULT NEUTRALIZER',
+    id: 'cloudrun-compose-up-multi-container-studio',
+    wave: 'CLOUD RUN 2026 INNOVATION · GOOGLE CLOUD SDK 590.0.0 GA CLOUD RUN COMPOSE (gcloud run compose up) STUDIO',
     title:
-      'App Engine Service & Version Exterminator, Non-Deletable default Service $0.00/Mo Neutralizer & 1-Click Cloud Run Migrator',
+      'Google Cloud SDK 590.0.0 GA Cloud Run Compose (gcloud run compose up) Multi-Container & Sidecar Studio + Live Reverse Exporter',
+    badge: 'CLOUD RUN TAB (COMPOSE UP STUDIO)',
+    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    icon: Layers,
+    targetTab: 'CLOUD_RUN',
+    problemSolved:
+      'Deploying multi-container Cloud Run Gen2 pods (an ingress container + Redis / OpenTelemetry / Cloud SQL Auth Proxy / vLLM sidecars sharing localhost 127.0.0.1 and RAM/GCS FUSE volumes) historically required hand-authoring complex Knative YAML or multi-container REST JSON payloads. With Google Cloud SDK 590.0.0 promoting `gcloud run compose up` to GA, engineers need a bidirectional Docker Compose <-> Cloud Run v2 compiler and reverse-exporter.',
+    howItWorks: [
+      '4 Production Multi-Container Blueprints: (1) Web API + Redis In-Memory Sidecar + OpenTelemetry Collector, (2) LLM Gateway + vLLM Sidecar + GCS FUSE Model Volume, (3) App + Cloud SQL Auth Proxy Sidecar (127.0.0.1:5432), and (4) Full-Stack NGINX Reverse Proxy + Node.js API + Shared RAM Disk (/var/run/shared).',
+      'Live compose.yaml -> Cloud Run v2 Multi-Container Spec Compiler (POST /api/project/:id/cloudrun/compose · action: "VALIDATE_DRY_RUN"): Parses services, ports (designating the primary ingress container vs. internal 127.0.0.1 sidecars), depends_on (container.dependsOn startup ordering + automatic TCP startupProbe), environment, volumes (mapped to emptyDir RAM disks or GCS FUSE buckets via x-google-gcs-bucket), and secrets (x-google-secret -> valueSource.secretKeyRef).',
+      '1-Click Cloud Run v2 Multi-Container Deployment (POST /api/project/:id/cloudrun/compose · action: "DEPLOY_COMPOSE_UP"): Deploys the compiled multi-container pod directly via run.googleapis.com/v2 (GEN2 execution environment) with optional 1-click Direct Cloud IAP ($0/mo), or dispatches `gcloud run compose up compose.yaml --region=<REGION> --project=<PROJECT_ID>` to the Cloud Shell.',
+      'Reverse-Export Any Live Cloud Run Service to compose.yaml (POST /api/project/:id/cloudrun/compose · action: "EXPORT_SERVICE_TO_COMPOSE"): Click any live Cloud Run service pill inside the studio to reverse-engineer its running containers[], volumeMounts, env, and secretKeyRef bindings into a portable Docker Compose file.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/cloudrun/compose (VALIDATE_DRY_RUN | DEPLOY_COMPOSE_UP | EXPORT_SERVICE_TO_COMPOSE)',
+      'POST & PATCH https://run.googleapis.com/v2/projects/:id/locations/:region/services',
+      'GET https://run.googleapis.com/v2/projects/:id/locations/:region/services/:serviceName',
+    ],
+    billingImpact:
+      '100% scale-to-zero (minInstances: 0) multi-container pods—sidecar containers share the same Gen2 microVM lifecycle and scale down to $0.00/mo when idle.',
+  },
+  {
+    id: 'appengine-service-exterminator-and-default-neutralizer',
+    wave: 'CLOUD RUN & APP ENGINE 2026 INNOVATION · APP ENGINE SERVICE EXTERMINATOR, TOMBSTONE VAULT (0 ACTIVE SERVICES + EDGE FIREWALL DENY *) & CLOUD RUN MIGRATOR',
+    title:
+      'App Engine Service & Version Exterminator, Non-Deletable default Service Tombstone Vault (0 Active Services · Edge Firewall DENY * · Muted Gray UI) & 1-Click Cloud Run Migrator',
     badge: 'CLOUD RUN TAB (APP ENGINE EXTERMINATOR)',
-    badgeColor: 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40',
+    badgeColor: 'bg-zinc-500/20 text-zinc-600 dark:text-zinc-300 border-zinc-500/40',
     icon: PowerOff,
     targetTab: 'CLOUD_RUN',
     problemSolved:
       'In Google Cloud App Engine, there are two separate deletion locks: (1) For non-default services, the GCP Console UI omits the "Delete Service" button even though the REST API allows deleting them. (2) For the "default" service, Google Cloud permanently forbids deleting the service ("Cannot delete the default service") AND permanently forbids leaving "default" with 0 versions ("Cannot delete the version receiving all traffic on the default service")—even when the App Engine application is disabled ("USER_DISABLED")!',
     howItWorks: [
       'Direct REST v1 Service Deletion for Non-default Services (DELETE_SERVICE): Calls DELETE https://appengine.googleapis.com/v1/apps/:projectId/services/:serviceId directly from the UI to permanently delete any non-default App Engine service and all of its versions—even if its version holds 100% of that service\'s traffic.',
-      'Default Service $0.00/mo Floor Neutralizer & Dead-Shell Detector (NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO): Because Google Cloud permanently requires 1 version to remain in the default service until the GCP project itself is deleted, CloudPulse deletes all extra (0%-traffic) versions, stops the remaining required version, and locks the application to USER_DISABLED ($0.00/mo compute + $0.00/mo storage once *.appspot.com buckets are purged).',
+      'Default Service Tombstone Vault & Edge Firewall DENY * Lockdown (TOMBSTONE_DEFAULT_SERVICE / NEUTRALIZE_DEFAULT_SERVICE_TO_ZERO): Because Google Cloud permanently requires 1 version to remain in the default service until the GCP project itself is deleted, CloudPulse deletes all extra (0%-traffic) versions, stops the remaining required version, locks the application to USER_DISABLED ($0.00/mo), AND patches the App Engine Edge Firewall catch-all rule (PATCH /v1/apps/:id/firewall/ingressRules/2147483647?updateMask=action -> DENY) so 100% of external ingress (*) is blocked at Google\'s edge. In the UI, service/default is styled in muted gray ("DISABLED · 0 Active Svc ($0/mo)"), struck through, and collapsed into a hidden Tombstone Vault unless you click "Inspect Raw GCP API Metadata Shell".',
       'Application-Wide $0.00/mo Kill-Switch (TOGGLE_APP_SERVING_STATUS): Patches apps/:projectId?updateMask=servingStatus to USER_DISABLED so App Engine returns HTTP 404 at the edge and never bills a single instance hour ($0.00/mo).',
       'Real view=FULL App Engine -> Cloud Run v2 Migrator (MIGRATE_TO_CLOUD_RUN): Inspects GET /v1/apps/:id/services/:svc/versions?view=FULL to extract the real container image (deployment.container.image) or reconstructs the real source files from deployment.files in gs://staging.<project>.appspot.com via Google Cloud Buildpacks (gcr.io/k8s-skaffold/pack), preserving envVariables, serviceAccount, vpcAccessConnector, and CPU/Memory limits—and refuses to deploy fake placeholder containers if the staging bucket was deleted.',
     ],
     apisUsed: [
       'GET & POST /api/project/:id/appengine/overview & /api/project/:id/appengine/action',
       'DELETE https://appengine.googleapis.com/v1/apps/:id/services/:serviceId',
-      'DELETE & PATCH https://appengine.googleapis.com/v1/apps/:id/services/:serviceId/versions/:versionId',
+      'PATCH https://appengine.googleapis.com/v1/apps/:id/firewall/ingressRules/2147483647?updateMask=action (DENY | ALLOW)',
       'PATCH https://appengine.googleapis.com/v1/apps/:id?updateMask=servingStatus (USER_DISABLED | SERVING)',
     ],
     billingImpact:
-      'Eliminates $18–$150+/mo in hidden App Engine Flex/Manual/Basic resident instance and zombie version charges, reducing legacy App Engine footprint to $0.00/mo.',
+      'Eliminates $18–$150+/mo in hidden App Engine Flex/Manual/Basic resident instance and zombie version charges, locking legacy App Engine to 0 Active Services and $0.00/mo.',
   },
   {
     id: 'cloudrun-direct-iap-zero-lb-app-engine-parity',
