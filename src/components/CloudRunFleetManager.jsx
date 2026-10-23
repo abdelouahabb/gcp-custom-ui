@@ -1749,9 +1749,9 @@ spec:
             title="Delete non-default App Engine services directly (missing from GCP Console UI), Tombstone the non-deletable default service to Unavailable ($0.00/mo), or migrate App Engine services to Cloud Run in 1 click"
             className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
               showAppEngineExterminator
-                ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                ? 'bg-zinc-700 text-white border-zinc-600 shadow-sm'
                 : appEngineState.data?.summary?.activeServicesCount === 0
-                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/35'
+                ? 'bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-500 dark:text-zinc-400 border-zinc-400/30 dark:border-zinc-700'
                 : 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/35'
             }`}
           >
@@ -1759,14 +1759,14 @@ spec:
             <span>App Engine Exterminator & $0/mo Neutralizer</span>
             {appEngineState.data?.summary && (
               <span
-                className={`px-1.5 py-0.2 rounded-full bg-zinc-50 dark:bg-zinc-900/80 text-[10px] font-mono ${
+                className={`px-1.5 py-0.2 rounded-full bg-zinc-200/80 dark:bg-zinc-800/90 text-[10px] font-mono ${
                   appEngineState.data.summary.activeServicesCount === 0
-                    ? 'text-emerald-600 dark:text-emerald-300'
+                    ? 'text-zinc-500 dark:text-zinc-400'
                     : 'text-red-700 dark:text-red-300'
                 }`}
               >
                 {appEngineState.data.summary.activeServicesCount === 0
-                  ? '0 Active Svc (default Unavailable · $0/mo)'
+                  ? 'DISABLED · 0 Active Svc ($0/mo)'
                   : `${
                       appEngineState.data.summary.activeServicesCount ??
                       appEngineState.data.summary.totalServicesCount
@@ -2261,15 +2261,31 @@ services:
         const isAppServing = aeSummary.appServingStatus === 'SERVING';
 
         return (
-          <div className="p-4 rounded-xl border border-red-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+          <div
+            className={`p-4 rounded-xl border bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl ${
+              !isAppServing
+                ? 'border-zinc-300 dark:border-zinc-800'
+                : 'border-red-500/40'
+            }`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-400/40 text-red-700 dark:text-red-300 text-[10px] font-mono font-extrabold">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${
+                      !isAppServing
+                        ? 'bg-zinc-200 dark:bg-zinc-800/90 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400'
+                        : 'bg-red-500/20 border-red-400/40 text-red-700 dark:text-red-300'
+                    }`}
+                  >
                     <Trash2 className="w-3 h-3" />
-                    <span>APP ENGINE SERVICE & VERSION EXTERMINATOR (MISSING FROM GCP CONSOLE UI)</span>
+                    <span>
+                      {!isAppServing
+                        ? 'APP ENGINE DISABLED & TOMBSTONED (OFFLINE · $0.00/MO)'
+                        : 'APP ENGINE SERVICE & VERSION EXTERMINATOR (MISSING FROM GCP CONSOLE UI)'}
+                    </span>
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 px-2 py-0.5 rounded">
                     <ShieldCheck className="w-3 h-3" />
                     <span>Direct REST v1 Service Delete + Default Service $0.00/mo Neutralizer</span>
                   </span>
@@ -2279,7 +2295,7 @@ services:
                 </h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                   1) <strong>Non-<code>default</code> services</strong> (e.g., <code>api</code>, <code>worker</code>) CAN be deleted via{' '}
-                  <code className="text-red-600 dark:text-red-300">DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/:serviceId</code>, and extra <code>0%</code>-traffic versions can be deleted via <code>DELETE .../versions/:v</code>.{' '}
+                  <code className="text-zinc-700 dark:text-zinc-300">DELETE https://appengine.googleapis.com/v1/apps/{projectId}/services/:serviceId</code>, and extra <code>0%</code>-traffic versions can be deleted via <code>DELETE .../versions/:v</code>.{' '}
                   2) <strong>Why <code>default</code> &amp; Its Last 100%-Traffic Version Can NEVER Be Deleted</strong>: Once App Engine is initialized in a GCP project, Google Cloud hard-codes an unbreakable invariant: the <code>default</code> service can <strong>never</strong> be deleted, and <code>default</code> can <strong>never have 0 versions</strong> (at least 1 version must hold <code>100%</code> traffic forever, even when the app is <code>USER_DISABLED</code>). The only way to reach <strong>$0.00/mo</strong> on <code>default</code> is to delete all extra 0%-traffic versions, set the remaining version to <code>STOPPED</code>, delete the <code>*.appspot.com</code> GCS buckets, and set the app to <code>USER_DISABLED</code>.
                 </p>
               </div>
@@ -2298,7 +2314,7 @@ services:
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50 ${
                       isAppServing
                         ? 'bg-red-600 hover:bg-red-500 text-white'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        : 'bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700'
                     }`}
                   >
                     <Lock className="w-3.5 h-3.5" />
@@ -2307,7 +2323,7 @@ services:
                         ? 'Updating App Status...'
                         : isAppServing
                         ? 'Disable Entire App Engine ($0.00/mo Kill-Switch)'
-                        : 'Re-Enable App Engine (SERVING)'}
+                        : 'App Disabled (Click to Re-Enable SERVING)'}
                     </span>
                   </button>
                 )}
@@ -2347,57 +2363,61 @@ services:
 
             {/* 4 Live KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   1. App Engine Application Status
                 </div>
                 <div
                   className={`text-base font-extrabold mt-0.5 ${
                     !aeData?.appInitialized
-                      ? 'text-emerald-400'
+                      ? 'text-zinc-500 dark:text-zinc-400'
                       : isAppServing
                       ? 'text-amber-400'
-                      : 'text-emerald-400'
+                      : 'text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
                   {!aeData?.appInitialized
                     ? 'NOT INITIALIZED ($0.00/mo)'
                     : `${aeSummary.appServingStatus} (${appInfo?.locationId || 'regional'})`}
                 </div>
-                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                <div
+                  className={`text-[10px] font-mono text-zinc-400 mt-0.5 ${
+                    !isAppServing ? 'line-through opacity-60' : ''
+                  }`}
+                >
                   {appInfo?.defaultHostname || 'No *.appspot.com hostname provisioned'}
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   2. Active Services vs Tombstoned Default Shell
                 </div>
                 <div
                   className={`text-base font-extrabold mt-0.5 ${
                     (aeSummary.activeServicesCount ?? aeSummary.totalServicesCount) === 0
-                      ? 'text-emerald-400'
+                      ? 'text-zinc-500 dark:text-zinc-400'
                       : 'text-red-400'
                   }`}
                 >
                   {aeSummary.activeServicesCount ?? aeSummary.totalServicesCount} Active ·{' '}
-                  {aeSummary.unavailableServicesCount || 0} Unavailable
+                  {aeSummary.unavailableServicesCount || 0} Disabled
                 </div>
                 <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
                   {(aeSummary.activeServicesCount ?? aeSummary.totalServicesCount) === 0
-                    ? '0 Active App Engine services (default buried & unavailable)'
+                    ? '0 Active App Engine services (default disabled & offline)'
                     : 'Non-default services delete via REST v1 · Default tombstones to $0/mo'}
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   3. Edge Firewall & Serving Versions
                 </div>
                 <div
                   className={`text-base font-extrabold mt-0.5 ${
                     aeSummary.edgeFirewallDenyAll && !isAppServing
-                      ? 'text-emerald-400'
+                      ? 'text-zinc-500 dark:text-zinc-400'
                       : 'text-amber-400'
                   }`}
                 >
@@ -2411,11 +2431,17 @@ services:
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+              <div className="p-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800">
                 <div className="text-[10px] font-mono text-zinc-400">
                   4. Estimated App Engine Burn & Staging Buckets
                 </div>
-                <div className="text-base font-extrabold text-emerald-400 mt-0.5">
+                <div
+                  className={`text-base font-extrabold mt-0.5 ${
+                    !isAppServing && Number(aeSummary.totalEstimatedMonthlyUsd || 0) === 0
+                      ? 'text-zinc-500 dark:text-zinc-400'
+                      : 'text-amber-400'
+                  }`}
+                >
                   ${Number(aeSummary.totalEstimatedMonthlyUsd || 0).toFixed(2)}/mo · {aeBuckets.length} Bucket(s)
                 </div>
                 <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
@@ -2425,16 +2451,16 @@ services:
             </div>
 
             {!aeData?.appInitialized && !appEngineState.loading ? (
-              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-800 dark:text-emerald-200 flex items-center justify-between gap-3">
+              <div className="p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-300 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-300 flex items-center justify-between gap-3">
                 <div>
                   <div className="font-extrabold text-sm">
                     Clean Slate: No App Engine Application Initialized in {projectId} ($0.00/mo)
                   </div>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     This project does not have a legacy App Engine application or permanent <code>default</code> service. All serverless workloads are running cleanly on Cloud Run v2!
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 font-mono font-bold text-[11px] shrink-0">
+                <span className="px-2.5 py-1 rounded-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 font-mono font-bold text-[11px] shrink-0">
                   $0.00/mo App Engine Burn
                 </span>
               </div>
@@ -2452,24 +2478,24 @@ services:
                       key={svc.id}
                       className={`p-3.5 rounded-xl border space-y-3 ${
                         isAlreadyMinimalFloor
-                          ? 'border-emerald-500/40 bg-emerald-500/5'
+                          ? 'border-zinc-300 dark:border-zinc-800 bg-zinc-100/70 dark:bg-zinc-900/40'
                           : isDefault
                           ? 'border-amber-500/40 bg-amber-500/5'
                           : 'border-red-500/35 bg-zinc-50 dark:bg-zinc-900/70'
                       }`}
                     >
                       {isAlreadyMinimalFloor && (
-                        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-xs text-emerald-900 dark:text-emerald-200 space-y-3">
+                        <div className="p-3.5 rounded-xl bg-zinc-200/60 dark:bg-zinc-900/80 border border-zinc-300 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 space-y-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-500/50 font-mono font-extrabold text-[11px]">
-                                0 ACTIVE APP ENGINE SERVICES
+                              <span className="px-2.5 py-0.5 rounded-full bg-zinc-300/80 dark:bg-zinc-800 border border-zinc-400/50 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-mono font-extrabold text-[11px]">
+                                DISABLED · 0 ACTIVE SERVICES
                               </span>
-                              <span className="font-mono text-xs line-through opacity-60">
+                              <span className="font-mono text-xs line-through text-zinc-400 dark:text-zinc-500">
                                 service/default ({svc.primaryVersionId || 'last-version'})
                               </span>
-                              <span className="px-2 py-0.5 rounded bg-zinc-900/80 text-emerald-300 font-mono font-bold text-[10px]">
-                                UNAVAILABLE · TOMBSTONED ($0.00/MO)
+                              <span className="px-2 py-0.5 rounded bg-zinc-300/60 dark:bg-zinc-800/90 border border-zinc-400/40 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 font-mono font-bold text-[10px]">
+                                UNAVAILABLE · OFFLINE ($0.00/MO)
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -2483,7 +2509,7 @@ services:
                                     })
                                   }
                                   disabled={Boolean(appEngineActionBusy)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
                                 >
                                   <Lock className="w-3 h-3" />
                                   <span>
@@ -2496,7 +2522,7 @@ services:
                               <button
                                 type="button"
                                 onClick={() => setShowRawTombstoneMetadata((v) => !v)}
-                                className="px-2.5 py-1 rounded-lg bg-zinc-900/20 dark:bg-zinc-900/70 hover:bg-zinc-900/30 border border-emerald-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                                className="px-2.5 py-1 rounded-lg bg-zinc-300/60 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 border border-zinc-400/40 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold cursor-pointer"
                               >
                                 {showRawTombstoneMetadata
                                   ? 'Hide Raw GCP API Tombstone Shell'
@@ -2506,18 +2532,18 @@ services:
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-[11px]">
-                            <div className="p-2 rounded bg-white/60 dark:bg-zinc-950/70 border border-emerald-500/30 flex items-center justify-between">
-                              <span className="text-zinc-500">1. App Serving:</span>
-                              <span className="font-bold text-emerald-600 dark:text-emerald-300">
+                            <div className="p-2 rounded bg-zinc-100 dark:bg-zinc-950/70 border border-zinc-300 dark:border-zinc-800 flex items-center justify-between">
+                              <span className="text-zinc-400">1. App Serving:</span>
+                              <span className="font-bold text-zinc-600 dark:text-zinc-400">
                                 USER_DISABLED (HTTP 404)
                               </span>
                             </div>
-                            <div className="p-2 rounded bg-white/60 dark:bg-zinc-950/70 border border-emerald-500/30 flex items-center justify-between">
-                              <span className="text-zinc-500">2. Edge Firewall (*):</span>
+                            <div className="p-2 rounded bg-zinc-100 dark:bg-zinc-950/70 border border-zinc-300 dark:border-zinc-800 flex items-center justify-between">
+                              <span className="text-zinc-400">2. Edge Firewall (*):</span>
                               <span
                                 className={`font-bold ${
                                   aeSummary.edgeFirewallDenyAll
-                                    ? 'text-emerald-600 dark:text-emerald-300'
+                                    ? 'text-zinc-600 dark:text-zinc-400'
                                     : 'text-amber-600 dark:text-amber-300'
                                 }`}
                               >
@@ -2526,16 +2552,16 @@ services:
                                   : 'ALLOW (Click Lock Above -> DENY)'}
                               </span>
                             </div>
-                            <div className="p-2 rounded bg-white/60 dark:bg-zinc-950/70 border border-emerald-500/30 flex items-center justify-between">
-                              <span className="text-zinc-500">3. Compute & Storage:</span>
-                              <span className="font-bold text-emerald-600 dark:text-emerald-300">
+                            <div className="p-2 rounded bg-zinc-100 dark:bg-zinc-950/70 border border-zinc-300 dark:border-zinc-800 flex items-center justify-between">
+                              <span className="text-zinc-400">3. Compute & Storage:</span>
+                              <span className="font-bold text-zinc-600 dark:text-zinc-400">
                                 0 Instances · {aeBuckets.length} Buckets ($0/mo)
                               </span>
                             </div>
                           </div>
 
-                          <div className="text-[11px] text-emerald-800 dark:text-emerald-300">
-                            Because Google Cloud&apos;s API permanently forbids deleting <code>service/default</code> or reducing it to 0 versions, CloudPulse has <strong>Tombstoned &amp; Buried</strong> it as <strong>Unavailable (`0 Active Services`)</strong>. Its raw GCP API metadata shell is hidden from your active workspace unless you click <em>Inspect Raw GCP API Metadata Shell</em> above.
+                          <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                            Because Google Cloud&apos;s API permanently forbids deleting <code>service/default</code> or reducing it to 0 versions, CloudPulse has <strong>Disabled &amp; Tombstoned</strong> it as <strong>Unavailable (`0 Active Services`)</strong>. Its raw GCP API metadata shell is grayed out and hidden from your active workspace unless you click <em>Inspect Raw GCP API Metadata Shell</em> above.
                           </div>
                         </div>
                       )}
@@ -2555,8 +2581,8 @@ services:
                               service/{svc.id}
                             </span>
                             {isAlreadyMinimalFloor ? (
-                              <span className="px-2 py-0.5 rounded bg-zinc-800 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold">
-                                TOMBSTONED · UNAVAILABLE IN GCP ($0.00/MO)
+                              <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono font-bold">
+                                DISABLED · UNAVAILABLE IN GCP ($0.00/MO)
                               </span>
                             ) : isDefault ? (
                               <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold">
