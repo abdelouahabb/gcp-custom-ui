@@ -46407,11 +46407,32 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
   const r = String(resourceName || '').toLowerCase();
   const l = String(logName || '').toLowerCase();
 
-  // Check if event touched any CloudPulse SOC Canary Tripwire
+  // Distinguish defensive Canary Trap provisioning (CreateSecret / DeleteSecret / CreateServiceAccount) from actual Canary Tripwire hits/probes
+  const isCanaryResource =
+    r.includes('cloudpulse-soc-canary') || r.includes('soc-canary-vault-admin');
+  const isCanaryProvisioningOnly =
+    isCanaryResource &&
+    (m.includes('createsecret') ||
+      m.includes('deletesecret') ||
+      m.includes('createserviceaccount') ||
+      m.includes('deleteserviceaccount') ||
+      m.includes('updatesecret'));
+
+  if (isCanaryProvisioningOnly) {
+    return {
+      tactic: 'DEFENSIVE_DECEPTION_OPS',
+      techniqueId: 'T1580 · CANARY-ARM',
+      techniqueName: 'Defensive Honey-Canary Trap Provisioning / Maintenance',
+      riskPoints: 20,
+      isCanaryHit: false,
+      whySensitive:
+        'Provisioned or updated a $0.00/mo CloudPulse SOC Honey-Canary deception resource (authorized defensive setup, not an intrusion hit).',
+    };
+  }
+
+  // Check if event probed, read, or triggered any CloudPulse SOC Canary Tripwire
   const isCanaryHit =
-    r.includes('cloudpulse-soc-canary') ||
-    r.includes('soc-canary-vault-admin') ||
-    m.includes('security_canary_tripwire');
+    isCanaryResource || m.includes('security_canary_tripwire');
 
   if (isCanaryHit) {
     return {
@@ -46420,6 +46441,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'Active Canary Honey-Asset Touched (Zero False-Positive Intrusion)',
       riskPoints: 95,
       isCanaryHit: true,
+      whySensitive:
+        'CRITICAL BREACH INDICATOR: Accessed or probed a dedicated $0.00/mo decoy Honey-Secret or Canary Service Account that no legitimate production workload ever touches. Any access is either an active credential-harvesting intrusion or a live Purple-Team / Canary verification drill.',
     };
   }
   if (m.includes('createserviceaccountkey') || m.includes('uploadserviceaccountkey')) {
@@ -46429,6 +46452,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'Additional Cloud Credentials (.json Service Account Key Created)',
       riskPoints: 75,
       isCanaryHit: false,
+      whySensitive:
+        'HIGH PERSISTENCE RISK: Minted or uploaded a long-lived user-managed .json private key for a Service Account. Attackers use exported .json keys to maintain permanent external access bypassing short-lived OAuth2 tokens.',
     };
   }
   if (m.includes('setiampolicy') || m.includes('modifypolicy')) {
@@ -46438,6 +46463,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'IAM Policy Mutation (setIamPolicy Binding Change)',
       riskPoints: 60,
       isCanaryHit: false,
+      whySensitive:
+        'PRIVILEGE ESCALATION VECTOR: Modified IAM role bindings (setIamPolicy). Malicious actors use setIamPolicy to grant roles/owner, roles/editor, or public allUsers access.',
     };
   }
   if (
@@ -46453,6 +46480,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'Service Account Token Impersonation (generateAccessToken / signBlob)',
       riskPoints: 55,
       isCanaryHit: false,
+      whySensitive:
+        'LATERAL MOVEMENT VECTOR: Minted an OAuth2/JWT token or impersonated another Service Account to pivot across project privileges.',
     };
   }
   if (
@@ -46468,6 +46497,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'Cloud Firewall / Edge Perimeter Rule Modification',
       riskPoints: 50,
       isCanaryHit: false,
+      whySensitive:
+        'PERIMETER MUTATION: Created, patched, or deleted VPC Firewall or App Engine Edge ingress rules. Can either expose ports (0.0.0.0/0) or represent an operator/SOAR lockdown action.',
     };
   }
   if (
@@ -46482,6 +46513,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'Cloud Audit Logging / API Control-Plane Tampering',
       riskPoints: 70,
       isCanaryHit: false,
+      whySensitive:
+        'AUDIT EVASION RISK: Modified Cloud Logging sinks/exclusions or disabled a Google Cloud API service to blind security monitoring.',
     };
   }
   if (
@@ -46495,6 +46528,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'Cloud Secrets Management Access / Mutation',
       riskPoints: 45,
       isCanaryHit: false,
+      whySensitive:
+        'SECRET VAULT ACCESS: Read, rotated, or destroyed a Secret Manager secret version containing sensitive credentials or API keys.',
     };
   }
   if (
@@ -46509,6 +46544,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'Workload / Container Deployment or Mutation',
       riskPoints: 30,
       isCanaryHit: false,
+      whySensitive:
+        'WORKLOAD EXECUTION: Deployed or updated a Compute VM or Cloud Run container revision.',
     };
   }
   if (
@@ -46523,6 +46560,8 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
       techniqueName: 'Data Access from Cloud Storage / BigQuery',
       riskPoints: 35,
       isCanaryHit: false,
+      whySensitive:
+        'DATA COLLECTION: Accessed or exported data objects/tables from Cloud Storage or BigQuery.',
     };
   }
   return {
@@ -46531,6 +46570,10 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
     techniqueName: methodName || 'Cloud Infrastructure Activity',
     riskPoints: severity === 'ERROR' || severity === 'CRITICAL' ? 40 : 15,
     isCanaryHit: false,
+    whySensitive:
+      severity === 'ERROR' || severity === 'CRITICAL'
+        ? 'Elevated risk (+40 pts) because the control-plane API call returned an ERROR/CRITICAL severity status (often indicative of permission probing or failed exploitation).'
+        : 'Routine control-plane discovery or administrative configuration activity (+15 baseline pts).',
   };
 }
 
@@ -46813,6 +46856,7 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
         techniqueName: mitre.techniqueName,
         riskPoints: mitre.riskPoints,
         isCanaryHit: mitre.isCanaryHit,
+        whySensitive: mitre.whySensitive,
       };
     });
 
@@ -46842,6 +46886,7 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
         techniqueName: mitre.techniqueName,
         riskPoints: mitre.riskPoints,
         isCanaryHit: mitre.isCanaryHit,
+        whySensitive: mitre.whySensitive,
       });
     }
 
@@ -46893,12 +46938,104 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
             : totalRiskScore >= 35
             ? 'ELEVATED'
             : 'LOW_BASELINE';
+
+        // Identify the highest-risk event in this chain for forensic attribution
+        const sortedEventsByRisk = [...ch.events].sort(
+          (a, b) => b.riskPoints - a.riskPoints
+        );
+        const topEvent = sortedEventsByRisk[0] || ch.events[0] || {};
+        const deniedEventsCount = ch.events.filter(
+          (e) => Number(e.statusCode) !== 0 || e.severity === 'ERROR'
+        ).length;
+
+        // Classify actor context so the user immediately knows if this is a Purple-Team drill, their own operator session, a Google system agent, or an external actor
+        const uaLower = String(ch.userAgent || '').toLowerCase();
+        const isPurpleTeamOrCanaryDrill =
+          uaLower.includes('purpleteam') ||
+          uaLower.includes('canary-verification-probe') ||
+          ch.events.some((e) =>
+            String(e.methodName || '')
+              .toLowerCase()
+              .includes('security_canary_tripwire')
+          );
+        const isGoogleSystem =
+          ch.principalEmail === 'system@google.com' ||
+          ch.principalEmail.endsWith('@cloudservices.gserviceaccount.com') ||
+          ch.principalEmail.includes('gcp-sa-');
+        const isCurrentOperator =
+          Boolean(account) &&
+          String(ch.principalEmail || '').toLowerCase() ===
+            String(account || '').toLowerCase() &&
+          !isPurpleTeamOrCanaryDrill;
+
+        const actorClassification = isPurpleTeamOrCanaryDrill
+          ? 'PURPLE_TEAM_SIMULATION'
+          : isGoogleSystem
+          ? 'GOOGLE_MANAGED_CONTROL_PLANE'
+          : isCurrentOperator
+          ? 'AUTHENTICATED_OPERATOR_SESSION'
+          : 'UNRECOGNIZED_OR_EXTERNAL_ACTOR';
+
+        const actorBadgeLabel = isPurpleTeamOrCanaryDrill
+          ? 'PURPLE-TEAM BAS / CANARY DRILL (AUTHORIZED SIMULATION)'
+          : isGoogleSystem
+          ? 'GOOGLE CLOUD INTERNAL CONTROL-PLANE AGENT'
+          : isCurrentOperator
+          ? `YOUR AUTHENTICATED OWNER SESSION (${ch.callerIp})`
+          : `EXTERNAL / WORKLOAD PRINCIPAL (${ch.callerIp})`;
+
+        // Group distinct methods inside this chain with counts & explanations
+        const methodGroupsMap = new Map();
+        for (const ev of ch.events) {
+          const mKey = `${ev.methodName}||${ev.tactic}`;
+          if (!methodGroupsMap.has(mKey)) {
+            methodGroupsMap.set(mKey, {
+              methodName: ev.methodName,
+              tactic: ev.tactic,
+              technique: `${ev.techniqueId}: ${ev.techniqueName}`,
+              riskPoints: ev.riskPoints,
+              isCanaryHit: ev.isCanaryHit,
+              count: 0,
+              sampleResource: ev.resourceName,
+              statusMessage: ev.statusMessage,
+              explanation:
+                ev.whySensitive ||
+                'High-privilege control-plane mutation recorded in Cloud Audit Logs.',
+            });
+          }
+          methodGroupsMap.get(mKey).count += 1;
+        }
+        const whyFlaggedReasons = Array.from(methodGroupsMap.values()).sort(
+          (a, b) => b.riskPoints - a.riskPoints
+        );
+
+        const scoreFormulaText = ch.hasCanaryHit
+          ? `100/100 Hard Override: Active Canary Honey-Asset (${topEvent.resourceName || 'cloudpulse-soc-canary-master-key'}) was directly probed via ${topEvent.methodName} (+95 base pts -> 100/100 Zero-False-Positive Tripwire Rule).`
+          : `Peak Event Risk: ${ch.maxSingleRisk} pts (${topEvent.methodName} · ${topEvent.techniqueId}) + Multi-Tactic Chaining Bonus: +${multiStageBonus} pts (${tacticsArr.length} distinct MITRE tactic${tacticsArr.length === 1 ? '' : 's'} from IP ${ch.callerIp}) = ${totalRiskScore}/100 (${severityLevel}).`;
+
+        const whyFlaggedHeadline = ch.hasCanaryHit
+          ? isPurpleTeamOrCanaryDrill
+            ? `Flagged CRITICAL (100/100) because the Purple-Team BAS / Canary Verification Drill intentionally triggered the $0.00/mo Honey-Canary Tripwire (${topEvent.methodName}) from test IP ${ch.callerIp} to prove 100% real-time SIEM detection.`
+            : `CRITICAL BREACH ALERT (100/100): Principal "${ch.principalEmail}" from IP ${ch.callerIp} touched the armed $0.00/mo Honey-Canary Tripwire (${topEvent.resourceName}) via ${topEvent.methodName}. No legitimate workload ever accesses this decoy asset.`
+          : totalRiskScore >= 55
+          ? `Flagged ${severityLevel} (${totalRiskScore}/100) because "${ch.principalEmail}" executed ${ch.events.length} control-plane call(s) from IP ${ch.callerIp} peaking at ${topEvent.methodName} (${topEvent.tactic} · ${ch.maxSingleRisk} pts)${tacticsArr.length > 1 ? ` and chained ${tacticsArr.length} distinct MITRE ATT&CK tactics (+${multiStageBonus} pts)` : ''}.`
+          : `Scored ${severityLevel} (${totalRiskScore}/100) based on ${ch.events.length} audit call(s) from ${ch.callerIp} peaking at ${topEvent.methodName} (${ch.maxSingleRisk} pts).`;
+
+        const securityVerdictAndNextStep = isPurpleTeamOrCanaryDrill
+          ? `VERDICT — AUTHORIZED PURPLE-TEAM DRILL: This 100/100 CRITICAL alert was generated by your own live Purple-Team Breach & Attack Simulation (Pillar 15) or Canary Audit Probe (Pillar 04) using User-Agent "${ch.userAgent}". It confirms your Cloud Audit -> MITRE Kill-Chain pipeline detects Canary intrusions in real time. No remediation is required unless you wish to test 1-click IP Quarantine on ${ch.callerIp}/32.`
+          : isCurrentOperator
+          ? `VERDICT — YOUR AUTHENTICATED OPERATOR ACCOUNT: These ${ch.events.length} API call(s) were executed under your own owner identity (${ch.principalEmail}) from IP ${ch.callerIp} (${ch.userAgent}). Verify that ${ch.callerIp} is your ISP / workstation or CloudPulse backend. If you do NOT recognize IP ${ch.callerIp}, an attacker may have stolen an OAuth2 token or session cookie — click "Quarantine ${ch.callerIp}/32" immediately and rotate credentials.`
+          : isGoogleSystem
+          ? `VERDICT — GOOGLE INTERNAL CONTROL PLANE: Routine automated lifecycle maintenance executed by Google Cloud's internal system agent (${ch.principalEmail}) over internal-gcp-backbone.`
+          : `VERDICT — EXTERNAL / SERVICE ACCOUNT ACTIVITY: Verify whether principal "${ch.principalEmail}" is authorized to call ${topEvent.methodName} from IP ${ch.callerIp}. If unauthorized, click "Quarantine ${ch.callerIp}/32" and freeze the identity in Pillar 08.`;
+
         return {
           id: ch.id,
           principalEmail: ch.principalEmail,
           callerIp: ch.callerIp,
           userAgent: ch.userAgent,
           eventsCount: ch.events.length,
+          deniedEventsCount,
           tactics: tacticsArr,
           techniques: Array.from(ch.distinctTechniques),
           riskScore: totalRiskScore,
@@ -46908,6 +47045,31 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
           lastSeen: ch.lastSeen,
           sampleMethods: ch.events.slice(0, 4).map((e) => e.methodName),
           principalRoles: principalRolesMap.get(ch.principalEmail) || [],
+          breachExplanation: {
+            actorClassification,
+            actorBadgeLabel,
+            whyFlaggedHeadline,
+            scoreFormulaText,
+            baseMaxEventRisk: ch.maxSingleRisk,
+            multiTacticBonus: multiStageBonus,
+            topTriggerMethod: topEvent.methodName || 'unknown',
+            topTriggerResource: topEvent.resourceName || projectId,
+            whyFlaggedReasons,
+            securityVerdictAndNextStep,
+            forensicTimeline: ch.events.slice(0, 8).map((ev) => ({
+              id: ev.id,
+              timestamp: ev.timestamp,
+              methodName: ev.methodName,
+              resourceName: ev.resourceName,
+              tactic: ev.tactic,
+              techniqueId: ev.techniqueId,
+              riskPoints: ev.riskPoints,
+              statusCode: ev.statusCode,
+              statusMessage: ev.statusMessage,
+              userAgent: ev.userAgent,
+              whySensitive: ev.whySensitive,
+            })),
+          },
         };
       })
       .sort((a, b) => b.riskScore - a.riskScore);

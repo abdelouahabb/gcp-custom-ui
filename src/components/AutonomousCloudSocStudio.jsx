@@ -146,6 +146,7 @@ export default function AutonomousCloudSocStudio({
   const [statusBanner, setStatusBanner] = useState(null);
   const [showGitOpsBridge, setShowGitOpsBridge] = useState(false);
   const [gitOpsTab, setGitOpsTab] = useState('DIFF');
+  const [expandedChainIds, setExpandedChainIds] = useState({});
 
   // SOAR IP Quarantine input
   const [quarantineIpInput, setQuarantineIpInput] = useState('');
@@ -890,10 +891,16 @@ export default function AutonomousCloudSocStudio({
                     chain.callerIp !== 'internal-gcp-backbone' &&
                     chain.callerIp !== '127.0.0.1' &&
                     !chain.callerIp.includes(':');
+                  const exp = chain.breachExplanation || null;
+                  const isExpanded =
+                    expandedChainIds[chain.id] !== undefined
+                      ? Boolean(expandedChainIds[chain.id])
+                      : isCrit;
+
                   return (
                     <div
                       key={chain.id}
-                      className={`p-3.5 rounded-xl border space-y-2 ${
+                      className={`p-3.5 rounded-xl border space-y-2.5 ${
                         chain.hasCanaryHit
                           ? 'border-red-500 bg-red-500/10'
                           : isCrit
@@ -916,6 +923,23 @@ export default function AutonomousCloudSocStudio({
                           >
                             RISK {chain.riskScore}/100 · {chain.severityLevel}
                           </span>
+                          {exp?.actorBadgeLabel && (
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-extrabold border ${
+                                exp.actorClassification === 'PURPLE_TEAM_SIMULATION'
+                                  ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/40'
+                                  : exp.actorClassification ===
+                                    'AUTHENTICATED_OPERATOR_SESSION'
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                  : exp.actorClassification ===
+                                    'GOOGLE_MANAGED_CONTROL_PLANE'
+                                  ? 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30'
+                                  : 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40'
+                              }`}
+                            >
+                              {exp.actorBadgeLabel}
+                            </span>
+                          )}
                           <span className="font-mono text-xs font-extrabold text-zinc-900 dark:text-white">
                             {chain.principalEmail}
                           </span>
@@ -927,7 +951,29 @@ export default function AutonomousCloudSocStudio({
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedChainIds((prev) => ({
+                                ...prev,
+                                [chain.id]: !isExpanded,
+                              }))
+                            }
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono font-extrabold cursor-pointer border ${
+                              isExpanded
+                                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-700'
+                                : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            <AlertTriangle className="w-3 h-3 text-amber-500" />
+                            <span>
+                              {isExpanded
+                                ? 'Hide Breach Explanation'
+                                : `Why Flagged ${chain.severityLevel}? (${chain.eventsCount} Calls)`}
+                            </span>
+                          </button>
+
                           {canBlockIp && (
                             <button
                               type="button"
@@ -976,6 +1022,135 @@ export default function AutonomousCloudSocStudio({
                           {(chain.sampleMethods || []).join(' -> ')}
                         </span>
                       </div>
+
+                      {/* WHY WAS THIS FLAGGED? FORENSIC BREACH & RISK ATTRIBUTION EXPLAINER */}
+                      {exp && isExpanded && (
+                        <div className="p-3 rounded-xl bg-white/95 dark:bg-zinc-950/95 border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs font-mono">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                            <div className="font-extrabold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                              <ShieldAlert className="w-4 h-4 shrink-0" />
+                              <span>
+                                WHY WAS THIS FLAGGED AS {chain.severityLevel} (RISK{' '}
+                                {chain.riskScore}/100)?
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-zinc-500">
+                              User-Agent: {chain.userAgent}
+                            </span>
+                          </div>
+
+                          {/* 1. Plain-English Headline */}
+                          <div className="text-zinc-800 dark:text-zinc-200 font-bold leading-relaxed">
+                            {exp.whyFlaggedHeadline}
+                          </div>
+
+                          {/* 2. Exact Mathematical Risk Formula */}
+                          <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-300">
+                            <span className="font-extrabold text-cyan-600 dark:text-cyan-400">
+                              Risk Score Math:{' '}
+                            </span>
+                            {exp.scoreFormulaText}
+                          </div>
+
+                          {/* 3. Per-API-Method Forensic Reasons */}
+                          {Array.isArray(exp.whyFlaggedReasons) &&
+                            exp.whyFlaggedReasons.length > 0 && (
+                              <div className="space-y-1.5">
+                                <div className="text-[10px] font-extrabold uppercase text-zinc-400">
+                                  Triggered API Methods &amp; Security Impact Breakdown:
+                                </div>
+                                {exp.whyFlaggedReasons.map((reason, idx) => (
+                                  <div
+                                    key={`${reason.methodName}-${idx}`}
+                                    className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-300 text-[10px] font-extrabold">
+                                          +{reason.riskPoints} pts · {reason.tactic}
+                                        </span>
+                                        <span className="font-extrabold text-zinc-900 dark:text-white">
+                                          {reason.methodName}
+                                        </span>
+                                        <span className="text-[10px] text-zinc-500">
+                                          (&times;{reason.count} call
+                                          {reason.count === 1 ? '' : 's'})
+                                        </span>
+                                      </div>
+                                      <span className="text-[10px] text-zinc-400 truncate max-w-xs">
+                                        Target: {reason.sampleResource}
+                                      </span>
+                                    </div>
+                                    <div className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                      {reason.explanation}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                          {/* 4. Security Verdict & Recommended Operator Action */}
+                          <div
+                            className={`p-2.5 rounded-lg border text-[11px] leading-relaxed ${
+                              exp.actorClassification === 'PURPLE_TEAM_SIMULATION'
+                                ? 'bg-violet-500/10 border-violet-500/30 text-violet-800 dark:text-violet-200'
+                                : exp.actorClassification ===
+                                  'AUTHENTICATED_OPERATOR_SESSION'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200'
+                                : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+                            }`}
+                          >
+                            {exp.securityVerdictAndNextStep}
+                          </div>
+
+                          {/* 5. Raw Forensic Event Timeline (Top Calls in Chain) */}
+                          {Array.isArray(exp.forensicTimeline) &&
+                            exp.forensicTimeline.length > 0 && (
+                              <div className="pt-1 space-y-1">
+                                <div className="text-[10px] font-extrabold uppercase text-zinc-400">
+                                  Correlated Cloud Audit Event Evidence ({exp.forensicTimeline.length}{' '}
+                                  of {chain.eventsCount} calls):
+                                </div>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-left text-[10px] border-collapse">
+                                    <thead>
+                                      <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400">
+                                        <th className="py-1 pr-2">UTC Timestamp</th>
+                                        <th className="py-1 px-2">Method</th>
+                                        <th className="py-1 px-2">Target Resource</th>
+                                        <th className="py-1 px-2">MITRE</th>
+                                        <th className="py-1 pl-2 text-right">Risk</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50">
+                                      {exp.forensicTimeline.map((ev) => (
+                                        <tr key={ev.id}>
+                                          <td className="py-1 pr-2 text-zinc-500 whitespace-nowrap">
+                                            {String(ev.timestamp || '')
+                                              .replace('T', ' ')
+                                              .slice(0, 19)}
+                                          </td>
+                                          <td className="py-1 px-2 font-bold text-zinc-900 dark:text-zinc-100">
+                                            {ev.methodName}
+                                          </td>
+                                          <td className="py-1 px-2 text-zinc-500 truncate max-w-[240px]">
+                                            {ev.resourceName}
+                                          </td>
+                                          <td className="py-1 px-2 text-cyan-600 dark:text-cyan-400">
+                                            {ev.techniqueId}
+                                          </td>
+                                          <td className="py-1 pl-2 text-right font-bold text-red-500">
+                                            +{ev.riskPoints}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
