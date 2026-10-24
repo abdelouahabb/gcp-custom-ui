@@ -57972,7 +57972,46 @@ function haversineKmServer(lat1, lon1, lat2, lon2) {
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-async function resolveLiveClientOrigin() {
+const IANA_TIMEZONE_GEO_MAP = {
+  'Africa/Algiers': { lat: 36.7538, lon: 3.0588, iso2: 'DZ' },
+  'Africa/Casablanca': { lat: 33.5731, lon: -7.5898, iso2: 'MA' },
+  'Africa/Tunis': { lat: 36.8065, lon: 10.1815, iso2: 'TN' },
+  'Africa/Cairo': { lat: 30.0444, lon: 31.2357, iso2: 'EG' },
+  'Africa/Johannesburg': { lat: -26.2041, lon: 28.0473, iso2: 'ZA' },
+  'Europe/Paris': { lat: 48.8566, lon: 2.3522, iso2: 'FR' },
+  'Europe/London': { lat: 51.5072, lon: -0.1276, iso2: 'GB' },
+  'Europe/Berlin': { lat: 52.52, lon: 13.405, iso2: 'DE' },
+  'Europe/Madrid': { lat: 40.4168, lon: -3.7038, iso2: 'ES' },
+  'Europe/Rome': { lat: 41.9028, lon: 12.4964, iso2: 'IT' },
+  'Europe/Amsterdam': { lat: 52.3676, lon: 4.9041, iso2: 'NL' },
+  'Europe/Zurich': { lat: 47.3769, lon: 8.5417, iso2: 'CH' },
+  'Europe/Warsaw': { lat: 52.2297, lon: 21.0122, iso2: 'PL' },
+  'America/New_York': { lat: 40.7128, lon: -74.006, iso2: 'US' },
+  'America/Chicago': { lat: 41.8781, lon: -87.6298, iso2: 'US' },
+  'America/Denver': { lat: 39.7392, lon: -104.9903, iso2: 'US' },
+  'America/Los_Angeles': { lat: 34.0522, lon: -118.2437, iso2: 'US' },
+  'America/Toronto': { lat: 43.6532, lon: -79.3832, iso2: 'CA' },
+  'America/Sao_Paulo': { lat: -23.5505, lon: -46.6333, iso2: 'BR' },
+  'Asia/Dubai': { lat: 25.2048, lon: 55.2708, iso2: 'AE' },
+  'Asia/Riyadh': { lat: 24.7136, lon: 46.6753, iso2: 'SA' },
+  'Asia/Kolkata': { lat: 19.076, lon: 72.8777, iso2: 'IN' },
+  'Asia/Singapore': { lat: 1.3521, lon: 103.8198, iso2: 'SG' },
+  'Asia/Tokyo': { lat: 35.6762, lon: 139.6503, iso2: 'JP' },
+  'Asia/Seoul': { lat: 37.5665, lon: 126.978, iso2: 'KR' },
+  'Australia/Sydney': { lat: -33.8688, lon: 151.2093, iso2: 'AU' },
+};
+
+function resolveCountryNameFromIso2(iso2) {
+  if (!iso2 || iso2.length !== 2) return 'Local Jurisdiction';
+  try {
+    const dn = new Intl.DisplayNames(['en'], { type: 'region' });
+    return dn.of(iso2.toUpperCase()) || iso2.toUpperCase();
+  } catch (_e) {
+    return iso2.toUpperCase();
+  }
+}
+
+async function resolveLiveClientOrigin(req) {
   if (
     cachedLiveClientOrigin &&
     Date.now() - cachedLiveClientOriginAt < 30 * 60 * 1000
@@ -57988,10 +58027,10 @@ async function resolveLiveClientOrigin() {
         ip: 'IP Hidden (Privacy Mode)',
         city: d.city || d.capital || 'Client City',
         region: d.region || '',
-        country: d.country || 'Client Country',
+        country: d.country || resolveCountryNameFromIso2(iso2),
         countryCode: iso2,
         countryIso3: ISO2_TO_ISO3_MAP[iso2] || iso2,
-        continent: d.continent || 'Africa',
+        continent: d.continent || '',
         lat: Number(d.latitude.toFixed(4)),
         lon: Number(d.longitude.toFixed(4)),
         asn: d.connection?.asn ? `AS${d.connection.asn}` : 'AS-LIVE',
@@ -58017,10 +58056,10 @@ async function resolveLiveClientOrigin() {
           ip: 'IP Hidden (Privacy Mode)',
           city: d2.city || 'Client City',
           region: d2.region || '',
-          country: iso2 === 'DZ' ? 'Algeria' : iso2,
+          country: resolveCountryNameFromIso2(iso2),
           countryCode: iso2,
           countryIso3: ISO2_TO_ISO3_MAP[iso2] || iso2,
-          continent: 'Local Continent',
+          continent: String(d2.timezone || '').split('/')[0] || 'Local Continent',
           lat: Number(Number(latS).toFixed(4)),
           lon: Number(Number(lonS).toFixed(4)),
           asn: String(d2.org || '').split(' ')[0] || 'AS-LIVE',
@@ -58037,23 +58076,33 @@ async function resolveLiveClientOrigin() {
     }
   }
 
-  // Offline / Timezone-based fallback
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Algiers';
-  const isAlgiers = tz.toLowerCase().includes('algiers');
+  // Offline / Timezone-based dynamic fallback (zero hardcoded country names)
+  const clientTz =
+    (req?.query?.tz && String(req.query.tz)) ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone ||
+    'UTC';
+  const tzEntry = IANA_TIMEZONE_GEO_MAP[clientTz] || {
+    lat: 36.7538,
+    lon: 3.0588,
+    iso2: 'DZ',
+  };
+  const iso2 = tzEntry.iso2;
+  const derivedCity =
+    clientTz.split('/').pop()?.replace(/_/g, ' ') || 'Client Workstation';
   return {
     ip: 'IP Hidden (Privacy Mode)',
-    city: isAlgiers ? 'Algiers' : tz.split('/').pop()?.replace(/_/g, ' ') || 'Client Workstation',
+    city: derivedCity,
     region: '',
-    country: isAlgiers ? 'Algeria' : 'Local Jurisdiction',
-    countryCode: isAlgiers ? 'DZ' : 'LOC',
-    countryIso3: isAlgiers ? 'DZA' : 'LOC',
-    continent: tz.split('/')[0] || 'Africa',
-    lat: isAlgiers ? 36.7538 : 36.7118,
-    lon: isAlgiers ? 3.0588 : 4.0459,
+    country: resolveCountryNameFromIso2(iso2),
+    countryCode: iso2,
+    countryIso3: ISO2_TO_ISO3_MAP[iso2] || iso2,
+    continent: clientTz.split('/')[0] || 'Local',
+    lat: tzEntry.lat,
+    lon: tzEntry.lon,
     asn: 'LOCAL_NET',
     isp: 'Local Workstation Egress',
     domain: '',
-    timezone: tz,
+    timezone: clientTz,
     source: 'SYSTEM_TIMEZONE_GEOLOCATION',
   };
 }
@@ -58062,6 +58111,9 @@ app.get(
   '/api/project/:projectId/global-map/live-telemetry',
   async (req, res) => {
     const { projectId } = req.params;
+    const focusRegion = req.query.focusRegion
+      ? String(req.query.focusRegion).trim()
+      : null;
     const dnsPromises = dns.promises;
     const netMod = net;
     const tlsMod = tls;
@@ -58069,31 +58121,22 @@ app.get(
 
     const REGIONAL_PROBE_TARGETS = [
       {
-        regionId: 'us-central1',
-        city: 'Council Bluffs, Iowa',
-        continent: 'North America',
-        lat: 41.2619,
-        lon: -95.8608,
-        host: 'us-central1-aiplatform.googleapis.com',
-        cfePct: 93,
+        regionId: 'europe-west9',
+        city: 'Paris, France',
+        continent: 'Europe',
+        lat: 48.8566,
+        lon: 2.3522,
+        host: 'europe-west9-aiplatform.googleapis.com',
+        cfePct: 92,
       },
       {
-        regionId: 'us-east1',
-        city: 'Moncks Corner, South Carolina',
-        continent: 'North America',
-        lat: 33.196,
-        lon: -80.0131,
-        host: 'us-east1-aiplatform.googleapis.com',
-        cfePct: 52,
-      },
-      {
-        regionId: 'us-west1',
-        city: 'The Dalles, Oregon',
-        continent: 'North America',
-        lat: 45.5946,
-        lon: -121.1787,
-        host: 'us-west1-aiplatform.googleapis.com',
-        cfePct: 89,
+        regionId: 'europe-southwest1',
+        city: 'Madrid, Spain',
+        continent: 'Europe',
+        lat: 40.4168,
+        lon: -3.7038,
+        host: 'europe-southwest1-aiplatform.googleapis.com',
+        cfePct: 82,
       },
       {
         regionId: 'europe-west1',
@@ -58112,6 +58155,33 @@ app.get(
         lon: 6.8355,
         host: 'europe-west4-aiplatform.googleapis.com',
         cfePct: 72,
+      },
+      {
+        regionId: 'us-east1',
+        city: 'Moncks Corner, South Carolina',
+        continent: 'North America',
+        lat: 33.196,
+        lon: -80.0131,
+        host: 'us-east1-aiplatform.googleapis.com',
+        cfePct: 52,
+      },
+      {
+        regionId: 'us-central1',
+        city: 'Council Bluffs, Iowa',
+        continent: 'North America',
+        lat: 41.2619,
+        lon: -95.8608,
+        host: 'us-central1-aiplatform.googleapis.com',
+        cfePct: 93,
+      },
+      {
+        regionId: 'us-west1',
+        city: 'The Dalles, Oregon',
+        continent: 'North America',
+        lat: 45.5946,
+        lon: -121.1787,
+        host: 'us-west1-aiplatform.googleapis.com',
+        cfePct: 89,
       },
       {
         regionId: 'asia-northeast1',
@@ -58141,6 +58211,25 @@ app.get(
         cfePct: 91,
       },
     ];
+
+    // If the user clicked any of the other 30 GCP regions on the map to probe on-demand, include it dynamically
+    if (
+      focusRegion &&
+      /^[a-z]+-[a-z]+\d+$/.test(focusRegion) &&
+      !REGIONAL_PROBE_TARGETS.some((t) => t.regionId === focusRegion)
+    ) {
+      REGIONAL_PROBE_TARGETS.push({
+        regionId: focusRegion,
+        city: req.query.focusCity ? String(req.query.focusCity) : focusRegion,
+        continent: req.query.focusContinent
+          ? String(req.query.focusContinent)
+          : 'Global',
+        lat: req.query.focusLat ? Number(req.query.focusLat) : 0,
+        lon: req.query.focusLon ? Number(req.query.focusLon) : 0,
+        host: `${focusRegion}-aiplatform.googleapis.com`,
+        cfePct: req.query.focusCfe ? Number(req.query.focusCfe) : 75,
+      });
+    }
 
     async function probeRegionalEndpoint(target) {
       const t0 = perf.now();
@@ -58224,12 +58313,12 @@ app.get(
         runRes,
         vmsRes,
       ] = await Promise.all([
-        resolveLiveClientOrigin(),
+        resolveLiveClientOrigin(req),
         Promise.all(REGIONAL_PROBE_TARGETS.map(probeRegionalEndpoint)),
         gcpFetch(
           `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
             projectId
-          )}/regions?maxResults=30`,
+          )}/regions?maxResults=60`,
           token,
           projectId,
           { timeout: 5000 }
@@ -58237,7 +58326,7 @@ app.get(
         gcpFetch(
           `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
             projectId
-          )}/aggregated/subnetworks?maxResults=40`,
+          )}/aggregated/subnetworks?maxResults=60`,
           token,
           projectId,
           { timeout: 5000 }
@@ -58294,9 +58383,9 @@ app.get(
       );
       const fastestRegion = sortedProbes[0] || null;
 
-      // Extract live regional quotas from compute.regions.list
+      // Extract live regional quotas from compute.regions.list across all project regions
       const rawRegions = regionsRes?.items || [];
-      const regionalQuotas = rawRegions.slice(0, 16).map((reg) => {
+      const regionalQuotas = rawRegions.slice(0, 48).map((reg) => {
         const quotas = reg.quotas || [];
         const cpuQ = quotas.find((q) => q.metric === 'CPUS') || {
           usage: 0,
@@ -58361,6 +58450,11 @@ app.get(
         }
       }
 
+      const peerDrRegion =
+        fastestRegion?.regionId && fastestRegion.regionId !== 'us-central1'
+          ? fastestRegion.regionId
+          : 'europe-west1';
+
       const geoAssets = [
         ...buckets.map((b) => {
           const loc = String(b.location || 'US').toUpperCase();
@@ -58385,7 +58479,7 @@ app.get(
               : 'GLOBAL',
             replicationCli: isMulti
               ? `gcloud storage buckets describe gs://${b.name} --project=${projectId} --format="json(name,location,locationType,rpo)"`
-              : `gcloud storage buckets update gs://${b.name} --placement=${loc.toLowerCase()},us-east1 --project=${projectId}`,
+              : `gcloud storage buckets update gs://${b.name} --placement=${loc.toLowerCase()},${peerDrRegion} --project=${projectId}`,
           };
         }),
         ...datasets.map((d) => {
@@ -58411,6 +58505,7 @@ app.get(
           const parts = String(s.name || '').split('/');
           const sName = parts[parts.length - 1];
           const sReg = parts[3] || 'us-central1';
+          const altReg = sReg === peerDrRegion ? 'us-central1' : peerDrRegion;
           return {
             assetType: 'Cloud Run v2 Service',
             name: sName,
@@ -58421,7 +58516,7 @@ app.get(
             sovereigntyZone: sReg.startsWith('europe')
               ? 'EU_GDPR_RESIDENCY'
               : 'US_SOVEREIGN_ZONE',
-            replicationCli: `gcloud beta run multi-region-services update ${sName} --add-regions=us-east1 --project=${projectId}`,
+            replicationCli: `gcloud beta run multi-region-services update ${sName} --add-regions=${altReg} --project=${projectId}`,
           };
         }),
         ...vms.map((v) => ({
@@ -58446,7 +58541,7 @@ app.get(
         fastestRegion,
         regionalSocketProbes: sortedProbes,
         regionalQuotas,
-        liveSubnets: liveSubnets.slice(0, 24),
+        liveSubnets: liveSubnets.slice(0, 60),
         geoAssets,
         summary: {
           probedRegionsCount: sortedProbes.length,

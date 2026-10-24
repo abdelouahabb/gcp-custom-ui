@@ -1933,19 +1933,36 @@ export default function GlobalNetworkWorldMap({
   const [activeGeoTab, setActiveGeoTab] = useState('LATENCY_PROBES');
 
   const fetchLiveGeoTelemetry = useCallback(
-    async (showToastMsg = false) => {
+    async (showToastMsg = false, focusRegObj = null) => {
       if (!projectId) return;
       setGeoLoading(true);
       try {
+        const tz =
+          Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        const params = new URLSearchParams({ tz });
+        if (focusRegObj && focusRegObj.id) {
+          params.set('focusRegion', focusRegObj.id);
+          params.set('focusCity', focusRegObj.city || focusRegObj.id);
+          params.set('focusContinent', focusRegObj.continent || 'Global');
+          params.set('focusLat', String(focusRegObj.lat || 0));
+          params.set('focusLon', String(focusRegObj.lon || 0));
+          params.set('focusCfe', String(focusRegObj.cfePercent || 75));
+        }
         const res = await axios.get(
           `/api/project/${encodeURIComponent(
             projectId
-          )}/global-map/live-telemetry`
+          )}/global-map/live-telemetry?${params.toString()}`
         );
         setLiveGeoTelemetry(res.data);
         if (showToastMsg && res.data?.fastestRegion) {
           onShowToast?.(
-            `Probed 8 live GCP regional endpoints: Fastest is ${res.data.fastestRegion.regionId} (${res.data.fastestRegion.tcpMs}ms TCP / ${res.data.fastestRegion.totalRttMs}ms TLS RTT)`
+            `Probed ${
+              res.data?.regionalSocketProbes?.length || 10
+            } live GCP regional endpoints: Fastest is ${
+              res.data.fastestRegion.regionId
+            } (${res.data.fastestRegion.tcpMs}ms TCP / ${
+              res.data.fastestRegion.totalRttMs
+            }ms TLS RTT)`
           );
         }
       } catch (err) {
@@ -1967,21 +1984,35 @@ export default function GlobalNetworkWorldMap({
     fetchLiveGeoTelemetry(false);
   }, [fetchLiveGeoTelemetry]);
 
-  // Live-Detected Client Origin (Privacy-Shielded: raw IP is never displayed or logged)
+  // Dynamic Browser Timezone & Locale Pre-Probe Origin (Zero Hardcoded City/Country/ISP)
   const liveClientOriginNode = useMemo(() => {
     const c = liveGeoTelemetry?.clientOrigin;
-    const lat = typeof c?.lat === 'number' ? c.lat : 36.7118;
-    const lon = typeof c?.lon === 'number' ? c.lon : 4.0459;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const tzCity =
+      tz.split('/').pop()?.replace(/_/g, ' ') || 'Client Workstation';
+    const tzContinent = tz.split('/')[0] || 'Local';
+    const lat = typeof c?.lat === 'number' ? c.lat : 36.7538;
+    const lon = typeof c?.lon === 'number' ? c.lon : 3.0588;
     const pt = projectLatLon(lat, lon);
-    const city = c?.city || 'Tizi Ouzou';
-    const region = c?.region || 'Wilaya de Tizi Ouzou';
-    const country = c?.country || 'Algeria';
-    const countryCode = c?.countryCode || 'DZ';
-    const countryIso3 = c?.countryIso3 || 'DZA';
+    const city = c?.city || tzCity;
+    const region = c?.region || tzContinent;
+    const countryCode = c?.countryCode || 'LOC';
+    const countryIso3 = c?.countryIso3 || 'LOC';
+    let country = c?.country || '';
+    if (!country && countryCode.length === 2) {
+      try {
+        country =
+          new Intl.DisplayNames(['en'], { type: 'region' }).of(countryCode) ||
+          countryCode;
+      } catch (_e) {
+        country = countryCode;
+      }
+    }
+    if (!country) country = tzContinent;
     const ip = 'IP Hidden (Privacy Mode)';
     const evalIp = '198.51.100.1'; // RFC 5737 TEST-NET-2 documentation IP for local CIDR evaluation only
-    const asn = c?.asn || 'AS36947';
-    const isp = c?.isp || 'Telecom Algeria';
+    const asn = c?.asn || 'LIVE-ASN';
+    const isp = c?.isp || 'Live Egress Network';
     return {
       id: 'my-live-client',
       label: `My Live Client — ${city}, ${country} [${countryCode}]`,
@@ -2056,11 +2087,29 @@ export default function GlobalNetworkWorldMap({
   // 2. Chaos Outage / Failover Simulator (severed regions & zones)
   const [severedRegions, setSeveredRegions] = useState([]);
   const [severedZones, setSeveredZones] = useState([]);
-  // 3. Point-to-Point Subsea Fiber RTT & Cross-Region Egress Analyzer
+  // 3. Point-to-Point Subsea Fiber RTT & Cross-Region Egress Analyzer (wired to active project region & fastest live region)
   const [routeAnalyzerEnabled, setRouteAnalyzerEnabled] = useState(true);
-  const [routeSourceRegionId, setRouteSourceRegionId] = useState('us-east1');
+  const [routeSourceRegionId, setRouteSourceRegionId] = useState(
+    () => activeRegionIds[0] || 'us-central1'
+  );
   const [routeDestRegionId, setRouteDestRegionId] = useState('europe-west9');
   const [monthlyReplicationTb, setMonthlyReplicationTb] = useState(5);
+
+  // Sync Route Analyzer & Migration Target with the user's live fastest probed region & active project regions when telemetry arrives
+  const didAutoWireGeoRef = useRef(false);
+  useEffect(() => {
+    const primaryActive = activeRegionIds[0] || 'us-central1';
+    const fastestId = liveGeoTelemetry?.fastestRegion?.regionId;
+    if (fastestId && !didAutoWireGeoRef.current) {
+      didAutoWireGeoRef.current = true;
+      setRouteSourceRegionId(primaryActive);
+      if (fastestId !== primaryActive) {
+        setRouteDestRegionId(fastestId);
+      } else if (activeRegionIds[1]) {
+        setRouteDestRegionId(activeRegionIds[1]);
+      }
+    }
+  }, [activeRegionIds, liveGeoTelemetry]);
   // 4. Hybrid Cloud VPN / IAP Zero-Trust Workstation Tunnel Overlay
   const [showHybridTunnel, setShowHybridTunnel] = useState(true);
   // 5. DVR Flight Recorder Time-Machine Scrubber (0 = LIVE, >0 = Historical Snapshot)
@@ -2533,9 +2582,11 @@ export default function GlobalNetworkWorldMap({
   });
   const [deployingShield, setDeployingShield] = useState(false);
 
-  // Custom Test Packet Launcher state (defaults to User's Live Client Location, e.g. Tizi Ouzou, Algeria)
+  // Custom Test Packet Launcher state (defaults to User's Live Client Location -> Selected Region)
   const [customOriginId, setCustomOriginId] = useState('my-live-client');
-  const [customTargetRegionId, setCustomTargetRegionId] = useState('us-east1');
+  const [customTargetRegionId, setCustomTargetRegionId] = useState(
+    () => activeRegionIds[0] || 'us-central1'
+  );
   const [customProtocol, setCustomProtocol] = useState('tcp');
   const [customPort, setCustomPort] = useState(22);
 
@@ -2675,7 +2726,7 @@ export default function GlobalNetworkWorldMap({
           port = seq % 3 === 0 ? 3389 : 22;
         } else if (simMode === 'IAP_ZERO_TRUST') {
           if (seq % 2 === 0) {
-            origin = effectiveClientOrigins[0]; // Live Client Origin (Algeria)
+            origin = effectiveClientOrigins[0]; // Live Client Origin
             protocol = 'tcp';
             port = 22;
           } else {
@@ -4010,7 +4061,7 @@ export default function GlobalNetworkWorldMap({
                   );
                 })}
 
-              {/* Live Client Workstation Uplink Beam & Radar Beacon (e.g., Tizi Ouzou, Algeria -> Selected GCP Region) */}
+              {/* Live Client Workstation Uplink Beam & Radar Beacon (Client Origin -> Selected GCP Region) */}
               {showHybridTunnel && (
                 <g>
                   <path
@@ -4050,7 +4101,7 @@ export default function GlobalNetworkWorldMap({
                 </g>
               )}
 
-              {/* Always-Visible Live Client Origin Radar Beacon ("YOU ARE HERE" e.g., Tizi Ouzou, Algeria) */}
+              {/* Always-Visible Live Client Origin Radar Beacon ("YOU ARE HERE") */}
               <g
                 transform={`translate(${liveClientOriginNode.x}, ${liveClientOriginNode.y}) scale(${invScale})`}
                 onClick={(e) => {
@@ -4823,6 +4874,104 @@ export default function GlobalNetworkWorldMap({
                 </button>
               </div>
             </div>
+
+            {/* Live Client-to-Region Socket RTT, Compute Quotas & VPC Subnet CIDR Panel */}
+            {(() => {
+              const liveProbe = (
+                liveGeoTelemetry?.regionalSocketProbes || []
+              ).find((p) => p.regionId === selectedRegion.id);
+              const liveQuota = (liveGeoTelemetry?.regionalQuotas || []).find(
+                (q) => q.regionName === selectedRegion.id
+              );
+              const liveSubnet = (liveGeoTelemetry?.liveSubnets || []).find(
+                (sn) => sn.region === selectedRegion.id
+              );
+              return (
+                <div className="p-2.5 rounded-xl bg-amber-500/[0.07] dark:bg-amber-500/[0.08] border border-amber-500/30 space-y-2 text-[10px] font-mono">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-extrabold text-amber-700 dark:text-amber-300">
+                      {liveClientOriginNode.city} [{liveClientOriginNode.countryCode}] ⇄{' '}
+                      {selectedRegion.name}:{' '}
+                      {clientUplinkTelemetry.greatCircleKm.toLocaleString()} km
+                      ({clientUplinkTelemetry.fiberKm.toLocaleString()} km fiber)
+                    </span>
+                    <button
+                      type="button"
+                      disabled={geoLoading}
+                      onClick={() => fetchLiveGeoTelemetry(true, selectedRegion)}
+                      className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-800 dark:text-amber-200 font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {geoLoading
+                        ? 'Probing...'
+                        : liveProbe
+                        ? `Re-Probe ${selectedRegion.id}`
+                        : `Probe Live Socket to ${selectedRegion.id}`}
+                    </button>
+                  </div>
+
+                  {liveProbe ? (
+                    <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-amber-500/20">
+                      <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                        <span className="text-zinc-400 block">Live DNS</span>
+                        <strong className="text-zinc-900 dark:text-zinc-100">
+                          {liveProbe.dnsMs}ms
+                        </strong>
+                      </div>
+                      <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                        <span className="text-zinc-400 block">Live TCP :443</span>
+                        <strong className="text-emerald-600 dark:text-emerald-400">
+                          {liveProbe.tcpMs}ms
+                        </strong>
+                      </div>
+                      <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                        <span className="text-zinc-400 block">Live TLS 1.3</span>
+                        <strong className="text-blue-600 dark:text-blue-400">
+                          {liveProbe.tlsMs}ms
+                        </strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-zinc-500 dark:text-zinc-400">
+                      Optical Fiber RTT Estimate:{' '}
+                      <strong className="text-amber-600 dark:text-amber-300">
+                        {clientUplinkTelemetry.estRttMs}
+                      </strong>{' '}
+                      · Click &ldquo;Probe Live Socket&rdquo; to execute a real TCP/TLS 1.3 handshake to{' '}
+                      <code>{selectedRegion.id}-aiplatform.googleapis.com:443</code>.
+                    </div>
+                  )}
+
+                  {(liveSubnet || liveQuota) && (
+                    <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-amber-500/20">
+                      {liveSubnet && (
+                        <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                          <span className="text-zinc-400 block">
+                            Live VPC Subnet ({liveSubnet.network})
+                          </span>
+                          <strong className="text-blue-600 dark:text-blue-400">
+                            {liveSubnet.ipCidrRange}
+                          </strong>{' '}
+                          <span className="text-zinc-400">
+                            (GW {liveSubnet.gatewayAddress})
+                          </span>
+                        </div>
+                      )}
+                      {liveQuota && (
+                        <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                          <span className="text-zinc-400 block">
+                            Live Regional Quotas ({liveQuota.status})
+                          </span>
+                          <strong className="text-zinc-900 dark:text-zinc-100">
+                            {liveQuota.cpusUsed}/{liveQuota.cpusLimit} vCPU
+                          </strong>{' '}
+                          · {liveQuota.disksGbUsed}/{liveQuota.disksGbLimit}GB
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Availability Zones Matrix inside Selected Region + Per-Zone Chaos Outage Toggle */}
             <div className="space-y-1.5">
