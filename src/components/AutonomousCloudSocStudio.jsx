@@ -133,6 +133,8 @@ const SOC_PILLARS = [
 export default function AutonomousCloudSocStudio({
   projectId,
   onRunInShell,
+  onOpenHealthAndDrift,
+  onNavigateTab,
   onRefreshGlobal,
 }) {
   const [activePillar, setActivePillar] = useState('KILL_CHAINS');
@@ -142,6 +144,8 @@ export default function AutonomousCloudSocStudio({
   const [error, setError] = useState('');
   const [actionBusy, setActionBusy] = useState('');
   const [statusBanner, setStatusBanner] = useState(null);
+  const [showGitOpsBridge, setShowGitOpsBridge] = useState(false);
+  const [gitOpsTab, setGitOpsTab] = useState('DIFF');
 
   // SOAR IP Quarantine input
   const [quarantineIpInput, setQuarantineIpInput] = useState('');
@@ -409,6 +413,7 @@ export default function AutonomousCloudSocStudio({
     piiColumnsCount: 0,
     staleSecretsCount: 0,
   };
+  const healthAndDriftBridge = socData?.healthAndDriftBridge || null;
   const attestation = socData?.cryptographicAttestation || {};
 
   return (
@@ -425,6 +430,11 @@ export default function AutonomousCloudSocStudio({
               <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
                 100% REAL GCP REST APIs · $0.00/MO SIEM LICENSE TAX
               </span>
+              {healthAndDriftBridge?.merkleSnapshot?.merkleRootShort && (
+                <span className="px-2 py-0.5 rounded bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 text-[10px] font-mono font-bold">
+                  Health &amp; Drift Merkle: {healthAndDriftBridge.merkleSnapshot.merkleRootShort}
+                </span>
+              )}
               {summary.canaryHitsCount > 0 && (
                 <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-mono font-extrabold animate-pulse">
                   CANARY TRIPWIRE HIT ({summary.canaryHitsCount}) · ACTIVE INTRUSION ALERT
@@ -435,7 +445,7 @@ export default function AutonomousCloudSocStudio({
               Next-Gen Autonomous Cloud Security Operations Center (`{projectId}`)
             </h2>
             <p className="text-xs text-zinc-400 max-w-4xl">
-              Correlates live <code className="text-cyan-300">cloudaudit.googleapis.com</code> MITRE ATT&amp;CK kill-chains, maps 3-vector <strong>Toxic Combinations</strong> (<em>Public Ingress &times; Over-Privileged Runtime Identity &times; Crown Jewels</em>), verifies container <code className="text-cyan-300">@sha256</code> supply-chain integrity, arms <strong>$0.00/mo Active Canary Deception Tripwires</strong>, and seals every SOAR containment action in an <strong>Ed25519 (RFC 8032)</strong> cryptographic ledger.
+              Correlates live <code className="text-cyan-300">cloudaudit.googleapis.com</code> MITRE ATT&amp;CK kill-chains, maps 3-vector <strong>Toxic Combinations</strong> (<em>Public Ingress &times; Over-Privileged Runtime Identity &times; Crown Jewels</em>), verifies container <code className="text-cyan-300">@sha256</code> supply-chain integrity, arms <strong>$0.00/mo Active Canary Deception Tripwires</strong>, and seals every SOAR containment action in an <strong>Ed25519 (RFC 8032)</strong> cryptographic ledger + live <strong>ClickOps-to-GitOps (`main.tf`)</strong> diff.
             </p>
           </div>
 
@@ -453,6 +463,34 @@ export default function AutonomousCloudSocStudio({
               <option value={72}>Lookback: Last 72 Hours (3d)</option>
               <option value={168}>Lookback: Last 168 Hours (7d)</option>
             </select>
+
+            {onOpenHealthAndDrift && (
+              <button
+                type="button"
+                onClick={onOpenHealthAndDrift}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
+                title="Open 1-Tap Project Health, Drift, FinOps & Control-Plane Synthesis Hub"
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Health &amp; Drift Hub</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowGitOpsBridge((v) => !v)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer border ${
+                showGitOpsBridge
+                  ? 'bg-indigo-600 border-indigo-400 text-white'
+                  : 'bg-zinc-900 hover:bg-zinc-800 border-indigo-500/40 text-indigo-300'
+              }`}
+              title="Inspect live Terraform HCL git diff generated from your Cloud SOC SOAR actions"
+            >
+              <FileCode2 className="w-3.5 h-3.5" />
+              <span>
+                GitOps HCL Bridge ({healthAndDriftBridge?.flightMutationsCount || 0})
+              </span>
+            </button>
 
             <button
               type="button"
@@ -486,6 +524,87 @@ export default function AutonomousCloudSocStudio({
             </button>
           </div>
         </div>
+
+        {/* Live Health & Drift + ClickOps-to-GitOps (main.tf / imports.tf) Bridge Drawer */}
+        {showGitOpsBridge && healthAndDriftBridge?.gitOpsBridge && (
+          <div className="p-3.5 rounded-xl bg-zinc-900/95 border border-indigo-500/40 space-y-2.5 font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-extrabold uppercase">
+                  Health &amp; Drift &harr; Cloud SOC Bidirectional Bridge
+                </span>
+                <span className="text-xs font-bold text-white">
+                  SOAR Containment &rarr; Live Terraform HCL (`git diff main.tf` + `imports.tf`)
+                </span>
+                <span className="text-[10px] text-zinc-400">
+                  {healthAndDriftBridge.flightMutationsCount} Flight Mutation
+                  {healthAndDriftBridge.flightMutationsCount === 1 ? '' : 's'} ·{' '}
+                  {healthAndDriftBridge.snapshotsHistoryCount} Merkle State Snapshot
+                  {healthAndDriftBridge.snapshotsHistoryCount === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setGitOpsTab('DIFF')}
+                  className={`px-2.5 py-1 rounded text-[10px] font-extrabold cursor-pointer ${
+                    gitOpsTab === 'DIFF'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  git diff main.tf
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGitOpsTab('IMPORTS')}
+                  className={`px-2.5 py-1 rounded text-[10px] font-extrabold cursor-pointer ${
+                    gitOpsTab === 'IMPORTS'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  imports.tf (Terraform 1.5+)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      gitOpsTab === 'DIFF'
+                        ? healthAndDriftBridge.gitOpsBridge.unifiedDiff
+                        : healthAndDriftBridge.gitOpsBridge.importsTf
+                    );
+                    setStatusBanner({
+                      type: 'success',
+                      message: `Copied ${
+                        gitOpsTab === 'DIFF' ? 'git diff main.tf' : 'imports.tf'
+                      } to clipboard!`,
+                    });
+                  }}
+                  className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer"
+                >
+                  Copy HCL
+                </button>
+                {onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('SOVEREIGN_STUDIO')}
+                    className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-cyan-300 text-[10px] font-extrabold cursor-pointer"
+                  >
+                    Open SHA-256 Time-Machine &rarr;
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <pre className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-emerald-300 overflow-x-auto max-h-48 leading-relaxed">
+              {gitOpsTab === 'DIFF'
+                ? healthAndDriftBridge.gitOpsBridge.unifiedDiff
+                : healthAndDriftBridge.gitOpsBridge.importsTf}
+            </pre>
+          </div>
+        )}
 
         {/* 5 Live SOC KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">

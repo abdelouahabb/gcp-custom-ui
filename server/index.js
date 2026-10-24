@@ -35984,18 +35984,18 @@ function buildSessionGitOpsDiffFromFlightLog(projectId, flightEvents = []) {
       resName.includes('gs://')
     ) {
       const bkt = resName.replace(/^gs:\/\//, '').split(/\s+/)[0] || `${projectId}-bucket`;
-      diffBlocks.push(`@@ -14,6 +14,13 @@ resource "google_storage_bucket" "${slug || 'bucket'}" {
+      diffBlocks.push(`@@ -14,6 +14,14 @@ resource "google_storage_bucket" "${slug || 'bucket'}" {
    name                        = "${bkt}"
    project                     = "${projectId}"
    uniform_bucket_level_access = true
 -  public_access_prevention    = "inherited"
 +  public_access_prevention    = "enforced"
++  soft_delete_policy {
++    retention_duration_seconds = 604800
++  }
 +  autoclass {
 +    enabled                = true
 +    terminal_storage_class = "ARCHIVE"
-+  }
-+  labels = {
-+    cloudpulse-finops-optimized = "true"
 +  }
  }`);
       importBlocks.push(`import {
@@ -36005,12 +36005,14 @@ function buildSessionGitOpsDiffFromFlightLog(projectId, flightEvents = []) {
     } else if (
       act.includes('ROLLBACK_CANARY') ||
       act.includes('CLOUD_RUN') ||
+      act.includes('CLOUDRUN') ||
       act.includes('HIBERNATE')
     ) {
       const svc = resName.split(/\s+/)[0] || 'cloudpulse-api';
-      diffBlocks.push(`@@ -42,8 +42,11 @@ resource "google_cloud_run_v2_service" "${slug || 'service'}" {
+      diffBlocks.push(`@@ -42,8 +42,12 @@ resource "google_cloud_run_v2_service" "${slug || 'service'}" {
    name     = "${svc}"
    project  = "${projectId}"
++  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
    template {
      scaling {
 -      min_instance_count = 1
@@ -36029,23 +36031,85 @@ function buildSessionGitOpsDiffFromFlightLog(projectId, flightEvents = []) {
   to = google_cloud_run_v2_service.${slug || 'service'}
   id = "projects/${projectId}/locations/${evt.region || 'us-central1'}/services/${svc}"
 }`);
+    } else if (act.includes('QUARANTINE_IP_CIDR')) {
+      const fwRule = resName.split(/\s+/)[0] || 'cloudpulse-soc-quarantine-rule';
+      diffBlocks.push(`@@ -64,0 +65,14 @@
++resource "google_compute_firewall" "${slug || 'soc_quarantine'}" {
++  name          = "${fwRule}"
++  project       = "${projectId}"
++  network       = "default"
++  direction     = "INGRESS"
++  priority      = 100
++  source_ranges = ["${evt.blockedCidr || '198.51.100.77/32'}"]
++  deny {
++    protocol = "all"
++  }
++}`);
+      importBlocks.push(`import {
+  to = google_compute_firewall.${slug || 'soc_quarantine'}
+  id = "projects/${projectId}/global/firewalls/${fwRule}"
+}`);
     } else if (
       act.includes('FIREWALL') ||
       act.includes('DRIFT_HEAL') ||
-      act.includes('TRIPWIRE')
+      act.includes('TRIPWIRE') ||
+      act.includes('ZERO_TRUST_LOCKDOWN') ||
+      act.includes('DEFCON1_LOCKDOWN')
     ) {
+      const fwRule = resName.split(/\s+/)[0] || 'default-allow-ssh';
       diffBlocks.push(`@@ -78,6 +78,6 @@ resource "google_compute_firewall" "${slug || 'perimeter_fw'}" {
-   name          = "${resName.split(/\s+/)[0] || 'default-allow-ssh'}"
+   name          = "${fwRule}"
    project       = "${projectId}"
    network       = "default"
 -  source_ranges = ["0.0.0.0/0"]
-+  source_ranges = ["35.235.240.0/20"] # Locked to Google Cloud IAP TCP Forwarding
++  source_ranges = ["35.235.240.0/20"] # Locked to Google Cloud IAP TCP Forwarding by Cloud SOC
+ }`);
+      importBlocks.push(`import {
+  to = google_compute_firewall.${slug || 'perimeter_fw'}
+  id = "projects/${projectId}/global/firewalls/${fwRule}"
+}`);
+    } else if (act.includes('OSLOGIN') || act.includes('SERIAL_PORT')) {
+      diffBlocks.push(`@@ -90,4 +90,8 @@ resource "google_compute_project_metadata" "${safeProjSlug}_hardened_meta" {
+   project = "${projectId}"
+   metadata = {
+-    enable-oslogin     = "FALSE"
++    enable-oslogin     = "TRUE"
++    serial-port-enable = "FALSE"
+   }
+ }`);
+      importBlocks.push(`import {
+  to = google_compute_project_metadata.${safeProjSlug}_hardened_meta
+  id = "${projectId}"
+}`);
+    } else if (act.includes('CANARY') || act.includes('SECRET')) {
+      const secId = resName.split('/').pop() || 'cloudpulse-soc-canary-master-key';
+      diffBlocks.push(`@@ -104,0 +105,11 @@
++resource "google_secret_manager_secret" "${slug || 'soc_canary_secret'}" {
++  project   = "${projectId}"
++  secret_id = "${secId}"
++  labels = {
++    managed-by = "cloudpulse-autonomous-soc"
++    soc-role   = "zero-cost-canary-tripwire"
++  }
++  replication {
++    auto {}
++  }
++}`);
+      importBlocks.push(`import {
+  to = google_secret_manager_secret.${slug || 'soc_canary_secret'}
+  id = "projects/${projectId}/secrets/${secId}"
+}`);
+    } else if (act.includes('FREEZE_SA') || act.includes('SERVICE_ACCOUNT')) {
+      diffBlocks.push(`@@ -118,4 +118,5 @@ resource "google_service_account" "${slug || 'quarantined_sa'}" {
+   project    = "${projectId}"
+   account_id = "${resName.split('@')[0] || 'service-account'}"
++  disabled   = true # Frozen in-place by Cloud SOC SOAR
  }`);
     } else {
-      diffBlocks.push(`@@ -102,4 +102,8 @@ # Flight-Recorder Mutation (${evt.timestamp || new Date().toISOString()})
+      diffBlocks.push(`@@ -132,4 +132,8 @@ # Flight-Recorder & Cloud SOC Mutation (${evt.timestamp || new Date().toISOString()})
 +# Action: ${act || 'LIVE_MUTATION'}
 +# Target: ${resName} (${evt.region || 'global'})
-+# Summary: ${evt.summary || evt.title || 'Reconciled live Google Cloud resource state'}`);
++# Summary: ${evt.summary || evt.details || evt.title || 'Reconciled live Google Cloud resource state'}`);
     }
   }
 
@@ -36058,8 +36122,8 @@ function buildSessionGitOpsDiffFromFlightLog(projectId, flightEvents = []) {
    disable_on_destroy = false
  }
 +
-+# Zero out-of-band ClickOps mutations pending commit in current flight session.
-+# Execute any 1-Tap Remediation or Runbook above to auto-generate the exact git diff.`);
++# Zero out-of-band ClickOps / SOAR mutations pending commit in current flight session.
++# Execute any 1-Tap Remediation, Autonomous Runbook, or Cloud SOC SOAR containment action to auto-generate the exact git diff.`);
   }
 
   const unifiedDiff = [
@@ -36074,7 +36138,7 @@ function buildSessionGitOpsDiffFromFlightLog(projectId, flightEvents = []) {
     unifiedDiff,
     importsTf:
       importBlocks.join('\n\n') ||
-      `# Terraform 1.5+ Declarative State Import Blocks (${projectId})\n# Trigger any live resource mutation to populate state import targets.`,
+      `# Terraform 1.5+ Declarative State Import Blocks (${projectId})\n# Trigger any live resource mutation or Cloud SOC SOAR action to populate state import targets.`,
     eventsCount: flightEvents.length,
   };
 }
@@ -36093,12 +36157,53 @@ app.get('/api/project/:projectId/synthesis/overview', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated.' });
     }
 
-    const rawLiveState = await gatherLiveCanonicalProjectState(projectId, token);
+    const encProj = encodeURIComponent(projectId);
+    const [rawLiveState, secretsCheckRes, computeMetaRes, iamPolRes] = await Promise.all([
+      gatherLiveCanonicalProjectState(projectId, token),
+      gcpFetch(
+        `https://secretmanager.googleapis.com/v1/projects/${encProj}/secrets?pageSize=30`,
+        token,
+        projectId,
+        { timeout: 5500 }
+      ).catch(() => ({ secrets: [] })),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}`,
+        token,
+        projectId,
+        { timeout: 5500 }
+      ).catch(() => null),
+      gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`,
+        token,
+        projectId,
+        { method: 'POST', body: {}, timeout: 5500 }
+      ).catch(() => null),
+    ]);
+
     const liveSnap = computeCanonicalProjectSnapshot(
       projectId,
       rawLiveState,
-      'Live Control-Plane Synthesis Anchor'
+      'Live Control-Plane Synthesis & SOC Anchor'
     );
+    // Keep projectStateSnapshotsByProject seeded so Time-Machine & Cloud SOC always share the latest baseline
+    const existingSnaps = projectStateSnapshotsByProject.get(projectId) || [];
+    if (existingSnaps.length === 0) {
+      projectStateSnapshotsByProject.set(projectId, [liveSnap]);
+    }
+
+    // Seed SOC IAM Time-Machine Vault if empty and iamPolRes returned
+    if (
+      iamPolRes &&
+      (!socIamCheckpointsByProject.has(projectId) ||
+        socIamCheckpointsByProject.get(projectId).length === 0)
+    ) {
+      captureSocIamCheckpoint(
+        projectId,
+        iamPolRes,
+        'Genesis Baseline Policy (Auto-Anchored by Health & Drift)',
+        account || 'system-baseline'
+      );
+    }
 
     const runningVms = (rawLiveState.computeVms || []).filter(
       (v) => v.status === 'RUNNING'
@@ -36119,6 +36224,74 @@ app.get('/api/project/:projectId/synthesis/overview', async (req, res) => {
     const unhardenedBuckets = (rawLiveState.storageBuckets || []).filter(
       (b) => b.publicAccessPrevention !== 'enforced' || b.softDeleteDays === 0
     );
+
+    // Extract live Autonomous Cloud SOC bridge telemetry
+    const secretsArr = Array.isArray(secretsCheckRes?.secrets)
+      ? secretsCheckRes.secrets
+      : [];
+    const canarySecretArmed = secretsArr.some((s) =>
+      String(s.name || '').endsWith('/secrets/cloudpulse-soc-canary-master-key')
+    );
+    const commonMetaItems = Array.isArray(computeMetaRes?.commonInstanceMetadata?.items)
+      ? computeMetaRes.commonInstanceMetadata.items
+      : [];
+    const findMetaVal = (key) => {
+      const hit = commonMetaItems.find(
+        (i) => String(i.key || '').toLowerCase() === key.toLowerCase()
+      );
+      return hit ? String(hit.value || '') : '';
+    };
+    const osLoginEnabled = /^true$/i.test(findMetaVal('enable-oslogin'));
+    const serialPortEnabled = /^true|1$/i.test(findMetaVal('serial-port-enable'));
+    const rawSshKeys = findMetaVal('ssh-keys') || findMetaVal('sshKeys') || '';
+    const projectWideSshKeysCount = rawSshKeys
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean).length;
+
+    const iamCheckpoints = socIamCheckpointsByProject.get(projectId) || [];
+    const socForensicReceipts = socForensicReceiptsByProject.get(projectId) || [];
+    const baselineCp = iamCheckpoints[iamCheckpoints.length - 1] || null;
+    const iamEtagDrifted = Boolean(
+      baselineCp && iamPolRes?.etag && baselineCp.etag !== iamPolRes.etag
+    );
+
+    const rawSocScore =
+      100 -
+      openFirewalls.length * 14 -
+      unhardenedBuckets.length * 5 -
+      (projectWideSshKeysCount > 0 ? 8 : 0) -
+      (!osLoginEnabled ? 6 : 0) +
+      (canarySecretArmed ? 5 : 0);
+    const socPostureScore = Math.max(10, Math.min(100, Math.round(rawSocScore)));
+    const socGrade =
+      socPostureScore >= 90
+        ? 'A+ (ZERO-TRUST)'
+        : socPostureScore >= 75
+        ? 'A (HARDENED)'
+        : socPostureScore >= 60
+        ? 'B (GUARDED)'
+        : 'C (ACTION REQUIRED)';
+
+    const cloudSocBridge = {
+      socPostureScore,
+      socGrade,
+      pillarsTotal: 15,
+      canarySecretArmed,
+      canarySecretId: 'cloudpulse-soc-canary-master-key',
+      osLoginEnabled,
+      serialPortEnabled,
+      projectWideSshKeysCount,
+      openFirewallsCount: openFirewalls.length,
+      unhardenedBucketsCount: unhardenedBuckets.length,
+      iamCheckpointsCount: iamCheckpoints.length,
+      liveIamEtag: iamPolRes?.etag || 'unknown',
+      iamEtagDrifted,
+      ed25519ReceiptsCount: socForensicReceipts.length,
+      recentForensicReceipts: socForensicReceipts.slice(0, 6),
+      ed25519PublicKeyPem: socPublicKeyPem,
+      merkleSnapshotsCount: (projectStateSnapshotsByProject.get(projectId) || []).length,
+    };
 
     // Compute live hourly & daily burn velocity
     const hourlyBurnUsd = Number(
@@ -36297,6 +36470,8 @@ app.get('/api/project/:projectId/synthesis/overview', async (req, res) => {
       generatedAt: new Date().toISOString(),
       merkleRootSha256: liveSnap.sha256,
       merkleRootShort: liveSnap.merkleRootShort,
+      socPostureScore: cloudSocBridge.socPostureScore,
+      socGrade: cloudSocBridge.socGrade,
       inventoryCounts: {
         computeVms: (rawLiveState.computeVms || []).length,
         cloudRunServices: (rawLiveState.cloudRunServices || []).length,
@@ -36309,15 +36484,21 @@ app.get('/api/project/:projectId/synthesis/overview', async (req, res) => {
         exposedWorldFirewalls: openFirewalls.length,
         unhardenedBuckets: unhardenedBuckets.length,
         logicalBillingDatasets: logicalBqDatasets.length,
+        projectWideSshKeysCount: cloudSocBridge.projectWideSshKeysCount,
+        canarySecretArmed: cloudSocBridge.canarySecretArmed,
         hourlyBurnUsd,
         monthlyBurnUsd,
         monthlySavingsPotentialUsd,
       },
     };
+    const dossierJson = JSON.stringify(dossierPayload);
     const dossierSignature = crypto
       .createHash('sha256')
-      .update(JSON.stringify(dossierPayload))
+      .update(dossierJson)
       .digest('hex');
+    const dossierEd25519Signature = crypto
+      .sign(null, Buffer.from(dossierJson, 'utf8'), socEd25519KeyPair.privateKey)
+      .toString('hex');
 
     return res.json({
       projectId,
@@ -36327,12 +36508,14 @@ app.get('/api/project/:projectId/synthesis/overview', async (req, res) => {
         merkleRootShort: liveSnap.merkleRootShort,
         timestamp: liveSnap.timestamp,
       },
+      cloudSocBridge,
       creditRunwayOptimizer,
       autonomousRunbooks,
       gitOpsBridge,
       executiveDossier: {
         ...dossierPayload,
         cryptographicSignature: `sha256:${dossierSignature}`,
+        ed25519Signature: dossierEd25519Signature,
       },
     });
   } catch (err) {
@@ -36378,6 +36561,28 @@ app.post('/api/project/:projectId/synthesis/runbook', async (req, res) => {
     });
 
     if (runbookId === 'RUNBOOK_ZERO_TRUST_LOCKDOWN') {
+      // Also capture an Ed25519 IAM Policy Checkpoint in the Cloud SOC Vault
+      try {
+        const liveIamPol = await gcpFetch(
+          `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}:getIamPolicy`,
+          token,
+          projectId,
+          { method: 'POST', body: {}, timeout: 6000 }
+        );
+        if (liveIamPol) {
+          captureSocIamCheckpoint(
+            projectId,
+            liveIamPol,
+            'Health & Drift Zero-Trust Lockdown Pre-Anchor',
+            account || 'soc-operator'
+          );
+        }
+      } catch {
+        // ignore
+      }
+
       // Step 2: Lock world-open 0.0.0.0/0 SSH/RDP firewalls to Google IAP
       const openFws = (rawLiveState.vpcFirewalls || []).filter(
         (f) =>
@@ -36431,7 +36636,10 @@ app.post('/api/project/:projectId/synthesis/runbook', async (req, res) => {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: {
-                  iamConfiguration: { publicAccessPrevention: 'enforced' },
+                  iamConfiguration: {
+                    publicAccessPrevention: 'enforced',
+                    uniformBucketLevelAccess: { enabled: true },
+                  },
                 },
                 timeout: 6000,
               }
@@ -36451,8 +36659,8 @@ app.post('/api/project/:projectId/synthesis/runbook', async (req, res) => {
             : `Verified all ${(rawLiveState.storageBuckets || []).length} Cloud Storage bucket(s) enforce publicAccessPrevention.`,
       });
 
-      // Step 4: Plant or verify Secret Manager Honey-Token canary
-      const canarySecretId = 'CLOUDPULSE_ZERO_TRUST_CANARY_KEY';
+      // Step 4: Plant or verify Unified SOC Secret Manager Honey-Token canary (`cloudpulse-soc-canary-master-key`)
+      const canarySecretId = 'cloudpulse-soc-canary-master-key';
       let plantedCanary = false;
       try {
         await gcpFetch(
@@ -36466,7 +36674,10 @@ app.post('/api/project/:projectId/synthesis/runbook', async (req, res) => {
             headers: { 'Content-Type': 'application/json' },
             body: {
               replication: { automatic: {} },
-              labels: { 'cloudpulse-honey-token': 'true' },
+              labels: {
+                'managed-by': 'cloudpulse-autonomous-soc',
+                'soc-role': 'zero-cost-canary-tripwire',
+              },
             },
             timeout: 6000,
           }
@@ -36479,8 +36690,16 @@ app.post('/api/project/:projectId/synthesis/runbook', async (req, res) => {
         step: 4,
         status: 'EXECUTED_LIVE_GCP',
         detail: plantedCanary
-          ? `Provisioned live Secret Manager honey-token canary (${canarySecretId}) via secretmanager.googleapis.com/v1.`
-          : `Verified Zero-Trust Honey-Token deception trap (${canarySecretId}) is armed.`,
+          ? `Provisioned live $0.00/mo SOC Secret Manager honey-token canary (${canarySecretId}) via secretmanager.googleapis.com/v1.`
+          : `Verified $0.00/mo SOC Honey-Token deception tripwire (${canarySecretId}) is armed.`,
+      });
+
+      appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'HEALTH_DRIFT_ZERO_TRUST_RUNBOOK',
+        target: `${projectId} (Merkle ${checkpoint.merkleRootShort})`,
+        actor: account || 'soc-operator',
+        details: `Executed Health & Drift Zero-Trust Lockdown DAG: ${lockedFwCount} firewall(s) locked, ${hardenedBucketsCount} bucket(s) locked, Canary ${canarySecretId} armed.`,
       });
     } else if (runbookId === 'RUNBOOK_CREDIT_RUNWAY_EXTENDER') {
       // Step 2: Optimize Cloud Run services (cpuIdle=true, startupCpuBoost=true, minInstanceCount=0)
@@ -47583,6 +47802,32 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
       .sign(null, Buffer.from(canonicalStatePayload, 'utf8'), socEd25519KeyPair.privateKey)
       .toString('hex');
 
+    // ========================================================================
+    // BIDIRECTIONAL HEALTH & DRIFT + CLICKOPS-TO-GITOPS BRIDGE
+    // ========================================================================
+    const projectFlightEvents = flightRecorderByProject.get(projectId) || [];
+    const gitOpsBridge = buildSessionGitOpsDiffFromFlightLog(
+      projectId,
+      projectFlightEvents
+    );
+    const existingSnapshots = projectStateSnapshotsByProject.get(projectId) || [];
+    const latestMerkleSnap = existingSnapshots[0] || {
+      sha256: stateSha256,
+      merkleRootShort: `merkle:${stateSha256.slice(0, 12)}`,
+      timestamp: new Date().toISOString(),
+    };
+    const healthAndDriftBridge = {
+      merkleSnapshot: {
+        sha256: latestMerkleSnap.sha256,
+        merkleRootShort:
+          latestMerkleSnap.merkleRootShort || `merkle:${stateSha256.slice(0, 12)}`,
+        timestamp: latestMerkleSnap.timestamp || new Date().toISOString(),
+      },
+      snapshotsHistoryCount: existingSnapshots.length,
+      flightMutationsCount: projectFlightEvents.length,
+      gitOpsBridge,
+    };
+
     return res.json({
       ok: true,
       projectId,
@@ -47615,6 +47860,7 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
         escalationPathsCount: iamEscalationGraph.totalPathsCount,
         projectWideSshKeysCount: vmMetadataAndShieldedRadar.projectWideSshKeysCount,
         piiColumnsCount: dataDlpAndSecretHygiene.piiColumnsCount,
+        flightMutationsCount: projectFlightEvents.length,
       },
       killChains: killChains.slice(0, 25),
       auditEvents: parsedAuditEvents.slice(0, 50),
@@ -47631,6 +47877,7 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
       iamEscalationGraph,
       vmMetadataAndShieldedRadar,
       dataDlpAndSecretHygiene,
+      healthAndDriftBridge,
       cryptographicAttestation: {
         algorithm: 'Ed25519 (RFC 8032) + SHA-256 Merkle State Digest',
         stateSha256,
@@ -47898,6 +48145,14 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         target: firewallRuleName,
         actor: account || 'soc-operator',
         details: `Restricted firewall rule ${firewallRuleName} from 0.0.0.0/0 to Google Cloud IAP (35.235.240.0/20).`,
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'SOC_LOCK_FIREWALL_IAP',
+        resourceType: 'VPC_FIREWALL_RULE',
+        resourceName: firewallRuleName,
+        region: 'global',
+        details: `Restricted firewall rule ${firewallRuleName} from 0.0.0.0/0 to Cloud IAP (35.235.240.0/20)`,
       });
 
       return res.json({
@@ -48346,6 +48601,13 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         actor: account || 'soc-operator',
         details: `Enforced publicAccessPrevention=enforced and uniformBucketLevelAccess=true on gs://${bucketName}.`,
       });
+      recordFlightEvent(projectId, {
+        action: 'SOC_LOCK_GCS_BUCKET',
+        resourceType: 'GCS_BUCKET',
+        resourceName: `gs://${bucketName}`,
+        region: 'global',
+        details: `Enforced publicAccessPrevention=enforced and uniformBucketLevelAccess=true on gs://${bucketName}`,
+      });
       return res.json({
         success: true,
         action,
@@ -48407,6 +48669,13 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         details: `${
           shouldFreeze ? 'Frozen (disabled)' : 'Unfrozen (re-enabled)'
         } Service Account ${serviceAccountEmail} via iam.googleapis.com/v1.`,
+      });
+      recordFlightEvent(projectId, {
+        action: shouldFreeze ? 'SOC_FREEZE_SA' : 'SOC_UNFREEZE_SA',
+        resourceType: 'SERVICE_ACCOUNT',
+        resourceName: serviceAccountEmail,
+        region: 'global',
+        details: `${shouldFreeze ? 'Frozen' : 'Re-enabled'} Service Account ${serviceAccountEmail}`,
       });
       return res.json({
         success: true,
@@ -48565,6 +48834,14 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         details: `Defcon-1 Atomic Lockdown completed: ${stepsExecuted.join(' | ')}.`,
       });
 
+      recordFlightEvent(projectId, {
+        action: 'SOC_DEFCON1_LOCKDOWN',
+        resourceType: 'PROJECT_PERIMETER',
+        resourceName: 'default-allow-ssh',
+        region: 'global',
+        details: `Defcon-1 Atomic Lockdown: ${stepsExecuted.join(' | ')}`,
+      });
+
       return res.json({
         success: true,
         action,
@@ -48677,6 +48954,14 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         details: `Severed transitive IAM privilege-escalation edge (${memberToSever} on ${roleToSever}).`,
       });
 
+      recordFlightEvent(projectId, {
+        action: 'SOC_SEVER_IAM_ESCALATION',
+        resourceType: 'IAM_BINDING',
+        resourceName: `${memberToSever} -> ${roleToSever}`,
+        region: 'global',
+        details: `Severed transitive IAM privilege-escalation edge (${memberToSever} on ${roleToSever})`,
+      });
+
       return res.json({
         success: true,
         action,
@@ -48730,6 +49015,14 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         target: `projects/${projectId}/commonInstanceMetadata`,
         actor: account || 'soc-operator',
         details: `Enforced enable-oslogin=TRUE and serial-port-enable=FALSE across Compute Engine project commonInstanceMetadata.`,
+      });
+
+      recordFlightEvent(projectId, {
+        action: 'SOC_HARDEN_OSLOGIN_SERIAL_PORT',
+        resourceType: 'COMPUTE_PROJECT_METADATA',
+        resourceName: projectId,
+        region: 'global',
+        details: `Enforced enable-oslogin=TRUE and serial-port-enable=FALSE on ${projectId}`,
       });
 
       return res.json({
@@ -48818,6 +49111,13 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         target: addedVer?.name || `projects/${projectId}/secrets/${secretId}`,
         actor: account || 'soc-operator',
         details: `Rotated Secret Manager secret ${secretId} with fresh 256-bit cryptographic version (${addedVer?.name}).`,
+      });
+      recordFlightEvent(projectId, {
+        action: 'SOC_ROTATE_SECRET_VERSION',
+        resourceType: 'SECRET_MANAGER_SECRET',
+        resourceName: secretId,
+        region: 'global',
+        details: `Rotated Secret Manager secret ${secretId} to ${addedVer?.name || 'latest'}`,
       });
       return res.json({
         success: true,

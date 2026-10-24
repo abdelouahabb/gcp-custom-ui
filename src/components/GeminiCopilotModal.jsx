@@ -252,11 +252,34 @@ export default function GeminiCopilotModal({
     }
   };
 
+  const handleExecuteSocBridgeAction = async (action, payload = {}) => {
+    setBusyActionId(`soc-${action}`);
+    setActionBanner('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/soc/action`,
+        { action, ...payload }
+      );
+      const msg = res.data?.message || `Executed Cloud SOC action ${action}`;
+      setActionBanner(msg);
+      if (onShowToast) onShowToast(msg);
+      await runLiveProjectAudit();
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      setActionBanner(
+        `Cloud SOC action error: ${err.response?.data?.error || err.message}`
+      );
+    } finally {
+      setBusyActionId(null);
+    }
+  };
+
   const totalFindings =
     exposedFirewalls.length + zombies.length + priceDriftCount;
   const runway = synthesisData?.creditRunwayOptimizer;
   const runbooks = synthesisData?.autonomousRunbooks || [];
   const gitOpsBridge = synthesisData?.gitOpsBridge;
+  const cloudSocBridge = synthesisData?.cloudSocBridge;
   const dossier = synthesisData?.executiveDossier;
 
   return (
@@ -431,6 +454,191 @@ export default function GeminiCopilotModal({
               </div>
             </div>
           </div>
+
+          {/* WAVE 16 BRIDGE: 15-Pillar Autonomous Cloud SOC & Ed25519 Zero-Trust Bridge */}
+          {cloudSocBridge && (
+            <div className="p-4 rounded-xl bg-gradient-to-br from-rose-500/[0.06] via-zinc-900/40 to-indigo-500/[0.06] border border-rose-500/30 space-y-3 font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-500/20 text-rose-500 dark:text-rose-300 border border-rose-500/40">
+                    Wave 16 · 15-Pillar Cloud SOC Bridge
+                  </span>
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Autonomous Cloud SOC & Ed25519 Zero-Trust War-Room Telemetry
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                    SOC Score: {cloudSocBridge.socPostureScore}/100 · {cloudSocBridge.socGrade}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectTab('CLOUD_SOC');
+                        onClose();
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                      <span>Open 15-Pillar Cloud SOC</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectTab('SOVEREIGN_STUDIO');
+                        onClose();
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>SHA-256 Time-Machine</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
+                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    $0.00/mo Honey-Canary
+                  </div>
+                  <div
+                    className={`font-extrabold mt-0.5 ${
+                      cloudSocBridge.canarySecretArmed
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-amber-500'
+                    }`}
+                  >
+                    {cloudSocBridge.canarySecretArmed ? 'ARMED (LIVE)' : 'UNARMED'}
+                  </div>
+                  <div className="text-[10px] text-zinc-400 truncate">
+                    {cloudSocBridge.canarySecretId}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    Project-Wide SSH & OS Login
+                  </div>
+                  <div
+                    className={`font-extrabold mt-0.5 ${
+                      cloudSocBridge.projectWideSshKeysCount > 0 ||
+                      !cloudSocBridge.osLoginEnabled
+                        ? 'text-amber-500'
+                        : 'text-emerald-600 dark:text-emerald-400'
+                    }`}
+                  >
+                    {cloudSocBridge.projectWideSshKeysCount} SSH Key
+                    {cloudSocBridge.projectWideSshKeysCount === 1 ? '' : 's'} · OSLogin:{' '}
+                    {cloudSocBridge.osLoginEnabled ? 'ON' : 'OFF'}
+                  </div>
+                  <div className="text-[10px] text-zinc-400">
+                    Serial Port: {cloudSocBridge.serialPortEnabled ? 'ENABLED' : 'BLOCKED'}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    IAM etag Vault & Merkle
+                  </div>
+                  <div className="font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                    {cloudSocBridge.iamCheckpointsCount} IAM Checkpoint
+                    {cloudSocBridge.iamCheckpointsCount === 1 ? '' : 's'}
+                  </div>
+                  <div className="text-[10px] text-zinc-400 truncate">
+                    etag: {cloudSocBridge.liveIamEtag} ·{' '}
+                    {cloudSocBridge.iamEtagDrifted ? 'DRIFTED' : 'IN-SYNC'}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    Ed25519 Forensic Ledger
+                  </div>
+                  <div className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {cloudSocBridge.ed25519ReceiptsCount} Signed Receipt
+                    {cloudSocBridge.ed25519ReceiptsCount === 1 ? '' : 's'}
+                  </div>
+                  <div className="text-[10px] text-zinc-400">
+                    RFC 8032 + SHA-256 Chain
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busyActionId === 'soc-EXECUTE_DEFCON1_LOCKDOWN'}
+                    onClick={() =>
+                      handleExecuteSocBridgeAction('EXECUTE_DEFCON1_LOCKDOWN')
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>
+                      {busyActionId === 'soc-EXECUTE_DEFCON1_LOCKDOWN'
+                        ? 'Executing Defcon-1 Lockdown...'
+                        : '1-Click Defcon-1 Atomic Lockdown'}
+                    </span>
+                  </button>
+
+                  {!cloudSocBridge.canarySecretArmed && (
+                    <button
+                      type="button"
+                      disabled={busyActionId === 'soc-DEPLOY_ZERO_COST_CANARY_TRAP'}
+                      onClick={() =>
+                        handleExecuteSocBridgeAction('DEPLOY_ZERO_COST_CANARY_TRAP', {
+                          canaryType: 'CANARY_SECRET_MANAGER',
+                        })
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Arm $0.00/mo Honey-Secret Canary</span>
+                    </button>
+                  )}
+
+                  {!cloudSocBridge.osLoginEnabled && (
+                    <button
+                      type="button"
+                      disabled={
+                        busyActionId === 'soc-HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT'
+                      }
+                      onClick={() =>
+                        handleExecuteSocBridgeAction(
+                          'HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Enforce OS Login + Block Serial Port</span>
+                    </button>
+                  )}
+                </div>
+
+                {cloudSocBridge.recentForensicReceipts?.length > 0 && (
+                  <span className="text-[10px] text-zinc-400">
+                    Latest Ed25519 Receipt:{' '}
+                    <strong className="text-emerald-400">
+                      {cloudSocBridge.recentForensicReceipts[0].action}
+                    </strong>{' '}
+                    (sig:{' '}
+                    {String(
+                      cloudSocBridge.recentForensicReceipts[0].ed25519Signature || ''
+                    ).slice(0, 16)}
+                    ...)
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* DERIVED CAPABILITY A: Promotional Credit & Budget Runway Optimizer */}
           {runway && (

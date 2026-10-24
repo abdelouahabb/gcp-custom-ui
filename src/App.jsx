@@ -3205,6 +3205,8 @@ function CloudPulseCockpit() {
                 <AutonomousCloudSocStudio
                   projectId={selectedProjectId}
                   onRunInShell={handleRunInShell}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                  onNavigateTab={(tabId) => setActiveTab(tabId)}
                   onRefreshGlobal={() => {
                     fetchProjectOverview(selectedProjectId);
                     setVmRefreshTrigger((c) => c + 1);
