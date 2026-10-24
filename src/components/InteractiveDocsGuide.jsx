@@ -31,6 +31,33 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'wave16-autonomous-cloud-soc-and-zero-trust-soar-war-room',
+    wave: 'WAVE 16 MOONSHOT · 10-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC & SOAR WAR-ROOM ($0.00/MO SIEM LICENSE TAX)',
+    title:
+      'Wave 16: 10-Pillar Autonomous Google Cloud Security Operations Center (SOC) & Zero-Trust SOAR War-Room — MITRE Kill-Chains, Toxic Combinations, $0/mo Canary Grid, IAM Time-Machine & Defcon-1 Lockdown',
+    badge: 'CLOUD SOC TAB (PRIMARY STARRED)',
+    badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
+    icon: ShieldAlert,
+    targetTab: 'CLOUD_SOC',
+    problemSolved:
+      'Legacy cloud SIEMs (Chronicle, Splunk, Datadog SIEM, SCC Enterprise) cost $3,000–$25,000+/mo yet act as passive log viewers that flood operators with uncorrelated alerts while requiring manual multi-tab CLI/Console actions during an active intrusion. CloudPulse Wave 16 turns your live Google Cloud control plane into a $0.00/mo, 10-pillar autonomous detection, deception, IAM rollback, and 1-click SOAR containment war-room.',
+    howItWorks: [
+      'Pillars 01–02 (MITRE ATT&CK Kill-Chains, /32 IP Quarantine & 3-Vector Toxic Combinations Graph): Ingests live cloudaudit.googleapis.com entries via logging.googleapis.com/v2/entries:list, groups behavioral progression by (principalEmail, callerIp), quarantines external attacker IPs via priority-100 VPC INGRESS DENY ALL rules (BLOCK_ATTACKER_IP_CIDR), and maps Public Ingress x Over-Privileged Runtime Identity x Crown Jewels with 1-click Zero-Trust remediation.',
+      'Pillars 03–05 (Supply-Chain @sha256 & .json SA Key Disabler, $0.00/mo Active Canary Deception Grid & Gemini 3.8 Flash / 3.1 Pro SOC Commander): Audits Cloud Run @sha256 image digests, disables user-managed Service Account .json keys in 1 click (DISABLE_SERVICE_ACCOUNT_KEY), deploys 3 real $0.00/mo GCP canary tripwires (cloudpulse-soc-canary-master-key metadata-only Secret Manager secret, soc-canary-vault-admin zero-role decoy SA, and cloudpulse-soc-canary-trap-log VPC recon trap), and chains every SOAR action into an Ed25519 (RFC 8032) cryptographic receipt ledger.',
+      'Pillars 06–08 (IAM Policy Time-Machine, Outbound Exfiltration & GCS Firewall, and WIF + Service Account In-Place Freeze): Captures Ed25519-signed projects:getIamPolicy checkpoints with 1-click atomic setIamPolicy rollback and Zero-Lockout Owner Safety Guard (RESTORE_IAM_CHECKPOINT), audits Cloud Logging sinks/exclusions, locks GCS buckets with publicAccessPrevention="enforced" (LOCK_GCS_BUCKET_PUBLIC_ACCESS), and freezes/unfreezes compromised Service Accounts in-place (serviceAccounts:disable / :enable).',
+      'Pillars 09–10 (Cross-Project Multi-Estate SOC Federation Matrix & 1-Click Defcon-1 Atomic Project Lockdown): Probes all ACTIVE GCP projects on your account in parallel (GET /api/soc/fleet-matrix) for side-by-side Zero-Trust posture comparison, and provides a 1-click 5-stage Defcon-1 Atomic Lockdown playbook (EXECUTE_DEFCON1_LOCKDOWN).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/soc/overview & POST /api/project/:id/soc/action',
+      'GET /api/soc/fleet-matrix & POST /api/project/:id/soc/ai-commander',
+      'POST https://logging.googleapis.com/v2/entries:list & entries:write',
+      'POST https://cloudresourcemanager.googleapis.com/v1/projects/:id:getIamPolicy & :setIamPolicy',
+      'POST & PATCH https://compute.googleapis.com/compute/v1/projects/:id/global/firewalls, PATCH https://storage.googleapis.com/storage/v1/b/:bucket & POST https://iam.googleapis.com/v1/projects/:id/serviceAccounts/:email:disable',
+    ],
+    billingImpact:
+      '100% $0.00/mo SIEM license tax — Secret Manager metadata-only canary containers (0 versions), IAM Decoy Service Accounts, VPC firewall rules, GCS publicAccessPrevention locks, and Cloud Audit Admin Activity logs incur $0.00/mo.',
+  },
+  {
     id: 'cloudrun-compose-up-multi-container-studio',
     wave: 'CLOUD RUN 2026 INNOVATION · GOOGLE CLOUD SDK 590.0.0 GA CLOUD RUN COMPOSE (gcloud run compose up) STUDIO',
     title:

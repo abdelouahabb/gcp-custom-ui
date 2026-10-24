@@ -58,6 +58,41 @@ const SOC_PILLARS = [
     subtitle: 'Gemini 3.8 Flash / 3.1 Pro + RFC 8032 Forensic Ledger',
     icon: Sparkles,
   },
+  {
+    id: 'IAM_TIME_MACHINE',
+    step: '06',
+    title: 'IAM Policy Time-Machine',
+    subtitle: 'Ed25519 etag Vault & 1-Click Atomic setIamPolicy Rollback',
+    icon: Layers,
+  },
+  {
+    id: 'EXFILTRATION_RADAR',
+    step: '07',
+    title: 'Exfiltration & Log Tampering',
+    subtitle: 'Log Sinks, Audit Exclusions & GCS Public Access Lock',
+    icon: FileCode2,
+  },
+  {
+    id: 'WIF_IDENTITY_FREEZE',
+    step: '08',
+    title: 'WIF & Service Account Freeze',
+    subtitle: 'OIDC Federation Pools & 1-Click SA Freeze/Unfreeze',
+    icon: Cpu,
+  },
+  {
+    id: 'FLEET_SOC_MATRIX',
+    step: '09',
+    title: 'Multi-Project SOC Federation',
+    subtitle: 'Cross-Estate Posture Matrix Across All Active Projects',
+    icon: Server,
+  },
+  {
+    id: 'DEFCON1_LOCKDOWN',
+    step: '10',
+    title: 'Defcon-1 Atomic Lockdown',
+    subtitle: '1-Click 5-Stage Coordinated Project Perimeter Seal',
+    icon: Lock,
+  },
 ];
 
 export default function AutonomousCloudSocStudio({
@@ -75,6 +110,11 @@ export default function AutonomousCloudSocStudio({
 
   // SOAR IP Quarantine input
   const [quarantineIpInput, setQuarantineIpInput] = useState('');
+  const [checkpointLabelInput, setCheckpointLabelInput] = useState('');
+
+  // Multi-Project SOC Federation Matrix (Pillar 09)
+  const [fleetMatrix, setFleetMatrix] = useState(null);
+  const [fleetLoading, setFleetLoading] = useState(false);
 
   // Gemini Incident Commander state
   const [selectedAiModel, setSelectedAiModel] = useState('gemini-3.8-flash');
@@ -105,9 +145,33 @@ export default function AutonomousCloudSocStudio({
     [projectId, lookbackHours]
   );
 
+  const fetchFleetSocMatrix = useCallback(async () => {
+    setFleetLoading(true);
+    try {
+      const res = await axios.get('/api/soc/fleet-matrix');
+      setFleetMatrix(res.data);
+    } catch (err) {
+      setStatusBanner({
+        type: 'error',
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          'Failed to load Multi-Project SOC Federation Matrix.',
+      });
+    } finally {
+      setFleetLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSocOverview();
   }, [fetchSocOverview]);
+
+  useEffect(() => {
+    if (activePillar === 'FLEET_SOC_MATRIX' && !fleetMatrix && !fleetLoading) {
+      fetchFleetSocMatrix();
+    }
+  }, [activePillar, fleetMatrix, fleetLoading, fetchFleetSocMatrix]);
 
   const handleExecuteSocAction = async (busyKey, payload) => {
     if (!projectId) return;
@@ -190,6 +254,31 @@ export default function AutonomousCloudSocStudio({
   const saKeysList = socData?.supplyChainRadar?.serviceAccountKeys || [];
   const canaryGrid = socData?.canaryGrid || [];
   const activeQuarantineRules = socData?.activeQuarantineRules || [];
+  const iamTimeMachine = socData?.iamTimeMachine || {
+    liveEtag: 'unknown',
+    totalBindingsCount: 0,
+    totalPrincipalsCount: 0,
+    privilegedBindings: [],
+    driftDetected: false,
+    addedBindings: [],
+    removedBindings: [],
+    checkpoints: [],
+  };
+  const exfiltrationRadar = socData?.exfiltrationRadar || {
+    logSinks: [],
+    logExclusions: [],
+    gcsBuckets: [],
+    externalSinksCount: 0,
+    suspiciousExclusionsCount: 0,
+    unhardenedBucketsCount: 0,
+  };
+  const wifAndIdentityRadar = socData?.wifAndIdentityRadar || {
+    wifPools: [],
+    serviceAccounts: [],
+    activeWifPoolsCount: 0,
+    frozenServiceAccountsCount: 0,
+    highPrivilegeSaCount: 0,
+  };
   const attestation = socData?.cryptographicAttestation || {};
 
   return (
@@ -234,6 +323,15 @@ export default function AutonomousCloudSocStudio({
               <option value={72}>Lookback: Last 72 Hours (3d)</option>
               <option value={168}>Lookback: Last 168 Hours (7d)</option>
             </select>
+
+            <button
+              type="button"
+              onClick={() => setActivePillar('DEFCON1_LOCKDOWN')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Defcon-1 Lockdown</span>
+            </button>
 
             <button
               type="button"
@@ -1105,6 +1203,681 @@ export default function AutonomousCloudSocStudio({
                   ))}
                 </div>
               )}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 06: IAM POLICY TIME-MACHINE & CRYPTOGRAPHIC ETAG SNAPSHOT VAULT
+         ==================================================================== */}
+      {activePillar === 'IAM_TIME_MACHINE' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-cyan-500" />
+                  <span>
+                    IAM Policy Time-Machine, Cryptographic `etag` Vault &amp; 1-Click Atomic `setIamPolicy` Rollback
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Snapshots <code className="font-mono">cloudresourcemanager.googleapis.com/v1/projects/{projectId}:getIamPolicy</code> with an <strong>Ed25519 signature</strong>, computes live binding-level drift, and executes 1-click atomic rollback while strictly preserving your authenticated <code className="font-mono">roles/owner</code> binding.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={checkpointLabelInput}
+                  onChange={(e) => setCheckpointLabelInput(e.target.value)}
+                  placeholder="Checkpoint label (e.g. Pre-Deploy Golden IAM)"
+                  className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100 w-64"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleExecuteSocAction('CAPTURE_IAM_CP', {
+                      action: 'CAPTURE_IAM_CHECKPOINT',
+                      checkpointLabel:
+                        checkpointLabelInput.trim() ||
+                        `Golden IAM Snapshot (${new Date().toLocaleTimeString()})`,
+                    });
+                    setCheckpointLabelInput('');
+                  }}
+                  disabled={Boolean(actionBusy)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>
+                    {actionBusy === 'CAPTURE_IAM_CP'
+                      ? 'Snapshotting IAM Policy...'
+                      : 'Capture Signed IAM Checkpoint'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Live IAM Metadata & Drift Status */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-400">Live IAM Policy etag</div>
+                <div className="font-bold text-cyan-600 dark:text-cyan-400 truncate mt-0.5">
+                  {iamTimeMachine.liveEtag}
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-400">Role Bindings &amp; Principals</div>
+                <div className="font-bold text-zinc-900 dark:text-white mt-0.5">
+                  {iamTimeMachine.totalBindingsCount} Roles · {iamTimeMachine.totalPrincipalsCount} Grants
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-400">Drift vs Baseline Snapshot</div>
+                <div
+                  className={`font-bold mt-0.5 ${
+                    iamTimeMachine.driftDetected
+                      ? 'text-amber-500'
+                      : 'text-emerald-500'
+                  }`}
+                >
+                  {iamTimeMachine.driftDetected
+                    ? `+${iamTimeMachine.addedBindings.length} / -${iamTimeMachine.removedBindings.length} Bindings Drifted`
+                    : '0 Drift (Matches Baseline)'}
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-400">Signed Vault Checkpoints</div>
+                <div className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {iamTimeMachine.checkpoints.length} Ed25519 Checkpoint(s)
+                </div>
+              </div>
+            </div>
+
+            {/* Checkpoints List & 1-Click Rollback */}
+            <div className="space-y-2 pt-2">
+              <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
+                Cryptographic IAM Policy Checkpoints (`socIamCheckpointsByProject`):
+              </div>
+              {iamTimeMachine.checkpoints.map((cp) => (
+                <div
+                  key={cp.checkpointId}
+                  className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-bold text-[10px]">
+                        {cp.checkpointId}
+                      </span>
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        {cp.label}
+                      </span>
+                      <span className="text-zinc-500">
+                        etag: {cp.etag} · {cp.bindingsCount} roles · {cp.membersCount} principals
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-zinc-500 break-all">
+                      Captured: {cp.capturedAt} by {cp.actor} · SHA-256: {String(cp.sha256 || '').slice(0, 20)}... · Ed25519: {String(cp.ed25519Signature || '').slice(0, 24)}...
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleExecuteSocAction(`RESTORE_IAM:${cp.checkpointId}`, {
+                        action: 'RESTORE_IAM_CHECKPOINT',
+                        checkpointId: cp.checkpointId,
+                      })
+                    }
+                    disabled={Boolean(actionBusy)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>
+                      {actionBusy === `RESTORE_IAM:${cp.checkpointId}`
+                        ? 'Rolling Back IAM...'
+                        : 'Atomic Rollback to Checkpoint'}
+                    </span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Privileged Role Bindings Inspector */}
+            <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+              <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
+                Live High-Privilege IAM Role Bindings (`roles/owner`, `roles/editor`, `roles/*.admin`):
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {iamTimeMachine.privilegedBindings.map((b) => (
+                  <div
+                    key={b.role}
+                    className={`p-2.5 rounded-lg border text-xs font-mono space-y-1 ${
+                      b.isCriticalAdmin
+                        ? 'border-amber-500/40 bg-amber-500/5'
+                        : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40'
+                    }`}
+                  >
+                    <div className="font-extrabold text-zinc-900 dark:text-white flex items-center justify-between">
+                      <span>{b.role}</span>
+                      <span className="text-[10px] text-zinc-500">
+                        {b.members.length} member(s)
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-600 dark:text-zinc-300 space-y-0.5">
+                      {b.members.map((m) => (
+                        <div key={m} className="truncate">
+                          &bull; {m}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 07: EXFILTRATION, LOGGING SINK TAMPERING & GCS FIREWALL
+         ==================================================================== */}
+      {activePillar === 'EXFILTRATION_RADAR' && (
+        <div className="space-y-4">
+          {/* GCS Public Access Prevention & Uniform Access Lock */}
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                  GCS Crown-Jewel Exfiltration Firewall (`publicAccessPrevention` &amp; `uniformBucketLevelAccess`)
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Inspects every Cloud Storage bucket in <code className="font-mono">{projectId}</code> and enforces <code className="font-mono">publicAccessPrevention: &quot;enforced&quot;</code> + Uniform Bucket-Level Access in 1 click.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-zinc-500">
+                {exfiltrationRadar.gcsBuckets.length} Bucket(s)
+              </span>
+            </div>
+
+            {exfiltrationRadar.gcsBuckets.length === 0 ? (
+              <div className="p-4 text-xs font-mono text-zinc-500">
+                No Cloud Storage buckets provisioned in {projectId}.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {exfiltrationRadar.gcsBuckets.map((b) => {
+                  const isLocked = b.status === 'ZERO_TRUST_LOCKED';
+                  return (
+                    <div
+                      key={b.name}
+                      className={`p-3 rounded-xl border flex flex-wrap items-center justify-between gap-2 text-xs font-mono ${
+                        isLocked
+                          ? 'border-emerald-500/30 bg-emerald-500/5'
+                          : 'border-amber-500/40 bg-amber-500/5'
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                              isLocked
+                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                                : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                            }`}
+                          >
+                            {b.status}
+                          </span>
+                          <span className="font-extrabold text-zinc-900 dark:text-white">
+                            gs://{b.name}
+                          </span>
+                          <span className="text-zinc-500">
+                            ({b.location} · {b.storageClass})
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-zinc-500">
+                          publicAccessPrevention: <strong>{b.publicAccessPrevention}</strong> · uniformBucketLevelAccess: <strong>{b.uniformBucketLevelAccess ? 'true' : 'false'}</strong>
+                        </div>
+                      </div>
+
+                      {!isLocked && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleExecuteSocAction(`LOCK_BUCKET:${b.name}`, {
+                              action: 'LOCK_GCS_BUCKET_PUBLIC_ACCESS',
+                              bucketName: b.name,
+                            })
+                          }
+                          disabled={Boolean(actionBusy)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>
+                            {actionBusy === `LOCK_BUCKET:${b.name}`
+                              ? 'Locking Bucket...'
+                              : 'Enforce Zero-Trust Bucket Lock'}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Cloud Logging Sinks & Audit Exclusions Tampering Detector */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                Cloud Logging Sinks (`logging.googleapis.com/v2/sinks`)
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Detects unauthorized cross-project log export sinks used for silent telemetry exfiltration.
+              </p>
+              <div className="space-y-2">
+                {exfiltrationRadar.logSinks.map((s) => (
+                  <div
+                    key={s.name}
+                    className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 text-xs font-mono space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        {s.name}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          s.isExternalExfiltrationRisk
+                            ? 'bg-red-500/20 text-red-500'
+                            : 'bg-emerald-500/20 text-emerald-500'
+                        }`}
+                      >
+                        {s.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500 break-all">
+                      Destination: {s.destination || 'Internal Cloud Logging Bucket'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                Audit Log Suppression / Exclusions (`logging.googleapis.com/v2/exclusions`)
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Attackers create log exclusions to blind SIEMs during privilege escalation. Delete suspicious exclusions in 1 click.
+              </p>
+              {exfiltrationRadar.logExclusions.length === 0 ? (
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-600 dark:text-emerald-300">
+                  0 Log Exclusions Active — 100% of Cloud Audit Logs are retained without suppression.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {exfiltrationRadar.logExclusions.map((ex) => (
+                    <div
+                      key={ex.name}
+                      className="p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/5 text-xs font-mono flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <div className="font-bold text-zinc-900 dark:text-white">
+                          {ex.name} ({ex.status})
+                        </div>
+                        <div className="text-[10px] text-zinc-500 break-all">
+                          Filter: {ex.filter}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleExecuteSocAction(`DEL_EXCL:${ex.name}`, {
+                            action: 'DELETE_LOG_EXCLUSION',
+                            exclusionName: ex.name,
+                          })
+                        }
+                        disabled={Boolean(actionBusy)}
+                        className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
+                      >
+                        Delete Exclusion
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 08: WORKLOAD IDENTITY FEDERATION (WIF) & SERVICE ACCOUNT FREEZE
+         ==================================================================== */}
+      {activePillar === 'WIF_IDENTITY_FREEZE' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-cyan-500" />
+                  <span>
+                    1-Click Service Account In-Place Freeze / Unfreeze (`serviceAccounts:disable` &amp; `:enable`)
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Halts all OAuth2/JWT token minting for a compromised or over-privileged Service Account in-place without deleting the identity or breaking IAM policy references.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-zinc-500">
+                {wifAndIdentityRadar.serviceAccounts.length} Service Account(s) · {wifAndIdentityRadar.frozenServiceAccountsCount} Frozen
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {wifAndIdentityRadar.serviceAccounts.map((sa) => (
+                <div
+                  key={sa.email}
+                  className={`p-3 rounded-xl border flex flex-wrap items-center justify-between gap-2 text-xs font-mono ${
+                    sa.disabled
+                      ? 'border-zinc-500/40 bg-zinc-500/10'
+                      : sa.isHighPrivilege
+                      ? 'border-amber-500/40 bg-amber-500/5'
+                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          sa.disabled
+                            ? 'bg-zinc-700 text-zinc-200'
+                            : sa.isHighPrivilege
+                            ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                            : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                        }`}
+                      >
+                        {sa.status}
+                      </span>
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        {sa.email}
+                      </span>
+                      <span className="text-zinc-500">({sa.displayName})</span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Roles:{' '}
+                      {sa.roles.length > 0
+                        ? sa.roles.join(', ')
+                        : 'No direct project-level roles'}{' '}
+                      · User .json Keys: <strong>{sa.userManagedKeysCount}</strong>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleExecuteSocAction(`SA_FREEZE:${sa.email}`, {
+                        action: 'TOGGLE_SERVICE_ACCOUNT_FREEZE',
+                        serviceAccountEmail: sa.email,
+                        freeze: !sa.disabled,
+                      })
+                    }
+                    disabled={Boolean(actionBusy)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
+                      sa.disabled
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        : 'bg-red-600 hover:bg-red-500 text-white'
+                    }`}
+                  >
+                    {sa.disabled ? (
+                      <>
+                        <Unlock className="w-3.5 h-3.5" />
+                        <span>Unfreeze Service Account</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Freeze SA In-Place (:disable)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Workload Identity Federation (WIF) Pools */}
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+              Workload Identity Federation (WIF) OIDC / AWS / GitHub Pools (`workloadIdentityPools`)
+            </h3>
+            {wifAndIdentityRadar.wifPools.length === 0 ? (
+              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-600 dark:text-emerald-300">
+                0 External Workload Identity Federation Pools configured — Zero external OIDC/GitHub repository trust surface.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {wifAndIdentityRadar.wifPools.map((p) => (
+                  <div
+                    key={p.fullName}
+                    className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-mono flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-bold text-zinc-900 dark:text-white">
+                        {p.displayName} ({p.name})
+                      </div>
+                      <div className="text-[11px] text-zinc-500">{p.description}</div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 text-[10px] font-bold">
+                      {p.state}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 09: MULTI-PROJECT SOC FEDERATION MATRIX
+         ==================================================================== */}
+      {activePillar === 'FLEET_SOC_MATRIX' && (
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <Server className="w-4 h-4 text-cyan-500" />
+                <span>
+                  Cross-Project Multi-Estate SOC Federation Matrix (`cloudresourcemanager.googleapis.com/v1/projects`)
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Discovers all <code className="font-mono">ACTIVE</code> Google Cloud projects on your authenticated account and probes VPC Firewalls, GCS Buckets, IAM Service Accounts, and App Engine edge firewalls in parallel.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={fetchFleetSocMatrix}
+              disabled={fleetLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${fleetLoading ? 'animate-spin' : ''}`} />
+              <span>
+                {fleetLoading ? 'Probing Multi-Project Estate...' : 'Rescan All GCP Projects'}
+              </span>
+            </button>
+          </div>
+
+          {fleetMatrix ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
+                <span className="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-300 font-bold">
+                  Active Projects Scanned: {fleetMatrix.projectsCount}
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 font-bold">
+                  Fleet Average SOC Posture: {fleetMatrix.fleetAverageScore}/100
+                </span>
+                <span className="text-zinc-500">
+                  Latency: {fleetMatrix.latencyMs}ms
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(fleetMatrix.projects || []).map((proj) => (
+                  <div
+                    key={proj.projectId}
+                    className={`p-3.5 rounded-xl border space-y-2 font-mono text-xs ${
+                      proj.projectId === projectId
+                        ? 'border-cyan-500/50 bg-cyan-500/5'
+                        : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="font-extrabold text-zinc-900 dark:text-white text-sm">
+                          {proj.projectId}
+                        </span>
+                        <span className="text-zinc-500 ml-2">
+                          (#{proj.projectNumber})
+                        </span>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          proj.socPostureScore >= 85
+                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                            : proj.socPostureScore >= 65
+                            ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                            : 'bg-red-500/20 text-red-600 dark:text-red-300'
+                        }`}
+                      >
+                        {proj.socPostureScore}/100 · {proj.socGrade}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                      <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">0.0.0.0/0 Firewalls</div>
+                        <div
+                          className={`font-bold ${
+                            proj.openAdminFirewallsCount > 0
+                              ? 'text-red-500'
+                              : 'text-emerald-500'
+                          }`}
+                        >
+                          {proj.openAdminFirewallsCount} Open / {proj.totalFirewallsCount} Rules
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">GCS Public Prevention</div>
+                        <div
+                          className={`font-bold ${
+                            proj.unhardenedBucketsCount > 0
+                              ? 'text-amber-500'
+                              : 'text-emerald-500'
+                          }`}
+                        >
+                          {proj.unhardenedBucketsCount} Unhardened / {proj.totalBucketsCount} Buckets
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">Service Accounts</div>
+                        <div className="font-bold text-zinc-800 dark:text-zinc-200">
+                          {proj.serviceAccountsCount} Total ({proj.frozenSaCount} Frozen)
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-400">App Engine Edge</div>
+                        <div className="font-bold text-cyan-600 dark:text-cyan-400">
+                          {proj.appEngineState}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-xs font-mono text-zinc-500">
+              {fleetLoading
+                ? 'Probing all active Google Cloud projects in parallel...'
+                : 'Click "Rescan All GCP Projects" to load the Multi-Project SOC Matrix.'}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 10: 1-CLICK DEFCON-1 ATOMIC PROJECT LOCKDOWN PLAYBOOK
+         ==================================================================== */}
+      {activePillar === 'DEFCON1_LOCKDOWN' && (
+        <div className="p-5 rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-zinc-950 via-red-950/20 to-zinc-950 text-zinc-100 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-1.5 max-w-3xl">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-mono font-extrabold">
+                <Lock className="w-3.5 h-3.5" />
+                <span>PILLAR 10 · COORDINATED ATOMIC SOAR CONTAINMENT PLAYBOOK</span>
+              </div>
+              <h3 className="text-lg font-extrabold text-white">
+                1-Click &ldquo;Defcon-1 Atomic Project Lockdown&rdquo; (`{projectId}`)
+              </h3>
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                Executes a coordinated 5-stage zero-trust perimeter seal across Compute Engine VPC, Cloud Storage, App Engine, Secret Manager, and IAM Resource Manager in a single atomic transaction — while preserving your authenticated Owner access and sealing an <strong>Ed25519 (RFC 8032)</strong> forensic receipt.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                handleExecuteSocAction('DEFCON1_LOCKDOWN_EXEC', {
+                  action: 'EXECUTE_DEFCON1_LOCKDOWN',
+                })
+              }
+              disabled={Boolean(actionBusy)}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-extrabold shadow-lg shadow-red-600/30 cursor-pointer disabled:opacity-50"
+            >
+              <Lock className="w-4 h-4" />
+              <span>
+                {actionBusy === 'DEFCON1_LOCKDOWN_EXEC'
+                  ? 'Executing 5-Stage Defcon-1 Lockdown...'
+                  : 'EXECUTE DEFCON-1 PROJECT LOCKDOWN NOW'}
+              </span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5 text-xs font-mono">
+            <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+              <div className="text-cyan-400 font-extrabold">Stage 1 · IAM Vault</div>
+              <div className="text-[11px] text-zinc-300">
+                Captures an Ed25519-signed <code className="text-cyan-300">getIamPolicy</code> snapshot with Zero-Lockout Owner Guard.
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+              <div className="text-red-400 font-extrabold">Stage 2 · VPC IAP Seal</div>
+              <div className="text-[11px] text-zinc-300">
+                Rewrites all world-open <code className="text-red-300">0.0.0.0/0</code> ingress rules to Google Cloud IAP (<code className="text-emerald-300">35.235.240.0/20</code>).
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+              <div className="text-amber-400 font-extrabold">Stage 3 · GCS Shield</div>
+              <div className="text-[11px] text-zinc-300">
+                Enforces <code className="text-amber-300">publicAccessPrevention: enforced</code> &amp; Uniform Access on all project buckets.
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+              <div className="text-violet-400 font-extrabold">Stage 4 · App Engine</div>
+              <div className="text-[11px] text-zinc-300">
+                Locks App Engine Edge Firewall default rule (<code className="text-violet-300">*</code>) to <code className="text-red-300">DENY</code>.
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+              <div className="text-emerald-400 font-extrabold">Stage 5 · $0 Canary</div>
+              <div className="text-[11px] text-zinc-300">
+                Arms the <code className="text-emerald-300">$0.00/mo</code> Secret Manager Honey-Secret Canary Tripwire.
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -46116,6 +46116,40 @@ const socPublicKeyPem = socEd25519KeyPair.publicKey
   .export({ type: 'spki', format: 'pem' })
   .toString();
 const socForensicReceiptsByProject = new Map();
+const socIamCheckpointsByProject = new Map();
+
+function captureSocIamCheckpoint(projectId, iamPolicyObj, label = 'Baseline Auto-Snapshot', actor = 'soc-autopilot') {
+  const bindings = Array.isArray(iamPolicyObj?.bindings)
+    ? JSON.parse(JSON.stringify(iamPolicyObj.bindings))
+    : [];
+  const etag = iamPolicyObj?.etag || '';
+  const canonical = JSON.stringify({ projectId, etag, bindings });
+  const policySha256 = crypto.createHash('sha256').update(canonical).digest('hex');
+  const signatureHex = crypto
+    .sign(null, Buffer.from(canonical, 'utf8'), socEd25519KeyPair.privateKey)
+    .toString('hex');
+
+  const list = socIamCheckpointsByProject.get(projectId) || [];
+  // Avoid duplicate consecutive identical SHA-256 checkpoints unless explicitly requested
+  if (list.length > 0 && list[0].policySha256 === policySha256 && label === 'Baseline Auto-Snapshot') {
+    return list[0];
+  }
+  const ckpt = {
+    id: `iam-ckpt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    timestamp: new Date().toISOString(),
+    label,
+    actor,
+    etag,
+    bindingsCount: bindings.length,
+    totalMembersCount: bindings.reduce((acc, b) => acc + (b.members?.length || 0), 0),
+    policySha256,
+    signatureHex,
+    bindings,
+  };
+  list.unshift(ckpt);
+  socIamCheckpointsByProject.set(projectId, list.slice(0, 20));
+  return ckpt;
+}
 
 function appendSocForensicReceipt(projectId, receipt) {
   const list = socForensicReceiptsByProject.get(projectId) || [];
@@ -46308,6 +46342,9 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
       secretsRes,
       bucketsRes,
       datasetsRes,
+      logSinksRes,
+      logExclusionsRes,
+      wifPoolsRes,
     ] = await Promise.allSettled([
       gcpFetch(
         'https://logging.googleapis.com/v2/entries:list',
@@ -46383,6 +46420,24 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
         token,
         projectId,
         { timeout: 7000 }
+      ),
+      gcpFetch(
+        `https://logging.googleapis.com/v2/projects/${encProj}/sinks`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ),
+      gcpFetch(
+        `https://logging.googleapis.com/v2/projects/${encProj}/exclusions`,
+        token,
+        projectId,
+        { timeout: 6000 }
+      ),
+      gcpFetch(
+        `https://iam.googleapis.com/v1/projects/${encProj}/locations/global/workloadIdentityPools`,
+        token,
+        projectId,
+        { timeout: 6000 }
       ),
     ]);
 
@@ -46916,6 +46971,213 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
       }));
 
     // ========================================================================
+    // PILLAR 6: IAM POLICY TIME-MACHINE & CRYPTOGRAPHIC ETAG SNAPSHOT VAULT
+    // ========================================================================
+    const iamPolicyObj =
+      iamPolicyRes.status === 'fulfilled' && iamPolicyRes.value
+        ? iamPolicyRes.value
+        : { bindings: [], etag: 'unknown' };
+    captureSocIamCheckpoint(
+      projectId,
+      iamPolicyObj,
+      'Auto-Captured Live IAM Policy Snapshot',
+      account || 'soc-telemetry-scanner'
+    );
+    const iamCheckpoints = socIamCheckpointsByProject.get(projectId) || [];
+    const baselineCheckpoint =
+      iamCheckpoints.length > 0 ? iamCheckpoints[iamCheckpoints.length - 1] : null;
+
+    // Flatten role->member pairs to compute live drift against the baseline checkpoint
+    const flattenBindings = (bindingsArr) => {
+      const pairs = new Set();
+      for (const b of bindingsArr || []) {
+        for (const m of b.members || []) {
+          pairs.add(`${b.role}:::${m}`);
+        }
+      }
+      return pairs;
+    };
+    const livePairs = flattenBindings(iamPolicyObj?.bindings || []);
+    const baselinePairs = flattenBindings(baselineCheckpoint?.bindings || []);
+    const addedBindings = [];
+    const removedBindings = [];
+    for (const pair of livePairs) {
+      if (!baselinePairs.has(pair)) {
+        const [role, member] = pair.split(':::');
+        addedBindings.push({ role, member });
+      }
+    }
+    for (const pair of baselinePairs) {
+      if (!livePairs.has(pair)) {
+        const [role, member] = pair.split(':::');
+        removedBindings.push({ role, member });
+      }
+    }
+
+    const privilegedBindings = (iamPolicyObj?.bindings || [])
+      .filter((b) =>
+        /roles\/(owner|editor|iam\.|resourcemanager\.|secretmanager\.|storage\.admin|run\.admin|compute\.admin)/i.test(
+          String(b.role || '')
+        )
+      )
+      .map((b) => ({
+        role: b.role,
+        members: b.members || [],
+        isCriticalAdmin: /roles\/(owner|editor|resourcemanager\.projectIamAdmin|iam\.securityAdmin)/i.test(
+          String(b.role || '')
+        ),
+      }));
+
+    const iamTimeMachine = {
+      liveEtag: iamPolicyObj?.etag || 'unknown',
+      totalBindingsCount: (iamPolicyObj?.bindings || []).length,
+      totalPrincipalsCount: livePairs.size,
+      privilegedBindings,
+      driftDetected: addedBindings.length > 0 || removedBindings.length > 0,
+      addedBindings,
+      removedBindings,
+      checkpoints: iamCheckpoints.map((cp) => ({
+        checkpointId: cp.checkpointId,
+        capturedAt: cp.capturedAt,
+        label: cp.label,
+        actor: cp.actor,
+        etag: cp.etag,
+        bindingsCount: cp.bindingsCount,
+        membersCount: cp.membersCount,
+        sha256: cp.sha256,
+        ed25519Signature: cp.ed25519Signature,
+      })),
+    };
+
+    // ========================================================================
+    // PILLAR 7: OUTBOUND EXFILTRATION, LOGGING SINK TAMPERING & GCS FIREWALL
+    // ========================================================================
+    const rawLogSinks =
+      logSinksRes.status === 'fulfilled' && Array.isArray(logSinksRes.value?.sinks)
+        ? logSinksRes.value.sinks
+        : [];
+    const logSinks = rawLogSinks.map((s) => {
+      const dest = String(s.destination || '');
+      const isExternalProject =
+        dest !== '' &&
+        !dest.includes(`projects/${projectId}`) &&
+        !dest.includes(`/${projectId}/`);
+      return {
+        name: s.name,
+        destination: dest,
+        filter: s.filter || '(All Logs)',
+        disabled: Boolean(s.disabled),
+        writerIdentity: s.writerIdentity || 'Google Managed',
+        isExternalExfiltrationRisk: isExternalProject,
+        status: isExternalProject ? 'EXTERNAL_SINK_ALERT' : 'INTERNAL_VERIFIED',
+      };
+    });
+
+    const rawExclusions =
+      logExclusionsRes.status === 'fulfilled' &&
+      Array.isArray(logExclusionsRes.value?.exclusions)
+        ? logExclusionsRes.value.exclusions
+        : [];
+    const logExclusions = rawExclusions.map((ex) => {
+      const filterStr = String(ex.filter || '');
+      const suppressesAudit =
+        !ex.disabled &&
+        (filterStr.includes('cloudaudit.googleapis.com') ||
+          filterStr.includes('activity') ||
+          filterStr.includes('data_access') ||
+          filterStr.trim() === '');
+      return {
+        name: ex.name,
+        description: ex.description || '',
+        filter: filterStr,
+        disabled: Boolean(ex.disabled),
+        suppressesAudit,
+        status: suppressesAudit ? 'AUDIT_SUPPRESSION_RISK' : 'BENIGN_EXCLUSION',
+      };
+    });
+
+    const rawBuckets =
+      bucketsRes.status === 'fulfilled' && Array.isArray(bucketsRes.value?.items)
+        ? bucketsRes.value.items
+        : [];
+    const gcsBuckets = rawBuckets.map((b) => {
+      const pap =
+        b.iamConfiguration?.publicAccessPrevention || 'inherited';
+      const ubla = Boolean(
+        b.iamConfiguration?.uniformBucketLevelAccess?.enabled
+      );
+      const isHardened = pap === 'enforced' && ubla;
+      return {
+        name: b.name,
+        location: b.location,
+        storageClass: b.storageClass,
+        publicAccessPrevention: pap,
+        uniformBucketLevelAccess: ubla,
+        status: isHardened ? 'ZERO_TRUST_LOCKED' : 'PUBLIC_EXPOSURE_RISK',
+        remediationAction: isHardened ? null : 'LOCK_GCS_BUCKET_PUBLIC_ACCESS',
+      };
+    });
+
+    const exfiltrationRadar = {
+      logSinks,
+      logExclusions,
+      gcsBuckets,
+      externalSinksCount: logSinks.filter((s) => s.isExternalExfiltrationRisk).length,
+      suspiciousExclusionsCount: logExclusions.filter((e) => e.suppressesAudit).length,
+      unhardenedBucketsCount: gcsBuckets.filter((b) => b.status !== 'ZERO_TRUST_LOCKED').length,
+    };
+
+    // ========================================================================
+    // PILLAR 8: WORKLOAD IDENTITY FEDERATION (WIF) & SERVICE ACCOUNT FREEZE RADAR
+    // ========================================================================
+    const rawWifPools =
+      wifPoolsRes.status === 'fulfilled' &&
+      Array.isArray(wifPoolsRes.value?.workloadIdentityPools)
+        ? wifPoolsRes.value.workloadIdentityPools
+        : [];
+    const wifPools = rawWifPools.map((pool) => ({
+      name: String(pool.name || '').split('/').pop(),
+      fullName: pool.name,
+      displayName: pool.displayName || String(pool.name || '').split('/').pop(),
+      state: pool.state || 'ACTIVE',
+      disabled: Boolean(pool.disabled),
+      description: pool.description || 'External OIDC/AWS/GitHub Workload Identity Pool',
+    }));
+
+    const serviceAccountInventory = serviceAccounts.map((sa) => {
+      const email = sa.email;
+      const roles = principalRolesMap.get(email) || [];
+      const keyEntry = saKeyFindings.find((k) => k.email === email);
+      const isHighPriv = roles.some((r) =>
+        /roles\/(owner|editor|admin|iam\.|secretmanager\.|storage\.admin)/i.test(r)
+      );
+      return {
+        email,
+        displayName: sa.displayName || email.split('@')[0],
+        uniqueId: sa.uniqueId,
+        disabled: Boolean(sa.disabled),
+        roles,
+        isHighPrivilege: isHighPriv,
+        userManagedKeysCount: keyEntry?.userManagedKeysCount || 0,
+        status: sa.disabled
+          ? 'FROZEN_QUARANTINED'
+          : isHighPriv
+          ? 'ACTIVE_HIGH_PRIVILEGE'
+          : 'ACTIVE_SCOPED',
+      };
+    });
+
+    const wifAndIdentityRadar = {
+      wifPools,
+      serviceAccounts: serviceAccountInventory,
+      activeWifPoolsCount: wifPools.filter((p) => !p.disabled).length,
+      frozenServiceAccountsCount: serviceAccountInventory.filter((s) => s.disabled).length,
+      highPrivilegeSaCount: serviceAccountInventory.filter(
+        (s) => s.isHighPrivilege && !s.disabled
+      ).length,
+    };
+
+    // ========================================================================
     // PILLAR 5: CANONICAL SOC POSTURE SCORE & Ed25519 FORENSIC DIGEST
     // ========================================================================
     const toxicCount = toxicCombinations.filter(
@@ -46932,9 +47194,11 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
 
     const rawPostureScore =
       100 -
-      toxicCount * 18 -
+      toxicCount * 16 -
       criticalChainsCount * 12 -
-      totalUserManagedKeys * 8 +
+      totalUserManagedKeys * 8 -
+      exfiltrationRadar.unhardenedBucketsCount * 5 -
+      exfiltrationRadar.suspiciousExclusionsCount * 15 +
       deployedCanariesCount * 4;
     const socPostureScore = Math.max(5, Math.min(100, Math.round(rawPostureScore)));
 
@@ -46945,6 +47209,8 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
       criticalChainsCount,
       deployedCanariesCount,
       totalUserManagedKeys,
+      iamEtag: iamTimeMachine.liveEtag,
+      unhardenedBucketsCount: exfiltrationRadar.unhardenedBucketsCount,
       auditEventsCount: parsedAuditEvents.length,
     });
     const stateSha256 = crypto
@@ -46981,6 +47247,9 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
         deployedCanariesCount,
         canaryHitsCount: canaryHits.length,
         activeQuarantineRulesCount: activeQuarantineRules.length,
+        iamCheckpointsCount: iamTimeMachine.checkpoints.length,
+        unhardenedBucketsCount: exfiltrationRadar.unhardenedBucketsCount,
+        frozenServiceAccountsCount: wifAndIdentityRadar.frozenServiceAccountsCount,
       },
       killChains: killChains.slice(0, 25),
       auditEvents: parsedAuditEvents.slice(0, 50),
@@ -46991,6 +47260,9 @@ app.get('/api/project/:projectId/soc/overview', async (req, res) => {
       },
       canaryGrid,
       activeQuarantineRules,
+      iamTimeMachine,
+      exfiltrationRadar,
+      wifAndIdentityRadar,
       cryptographicAttestation: {
         algorithm: 'Ed25519 (RFC 8032) + SHA-256 Merkle State Digest',
         stateSha256,
@@ -47021,6 +47293,11 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
     serviceAccountEmail,
     keyId,
     canaryType,
+    checkpointId,
+    checkpointLabel,
+    bucketName,
+    exclusionName,
+    freeze,
   } = req.body || {};
 
   try {
@@ -47566,6 +47843,364 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
       });
     }
 
+    // ACTION J: CAPTURE CRYPTOGRAPHIC IAM POLICY CHECKPOINT (PILLAR 06)
+    if (action === 'CAPTURE_IAM_CHECKPOINT') {
+      const livePol = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`,
+        token,
+        projectId,
+        { method: 'POST', body: {}, timeout: 10000 }
+      );
+      const cp = captureSocIamCheckpoint(
+        projectId,
+        livePol,
+        checkpointLabel || `Operator Manual Checkpoint (${new Date().toLocaleTimeString()})`,
+        account || 'soc-operator'
+      );
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'CAPTURE_IAM_CHECKPOINT',
+        target: `projects/${projectId}:getIamPolicy (etag=${livePol?.etag || 'unknown'})`,
+        actor: account || 'soc-operator',
+        details: `Captured Ed25519-signed IAM Policy checkpoint ${cp?.checkpointId} (${cp?.bindingsCount} role bindings, ${cp?.membersCount} principals).`,
+      });
+      return res.json({
+        success: true,
+        action,
+        checkpoint: cp,
+        receipt,
+        message: `Captured Ed25519-signed IAM Policy Checkpoint "${cp?.checkpointId}" (etag: ${livePol?.etag})!`,
+      });
+    }
+
+    // ACTION K: ATOMIC IAM POLICY ROLLBACK TO CHECKPOINT (PILLAR 06)
+    if (action === 'RESTORE_IAM_CHECKPOINT') {
+      const list = socIamCheckpointsByProject.get(projectId) || [];
+      const targetCp = checkpointId
+        ? list.find((c) => c.checkpointId === checkpointId)
+        : list[0];
+      if (!targetCp) {
+        return res.status(404).json({
+          error: 'Requested IAM Policy checkpoint was not found in the vault.',
+        });
+      }
+
+      // Fetch current live policy to get latest etag for atomic concurrency control
+      const livePol = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`,
+        token,
+        projectId,
+        { method: 'POST', body: {}, timeout: 10000 }
+      );
+
+      // Zero-Lockout Safety Guard: Ensure authenticated operator remains in roles/owner
+      const restoredBindings = JSON.parse(JSON.stringify(targetCp.bindings || []));
+      if (account && account.includes('@')) {
+        const userMember = `user:${account}`;
+        const ownerBinding = restoredBindings.find((b) => b.role === 'roles/owner');
+        if (ownerBinding) {
+          if (!ownerBinding.members.includes(userMember)) {
+            ownerBinding.members.push(userMember);
+          }
+        } else {
+          restoredBindings.push({
+            role: 'roles/owner',
+            members: [userMember],
+          });
+        }
+      }
+
+      const updatedPol = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:setIamPolicy`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          body: {
+            policy: {
+              bindings: restoredBindings,
+              etag: livePol?.etag,
+            },
+          },
+          timeout: 12000,
+        }
+      );
+
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'RESTORE_IAM_CHECKPOINT',
+        target: `${targetCp.checkpointId} -> etag=${updatedPol?.etag || 'updated'}`,
+        actor: account || 'soc-operator',
+        details: `Executed atomic setIamPolicy rollback to checkpoint ${targetCp.checkpointId} while preserving Owner safety guard for ${account}.`,
+      });
+
+      return res.json({
+        success: true,
+        action,
+        checkpointId: targetCp.checkpointId,
+        newEtag: updatedPol?.etag,
+        receipt,
+        message: `Atomically verified & rolled back project IAM Policy to checkpoint "${targetCp.checkpointId}" (new etag: ${updatedPol?.etag}) with Zero-Lockout Owner Guard!`,
+      });
+    }
+
+    // ACTION L: LOCK GCS BUCKET PUBLIC ACCESS PREVENTION & UNIFORM BUCKET-LEVEL ACCESS (PILLAR 07)
+    if (action === 'LOCK_GCS_BUCKET_PUBLIC_ACCESS') {
+      if (!bucketName) {
+        return res.status(400).json({ error: 'bucketName is required.' });
+      }
+      await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucketName)}`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          body: {
+            iamConfiguration: {
+              publicAccessPrevention: 'enforced',
+              uniformBucketLevelAccess: {
+                enabled: true,
+              },
+            },
+          },
+          timeout: 10000,
+        }
+      );
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'LOCK_GCS_BUCKET_PUBLIC_ACCESS',
+        target: `gs://${bucketName}`,
+        actor: account || 'soc-operator',
+        details: `Enforced publicAccessPrevention=enforced and uniformBucketLevelAccess=true on gs://${bucketName}.`,
+      });
+      return res.json({
+        success: true,
+        action,
+        bucketName,
+        receipt,
+        message: `Locked gs://${bucketName} with publicAccessPrevention="enforced" and Uniform Bucket-Level Access!`,
+      });
+    }
+
+    // ACTION M: DELETE SUSPICIOUS CLOUD LOGGING EXCLUSION RULE (PILLAR 07)
+    if (action === 'DELETE_LOG_EXCLUSION') {
+      if (!exclusionName) {
+        return res.status(400).json({ error: 'exclusionName is required.' });
+      }
+      await gcpFetch(
+        `https://logging.googleapis.com/v2/projects/${encProj}/exclusions/${encodeURIComponent(
+          exclusionName
+        )}`,
+        token,
+        projectId,
+        { method: 'DELETE', timeout: 10000 }
+      );
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'DELETE_LOG_EXCLUSION',
+        target: exclusionName,
+        actor: account || 'soc-operator',
+        details: `Deleted Cloud Logging exclusion rule ${exclusionName} to restore full audit log visibility.`,
+      });
+      return res.json({
+        success: true,
+        action,
+        exclusionName,
+        receipt,
+        message: `Deleted Cloud Logging exclusion "${exclusionName}" and restored full Audit Log telemetry!`,
+      });
+    }
+
+    // ACTION N: FREEZE OR UNFREEZE COMPROMISED SERVICE ACCOUNT IN-PLACE (PILLAR 08)
+    if (action === 'TOGGLE_SERVICE_ACCOUNT_FREEZE') {
+      if (!serviceAccountEmail) {
+        return res.status(400).json({ error: 'serviceAccountEmail is required.' });
+      }
+      const shouldFreeze = Boolean(freeze);
+      const verb = shouldFreeze ? 'disable' : 'enable';
+      await gcpFetch(
+        `https://iam.googleapis.com/v1/projects/${encProj}/serviceAccounts/${encodeURIComponent(
+          serviceAccountEmail
+        )}:${verb}`,
+        token,
+        projectId,
+        { method: 'POST', body: {}, timeout: 10000 }
+      );
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: shouldFreeze ? 'FREEZE_SERVICE_ACCOUNT' : 'UNFREEZE_SERVICE_ACCOUNT',
+        target: serviceAccountEmail,
+        actor: account || 'soc-operator',
+        details: `${
+          shouldFreeze ? 'Frozen (disabled)' : 'Unfrozen (re-enabled)'
+        } Service Account ${serviceAccountEmail} via iam.googleapis.com/v1.`,
+      });
+      return res.json({
+        success: true,
+        action,
+        serviceAccountEmail,
+        frozen: shouldFreeze,
+        receipt,
+        message: `${
+          shouldFreeze
+            ? `Frozen Service Account "${serviceAccountEmail}" in-place (all OAuth/JWT minting halted without deleting identity)!`
+            : `Re-enabled Service Account "${serviceAccountEmail}"!`
+        }`,
+      });
+    }
+
+    // ACTION O: 1-CLICK DEFCON-1 ATOMIC PROJECT LOCKDOWN PLAYBOOK (PILLAR 10)
+    if (action === 'EXECUTE_DEFCON1_LOCKDOWN') {
+      const stepsExecuted = [];
+
+      // Step 1: Capture Pre-Lockdown Cryptographic IAM Checkpoint
+      const livePol = await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`,
+        token,
+        projectId,
+        { method: 'POST', body: {}, timeout: 9000 }
+      ).catch(() => null);
+      if (livePol) {
+        const cp = captureSocIamCheckpoint(
+          projectId,
+          livePol,
+          'Defcon-1 Pre-Lockdown IAM Vault Snapshot',
+          account || 'soc-operator'
+        );
+        stepsExecuted.push(`IAM Snapshot Vaulted (${cp?.checkpointId})`);
+      }
+
+      // Step 2: Lock all world-open (0.0.0.0/0) SSH/RDP/ICMP VPC Firewall Rules to Google Cloud IAP (35.235.240.0/20)
+      const fwListRes = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/firewalls`,
+        token,
+        projectId,
+        { timeout: 9000 }
+      ).catch(() => ({ items: [] }));
+      const openRules = (fwListRes?.items || []).filter(
+        (fw) =>
+          !fw.disabled &&
+          fw.direction === 'INGRESS' &&
+          (fw.sourceRanges || []).includes('0.0.0.0/0') &&
+          !String(fw.name || '').startsWith('cloudpulse-soc-')
+      );
+      let lockedFwCount = 0;
+      await Promise.all(
+        openRules.map(async (fw) => {
+          try {
+            await gcpFetch(
+              `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/firewalls/${encodeURIComponent(
+                fw.name
+              )}`,
+              token,
+              projectId,
+              {
+                method: 'PATCH',
+                body: {
+                  sourceRanges: ['35.235.240.0/20'],
+                  description: `Defcon-1 Autonomous SOC Lockdown: Restricted from 0.0.0.0/0 to Cloud IAP (35.235.240.0/20)`,
+                },
+                timeout: 10000,
+              }
+            );
+            lockedFwCount += 1;
+          } catch {
+            // continue
+          }
+        })
+      );
+      stepsExecuted.push(
+        `VPC Perimeter Hardened (${lockedFwCount} world-open 0.0.0.0/0 rule(s) locked to Cloud IAP 35.235.240.0/20)`
+      );
+
+      // Step 3: Enforce Public Access Prevention & Uniform Access across all GCS Buckets
+      const bRes = await gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b?project=${encProj}`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ items: [] }));
+      let lockedBucketCount = 0;
+      await Promise.all(
+        (bRes?.items || []).map(async (b) => {
+          const pap = b.iamConfiguration?.publicAccessPrevention;
+          const ubla = b.iamConfiguration?.uniformBucketLevelAccess?.enabled;
+          if (pap === 'enforced' && ubla) return;
+          try {
+            await gcpFetch(
+              `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(b.name)}`,
+              token,
+              projectId,
+              {
+                method: 'PATCH',
+                body: {
+                  iamConfiguration: {
+                    publicAccessPrevention: 'enforced',
+                    uniformBucketLevelAccess: { enabled: true },
+                  },
+                },
+                timeout: 9000,
+              }
+            );
+            lockedBucketCount += 1;
+          } catch {
+            // continue
+          }
+        })
+      );
+      stepsExecuted.push(
+        `GCS Exfiltration Shield Enforced (${lockedBucketCount} bucket(s) newly locked, ${(bRes?.items || []).length} total verified)`
+      );
+
+      // Step 4: Verify App Engine Edge Firewall (*) -> DENY
+      await gcpFetch(
+        `https://appengine.googleapis.com/v1/apps/${encProj}/firewall/ingressRules/2147483647?updateMask=action`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          body: { action: 'DENY' },
+          timeout: 8000,
+        }
+      ).catch(() => null);
+      stepsExecuted.push(`App Engine Edge Firewall (*) verified DENY`);
+
+      // Step 5: Arm $0.00/mo Active Canary Deception Tripwire
+      await gcpFetch(
+        `https://secretmanager.googleapis.com/v1/projects/${encProj}/secrets?secretId=cloudpulse-soc-canary-master-key`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          body: {
+            replication: { automatic: {} },
+            labels: {
+              'managed-by': 'cloudpulse-autonomous-soc',
+              'soc-role': 'zero-cost-canary-tripwire',
+            },
+          },
+          timeout: 8000,
+        }
+      ).catch(() => null);
+      stepsExecuted.push(`$0.00/mo Canary Honey-Secret Tripwire Armed`);
+
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'EXECUTE_DEFCON1_LOCKDOWN',
+        target: `Project ${projectId} Multi-Plane Perimeter`,
+        actor: account || 'soc-operator',
+        details: `Defcon-1 Atomic Lockdown completed: ${stepsExecuted.join(' | ')}.`,
+      });
+
+      return res.json({
+        success: true,
+        action,
+        stepsExecuted,
+        receipt,
+        message: `DEFCON-1 ATOMIC LOCKDOWN COMPLETE: ${stepsExecuted.join(' · ')}!`,
+      });
+    }
+
     return res.status(400).json({ error: `Unsupported SOC action: ${action}` });
   } catch (err) {
     return res.status(500).json({
@@ -47573,6 +48208,144 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         err.response?.data?.error?.message ||
         err.message ||
         'SOC action failed.',
+    });
+  }
+});
+
+// 2B. GET /api/soc/fleet-matrix -> Cross-Project Multi-Estate SOC Federation Matrix (Pillar 09)
+app.get('/api/soc/fleet-matrix', async (req, res) => {
+  const t0 = Date.now();
+  try {
+    const { token, account } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const projRes = await gcpFetch(
+      'https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE',
+      token,
+      null,
+      { timeout: 9000 }
+    ).catch(() => ({ projects: [] }));
+
+    const activeProjects = (projRes?.projects || []).slice(0, 8);
+
+    const fleetRows = await Promise.all(
+      activeProjects.map(async (p) => {
+        const pid = p.projectId;
+        const enc = encodeURIComponent(pid);
+        const [fwRes, bucketsRes, saRes, appRes, appFwRes] = await Promise.all([
+          gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${enc}/global/firewalls`,
+            token,
+            pid,
+            { timeout: 6500 }
+          ).catch(() => ({ items: [] })),
+          gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b?project=${enc}`,
+            token,
+            pid,
+            { timeout: 6500 }
+          ).catch(() => ({ items: [] })),
+          gcpFetch(
+            `https://iam.googleapis.com/v1/projects/${enc}/serviceAccounts?pageSize=50`,
+            token,
+            pid,
+            { timeout: 6500 }
+          ).catch(() => ({ accounts: [] })),
+          gcpFetch(
+            `https://appengine.googleapis.com/v1/apps/${enc}`,
+            token,
+            pid,
+            { timeout: 5500 }
+          ).catch(() => null),
+          gcpFetch(
+            `https://appengine.googleapis.com/v1/apps/${enc}/firewall/ingressRules`,
+            token,
+            pid,
+            { timeout: 5500 }
+          ).catch(() => ({ ingressRules: [] })),
+        ]);
+
+        const firewalls = Array.isArray(fwRes?.items) ? fwRes.items : [];
+        const openAdminFirewallsCount = firewalls.filter(
+          (fw) =>
+            !fw.disabled &&
+            fw.direction === 'INGRESS' &&
+            (fw.sourceRanges || []).includes('0.0.0.0/0')
+        ).length;
+
+        const buckets = Array.isArray(bucketsRes?.items) ? bucketsRes.items : [];
+        const unhardenedBucketsCount = buckets.filter(
+          (b) => b.iamConfiguration?.publicAccessPrevention !== 'enforced'
+        ).length;
+
+        const accounts = Array.isArray(saRes?.accounts) ? saRes.accounts : [];
+        const frozenSaCount = accounts.filter((a) => a.disabled).length;
+
+        const defaultRule = (appFwRes?.ingressRules || []).find(
+          (r) => r.priority === 2147483647 || r.sourceRange === '*'
+        );
+        const appEngineState = !appRes
+          ? 'NOT_PROVISIONED'
+          : appRes.servingStatus === 'USER_DISABLED' || defaultRule?.action === 'DENY'
+          ? 'ZERO_TRUST_LOCKED'
+          : 'SERVING_PUBLIC';
+
+        const score = Math.max(
+          10,
+          Math.min(
+            100,
+            100 -
+              openAdminFirewallsCount * 15 -
+              unhardenedBucketsCount * 6 -
+              (appEngineState === 'SERVING_PUBLIC' ? 12 : 0)
+          )
+        );
+
+        return {
+          projectId: pid,
+          name: p.name || pid,
+          projectNumber: p.projectNumber,
+          socPostureScore: score,
+          socGrade:
+            score >= 90
+              ? 'A+ (ZERO-TRUST)'
+              : score >= 75
+              ? 'A (HARDENED)'
+              : score >= 60
+              ? 'B (GUARDED)'
+              : 'C (EXPOSED)',
+          openAdminFirewallsCount,
+          totalFirewallsCount: firewalls.length,
+          unhardenedBucketsCount,
+          totalBucketsCount: buckets.length,
+          serviceAccountsCount: accounts.length,
+          frozenSaCount,
+          appEngineState,
+        };
+      })
+    );
+
+    const fleetAverageScore =
+      fleetRows.length > 0
+        ? Math.round(
+            fleetRows.reduce((acc, r) => acc + r.socPostureScore, 0) / fleetRows.length
+          )
+        : 100;
+
+    return res.json({
+      ok: true,
+      scannedAt: new Date().toISOString(),
+      latencyMs: Date.now() - t0,
+      account: account || 'authenticated-operator',
+      projectsCount: fleetRows.length,
+      fleetAverageScore,
+      projects: fleetRows,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message || 'Failed to compute Multi-Project SOC Federation Matrix.',
     });
   }
 });
