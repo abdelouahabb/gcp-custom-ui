@@ -178,6 +178,7 @@ export default function FivePersonaCommandCenter({
   const [copiedKey, setCopiedKey] = useState('');
   const [overview, setOverview] = useState(null);
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [actionReceipts, setActionReceipts] = useState({});
   const [tribunalData, setTribunalData] = useState(null);
   const [tribunalLoading, setTribunalLoading] = useState(false);
   const [tribunalSubTab, setTribunalSubTab] = useState(
@@ -329,6 +330,10 @@ export default function FivePersonaCommandCenter({
         }
       );
       setLastReceipt(res.data);
+      setActionReceipts((prev) => ({
+        ...prev,
+        [action]: res.data,
+      }));
       if (res.data?.summary) {
         onShowToast?.(res.data.summary);
       }
@@ -361,6 +366,10 @@ export default function FivePersonaCommandCenter({
         }
       );
       setLastReceipt(res.data);
+      setActionReceipts((prev) => ({
+        ...prev,
+        [action]: res.data,
+      }));
       if (res.data?.summary) {
         onShowToast?.(res.data.summary);
       }
@@ -611,6 +620,10 @@ export default function FivePersonaCommandCenter({
         }
       );
       setLastReceipt(res.data);
+      setActionReceipts((prev) => ({
+        ...prev,
+        [action]: res.data,
+      }));
       if (res.data?.summary) {
         onShowToast?.(res.data.summary);
       }
@@ -707,7 +720,14 @@ export default function FivePersonaCommandCenter({
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setActivePersona(p.id)}
+                onClick={() => {
+                  setActivePersona(p.id);
+                  setTimeout(() => {
+                    document
+                      .getElementById('active-persona-lens-anchor')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 60);
+                }}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
@@ -2253,6 +2273,61 @@ export default function FivePersonaCommandCenter({
       )}
 
       {/* =================================================================== */}
+      {/* INLINE 10-PERSONA LENS QUICK-SWITCHER & LIVE ACTION RECEIPT BAR     */}
+      {/* =================================================================== */}
+      <div
+        id="active-persona-lens-anchor"
+        className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 shadow-sm space-y-3"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-mono font-extrabold">
+              LENS {activeTabMeta.code} ACTIVE
+            </span>
+            <span className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white">
+              {activeTabMeta.role} Deep-Dive Studio · {activeTabMeta.subtitle}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            {PERSONA_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActivePersona(t.id)}
+                className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                  activePersona === t.id
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {t.code} {t.role.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {lastReceipt && (
+          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+            <div className="space-y-0.5">
+              <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                [{lastReceipt.persona}] LIVE CONTROL-PLANE EXECUTION RECEIPT · {lastReceipt.action}
+              </div>
+              <div className="text-zinc-800 dark:text-zinc-200 text-[11px]">
+                {lastReceipt.summary}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLastReceipt(null)}
+              className="px-2 py-1 rounded bg-zinc-200/80 dark:bg-zinc-800 text-[10px] text-zinc-600 dark:text-zinc-300 hover:underline cursor-pointer shrink-0"
+            >
+              Clear Receipt
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* =================================================================== */}
       {/* LENS 01: CLOUD ARCHITECT (Org Policies, Region Blackout SPOF & C4)  */}
       {/* =================================================================== */}
       {activePersona === 'ARCHITECT' && (
@@ -2271,19 +2346,207 @@ export default function FivePersonaCommandCenter({
                   Evaluates every live Cloud Run service, Cloud SQL instance, and GCS bucket if `{region}` goes dark—computing RTO, RPO, and 1-tap multi-region promotion commands.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  runPersonaAction('RUN_ARCHITECT_SPOF_BLACKOUT_DRILL')
-                }
-                disabled={busyAction === 'RUN_ARCHITECT_SPOF_BLACKOUT_DRILL'}
-                className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
-              >
-                {busyAction === 'RUN_ARCHITECT_SPOF_BLACKOUT_DRILL'
-                  ? `Simulating ${region} Blackout...`
-                  : `Run Live "${region}" Blackout Drill`}
-              </button>
+              <div className="flex items-center gap-2">
+                {actionReceipts.RUN_ARCHITECT_SPOF_BLACKOUT_DRILL?.drillReport && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActionReceipts((prev) => {
+                        const next = { ...prev };
+                        delete next.RUN_ARCHITECT_SPOF_BLACKOUT_DRILL;
+                        return next;
+                      })
+                    }
+                    className="px-2.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[11px] font-mono font-bold cursor-pointer"
+                  >
+                    Reset Drill
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    runPersonaAction('RUN_ARCHITECT_SPOF_BLACKOUT_DRILL')
+                  }
+                  disabled={busyAction === 'RUN_ARCHITECT_SPOF_BLACKOUT_DRILL'}
+                  className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
+                >
+                  {busyAction === 'RUN_ARCHITECT_SPOF_BLACKOUT_DRILL'
+                    ? `Simulating ${region} Blackout...`
+                    : actionReceipts.RUN_ARCHITECT_SPOF_BLACKOUT_DRILL?.drillReport
+                    ? `Re-Run "${region}" Blackout Drill`
+                    : `Run Live "${region}" Blackout Drill`}
+                </button>
+              </div>
             </div>
+
+            {/* LIVE BLACKOUT SIMULATION INTERACTIVE OUTPUT CONSOLE */}
+            {(() => {
+              const drill =
+                actionReceipts.RUN_ARCHITECT_SPOF_BLACKOUT_DRILL?.drillReport ||
+                lastReceipt?.drillReport;
+              if (!drill) return null;
+              return (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 space-y-3.5 text-xs font-mono">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-extrabold uppercase tracking-wider">
+                        BLACKOUT DRILL ACTIVE · {drill.blackoutRegion} SEVERED
+                      </span>
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        Failover Target: {drill.secondaryFailoverRegion || 'us-east1'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-zinc-500">
+                      Simulated at {drill.simulatedAt ? new Date(drill.simulatedAt).toLocaleTimeString() : 'Live'}
+                    </span>
+                  </div>
+
+                  {/* 4 Blast-Radius & Survivability Scorecards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-2.5 rounded-xl bg-white/90 dark:bg-zinc-950/90 border border-amber-500/30">
+                      <div className="text-[10px] text-zinc-500">Impacted Run &amp; VMs</div>
+                      <div className="text-sm font-extrabold text-amber-600 dark:text-amber-400">
+                        {drill.impactedCloudRunCount || 0} Run · {drill.impactedVmsCount || 0} VMs
+                      </div>
+                      <div className="text-[9.5px] text-zinc-500">In {drill.blackoutRegion}</div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/90 dark:bg-zinc-950/90 border border-red-500/30">
+                      <div className="text-[10px] text-zinc-500">Single-Region Storage/SQL</div>
+                      <div className="text-sm font-extrabold text-red-600 dark:text-red-400">
+                        {drill.impactedCloudSqlCount || 0} SQL · {drill.impactedSingleRegionBucketsCount || 0} GCS
+                      </div>
+                      <div className="text-[9.5px] text-zinc-500">Needs Cross-Region Promote</div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/90 dark:bg-zinc-950/90 border border-emerald-500/30">
+                      <div className="text-[10px] text-zinc-500">Surviving GCS Buckets</div>
+                      <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                        {drill.survivingMultiRegionBucketsCount ?? 0}/{drill.totalBuckets ?? 0} Online
+                      </div>
+                      <div className="text-[9.5px] text-emerald-600 dark:text-emerald-400">RPO = 0s Quorum</div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/90 dark:bg-zinc-950/90 border border-emerald-500/30">
+                      <div className="text-[10px] text-zinc-500">Surviving BigQuery</div>
+                      <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                        {drill.survivingMultiRegionDatasets ?? 0}/{drill.totalDatasets ?? 0} Online
+                      </div>
+                      <div className="text-[9.5px] text-emerald-600 dark:text-emerald-400">US/EU Colossus Active</div>
+                    </div>
+                  </div>
+
+                  {/* 4-Stage Blackout Propagation Timeline */}
+                  {Array.isArray(drill.blackoutTimeline) && drill.blackoutTimeline.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                        4-Stage Regional Blackout &amp; Anycast Failover Waterfall
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {drill.blackoutTimeline.map((st) => (
+                          <div
+                            key={st.step}
+                            className="p-2.5 rounded-xl bg-white/90 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 space-y-1"
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                                {st.step} · {st.title}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9px] font-bold shrink-0">
+                                {st.status}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                              {st.detail}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Per-Resource Live Blackout Impact Breakdown */}
+                  {Array.isArray(drill.resourceImpactBreakdown) &&
+                    drill.resourceImpactBreakdown.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                          Live Project Resource Survivability Breakdown ({drill.resourceImpactBreakdown.length} Resources Evaluated)
+                        </div>
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                          {drill.resourceImpactBreakdown.map((r, rIdx) => {
+                            const isDark = String(r.blackoutStatus || '').includes('DARK');
+                            return (
+                              <div
+                                key={`${r.name}-${rIdx}`}
+                                className={`p-2 rounded-lg border flex flex-wrap items-center justify-between gap-2 ${
+                                  isDark
+                                    ? 'bg-red-500/10 border-red-500/30'
+                                    : 'bg-emerald-500/10 border-emerald-500/30'
+                                }`}
+                              >
+                                <div>
+                                  <span className="font-extrabold text-zinc-900 dark:text-white">
+                                    {r.resourceType}: {r.name}
+                                  </span>{' '}
+                                  <span className="text-[10px] text-zinc-500">
+                                    ({r.location}) · RTO: {r.rto} · RPO: {r.rpo}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                      isDark
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-emerald-600 text-white'
+                                    }`}
+                                  >
+                                    {r.blackoutStatus}
+                                  </span>
+                                  {onRunInShell && r.failoverCli && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onRunInShell(r.failoverCli)}
+                                      className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[9.5px] font-bold cursor-pointer"
+                                    >
+                                      Run DR CLI
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Recommended Failover CLI Bar */}
+                  {drill.recommendedFailoverCli && (
+                    <div className="p-2.5 rounded-xl bg-zinc-950 text-emerald-400 flex flex-wrap items-center justify-between gap-2">
+                      <code className="text-[10px] truncate max-w-md">
+                        {drill.recommendedFailoverCli}
+                      </code>
+                      <div className="flex items-center gap-1.5">
+                        {onRunInShell && (
+                          <button
+                            type="button"
+                            onClick={() => onRunInShell(drill.recommendedFailoverCli)}
+                            className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                          >
+                            Execute Failover Audit in Shell
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            copyText(drill.recommendedFailoverCli, 'DRILL_CLI')
+                          }
+                          className="px-2 py-1 rounded bg-zinc-800 text-zinc-200 text-[10px] cursor-pointer"
+                        >
+                          {copiedKey === 'DRILL_CLI' ? 'Copied' : 'Copy CLI'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="space-y-2.5 max-h-[380px] overflow-y-auto">
               {(arch.spofMatrix || []).map((item, idx) => {
@@ -2482,6 +2745,37 @@ export default function FivePersonaCommandCenter({
                   </span>
                 ))}
               </div>
+              {actionReceipts.RUN_CLOUD_ENG_PREFLIGHT_VALIDATOR
+                ?.preflightReport && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/40 space-y-1.5 text-xs font-mono">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                      PRE-FLIGHT GATE PASSED
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[9.5px] font-bold">
+                      {
+                        actionReceipts.RUN_CLOUD_ENG_PREFLIGHT_VALIDATOR
+                          .preflightReport.quotaCliStatus
+                      }
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                    Verified IAM Permissions:{' '}
+                    <strong>
+                      {actionReceipts.RUN_CLOUD_ENG_PREFLIGHT_VALIDATOR
+                        .preflightReport.verifiedPermissions?.length || 0}
+                      /6
+                    </strong>{' '}
+                    · GitOps Resource Schemas Ready:{' '}
+                    <strong>
+                      {
+                        actionReceipts.RUN_CLOUD_ENG_PREFLIGHT_VALIDATOR
+                          .preflightReport.gitOpsResourceSchemasReady
+                      }
+                    </strong>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
@@ -2642,6 +2936,32 @@ export default function FivePersonaCommandCenter({
                     : '1-Click Heal & Replay DLQ on BigQuery'}
                 </button>
               </div>
+
+              {actionReceipts.REPLAY_DATA_ENG_QUARANTINE_DLQ?.replayReceipt && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/40 space-y-1.5 text-xs font-mono">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                      BIGQUERY DLQ REPLAY COMPLETE · JOB{' '}
+                      {
+                        actionReceipts.REPLAY_DATA_ENG_QUARANTINE_DLQ
+                          .replayReceipt.jobId
+                      }
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[9.5px] font-bold">
+                      3 ROWS HEALED
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                    Healed Row Sample:{' '}
+                    <code>
+                      {JSON.stringify(
+                        actionReceipts.REPLAY_DATA_ENG_QUARANTINE_DLQ
+                          .replayReceipt.healedRowSample
+                      )}
+                    </code>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2.5">
                 {(deng.quarantineDlqRecords || []).map((rec) => (
@@ -3035,6 +3355,31 @@ export default function FivePersonaCommandCenter({
                 </button>
               </div>
 
+              {actionReceipts.VERIFY_DEVSECOPS_SUPPLY_CHAIN_AND_OIDC
+                ?.devSecOpsReceipt && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/40 space-y-1 text-xs font-mono">
+                  <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                    SUPPLY-CHAIN &amp; OIDC AUDIT COMPLETE
+                  </div>
+                  <div className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                    BinAuthz Mode:{' '}
+                    <strong>
+                      {
+                        actionReceipts.VERIFY_DEVSECOPS_SUPPLY_CHAIN_AND_OIDC
+                          .devSecOpsReceipt.binAuthzEnforcementMode
+                      }
+                    </strong>{' '}
+                    · Active OIDC Pools:{' '}
+                    <strong>
+                      {
+                        actionReceipts.VERIFY_DEVSECOPS_SUPPLY_CHAIN_AND_OIDC
+                          .devSecOpsReceipt.activeOidcPoolsCount
+                      }
+                    </strong>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {(sec.containerSupplyChain || []).map((c) => (
                   <div
@@ -3136,6 +3481,39 @@ export default function FivePersonaCommandCenter({
                     ? 'Verifying Model Armor & RAG...'
                     : 'Verify Model Armor & RAG Recall Live'}
                 </button>
+                {actionReceipts.RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC
+                  ?.aiMlOpsReceipt && (
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-purple-500">
+                      MODEL ARMOR &amp; RAG VERIFIED
+                    </div>
+                    <div className="text-zinc-700 dark:text-zinc-300">
+                      Templates:{' '}
+                      <strong>
+                        {
+                          actionReceipts.RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC
+                            .aiMlOpsReceipt.modelArmorTemplatesCount
+                        }
+                      </strong>{' '}
+                      · RAG Datasets:{' '}
+                      <strong>
+                        {
+                          actionReceipts.RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC
+                            .aiMlOpsReceipt.ragDatasetsAudited
+                        }
+                      </strong>{' '}
+                      · Cache Savings:{' '}
+                      <strong>
+                        -
+                        {
+                          actionReceipts.RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC
+                            .aiMlOpsReceipt.contextCacheSavingsPct
+                        }
+                        %
+                      </strong>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
@@ -3195,6 +3573,45 @@ export default function FivePersonaCommandCenter({
                     ? 'Auditing SLO Gate...'
                     : 'Run SLO Freeze Gate & Change Correlation'}
                 </button>
+                {actionReceipts.RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION
+                  ?.sreReceipt && (
+                  <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-orange-500">
+                      RELEASE GATE:{' '}
+                      {
+                        actionReceipts.RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION
+                          .sreReceipt.releaseGate
+                      }
+                    </div>
+                    <div className="text-zinc-700 dark:text-zinc-300">
+                      Services:{' '}
+                      <strong>
+                        {
+                          actionReceipts
+                            .RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION
+                            .sreReceipt.servicesAudited
+                        }
+                      </strong>{' '}
+                      · Alert Policies:{' '}
+                      <strong>
+                        {
+                          actionReceipts
+                            .RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION
+                            .sreReceipt.alertPoliciesCount
+                        }
+                      </strong>{' '}
+                      · 1h Burn:{' '}
+                      <strong>
+                        {
+                          actionReceipts
+                            .RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION
+                            .sreReceipt.burnRate1h
+                        }
+                        x
+                      </strong>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
@@ -3254,6 +3671,37 @@ export default function FivePersonaCommandCenter({
                     ? 'Auditing Locks & Indexes...'
                     : 'Run Live Lock & Index Advisor Audit'}
                 </button>
+                {actionReceipts.RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR
+                  ?.dbreReceipt && (
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-cyan-500">
+                      DBRE LOCK &amp; INDEX AUDIT COMPLETE
+                    </div>
+                    <div className="text-zinc-700 dark:text-zinc-300">
+                      Cloud SQL:{' '}
+                      <strong>
+                        {
+                          actionReceipts.RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR
+                            .dbreReceipt.cloudSqlInstancesCount
+                        }
+                      </strong>{' '}
+                      · Spanner:{' '}
+                      <strong>
+                        {
+                          actionReceipts.RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR
+                            .dbreReceipt.spannerInstancesCount
+                        }
+                      </strong>{' '}
+                      · Blocking PIDs:{' '}
+                      <strong>
+                        {
+                          actionReceipts.RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR
+                            .dbreReceipt.blockingPids
+                        }
+                      </strong>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
@@ -3310,6 +3758,37 @@ export default function FivePersonaCommandCenter({
                     ? 'Scanning Zombie Disks & IPs...'
                     : 'Run Zombie Resource Reaper & Unit Audit'}
                 </button>
+                {actionReceipts.RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT
+                  ?.finopsReceipt && (
+                  <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-teal-500">
+                      ZOMBIE REAPER &amp; UNIT AUDIT COMPLETE
+                    </div>
+                    <div className="text-zinc-700 dark:text-zinc-300">
+                      Unattached Disks:{' '}
+                      <strong>
+                        {
+                          actionReceipts.RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT
+                            .finopsReceipt.unattachedDisks
+                        }
+                      </strong>{' '}
+                      · Idle Static IPs:{' '}
+                      <strong>
+                        {
+                          actionReceipts.RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT
+                            .finopsReceipt.unusedIps
+                        }
+                      </strong>{' '}
+                      · Green Target:{' '}
+                      <strong>
+                        {
+                          actionReceipts.RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT
+                            .finopsReceipt.recommendedGreenRegion
+                        }
+                      </strong>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
@@ -3362,6 +3841,41 @@ export default function FivePersonaCommandCenter({
                     ? 'Auditing GKE & mTLS Mesh...'
                     : 'Run GKE Right-Sizer & mTLS Mesh Check'}
                 </button>
+                {actionReceipts.RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK
+                  ?.platformK8sReceipt && (
+                  <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/40 text-[11px] font-mono space-y-1">
+                    <div className="font-extrabold text-sky-500">
+                      GKE &amp; SERVICE MESH AUDIT COMPLETE
+                    </div>
+                    <div className="text-zinc-700 dark:text-zinc-300">
+                      GKE Clusters:{' '}
+                      <strong>
+                        {
+                          actionReceipts
+                            .RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK
+                            .platformK8sReceipt.gkeClustersCount
+                        }
+                      </strong>{' '}
+                      · mTLS Mode:{' '}
+                      <strong>
+                        {
+                          actionReceipts
+                            .RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK
+                            .platformK8sReceipt.mtlsMode
+                        }
+                      </strong>{' '}
+                      · Reclaimable RAM:{' '}
+                      <strong>
+                        {
+                          actionReceipts
+                            .RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK
+                            .platformK8sReceipt.reclaimableMemoryGiB
+                        }{' '}
+                        GiB
+                      </strong>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
