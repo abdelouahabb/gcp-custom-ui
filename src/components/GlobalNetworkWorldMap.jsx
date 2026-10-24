@@ -1967,7 +1967,7 @@ export default function GlobalNetworkWorldMap({
     fetchLiveGeoTelemetry(false);
   }, [fetchLiveGeoTelemetry]);
 
-  // Live-Detected Client Origin (e.g. Tizi Ouzou / Algiers, Algeria · IP 154.248.101.10 · AS36947 Telecom Algeria)
+  // Live-Detected Client Origin (Privacy-Shielded: raw IP is never displayed or logged)
   const liveClientOriginNode = useMemo(() => {
     const c = liveGeoTelemetry?.clientOrigin;
     const lat = typeof c?.lat === 'number' ? c.lat : 36.7118;
@@ -1978,7 +1978,8 @@ export default function GlobalNetworkWorldMap({
     const country = c?.country || 'Algeria';
     const countryCode = c?.countryCode || 'DZ';
     const countryIso3 = c?.countryIso3 || 'DZA';
-    const ip = c?.ip || 'Live Client IP';
+    const ip = 'IP Hidden (Privacy Mode)';
+    const evalIp = '198.51.100.1'; // RFC 5737 TEST-NET-2 documentation IP for local CIDR evaluation only
     const asn = c?.asn || 'AS36947';
     const isp = c?.isp || 'Telecom Algeria';
     return {
@@ -1991,6 +1992,7 @@ export default function GlobalNetworkWorldMap({
       countryCode,
       countryIso3,
       ip,
+      evalIp,
       asn,
       isp,
       lat,
@@ -2712,7 +2714,7 @@ export default function GlobalNetworkWorldMap({
 
       const evaluation = evaluatePacketAgainstFirewalls(
         {
-          sourceIp: origin.ip,
+          sourceIp: origin.evalIp || origin.ip,
           protocol,
           port,
         },
@@ -2970,12 +2972,12 @@ export default function GlobalNetworkWorldMap({
                 type="button"
                 onClick={() => focusOnClientOrigin(3.2)}
                 className="px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
-                title="Click to zoom the World Map directly to your live client location"
+                title="Click to zoom the World Map directly to your live client location (IP Hidden for Privacy)"
               >
                 PROBING LIVE FROM: {liveClientOriginNode.city},{' '}
-                {liveClientOriginNode.country} [{liveClientOriginNode.countryCode}] · IP{' '}
-                {liveClientOriginNode.ip} · {liveClientOriginNode.asn}{' '}
-                {liveClientOriginNode.isp} · GPS {liveClientOriginNode.gpsLabel}
+                {liveClientOriginNode.country} [{liveClientOriginNode.countryCode}] · IP Hidden (Privacy Mode) ·{' '}
+                {liveClientOriginNode.asn} {liveClientOriginNode.isp} · GPS{' '}
+                {liveClientOriginNode.gpsLabel}
               </button>
               {liveGeoTelemetry?.fastestRegion && (
                 <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
@@ -3933,7 +3935,7 @@ export default function GlobalNetworkWorldMap({
                   >
                     <title>{`${country.name} (${country.id})${
                       isClientCountry
-                        ? ` · YOUR LIVE CLIENT LOCATION (${liveClientOriginNode.city}, ${liveClientOriginNode.country} · ${liveClientOriginNode.ip})`
+                        ? ` · YOUR LIVE CLIENT LOCATION (${liveClientOriginNode.city}, ${liveClientOriginNode.country} · IP Hidden)`
                         : country.hostsGcp
                         ? ' · Google Cloud Host Country'
                         : ''
@@ -4071,7 +4073,7 @@ export default function GlobalNetworkWorldMap({
                   stroke="#020617"
                   strokeWidth="1.5"
                 >
-                  <title>{`YOU ARE HERE: ${liveClientOriginNode.city}, ${liveClientOriginNode.region}, ${liveClientOriginNode.country} [${liveClientOriginNode.countryCode}] · IP ${liveClientOriginNode.ip} · ${liveClientOriginNode.asn} ${liveClientOriginNode.isp} · GPS ${liveClientOriginNode.gpsLabel}`}</title>
+                  <title>{`YOU ARE HERE: ${liveClientOriginNode.city}, ${liveClientOriginNode.region}, ${liveClientOriginNode.country} [${liveClientOriginNode.countryCode}] · IP Hidden (Privacy Mode) · ${liveClientOriginNode.asn} ${liveClientOriginNode.isp} · GPS ${liveClientOriginNode.gpsLabel}`}</title>
                 </circle>
                 <circle r={2} fill="#ffffff" />
                 <rect
@@ -4093,7 +4095,7 @@ export default function GlobalNetworkWorldMap({
                   fontWeight="bold"
                   fontFamily="monospace"
                 >
-                  {`YOU: ${liveClientOriginNode.city}, ${liveClientOriginNode.countryCode} (${liveClientOriginNode.ip})`}
+                  {`YOU: ${liveClientOriginNode.city}, ${liveClientOriginNode.countryCode} (IP Hidden)`}
                 </text>
               </g>
 
@@ -4643,7 +4645,7 @@ export default function GlobalNetworkWorldMap({
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                   <span>
                     You: {liveClientOriginNode.city},{' '}
-                    {liveClientOriginNode.countryCode} ({liveClientOriginNode.ip})
+                    {liveClientOriginNode.countryCode} (IP Hidden)
                   </span>
                 </span>
                 <span className="flex items-center gap-1">

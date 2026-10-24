@@ -57985,7 +57985,7 @@ async function resolveLiveClientOrigin() {
     if (d && d.success !== false && typeof d.latitude === 'number') {
       const iso2 = String(d.country_code || '').toUpperCase();
       cachedLiveClientOrigin = {
-        ip: d.ip || 'Live Egress IP',
+        ip: 'IP Hidden (Privacy Mode)',
         city: d.city || d.capital || 'Client City',
         region: d.region || '',
         country: d.country || 'Client Country',
@@ -57996,11 +57996,11 @@ async function resolveLiveClientOrigin() {
         lon: Number(d.longitude.toFixed(4)),
         asn: d.connection?.asn ? `AS${d.connection.asn}` : 'AS-LIVE',
         isp: d.connection?.isp || d.connection?.org || 'Live ISP',
-        domain: d.connection?.domain || '',
+        domain: '',
         timezone: d.timezone?.id
           ? `${d.timezone.id} (UTC${d.timezone.utc || ''})`
           : Intl.DateTimeFormat().resolvedOptions().timeZone,
-        source: 'LIVE_EGRESS_IP_GEOLOCATION',
+        source: 'LIVE_EGRESS_GEOLOCATION_PRIVACY_SHIELDED',
       };
       cachedLiveClientOriginAt = Date.now();
       return cachedLiveClientOrigin;
@@ -58014,7 +58014,7 @@ async function resolveLiveClientOrigin() {
         const [latS, lonS] = String(d2.loc).split(',');
         const iso2 = String(d2.country || '').toUpperCase();
         cachedLiveClientOrigin = {
-          ip: d2.ip || 'Live Egress IP',
+          ip: 'IP Hidden (Privacy Mode)',
           city: d2.city || 'Client City',
           region: d2.region || '',
           country: iso2 === 'DZ' ? 'Algeria' : iso2,
@@ -58027,7 +58027,7 @@ async function resolveLiveClientOrigin() {
           isp: String(d2.org || '').replace(/^AS\d+\s*/, '') || 'Live ISP',
           domain: '',
           timezone: d2.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-          source: 'LIVE_IPINFO_GEOLOCATION',
+          source: 'LIVE_IPINFO_GEOLOCATION_PRIVACY_SHIELDED',
         };
         cachedLiveClientOriginAt = Date.now();
         return cachedLiveClientOrigin;
@@ -58041,7 +58041,7 @@ async function resolveLiveClientOrigin() {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Algiers';
   const isAlgiers = tz.toLowerCase().includes('algiers');
   return {
-    ip: 'Local Workstation',
+    ip: 'IP Hidden (Privacy Mode)',
     city: isAlgiers ? 'Algiers' : tz.split('/').pop()?.replace(/_/g, ' ') || 'Client Workstation',
     region: '',
     country: isAlgiers ? 'Algeria' : 'Local Jurisdiction',
