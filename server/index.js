@@ -57910,8 +57910,154 @@ app.post(
 
 // ============================================================================
 // LIVE GLOBAL MAP GEO-CONTROL PLANE: REAL TCP/TLS REGIONAL RTT PROBES,
-// COMPUTE REGIONAL QUOTAS, VPC SUBNET CIDRs & DATA SOVEREIGNTY AUDIT
+// LIVE CLIENT EGRESS GEOLOCATION, COMPUTE QUOTAS, VPC SUBNETS & SOVEREIGNTY
 // ============================================================================
+let cachedLiveClientOrigin = null;
+let cachedLiveClientOriginAt = 0;
+
+const ISO2_TO_ISO3_MAP = {
+  DZ: 'DZA',
+  MA: 'MAR',
+  TN: 'TUN',
+  EG: 'EGY',
+  NG: 'NGA',
+  ZA: 'ZAF',
+  KE: 'KEN',
+  US: 'USA',
+  CA: 'CAN',
+  MX: 'MEX',
+  BR: 'BRA',
+  CL: 'CHL',
+  AR: 'ARG',
+  CO: 'COL',
+  FR: 'FRA',
+  GB: 'GBR',
+  DE: 'DEU',
+  NL: 'NLD',
+  BE: 'BEL',
+  ES: 'ESP',
+  IT: 'ITA',
+  CH: 'CHE',
+  PL: 'POL',
+  FI: 'FIN',
+  SE: 'SWE',
+  NO: 'NOR',
+  IE: 'IRL',
+  PT: 'PRT',
+  IL: 'ISR',
+  QA: 'QAT',
+  SA: 'SAU',
+  AE: 'ARE',
+  TR: 'TUR',
+  IN: 'IND',
+  SG: 'SGP',
+  ID: 'IDN',
+  TW: 'TWN',
+  HK: 'HKG',
+  CN: 'CHN',
+  JP: 'JPN',
+  KR: 'KOR',
+  AU: 'AUS',
+  NZ: 'NZL',
+};
+
+function haversineKmServer(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+async function resolveLiveClientOrigin() {
+  if (
+    cachedLiveClientOrigin &&
+    Date.now() - cachedLiveClientOriginAt < 30 * 60 * 1000
+  ) {
+    return cachedLiveClientOrigin;
+  }
+  try {
+    const resp = await axios.get('https://ipwho.is/', { timeout: 2800 });
+    const d = resp.data;
+    if (d && d.success !== false && typeof d.latitude === 'number') {
+      const iso2 = String(d.country_code || '').toUpperCase();
+      cachedLiveClientOrigin = {
+        ip: d.ip || 'Live Egress IP',
+        city: d.city || d.capital || 'Client City',
+        region: d.region || '',
+        country: d.country || 'Client Country',
+        countryCode: iso2,
+        countryIso3: ISO2_TO_ISO3_MAP[iso2] || iso2,
+        continent: d.continent || 'Africa',
+        lat: Number(d.latitude.toFixed(4)),
+        lon: Number(d.longitude.toFixed(4)),
+        asn: d.connection?.asn ? `AS${d.connection.asn}` : 'AS-LIVE',
+        isp: d.connection?.isp || d.connection?.org || 'Live ISP',
+        domain: d.connection?.domain || '',
+        timezone: d.timezone?.id
+          ? `${d.timezone.id} (UTC${d.timezone.utc || ''})`
+          : Intl.DateTimeFormat().resolvedOptions().timeZone,
+        source: 'LIVE_EGRESS_IP_GEOLOCATION',
+      };
+      cachedLiveClientOriginAt = Date.now();
+      return cachedLiveClientOrigin;
+    }
+  } catch (_e) {
+    // Fallback to ipinfo.io if ipwho.is is unreachable
+    try {
+      const resp2 = await axios.get('https://ipinfo.io/json', { timeout: 2500 });
+      const d2 = resp2.data;
+      if (d2 && d2.loc) {
+        const [latS, lonS] = String(d2.loc).split(',');
+        const iso2 = String(d2.country || '').toUpperCase();
+        cachedLiveClientOrigin = {
+          ip: d2.ip || 'Live Egress IP',
+          city: d2.city || 'Client City',
+          region: d2.region || '',
+          country: iso2 === 'DZ' ? 'Algeria' : iso2,
+          countryCode: iso2,
+          countryIso3: ISO2_TO_ISO3_MAP[iso2] || iso2,
+          continent: 'Local Continent',
+          lat: Number(Number(latS).toFixed(4)),
+          lon: Number(Number(lonS).toFixed(4)),
+          asn: String(d2.org || '').split(' ')[0] || 'AS-LIVE',
+          isp: String(d2.org || '').replace(/^AS\d+\s*/, '') || 'Live ISP',
+          domain: '',
+          timezone: d2.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+          source: 'LIVE_IPINFO_GEOLOCATION',
+        };
+        cachedLiveClientOriginAt = Date.now();
+        return cachedLiveClientOrigin;
+      }
+    } catch (_e2) {
+      // ignore
+    }
+  }
+
+  // Offline / Timezone-based fallback
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Algiers';
+  const isAlgiers = tz.toLowerCase().includes('algiers');
+  return {
+    ip: 'Local Workstation',
+    city: isAlgiers ? 'Algiers' : tz.split('/').pop()?.replace(/_/g, ' ') || 'Client Workstation',
+    region: '',
+    country: isAlgiers ? 'Algeria' : 'Local Jurisdiction',
+    countryCode: isAlgiers ? 'DZ' : 'LOC',
+    countryIso3: isAlgiers ? 'DZA' : 'LOC',
+    continent: tz.split('/')[0] || 'Africa',
+    lat: isAlgiers ? 36.7538 : 36.7118,
+    lon: isAlgiers ? 3.0588 : 4.0459,
+    asn: 'LOCAL_NET',
+    isp: 'Local Workstation Egress',
+    domain: '',
+    timezone: tz,
+    source: 'SYSTEM_TIMEZONE_GEOLOCATION',
+  };
+}
+
 app.get(
   '/api/project/:projectId/global-map/live-telemetry',
   async (req, res) => {
@@ -57926,6 +58072,8 @@ app.get(
         regionId: 'us-central1',
         city: 'Council Bluffs, Iowa',
         continent: 'North America',
+        lat: 41.2619,
+        lon: -95.8608,
         host: 'us-central1-aiplatform.googleapis.com',
         cfePct: 93,
       },
@@ -57933,6 +58081,8 @@ app.get(
         regionId: 'us-east1',
         city: 'Moncks Corner, South Carolina',
         continent: 'North America',
+        lat: 33.196,
+        lon: -80.0131,
         host: 'us-east1-aiplatform.googleapis.com',
         cfePct: 52,
       },
@@ -57940,6 +58090,8 @@ app.get(
         regionId: 'us-west1',
         city: 'The Dalles, Oregon',
         continent: 'North America',
+        lat: 45.5946,
+        lon: -121.1787,
         host: 'us-west1-aiplatform.googleapis.com',
         cfePct: 89,
       },
@@ -57947,6 +58099,8 @@ app.get(
         regionId: 'europe-west1',
         city: 'St. Ghislain, Belgium',
         continent: 'Europe',
+        lat: 50.4481,
+        lon: 3.8189,
         host: 'europe-west1-aiplatform.googleapis.com',
         cfePct: 84,
       },
@@ -57954,6 +58108,8 @@ app.get(
         regionId: 'europe-west4',
         city: 'Eemshaven, Netherlands',
         continent: 'Europe',
+        lat: 53.4386,
+        lon: 6.8355,
         host: 'europe-west4-aiplatform.googleapis.com',
         cfePct: 72,
       },
@@ -57961,6 +58117,8 @@ app.get(
         regionId: 'asia-northeast1',
         city: 'Tokyo, Japan',
         continent: 'Asia-Pacific',
+        lat: 35.6762,
+        lon: 139.6503,
         host: 'asia-northeast1-aiplatform.googleapis.com',
         cfePct: 48,
       },
@@ -57968,6 +58126,8 @@ app.get(
         regionId: 'asia-southeast1',
         city: 'Jurong West, Singapore',
         continent: 'Asia-Pacific',
+        lat: 1.3521,
+        lon: 103.8198,
         host: 'asia-southeast1-aiplatform.googleapis.com',
         cfePct: 41,
       },
@@ -57975,6 +58135,8 @@ app.get(
         regionId: 'southamerica-east1',
         city: 'São Paulo, Brazil',
         continent: 'South America',
+        lat: -23.5505,
+        lon: -46.6333,
         host: 'southamerica-east1-aiplatform.googleapis.com',
         cfePct: 91,
       },
@@ -58053,6 +58215,7 @@ app.get(
       const token = await resolveRequestToken(req);
 
       const [
+        clientOrigin,
         probeResults,
         regionsRes,
         subnetsRes,
@@ -58061,6 +58224,7 @@ app.get(
         runRes,
         vmsRes,
       ] = await Promise.all([
+        resolveLiveClientOrigin(),
         Promise.all(REGIONAL_PROBE_TARGETS.map(probeRegionalEndpoint)),
         gcpFetch(
           `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
@@ -58112,8 +58276,20 @@ app.get(
         ).catch(() => null),
       ]);
 
-      // Sort live regional socket probes by lowest real TCP connect / total RTT
-      const sortedProbes = [...probeResults].sort(
+      // Enrich regional probes with exact distance from the live client origin & sort by lowest TCP connect / RTT
+      const enrichedProbes = probeResults.map((p) => ({
+        ...p,
+        distanceFromClientKm:
+          clientOrigin && typeof clientOrigin.lat === 'number'
+            ? haversineKmServer(
+                clientOrigin.lat,
+                clientOrigin.lon,
+                p.lat,
+                p.lon
+              )
+            : null,
+      }));
+      const sortedProbes = [...enrichedProbes].sort(
         (a, b) => (a.tcpMs || 9999) - (b.tcpMs || 9999)
       );
       const fastestRegion = sortedProbes[0] || null;
@@ -58266,6 +58442,7 @@ app.get(
         status: 'OK',
         projectId,
         probedAt: new Date().toISOString(),
+        clientOrigin,
         fastestRegion,
         regionalSocketProbes: sortedProbes,
         regionalQuotas,

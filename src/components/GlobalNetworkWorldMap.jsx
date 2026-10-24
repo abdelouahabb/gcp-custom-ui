@@ -1739,9 +1739,6 @@ const GLOBAL_CLIENT_ORIGINS = RAW_GLOBAL_CLIENT_ORIGINS.map((orig) => {
   };
 });
 
-// Corporate Hybrid VPN / IAP Gateway Origin (New York City, USA)
-const HYBRID_GATEWAY_POINT = projectLatLon(40.7128, -74.006);
-
 // Helper: Match IPv4 to CIDR
 function ipMatchesCidr(ipStr, cidrStr) {
   const cleanCidr = (cidrStr || '').trim();
@@ -1969,6 +1966,85 @@ export default function GlobalNetworkWorldMap({
   useEffect(() => {
     fetchLiveGeoTelemetry(false);
   }, [fetchLiveGeoTelemetry]);
+
+  // Live-Detected Client Origin (e.g. Tizi Ouzou / Algiers, Algeria · IP 154.248.101.10 · AS36947 Telecom Algeria)
+  const liveClientOriginNode = useMemo(() => {
+    const c = liveGeoTelemetry?.clientOrigin;
+    const lat = typeof c?.lat === 'number' ? c.lat : 36.7118;
+    const lon = typeof c?.lon === 'number' ? c.lon : 4.0459;
+    const pt = projectLatLon(lat, lon);
+    const city = c?.city || 'Tizi Ouzou';
+    const region = c?.region || 'Wilaya de Tizi Ouzou';
+    const country = c?.country || 'Algeria';
+    const countryCode = c?.countryCode || 'DZ';
+    const countryIso3 = c?.countryIso3 || 'DZA';
+    const ip = c?.ip || 'Live Client IP';
+    const asn = c?.asn || 'AS36947';
+    const isp = c?.isp || 'Telecom Algeria';
+    return {
+      id: 'my-live-client',
+      label: `My Live Client — ${city}, ${country} [${countryCode}]`,
+      shortLabel: `YOU: ${city}, ${countryCode}`,
+      city,
+      region,
+      country,
+      countryCode,
+      countryIso3,
+      ip,
+      asn,
+      isp,
+      lat,
+      lon,
+      gpsLabel: formatLatLon(lat, lon),
+      x: pt.x,
+      y: pt.y,
+      kind: 'MY_LIVE_CLIENT',
+    };
+  }, [liveGeoTelemetry]);
+
+  const effectiveClientOrigins = useMemo(
+    () => [liveClientOriginNode, ...GLOBAL_CLIENT_ORIGINS],
+    [liveClientOriginNode]
+  );
+
+  // Live Uplink Geometry & Distance from User's Current Location to Selected GCP Region
+  const clientUplinkTelemetry = useMemo(() => {
+    const greatCircleKm = calculateGreatCircleKm(
+      liveClientOriginNode.lat,
+      liveClientOriginNode.lon,
+      selectedRegion.lat,
+      selectedRegion.lon
+    );
+    const fiberKm = Math.max(80, Math.round(greatCircleKm * 1.2));
+    const probedMatch = (liveGeoTelemetry?.regionalSocketProbes || []).find(
+      (p) => p.regionId === selectedRegion.id
+    );
+    const estRttMs = probedMatch?.tcpMs
+      ? `${probedMatch.tcpMs}ms Live TCP`
+      : `~${Math.round((fiberKm / 200) * 2 + 6)}ms Est.`;
+    const arc = buildArcPath(
+      liveClientOriginNode.x,
+      liveClientOriginNode.y,
+      selectedRegion.x,
+      selectedRegion.y
+    );
+    const mid = pointOnQuadraticBezier(
+      liveClientOriginNode.x,
+      liveClientOriginNode.y,
+      arc.cx,
+      arc.cy,
+      selectedRegion.x,
+      selectedRegion.y,
+      0.5
+    );
+    return {
+      greatCircleKm,
+      fiberKm,
+      estRttMs,
+      arc,
+      mid,
+    };
+  }, [liveClientOriginNode, selectedRegion, liveGeoTelemetry]);
 
   // ==========================================================================
   // WAVE 4 ORBITAL ENGINEERING INNOVATIONS STATE
@@ -2229,8 +2305,23 @@ export default function GlobalNetworkWorldMap({
     [zoom, clampCamera]
   );
 
+  const focusOnClientOrigin = useCallback(
+    (targetZoom = 3.2) => {
+      const nextZ = Math.max(zoom, targetZoom);
+      setZoom(nextZ);
+      setCameraCenter(
+        clampCamera(liveClientOriginNode.x, liveClientOriginNode.y, nextZ)
+      );
+    },
+    [zoom, clampCamera, liveClientOriginNode]
+  );
+
   const focusOnContinent = useCallback(
     (preset) => {
+      if (preset === 'MY_LOCATION') {
+        focusOnClientOrigin(3.2);
+        return;
+      }
       const na = projectLatLon(39.0, -97.0);
       const sa = projectLatLon(-24.0, -58.0);
       const eu = projectLatLon(50.5, 10.0);
@@ -2248,7 +2339,7 @@ export default function GlobalNetworkWorldMap({
       setZoom(target.z);
       setCameraCenter(clampCamera(target.x, target.y, target.z));
     },
-    [clampCamera]
+    [clampCamera, focusOnClientOrigin]
   );
 
   const [isPointerInsideMap, setIsPointerInsideMap] = useState(false);
@@ -2440,8 +2531,8 @@ export default function GlobalNetworkWorldMap({
   });
   const [deployingShield, setDeployingShield] = useState(false);
 
-  // Custom Test Packet Launcher state
-  const [customOriginId, setCustomOriginId] = useState('iap-proxy');
+  // Custom Test Packet Launcher state (defaults to User's Live Client Location, e.g. Tizi Ouzou, Algeria)
+  const [customOriginId, setCustomOriginId] = useState('my-live-client');
   const [customTargetRegionId, setCustomTargetRegionId] = useState('us-east1');
   const [customProtocol, setCustomProtocol] = useState('tcp');
   const [customPort, setCustomPort] = useState(22);
@@ -2567,14 +2658,14 @@ export default function GlobalNetworkWorldMap({
 
       // Deterministically cycle through origin & protocol/port based on simMode
       let origin =
-        GLOBAL_CLIENT_ORIGINS.find((o) => o.id === overrideSpec?.originId) ||
-        GLOBAL_CLIENT_ORIGINS[seq % GLOBAL_CLIENT_ORIGINS.length];
+        effectiveClientOrigins.find((o) => o.id === overrideSpec?.originId) ||
+        effectiveClientOrigins[seq % effectiveClientOrigins.length];
       let protocol = overrideSpec?.protocol || 'tcp';
       let port = overrideSpec?.port !== undefined ? Number(overrideSpec.port) : 443;
 
       if (!overrideSpec) {
         if (simMode === 'SSH_BRUTEFORCE') {
-          const scanners = GLOBAL_CLIENT_ORIGINS.filter(
+          const scanners = effectiveClientOrigins.filter(
             (o) => o.kind === 'THREAT_SCANNER' || o.kind === 'PUBLIC_CLIENT'
           );
           origin = scanners[seq % Math.max(scanners.length, 1)];
@@ -2582,17 +2673,20 @@ export default function GlobalNetworkWorldMap({
           port = seq % 3 === 0 ? 3389 : 22;
         } else if (simMode === 'IAP_ZERO_TRUST') {
           if (seq % 2 === 0) {
-            origin = GLOBAL_CLIENT_ORIGINS[0]; // IAP 35.235.240.18
+            origin = effectiveClientOrigins[0]; // Live Client Origin (Algeria)
             protocol = 'tcp';
             port = 22;
           } else {
-            origin = GLOBAL_CLIENT_ORIGINS[5]; // External scanner
+            origin = GLOBAL_CLIENT_ORIGINS[0]; // IAP 35.235.240.18
             protocol = 'tcp';
             port = 22;
           }
         } else if (simMode === 'GLOBAL_LOAD_TEST') {
-          const clients = GLOBAL_CLIENT_ORIGINS.filter(
-            (o) => o.kind === 'PUBLIC_CLIENT' || o.kind === 'GCLB_HEALTH'
+          const clients = effectiveClientOrigins.filter(
+            (o) =>
+              o.kind === 'MY_LIVE_CLIENT' ||
+              o.kind === 'PUBLIC_CLIENT' ||
+              o.kind === 'GCLB_HEALTH'
           );
           origin = clients[seq % Math.max(clients.length, 1)];
           protocol = 'tcp';
@@ -2626,10 +2720,13 @@ export default function GlobalNetworkWorldMap({
       );
 
       const arc = buildArcPath(origin.x, origin.y, targetReg.x, targetReg.y);
-      const fiberDistKm = Math.max(
-        120,
-        Math.round(Math.hypot(targetReg.x - origin.x, targetReg.y - origin.y) * 16.4)
+      const greatCircleKm = calculateGreatCircleKm(
+        origin.lat,
+        origin.lon,
+        targetReg.lat,
+        targetReg.lon
       );
+      const fiberDistKm = Math.max(120, Math.round(greatCircleKm * 1.22));
       const computedRttMs = Math.max(4, Math.round((fiberDistKm / 200) * 2 + 5));
 
       return {
@@ -2665,6 +2762,7 @@ export default function GlobalNetworkWorldMap({
       simMode,
       simSpeed,
       tickIntervalMs,
+      effectiveClientOrigins,
     ]
   );
 
@@ -2868,6 +2966,17 @@ export default function GlobalNetworkWorldMap({
               <span className="px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
                 100% LIVE PROJECT GEO-CONTROL PLANE · ZERO GIMMICK
               </span>
+              <button
+                type="button"
+                onClick={() => focusOnClientOrigin(3.2)}
+                className="px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
+                title="Click to zoom the World Map directly to your live client location"
+              >
+                PROBING LIVE FROM: {liveClientOriginNode.city},{' '}
+                {liveClientOriginNode.country} [{liveClientOriginNode.countryCode}] · IP{' '}
+                {liveClientOriginNode.ip} · {liveClientOriginNode.asn}{' '}
+                {liveClientOriginNode.isp} · GPS {liveClientOriginNode.gpsLabel}
+              </button>
               {liveGeoTelemetry?.fastestRegion && (
                 <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
                   FASTEST LIVE REGION: {liveGeoTelemetry.fastestRegion.regionId} ({liveGeoTelemetry.fastestRegion.tcpMs}ms TCP / {liveGeoTelemetry.fastestRegion.totalRttMs}ms TLS)
@@ -2986,6 +3095,9 @@ export default function GlobalNetworkWorldMap({
                   </div>
                   <div className="text-[10.5px] text-zinc-500 truncate">
                     {probe.city} · CFE: <strong>{probe.cfePct}%</strong>
+                    {probe.distanceFromClientKm
+                      ? ` · ${probe.distanceFromClientKm.toLocaleString()} km from ${liveClientOriginNode.city}`
+                      : ''}
                   </div>
                   <div className="grid grid-cols-3 gap-1 pt-1 border-t border-zinc-200/80 dark:border-zinc-800 text-[10px]">
                     <div>
@@ -3433,6 +3545,11 @@ export default function GlobalNetworkWorldMap({
               </span>
               {[
                 { id: 'WORLD', label: 'World (1x)' },
+                {
+                  id: 'MY_LOCATION',
+                  label: `My Location (${liveClientOriginNode.city}, ${liveClientOriginNode.countryCode})`,
+                  highlight: true,
+                },
                 { id: 'AMERICAS', label: 'North America' },
                 { id: 'SOUTH_AMERICA', label: 'South America' },
                 { id: 'EUROPE', label: 'Europe (12)' },
@@ -3443,7 +3560,11 @@ export default function GlobalNetworkWorldMap({
                   key={c.id}
                   type="button"
                   onClick={() => focusOnContinent(c.id)}
-                  className="px-2 py-1 rounded-md bg-zinc-50 dark:bg-zinc-900 hover:bg-blue-500/20 text-zinc-700 dark:text-zinc-300 hover:text-blue-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 transition-colors cursor-pointer"
+                  className={
+                    c.highlight
+                      ? 'px-2.5 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/50 font-extrabold transition-colors cursor-pointer'
+                      : 'px-2 py-1 rounded-md bg-zinc-50 dark:bg-zinc-900 hover:bg-blue-500/20 text-zinc-700 dark:text-zinc-300 hover:text-blue-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 transition-colors cursor-pointer'
+                  }
                 >
                   {c.label}
                 </button>
@@ -3783,12 +3904,14 @@ export default function GlobalNetworkWorldMap({
                 );
               })}
 
-              {/* 178 Real Natural Earth Country Polygons (With Host Country & Selected Country Illumination) */}
+              {/* 178 Real Natural Earth Country Polygons (With Host Country, Selected Country & Live Client Country Illumination) */}
               {WORLD_COUNTRY_PATHS.map((country) => {
                 const isSelectedCountry =
                   selectedRegion?.countryCode === country.id ||
                   (selectedRegion?.countryCode === 'SGP' && country.id === 'MYS') ||
                   (selectedRegion?.countryCode === 'HKG' && country.id === 'CHN');
+                const isClientCountry =
+                  liveClientOriginNode.countryIso3 === country.id;
                 return (
                   <path
                     key={country.id}
@@ -3796,15 +3919,25 @@ export default function GlobalNetworkWorldMap({
                     className={
                       isSelectedCountry
                         ? 'fill-blue-100/90 dark:fill-[#132847] stroke-blue-500/80 dark:stroke-[#3b82f6]'
+                        : isClientCountry
+                        ? 'fill-amber-100/85 dark:fill-[#1f2438] stroke-amber-500/85 dark:stroke-[#f59e0b]'
                         : country.hostsGcp
                         ? 'fill-slate-200/95 dark:fill-[#0f1b31] stroke-slate-400 dark:stroke-[#233d63]'
                         : 'fill-slate-200/75 dark:fill-[#0b1324] stroke-slate-300 dark:stroke-[#182a46]'
                     }
                     strokeWidth={
-                      isSelectedCountry ? 1.1 * invScale : 0.7 * invScale
+                      isSelectedCountry || isClientCountry
+                        ? 1.15 * invScale
+                        : 0.7 * invScale
                     }
                   >
-                    <title>{`${country.name} (${country.id})${country.hostsGcp ? ' · Google Cloud Host Country' : ''}`}</title>
+                    <title>{`${country.name} (${country.id})${
+                      isClientCountry
+                        ? ` · YOUR LIVE CLIENT LOCATION (${liveClientOriginNode.city}, ${liveClientOriginNode.country} · ${liveClientOriginNode.ip})`
+                        : country.hostsGcp
+                        ? ' · Google Cloud Host Country'
+                        : ''
+                    }`}</title>
                   </path>
                 );
               })}
@@ -3875,53 +4008,94 @@ export default function GlobalNetworkWorldMap({
                   );
                 })}
 
-              {/* Hybrid Cloud VPN / IAP Zero-Trust Workstation Encrypted Tunnel */}
+              {/* Live Client Workstation Uplink Beam & Radar Beacon (e.g., Tizi Ouzou, Algeria -> Selected GCP Region) */}
               {showHybridTunnel && (
                 <g>
                   <path
-                    d={
-                      buildArcPath(
-                        HYBRID_GATEWAY_POINT.x,
-                        HYBRID_GATEWAY_POINT.y,
-                        selectedRegion.x,
-                        selectedRegion.y
-                      ).d
-                    }
+                    d={clientUplinkTelemetry.arc.d}
                     fill="none"
-                    stroke="#4285f4"
-                    strokeWidth={2 * invScale}
+                    stroke="#f59e0b"
+                    strokeWidth={2.1 * invScale}
                     strokeDasharray="5 3"
-                    strokeOpacity="0.75"
+                    strokeOpacity="0.88"
                   />
+                  {/* Uplink Midpoint Telemetry Badge (Client -> Selected Region Distance & RTT) */}
                   <g
-                    transform={`translate(${HYBRID_GATEWAY_POINT.x}, ${HYBRID_GATEWAY_POINT.y}) scale(${invScale})`}
+                    transform={`translate(${clientUplinkTelemetry.mid.x}, ${clientUplinkTelemetry.mid.y}) scale(${invScale})`}
                   >
-                    <circle r={5} fill="#4285f4" stroke="#020617" strokeWidth="1.4" />
-                    <circle r={10} fill="none" stroke="#4285f4" strokeDasharray="2 2" />
                     <rect
-                      x={-62}
-                      y={8}
-                      width={124}
-                      height={11.5}
-                      rx={3}
+                      x={-72}
+                      y={-9}
+                      width={144}
+                      height={14}
+                      rx={3.5}
                       fill="#020617"
-                      fillOpacity="0.9"
-                      stroke="#4285f4"
-                      strokeWidth="0.7"
+                      fillOpacity="0.92"
+                      stroke="#f59e0b"
+                      strokeWidth="0.8"
                     />
                     <text
-                      y={16.2}
+                      y={0.8}
                       textAnchor="middle"
-                      fill="#d2e3fc"
+                      fill="#fde68a"
                       fontSize="6.5"
                       fontWeight="bold"
                       fontFamily="monospace"
                     >
-                      Corp Hybrid / IAP Gateway
+                      {`${liveClientOriginNode.countryCode} ⇄ ${selectedRegion.name}: ${clientUplinkTelemetry.greatCircleKm.toLocaleString()}km (${clientUplinkTelemetry.estRttMs})`}
                     </text>
                   </g>
                 </g>
               )}
+
+              {/* Always-Visible Live Client Origin Radar Beacon ("YOU ARE HERE" e.g., Tizi Ouzou, Algeria) */}
+              <g
+                transform={`translate(${liveClientOriginNode.x}, ${liveClientOriginNode.y}) scale(${invScale})`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  focusOnClientOrigin(3.4);
+                }}
+                className="cursor-pointer"
+              >
+                <circle r={18} fill="url(#selectedRegionHalo)" opacity="0.55" />
+                <circle
+                  r={12}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="1.2"
+                  strokeDasharray="2.5 2"
+                />
+                <circle
+                  r={6}
+                  fill="#f59e0b"
+                  stroke="#020617"
+                  strokeWidth="1.5"
+                >
+                  <title>{`YOU ARE HERE: ${liveClientOriginNode.city}, ${liveClientOriginNode.region}, ${liveClientOriginNode.country} [${liveClientOriginNode.countryCode}] · IP ${liveClientOriginNode.ip} · ${liveClientOriginNode.asn} ${liveClientOriginNode.isp} · GPS ${liveClientOriginNode.gpsLabel}`}</title>
+                </circle>
+                <circle r={2} fill="#ffffff" />
+                <rect
+                  x={-68}
+                  y={9}
+                  width={136}
+                  height={13}
+                  rx={3.5}
+                  fill="#020617"
+                  fillOpacity="0.94"
+                  stroke="#f59e0b"
+                  strokeWidth="1"
+                />
+                <text
+                  y={17.8}
+                  textAnchor="middle"
+                  fill="#fde68a"
+                  fontSize="6.7"
+                  fontWeight="bold"
+                  fontFamily="monospace"
+                >
+                  {`YOU: ${liveClientOriginNode.city}, ${liveClientOriginNode.countryCode} (${liveClientOriginNode.ip})`}
+                </text>
+              </g>
 
               {/* Point-to-Point Subsea Fiber RTT & Cross-Region Egress Telemetry Beam */}
               {routeAnalyzerEnabled &&
@@ -4465,13 +4639,16 @@ export default function GlobalNetworkWorldMap({
             {/* Bottom Map Legend Bar */}
             <div className="absolute bottom-2.5 left-3 right-3 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-950/85 backdrop-blur-md border border-zinc-200 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
               <div className="flex items-center gap-3 flex-wrap">
+                <span className="flex items-center gap-1 text-amber-500 dark:text-amber-300 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+                  <span>
+                    You: {liveClientOriginNode.city},{' '}
+                    {liveClientOriginNode.countryCode} ({liveClientOriginNode.ip})
+                  </span>
+                </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />
                   <span>Live Region</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
-                  <span>Zones (-a/-b/-c)</span>
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
@@ -4549,7 +4726,7 @@ export default function GlobalNetworkWorldMap({
                 onChange={(e) => setCustomOriginId(e.target.value)}
                 className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
               >
-                {GLOBAL_CLIENT_ORIGINS.map((o) => (
+                {effectiveClientOrigins.map((o) => (
                   <option key={o.id} value={o.id}>
                     From: {o.label} ({o.ip})
                   </option>
