@@ -3828,6 +3828,8 @@ function CloudPulseCockpit() {
           !overview &&
           activeTab !== 'AWS_AZURE_PARITY' &&
           activeTab !== 'CLOUD_SOC' &&
+          activeTab !== 'SRE_WAR_ROOM' &&
+          activeTab !== 'SOVEREIGN_STUDIO' &&
           activeTab !== 'DOCS_GUIDE' ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -3906,7 +3908,7 @@ function CloudPulseCockpit() {
                         </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
-                        5 DOMAINS · 19 DEDICATED STUDIOS · ZERO DUPLICATES
+                        5 DOMAINS · 20 DEDICATED STUDIOS · ZERO DUPLICATES
                       </span>
                     </div>
 
@@ -3949,9 +3951,10 @@ function CloudPulseCockpit() {
                           domain: 'IV. Zero-Trust IAM & Incident SRE',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'SOVEREIGN_STUDIO', label: 'IAM', meta: 'SA Key Kill-Switch, JIT & Drift' },
+                            { id: 'SOVEREIGN_STUDIO', label: 'IAM & Time-Machine', meta: 'SA Key Kill-Switch, JIT & SHA-256 Drift' },
+                            { id: 'CLOUD_SOC', label: 'Cloud SOC (20-Pillar)', meta: 'Kill-Chains, Canary, Model-Armor & SOAR' },
+                            { id: 'SRE_WAR_ROOM', label: 'SRE War-Room (12-Pillar)', meta: '14.4x SLO Burn, Prober & VPC-SC Perimeter' },
                             { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: '28-in-1 AWS, Azure, Alibaba & Huawei Bridge' },
-                            { id: 'SRE_WAR_ROOM', label: 'SRE War-room', meta: '14.4x SLO Burn & VPC-SC Perimeter' },
                           ],
                         },
                         {
@@ -4154,6 +4157,13 @@ function CloudPulseCockpit() {
                   projectId={selectedProjectId}
                   initialSubTab={sovereignSubTab}
                   onTriggerToast={showToast}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                  onNavigateTab={(tabId, subTab) => {
+                    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
+                      setSovereignSubTab(subTab);
+                    }
+                    setActiveTab(tabId);
+                  }}
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
@@ -4165,7 +4175,13 @@ function CloudPulseCockpit() {
                   projectId={selectedProjectId}
                   onTriggerToast={showToast}
                   onRunInShell={handleRunInShell}
-                  onNavigateTab={(tabId) => setActiveTab(tabId)}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                  onNavigateTab={(tabId, subTab) => {
+                    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
+                      setSovereignSubTab(subTab);
+                    }
+                    setActiveTab(tabId);
+                  }}
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
@@ -4326,7 +4342,12 @@ function CloudPulseCockpit() {
                   projectId={selectedProjectId}
                   onRunInShell={handleRunInShell}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onNavigateTab={(tabId) => setActiveTab(tabId)}
+                  onNavigateTab={(tabId, subTab) => {
+                    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
+                      setSovereignSubTab(subTab);
+                    }
+                    setActiveTab(tabId);
+                  }}
                   onRefreshGlobal={() => {
                     fetchProjectOverview(selectedProjectId);
                     setVmRefreshTrigger((c) => c + 1);
@@ -4466,7 +4487,12 @@ function CloudPulseCockpit() {
           fetchProjectOverview(selectedProjectId);
           setVmRefreshTrigger((c) => c + 1);
         }}
-        onSelectTab={(tab) => setActiveTab(tab)}
+        onSelectTab={(tab, subTab) => {
+          if (subTab && tab === 'SOVEREIGN_STUDIO') {
+            setSovereignSubTab(subTab);
+          }
+          setActiveTab(tab);
+        }}
         onShowToast={showToast}
       />
 

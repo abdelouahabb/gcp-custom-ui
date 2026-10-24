@@ -113,6 +113,7 @@ export default function SreWarRoomPerimeterStudio({
   onTriggerToast,
   onRunInShell,
   onNavigateTab,
+  onOpenHealthAndDrift,
   onRefreshOverview,
 }) {
   const [activePillar, setActivePillar] = useState('SLO_BURN_AND_RCA');
@@ -460,6 +461,186 @@ export default function SreWarRoomPerimeterStudio({
   const logBasedMetrics = warRoomData?.logBasedMetrics || [];
   const healthAndSocBridge = warRoomData?.healthAndSocBridge || {};
 
+  // Auto-run read-only diagnostics when switching to Synthetic Prober (Pillar 04) or AI Commander (Pillar 07)
+  useEffect(() => {
+    if (
+      activePillar === 'BLACKBOX_SYNTHETIC_PROBER' &&
+      !syntheticResult &&
+      !syntheticLoading &&
+      projectId
+    ) {
+      handleRunSyntheticProbe();
+    } else if (
+      activePillar === 'GEMINI_SRE_COMMANDER' &&
+      !aiCommanderResult &&
+      !aiCommanderLoading &&
+      warRoomData &&
+      projectId
+    ) {
+      handleRunAiSreCommander(
+        'Diagnose top SLO error-budget burn cluster & output exact gcloud hotfix'
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePillar, projectId]);
+
+  const GOLDEN_SLI_IDS = [
+    'cloudpulse_sre_5xx_errors',
+    'cloudpulse_sre_oom_exit137',
+    'cloudpulse_sre_iam_403_denied',
+  ];
+  const goldenSlisCount = GOLDEN_SLI_IDS.filter((id) =>
+    logBasedMetrics.some((m) => m.name === id || String(m.name || '').endsWith(`/${id}`))
+  ).length;
+  const allGoldenSlisActive = goldenSlisCount >= 3 || logBasedMetrics.length >= 3;
+  const hasActiveUptimeCheck = uptimeChecks.length > 0;
+  const hasActiveAlertPolicy = alertPolicies.some((ap) => ap.enabled !== false);
+  const allSubnetsPgaEnabled = (vpcScData?.pgaCoveragePct ?? 100) === 100;
+  const unshieldedSubs = (pubsubData?.subscriptions || []).filter(
+    (s) => !s.hasDlqProtection && !String(s.shortName || '').endsWith('-dlq-sub')
+  );
+  const allPubsubDlqProtected =
+    (pubsubData?.summary?.subscriptionsCount || 0) > 0 &&
+    unshieldedSubs.length === 0;
+  const noActiveP1ChaosDrill = !warRoomData?.drillActive;
+
+  const sreReadinessInvariants = [
+    {
+      id: 'SRE-INV-01',
+      key: 'RB_UPTIME',
+      title: 'SRE-01 · Global 60s HTTPS Uptime Check Prober',
+      compliant: hasActiveUptimeCheck,
+      statusDetail: hasActiveUptimeCheck
+        ? `${uptimeChecks.length} Global HTTPS Probe(s) Active (${uptimeChecks[0]?.displayName || uptimeChecks[0]?.host})`
+        : `0 Uptime Checks configured in monitoring.googleapis.com/v3`,
+      desc: `Provisions a 60s SSL-validated global HTTPS probe in monitoring.googleapis.com/v3 for ${projectId}.appspot.com.`,
+      pillarId: 'UPTIME_AND_ALERT_POLICIES',
+      pillarLabel: 'Inspect in Pillar 03',
+      onRemediate: () =>
+        handleExecuteSreAction('RB_UPTIME', {
+          action: 'CREATE_CLOUD_MONITORING_UPTIME_CHECK',
+          host: `${projectId}.appspot.com`,
+          path: '/',
+        }),
+    },
+    {
+      id: 'SRE-INV-02',
+      key: 'RB_ALERT',
+      title: 'SRE-02 · 14.4x Multi-Window P1 SLO Burn Alert Policy',
+      compliant: hasActiveAlertPolicy,
+      statusDetail: hasActiveAlertPolicy
+        ? `${alertPolicies.filter((a) => a.enabled !== false).length} Enabled Alert Policy (${alertPolicies[0]?.displayName})`
+        : `No enabled P1 SLO Alert Policy in monitoring.googleapis.com/v3`,
+      desc: 'Provisions a Cloud Monitoring Alert Policy watching for P1 CRITICAL/ERROR War-Room cascades.',
+      pillarId: 'UPTIME_AND_ALERT_POLICIES',
+      pillarLabel: 'Inspect in Pillar 03',
+      onRemediate: () =>
+        handleExecuteSreAction('RB_ALERT', {
+          action: 'CREATE_SLO_ALERT_POLICY',
+        }),
+    },
+    {
+      id: 'SRE-INV-03',
+      key: 'RB_SLI_METRICS',
+      title: 'SRE-03 · 3 Golden Log-Based SLI Counter Metrics',
+      compliant: allGoldenSlisActive,
+      statusDetail: allGoldenSlisActive
+        ? `${logBasedMetrics.length} Log-Based SLI Counter Metric(s) Active (5xx, OOM-137, IAM-403)`
+        : `${goldenSlisCount}/3 Golden SLI Counter Metrics provisioned in Cloud Logging v2`,
+      desc: 'Provisions cloudpulse_sre_5xx_errors, cloudpulse_sre_oom_exit137, and cloudpulse_sre_iam_403_denied in Cloud Logging v2.',
+      pillarId: 'LOG_BASED_METRICS_SLI',
+      pillarLabel: 'Inspect in Pillar 05',
+      onRemediate: () =>
+        handleExecuteSreAction('RB_SLI_METRICS', {
+          action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
+        }),
+    },
+    {
+      id: 'SRE-INV-04',
+      key: 'RB_PGA_ALL',
+      title: 'SRE-04 · 100% Regional VPC Subnet Private Google Access',
+      compliant: allSubnetsPgaEnabled,
+      statusDetail: `${vpcScData?.summary?.pgaEnabledSubnets ?? 0}/${vpcScData?.summary?.totalSubnets ?? 0} Subnets Hardened (${vpcScData?.pgaCoveragePct ?? 100}% PGA Coverage)`,
+      desc: 'Batch-enables privateIpGoogleAccess=true across all regional VPC subnetworks for VPC-SC readiness.',
+      pillarId: 'VPCSC_ZERO_EXFIL_ARCHITECT',
+      pillarLabel: 'Inspect in Pillar 09',
+      onRemediate: () =>
+        handleExecuteSreAction('RB_PGA_ALL', {
+          action: 'ENFORCE_ALL_SUBNETS_PGA',
+        }),
+    },
+    {
+      id: 'SRE-INV-05',
+      key: 'RB_DLQ_SHIELD',
+      title: 'SRE-05 · Resilient Pub/Sub Dead-Letter Queue (-dlq) Shield',
+      compliant: allPubsubDlqProtected,
+      statusDetail: allPubsubDlqProtected
+        ? `${pubsubData?.summary?.dlqProtectedCount || 0}/${pubsubData?.summary?.subscriptionsCount || 0} Subscription(s) DLQ-Protected`
+        : (pubsubData?.summary?.subscriptionsCount || 0) === 0
+        ? '0 Pub/Sub Subscriptions provisioned yet'
+        : `${unshieldedSubs.length} Subscription(s) missing Dead-Letter Queue protection`,
+      desc: 'Provisions or attaches a Dead-Letter Queue (-dlq) topic (maxDeliveryAttempts=5) so poison-pill messages never block subscribers.',
+      pillarId: 'PUBSUB_DLQ_AUTOPSY',
+      pillarLabel: 'Inspect in Pillar 10',
+      onRemediate: () => {
+        if ((pubsubData?.summary?.subscriptionsCount || 0) === 0) {
+          return handleProvisionPubsubPair();
+        }
+        return handleExecuteSreAction('RB_DLQ_SHIELD', {
+          action: 'ATTACH_DLQ_TO_SUBSCRIPTION',
+          subscriptionName: unshieldedSubs[0]?.shortName,
+        });
+      },
+    },
+    {
+      id: 'SRE-INV-06',
+      key: 'RB_RESOLVE_P1',
+      title: 'SRE-06 · Zero Active P1 Chaos Cascades & Merkle Baseline Sealed',
+      compliant:
+        noActiveP1ChaosDrill &&
+        (healthAndSocBridge.merkleSnapshotsCount || 0) > 0,
+      statusDetail: !noActiveP1ChaosDrill
+        ? `ACTIVE P1 CHAOS DRILL IN PROGRESS (${slo.fastBurn1h}x Burn Rate)`
+        : (healthAndSocBridge.merkleSnapshotsCount || 0) > 0
+        ? `Nominal (${slo.fastBurn1h}x Burn) · ${healthAndSocBridge.merkleSnapshotsCount} Merkle Checkpoint(s) Sealed`
+        : `Nominal (${slo.fastBurn1h}x Burn) · 0 Merkle Checkpoints Sealed Yet`,
+      desc: 'Mitigates active P1 Chaos Drills and seals a SHA-256 Merkle state checkpoint into the shared Health & Drift vault.',
+      pillarId: !noActiveP1ChaosDrill
+        ? 'CHAOS_GAME_DAY_LAB'
+        : 'HEALTH_DRIFT_SOC_BRIDGE',
+      pillarLabel: !noActiveP1ChaosDrill
+        ? 'Inspect in Pillar 06'
+        : 'Inspect in Pillar 12',
+      onRemediate: () => {
+        if (!noActiveP1ChaosDrill) {
+          return handleIncidentDrill('RESOLVE_INCIDENT');
+        }
+        return handleExecuteSreAction('RB_MERKLE_SNAP', {
+          action: 'CAPTURE_SRE_MERKLE_SNAPSHOT',
+        });
+      },
+    },
+  ];
+
+  const compliantSreCount = sreReadinessInvariants.filter(
+    (inv) => inv.compliant
+  ).length;
+  const nonCompliantSreInvariants = sreReadinessInvariants.filter(
+    (inv) => !inv.compliant
+  );
+
+  const handleReconcileAllSreInvariants = async () => {
+    if (nonCompliantSreInvariants.length === 0) {
+      await handleExecuteSreAction('RB_MERKLE_SNAP', {
+        action: 'CAPTURE_SRE_MERKLE_SNAPSHOT',
+      });
+      return;
+    }
+    for (const inv of nonCompliantSreInvariants) {
+      await inv.onRemediate();
+    }
+  };
+
   const filteredTimeline = useMemo(() => {
     return timeline.filter((ev) => {
       if (timelineFilter === 'ERRORS' && !ev.effectiveIsTrueError) return false;
@@ -516,7 +697,7 @@ export default function SreWarRoomPerimeterStudio({
       case 'PUBSUB_DLQ_AUTOPSY':
         return `${pubsubData?.summary?.topicsCount || 0} Topics`;
       case 'TOIL_AUTOMATION_RUNBOOKS':
-        return `${(healthAndSocBridge.sreRunbookReceipts || []).length} Executed`;
+        return `${compliantSreCount}/6 Compliant`;
       case 'HEALTH_DRIFT_SOC_BRIDGE':
         return `${healthAndSocBridge.flightMutationsCount || 0} HCL Diffs`;
       default:
@@ -836,35 +1017,56 @@ export default function SreWarRoomPerimeterStudio({
                   Pages only when both short and long windows exceed burn thresholds, preventing false-positive alert fatigue while catching catastrophic 1-hour cascades in under 2 minutes.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={Boolean(actionBusy)}
-                  onClick={() =>
-                    handleExecuteSreAction('SLO_ARM_ALERT', {
-                      action: 'CREATE_SLO_ALERT_POLICY',
-                    })
-                  }
-                  className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {actionBusy === 'SLO_ARM_ALERT'
-                    ? 'Arming P1 Alert...'
-                    : '1-Click Arm 14.4x SLO Burn Alert Policy'}
-                </button>
-                <button
-                  type="button"
-                  disabled={Boolean(actionBusy)}
-                  onClick={() =>
-                    handleExecuteSreAction('SLO_BOOT_SLI', {
-                      action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
-                    })
-                  }
-                  className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {actionBusy === 'SLO_BOOT_SLI'
-                    ? 'Provisioning SLIs...'
-                    : '1-Click Bootstrap 3 Golden SLI Metrics'}
-                </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {hasActiveAlertPolicy ? (
+                  <button
+                    type="button"
+                    onClick={() => setActivePillar('UPTIME_AND_ALERT_POLICIES')}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold cursor-pointer"
+                  >
+                    [ARMED · {alertPolicies.length} Alert Policy Active] Manage in Pillar 03 &rarr;
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={Boolean(actionBusy)}
+                    onClick={() =>
+                      handleExecuteSreAction('SLO_ARM_ALERT', {
+                        action: 'CREATE_SLO_ALERT_POLICY',
+                      })
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {actionBusy === 'SLO_ARM_ALERT'
+                      ? 'Arming P1 Alert...'
+                      : '1-Click Arm 14.4x SLO Burn Alert Policy'}
+                  </button>
+                )}
+
+                {allGoldenSlisActive ? (
+                  <button
+                    type="button"
+                    onClick={() => setActivePillar('LOG_BASED_METRICS_SLI')}
+                    className="px-3 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-600 dark:text-cyan-400 text-xs font-mono font-extrabold cursor-pointer"
+                  >
+                    [VERIFIED · {logBasedMetrics.length} Golden SLIs Active] Manage in Pillar 05 &rarr;
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={Boolean(actionBusy)}
+                    onClick={() =>
+                      handleExecuteSreAction('SLO_BOOT_SLI', {
+                        action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
+                      })
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                  >
+                    {actionBusy === 'SLO_BOOT_SLI'
+                      ? 'Provisioning SLIs...'
+                      : '1-Click Bootstrap 3 Golden SLI Metrics'}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -995,19 +1197,38 @@ export default function SreWarRoomPerimeterStudio({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          disabled={
-                            Boolean(actionBusy) || Boolean(drillBusy)
-                          }
-                          onClick={handleClusterRemediate}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>
-                            {c.remediationLabel || '1-Click Remediate'}
+                        {c.activeUnmitigatedCount > 0 ? (
+                          <button
+                            type="button"
+                            disabled={
+                              Boolean(actionBusy) || Boolean(drillBusy)
+                            }
+                            onClick={handleClusterRemediate}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>
+                              {c.remediationLabel || '1-Click Remediate'}
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>NOMINAL · 0 Active Burn</span>
                           </span>
-                        </button>
+                        )}
+
+                        {onNavigateTab &&
+                          (String(c.clusterKey || '').includes('IAM') ||
+                            String(c.clusterKey || '').includes('403')) && (
+                            <button
+                              type="button"
+                              onClick={() => onNavigateTab('CLOUD_SOC')}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
+                            >
+                              <span>Inspect in Cloud SOC &rarr;</span>
+                            </button>
+                          )}
 
                         {onRunInShell && (
                           <button
@@ -1222,23 +1443,45 @@ export default function SreWarRoomPerimeterStudio({
                       </button>
                     )}
 
-                    <button
-                      type="button"
-                      disabled={Boolean(actionBusy)}
-                      onClick={() =>
-                        handleExecuteSreAction(`UPTIME_${w.id}`, {
-                          action: 'CREATE_CLOUD_MONITORING_UPTIME_CHECK',
-                          displayName: `CloudPulse SRE Probe (${w.name})`,
-                          host:
+                    {uptimeChecks.some(
+                      (u) =>
+                        (w.uri && u.host && w.uri.includes(u.host)) ||
+                        String(u.displayName || '').includes(w.name)
+                    ) ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetUrl =
                             w.uri && w.uri.startsWith('http')
                               ? w.uri
-                              : `${projectId}.appspot.com`,
-                        })
-                      }
-                      className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
-                    >
-                      + Monitor Uptime
-                    </button>
+                              : `https://${projectId}.appspot.com`;
+                          setCustomProbeUrl(targetUrl);
+                          setActivePillar('BLACKBOX_SYNTHETIC_PROBER');
+                          handleRunSyntheticProbe(targetUrl);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold cursor-pointer"
+                      >
+                        [UPTIME MONITORED] Probe Live &rarr;
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={Boolean(actionBusy)}
+                        onClick={() =>
+                          handleExecuteSreAction(`UPTIME_${w.id}`, {
+                            action: 'CREATE_CLOUD_MONITORING_UPTIME_CHECK',
+                            displayName: `CloudPulse SRE Probe (${w.name})`,
+                            host:
+                              w.uri && w.uri.startsWith('http')
+                                ? w.uri
+                                : `${projectId}.appspot.com`,
+                          })
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        + Monitor Uptime
+                      </button>
+                    )}
 
                     {onNavigateTab && w.studioTab && (
                       <button
@@ -1622,21 +1865,33 @@ export default function SreWarRoomPerimeterStudio({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={Boolean(actionBusy)}
-                      onClick={() =>
-                        handleExecuteSreAction(`PROMOTE_UPTIME_${p.id}`, {
-                          action: 'CREATE_CLOUD_MONITORING_UPTIME_CHECK',
-                          displayName: `CloudPulse SRE Probe (${p.hostname})`,
-                          host: p.hostname,
-                          path: p.path || '/',
-                        })
-                      }
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
-                    >
-                      + Register as 60s Cloud Monitoring Uptime Check
-                    </button>
+                    {uptimeChecks.some((u) => u.host === p.hostname) ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActivePillar('UPTIME_AND_ALERT_POLICIES')
+                        }
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold cursor-pointer"
+                      >
+                        [60s UPTIME CHECK ACTIVE] View in Pillar 03 &rarr;
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={Boolean(actionBusy)}
+                        onClick={() =>
+                          handleExecuteSreAction(`PROMOTE_UPTIME_${p.id}`, {
+                            action: 'CREATE_CLOUD_MONITORING_UPTIME_CHECK',
+                            displayName: `CloudPulse SRE Probe (${p.hostname})`,
+                            host: p.hostname,
+                            path: p.path || '/',
+                          })
+                        }
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        + Register as 60s Cloud Monitoring Uptime Check
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1670,10 +1925,16 @@ export default function SreWarRoomPerimeterStudio({
                   action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
                 })
               }
-              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
+                allGoldenSlisActive
+                  ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-mono'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+              }`}
             >
               {actionBusy === 'BOOT_ALL_SLI'
                 ? 'Bootstrapping 3 Golden SLIs...'
+                : allGoldenSlisActive
+                ? `[3/3 GOLDEN SLIs VERIFIED LIVE] Re-Sync Golden SLIs`
                 : '1-Click Bootstrap All 3 Golden SLI Metrics (5xx, OOM-137, IAM-403)'}
             </button>
           </div>
@@ -1782,16 +2043,22 @@ export default function SreWarRoomPerimeterStudio({
                 Injects real structured failure telemetry into `projects/{projectId}/logs/cloudpulse-sre-war-room` to verify your LogRCA clustering, 14.4x SLO Burn alerting, and 1-click MTTR recovery without harming production data.
               </p>
             </div>
-            <button
-              type="button"
-              disabled={Boolean(drillBusy)}
-              onClick={() => handleIncidentDrill('RESOLVE_INCIDENT')}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
-            >
-              {drillBusy === 'RESOLVE_INCIDENT'
-                ? 'Mitigating All Drills...'
-                : '1-Click Mitigate & Resolve Active Chaos Drill (Reset SLO Burn)'}
-            </button>
+            {warRoomData?.drillActive ? (
+              <button
+                type="button"
+                disabled={Boolean(drillBusy)}
+                onClick={() => handleIncidentDrill('RESOLVE_INCIDENT')}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                {drillBusy === 'RESOLVE_INCIDENT'
+                  ? 'Mitigating All Drills...'
+                  : '1-Click Mitigate & Resolve Active Chaos Drill (Reset SLO Burn)'}
+              </button>
+            ) : (
+              <span className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold">
+                [ALL DRILLS NOMINAL · 0 ACTIVE FAULTS]
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1848,14 +2115,16 @@ export default function SreWarRoomPerimeterStudio({
                       ? 'Injecting Live Telemetry...'
                       : '1-Click Fire Chaos Scenario'}
                   </button>
-                  <button
-                    type="button"
-                    disabled={Boolean(drillBusy)}
-                    onClick={() => handleIncidentDrill('RESOLVE_INCIDENT')}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
-                  >
-                    Resolve
-                  </button>
+                  {warRoomData?.drillActive && (
+                    <button
+                      type="button"
+                      disabled={Boolean(drillBusy)}
+                      onClick={() => handleIncidentDrill('RESOLVE_INCIDENT')}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      Resolve Active Drill
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -2253,11 +2522,17 @@ export default function SreWarRoomPerimeterStudio({
                     action: 'ENFORCE_ALL_SUBNETS_PGA',
                   })
                 }
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                className={`px-3 py-1.5 rounded-lg text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
+                  allSubnetsPgaEnabled
+                    ? 'bg-zinc-800 hover:bg-zinc-700 border border-emerald-500/40'
+                    : 'bg-emerald-600 hover:bg-emerald-500'
+                }`}
               >
                 {actionBusy === 'BATCH_PGA_ALL'
                   ? 'Enforcing All Subnets...'
-                  : '1-Click Enforce PGA on All Subnets'}
+                  : allSubnetsPgaEnabled
+                    ? `[100% PGA ENFORCED (${vpcScData?.summary?.pgaEnabledSubnets || 0}/${vpcScData?.summary?.totalSubnets || 0} Subnets)] Re-Verify`
+                    : '1-Click Enforce PGA on All Subnets'}
               </button>
             </div>
 
@@ -2513,98 +2788,110 @@ export default function SreWarRoomPerimeterStudio({
       )}
 
       {/* ====================================================================
-          PILLAR 11: 1-CLICK AUTONOMOUS SRE TOIL-ELIMINATION RUNBOOKS
+          PILLAR 11: 1-CLICK AUTONOMOUS SRE TOIL-ELIMINATION & INVARIANT AUDITOR
          ==================================================================== */}
       {activePillar === 'TOIL_AUTOMATION_RUNBOOKS' && (
         <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
-          <div>
-            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>
-                1-Click Autonomous SRE Toil-Elimination &amp; Self-Healing Runbook Executor
-              </span>
-            </h3>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Every runbook executes real Google Cloud REST API calls and appends a SHA-256 hash-chained receipt to the SRE War-Room Ledger.
-            </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span>
+                  Autonomous SRE Readiness Invariant Auditor &amp; Non-Compliant Reconciler ({compliantSreCount}/{sreReadinessInvariants.length} Compliant)
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Live state-aware verification across all 6 SRE reliability invariants on `{projectId}`. Compliant invariants link directly to their owning pillar instead of repeating duplicate bootstrap buttons.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={Boolean(actionBusy) || Boolean(drillBusy)}
+                onClick={handleReconcileAllSreInvariants}
+                className={`px-3 py-1.5 rounded-lg text-white text-xs font-extrabold cursor-pointer disabled:opacity-50 ${
+                  compliantSreCount === sreReadinessInvariants.length
+                    ? 'bg-emerald-600 hover:bg-emerald-500'
+                    : 'bg-red-600 hover:bg-red-500'
+                }`}
+              >
+                {actionBusy === 'RECONCILE_ALL_SRE'
+                  ? 'Reconciling SRE Invariants...'
+                  : compliantSreCount === sreReadinessInvariants.length
+                    ? '[6/6 INVARIANTS COMPLIANT] Seal Merkle Readiness Proof'
+                    : `1-Click Reconcile ${sreReadinessInvariants.length - compliantSreCount} Non-Compliant Invariant(s)`}
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(actionBusy)}
+                onClick={() =>
+                  handleExecuteSreAction('RB_MERKLE_SNAP', {
+                    action: 'CAPTURE_SRE_MERKLE_SNAPSHOT',
+                  })
+                }
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                {actionBusy === 'RB_MERKLE_SNAP'
+                  ? 'Sealing Checkpoint...'
+                  : 'Seal Cryptographic Merkle Checkpoint'}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              {
-                key: 'RB_UPTIME',
-                title: '1. Bootstrap Global HTTPS Uptime Check',
-                desc: `Provisions a 60s SSL-validated global HTTPS probe in monitoring.googleapis.com/v3 for ${projectId}.appspot.com.`,
-                onRun: () =>
-                  handleExecuteSreAction('RB_UPTIME', {
-                    action: 'CREATE_CLOUD_MONITORING_UPTIME_CHECK',
-                    host: `${projectId}.appspot.com`,
-                    path: '/',
-                  }),
-              },
-              {
-                key: 'RB_ALERT',
-                title: '2. Arm 14.4x P1 SLO Burn Alert Policy',
-                desc: 'Provisions a Cloud Monitoring Alert Policy watching for P1 CRITICAL/ERROR War-Room cascades.',
-                onRun: () =>
-                  handleExecuteSreAction('RB_ALERT', {
-                    action: 'CREATE_SLO_ALERT_POLICY',
-                  }),
-              },
-              {
-                key: 'RB_SLI_METRICS',
-                title: '3. Bootstrap 3 Golden Log-Based SLI Metrics',
-                desc: 'Provisions cloudpulse_sre_5xx_errors, cloudpulse_sre_oom_exit137, and cloudpulse_sre_iam_403_denied in Cloud Logging v2.',
-                onRun: () =>
-                  handleExecuteSreAction('RB_SLI_METRICS', {
-                    action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
-                  }),
-              },
-              {
-                key: 'RB_PGA_ALL',
-                title: '4. Enforce Private Google Access Across All Subnets',
-                desc: 'Batch-enables privateIpGoogleAccess=true across all regional VPC subnetworks for VPC-SC readiness.',
-                onRun: () =>
-                  handleExecuteSreAction('RB_PGA_ALL', {
-                    action: 'ENFORCE_ALL_SUBNETS_PGA',
-                  }),
-              },
-              {
-                key: 'RB_RESOLVE_P1',
-                title: '5. Mitigate Active P1 Incident & Reset SLO Burn',
-                desc: 'Writes verified P1 resolution marker into Cloud Logging and restores 1h/6h SLO burn rate to nominal.',
-                onRun: () => handleIncidentDrill('RESOLVE_INCIDENT'),
-              },
-              {
-                key: 'RB_MERKLE_SNAP',
-                title: '6. Seal Cryptographic Merkle State Checkpoint',
-                desc: 'Captures a SHA-256 Merkle state checkpoint into the shared Health & Drift vault.',
-                onRun: () =>
-                  handleExecuteSreAction('RB_MERKLE_SNAP', {
-                    action: 'CAPTURE_SRE_MERKLE_SNAPSHOT',
-                  }),
-              },
-            ].map((rb) => (
+            {sreReadinessInvariants.map((inv) => (
               <div
-                key={rb.key}
-                className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 flex flex-col justify-between gap-3"
+                key={inv.id}
+                className={`p-3.5 rounded-xl border flex flex-col justify-between gap-3 ${
+                  inv.compliant
+                    ? 'border-emerald-500/30 bg-emerald-500/5'
+                    : 'border-amber-500/40 bg-amber-500/10'
+                }`}
               >
-                <div>
-                  <div className="text-xs font-extrabold text-zinc-900 dark:text-white">
-                    {rb.title}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono font-bold text-zinc-400">
+                      {inv.id}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        inv.compliant
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                      }`}
+                    >
+                      {inv.compliant ? 'COMPLIANT · VERIFIED LIVE' : 'DRIFT / ACTION REQUIRED'}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-1">{rb.desc}</p>
+                  <div className="text-xs font-extrabold text-zinc-900 dark:text-white">
+                    {inv.title}
+                  </div>
+                  <p className="text-[11px] font-mono text-zinc-500">
+                    {inv.statusLabel}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={Boolean(actionBusy) || Boolean(drillBusy)}
-                  onClick={rb.onRun}
-                  className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {actionBusy === rb.key
-                    ? 'Executing Runbook...'
-                    : '1-Click Execute Runbook'}
-                </button>
+
+                <div className="flex items-center gap-2">
+                  {!inv.compliant ? (
+                    <button
+                      type="button"
+                      disabled={Boolean(actionBusy) || Boolean(drillBusy)}
+                      onClick={inv.onReconcile}
+                      className="flex-1 py-1.5 px-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                    >
+                      {inv.reconcileLabel}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActivePillar(inv.pillar)}
+                      className="flex-1 py-1.5 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold cursor-pointer"
+                    >
+                      Inspect Live Resource &rarr;
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -2672,21 +2959,31 @@ export default function SreWarRoomPerimeterStudio({
                 1-Click Seal Merkle State Snapshot
               </button>
 
+              {onOpenHealthAndDrift && (
+                <button
+                  type="button"
+                  onClick={() => onOpenHealthAndDrift()}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold cursor-pointer"
+                >
+                  Open 1-Tap Health &amp; Drift Hub &rarr;
+                </button>
+              )}
+
               {onNavigateTab && (
                 <>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('SOVEREIGN_STUDIO', 'TIME_MACHINE')}
+                    className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold cursor-pointer"
+                  >
+                    Open SHA-256 Time-Machine &amp; Drift Radar &rarr;
+                  </button>
                   <button
                     type="button"
                     onClick={() => onNavigateTab('CLOUD_SOC')}
                     className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold cursor-pointer"
                   >
                     Open Wave 16 Autonomous Cloud SOC &rarr;
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateTab('INNOVATION_LAB')}
-                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold cursor-pointer"
-                  >
-                    Open Health &amp; Drift Studio &rarr;
                   </button>
                 </>
               )}

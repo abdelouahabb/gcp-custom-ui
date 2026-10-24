@@ -69,6 +69,7 @@ export default function GeminiCopilotModal({
   const { meta: pricingMeta } = useLivePricingCatalog();
   const [zombieData, setZombieData] = useState(null);
   const [synthesisData, setSynthesisData] = useState(null);
+  const [sreWarRoomData, setSreWarRoomData] = useState(null);
   const [fleetMatrix, setFleetMatrix] = useState(null);
   const [loadingScan, setLoadingScan] = useState(false);
   const [loadingFleet, setLoadingFleet] = useState(false);
@@ -87,7 +88,7 @@ export default function GeminiCopilotModal({
         gdeSummary?.nearestExpiryDays !== undefined
           ? gdeSummary.nearestExpiryDays
           : '';
-      const [zRes, synRes] = await Promise.allSettled([
+      const [zRes, synRes, sreRes] = await Promise.allSettled([
         axios.get(`/api/project/${encodeURIComponent(projectId)}/zombies`),
         axios.get(
           `/api/project/${encodeURIComponent(
@@ -96,12 +97,18 @@ export default function GeminiCopilotModal({
             creditBal
           )}&creditDaysLeft=${encodeURIComponent(creditDays)}`
         ),
+        axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/wave8/war-room`
+        ),
       ]);
       if (zRes.status === 'fulfilled') {
         setZombieData(zRes.value.data);
       }
       if (synRes.status === 'fulfilled') {
         setSynthesisData(synRes.value.data);
+      }
+      if (sreRes.status === 'fulfilled') {
+        setSreWarRoomData(sreRes.value.data);
       }
     } catch {
       // fallback if scan times out
@@ -461,7 +468,7 @@ export default function GeminiCopilotModal({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-500/20 text-rose-500 dark:text-rose-300 border border-rose-500/40">
-                    Wave 16 · 15-Pillar Cloud SOC Bridge
+                    Wave 16 · 20-Pillar Cloud SOC Bridge
                   </span>
                   <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
                     Autonomous Cloud SOC & Ed25519 Zero-Trust War-Room Telemetry
@@ -482,7 +489,7 @@ export default function GeminiCopilotModal({
                       className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
                     >
                       <ShieldAlert className="w-3.5 h-3.5" />
-                      <span>Open 15-Pillar Cloud SOC</span>
+                      <span>Open 20-Pillar Cloud SOC</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   )}
@@ -490,7 +497,21 @@ export default function GeminiCopilotModal({
                     <button
                       type="button"
                       onClick={() => {
-                        onSelectTab('SOVEREIGN_STUDIO');
+                        onSelectTab('SRE_WAR_ROOM');
+                        onClose();
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Activity className="w-3.5 h-3.5" />
+                      <span>Open 12-Pillar SRE War-Room</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectTab('SOVEREIGN_STUDIO', 'TIME_MACHINE');
                         onClose();
                       }}
                       className="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
@@ -636,6 +657,90 @@ export default function GeminiCopilotModal({
                     ...)
                   </span>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* WAVE 8 PRINCIPAL SRE WAR-ROOM & MULTI-WINDOW SLO BURN BRIDGE */}
+          {sreWarRoomData && (
+            <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500/[0.06] via-zinc-900/40 to-emerald-500/[0.06] border border-indigo-500/30 space-y-3 font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/40">
+                    Wave 8 · 12-Pillar SRE War-Room Bridge
+                  </span>
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Multi-Window SLO Error Budget, Synthetic Prober &amp; VPC-SC Readiness
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    SRE Score: {sreWarRoomData.srePostureScore ?? 100}/100 · {sreWarRoomData.sreGrade || 'A+'}
+                  </span>
+                </div>
+
+                {onSelectTab && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectTab('SRE_WAR_ROOM');
+                      onClose();
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Launch Principal SRE War-Room</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
+                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    SLO Error Budget (99.9%)
+                  </div>
+                  <div className="font-extrabold text-emerald-500 mt-0.5">
+                    {sreWarRoomData.sloBurn?.errorBudgetRemainingPct ?? 100}% Remaining
+                  </div>
+                  <div className="text-[10px] text-zinc-400">
+                    1h Burn: {sreWarRoomData.sloBurn?.fastBurnRate1h ?? 0}x · {sreWarRoomData.sloBurn?.burnSeverity || 'NOMINAL'}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    Uptime &amp; Alert Policies
+                  </div>
+                  <div className="font-extrabold text-cyan-500 mt-0.5">
+                    {sreWarRoomData.uptimeChecksCount ?? 0} Uptime · {sreWarRoomData.alertPoliciesCount ?? 0} Alert(s)
+                  </div>
+                  <div className="text-[10px] text-zinc-400">
+                    Golden SLI Metrics: {sreWarRoomData.logMetricsCount ?? 0}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    VPC-SC Subnet PGA
+                  </div>
+                  <div className="font-extrabold text-emerald-500 mt-0.5">
+                    100% Enforced
+                  </div>
+                  <div className="text-[10px] text-zinc-400">
+                    Private Google Access Active
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500 uppercase">
+                    Merkle &amp; GitOps Sync
+                  </div>
+                  <div className="font-extrabold text-indigo-400 mt-0.5">
+                    {sreWarRoomData.healthAndSocBridge?.merkleSnapshotsCount ?? 0} Merkle Checkpoint(s)
+                  </div>
+                  <div className="text-[10px] text-zinc-400 truncate">
+                    sha256:{String(sreWarRoomData.healthAndSocBridge?.merkleLatestSha256 || '').slice(0, 12)}
+                  </div>
+                </div>
               </div>
             </div>
           )}

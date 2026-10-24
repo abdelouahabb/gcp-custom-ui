@@ -30,6 +30,8 @@ export default function SovereignTimeMachineIamStudio({
   initialSubTab = 'IAM_SURGEON',
   onTriggerToast,
   onRefreshOverview,
+  onNavigateTab,
+  onOpenHealthAndDrift,
 }) {
   const [activeSubTab, setActiveSubTab] = useState(
     initialSubTab || 'IAM_SURGEON'
@@ -859,7 +861,38 @@ export default function SovereignTimeMachineIamStudio({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {onOpenHealthAndDrift && (
+              <button
+                type="button"
+                onClick={onOpenHealthAndDrift}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
+                title="Open 1-Tap Project Health, Drift, FinOps & Control-Plane Synthesis Hub"
+              >
+                <GitCompare className="w-3.5 h-3.5" />
+                <span>Health &amp; Drift Hub</span>
+              </button>
+            )}
+            {onNavigateTab && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('SRE_WAR_ROOM')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
+                  title="Jump to Wave 8 Principal SRE War-Room, Multi-Window SLO Burn & VPC-SC Architect"
+                >
+                  <span>SRE War-Room &rarr;</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('CLOUD_SOC')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
+                  title="Jump to Wave 16 Autonomous 20-Pillar Cloud SOC & SOAR Studio"
+                >
+                  <span>Cloud SOC &rarr;</span>
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => {
