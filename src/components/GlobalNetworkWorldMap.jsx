@@ -1803,20 +1803,20 @@ export default function GlobalNetworkWorldMap({
       if (res.type === 'Enabled GCP Service API' || res.category === 'network') {
         return;
       }
-      const rawLoc = String(res.region || res.zone || 'us-east1').toLowerCase();
+      const rawLoc = String(res.region || res.zone || 'us-central1').toLowerCase();
       // Normalize multi-region 'us' -> 'us-central1', 'eu' -> 'europe-west1'
       let matchedRegionId = GCP_GLOBAL_REGIONS.find((r) =>
         rawLoc.startsWith(r.id)
       )?.id;
       if (!matchedRegionId) {
         if (rawLoc === 'us' || rawLoc.startsWith('us-')) {
-          matchedRegionId = 'us-east1';
+          matchedRegionId = 'us-central1';
         } else if (rawLoc === 'eu' || rawLoc.startsWith('europe-')) {
           matchedRegionId = 'europe-west1';
         } else if (rawLoc.startsWith('asia-')) {
           matchedRegionId = 'asia-east1';
         } else {
-          matchedRegionId = 'us-east1';
+          matchedRegionId = 'us-central1';
         }
       }
 
@@ -1838,19 +1838,59 @@ export default function GlobalNetworkWorldMap({
     const active = Object.entries(regionWorkloadsMap)
       .filter(([, w]) => w.totalCount > 0)
       .map(([id]) => id);
-    return active.length > 0 ? active : ['us-east1', 'us-central1', 'europe-west1'];
+    return active.length > 0 ? active : ['us-central1', 'us-east1', 'europe-west1'];
   }, [regionWorkloadsMap]);
 
   // Selected Region & Zone on the World Map
-  const [selectedRegionId, setSelectedRegionId] = useState('us-east1');
-  const [selectedZoneName, setSelectedZoneName] = useState('us-east1-b');
+  const [selectedRegionId, setSelectedRegionId] = useState('us-central1');
+  const [selectedZoneName, setSelectedZoneName] = useState('us-central1-a');
   const [hoveredRegionId, setHoveredRegionId] = useState(null);
   const selectedRegion = useMemo(
     () =>
       GCP_GLOBAL_REGIONS.find((r) => r.id === selectedRegionId) ||
-      GCP_GLOBAL_REGIONS[5],
+      GCP_GLOBAL_REGIONS[4],
     [selectedRegionId]
   );
+
+  // Live Multi-Region Socket RTT, Compute Quotas, VPC Subnets & Asset Sovereignty State
+  const [liveGeoTelemetry, setLiveGeoTelemetry] = useState(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [activeGeoTab, setActiveGeoTab] = useState('LATENCY_PROBES');
+
+  const fetchLiveGeoTelemetry = useCallback(
+    async (showToastMsg = false) => {
+      if (!projectId) return;
+      setGeoLoading(true);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/global-map/live-telemetry`
+        );
+        setLiveGeoTelemetry(res.data);
+        if (showToastMsg && res.data?.fastestRegion) {
+          onShowToast?.(
+            `Probed 8 live GCP regional endpoints: Fastest is ${res.data.fastestRegion.regionId} (${res.data.fastestRegion.tcpMs}ms TCP / ${res.data.fastestRegion.totalRttMs}ms TLS RTT)`
+          );
+        }
+      } catch (err) {
+        if (showToastMsg) {
+          onShowError?.(
+            err.response?.data?.error ||
+              err.message ||
+              'Failed to probe live Global Map regional telemetry.'
+          );
+        }
+      } finally {
+        setGeoLoading(false);
+      }
+    },
+    [projectId, onShowToast, onShowError]
+  );
+
+  useEffect(() => {
+    fetchLiveGeoTelemetry(false);
+  }, [fetchLiveGeoTelemetry]);
 
   // ==========================================================================
   // WAVE 4 ORBITAL ENGINEERING INNOVATIONS STATE
@@ -2268,8 +2308,8 @@ export default function GlobalNetworkWorldMap({
     dragStartRef.current = null;
   };
 
-  // Simulation & Performance Guardrail Controls
-  const [isRunning, setIsRunning] = useState(true);
+  // Simulation & Performance Guardrail Controls (Paused by default so 100% Live Telemetry leads)
+  const [isRunning, setIsRunning] = useState(false);
   const [simMode, setSimMode] = useState('LIVE_MIX'); // 'LIVE_MIX' | 'SSH_BRUTEFORCE' | 'IAP_ZERO_TRUST' | 'GLOBAL_LOAD_TEST'
   const [simSpeed, setSimSpeed] = useState(1); // 1x | 2x | 4x
   // Refresh / Tick Interval (ms) — defaults to 250ms (4 FPS) to prevent UI hang on large VM fleets
@@ -2711,28 +2751,308 @@ export default function GlobalNetworkWorldMap({
 
   return (
     <div className="space-y-5">
+      {/* =================================================================== */}
+      {/* 0. 100% LIVE PROJECT GEO-CONTROL PLANE (ZERO GIMMICK TELEMETRY)     */}
+      {/* =================================================================== */}
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
+          <div className="space-y-1 max-w-4xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
+                100% LIVE PROJECT GEO-CONTROL PLANE · ZERO GIMMICK
+              </span>
+              {liveGeoTelemetry?.fastestRegion && (
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
+                  FASTEST LIVE REGION: {liveGeoTelemetry.fastestRegion.regionId} ({liveGeoTelemetry.fastestRegion.tcpMs}ms TCP / {liveGeoTelemetry.fastestRegion.totalRttMs}ms TLS)
+                </span>
+              )}
+            </div>
+            <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
+              Live Multi-Region Socket Latency Prober, Compute Quotas, VPC Subnet CIDRs &amp; Data Sovereignty Audit (`{projectId}`)
+            </h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Instead of a static map, this workbench executes <strong>real concurrent TCP/TLS 1.3 socket handshakes</strong> to 8 Google Cloud regional endpoints (`*-aiplatform.googleapis.com:443`), inspects your live regional quotas (`compute.regions.list`), maps your regional VPC subnets (`subnetworks.aggregatedList`), and audits every GCS Bucket, BigQuery Dataset, Cloud Run service, and VM for multi-region quorum &amp; GDPR/US residency.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => fetchLiveGeoTelemetry(true)}
+              disabled={geoLoading}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50 shadow-sm"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${geoLoading ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {geoLoading
+                  ? 'Probing 8 Regions & Quotas...'
+                  : 'Re-Probe Live Regional Sockets & Quotas'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Under The Hood Technical Architecture Banner */}
+        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 space-y-1">
+          <div className="font-extrabold text-blue-600 dark:text-blue-400">
+            UNDER THE HOOD · HOW THIS GEO-CONTROL PLANE WORKS (100% REAL SOCKETS &amp; REST APIs)
+          </div>
+          <div>
+            1. <strong>Live Regional Socket RTT:</strong> Node `dns.promises.lookup` + `net.createConnection(:443)` + `tls.connect` with `perf_hooks.performance.now()` microsecond timers against 8 regional `*-aiplatform.googleapis.com` frontends.
+            {' '}2. <strong>Regional Compute Quotas:</strong> Queries `GET https://compute.googleapis.com/compute/v1/projects/{projectId}/regions` for live `CPUS`, `DISKS_TOTAL_GB`, and `IN_USE_ADDRESSES` headroom.
+            {' '}3. <strong>VPC Subnet CIDRs &amp; Asset Residency:</strong> Queries `subnetworks.aggregatedList`, `storage.v1/b`, `bigquery.v2/datasets`, and `run.v2/services` to verify multi-region quorum (`RPO=0s`) vs single-region SPOFs.
+          </div>
+        </div>
+
+        {/* 4-Pillar Equal-Width Navigation Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+          {[
+            {
+              id: 'LATENCY_PROBES',
+              label: `01 · Live Regional TCP/TLS Latency (${
+                liveGeoTelemetry?.regionalSocketProbes?.length || 8
+              } Regions)`,
+            },
+            {
+              id: 'ASSET_SOVEREIGNTY',
+              label: `02 · Project Asset Residency & Multi-Region Quorum (${
+                liveGeoTelemetry?.geoAssets?.length || 0
+              })`,
+            },
+            {
+              id: 'REGIONAL_QUOTAS',
+              label: `03 · Live Regional Compute Quotas (${
+                liveGeoTelemetry?.regionalQuotas?.length || 0
+              } Regions)`,
+            },
+            {
+              id: 'VPC_SUBNETS',
+              label: `04 · Regional VPC Subnets & CIDR Map (${
+                liveGeoTelemetry?.liveSubnets?.length || 0
+              } Subnets)`,
+            },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveGeoTab(tab.id)}
+              className={`w-full h-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-extrabold border transition-all cursor-pointer flex items-center justify-center text-center leading-snug ${
+                activeGeoTab === tab.id
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
+                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* TAB 01: LIVE REGIONAL TCP/TLS SOCKET LATENCY MATRIX */}
+        {activeGeoTab === 'LATENCY_PROBES' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {(liveGeoTelemetry?.regionalSocketProbes || []).map((probe, idx) => {
+              const isFastest = idx === 0;
+              return (
+                <div
+                  key={probe.regionId}
+                  onClick={() => focusOnRegion(probe.regionId, 2.8)}
+                  className={`p-3.5 rounded-xl border text-xs font-mono space-y-2 cursor-pointer transition-all hover:shadow-md ${
+                    isFastest
+                      ? 'bg-emerald-500/10 border-emerald-500/40'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-extrabold text-zinc-900 dark:text-white">
+                      #{idx + 1} · {probe.regionId}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[9.5px] font-bold ${
+                        isFastest
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      {probe.tcpMs}ms TCP
+                    </span>
+                  </div>
+                  <div className="text-[10.5px] text-zinc-500 truncate">
+                    {probe.city} · CFE: <strong>{probe.cfePct}%</strong>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 pt-1 border-t border-zinc-200/80 dark:border-zinc-800 text-[10px]">
+                    <div>
+                      <span className="text-zinc-400 block">DNS</span>
+                      <strong>{probe.dnsMs}ms</strong>
+                    </div>
+                    <div>
+                      <span className="text-zinc-400 block">TCP</span>
+                      <strong className="text-emerald-600 dark:text-emerald-400">
+                        {probe.tcpMs}ms
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-zinc-400 block">TLS 1.3</span>
+                      <strong>{probe.tlsMs}ms</strong>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-1 pt-1 text-[10px]">
+                    <span className="text-zinc-400 truncate">
+                      IP: {probe.resolvedIp || 'Anycast'}
+                    </span>
+                    <span className="text-blue-600 dark:text-blue-400 font-bold">
+                      Focus on Map →
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* TAB 02: LIVE PROJECT ASSET RESIDENCY & MULTI-REGION QUORUM AUDIT */}
+        {activeGeoTab === 'ASSET_SOVEREIGNTY' && (
+          <div className="space-y-2.5 max-h-72 overflow-y-auto">
+            {(liveGeoTelemetry?.geoAssets || []).length === 0 ? (
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
+                No regional or multi-region storage/compute assets found in `{projectId}`. Use the Provision button on any region below to deploy resources.
+              </div>
+            ) : (
+              (liveGeoTelemetry?.geoAssets || []).map((asset, i) => {
+                const isMulti = asset.resiliencyVerdict.includes('MULTI_REGION');
+                return (
+                  <div
+                    key={`${asset.name}-${i}`}
+                    className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-zinc-900 dark:text-white">
+                          {asset.assetType}: {asset.name}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                          Location: {asset.location} ({asset.locationType})
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 text-[10px] font-bold">
+                          {asset.sovereigntyZone}
+                        </span>
+                      </div>
+                      <div className="text-[10.5px] text-zinc-500">
+                        Storage/Tier: <strong>{asset.storageClass}</strong> · CLI:{' '}
+                        <code>{asset.replicationCli}</code>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          isMulti
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        }`}
+                      >
+                        {asset.resiliencyVerdict}
+                      </span>
+                      {onRunInShell && asset.replicationCli && (
+                        <button
+                          type="button"
+                          onClick={() => onRunInShell(asset.replicationCli)}
+                          className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          Run in Cloud Shell
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* TAB 03: LIVE REGIONAL COMPUTE QUOTAS & HEADROOM */}
+        {activeGeoTab === 'REGIONAL_QUOTAS' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto">
+            {(liveGeoTelemetry?.regionalQuotas || []).map((rq) => (
+              <div
+                key={rq.regionName}
+                onClick={() => focusOnRegion(rq.regionName, 2.8)}
+                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-xs font-mono space-y-1.5 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-zinc-900 dark:text-white">
+                    {rq.regionName}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9.5px] font-bold">
+                    {rq.status}
+                  </span>
+                </div>
+                <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400 space-y-0.5">
+                  <div>
+                    vCPUs: <strong>{rq.cpusUsed}</strong> / {rq.cpusLimit}
+                  </div>
+                  <div>
+                    Disks GB: <strong>{rq.disksGbUsed}</strong> / {rq.disksGbLimit} GB
+                  </div>
+                  <div>
+                    Static IPs: <strong>{rq.ipsUsed}</strong> / {rq.ipsLimit}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* TAB 04: LIVE REGIONAL VPC SUBNETS & RFC1918 CIDR MAP */}
+        {activeGeoTab === 'VPC_SUBNETS' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto">
+            {(liveGeoTelemetry?.liveSubnets || []).map((sn, idx) => (
+              <div
+                key={`${sn.region}-${sn.name}-${idx}`}
+                onClick={() => focusOnRegion(sn.region, 2.8)}
+                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-xs font-mono space-y-1 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-zinc-900 dark:text-white truncate">
+                    {sn.region}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px] font-bold">
+                    {sn.ipCidrRange}
+                  </span>
+                </div>
+                <div className="text-[10px] text-zinc-500 truncate">
+                  VPC: <strong>{sn.network}</strong> · Subnet: {sn.name}
+                </div>
+                <div className="text-[10px] text-zinc-500 flex items-center justify-between">
+                  <span>GW: {sn.gatewayAddress}</span>
+                  <span className="text-emerald-500 font-bold">
+                    PGA: {sn.privateIpGoogleAccess ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* 1. Top Orbital Command Header & Scenario Switcher */}
       <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/35 flex items-center justify-center text-blue-400">
-              <Globe className="w-5 h-5 animate-pulse" />
+              <Globe className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-extrabold text-zinc-950 dark:text-zinc-50">
-                  Global Cloud Map · Regions, Zones & Real-Time Packet Simulation
+                  Interactive 40-Region Topology Canvas &amp; Optional Firewall Rule Packet Tester
                 </h2>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
-                  40 GCP REGIONS · 121 ZONES · ANTI-LAG THROTTLED ENGINE
+                  40 GCP REGIONS · 121 ZONES · {firewalls.length} LIVE VPC FIREWALL RULES
                 </span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Visualizes your live <code className="font-mono">{projectId}</code>{' '}
-                regions, availability zones, subsea Andromeda fiber mesh, and
-                real-time packet evaluation against your{' '}
-                <code className="font-mono">{firewalls.length}</code> VPC firewall
-                rules.
+                Click any region below (or in the Live Latency Matrix above) to inspect its availability zones, FinOps migration break-even, carbon intensity, and test packets against your{' '}
+                <code className="font-mono">{firewalls.length}</code> live VPC firewall rules in <code className="font-mono">{projectId}</code>.
               </p>
             </div>
           </div>

@@ -960,6 +960,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/enterprise-personas/wire-packet-waterfall') ||
       rawUrl.includes('/enterprise-personas/practitioner-devkit') ||
       rawUrl.includes('/enterprise-personas/devsecops-entropy-gitops') ||
+      rawUrl.includes('/global-map/') ||
       (rawUrl.includes('/enterprise-personas/action') &&
         !['EXECUTE_TRIBUNAL_LIVE_REMEDIATION', 'ROLLBACK_TRIBUNAL_REMEDIATION'].includes(
           String(body.action || '').toUpperCase()
