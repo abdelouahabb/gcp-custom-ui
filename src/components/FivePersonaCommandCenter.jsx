@@ -973,7 +973,17 @@ export default function FivePersonaCommandCenter({
 
           {/* SUB-TAB 1: 10-PERSONA ROLL-CALL VOTING GRID & LIVE GCP REMEDIATOR */}
           {tribunalSubTab === 'ROLL_CALL' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2.5">
+            <div className="space-y-3">
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                <div className="font-extrabold text-blue-600 dark:text-blue-400">
+                  UNDER THE HOOD · HOW THE 10-PERSONA LAUNCH TRIBUNAL WORKS (ZERO GIMMICK)
+                </div>
+                <div>
+                  1. <strong>20 Parallel Live GCP REST API Probes:</strong> Simultaneously queries `run.googleapis.com/v2`, `sqladmin.googleapis.com/v1`, `storage.googleapis.com/storage/v1`, `bigquery.googleapis.com/bigquery/v2`, `compute.googleapis.com/compute/v1` (Networks, Subnets, Firewalls, Disks, Addresses), `iam.googleapis.com/v1`, `container.googleapis.com/v1`, `logging.googleapis.com/v2`, `orgpolicy.googleapis.com/v2`, and `cloudresourcemanager.googleapis.com/v1` (`:testIamPermissions` &amp; `:getIamPolicy`).
+                  {' '}2. <strong>1-Click Live Control-Plane Remediation:</strong> Clicking `Fix Live` dispatches a real `PATCH /compute/v1/projects/:id/global/firewalls/:name` (`sourceRanges: [&quot;35.235.240.0/20&quot;]`) or `PATCH /storage/v1/b/:bucket` (`publicAccessPrevention: &quot;enforced&quot;`).
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2.5">
               {(tribunalData.votes || tribunalData.personaVotes || []).map(
                 (pv) => {
                   const remAction =
@@ -1070,65 +1080,76 @@ export default function FivePersonaCommandCenter({
                   );
                 }
               )}
+              </div>
             </div>
           )}
 
           {/* SUB-TAB 2: LIVE CROSS-PERSONA DEPENDENCY & BLAST-RADIUS RIPPLE CHAINS */}
           {tribunalSubTab === 'RIPPLE_GRAPH' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(tribunalData.liveCrossPersonaChains || []).map((chain) => (
-                <div
-                  key={chain.chainId || chain.id}
-                  className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2 text-xs font-mono"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-extrabold text-zinc-900 dark:text-white">
-                      {chain.title || chain.trigger}
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-500">
-                      {chain.triggerPersona || 'CROSS-DOMAIN'}
-                    </span>
-                  </div>
-                  {chain.liveResourceAnchor && (
-                    <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
-                      Anchor: {chain.liveResourceAnchor}
-                    </div>
-                  )}
-                  <div className="space-y-1 text-[11px] text-zinc-600 dark:text-zinc-300">
-                    {(chain.rippleSequence || [chain.blastRadius]).map(
-                      (step, idx) => (
-                        <div key={idx}>{step}</div>
-                      )
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] text-zinc-500">
-                        Impacted Personas:
-                      </span>
-                      {(chain.impactedPersonas || []).map((p) => (
-                        <span
-                          key={p}
-                          className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold"
-                        >
-                          {p}
-                        </span>
-                      ))}
-                    </div>
-                    {chain.safeExecutionOrderCli && onRunInShell && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onRunInShell(chain.safeExecutionOrderCli)
-                        }
-                        className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
-                      >
-                        Verify Chain CLI
-                      </button>
-                    )}
-                  </div>
+            <div className="space-y-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                <div className="font-extrabold text-amber-600 dark:text-amber-400">
+                  UNDER THE HOOD · HOW CROSS-PERSONA BLAST-RADIUS RIPPLE CHAINS WORK (ZERO GIMMICK)
                 </div>
-              ))}
+                <div>
+                  Joins your live VPC networks (`compute/v1/projects/:id/global/networks`), Subnets (`aggregated/subnetworks`), Firewall rules (`global/firewalls`), IAM Service Accounts (`iam.googleapis.com/v1`), and GCS Buckets (`storage/v1/b`) by resource reference so every ripple chain is anchored to a real resource in `{projectId}`.
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(tribunalData.liveCrossPersonaChains || []).map((chain) => (
+                  <div
+                    key={chain.chainId || chain.id}
+                    className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2 text-xs font-mono"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        {chain.title || chain.trigger}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-500">
+                        {chain.triggerPersona || 'CROSS-DOMAIN'}
+                      </span>
+                    </div>
+                    {chain.liveResourceAnchor && (
+                      <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                        Anchor: {chain.liveResourceAnchor}
+                      </div>
+                    )}
+                    <div className="space-y-1 text-[11px] text-zinc-600 dark:text-zinc-300">
+                      {(chain.rippleSequence || [chain.blastRadius]).map(
+                        (step, idx) => (
+                          <div key={idx}>{step}</div>
+                        )
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] text-zinc-500">
+                          Impacted Personas:
+                        </span>
+                        {(chain.impactedPersonas || []).map((p) => (
+                          <span
+                            key={p}
+                            className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold"
+                          >
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                      {chain.safeExecutionOrderCli && onRunInShell && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRunInShell(chain.safeExecutionOrderCli)
+                          }
+                          className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                        >
+                          Verify Chain CLI
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -1136,6 +1157,14 @@ export default function FivePersonaCommandCenter({
           {tribunalSubTab === 'PARETO_SOLVER' &&
             tribunalData.paretoConflictSolver && (
               <div className="space-y-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                  <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                    UNDER THE HOOD · HOW MULTI-PERSONA PARETO CONFLICT SYNTHESIS WORKS (ZERO GIMMICK)
+                  </div>
+                  <div>
+                    Evaluates competing objective functions (`[09 FinOps] Minimize $/mo` vs. `[01/07 Architect/SRE] 99.99% Multi-Region HA` vs. `[05 DevSecOps] Zero-Trust IAP &amp; 0 Keys`) against your live Cloud Run services, SQL instances, Firewalls, and GCS Buckets in `{projectId}` to compute the Pareto-optimal configuration on each axis.
+                  </div>
+                </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                   <span className="font-extrabold text-zinc-900 dark:text-white">
                     {tribunalData.paretoConflictSolver.conflictTitle}
@@ -1187,6 +1216,15 @@ export default function FivePersonaCommandCenter({
           {/* SUB-TAB 4: T0 vs. T_NOW CRYPTOGRAPHIC SHA-256 MERKLE SNAPSHOT DIFF */}
           {tribunalSubTab === 'MERKLE_DIFF' && tribunalData.merkleDiff && (
             <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2.5 text-xs font-mono">
+              <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
+                <div className="font-extrabold text-indigo-600 dark:text-indigo-400">
+                  UNDER THE HOOD · HOW MERKLE DIFF &amp; ROLLBACK CAPSULES WORK (ZERO GIMMICK)
+                </div>
+                <div>
+                  1. <strong>SHA-256 Merkle State Tree:</strong> Hashes the canonical JSON vector of all 10 personas&apos; live GCP API counts (`crypto.createHash(&apos;sha256&apos;)`) at `T0` and compares it against `T_Now` on every probe.
+                  {' '}2. <strong>Pre-Mutation Rollback Capsules:</strong> Before `EXECUTE_TRIBUNAL_LIVE_REMEDIATION` mutates a live VPC Firewall or GCS Bucket, the server fetches the exact pre-change GCP resource JSON (`GET /compute/v1/.../firewalls/:name` or `GET /storage/v1/b/:bucket`), seals it with a `SHA-256` digest, and stores the restore payload in memory so `ROLLBACK_TRIBUNAL_REMEDIATION` can atomically `PATCH` the original state back in 1 click.
+                </div>
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -1302,6 +1340,15 @@ export default function FivePersonaCommandCenter({
           {/* SUB-TAB 5: [2030] MULTI-PROJECT FLEET TRIBUNAL & CROSS-ESTATE ARBITRATOR */}
           {tribunalSubTab === 'MULTI_PROJECT_FLEET' && (
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
+                <div className="font-extrabold text-blue-600 dark:text-blue-400">
+                  UNDER THE HOOD · HOW MULTI-PROJECT FLEET TRIBUNAL WORKS (ZERO GIMMICK)
+                </div>
+                <div>
+                  1. <strong>Live Account Discovery:</strong> Calls `GET https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE` using your live OAuth2 / ADC token.
+                  {' '}2. <strong>Parallel Control-Plane Fan-Out:</strong> Dispatches `Promise.allSettled` across every discovered project simultaneously—querying `compute.googleapis.com` (`global/firewalls` &amp; `aggregated/disks`), `storage.googleapis.com/storage/v1/b`, and `run.googleapis.com/v2`—and seals each project&apos;s posture with an independent `SHA-256` Merkle root.
+                </div>
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -1409,6 +1456,15 @@ export default function FivePersonaCommandCenter({
           {tribunalSubTab === 'PRE_CRIME_72H' &&
             tribunalData.preCrime72hForecast && (
               <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
+                  <div className="font-extrabold text-amber-600 dark:text-amber-400">
+                    UNDER THE HOOD · HOW T_+72H PRE-CRIME FORECASTING WORKS (ZERO GIMMICK)
+                  </div>
+                  <div>
+                    1. <strong>Live Telemetry Inputs:</strong> Reads live `logging.googleapis.com/v2/entries:list` (`severity&gt;=ERROR` count), `compute.googleapis.com` (`0.0.0.0/0` firewall count + unattached disk GB + reserved static IPs), and `storage.googleapis.com` (buckets without `publicAccessPrevention=&quot;enforced&quot;`).
+                    {' '}2. <strong>72-Hour Extrapolation Math:</strong> Multiplies current hourly error &amp; waste burn rates over a `+72h` horizon (`burnRatePerHour * 72`) to compute exact SLO Error-Budget exhaustion windows, cumulative public exposure-hours (`openAssets * 72h`), and 72-hour stranded FinOps waste before the invoice arrives.
+                  </div>
+                </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -1464,6 +1520,15 @@ export default function FivePersonaCommandCenter({
           {tribunalSubTab === 'ZKP_BLIND_PROOF' &&
             tribunalData.blindedComplianceProof && (
               <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
+                  <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                    UNDER THE HOOD · HOW ZERO-KNOWLEDGE / ED25519 BLINDED ATTESTATION WORKS (ZERO GIMMICK)
+                  </div>
+                  <div>
+                    1. <strong>Salted SHA-256 Pedersen-Style Commitments:</strong> For every live firewall rule, GCS bucket, and IAM Service Account, the server generates a cryptographic salt and computes `C_i = SHA256(salt || resourceType || resourceName || complianceState)`—replacing the plaintext resource name with `blindedIdentifier` (`fw_commit_01`, `bkt_commit_01`) so external auditors never see internal infrastructure names.
+                    {' '}2. <strong>RFC 8032 Ed25519 Digital Signature &amp; Live Verifier:</strong> Signs the blinded Merkle statement using Node.js `crypto.sign(null, payloadBuffer, ed25519PrivateKey)` and verifies it in microseconds via `POST /enterprise-personas/zkp-verify` (`crypto.verify(null, payloadBuffer, publicKeyPem, signatureBuffer)`).
+                  </div>
+                </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -1564,6 +1629,15 @@ export default function FivePersonaCommandCenter({
           {/* SUB-TAB 8: [2030] INTENT-TO-CONTROL-PLANE COMPILER */}
           {tribunalSubTab === 'INTENT_COMPILER' && (
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
+                <div className="font-extrabold text-blue-600 dark:text-blue-400">
+                  UNDER THE HOOD · HOW INTENT-TO-CONTROL-PLANE COMPILATION WORKS (ZERO GIMMICK)
+                </div>
+                <div>
+                  1. <strong>Live Inventory Grounding:</strong> Queries `compute.googleapis.com/compute/v1/projects/:id/global/firewalls`, `storage.googleapis.com/storage/v1/b`, and `run.googleapis.com/v2/projects/:id/locations/-/services` first so the compiler operates on your actual live GCP resource names.
+                  {' '}2. <strong>10-Persona AST + Gemini Synthesis:</strong> Evaluates your natural-language intent against all 10 specialist guardrails (using `gemini-3.8-flash` / `gemini-3.1-pro` when configured or deterministic AST policy synthesis) and outputs copy-ready Terraform HCL (`google_project_organization_policy`, `google_compute_firewall`, `google_storage_bucket`).
+                </div>
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="font-extrabold text-zinc-900 dark:text-white">
@@ -1717,6 +1791,16 @@ export default function FivePersonaCommandCenter({
                     </span>
                   </div>
 
+                  <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                    <div className="font-extrabold text-indigo-600 dark:text-indigo-400">
+                      UNDER THE HOOD · WHY ZERO VM AGENT IS NEEDED
+                    </div>
+                    <div>
+                      1. <strong>GCE KVM Hypervisor Ringbuffer:</strong> Calls `GET /compute/v1/projects/:id/zones/:zone/instances/:name/serialPort?port=1` directly from Google&apos;s KVM hypervisor outside the guest VM (even if `sshd` is dead or port 22 is blocked).
+                      {' '}2. <strong>Direct Linux `/proc` Syscalls:</strong> Reads `/proc/loadavg`, `/proc/meminfo`, and parses hex socket state `0A` (`TCP_LISTEN`) in `/proc/net/tcp` via `fs.readFileSync` with zero background daemon.
+                    </div>
+                  </div>
+
                   {vmXrayData?.liveKernelProcTelemetry && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
@@ -1819,6 +1903,16 @@ export default function FivePersonaCommandCenter({
                     </span>
                   </div>
 
+                  <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                    <div className="font-extrabold text-blue-600 dark:text-blue-400">
+                      UNDER THE HOOD · HOW WIRE-SPEED SOCKET TIMING &amp; SHADOW DETECTION WORK
+                    </div>
+                    <div>
+                      1. <strong>Nanosecond OS Socket Stopwatch (`process.hrtime.bigint()`):</strong> Measures real `dns.promises.lookup` (`L3`), `new net.Socket().connect()` `TCP SYN-ACK` (`L4`), and `tls.connect()` (`L6` cipher, ALPN &amp; `getPeerCertificate()`).
+                      {' '}2. <strong>Firewall Set-Inclusion Math:</strong> Sorts live `GET /compute/v1/projects/:id/global/firewalls` by `(network, direction, priority)` and flags any rule shadowed by a higher-priority wildcard rule.
+                    </div>
+                  </div>
+
                   <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="text"
@@ -1916,6 +2010,16 @@ export default function FivePersonaCommandCenter({
                     <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9px] font-extrabold shrink-0">
                       GRANTED: {devkitData?.permissionSummary?.grantedCount ?? 0}/{devkitData?.permissionSummary?.totalTested ?? 8}
                     </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                    <div className="font-extrabold text-purple-600 dark:text-purple-400">
+                      UNDER THE HOOD · HOW IAM 403 DEBUGGING &amp; JSON-TO-BIGQUERY AST WORK
+                    </div>
+                    <div>
+                      1. <strong>Live `testIamPermissions` Probe:</strong> Dispatches `POST https://cloudresourcemanager.googleapis.com/v1/projects/:id:testIamPermissions` against your active token and maps any missing permission to its exact least-privilege `roles/*` binding.
+                      {' '}2. <strong>Recursive JSON AST Type Inference:</strong> Walks nested JSON objects/arrays recursively (`inferBqType`) to synthesize `STRUCT&lt;...&gt;` and `ARRAY&lt;...&gt;` DDL with automatic ISO-8601 `PARTITION BY DATE(...)` and `CLUSTER BY`.
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-28 overflow-y-auto">
@@ -2028,6 +2132,16 @@ export default function FivePersonaCommandCenter({
                     <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9px] font-extrabold shrink-0">
                       LEAKED SECRETS: {entropyGitopsData?.entropyScanSummary?.highEntropyPlaintextWarnings ?? 0}
                     </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-[9.5px] text-zinc-700 dark:text-zinc-300 space-y-0.5">
+                    <div className="font-extrabold text-rose-600 dark:text-rose-400">
+                      UNDER THE HOOD · HOW SHANNON ENTROPY H(X) &amp; TERRAFORM 1.5+ IMPORT WORK
+                    </div>
+                    <div>
+                      1. <strong>Information-Theory Entropy (`calcShannonEntropy`):</strong> Computes exact character probability $P(x) = \text&#123;count&#125;(x)/N$ and $H(X) = -\sum P(x)\log_2 P(x)$ across live `run.googleapis.com/v2` container env vars and `iam.googleapis.com/v1` principals—flagging unreferenced values with $H(X) \ge 4.2$ bits/char.
+                      {' '}2. <strong>Live State Reverse-Compiler:</strong> Reads live VPC firewall IDs, GCS bucket names, and Service Account emails to emit native Terraform 1.5+ `import &#123; to = ... id = ... &#125;` blocks.
+                    </div>
                   </div>
 
                   <div className="space-y-1">
