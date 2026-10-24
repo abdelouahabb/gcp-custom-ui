@@ -198,7 +198,7 @@ export default function FivePersonaCommandCenter({
       onShowError?.(
         err.response?.data?.error ||
           err.message ||
-          'Failed to load 5-Persona Enterprise Readiness data.'
+          'Failed to load 10-Persona Enterprise Readiness data.'
       );
     } finally {
       setLoading(false);

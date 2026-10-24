@@ -957,7 +957,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               }
               className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
             >
-              [5-Persona] Column Lineage &amp; DLQ Replay →
+              [10-Persona] Column Lineage &amp; DLQ Replay →
             </button>
             <button
               type="button"
