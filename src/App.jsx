@@ -85,6 +85,7 @@ import GdeStreamerPrivacyShield, {
 import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
 import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
+import WhyGcpWins10PillarStudio from './components/WhyGcpWins10PillarStudio';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -3381,6 +3382,14 @@ function CloudPulseCockpit() {
       tip: 'Interactive 40-Region & 121-Zone Global Subsea Cable, Carbon Intensity & Chaos Failover Map with click-to-deploy',
       icon: Globe,
     },
+    {
+      id: 'WHY_GCP_WINS',
+      group: 'COMMAND',
+      label: 'Why GCP Wins (10x)',
+      isStar: true,
+      tip: '10 Practical Engineering Capabilities That Make AWS & Azure Architects Jealous: Live Cross-Cloud Tax Receipt, 1 Global VPC, Scale-to-$0 GPUs, $0 Reachability Prover, 168h BQ Time-Travel, Zero-Reboot VM Migration, 90d IAM Surgeon, Keyless WIF, 1-Click DR & Live API/Terraform Recorder',
+      icon: Sparkles,
+    },
 
     // II. Core Infrastructure, Compute & Serverless
     {
@@ -4095,6 +4104,7 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '18 Categorized Beyond-Console Labs' },
+                            { id: 'WHY_GCP_WINS', label: 'Why GCP Wins (10x)', meta: '10 Live AWS/Azure Jealousy Benchmarks' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                             { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
@@ -4250,6 +4260,16 @@ function CloudPulseCockpit() {
                     onShowError={setErrorBanner}
                   />
                 </div>
+              )}
+
+              {activeTab === 'WHY_GCP_WINS' && (
+                <WhyGcpWins10PillarStudio
+                  projectId={selectedProjectId}
+                  onRunInShell={handleRunInShell}
+                  onSelectTab={(tabId) => setActiveTab(tabId)}
+                  onShowToast={showToast}
+                  onShowError={setErrorBanner}
+                />
               )}
 
               {activeTab === 'INNOVATION_LAB' && (

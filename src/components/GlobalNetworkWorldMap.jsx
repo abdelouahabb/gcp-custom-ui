@@ -3083,7 +3083,17 @@ export default function GlobalNetworkWorldMap({
               Instead of a static map, this workbench executes <strong>real concurrent TCP/TLS 1.3 socket handshakes</strong> to 8 Google Cloud regional endpoints (`*-aiplatform.googleapis.com:443`), inspects your live regional quotas (`compute.regions.list`), maps your regional VPC subnets (`subnetworks.aggregatedList`), and audits every GCS Bucket, BigQuery Dataset, Cloud Run service, and VM for multi-region quorum &amp; GDPR/US residency.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {onSelectTab && (
+              <button
+                type="button"
+                onClick={() => onSelectTab('WHY_GCP_WINS')}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Why GCP Wins (10x AWS/Azure Benchmark)</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => fetchLiveGeoTelemetry(true)}
