@@ -770,7 +770,7 @@ export default function FivePersonaCommandCenter({
         </div>
 
         {/* Active Persona Owning-Studio Cross-Bridge Bar */}
-        <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+        <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 space-y-2">
           <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
             Active Specialist Lens:{' '}
             <strong className="text-blue-600 dark:text-blue-400">
@@ -778,7 +778,7 @@ export default function FivePersonaCommandCenter({
             </strong>{' '}
             · Companion Studio: <strong>{activeTabMeta.ownerLabel}</strong>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 w-full">
             {onNavigateTab && (
               <button
                 type="button"
@@ -788,7 +788,7 @@ export default function FivePersonaCommandCenter({
                     activeTabMeta.ownerSubTab
                   )
                 }
-                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
+                className="w-full h-full px-2.5 py-2 rounded-xl text-[10px] font-mono font-extrabold bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer flex items-center justify-center text-center"
               >
                 Open {activeTabMeta.ownerLabel} →
               </button>
@@ -800,21 +800,21 @@ export default function FivePersonaCommandCenter({
                   onClick={() =>
                     onNavigateTab('DATA_ENGINEER_STUDIO', 'ICEBERG_50_MATRIX')
                   }
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer"
+                  className="w-full h-full px-2.5 py-2 rounded-xl text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer flex items-center justify-center text-center"
                 >
                   50 Iceberg Playbooks →
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('SRE_WAR_ROOM')}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer"
+                  className="w-full h-full px-2.5 py-2 rounded-xl text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer flex items-center justify-center text-center"
                 >
                   SRE War-Room →
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('CLOUD_SOC')}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer"
+                  className="w-full h-full px-2.5 py-2 rounded-xl text-[10px] font-mono font-extrabold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer flex items-center justify-center text-center"
                 >
                   Cloud SOC →
                 </button>
@@ -824,7 +824,7 @@ export default function FivePersonaCommandCenter({
               <button
                 type="button"
                 onClick={onOpenTimeMachine}
-                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                className="w-full h-full px-2.5 py-2 rounded-xl text-[10px] font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer flex items-center justify-center text-center"
               >
                 SHA-256 Time-Machine
               </button>
@@ -833,7 +833,7 @@ export default function FivePersonaCommandCenter({
               <button
                 type="button"
                 onClick={onOpenHealthAndDrift}
-                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                className="w-full h-full px-2.5 py-2 rounded-xl text-[10px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer flex items-center justify-center text-center"
               >
                 1-Tap Health &amp; Drift Hub
               </button>
@@ -940,8 +940,8 @@ export default function FivePersonaCommandCenter({
             </div>
           </div>
 
-          {/* Sub-navigation tabs for the 8 Swarm & 2030 Horizon Intelligence Views */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Sub-navigation tabs for the 9 Swarm & 2030 Horizon Intelligence Views (3x3 Equal Grid) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full">
             {[
               {
                 id: 'ROLL_CALL',
@@ -1008,9 +1008,9 @@ export default function FivePersonaCommandCenter({
                     runPractitionerWorkbenchAll();
                   }
                 }}
-                className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-extrabold border transition-colors cursor-pointer ${
+                className={`w-full h-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-extrabold border transition-all cursor-pointer flex items-center justify-center text-center leading-snug ${
                   tribunalSubTab === tab.id
-                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
                     : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                 }`}
               >
@@ -1718,7 +1718,7 @@ export default function FivePersonaCommandCenter({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
                 {[
                   'Lock project to strict Zero-Trust & $0.00/mo Always-Free invariance',
                   'Eliminate all public 0.0.0.0/0 ingress & enforce Cloud IAP (35.235.240.0/20)',
@@ -1729,7 +1729,7 @@ export default function FivePersonaCommandCenter({
                     key={preset}
                     type="button"
                     onClick={() => runIntentCompiler(preset)}
-                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 text-[10px] text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                    className="w-full h-full px-2.5 py-2 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 text-[10px] text-zinc-700 dark:text-zinc-300 cursor-pointer flex items-center justify-center text-center leading-snug"
                   >
                     {preset}
                   </button>
@@ -2279,7 +2279,7 @@ export default function FivePersonaCommandCenter({
         id="active-persona-lens-anchor"
         className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-4 shadow-sm space-y-3"
       >
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="space-y-2.5">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-mono font-extrabold">
               LENS {activeTabMeta.code} ACTIVE
@@ -2288,13 +2288,13 @@ export default function FivePersonaCommandCenter({
               {activeTabMeta.role} Deep-Dive Studio · {activeTabMeta.subtitle}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-1.5 w-full">
             {PERSONA_TABS.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setActivePersona(t.id)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                className={`w-full h-full px-2 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center text-center ${
                   activePersona === t.id
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
