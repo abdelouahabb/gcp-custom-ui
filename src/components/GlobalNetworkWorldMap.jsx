@@ -2340,8 +2340,17 @@ export default function GlobalNetworkWorldMap({
     setCameraCenter({ x: 600, y: 280 });
   }, []);
 
-  const focusOnRegion = useCallback(
-    (regionId, targetZoom = 3.2) => {
+  const scrollToMapCanvas = useCallback(() => {
+    if (svgContainerRef.current) {
+      svgContainerRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, []);
+
+  const selectRegionInPlace = useCallback(
+    (regionId, targetZoom = 2.8) => {
       const reg = GCP_GLOBAL_REGIONS.find((r) => r.id === regionId);
       if (!reg) return;
       setSelectedRegionId(reg.id);
@@ -2356,15 +2365,37 @@ export default function GlobalNetworkWorldMap({
     [zoom, clampCamera]
   );
 
+  const focusOnRegion = useCallback(
+    (regionId, targetZoom = 3.2, options = {}) => {
+      const reg = GCP_GLOBAL_REGIONS.find((r) => r.id === regionId);
+      if (!reg) return;
+      setSelectedRegionId(reg.id);
+      if (reg.zones?.length > 0) {
+        setSelectedZoneName(reg.zones[0]);
+      }
+      setCustomTargetRegionId(reg.id);
+      const nextZ = Math.max(zoom, targetZoom);
+      setZoom(nextZ);
+      setCameraCenter(clampCamera(reg.x, reg.y, nextZ));
+      if (options.scrollToMap) {
+        scrollToMapCanvas();
+      }
+    },
+    [zoom, clampCamera, scrollToMapCanvas]
+  );
+
   const focusOnClientOrigin = useCallback(
-    (targetZoom = 3.2) => {
+    (targetZoom = 3.2, options = {}) => {
       const nextZ = Math.max(zoom, targetZoom);
       setZoom(nextZ);
       setCameraCenter(
         clampCamera(liveClientOriginNode.x, liveClientOriginNode.y, nextZ)
       );
+      if (options.scrollToMap) {
+        scrollToMapCanvas();
+      }
     },
-    [zoom, clampCamera, liveClientOriginNode]
+    [zoom, clampCamera, liveClientOriginNode, scrollToMapCanvas]
   );
 
   const focusOnContinent = useCallback(
@@ -3021,9 +3052,9 @@ export default function GlobalNetworkWorldMap({
               </span>
               <button
                 type="button"
-                onClick={() => focusOnClientOrigin(3.2)}
+                onClick={() => focusOnClientOrigin(3.2, { scrollToMap: true })}
                 className="px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
-                title="Click to zoom the World Map directly to your live client location (IP Hidden for Privacy)"
+                title="Click to scroll and zoom the World Map directly to your live client location (IP Hidden for Privacy)"
               >
                 PROBING LIVE FROM: {liveClientOriginNode.city},{' '}
                 {liveClientOriginNode.country} [{liveClientOriginNode.countryCode}] · IP Hidden (Privacy Mode) ·{' '}
@@ -3031,9 +3062,18 @@ export default function GlobalNetworkWorldMap({
                 {liveClientOriginNode.gpsLabel}
               </button>
               {liveGeoTelemetry?.fastestRegion && (
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
+                <button
+                  type="button"
+                  onClick={() =>
+                    focusOnRegion(liveGeoTelemetry.fastestRegion.regionId, 3.2, {
+                      scrollToMap: true,
+                    })
+                  }
+                  className="px-2.5 py-0.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold cursor-pointer transition-colors"
+                  title="Click to select and scroll to your fastest live GCP region on the World Map"
+                >
                   FASTEST LIVE REGION: {liveGeoTelemetry.fastestRegion.regionId} ({liveGeoTelemetry.fastestRegion.tcpMs}ms TCP / {liveGeoTelemetry.fastestRegion.totalRttMs}ms TLS)
-                </span>
+                </button>
               )}
             </div>
             <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50">
@@ -3122,29 +3162,61 @@ export default function GlobalNetworkWorldMap({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {(liveGeoTelemetry?.regionalSocketProbes || []).map((probe, idx) => {
               const isFastest = idx === 0;
+              const isSelected = selectedRegionId === probe.regionId;
               return (
                 <div
                   key={probe.regionId}
-                  onClick={() => focusOnRegion(probe.regionId, 2.8)}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => selectRegionInPlace(probe.regionId, 2.8)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      selectRegionInPlace(probe.regionId, 2.8);
+                    }
+                  }}
                   className={`p-3.5 rounded-xl border text-xs font-mono space-y-2 cursor-pointer transition-all hover:shadow-md ${
-                    isFastest
-                      ? 'bg-emerald-500/10 border-emerald-500/40'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                    isSelected
+                      ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-zinc-900 dark:text-white">
-                      #{idx + 1} · {probe.regionId}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[9.5px] font-bold ${
-                        isFastest
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
-                      }`}
-                    >
-                      {probe.tcpMs}ms TCP
-                    </span>
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          isSelected
+                            ? 'bg-emerald-500 animate-pulse'
+                            : isFastest
+                            ? 'bg-blue-500'
+                            : 'bg-zinc-400'
+                        }`}
+                      />
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        #{idx + 1} · {probe.regionId}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {isSelected && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
+                          SELECTED
+                        </span>
+                      )}
+                      {isFastest && (
+                        <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[9px] font-extrabold">
+                          FASTEST
+                        </span>
+                      )}
+                      <span
+                        className={`px-2 py-0.5 rounded text-[9.5px] font-bold ${
+                          isSelected
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                        }`}
+                      >
+                        {probe.tcpMs}ms TCP
+                      </span>
+                    </div>
                   </div>
                   <div className="text-[10.5px] text-zinc-500 truncate">
                     {probe.city} · CFE: <strong>{probe.cfePct}%</strong>
@@ -3172,9 +3244,18 @@ export default function GlobalNetworkWorldMap({
                     <span className="text-zinc-400 truncate">
                       IP: {probe.resolvedIp || 'Anycast'}
                     </span>
-                    <span className="text-blue-600 dark:text-blue-400 font-bold">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        focusOnRegion(probe.regionId, 3.2, {
+                          scrollToMap: true,
+                        });
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer transition-colors shrink-0"
+                    >
                       Focus on Map →
-                    </span>
+                    </button>
                   </div>
                 </div>
               );
@@ -3244,64 +3325,120 @@ export default function GlobalNetworkWorldMap({
         {/* TAB 03: LIVE REGIONAL COMPUTE QUOTAS & HEADROOM */}
         {activeGeoTab === 'REGIONAL_QUOTAS' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto">
-            {(liveGeoTelemetry?.regionalQuotas || []).map((rq) => (
-              <div
-                key={rq.regionName}
-                onClick={() => focusOnRegion(rq.regionName, 2.8)}
-                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-xs font-mono space-y-1.5 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-zinc-900 dark:text-white">
-                    {rq.regionName}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9.5px] font-bold">
-                    {rq.status}
-                  </span>
+            {(liveGeoTelemetry?.regionalQuotas || []).map((rq) => {
+              const isSelected = selectedRegionId === rq.regionName;
+              return (
+                <div
+                  key={rq.regionName}
+                  onClick={() => selectRegionInPlace(rq.regionName, 2.8)}
+                  className={`p-3 rounded-xl border text-xs font-mono space-y-1.5 cursor-pointer transition-all ${
+                    isSelected
+                      ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-zinc-900 dark:text-white">
+                      {rq.regionName}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {isSelected && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
+                          SELECTED
+                        </span>
+                      )}
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9.5px] font-bold">
+                        {rq.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400 space-y-0.5">
+                    <div>
+                      vCPUs: <strong>{rq.cpusUsed}</strong> / {rq.cpusLimit}
+                    </div>
+                    <div>
+                      Disks GB: <strong>{rq.disksGbUsed}</strong> /{' '}
+                      {rq.disksGbLimit} GB
+                    </div>
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span>
+                        Static IPs: <strong>{rq.ipsUsed}</strong> /{' '}
+                        {rq.ipsLimit}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          focusOnRegion(rq.regionName, 3.2, {
+                            scrollToMap: true,
+                          });
+                        }}
+                        className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[9.5px] font-bold cursor-pointer"
+                      >
+                        Focus on Map →
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400 space-y-0.5">
-                  <div>
-                    vCPUs: <strong>{rq.cpusUsed}</strong> / {rq.cpusLimit}
-                  </div>
-                  <div>
-                    Disks GB: <strong>{rq.disksGbUsed}</strong> / {rq.disksGbLimit} GB
-                  </div>
-                  <div>
-                    Static IPs: <strong>{rq.ipsUsed}</strong> / {rq.ipsLimit}
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* TAB 04: LIVE REGIONAL VPC SUBNETS & RFC1918 CIDR MAP */}
         {activeGeoTab === 'VPC_SUBNETS' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto">
-            {(liveGeoTelemetry?.liveSubnets || []).map((sn, idx) => (
-              <div
-                key={`${sn.region}-${sn.name}-${idx}`}
-                onClick={() => focusOnRegion(sn.region, 2.8)}
-                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-xs font-mono space-y-1 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-zinc-900 dark:text-white truncate">
-                    {sn.region}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px] font-bold">
-                    {sn.ipCidrRange}
-                  </span>
+            {(liveGeoTelemetry?.liveSubnets || []).map((sn, idx) => {
+              const isSelected = selectedRegionId === sn.region;
+              return (
+                <div
+                  key={`${sn.region}-${sn.name}-${idx}`}
+                  onClick={() => selectRegionInPlace(sn.region, 2.8)}
+                  className={`p-3 rounded-xl border text-xs font-mono space-y-1 cursor-pointer transition-all ${
+                    isSelected
+                      ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-zinc-900 dark:text-white truncate">
+                      {sn.region}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {isSelected && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
+                          SELECTED
+                        </span>
+                      )}
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px] font-bold">
+                        {sn.ipCidrRange}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate">
+                    VPC: <strong>{sn.network}</strong> · Subnet: {sn.name}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 flex items-center justify-between pt-0.5">
+                    <span>
+                      GW: {sn.gatewayAddress} · PGA:{' '}
+                      <strong className="text-emerald-500">
+                        {sn.privateIpGoogleAccess ? 'ON' : 'OFF'}
+                      </strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        focusOnRegion(sn.region, 3.2, { scrollToMap: true });
+                      }}
+                      className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[9.5px] font-bold cursor-pointer"
+                    >
+                      Focus on Map →
+                    </button>
+                  </div>
                 </div>
-                <div className="text-[10px] text-zinc-500 truncate">
-                  VPC: <strong>{sn.network}</strong> · Subnet: {sn.name}
-                </div>
-                <div className="text-[10px] text-zinc-500 flex items-center justify-between">
-                  <span>GW: {sn.gatewayAddress}</span>
-                  <span className="text-emerald-500 font-bold">
-                    PGA: {sn.privateIpGoogleAccess ? 'ON' : 'OFF'}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -5629,7 +5766,9 @@ export default function GlobalNetworkWorldMap({
                       <button
                         key={reg.id}
                         type="button"
-                        onClick={() => focusOnRegion(reg.id, 3.5)}
+                        onClick={() =>
+                          focusOnRegion(reg.id, 3.5, { scrollToMap: true })
+                        }
                         className={`p-2.5 rounded-xl border text-left font-mono transition-all cursor-pointer ${
                           isSel
                             ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-sm'
