@@ -1265,9 +1265,12 @@ spec:
           },
         }
       );
+      setServices((prev) =>
+        prev.filter((s) => s.id !== srv.id && s.name !== srv.name)
+      );
       if (onShowToast) {
         onShowToast(
-          res.data?.message || `Deleting Cloud Run service ${srv.name}...`
+          res.data?.message || `Deleted Cloud Run service ${srv.name}.`
         );
       }
       await fetchCloudRunFleet(true);

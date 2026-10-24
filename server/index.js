@@ -1592,8 +1592,9 @@ app.get('/api/project/:projectId/overview', async (req, res) => {
       datasetsRes.status === 'fulfilled'
         ? datasetsRes.value?.datasets || []
         : [];
-    const liveRunServices =
-      runRes.status === 'fulfilled' ? runRes.value?.services || [] : [];
+    const liveRunServices = (
+      runRes.status === 'fulfilled' ? runRes.value?.services || [] : []
+    ).filter((s) => !isCloudRunServiceDeletedOrTombstoned(projectId, s));
     const liveVmsRaw =
       vmsRes.status === 'fulfilled'
         ? Object.entries(vmsRes.value?.items || {}).flatMap(([zoneKey, val]) =>
@@ -4350,16 +4351,37 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
       resolvedType === 'CLOUD_RUN'
     ) {
       const loc = region || 'us-east1';
-      await gcpFetch(
-        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
-          projectId
-        )}/locations/${encodeURIComponent(loc)}/services/${encodeURIComponent(
-          name
-        )}`,
-        token,
-        projectId,
-        { method: 'DELETE', timeout: 6000 }
-      );
+      try {
+        await gcpFetch(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(loc)}/services/${encodeURIComponent(
+            name
+          )}`,
+          token,
+          projectId,
+          { method: 'DELETE', timeout: 8000 }
+        );
+      } catch (runDelErr) {
+        const msg = String(
+          runDelErr.response?.data?.error?.message || runDelErr.message || ''
+        );
+        const status = runDelErr.response?.status;
+        if (
+          status === 404 ||
+          msg.toLowerCase().includes('does not exist') ||
+          msg.toLowerCase().includes('not found')
+        ) {
+          markCloudRunServiceTombstoned(projectId, loc, name);
+          return res.json({
+            ok: true,
+            alreadyDeleted: true,
+            message: `Cloud Run service "${name}" (${loc}) was already deleted on Google Cloud.`,
+          });
+        }
+        throw runDelErr;
+      }
+      markCloudRunServiceTombstoned(projectId, loc, name);
       return res.json({
         ok: true,
         message: `Deleted Cloud Run service ${name} in ${loc}.`,
@@ -4817,8 +4839,47 @@ app.post('/api/project/:projectId/billing/kill-switch', async (req, res) => {
 });
 
 // ============================================================================
+// ============================================================================
 // CLOUD RUN COMMAND CENTER ENDPOINTS (SERVICES, REVISIONS, SCALING, IAM, TRAFFIC)
 // ============================================================================
+const deletedCloudRunTombstones = new Map();
+const CLOUD_RUN_TOMBSTONE_TTL_MS = 120 * 1000;
+
+function markCloudRunServiceTombstoned(projectId, region, serviceName) {
+  if (!projectId || !serviceName) return;
+  const now = Date.now();
+  const shortName = String(serviceName).split('/').pop();
+  const cleanReg = String(region || '*').trim();
+  deletedCloudRunTombstones.set(`${projectId}/${cleanReg}/${shortName}`, now);
+  deletedCloudRunTombstones.set(`${projectId}/*/${shortName}`, now);
+}
+
+function isCloudRunServiceDeletedOrTombstoned(projectId, srv) {
+  if (!srv) return true;
+  if (
+    srv.deleteTime ||
+    srv.expireTime ||
+    srv.metadata?.deletionTimestamp
+  ) {
+    return true;
+  }
+  const shortName = srv.name?.split('/').pop() || '';
+  const region = srv.name?.split('/')[3] || '*';
+  const now = Date.now();
+  for (const key of [
+    `${projectId}/${region}/${shortName}`,
+    `${projectId}/*/${shortName}`,
+  ]) {
+    const ts = deletedCloudRunTombstones.get(key);
+    if (ts && now - ts < CLOUD_RUN_TOMBSTONE_TTL_MS) {
+      return true;
+    }
+    if (ts) {
+      deletedCloudRunTombstones.delete(key);
+    }
+  }
+  return false;
+}
 
 // 10e. GET /api/project/:projectId/cloudrun -> Full Cloud Run Services, Revisions, Scaling & IAM Policy
 app.get('/api/project/:projectId/cloudrun', async (req, res) => {
@@ -4840,7 +4901,9 @@ app.get('/api/project/:projectId/cloudrun', async (req, res) => {
         projectId,
         { timeout: 8000 }
       );
-      rawServices = data.services || [];
+      rawServices = (data.services || []).filter(
+        (s) => !isCloudRunServiceDeletedOrTombstoned(projectId, s)
+      );
     } catch (err) {
       runApiEnabled = false;
       runApiMessage = err.response?.data?.error?.message || err.message;
