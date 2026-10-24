@@ -53887,7 +53887,9 @@ resource "google_bigquery_dataset" "${tfId}" {
       // PERSONA 3: DATA ENGINEER (Column Lineage DAG, Quarantine DLQ & Chargeback)
       // ======================================================================
       const primaryDs =
-        bqDatasets[0]?.datasetReference?.datasetId || 'customer_360_events';
+        bqDatasets[0]?.datasetReference?.datasetId ||
+        `${projectId.replace(/[^a-zA-Z0-9_]/g, '_')}_lakehouse`;
+      const primaryDataset = primaryDs;
       const columnLineageDag = [
         {
           columnId: 'col-event-id',
