@@ -31,6 +31,29 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'ten-persona-enterprise-board-and-contextual-studio-helpers',
+    wave: '2026 ENTERPRISE WAR-ROOM · 10-PERSONA ENGINEERING ARCHITECTURE BOARD & CONTEXTUAL STUDIO HELPERS',
+    title:
+      '10-Persona Enterprise Architecture Board & Contextual Studio Helpers (Cloud Architect, Cloud Engineer, Data Engineer, Network Engineer, DevSecOps, AI/MLOps, SRE Commander, DBRE, FinOps & GreenOps, and K8s/IDP Platform Engineer)',
+    badge: '10-PERSONA BOARD + STUDIO HELPERS',
+    badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
+    icon: ShieldCheck,
+    targetTab: 'INNOVATION_LAB',
+    problemSolved:
+      'Standard cloud consoles present raw resource tables without role-specific pre-flight guards, forcing specialized engineers (Architects, Platform Ops, Data Engineers, NetOps, DevSecOps, AI/MLOps, SREs, DBREs, FinOps, and K8s Engineers) to context-switch across dozens of pages or write custom scripts to answer critical operational questions.',
+    howItWorks: [
+      'Personas 01–05 (Cloud Architect, Cloud Engineer, Data Engineer, Network Engineer, DevSecOps): Live Region Blackout SPOF Blast-Radius Simulator & Org Policy Guardrails, 5-Gate Pre-Flight Validator + ClickOps-to-GitOps main.tf Exporter + Compensating Undo Saga, End-to-End Column Lineage AST DAG + Quarantine DLQ Auto-Repair Replay, 4-Hop Packet Reachability Tracer + IPAM CIDR Collision Matrix, and Binary Authorization @sha256 Digest Gate + IAM Escalation Path Detector + Zero-Key OIDC WIF Generator.',
+      'Personas 06–10 (AI/MLOps Engineer, SRE On-Call Commander, Database Reliability Engineer [DBRE], FinOps & GreenOps Engineer, and K8s & IDP Platform Engineer): Model Armor GA Prompt/PII Firewall + Smart Router (gemini-3.8-flash -80% Context Cache + gemini-3.1-pro) + RAG Vector Recall + GPU/TPU Stockout Finder, 14.4x SLO Error-Budget Release Freeze Gate + Golden-Signal Change Correlator + Chaos GameDay Harness, Active pg_stat_activity Lock-Tree & Spanner Hot-Key Inspector + CREATE INDEX CONCURRENTLY Advisor + 1.6s PITR Clone Proof, Unit Economics ($/1k req) + Zombie Resource Reaper + 98% Carbon-Free Energy Shifter, and Pod OOMKilled/CPU Right-Sizer + GKE Scale-Down Blocker Detector + STRICT mTLS Mesh Map + Golden-Path Service Scaffolder.',
+      'Embedded Contextual Helpers (PersonaContextualHelper.jsx): Every engineering studio (Overview, VPC & Firewalls, Global Map, IAM & Zero-Trust, Cloud Run, VMs, GKE, Cloud Functions, Cloud Storage, BigQuery, BigLake, Data Engineer, Cloud SQL/AlloyDB, Spanner Frontier, MCP Hub, SRE War-Room, FinOps, and Logs/Shell) embeds its matching contextual persona helper bar with live telemetry pills, 1-click live actions, and instant jump to the 10-Persona War-Room.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/enterprise-personas/overview (10-Persona Unified Telemetry & In-Memory Studio Cache)',
+      'POST /api/project/:id/enterprise-personas/action (10 Live Persona Actions across Compute, Run, BigQuery, SQL, Spanner, GKE, IAM, BinAuthz, NIC & Model Armor)',
+    ],
+    billingImpact:
+      '100% read-only control-plane inspection and zero-cost pre-flight validation; BigQuery DLQ replay uses tiny in-memory SELECT expressions well within the 1 TB/mo free tier.',
+  },
+  {
     id: 'wave16-autonomous-cloud-soc-and-zero-trust-soar-war-room',
     wave: 'WAVE 16 MOONSHOT · 20-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC & PURPLE-TEAM SOAR WAR-ROOM ($0.00/MO SIEM LICENSE TAX)',
     title:

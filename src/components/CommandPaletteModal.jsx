@@ -149,12 +149,12 @@ export default function CommandPaletteModal({
         }
       },
       {
-        id: 'open-five-persona-enterprise-board',
+        id: 'open-10-persona-enterprise-board',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open 5-Persona Enterprise Architecture Board (Architect, Cloud Eng, Data Eng, NetOps & DevSecOps)',
-        subtitle: 'Live Region Blackout SPOF Drill, Org Policies, ClickOps-to-GitOps .tf Exporter, Column Lineage & Quarantine DLQ Replay, 4-Hop Packet Tracer & Binary Authz + OIDC WIF',
-        keywords: '5 persona architect cloud engineer data engineer network engineer devsecops blackout spof org policy terraform import undo column lineage quarantine dlq packet connectivity trace ipam cidr binary authorization oidc workload identity',
-        badge: '5-PERSONA BOARD',
+        title: 'Open 10-Persona Enterprise Architecture Board & Contextual Studio Helpers (01 Architect -> 10 K8s/IDP)',
+        subtitle: 'All 10 Engineering Personas: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps, (06) AI/MLOps, (07) SRE Commander, (08) DBRE, (09) FinOps & GreenOps, (10) K8s & IDP Platform',
+        keywords: '10 persona 5 persona architect cloud engineer data engineer network engineer devsecops ai mlops sre commander dbre database reliability finops greenops kubernetes idp platform contextual helper blackout spof terraform lineage dlq packet trace oidc model armor slo freeze pitr',
+        badge: '10-PERSONA BOARD',
         badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
         icon: ShieldCheck,
         run: () => {

@@ -1472,20 +1472,14 @@ export default function Revolutionary2026Suite({
         />
       )}
 
-      {/* FLAGSHIP 5-PERSONA ENTERPRISE ARCHITECTURE BOARD & PRE-FLIGHT WAR-ROOM */}
+      {/* FLAGSHIP 10-PERSONA ENTERPRISE ARCHITECTURE BOARD & PRE-FLIGHT WAR-ROOM */}
       {String(subTab || '').startsWith('FIVE_PERSONA_') && (
         <FivePersonaCommandCenter
           projectId={projectId}
           initialPersona={
-            subTab === 'FIVE_PERSONA_CLOUD_ENG'
-              ? 'CLOUD_ENGINEER'
-              : subTab === 'FIVE_PERSONA_DATA_ENG'
-              ? 'DATA_ENGINEER'
-              : subTab === 'FIVE_PERSONA_NETOPS'
-              ? 'NETWORK_ENGINEER'
-              : subTab === 'FIVE_PERSONA_DEVSECOPS'
-              ? 'DEVSECOPS'
-              : 'ARCHITECT'
+            subTab === 'FIVE_PERSONA_COUNCIL'
+              ? 'ARCHITECT'
+              : String(subTab).replace('FIVE_PERSONA_', '')
           }
           onNavigateTab={onSelectStudioTab}
           onOpenBigQuerySql={onOpenBigQuerySql}
