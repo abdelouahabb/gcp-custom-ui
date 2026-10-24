@@ -85,7 +85,7 @@ import GdeStreamerPrivacyShield, {
 import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
 import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
-import WhyGcpWins10PillarStudio from './components/WhyGcpWins10PillarStudio';
+import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -3382,14 +3382,6 @@ function CloudPulseCockpit() {
       tip: 'Interactive 40-Region & 121-Zone Global Subsea Cable, Carbon Intensity & Chaos Failover Map with click-to-deploy',
       icon: Globe,
     },
-    {
-      id: 'WHY_GCP_WINS',
-      group: 'COMMAND',
-      label: 'Why GCP Wins (10x)',
-      isStar: true,
-      tip: '10 Practical Engineering Capabilities That Make AWS & Azure Architects Jealous: Live Cross-Cloud Tax Receipt, 1 Global VPC, Scale-to-$0 GPUs, $0 Reachability Prover, 168h BQ Time-Travel, Zero-Reboot VM Migration, 90d IAM Surgeon, Keyless WIF, 1-Click DR & Live API/Terraform Recorder',
-      icon: Sparkles,
-    },
 
     // II. Core Infrastructure, Compute & Serverless
     {
@@ -4104,7 +4096,6 @@ function CloudPulseCockpit() {
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
                             { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '18 Categorized Beyond-Console Labs' },
-                            { id: 'WHY_GCP_WINS', label: 'Why GCP Wins (10x)', meta: '10 Live AWS/Azure Jealousy Benchmarks' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                             { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
@@ -4263,16 +4254,6 @@ function CloudPulseCockpit() {
                 </div>
               )}
 
-              {activeTab === 'WHY_GCP_WINS' && (
-                <WhyGcpWins10PillarStudio
-                  projectId={selectedProjectId}
-                  onRunInShell={handleRunInShell}
-                  onSelectTab={(tabId) => setActiveTab(tabId)}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
-              )}
-
               {activeTab === 'INNOVATION_LAB' && (
                 <Revolutionary2026Suite
                   projectId={selectedProjectId}
@@ -4339,6 +4320,16 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="STORAGE"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <CloudStorageStudio
                     projectId={selectedProjectId}
                     onOpenProvision={handleOpenProvision}
@@ -4365,6 +4356,16 @@ function CloudPulseCockpit() {
                       if (sqlText) setBigQueryInitialSql(sqlText);
                     }}
                     onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="BIGQUERY"
+                    onRunInShell={handleRunInShell}
+                    onLoadBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                    }}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
@@ -4604,6 +4605,16 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="IAM"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <SovereignTimeMachineIamStudio
                     projectId={selectedProjectId}
                     initialSubTab={sovereignSubTab}
@@ -4683,6 +4694,16 @@ function CloudPulseCockpit() {
                       onShowError={setErrorBanner}
                     />
                   </div>
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="CLOUD_RUN"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <CloudRunFleetManager
                     projectId={selectedProjectId}
                     initialServices={overview?.cloudRunServices || []}
@@ -4751,6 +4772,16 @@ function CloudPulseCockpit() {
                       onShowError={setErrorBanner}
                     />
                   </div>
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="GKE_FINOPS"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <GkeFleetStudio
                     projectId={selectedProjectId}
                     onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}
@@ -4773,6 +4804,17 @@ function CloudPulseCockpit() {
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
                     onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="VM"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() => {
+                      fetchProjectOverview(selectedProjectId);
+                      setVmRefreshTrigger((c) => c + 1);
+                    }}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
@@ -4800,6 +4842,16 @@ function CloudPulseCockpit() {
                       handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
                     }
                     onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="VPC"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
@@ -4847,6 +4899,16 @@ function CloudPulseCockpit() {
                       onShowError={setErrorBanner}
                     />
                   </div>
+                  <StudioGcpAdvantageBar
+                    projectId={selectedProjectId}
+                    studioDomain="GKE_FINOPS"
+                    onRunInShell={handleRunInShell}
+                    onRefreshParent={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <BillingAccountCreditGuardian
                     projectId={selectedProjectId}
                     liveBurn={liveBurn}

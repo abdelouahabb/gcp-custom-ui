@@ -3087,11 +3087,11 @@ export default function GlobalNetworkWorldMap({
             {onSelectTab && (
               <button
                 type="button"
-                onClick={() => onSelectTab('WHY_GCP_WINS')}
+                onClick={() => onSelectTab('VPC_NETWORKS')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-extrabold cursor-pointer shadow-sm"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Why GCP Wins (10x AWS/Azure Benchmark)</span>
+                <span>Open Global VPC &amp; $0 Reachability Prover</span>
               </button>
             )}
             <button
