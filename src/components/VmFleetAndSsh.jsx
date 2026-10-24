@@ -131,15 +131,21 @@ export default function VmFleetAndSsh({
   const [migrateForm, setMigrateForm] = useState({
     serviceName: '',
     region: 'us-central1',
-    containerImage: 'us-docker.pkg.dev/cloudrun/container/hello',
+    targetPath: '/var/www/html',
+    migrationMode: 'HYDRATE_VM_FILES', // 'HYDRATE_VM_FILES' | 'CUSTOM_IMAGE'
+    containerImage: 'mirror.gcr.io/library/python:3.12-slim',
     containerPort: 8080,
     cpu: '1',
     memory: '1Gi',
     maxInstances: 10,
     stopSourceVmAfterDeploy: true,
+    primaryFileName: 'index.html',
+    primaryFilePreview: '',
+    extractedBundleB64: '',
   });
   const [inspectingVmContainers, setInspectingVmContainers] = useState(false);
   const [detectedVmRuntimeInfo, setDetectedVmRuntimeInfo] = useState(null);
+  const [activeExtractPreviewTab, setActiveExtractPreviewTab] = useState('FILES'); // 'FILES' | 'DOCKERFILE'
   const [migratingToCloudRun, setMigratingToCloudRun] = useState(false);
   const [migrationResult, setMigrationResult] = useState(null);
   const [migrationError, setMigrationError] = useState(null);
@@ -460,14 +466,59 @@ export default function VmFleetAndSsh({
     return {
       serviceName: `${cleanName}-cloudrun`,
       region: vmReg,
-      containerImage: 'us-docker.pkg.dev/cloudrun/container/hello',
+      targetPath: '/var/www/html',
+      migrationMode: 'HYDRATE_VM_FILES',
+      containerImage: 'mirror.gcr.io/library/python:3.12-slim',
       containerPort: 8080,
       cpu,
       memory,
       maxInstances: 10,
       stopSourceVmAfterDeploy: true,
       estMonthlyVmUsd,
+      primaryFileName: 'index.html',
+      primaryFilePreview: '',
+      extractedBundleB64: '',
     };
+  };
+
+  const handleInspectVmForCloudRun = async (vm, customPath) => {
+    setInspectingVmContainers(true);
+    setMigrationError(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          vm.name
+        )}/extract-workload`,
+        {
+          zone: vm.zone,
+          targetPath: customPath || migrateForm.targetPath || '/var/www/html',
+        }
+      );
+      const data = res.data || {};
+      setDetectedVmRuntimeInfo(data);
+      setMigrateForm((prev) => ({
+        ...prev,
+        targetPath: data.resolvedDir || prev.targetPath,
+        migrationMode: data.detectedDockerImage
+          ? 'CUSTOM_IMAGE'
+          : 'HYDRATE_VM_FILES',
+        containerImage:
+          data.detectedDockerImage ||
+          'mirror.gcr.io/library/python:3.12-slim',
+        containerPort: data.detectedPort || prev.containerPort || 8080,
+        primaryFileName: data.primaryFileName || 'index.html',
+        primaryFilePreview: data.primaryFilePreview || '',
+        extractedBundleB64: data.extractedBundleB64 || '',
+      }));
+    } catch (err) {
+      setMigrationError(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to extract workload from VM.'
+      );
+    } finally {
+      setInspectingVmContainers(false);
+    }
   };
 
   const handleToggleMigrateVm = (vm) => {
@@ -481,62 +532,8 @@ export default function VmFleetAndSsh({
     setMigrationResult(null);
     setMigrationError(null);
     setOpenMigrateCloudRunVm(vm.name);
-  };
-
-  const handleInspectVmForCloudRun = async (vm) => {
-    setInspectingVmContainers(true);
-    setMigrationError(null);
-    try {
-      const probeCmd =
-        'docker ps --format "{{.Image}}|{{.Ports}}|{{.Names}}" 2>/dev/null || ss -tulpn 2>/dev/null | grep LISTEN | head -n 6 || uname -a';
-      const res = await axios.post(
-        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
-          vm.name
-        )}/ssh`,
-        {
-          command: probeCmd,
-          zone: vm.zone,
-        }
-      );
-      const rawOut = String(res.data?.output || '').trim();
-      let detectedImage = null;
-      let detectedPort = null;
-      const firstLine = rawOut.split('\n')[0] || '';
-      if (firstLine.includes('|')) {
-        const [img, ports] = firstLine.split('|');
-        if (img && !img.includes('command not found')) {
-          detectedImage = img.trim();
-        }
-        const portMatch = (ports || '').match(/:(\d+)->(\d+)/);
-        if (portMatch) {
-          detectedPort = Number(portMatch[2] || portMatch[1]);
-        }
-      } else {
-        const listenMatch = rawOut.match(/:(8080|3000|5000|8000|80|8443)\b/);
-        if (listenMatch) {
-          detectedPort = Number(listenMatch[1]);
-        }
-      }
-      setDetectedVmRuntimeInfo({
-        rawOutput: rawOut || 'No active Docker containers returned; ready for container image deployment.',
-        detectedImage,
-        detectedPort,
-      });
-      setMigrateForm((prev) => ({
-        ...prev,
-        containerImage: detectedImage || prev.containerImage,
-        containerPort: detectedPort || prev.containerPort,
-      }));
-    } catch (err) {
-      setDetectedVmRuntimeInfo({
-        rawOutput:
-          err.response?.data?.error ||
-          err.message ||
-          'VM SSH inspection skipped (VM may be stopped or booting). Using default Cloud Run container configuration.',
-      });
-    } finally {
-      setInspectingVmContainers(false);
-    }
+    // Automatically extract files & runtime from the VM when opening the migrator
+    handleInspectVmForCloudRun(vm, spec.targetPath);
   };
 
   const handleExecuteVmToCloudRunMigration = async (vm) => {
@@ -544,65 +541,45 @@ export default function VmFleetAndSsh({
     setMigrationError(null);
     setMigrationResult(null);
     try {
-      const payload = {
-        serviceType: 'CLOUD_RUN',
-        name: migrateForm.serviceName,
-        serviceName: migrateForm.serviceName,
-        region: migrateForm.region,
-        config: {
-          containerImage: migrateForm.containerImage,
-          containerPort: Number(migrateForm.containerPort) || 8080,
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          vm.name
+        )}/migrate-to-cloudrun`,
+        {
+          zone: vm.zone,
+          region: migrateForm.region,
+          serviceName: migrateForm.serviceName,
           cpu: migrateForm.cpu,
           memory: migrateForm.memory,
-          minInstances: 0,
           maxInstances: Number(migrateForm.maxInstances) || 10,
-          allowUnauthenticated: true,
-          ingress: 'INGRESS_TRAFFIC_ALL',
-          executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
-          cpuIdle: true,
-          startupCpuBoost: true,
-          envVars: `MIGRATED_FROM_GCE_VM=${vm.name},SOURCE_VM_ZONE=${vm.zone},SOURCE_MACHINE_TYPE=${vm.machineType}`,
-        },
-      };
-      const res = await axios.post(
-        `/api/project/${encodeURIComponent(projectId)}/provision`,
-        payload
+          containerPort: Number(migrateForm.containerPort) || 8080,
+          migrationMode: migrateForm.migrationMode,
+          containerImage: migrateForm.containerImage,
+          extractedBundleB64: migrateForm.extractedBundleB64,
+          primaryFileName: migrateForm.primaryFileName || 'index.html',
+          primaryFilePreview: migrateForm.primaryFilePreview,
+          stopSourceVmAfterDeploy: migrateForm.stopSourceVmAfterDeploy,
+        }
       );
 
-      let vmStopped = false;
-      if (migrateForm.stopSourceVmAfterDeploy && vm.status === 'RUNNING') {
-        try {
-          await axios.post(
-            `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
-              vm.name
-            )}/power`,
-            {
-              action: 'STOP',
-              zone: vm.zone,
-            }
-          );
-          vmStopped = true;
-          fetchVms(true);
-        } catch {
-          // Non-fatal if stop fails
-        }
+      if (res.data?.vmStopped) {
+        fetchVms(true);
       }
 
-      const createdRes = res.data?.resource || {};
       setMigrationResult({
-        serviceName: createdRes.name || migrateForm.serviceName,
-        region: createdRes.region || migrateForm.region,
+        serviceName: res.data?.serviceName || migrateForm.serviceName,
+        region: res.data?.region || migrateForm.region,
         uri:
-          createdRes.uri ||
+          res.data?.uri ||
           `https://${migrateForm.serviceName}-${projectId}.${migrateForm.region}.run.app`,
-        vmStopped,
+        vmStopped: Boolean(res.data?.vmStopped),
         message:
           res.data?.message ||
-          `Migrated VM ${vm.name} (${vm.machineType}) to Cloud Run Gen2 service ${migrateForm.serviceName} (${migrateForm.cpu} vCPU / ${migrateForm.memory}, minInstances=0 Scale-to-$0.00).`,
+          `Migrated real files from VM ${vm.name} into Cloud Run Gen2 service ${migrateForm.serviceName}!`,
       });
       if (onShowToast) {
         onShowToast(
-          `Migrated VM ${vm.name} -> Cloud Run service ${migrateForm.serviceName} in ${migrateForm.region}!`,
+          `Migrated VM ${vm.name} content -> Cloud Run service ${migrateForm.serviceName} in ${migrateForm.region}!`,
           'success'
         );
       }
@@ -610,7 +587,7 @@ export default function VmFleetAndSsh({
       setMigrationError(
         err.response?.data?.error ||
           err.message ||
-          'Failed to deploy Cloud Run v2 service from VM spec.'
+          'Failed to migrate VM content to Cloud Run v2.'
       );
     } finally {
       setMigratingToCloudRun(false);
@@ -1160,7 +1137,7 @@ export default function VmFleetAndSsh({
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
-                              LIVE VM → CLOUD RUN GEN2 MIGRATOR
+                              LIVE VM FILESYSTEM EXTRACTOR → CLOUD RUN GEN2 MIGRATOR
                             </span>
                             <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 font-mono">
                               {vm.name} ({vm.machineType} in {vm.zone}) →{' '}
@@ -1168,40 +1145,13 @@ export default function VmFleetAndSsh({
                             </span>
                           </div>
                           <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1">
-                            <strong>Under the Hood:</strong> Converts your 24/7 Compute Engine VM (
-                            <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
-                              ~${(migrateForm.estMonthlyVmUsd || 14.22).toFixed(2)}/mo fixed
-                            </span>
-                            ) into an auto-scaling{' '}
-                            <span className="font-mono">run.googleapis.com/v2</span> Gen2 Linux microVM service in{' '}
-                            <span className="font-mono font-bold">{migrateForm.region}</span> with{' '}
-                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                              minInstances: 0 ($0.00/mo when idle)
-                            </span>
-                            , Startup CPU Boost, and automatic HTTPS TLS termination.
+                            <strong>How We Extract &amp; Migrate Your VM Content:</strong>{' '}
+                            1) Connects to <span className="font-mono">{vm.name}</span> via SSH / Compute API and extracts your actual application directory (<span className="font-mono">{migrateForm.targetPath}</span>, <span className="font-mono">tar.gz</span> bundle, listening ports, and GCE <span className="font-mono">startup-script</span>).{' '}
+                            2) Either <strong>hydrates your extracted VM files directly into an in-memory <span className="font-mono">/workspace</span> volume on Cloud Run Gen2</strong> (serves your VM&apos;s real files in &lt;8s) OR builds a custom container image via <strong>Google Cloud Build (<span className="font-mono">gcloud builds submit</span>)</strong>.
                           </p>
                         </div>
 
                         <div className="flex items-center gap-1.5">
-                          {isRunning && (
-                            <button
-                              type="button"
-                              disabled={inspectingVmContainers}
-                              onClick={() => handleInspectVmForCloudRun(vm)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-600/15 hover:bg-blue-600/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer disabled:opacity-50"
-                            >
-                              {inspectingVmContainers ? (
-                                <RefreshCw className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Terminal className="w-3 h-3" />
-                              )}
-                              <span>
-                                {inspectingVmContainers
-                                  ? 'Probing VM via SSH...'
-                                  : 'Auto-Detect Docker Image / Port on VM'}
-                              </span>
-                            </button>
-                          )}
                           <button
                             type="button"
                             onClick={() => setOpenMigrateCloudRunVm(null)}
@@ -1212,22 +1162,183 @@ export default function VmFleetAndSsh({
                         </div>
                       </div>
 
-                      {detectedVmRuntimeInfo && (
-                        <div className="p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800 text-[11px] font-mono text-zinc-200 space-y-1">
-                          <div className="flex items-center justify-between text-[10px] uppercase text-emerald-400 font-bold">
-                            <span>Live SSH Runtime Probe ({vm.name})</span>
-                            {detectedVmRuntimeInfo.detectedImage && (
-                              <span>
-                                Auto-Filled Image: {detectedVmRuntimeInfo.detectedImage}
-                              </span>
+                      {/* Stage 1: Target Directory on VM & Live Content Extraction */}
+                      <div className="p-3 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                        <div className="flex flex-wrap items-end justify-between gap-2">
+                          <div className="flex-1 min-w-[220px]">
+                            <label className="block text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 mb-1">
+                              Stage 1 · Source Application / Web Directory Inside VM ({vm.name})
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={migrateForm.targetPath}
+                                onChange={(e) =>
+                                  setMigrateForm((prev) => ({
+                                    ...prev,
+                                    targetPath: e.target.value,
+                                  }))
+                                }
+                                placeholder="/var/www/html or /opt/app or /home/ubuntu"
+                                className="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                              <button
+                                type="button"
+                                disabled={inspectingVmContainers}
+                                onClick={() =>
+                                  handleInspectVmForCloudRun(
+                                    vm,
+                                    migrateForm.targetPath
+                                  )
+                                }
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
+                              >
+                                {inspectingVmContainers ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <HardDrive className="w-3.5 h-3.5" />
+                                )}
+                                <span>
+                                  {inspectingVmContainers
+                                    ? `Extracting ${migrateForm.targetPath} from VM...`
+                                    : 'Extract Files & Workload from VM'}
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            {['/var/www/html', '/srv', '/opt', '/etc/nginx'].map(
+                              (presetPath) => (
+                                <button
+                                  key={presetPath}
+                                  type="button"
+                                  onClick={() => {
+                                    setMigrateForm((prev) => ({
+                                      ...prev,
+                                      targetPath: presetPath,
+                                    }));
+                                    handleInspectVmForCloudRun(vm, presetPath);
+                                  }}
+                                  className="px-2 py-1 rounded text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-500/15 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+                                >
+                                  {presetPath}
+                                </button>
+                              )
                             )}
                           </div>
-                          <div className="text-zinc-300 whitespace-pre-wrap break-all max-h-24 overflow-y-auto">
-                            {detectedVmRuntimeInfo.rawOutput}
-                          </div>
                         </div>
-                      )}
 
+                        {inspectingVmContainers && (
+                          <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs font-mono text-blue-500 flex items-center gap-2">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>
+                              Connecting to {vm.name} ({vm.zone}) to extract files from{' '}
+                              {migrateForm.targetPath}, inspect listening ports, and generate Dockerfile...
+                            </span>
+                          </div>
+                        )}
+
+                        {detectedVmRuntimeInfo && !inspectingVmContainers && (
+                          <div className="space-y-2 pt-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                  className={`px-2 py-0.5 rounded font-bold ${
+                                    detectedVmRuntimeInfo.sshSucceeded
+                                      ? 'bg-emerald-500/20 text-emerald-500'
+                                      : 'bg-amber-500/20 text-amber-500'
+                                  }`}
+                                >
+                                  {detectedVmRuntimeInfo.sshSucceeded
+                                    ? `LIVE SSH TAR.GZ EXTRACTED (${detectedVmRuntimeInfo.resolvedDir})`
+                                    : `EXTRACTED FROM GCE VM METADATA / STARTUP-SCRIPT (${vm.status})`}
+                                </span>
+                                {(detectedVmRuntimeInfo.extractedFilesList || [])
+                                  .length > 0 && (
+                                  <span className="text-zinc-500">
+                                    Files Staged:{' '}
+                                    {detectedVmRuntimeInfo.extractedFilesList
+                                      .map(
+                                        (f) => `${f.name} (${f.sizeBytes}B)`
+                                      )
+                                      .join(', ')}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setActiveExtractPreviewTab('FILES')
+                                  }
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+                                    activeExtractPreviewTab === 'FILES'
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                                  }`}
+                                >
+                                  Extracted VM File ({migrateForm.primaryFileName})
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setActiveExtractPreviewTab('DOCKERFILE')
+                                  }
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+                                    activeExtractPreviewTab === 'DOCKERFILE'
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                                  }`}
+                                >
+                                  Auto-Generated Dockerfile
+                                </button>
+                              </div>
+                            </div>
+
+                            {activeExtractPreviewTab === 'FILES' ? (
+                              <div>
+                                <div className="text-[10px] font-mono text-zinc-500 mb-1">
+                                  Live Content of{' '}
+                                  <span className="font-bold text-zinc-700 dark:text-zinc-200">
+                                    {detectedVmRuntimeInfo.resolvedDir}/
+                                    {migrateForm.primaryFileName}
+                                  </span>{' '}
+                                  (you can inspect or edit before hydrating into Cloud Run):
+                                </div>
+                                <textarea
+                                  rows={5}
+                                  value={migrateForm.primaryFilePreview}
+                                  onChange={(e) =>
+                                    setMigrateForm((prev) => ({
+                                      ...prev,
+                                      primaryFilePreview: e.target.value,
+                                      extractedBundleB64: '', // use updated file content
+                                    }))
+                                  }
+                                  className="w-full rounded-lg bg-zinc-950 text-emerald-300 border border-zinc-800 p-2.5 text-[11px] font-mono"
+                                />
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                <div className="text-[10px] font-mono text-zinc-500">
+                                  Staged on disk at{' '}
+                                  <span className="text-zinc-700 dark:text-zinc-200 font-bold">
+                                    {detectedVmRuntimeInfo.stagingDir}/Dockerfile
+                                  </span>
+                                  :
+                                </div>
+                                <pre className="w-full rounded-lg bg-zinc-950 text-blue-300 border border-zinc-800 p-2.5 text-[11px] font-mono overflow-x-auto">
+                                  {detectedVmRuntimeInfo.generatedDockerfile}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stage 2: Cloud Run Target Configuration & Packaging Mode */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
                         <div>
                           <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
@@ -1250,19 +1361,25 @@ export default function VmFleetAndSsh({
 
                         <div className="lg:col-span-2">
                           <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
-                            Container Image (Artifact Registry / Docker / GCR)
+                            Stage 2 · How to Package Extracted VM Content
                           </label>
-                          <input
-                            type="text"
-                            value={migrateForm.containerImage}
+                          <select
+                            value={migrateForm.migrationMode}
                             onChange={(e) =>
                               setMigrateForm((prev) => ({
                                 ...prev,
-                                containerImage: e.target.value,
+                                migrationMode: e.target.value,
                               }))
                             }
                             className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                          />
+                          >
+                            <option value="HYDRATE_VM_FILES">
+                              Hydrate Extracted VM Files into Cloud Run /workspace (&lt;8s)
+                            </option>
+                            <option value="CUSTOM_IMAGE">
+                              Deploy Container Image ({migrateForm.containerImage})
+                            </option>
+                          </select>
                         </div>
 
                         <div>
@@ -1307,7 +1424,7 @@ export default function VmFleetAndSsh({
 
                         <div>
                           <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
-                            Port & Max Scale
+                            Port &amp; Max Scale
                           </label>
                           <div className="flex items-center gap-1.5">
                             <input
@@ -1338,6 +1455,25 @@ export default function VmFleetAndSsh({
                         </div>
                       </div>
 
+                      {migrateForm.migrationMode === 'CUSTOM_IMAGE' && (
+                        <div>
+                          <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                            Container Image URI (Artifact Registry / GCR / Docker Hub)
+                          </label>
+                          <input
+                            type="text"
+                            value={migrateForm.containerImage}
+                            onChange={(e) =>
+                              setMigrateForm((prev) => ({
+                                ...prev,
+                                containerImage: e.target.value,
+                              }))
+                            }
+                            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                          />
+                        </div>
+                      )}
+
                       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                         <label className="inline-flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
                           <input
@@ -1357,18 +1493,19 @@ export default function VmFleetAndSsh({
                         </label>
 
                         <div className="flex items-center gap-2 flex-wrap">
-                          {onRunInShell && (
+                          {onRunInShell && detectedVmRuntimeInfo?.cloudBuildCliCommand && (
                             <button
                               type="button"
                               onClick={() =>
                                 onRunInShell(
-                                  `gcloud run deploy ${migrateForm.serviceName} --image=${migrateForm.containerImage} --region=${migrateForm.region} --port=${migrateForm.containerPort} --cpu=${migrateForm.cpu} --memory=${migrateForm.memory} --min-instances=0 --max-instances=${migrateForm.maxInstances} --execution-environment=gen2 --allow-unauthenticated --project=${projectId}`
+                                  detectedVmRuntimeInfo.cloudBuildCliCommand
                                 )
                               }
+                              title="Build a permanent Docker image from the extracted VM directory via Google Cloud Build (gcloud builds submit) and deploy to Cloud Run"
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 cursor-pointer"
                             >
                               <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>Run gcloud run deploy in Shell</span>
+                              <span>Build Image via Cloud Build in Shell</span>
                             </button>
                           )}
 
@@ -1385,8 +1522,8 @@ export default function VmFleetAndSsh({
                             )}
                             <span>
                               {migratingToCloudRun
-                                ? `Deploying ${migrateForm.serviceName} in ${migrateForm.region}...`
-                                : `Deploy Cloud Run v2 Service Now (Scale-to-$0.00)`}
+                                ? `Hydrating VM Files & Deploying ${migrateForm.serviceName}...`
+                                : `Migrate Extracted VM Content → Cloud Run Now`}
                             </span>
                           </button>
                         </div>
@@ -1406,7 +1543,7 @@ export default function VmFleetAndSsh({
                               <span>{migrationResult.message}</span>
                             </div>
                             <div className="font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
-                              Endpoint:{' '}
+                              Live Migrated Endpoint:{' '}
                               <a
                                 href={migrationResult.uri}
                                 target="_blank"

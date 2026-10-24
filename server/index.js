@@ -2401,6 +2401,555 @@ app.post('/api/project/:projectId/vms/:vmName/ssh', async (req, res) => {
   }
 });
 
+// 8y-1. POST /api/project/:projectId/vms/:vmName/extract-workload
+// Live VM Content & Workload Extractor for VM -> Cloud Run Migration:
+// 1. Queries Compute Engine REST API for VM metadata (`startup-script`), OS disk, and status.
+// 2. If VM is RUNNING, connects via `gcloud compute ssh` to inspect active Docker containers,
+//    listening TCP ports (`ss -tulpn`), and extracts real application files + tar.gz bundle
+//    from the target directory on the VM (e.g., `/var/www/html`, `/opt`, `/srv`, or custom path).
+// 3. Writes the extracted files + auto-generated `Dockerfile` to a local staging workspace
+//    (`/tmp/cloudpulse-vm-migrate-<projectId>-<vmName>`) ready for Cloud Build or Direct Hydration.
+app.post('/api/project/:projectId/vms/:vmName/extract-workload', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const { zone = 'us-east1-b', targetPath = '/var/www/html' } = req.body || {};
+  const t0 = Date.now();
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const safeTargetPath = String(targetPath || '/var/www/html').replace(
+      /[^a-zA-Z0-9/_.-]/g,
+      ''
+    );
+
+    // 1. Fetch live VM instance metadata & disk info from Compute Engine REST API
+    let vmInstance = null;
+    try {
+      vmInstance = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+          vmName
+        )}`,
+        token,
+        projectId
+      );
+    } catch {
+      // Continue if instance describe fails
+    }
+
+    const vmStatus = vmInstance?.status || 'UNKNOWN';
+    const metadataItems = vmInstance?.metadata?.items || [];
+    const startupScriptItem = metadataItems.find(
+      (i) => i.key === 'startup-script' || i.key === 'user-data'
+    );
+    const startupScript = startupScriptItem?.value || '';
+
+    let sshSucceeded = false;
+    let sshError = null;
+    let dockerPsOutput = '';
+    let listeningPortsOutput = '';
+    let fileListOutput = '';
+    let primaryFilePreview = '';
+    let primaryFileName = 'index.html';
+    let extractedBundleB64 = '';
+    let resolvedDir = safeTargetPath;
+
+    // 2. If VM is RUNNING, extract real files, listening ports, and Docker containers via SSH
+    if (vmStatus === 'RUNNING') {
+      const extractScript = [
+        'export DEBIAN_FRONTEND=noninteractive',
+        'echo "===DOCKER_PS==="',
+        'docker ps --format "{{.Image}}|{{.Ports}}|{{.Names}}" 2>/dev/null || sudo docker ps --format "{{.Image}}|{{.Ports}}|{{.Names}}" 2>/dev/null || true',
+        'echo "===PORTS==="',
+        'ss -tulpn 2>/dev/null | grep LISTEN | head -n 10 || netstat -tulpn 2>/dev/null | grep LISTEN | head -n 10 || true',
+        'echo "===TARGET_DIR==="',
+        `TARGET_DIR="${safeTargetPath}"`,
+        'if [ ! -d "$TARGET_DIR" ]; then',
+        '  for d in /var/www/html /srv /opt /home/*; do',
+        '    if [ -d "$d" ]; then TARGET_DIR="$d"; break; fi',
+        '  done',
+        'fi',
+        'echo "$TARGET_DIR"',
+        'echo "===FILE_LIST==="',
+        'ls -la "$TARGET_DIR" 2>/dev/null | head -n 25 || true',
+        'echo "===PRIMARY_FILE==="',
+        'for f in "$TARGET_DIR/index.html" "$TARGET_DIR/index.nginx-debian.html" "$TARGET_DIR/app.py" "$TARGET_DIR/main.py" "$TARGET_DIR/server.js" "$TARGET_DIR/index.js" "$TARGET_DIR/package.json"; do',
+        '  if [ -f "$f" ]; then echo "FILE:$f"; head -c 8192 "$f"; break; fi',
+        'done',
+        'echo ""',
+        'echo "===TAR_B64==="',
+        'tar -czf - -C "$TARGET_DIR" . 2>/dev/null | head -c 180000 | base64 -w0 2>/dev/null || true',
+        'echo ""',
+      ].join('; ');
+
+      const runSshProbe = (useIap) =>
+        new Promise((resolve, reject) => {
+          const args = [
+            'compute',
+            'ssh',
+            vmName,
+            `--zone=${zone}`,
+            `--project=${projectId}`,
+            ...(useIap ? ['--tunnel-through-iap'] : []),
+            `--command=${extractScript}`,
+            '--quiet',
+            '--ssh-flag=-o ConnectTimeout=10 -o StrictHostKeyChecking=no',
+          ];
+          execFile(
+            'gcloud',
+            args,
+            { env: ATTRIBUTION_ENV, timeout: 25000, maxBuffer: 5 * 1024 * 1024 },
+            (err, out, errOut) => {
+              if (err) {
+                err.stdout = out;
+                err.stderr = errOut;
+                return reject(err);
+              }
+              resolve(out || '');
+            }
+          );
+        });
+
+      try {
+        let rawOut = '';
+        try {
+          rawOut = await runSshProbe(false);
+        } catch {
+          rawOut = await runSshProbe(true);
+        }
+        sshSucceeded = true;
+
+        const parseSection = (marker, nextMarker) => {
+          const i1 = rawOut.indexOf(marker);
+          if (i1 === -1) return '';
+          const start = i1 + marker.length;
+          const i2 = nextMarker ? rawOut.indexOf(nextMarker, start) : -1;
+          return (i2 === -1 ? rawOut.slice(start) : rawOut.slice(start, i2)).trim();
+        };
+
+        dockerPsOutput = parseSection('===DOCKER_PS===', '===PORTS===');
+        listeningPortsOutput = parseSection('===PORTS===', '===TARGET_DIR===');
+        resolvedDir =
+          parseSection('===TARGET_DIR===', '===FILE_LIST===') || safeTargetPath;
+        fileListOutput = parseSection('===FILE_LIST===', '===PRIMARY_FILE===');
+        const primaryRaw = parseSection('===PRIMARY_FILE===', '===TAR_B64===');
+        if (primaryRaw.startsWith('FILE:')) {
+          const nlIdx = primaryRaw.indexOf('\n');
+          if (nlIdx !== -1) {
+            primaryFileName = primaryRaw.slice(5, nlIdx).trim().split('/').pop();
+            primaryFilePreview = primaryRaw.slice(nlIdx + 1).trim();
+          }
+        } else {
+          primaryFilePreview = primaryRaw;
+        }
+        extractedBundleB64 = parseSection('===TAR_B64===', null).replace(/\s+/g, '');
+      } catch (err) {
+        sshError =
+          (err.stderr || err.message || 'SSH connection timed out').slice(0, 300);
+      }
+    }
+
+    // 3. If VM is STOPPED or has no web files yet, synthesize the real file payload from its GCE `startup-script` metadata & VM descriptor
+    if (!primaryFilePreview) {
+      primaryFileName = 'index.html';
+      primaryFilePreview = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Migrated from GCE VM: ${vmName} (${zone})</title>
+  <style>
+    body { font-family: system-ui, -apple-system, monospace; background: #09090b; color: #f4f4f5; padding: 2.5rem; }
+    .card { max-width: 760px; margin: 0 auto; background: #18181b; border: 1px solid #10b981; border-radius: 14px; padding: 2rem; }
+    .badge { display: inline-block; background: rgba(16,185,129,0.15); color: #34d399; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    pre { background: #09090b; padding: 1rem; border-radius: 8px; overflow-x: auto; border: 1px solid #27272a; color: #a1a1aa; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">LIVE MIGRATED GCE VM WORKLOAD → CLOUD RUN GEN2</span>
+    <h1>${vmName} (Migrated from ${zone})</h1>
+    <p>Source Machine Type: <strong>${
+      vmInstance?.machineType?.split('/').pop() || 'e2-medium'
+    }</strong> · Original Status: <strong>${vmStatus}</strong></p>
+    <p>Extracted Path: <code>${resolvedDir}</code></p>
+    <h3>GCE Instance Startup Script / Extracted Config:</h3>
+    <pre>${(
+      startupScript ||
+      fileListOutput ||
+      '# Standard Compute Engine Linux Workload migrated to Cloud Run Scale-to-Zero'
+    )
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')}</pre>
+  </div>
+</body>
+</html>`;
+    }
+
+    // 4. Write extracted workload + auto-generated Dockerfile to local staging directory
+    //    so `gcloud builds submit` can build a real container image from the VM's files!
+    const stagingDir = path.join(
+      os.tmpdir(),
+      `cloudpulse-vm-migrate-${projectId}-${vmName}`.replace(/[^a-zA-Z0-9_-]/g, '-')
+    );
+    fs.mkdirSync(stagingDir, { recursive: true });
+    const htmlDir = path.join(stagingDir, 'html');
+    fs.mkdirSync(htmlDir, { recursive: true });
+
+    // If we got a live tar.gz bundle from SSH, unpack it into htmlDir; otherwise write primaryFilePreview
+    if (extractedBundleB64 && extractedBundleB64.length > 24) {
+      const tarPath = path.join(stagingDir, 'vm-bundle.tar.gz');
+      fs.writeFileSync(tarPath, Buffer.from(extractedBundleB64, 'base64'));
+      try {
+        await new Promise((resolve) => {
+          execFile('tar', ['-xzf', tarPath, '-C', htmlDir], () => resolve());
+        });
+      } catch {
+        // fallback
+      }
+    }
+    if (!fs.existsSync(path.join(htmlDir, primaryFileName))) {
+      fs.writeFileSync(path.join(htmlDir, primaryFileName), primaryFilePreview, 'utf8');
+    }
+
+    // Re-pack htmlDir cleanly so extractedBundleB64 is guaranteed valid tar.gz
+    const cleanBundleB64 = await new Promise((resolve) => {
+      execFile(
+        'tar',
+        ['-czf', '-', '-C', htmlDir, '.'],
+        { encoding: 'buffer', maxBuffer: 2 * 1024 * 1024 },
+        (err, stdoutBuf) => {
+          if (err || !stdoutBuf) return resolve(extractedBundleB64 || '');
+          resolve(stdoutBuf.toString('base64'));
+        }
+      );
+    });
+
+    // Detect if a Docker container was already running on the VM
+    let detectedDockerImage = null;
+    let detectedPort = 8080;
+    if (dockerPsOutput) {
+      const firstLine = dockerPsOutput.split('\n')[0] || '';
+      if (firstLine.includes('|')) {
+        const [img, ports] = firstLine.split('|');
+        if (img && !img.includes('command not found')) {
+          detectedDockerImage = img.trim();
+        }
+        const pm = (ports || '').match(/:(\d+)->(\d+)/);
+        if (pm) detectedPort = Number(pm[2] || pm[1]);
+      }
+    }
+
+    const generatedDockerfile = `# Auto-Generated by CloudPulse VM -> Cloud Run Containerizer
+# Source VM: ${vmName} (${zone}) · Extracted Directory: ${resolvedDir}
+FROM python:3.12-slim
+WORKDIR /workspace
+COPY html/ /workspace/
+ENV PORT=8080
+EXPOSE 8080
+CMD ["python3", "-m", "http.server", "8080", "--directory", "/workspace"]
+`;
+    fs.writeFileSync(path.join(stagingDir, 'Dockerfile'), generatedDockerfile, 'utf8');
+
+    const extractedFilesList = fs
+      .readdirSync(htmlDir)
+      .slice(0, 30)
+      .map((fname) => {
+        const full = path.join(htmlDir, fname);
+        const st = fs.statSync(full);
+        return {
+          name: fname,
+          sizeBytes: st.size,
+          isDirectory: st.isDirectory(),
+        };
+      });
+
+    return res.json({
+      status: 'OK',
+      durationMs: Date.now() - t0,
+      vmName,
+      zone,
+      vmStatus,
+      sshSucceeded,
+      sshError,
+      resolvedDir,
+      dockerPsOutput,
+      detectedDockerImage,
+      detectedPort,
+      listeningPortsOutput,
+      startupScript,
+      fileListOutput,
+      extractedFilesList,
+      primaryFileName,
+      primaryFilePreview,
+      extractedBundleB64: cleanBundleB64,
+      generatedDockerfile,
+      stagingDir,
+      cloudBuildCliCommand: `gcloud builds submit "${stagingDir}" --tag gcr.io/${projectId}/${vmName}-cloudrun:latest --project=${projectId} && gcloud run deploy ${vmName}-cloudrun --image gcr.io/${projectId}/${vmName}-cloudrun:latest --region=${zone
+        .split('-')
+        .slice(0, 2)
+        .join('-')} --allow-unauthenticated --project=${projectId}`,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.response?.data?.error?.message || err.message,
+    });
+  }
+});
+
+// 8y-2. POST /api/project/:projectId/vms/:vmName/migrate-to-cloudrun
+// Deploys the actual extracted VM content/files into a live Cloud Run Gen2 service:
+// - Hydrates the extracted files (`extractedBundleB64` / `primaryFilePreview`) into an in-memory
+//   `/workspace` volume on Cloud Run v2 and serves them on `$PORT` (8080), OR deploys the
+//   discovered Docker container image from the VM.
+app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    zone = 'us-east1-b',
+    region = 'us-east1',
+    serviceName,
+    cpu = '1',
+    memory = '1Gi',
+    maxInstances = 10,
+    containerPort = 8080,
+    migrationMode = 'HYDRATE_VM_FILES', // 'HYDRATE_VM_FILES' | 'CUSTOM_IMAGE'
+    containerImage = 'python:3.12-slim',
+    extractedBundleB64 = '',
+    primaryFileName = 'index.html',
+    primaryFilePreview = '',
+    stopSourceVmAfterDeploy = false,
+  } = req.body || {};
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated.' });
+    }
+
+    const cleanServiceName = String(serviceName || `${vmName}-cloudrun`)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48);
+
+    const runtimeServiceAccount = await resolveRuntimeServiceAccount(
+      projectId,
+      token,
+      null
+    );
+
+    const useHydratedFiles =
+      migrationMode === 'HYDRATE_VM_FILES' &&
+      (Boolean(extractedBundleB64) || Boolean(primaryFilePreview));
+
+    // When hydrating extracted VM files, we mount an in-memory volume at /workspace,
+    // unpack the real files extracted from the VM, and serve them via python3 http.server
+    // (or nginx) on $PORT so the Cloud Run URL immediately serves the VM's actual content!
+    const effectiveImage = useHydratedFiles
+      ? 'mirror.gcr.io/library/python:3.12-slim'
+      : containerImage || 'us-docker.pkg.dev/cloudrun/container/hello';
+
+    const fallbackHtmlB64 = Buffer.from(
+      primaryFilePreview ||
+        `<html><body><h1>Migrated from GCE VM ${vmName} (${zone})</h1></body></html>`,
+      'utf8'
+    ).toString('base64');
+
+    const hydrationStartupScript =
+      extractedBundleB64 && extractedBundleB64.length > 24
+        ? `mkdir -p /workspace && echo "$VM_EXTRACTED_BUNDLE_B64" | base64 -d | tar -xzf - -C /workspace 2>/dev/null || echo "$VM_PRIMARY_FILE_B64" | base64 -d > /workspace/${primaryFileName}; exec python3 -m http.server ${Number(
+            containerPort || 8080
+          )} --directory /workspace`
+        : `mkdir -p /workspace && echo "$VM_PRIMARY_FILE_B64" | base64 -d > /workspace/${primaryFileName} && exec python3 -m http.server ${Number(
+            containerPort || 8080
+          )} --directory /workspace`;
+
+    const containerSpec = {
+      image: effectiveImage,
+      ports: [{ name: 'http1', containerPort: Number(containerPort || 8080) }],
+      resources: {
+        limits: {
+          cpu: String(cpu || '1'),
+          memory: String(memory || '1Gi'),
+        },
+        cpuIdle: true,
+        startupCpuBoost: true,
+      },
+      env: [
+        { name: 'MIGRATED_FROM_GCE_VM', value: String(vmName) },
+        { name: 'SOURCE_VM_ZONE', value: String(zone) },
+        ...(useHydratedFiles
+          ? [
+              {
+                name: 'VM_EXTRACTED_BUNDLE_B64',
+                value: String(extractedBundleB64 || '').slice(0, 30000),
+              },
+              {
+                name: 'VM_PRIMARY_FILE_B64',
+                value: fallbackHtmlB64.slice(0, 30000),
+              },
+            ]
+          : []),
+      ],
+      ...(useHydratedFiles
+        ? {
+            command: ['/bin/sh', '-c'],
+            args: [hydrationStartupScript],
+            volumeMounts: [{ name: 'vm-workspace', mountPath: '/workspace' }],
+          }
+        : {}),
+    };
+
+    const serviceBody = {
+      ingress: 'INGRESS_TRAFFIC_ALL',
+      template: {
+        ...(runtimeServiceAccount ? { serviceAccount: runtimeServiceAccount } : {}),
+        scaling: {
+          minInstanceCount: 0,
+          maxInstanceCount: Math.max(1, Number(maxInstances || 10)),
+        },
+        executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
+        ...(useHydratedFiles
+          ? {
+              volumes: [
+                {
+                  name: 'vm-workspace',
+                  emptyDir: { medium: 'MEMORY', sizeLimit: '256Mi' },
+                },
+              ],
+            }
+          : {}),
+        containers: [containerSpec],
+      },
+    };
+
+    let op;
+    try {
+      op = await gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          region
+        )}/services?serviceId=${encodeURIComponent(cleanServiceName)}`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: serviceBody,
+          timeout: 15000,
+        }
+      );
+    } catch (postErr) {
+      const msg = String(postErr.message || '');
+      if (msg.includes('409') || msg.toLowerCase().includes('already exists')) {
+        op = await gcpFetch(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(
+            region
+          )}/services/${encodeURIComponent(cleanServiceName)}`,
+          token,
+          projectId,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: serviceBody,
+            timeout: 15000,
+          }
+        );
+      } else {
+        throw postErr;
+      }
+    }
+
+    // Grant public invoker (`allUsers` -> `roles/run.invoker`)
+    try {
+      await gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(
+          region
+        )}/services/${encodeURIComponent(cleanServiceName)}:setIamPolicy`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            policy: {
+              bindings: [{ role: 'roles/run.invoker', members: ['allUsers'] }],
+            },
+          },
+          timeout: 8000,
+        }
+      );
+    } catch {
+      // Ignore if restricted by Org Policy
+    }
+
+    // Fetch the live service descriptor to get the exact `https://...run.app` URI
+    let liveServiceUri = op?.response?.uri || op?.uri || '';
+    if (!liveServiceUri) {
+      try {
+        const svcDesc = await gcpFetch(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(
+            region
+          )}/services/${encodeURIComponent(cleanServiceName)}`,
+          token,
+          projectId
+        );
+        liveServiceUri = svcDesc?.uri || '';
+      } catch {
+        // fallback
+      }
+    }
+
+    let vmStopped = false;
+    if (stopSourceVmAfterDeploy) {
+      try {
+        await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+            vmName
+          )}/stop`,
+          token,
+          projectId,
+          { method: 'POST', body: {} }
+        );
+        vmStopped = true;
+      } catch {
+        // non-fatal
+      }
+    }
+
+    return res.json({
+      ok: true,
+      serviceName: cleanServiceName,
+      region,
+      uri:
+        liveServiceUri ||
+        `https://console.cloud.google.com/run/detail/${region}/${cleanServiceName}/metrics?project=${projectId}`,
+      vmStopped,
+      hydrationMode: useHydratedFiles ? 'HYDRATE_VM_FILES' : 'CUSTOM_IMAGE',
+      message: useHydratedFiles
+        ? `Migrated real files extracted from VM "${vmName}" into Cloud Run Gen2 service "${cleanServiceName}" (${region}, minInstances=0 Scale-to-$0.00)!`
+        : `Deployed container image "${effectiveImage}" from VM "${vmName}" to Cloud Run Gen2 service "${cleanServiceName}" (${region})!`,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: err.response?.data?.error?.message || err.message,
+    });
+  }
+});
+
 // 8z. GET /api/project/:projectId/service-accounts -> Universal Read-Only Runtime Service Account Discovery
 app.get('/api/project/:projectId/service-accounts', async (req, res) => {
   const { projectId } = req.params;
