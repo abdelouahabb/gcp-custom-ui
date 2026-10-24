@@ -46,6 +46,7 @@ import {
 import SortableKpiRow from './components/SortableKpiRow';
 import TelemetryCharts from './components/TelemetryCharts';
 import ResourceControlCenter from './components/ResourceControlCenter';
+import PersonaContextualHelper from './components/PersonaContextualHelper';
 import LogStreamerAndShell from './components/LogStreamerAndShell';
 import GeminiCopilotModal from './components/GeminiCopilotModal';
 import ResourceProvisionModal from './components/ResourceProvisionModal';
@@ -2853,6 +2854,10 @@ function CloudPulseCockpit() {
         ? 'CLOUD_SQL_STUDIO'
         : tabId === 'SPANNER'
         ? 'WAVE10_FRONTIER'
+        : tabId === 'VPC_FIREWALL'
+        ? 'VPC_NETWORKS'
+        : tabId === 'CLOUD_SOC'
+        ? 'SOVEREIGN_STUDIO'
         : tabId;
 
     if (subTab && normalizedTab === 'SOVEREIGN_STUDIO') {
@@ -4065,6 +4070,31 @@ function CloudPulseCockpit() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <PersonaContextualHelper
+                      persona="ARCHITECT"
+                      projectId={selectedProjectId}
+                      studioContextLabel="Overview · SPOF Blast-Radius & FinOps"
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                    <PersonaContextualHelper
+                      persona="CLOUD_ENG"
+                      projectId={selectedProjectId}
+                      studioContextLabel="Resource Table · .tf Exporter & 5-Gate Pre-Flight"
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                  </div>
+
                   <ResourceControlCenter
                     resources={overview?.resources || []}
                     projectId={selectedProjectId}
@@ -4086,18 +4116,31 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'GLOBAL_MAP' && (
-                <GlobalNetworkWorldMap
-                  projectId={selectedProjectId}
-                  overview={overview}
-                  firewalls={overview?.firewalls || []}
-                  vpcs={overview?.vpcs || []}
-                  onOpenProvision={handleOpenProvision}
-                  onRunInShell={handleRunInShell}
-                  onSelectTab={(tabId) => setActiveTab(tabId)}
-                  onRefresh={() => fetchProjectOverview(selectedProjectId)}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="NETOPS"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Global Network World Map · 4-Hop Tracer & IPAM"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <GlobalNetworkWorldMap
+                    projectId={selectedProjectId}
+                    overview={overview}
+                    firewalls={overview?.firewalls || []}
+                    vpcs={overview?.vpcs || []}
+                    onOpenProvision={handleOpenProvision}
+                    onRunInShell={handleRunInShell}
+                    onSelectTab={(tabId) => setActiveTab(tabId)}
+                    onRefresh={() => fetchProjectOverview(selectedProjectId)}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'INNOVATION_LAB' && (
@@ -4140,111 +4183,191 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'CLOUD_STORAGE' && (
-                <CloudStorageStudio
-                  projectId={selectedProjectId}
-                  onOpenProvision={handleOpenProvision}
-                  onRunInShell={handleRunInShell}
-                  onRefreshGlobal={() =>
-                    fetchProjectOverview(selectedProjectId)
-                  }
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Cloud Storage Studio · .tf Exporter & Undo Saga"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <CloudStorageStudio
+                    projectId={selectedProjectId}
+                    onOpenProvision={handleOpenProvision}
+                    onRunInShell={handleRunInShell}
+                    onRefreshGlobal={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'BIGQUERY_STUDIO' && (
-                <BigQueryStudio
-                  projectId={selectedProjectId}
-                  initialSql={bigQueryInitialSql}
-                  onOpenBigLakeStudio={(sub) =>
-                    handleNavigateStudioTab(
-                      'BIGLAKE_STUDIO',
-                      sub || 'METASTORE_CATALOGS'
-                    )
-                  }
-                  onOpenDataEngineerStudio={(sub) =>
-                    handleNavigateStudioTab(
-                      'DATA_ENGINEER_STUDIO',
-                      sub || 'MEDALLION_ELT'
-                    )
-                  }
-                  onNavigateTab={handleNavigateStudioTab}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
-                  onOpenProvision={handleOpenProvision}
-                  onRunInShell={handleRunInShell}
-                  onRefreshGlobal={() =>
-                    fetchProjectOverview(selectedProjectId)
-                  }
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="DATA_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="BigQuery Studio · Column Lineage Guard & DLQ Replay"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <BigQueryStudio
+                    projectId={selectedProjectId}
+                    initialSql={bigQueryInitialSql}
+                    onOpenBigLakeStudio={(sub) =>
+                      handleNavigateStudioTab(
+                        'BIGLAKE_STUDIO',
+                        sub || 'METASTORE_CATALOGS'
+                      )
+                    }
+                    onOpenDataEngineerStudio={(sub) =>
+                      handleNavigateStudioTab(
+                        'DATA_ENGINEER_STUDIO',
+                        sub || 'MEDALLION_ELT'
+                      )
+                    }
+                    onNavigateTab={handleNavigateStudioTab}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
+                    onOpenProvision={handleOpenProvision}
+                    onRunInShell={handleRunInShell}
+                    onRefreshGlobal={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'BIGLAKE_STUDIO' && (
-                <BigLakeIcebergStudio
-                  projectId={selectedProjectId}
-                  initialSubTab={bigLakeSubTab}
-                  onRunInShell={handleRunInShell}
-                  onOpenBigQuerySql={(sqlText) => {
-                    if (sqlText) setBigQueryInitialSql(sqlText);
-                    setActiveTab('BIGQUERY_STUDIO');
-                  }}
-                  onOpenDataEngineerStudio={(sub) =>
-                    handleNavigateStudioTab(
-                      'DATA_ENGINEER_STUDIO',
-                      sub || 'SERVERLESS_SPARK'
-                    )
-                  }
-                  onNavigateTab={handleNavigateStudioTab}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="DATA_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="BigLake & Iceberg · Schema Evolution & Spark Offload"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <BigLakeIcebergStudio
+                    projectId={selectedProjectId}
+                    initialSubTab={bigLakeSubTab}
+                    onRunInShell={handleRunInShell}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onOpenDataEngineerStudio={(sub) =>
+                      handleNavigateStudioTab(
+                        'DATA_ENGINEER_STUDIO',
+                        sub || 'SERVERLESS_SPARK'
+                      )
+                    }
+                    onNavigateTab={handleNavigateStudioTab}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'DATA_ENGINEER_STUDIO' && (
-                <DataEngineeringStudio
-                  projectId={selectedProjectId}
-                  initialSubTab={dataEngineerSubTab}
-                  onNavigateTab={handleNavigateStudioTab}
-                  onOpenBigQuerySql={(sqlText) => {
-                    if (sqlText) setBigQueryInitialSql(sqlText);
-                    setActiveTab('BIGQUERY_STUDIO');
-                  }}
-                  onOpenBigLakeStudio={(sub) =>
-                    handleNavigateStudioTab(
-                      'BIGLAKE_STUDIO',
-                      sub || 'METASTORE_CATALOGS'
-                    )
-                  }
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
-                  onRunInShell={handleRunInShell}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="DATA_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Data Engineering Studio · Column Lineage, DLQ & Spark"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <DataEngineeringStudio
+                    projectId={selectedProjectId}
+                    initialSubTab={dataEngineerSubTab}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onOpenBigLakeStudio={(sub) =>
+                      handleNavigateStudioTab(
+                        'BIGLAKE_STUDIO',
+                        sub || 'METASTORE_CATALOGS'
+                      )
+                    }
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'CLOUD_SQL_STUDIO' && (
-                <CloudSqlAndAlloyDbStudio
-                  projectId={selectedProjectId}
-                  onOpenProvisionCloudSql={() =>
-                    handleOpenProvision('CLOUD_SQL')
-                  }
-                  onNavigateTab={handleNavigateStudioTab}
-                  onOpenBigQuerySql={(sqlText) => {
-                    if (sqlText) setBigQueryInitialSql(sqlText);
-                    setActiveTab('BIGQUERY_STUDIO');
-                  }}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onRunInShell={handleRunInShell}
-                  onRefreshOverview={() =>
-                    fetchProjectOverview(selectedProjectId)
-                  }
-                  onShowToast={showToast}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="DATA_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Cloud SQL & AlloyDB · Federated Lineage & Pre-Flight"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <CloudSqlAndAlloyDbStudio
+                    projectId={selectedProjectId}
+                    onOpenProvisionCloudSql={() =>
+                      handleOpenProvision('CLOUD_SQL')
+                    }
+                    onNavigateTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onRunInShell={handleRunInShell}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                  />
+                </div>
               )}
 
               {activeTab === 'WAVE9_STUDIO' && (
@@ -4273,100 +4396,216 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'SOVEREIGN_STUDIO' && (
-                <SovereignTimeMachineIamStudio
-                  projectId={selectedProjectId}
-                  initialSubTab={sovereignSubTab}
-                  onTriggerToast={showToast}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onNavigateTab={handleNavigateStudioTab}
-                  onRefreshOverview={() =>
-                    fetchProjectOverview(selectedProjectId)
-                  }
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="DEVSECOPS"
+                    projectId={selectedProjectId}
+                    studioContextLabel="IAM & Zero-Trust Studio · Escalation Paths, @sha256 & OIDC WIF"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <SovereignTimeMachineIamStudio
+                    projectId={selectedProjectId}
+                    initialSubTab={sovereignSubTab}
+                    onTriggerToast={showToast}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                  />
+                </div>
               )}
 
               {activeTab === 'SRE_WAR_ROOM' && (
-                <SreWarRoomPerimeterStudio
-                  projectId={selectedProjectId}
-                  onTriggerToast={showToast}
-                  onRunInShell={handleRunInShell}
-                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onNavigateTab={handleNavigateStudioTab}
-                  onRefreshOverview={() =>
-                    fetchProjectOverview(selectedProjectId)
-                  }
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="ARCHITECT"
+                    projectId={selectedProjectId}
+                    studioContextLabel="SRE War-Room · Region Blackout SPOF Drill & Org Guardrails"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <SreWarRoomPerimeterStudio
+                    projectId={selectedProjectId}
+                    onTriggerToast={showToast}
+                    onRunInShell={handleRunInShell}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                  />
+                </div>
               )}
 
               {activeTab === 'CLOUD_RUN' && (
-                <CloudRunFleetManager
-                  projectId={selectedProjectId}
-                  initialServices={overview?.cloudRunServices || []}
-                  onOpenProvisionCloudRun={() =>
-                    handleOpenProvision('CLOUD_RUN')
-                  }
-                  onOpenSecretManagerStudio={() => {
-                    setSovereignSubTab('SECRETS_KMS_WAF');
-                    setActiveTab('SOVEREIGN_STUDIO');
-                  }}
-                  onRefreshOverview={() =>
-                    fetchProjectOverview(selectedProjectId)
-                  }
-                  onRunInShell={handleRunInShell}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <PersonaContextualHelper
+                      persona="CLOUD_ENG"
+                      projectId={selectedProjectId}
+                      studioContextLabel="Cloud Run Fleet · Pre-Flight Validator & .tf Export"
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                    <PersonaContextualHelper
+                      persona="DEVSECOPS"
+                      projectId={selectedProjectId}
+                      studioContextLabel="Cloud Run Revisions · Binary Authz @sha256 Digest Gate"
+                      onOpenFullBoard={(p) =>
+                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                      }
+                      onRunInShell={handleRunInShell}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                  </div>
+                  <CloudRunFleetManager
+                    projectId={selectedProjectId}
+                    initialServices={overview?.cloudRunServices || []}
+                    onOpenProvisionCloudRun={() =>
+                      handleOpenProvision('CLOUD_RUN')
+                    }
+                    onOpenSecretManagerStudio={() => {
+                      setSovereignSubTab('SECRETS_KMS_WAF');
+                      setActiveTab('SOVEREIGN_STUDIO');
+                    }}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'FUNCTIONS_STUDIO' && (
-                <CloudFunctionsEventarcStudio
-                  projectId={selectedProjectId}
-                  onRunInShell={handleRunInShell}
-                  onShowToast={showToast}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Cloud Functions & Eventarc · Pre-Flight & .tf Export"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <CloudFunctionsEventarcStudio
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                  />
+                </div>
               )}
 
               {activeTab === 'GKE_STUDIO' && (
-                <GkeFleetStudio
-                  projectId={selectedProjectId}
-                  onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}
-                  onRunInShell={handleRunInShell}
-                  onRefreshOverview={() =>
-                    fetchProjectOverview(selectedProjectId)
-                  }
-                  onShowToast={showToast}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="GKE Kubernetes Fleet · Pre-Flight Quota & .tf Export"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <GkeFleetStudio
+                    projectId={selectedProjectId}
+                    onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}
+                    onRunInShell={handleRunInShell}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId)
+                    }
+                    onShowToast={showToast}
+                  />
+                </div>
               )}
 
               {activeTab === 'VM_SSH' && (
-                <VmFleetAndSsh
-                  projectId={selectedProjectId}
-                  account={contextData.account}
-                  onOpenProvisionVm={() => handleOpenProvision('COMPUTE_VM')}
-                  refreshTrigger={vmRefreshTrigger}
-                  onVmDeleted={() => fetchProjectOverview(selectedProjectId)}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="CLOUD_ENG"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Compute Engine VM Fleet · Pre-Flight, .tf Export & Undo Saga"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <VmFleetAndSsh
+                    projectId={selectedProjectId}
+                    account={contextData.account}
+                    onOpenProvisionVm={() => handleOpenProvision('COMPUTE_VM')}
+                    refreshTrigger={vmRefreshTrigger}
+                    onVmDeleted={() => fetchProjectOverview(selectedProjectId)}
+                  />
+                </div>
               )}
 
               {activeTab === 'VPC_NETWORKS' && (
-                <VpcNetworksAndFirewalls
-                  projectId={selectedProjectId}
-                  vpcs={overview?.vpcs || []}
-                  firewalls={overview?.firewalls || []}
-                  onOpenProvisionVpc={() => handleOpenProvision('VPC_NETWORK')}
-                  onOpenProvisionFirewall={() =>
-                    handleOpenProvision('VPC_FIREWALL')
-                  }
-                  onDeleteResource={handleDeleteResource}
-                  onRefresh={() => fetchProjectOverview(selectedProjectId)}
-                  loading={loadingOverview}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="NETOPS"
+                    projectId={selectedProjectId}
+                    studioContextLabel="VPC & Firewall Studio · 4-Hop Packet Tracer & IPAM CIDR Guard"
+                    defaultExpanded={true}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <VpcNetworksAndFirewalls
+                    projectId={selectedProjectId}
+                    vpcs={overview?.vpcs || []}
+                    firewalls={overview?.firewalls || []}
+                    onOpenProvisionVpc={() => handleOpenProvision('VPC_NETWORK')}
+                    onOpenProvisionFirewall={() =>
+                      handleOpenProvision('VPC_FIREWALL')
+                    }
+                    onDeleteResource={handleDeleteResource}
+                    onRefresh={() => fetchProjectOverview(selectedProjectId)}
+                    loading={loadingOverview}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'FINOPS' && (
                 <div className="space-y-6">
+                  <PersonaContextualHelper
+                    persona="ARCHITECT"
+                    projectId={selectedProjectId}
+                    studioContextLabel="FinOps Studio · 3-Cloud Arbitrage (GCP vs AWS vs Azure) & Guardrails"
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <BillingAccountCreditGuardian
                     projectId={selectedProjectId}
                     liveBurn={liveBurn}
