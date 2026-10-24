@@ -30,20 +30,32 @@ import {
   Move,
   Navigation,
 } from 'lucide-react';
+import {
+  WORLD_COUNTRY_PATHS,
+  WORLD_LAKES_SVG_PATH,
+  ADMIN1_STATES_SVG_PATH,
+  projectLatLon,
+  unprojectSvgPoint,
+  formatLatLon,
+  calculateGreatCircleKm,
+} from '../data/worldMapGeoPaths';
 
 // ============================================================================
-// 1. GOOGLE CLOUD GLOBAL REGIONS & ZONES CATALOG (SVG Map Coordinates 1200x560)
+// 1. GOOGLE CLOUD GLOBAL REGIONS & ZONES CATALOG (Exact WGS84 Lat/Lon Projected)
 // ============================================================================
-// Equirectangular-styled projection tuned for a 1200x560 tactical orbital map
-export const GCP_GLOBAL_REGIONS = [
-  // ======================== NORTH AMERICA (11 REGIONS) ========================
+// Every region's (x, y) is mathematically projected from its real-world WGS84
+// (lat, lon) coordinates onto the 1200x560 Natural Earth vector world map.
+const RAW_GCP_GLOBAL_REGIONS = [
+  // ======================== NORTH AMERICA (12 REGIONS) ========================
   {
     id: 'us-west1',
     name: 'us-west1',
     city: 'The Dalles, Oregon',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 175,
-    y: 162,
+    lat: 45.5946,
+    lon: -121.1787,
+    labelOffset: { dx: -28, dy: -12 },
     zones: ['us-west1-a', 'us-west1-b', 'us-west1-c'],
     cfePercent: 89,
     gco2: 78,
@@ -53,9 +65,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'us-west2',
     name: 'us-west2',
     city: 'Los Angeles, California',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 178,
-    y: 214,
+    lat: 34.0522,
+    lon: -118.2437,
+    labelOffset: { dx: -30, dy: 14 },
     zones: ['us-west2-a', 'us-west2-b', 'us-west2-c'],
     cfePercent: 54,
     gco2: 245,
@@ -65,9 +79,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'us-west3',
     name: 'us-west3',
     city: 'Salt Lake City, Utah',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 212,
-    y: 184,
+    lat: 40.7608,
+    lon: -111.891,
+    labelOffset: { dx: 0, dy: -14 },
     zones: ['us-west3-a', 'us-west3-b', 'us-west3-c'],
     cfePercent: 39,
     gco2: 520,
@@ -77,9 +93,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'us-west4',
     name: 'us-west4',
     city: 'Las Vegas, Nevada',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 198,
-    y: 202,
+    lat: 36.1699,
+    lon: -115.1398,
+    labelOffset: { dx: 26, dy: 13 },
     zones: ['us-west4-a', 'us-west4-b', 'us-west4-c'],
     cfePercent: 62,
     gco2: 340,
@@ -89,9 +107,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'us-central1',
     name: 'us-central1',
     city: 'Council Bluffs, Iowa',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 264,
-    y: 184,
+    lat: 41.2619,
+    lon: -95.8608,
+    labelOffset: { dx: -14, dy: -14 },
     zones: ['us-central1-a', 'us-central1-b', 'us-central1-c', 'us-central1-f'],
     cfePercent: 93,
     gco2: 110,
@@ -101,9 +121,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'us-south1',
     name: 'us-south1',
     city: 'Dallas, Texas',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 256,
-    y: 224,
+    lat: 32.7767,
+    lon: -96.797,
+    labelOffset: { dx: 0, dy: 15 },
     zones: ['us-south1-a', 'us-south1-b', 'us-south1-c'],
     cfePercent: 68,
     gco2: 310,
@@ -113,9 +135,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'us-east1',
     name: 'us-east1',
     city: 'Moncks Corner, South Carolina',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 312,
-    y: 222,
+    lat: 33.196,
+    lon: -80.0131,
+    labelOffset: { dx: 28, dy: 14 },
     zones: ['us-east1-b', 'us-east1-c', 'us-east1-d'],
     cfePercent: 52,
     gco2: 380,
@@ -125,9 +149,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'us-east4',
     name: 'us-east4',
     city: 'Ashburn, Virginia',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 324,
-    y: 196,
+    lat: 39.0438,
+    lon: -77.4874,
+    labelOffset: { dx: 32, dy: 4 },
     zones: ['us-east4-a', 'us-east4-b', 'us-east4-c'],
     cfePercent: 56,
     gco2: 310,
@@ -137,9 +163,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'us-east5',
     name: 'us-east5',
     city: 'Columbus, Ohio',
+    countryCode: 'USA',
     continent: 'North America',
-    x: 298,
-    y: 190,
+    lat: 39.9612,
+    lon: -82.9988,
+    labelOffset: { dx: -24, dy: 13 },
     zones: ['us-east5-a', 'us-east5-b', 'us-east5-c'],
     cfePercent: 51,
     gco2: 410,
@@ -149,9 +177,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'northamerica-northeast1',
     name: 'northamerica-northeast1',
     city: 'Montréal, Québec',
+    countryCode: 'CAN',
     continent: 'North America',
-    x: 332,
-    y: 156,
+    lat: 45.5017,
+    lon: -73.5673,
+    labelOffset: { dx: 36, dy: -13 },
     zones: [
       'northamerica-northeast1-a',
       'northamerica-northeast1-b',
@@ -165,9 +195,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'northamerica-northeast2',
     name: 'northamerica-northeast2',
     city: 'Toronto, Ontario',
+    countryCode: 'CAN',
     continent: 'North America',
-    x: 306,
-    y: 168,
+    lat: 43.6532,
+    lon: -79.3832,
+    labelOffset: { dx: -32, dy: -13 },
     zones: [
       'northamerica-northeast2-a',
       'northamerica-northeast2-b',
@@ -181,9 +213,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'northamerica-south1',
     name: 'northamerica-south1',
     city: 'Querétaro, Mexico',
+    countryCode: 'MEX',
     continent: 'North America',
-    x: 242,
-    y: 262,
+    lat: 20.5888,
+    lon: -100.3899,
+    labelOffset: { dx: 0, dy: 15 },
     zones: [
       'northamerica-south1-a',
       'northamerica-south1-b',
@@ -199,9 +233,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'southamerica-east1',
     name: 'southamerica-east1',
     city: 'São Paulo, Brazil',
+    countryCode: 'BRA',
     continent: 'South America',
-    x: 416,
-    y: 412,
+    lat: -23.5505,
+    lon: -46.6333,
+    labelOffset: { dx: 28, dy: 14 },
     zones: ['southamerica-east1-a', 'southamerica-east1-b', 'southamerica-east1-c'],
     cfePercent: 91,
     gco2: 62,
@@ -211,9 +247,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'southamerica-west1',
     name: 'southamerica-west1',
     city: 'Santiago, Chile',
+    countryCode: 'CHL',
     continent: 'South America',
-    x: 356,
-    y: 452,
+    lat: -33.4489,
+    lon: -70.6693,
+    labelOffset: { dx: -28, dy: 14 },
     zones: ['southamerica-west1-a', 'southamerica-west1-b', 'southamerica-west1-c'],
     cfePercent: 83,
     gco2: 145,
@@ -225,9 +263,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west1',
     name: 'europe-west1',
     city: 'St. Ghislain, Belgium',
+    countryCode: 'BEL',
     continent: 'Europe',
-    x: 582,
-    y: 162,
+    lat: 50.4481,
+    lon: 3.8189,
+    labelOffset: { dx: -38, dy: -4 },
     zones: ['europe-west1-b', 'europe-west1-c', 'europe-west1-d'],
     cfePercent: 84,
     gco2: 132,
@@ -237,9 +277,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west2',
     name: 'europe-west2',
     city: 'London, United Kingdom',
+    countryCode: 'GBR',
     continent: 'Europe',
-    x: 564,
-    y: 152,
+    lat: 51.5072,
+    lon: -0.1276,
+    labelOffset: { dx: -38, dy: -14 },
     zones: ['europe-west2-a', 'europe-west2-b', 'europe-west2-c'],
     cfePercent: 86,
     gco2: 145,
@@ -249,9 +291,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west3',
     name: 'europe-west3',
     city: 'Frankfurt, Germany',
+    countryCode: 'DEU',
     continent: 'Europe',
-    x: 604,
-    y: 164,
+    lat: 50.1109,
+    lon: 8.6821,
+    labelOffset: { dx: 36, dy: -4 },
     zones: ['europe-west3-a', 'europe-west3-b', 'europe-west3-c'],
     cfePercent: 66,
     gco2: 295,
@@ -261,9 +305,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west4',
     name: 'europe-west4',
     city: 'Eemshaven, Netherlands',
+    countryCode: 'NLD',
     continent: 'Europe',
-    x: 594,
-    y: 146,
+    lat: 53.4386,
+    lon: 6.8355,
+    labelOffset: { dx: -8, dy: -16 },
     zones: ['europe-west4-a', 'europe-west4-b', 'europe-west4-c'],
     cfePercent: 72,
     gco2: 240,
@@ -273,9 +319,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west6',
     name: 'europe-west6',
     city: 'Zürich, Switzerland',
+    countryCode: 'CHE',
     continent: 'Europe',
-    x: 598,
-    y: 178,
+    lat: 47.3769,
+    lon: 8.5417,
+    labelOffset: { dx: 38, dy: 5 },
     zones: ['europe-west6-a', 'europe-west6-b', 'europe-west6-c'],
     cfePercent: 96,
     gco2: 34,
@@ -285,9 +333,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west8',
     name: 'europe-west8',
     city: 'Milan, Italy',
+    countryCode: 'ITA',
     continent: 'Europe',
-    x: 604,
-    y: 190,
+    lat: 45.4642,
+    lon: 9.19,
+    labelOffset: { dx: 34, dy: 15 },
     zones: ['europe-west8-a', 'europe-west8-b', 'europe-west8-c'],
     cfePercent: 61,
     gco2: 240,
@@ -297,9 +347,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west9',
     name: 'europe-west9',
     city: 'Paris, France',
+    countryCode: 'FRA',
     continent: 'Europe',
-    x: 576,
-    y: 174,
+    lat: 48.8566,
+    lon: 2.3522,
+    labelOffset: { dx: -38, dy: 7 },
     zones: ['europe-west9-a', 'europe-west9-b', 'europe-west9-c'],
     cfePercent: 92,
     gco2: 52,
@@ -309,9 +361,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west10',
     name: 'europe-west10',
     city: 'Berlin, Germany',
+    countryCode: 'DEU',
     continent: 'Europe',
-    x: 618,
-    y: 154,
+    lat: 52.52,
+    lon: 13.405,
+    labelOffset: { dx: 28, dy: -14 },
     zones: ['europe-west10-a', 'europe-west10-b', 'europe-west10-c'],
     cfePercent: 64,
     gco2: 310,
@@ -321,9 +375,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-west12',
     name: 'europe-west12',
     city: 'Turin, Italy',
+    countryCode: 'ITA',
     continent: 'Europe',
-    x: 592,
-    y: 192,
+    lat: 45.0703,
+    lon: 7.6869,
+    labelOffset: { dx: -34, dy: 16 },
     zones: ['europe-west12-a', 'europe-west12-b', 'europe-west12-c'],
     cfePercent: 61,
     gco2: 240,
@@ -333,9 +389,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-central2',
     name: 'europe-central2',
     city: 'Warsaw, Poland',
+    countryCode: 'POL',
     continent: 'Europe',
-    x: 638,
-    y: 156,
+    lat: 52.2297,
+    lon: 21.0122,
+    labelOffset: { dx: 36, dy: -6 },
     zones: ['europe-central2-a', 'europe-central2-b', 'europe-central2-c'],
     cfePercent: 34,
     gco2: 610,
@@ -345,9 +403,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-north1',
     name: 'europe-north1',
     city: 'Hamina, Finland',
+    countryCode: 'FIN',
     continent: 'Europe',
-    x: 644,
-    y: 116,
+    lat: 60.5693,
+    lon: 27.1878,
+    labelOffset: { dx: 0, dy: -14 },
     zones: ['europe-north1-a', 'europe-north1-b', 'europe-north1-c'],
     cfePercent: 98,
     gco2: 28,
@@ -357,9 +417,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'europe-southwest1',
     name: 'europe-southwest1',
     city: 'Madrid, Spain',
+    countryCode: 'ESP',
     continent: 'Europe',
-    x: 556,
-    y: 198,
+    lat: 40.4168,
+    lon: -3.7038,
+    labelOffset: { dx: -28, dy: 15 },
     zones: [
       'europe-southwest1-a',
       'europe-southwest1-b',
@@ -375,9 +437,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'me-west1',
     name: 'me-west1',
     city: 'Tel Aviv, Israel',
+    countryCode: 'ISR',
     continent: 'Middle East',
-    x: 686,
-    y: 232,
+    lat: 32.0853,
+    lon: 34.7818,
+    labelOffset: { dx: -26, dy: 14 },
     zones: ['me-west1-a', 'me-west1-b', 'me-west1-c'],
     cfePercent: 28,
     gco2: 460,
@@ -387,9 +451,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'me-central1',
     name: 'me-central1',
     city: 'Doha, Qatar',
+    countryCode: 'QAT',
     continent: 'Middle East',
-    x: 742,
-    y: 258,
+    lat: 25.2854,
+    lon: 51.531,
+    labelOffset: { dx: 30, dy: 14 },
     zones: ['me-central1-a', 'me-central1-b', 'me-central1-c'],
     cfePercent: 35,
     gco2: 490,
@@ -399,9 +465,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'me-central2',
     name: 'me-central2',
     city: 'Dammam, Saudi Arabia',
+    countryCode: 'SAU',
     continent: 'Middle East',
-    x: 728,
-    y: 252,
+    lat: 26.4207,
+    lon: 50.0888,
+    labelOffset: { dx: -30, dy: -13 },
     zones: ['me-central2-a', 'me-central2-b', 'me-central2-c'],
     cfePercent: 32,
     gco2: 510,
@@ -411,9 +479,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'africa-south1',
     name: 'africa-south1',
     city: 'Johannesburg, South Africa',
+    countryCode: 'ZAF',
     continent: 'Africa',
-    x: 656,
-    y: 432,
+    lat: -26.2041,
+    lon: 28.0473,
+    labelOffset: { dx: 0, dy: 15 },
     zones: ['africa-south1-a', 'africa-south1-b', 'africa-south1-c'],
     cfePercent: 31,
     gco2: 640,
@@ -425,9 +495,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-south1',
     name: 'asia-south1',
     city: 'Mumbai, India',
+    countryCode: 'IND',
     continent: 'Asia',
-    x: 822,
-    y: 282,
+    lat: 19.076,
+    lon: 72.8777,
+    labelOffset: { dx: -24, dy: 14 },
     zones: ['asia-south1-a', 'asia-south1-b', 'asia-south1-c'],
     cfePercent: 38,
     gco2: 560,
@@ -437,9 +509,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-south2',
     name: 'asia-south2',
     city: 'Delhi, India',
+    countryCode: 'IND',
     continent: 'Asia',
-    x: 834,
-    y: 252,
+    lat: 28.6139,
+    lon: 77.209,
+    labelOffset: { dx: 0, dy: -14 },
     zones: ['asia-south2-a', 'asia-south2-b', 'asia-south2-c'],
     cfePercent: 41,
     gco2: 540,
@@ -449,9 +523,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-southeast1',
     name: 'asia-southeast1',
     city: 'Jurong West, Singapore',
+    countryCode: 'SGP',
     continent: 'Asia',
-    x: 924,
-    y: 332,
+    lat: 1.3521,
+    lon: 103.8198,
+    labelOffset: { dx: -28, dy: -13 },
     zones: ['asia-southeast1-a', 'asia-southeast1-b', 'asia-southeast1-c'],
     cfePercent: 42,
     gco2: 395,
@@ -461,9 +537,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-southeast2',
     name: 'asia-southeast2',
     city: 'Jakarta, Indonesia',
+    countryCode: 'IDN',
     continent: 'Asia',
-    x: 938,
-    y: 362,
+    lat: -6.2088,
+    lon: 106.8456,
+    labelOffset: { dx: 0, dy: 15 },
     zones: ['asia-southeast2-a', 'asia-southeast2-b', 'asia-southeast2-c'],
     cfePercent: 36,
     gco2: 580,
@@ -473,9 +551,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-east1',
     name: 'asia-east1',
     city: 'Changhua County, Taiwan',
+    countryCode: 'TWN',
     continent: 'Asia',
-    x: 976,
-    y: 254,
+    lat: 24.0518,
+    lon: 120.5161,
+    labelOffset: { dx: 28, dy: 12 },
     zones: ['asia-east1-a', 'asia-east1-b', 'asia-east1-c'],
     cfePercent: 44,
     gco2: 450,
@@ -485,9 +565,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-east2',
     name: 'asia-east2',
     city: 'Hong Kong',
+    countryCode: 'HKG',
     continent: 'Asia',
-    x: 954,
-    y: 264,
+    lat: 22.3193,
+    lon: 114.1694,
+    labelOffset: { dx: -28, dy: 13 },
     zones: ['asia-east2-a', 'asia-east2-b', 'asia-east2-c'],
     cfePercent: 40,
     gco2: 470,
@@ -497,9 +579,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-northeast1',
     name: 'asia-northeast1',
     city: 'Tokyo, Japan',
+    countryCode: 'JPN',
     continent: 'Asia',
-    x: 1034,
-    y: 208,
+    lat: 35.6762,
+    lon: 139.6503,
+    labelOffset: { dx: 32, dy: -12 },
     zones: ['asia-northeast1-a', 'asia-northeast1-b', 'asia-northeast1-c'],
     cfePercent: 48,
     gco2: 410,
@@ -509,9 +593,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-northeast2',
     name: 'asia-northeast2',
     city: 'Osaka, Japan',
+    countryCode: 'JPN',
     continent: 'Asia',
-    x: 1018,
-    y: 218,
+    lat: 34.6937,
+    lon: 135.5023,
+    labelOffset: { dx: -26, dy: 14 },
     zones: ['asia-northeast2-a', 'asia-northeast2-b', 'asia-northeast2-c'],
     cfePercent: 48,
     gco2: 410,
@@ -521,9 +607,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'asia-northeast3',
     name: 'asia-northeast3',
     city: 'Seoul, South Korea',
+    countryCode: 'KOR',
     continent: 'Asia',
-    x: 992,
-    y: 206,
+    lat: 37.5665,
+    lon: 126.978,
+    labelOffset: { dx: -28, dy: -13 },
     zones: ['asia-northeast3-a', 'asia-northeast3-b', 'asia-northeast3-c'],
     cfePercent: 43,
     gco2: 430,
@@ -533,9 +621,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'australia-southeast1',
     name: 'australia-southeast1',
     city: 'Sydney, Australia',
+    countryCode: 'AUS',
     continent: 'Oceania',
-    x: 1062,
-    y: 438,
+    lat: -33.8688,
+    lon: 151.2093,
+    labelOffset: { dx: 30, dy: -12 },
     zones: [
       'australia-southeast1-a',
       'australia-southeast1-b',
@@ -549,9 +639,11 @@ export const GCP_GLOBAL_REGIONS = [
     id: 'australia-southeast2',
     name: 'australia-southeast2',
     city: 'Melbourne, Australia',
+    countryCode: 'AUS',
     continent: 'Oceania',
-    x: 1042,
-    y: 458,
+    lat: -37.8136,
+    lon: 144.9631,
+    labelOffset: { dx: -28, dy: 15 },
     zones: [
       'australia-southeast2-a',
       'australia-southeast2-b',
@@ -562,6 +654,16 @@ export const GCP_GLOBAL_REGIONS = [
     backbonePeers: ['australia-southeast1', 'asia-southeast2'],
   },
 ];
+
+export const GCP_GLOBAL_REGIONS = RAW_GCP_GLOBAL_REGIONS.map((reg) => {
+  const projected = projectLatLon(reg.lat, reg.lon);
+  return {
+    ...reg,
+    x: projected.x,
+    y: projected.y,
+    gpsLabel: formatLatLon(reg.lat, reg.lon),
+  };
+});
 
 // ============================================================================
 // 1B. LIVE VARIABLE REGIONAL FINOPS PRICING & HARDWARE SKU CATALOG ENGINE
@@ -1568,101 +1670,77 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
 
 
 
-// Global Client Edge PoPs & Threat / Proxy Origins for Realistic Traffic Simulation
-const GLOBAL_CLIENT_ORIGINS = [
+// Global Client Edge PoPs & Threat / Proxy Origins (Projected via Exact WGS84 Lat/Lon)
+const RAW_GLOBAL_CLIENT_ORIGINS = [
   {
     id: 'iap-proxy',
-    label: 'Google Cloud IAP Proxy',
+    label: 'Google Cloud IAP Proxy (Sunnyvale, CA)',
     ip: '35.235.240.18',
-    x: 235,
-    y: 145,
+    lat: 37.3861,
+    lon: -122.0839,
     kind: 'IAP_ZERO_TRUST',
   },
   {
     id: 'gclb-prober',
-    label: 'Google Front End (GCLB Prober)',
+    label: 'Google Front End (GCLB Edge · Atlanta)',
     ip: '130.211.1.44',
-    x: 358,
-    y: 185,
+    lat: 33.749,
+    lon: -84.388,
     kind: 'GCLB_HEALTH',
   },
   {
     id: 'edge-nyc',
-    label: 'New York Client Edge',
+    label: 'New York Client Edge (NYC)',
     ip: '198.51.100.24',
-    x: 336,
-    y: 194,
+    lat: 40.7128,
+    lon: -74.006,
     kind: 'PUBLIC_CLIENT',
   },
   {
     id: 'edge-madrid',
-    label: 'Madrid / EU West Edge',
+    label: 'Lisbon / EU Atlantic Client Edge',
     ip: '203.0.113.77',
-    x: 556,
-    y: 196,
+    lat: 38.7223,
+    lon: -9.1393,
     kind: 'PUBLIC_CLIENT',
   },
   {
     id: 'edge-lagos',
-    label: 'West Africa / Lagos PoP',
+    label: 'West Africa / Lagos PoP (Nigeria)',
     ip: '192.0.2.118',
-    x: 590,
-    y: 320,
+    lat: 6.5244,
+    lon: 3.3792,
     kind: 'PUBLIC_CLIENT',
   },
   {
     id: 'scanner-botnet-east',
-    label: 'External Port Scanner #1',
+    label: 'External Port Scanner #1 (Eastern Europe)',
     ip: '185.220.101.9',
-    x: 695,
-    y: 148,
+    lat: 55.7558,
+    lon: 37.6173,
     kind: 'THREAT_SCANNER',
   },
   {
     id: 'scanner-botnet-apac',
-    label: 'Automated Brute-Force Bot #2',
+    label: 'Automated Brute-Force Bot #2 (East Asia)',
     ip: '45.155.205.33',
-    x: 948,
-    y: 222,
+    lat: 31.2304,
+    lon: 121.4737,
     kind: 'THREAT_SCANNER',
   },
 ];
 
-// Stylized Continent Polygons for the 1200x560 Orbital World Map
-const CONTINENT_PATHS = [
-  {
-    name: 'North America',
-    d: 'M 75,95 L 165,78 L 265,85 L 365,115 L 385,155 L 340,210 L 305,248 L 265,275 L 235,265 L 185,225 L 155,180 L 110,145 Z',
-  },
-  {
-    name: 'Greenland',
-    d: 'M 395,55 L 475,48 L 490,92 L 435,112 L 395,88 Z',
-  },
-  {
-    name: 'South America',
-    d: 'M 315,295 L 385,305 L 445,355 L 435,435 L 385,505 L 348,495 L 332,415 L 305,345 Z',
-  },
-  {
-    name: 'Europe',
-    d: 'M 535,105 L 615,85 L 695,95 L 715,155 L 665,195 L 595,205 L 545,195 L 530,150 Z',
-  },
-  {
-    name: 'Africa',
-    d: 'M 535,222 L 635,218 L 705,265 L 725,345 L 675,445 L 615,455 L 580,375 L 530,315 L 515,265 Z',
-  },
-  {
-    name: 'Asia & Middle East',
-    d: 'M 705,102 L 865,88 L 1045,115 L 1085,185 L 1025,265 L 955,335 L 885,315 L 815,295 L 735,268 L 695,205 Z',
-  },
-  {
-    name: 'Japan & Taiwan Archipelagos',
-    d: 'M 1015,185 L 1052,195 L 1042,235 L 1005,225 Z',
-  },
-  {
-    name: 'Australia & Oceania',
-    d: 'M 945,382 L 1068,378 L 1092,438 L 1045,475 L 955,458 Z',
-  },
-];
+const GLOBAL_CLIENT_ORIGINS = RAW_GLOBAL_CLIENT_ORIGINS.map((orig) => {
+  const pt = projectLatLon(orig.lat, orig.lon);
+  return {
+    ...orig,
+    x: pt.x,
+    y: pt.y,
+  };
+});
+
+// Corporate Hybrid VPN / IAP Gateway Origin (New York City, USA)
+const HYBRID_GATEWAY_POINT = projectLatLon(40.7128, -74.006);
 
 // Helper: Match IPv4 to CIDR
 function ipMatchesCidr(ipStr, cidrStr) {
@@ -1927,7 +2005,7 @@ export default function GlobalNetworkWorldMap({
     );
   };
 
-  // Compute Point-to-Point Subsea Fiber Distance, RTT (ms), and GCP Cross-Region Egress Cost
+  // Compute Point-to-Point Subsea Fiber Distance (True WGS84 Haversine km), RTT (ms), and GCP Cross-Region Egress Cost
   const routeTelemetry = useMemo(() => {
     const src =
       GCP_GLOBAL_REGIONS.find((r) => r.id === routeSourceRegionId) ||
@@ -1935,14 +2013,20 @@ export default function GlobalNetworkWorldMap({
     const dst =
       GCP_GLOBAL_REGIONS.find((r) => r.id === routeDestRegionId) ||
       GCP_GLOBAL_REGIONS[6];
-    const svgDist = Math.hypot(dst.x - src.x, dst.y - src.y);
-    // Approximate great-circle + subsea fiber routing distance in km
-    const fiberKm = Math.max(120, Math.round(svgDist * 16.4));
-    // Speed of light in optical fiber (~200 km/ms) * 2 (round-trip) + switching overhead
+    const greatCircleKm = calculateGreatCircleKm(
+      src.lat,
+      src.lon,
+      dst.lat,
+      dst.lon
+    );
+    // Subsea / terrestrial fiber routing tortuosity factor (~1.22x great-circle distance)
+    const fiberKm =
+      src.id === dst.id ? 45 : Math.max(120, Math.round(greatCircleKm * 1.22));
+    // Speed of light in optical fiber (~200 km/ms) * 2 (round-trip) + DWDM switching overhead
     const rttMs =
       src.id === dst.id
         ? 0.6
-        : Number(((fiberKm / 200) * 2 + 4.8).toFixed(1));
+        : Number(((fiberKm / 200) * 2 + 4.2).toFixed(1));
     const sameContinent = src.continent === dst.continent;
     const ratePerGb =
       src.id === dst.id
@@ -1966,6 +2050,7 @@ export default function GlobalNetworkWorldMap({
     return {
       src,
       dst,
+      greatCircleKm,
       fiberKm,
       rttMs,
       sameContinent,
@@ -2146,13 +2231,18 @@ export default function GlobalNetworkWorldMap({
 
   const focusOnContinent = useCallback(
     (preset) => {
+      const na = projectLatLon(39.0, -97.0);
+      const sa = projectLatLon(-24.0, -58.0);
+      const eu = projectLatLon(50.5, 10.0);
+      const me = projectLatLon(5.0, 42.0);
+      const ap = projectLatLon(12.0, 122.0);
       const presets = {
         WORLD: { x: 600, y: 280, z: 1 },
-        AMERICAS: { x: 255, y: 205, z: 2.5 },
-        SOUTH_AMERICA: { x: 385, y: 425, z: 2.8 },
-        EUROPE: { x: 600, y: 162, z: 3.4 },
-        MIDDLE_EAST: { x: 695, y: 315, z: 2.3 },
-        ASIA_PACIFIC: { x: 955, y: 295, z: 2.3 },
+        AMERICAS: { x: na.x, y: na.y, z: 2.5 },
+        SOUTH_AMERICA: { x: sa.x, y: sa.y, z: 2.6 },
+        EUROPE: { x: eu.x, y: eu.y, z: 3.6 },
+        MIDDLE_EAST: { x: me.x, y: me.y, z: 2.2 },
+        ASIA_PACIFIC: { x: ap.x, y: ap.y, z: 2.2 },
       };
       const target = presets[preset] || presets.WORLD;
       setZoom(target.z);
@@ -2162,6 +2252,7 @@ export default function GlobalNetworkWorldMap({
   );
 
   const [isPointerInsideMap, setIsPointerInsideMap] = useState(false);
+  const [cursorGps, setCursorGps] = useState(null);
   const isPointerInsideMapRef = useRef(false);
 
   // Native non-passive wheel listener on the SVG map container so rolling the mouse wheel
@@ -2289,8 +2380,24 @@ export default function GlobalNetworkWorldMap({
   };
 
   const handleMapMouseMove = (e) => {
-    if (!isDragging || !dragStartRef.current || !svgContainerRef.current) return;
+    if (!svgContainerRef.current) return;
     const rect = svgContainerRef.current.getBoundingClientRect();
+    const relX = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / Math.max(rect.width, 1))
+    );
+    const relY = Math.max(
+      0,
+      Math.min(1, (e.clientY - rect.top) / Math.max(rect.height, 1))
+    );
+    const curW = 1200 / zoom;
+    const curH = 560 / zoom;
+    const clampedCur = clampCamera(cameraCenter.x, cameraCenter.y, zoom);
+    const svgX = clampedCur.x - curW / 2 + relX * curW;
+    const svgY = clampedCur.y - curH / 2 + relY * curH;
+    setCursorGps(unprojectSvgPoint(svgX, svgY));
+
+    if (!isDragging || !dragStartRef.current) return;
     const dxPx = e.clientX - dragStartRef.current.clientX;
     const dyPx = e.clientY - dragStartRef.current.clientY;
     if (Math.abs(dxPx) > 4 || Math.abs(dyPx) > 4) {
@@ -3526,9 +3633,9 @@ export default function GlobalNetworkWorldMap({
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
-            {/* Floating Interactive Camera Help & Input Lock Pill */}
+            {/* Floating Interactive Camera Help & Live GPS Readout Pill */}
             <div
-              className={`absolute top-2.5 left-3 z-10 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono transition-colors ${
+              className={`absolute top-2.5 left-3 z-10 pointer-events-none flex items-center gap-2.5 px-2.5 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono transition-colors ${
                 isPointerInsideMap
                   ? 'bg-blue-500/10 dark:bg-blue-950/85 border-blue-500/60 text-blue-800 dark:text-blue-200 shadow-lg shadow-blue-950/50'
                   : 'bg-white/90 dark:bg-zinc-950/80 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
@@ -3536,10 +3643,14 @@ export default function GlobalNetworkWorldMap({
             >
               <Move className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
               <span>
-                {isPointerInsideMap ? 'Map Controls Active: ' : ''}
-                Wheel to Zoom ({zoom.toFixed(1)}x) · Drag or Arrows/WASD to Pan ·
-                +/−/0 Shortcuts
+                {isPointerInsideMap ? 'WGS84 Cartographic Projection: ' : ''}
+                Wheel to Zoom ({zoom.toFixed(1)}x) · Drag or WASD to Pan
               </span>
+              {cursorGps && (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold">
+                  GPS: {formatLatLon(cursorGps.lat, cursorGps.lon)}
+                </span>
+              )}
             </div>
 
             {/* Chaos Outage Active Alert Pill */}
@@ -3593,52 +3704,126 @@ export default function GlobalNetworkWorldMap({
                 </radialGradient>
               </defs>
 
-              {/* Latitude / Longitude Orbital Graticule Grid */}
-              {[100, 200, 300, 400, 500].map((y) => (
-                <line
-                  key={`lat-${y}`}
-                  x1={0}
-                  y1={y}
-                  x2={1200}
-                  y2={y}
-                  className="stroke-slate-300 dark:stroke-[#1e293b]"
-                  strokeWidth="0.7"
-                  strokeDasharray="3 6"
-                />
-              ))}
-              {[150, 300, 450, 600, 750, 900, 1050].map((x) => (
-                <line
-                  key={`lon-${x}`}
-                  x1={x}
-                  y1={0}
-                  x2={x}
-                  y2={560}
-                  className="stroke-slate-300 dark:stroke-[#1e293b]"
-                  strokeWidth="0.7"
-                  strokeDasharray="3 6"
-                />
-              ))}
+              {/* True WGS84 Latitude Parallels & Longitude Meridians Graticule Grid */}
+              {[
+                { lat: 60, label: '60°N' },
+                { lat: 30, label: '30°N' },
+                { lat: 23.44, label: '23.4°N Tropic of Cancer', tropic: true },
+                { lat: 0, label: '0° Equator', equator: true },
+                { lat: -23.44, label: '23.4°S Tropic of Capricorn', tropic: true },
+                { lat: -30, label: '30°S' },
+              ].map((p) => {
+                const py = projectLatLon(p.lat, 0).y;
+                return (
+                  <g key={`lat-${p.lat}`}>
+                    <line
+                      x1={0}
+                      y1={py}
+                      x2={1200}
+                      y2={py}
+                      stroke={
+                        p.equator
+                          ? '#0ea5e9'
+                          : p.tropic
+                          ? '#38bdf8'
+                          : '#334155'
+                      }
+                      strokeOpacity={p.equator ? '0.35' : p.tropic ? '0.18' : '0.28'}
+                      strokeWidth={p.equator ? 1.1 * invScale : 0.7 * invScale}
+                      strokeDasharray={
+                        p.equator ? undefined : p.tropic ? '2 5' : '3 6'
+                      }
+                    />
+                    <text
+                      x={6}
+                      y={py - 3}
+                      fill={p.equator ? '#38bdf8' : '#64748b'}
+                      fillOpacity="0.65"
+                      fontSize={6.5 * invScale}
+                      fontFamily="monospace"
+                    >
+                      {p.label}
+                    </text>
+                  </g>
+                );
+              })}
 
-              {/* Equator Reference Line */}
-              <line
-                x1={0}
-                y1={325}
-                x2={1200}
-                y2={325}
-                stroke="#0ea5e9"
-                strokeOpacity="0.22"
-                strokeWidth="1"
+              {[
+                { lon: -120, label: '120°W' },
+                { lon: -60, label: '60°W' },
+                { lon: 0, label: '0° UTC (Prime Meridian)', prime: true },
+                { lon: 60, label: '60°E' },
+                { lon: 120, label: '120°E' },
+                { lon: 180, label: '180°' },
+              ].map((m) => {
+                const mx = projectLatLon(0, m.lon).x;
+                return (
+                  <g key={`lon-${m.lon}`}>
+                    <line
+                      x1={mx}
+                      y1={0}
+                      x2={mx}
+                      y2={560}
+                      stroke={m.prime ? '#0ea5e9' : '#334155'}
+                      strokeOpacity={m.prime ? '0.28' : '0.26'}
+                      strokeWidth={m.prime ? 0.9 * invScale : 0.7 * invScale}
+                      strokeDasharray="3 6"
+                    />
+                    <text
+                      x={mx + 3}
+                      y={553}
+                      fill={m.prime ? '#38bdf8' : '#64748b'}
+                      fillOpacity="0.65"
+                      fontSize={6.5 * invScale}
+                      fontFamily="monospace"
+                    >
+                      {m.label}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* 178 Real Natural Earth Country Polygons (With Host Country & Selected Country Illumination) */}
+              {WORLD_COUNTRY_PATHS.map((country) => {
+                const isSelectedCountry =
+                  selectedRegion?.countryCode === country.id ||
+                  (selectedRegion?.countryCode === 'SGP' && country.id === 'MYS') ||
+                  (selectedRegion?.countryCode === 'HKG' && country.id === 'CHN');
+                return (
+                  <path
+                    key={country.id}
+                    d={country.d}
+                    className={
+                      isSelectedCountry
+                        ? 'fill-blue-100/90 dark:fill-[#132847] stroke-blue-500/80 dark:stroke-[#3b82f6]'
+                        : country.hostsGcp
+                        ? 'fill-slate-200/95 dark:fill-[#0f1b31] stroke-slate-400 dark:stroke-[#233d63]'
+                        : 'fill-slate-200/75 dark:fill-[#0b1324] stroke-slate-300 dark:stroke-[#182a46]'
+                    }
+                    strokeWidth={
+                      isSelectedCountry ? 1.1 * invScale : 0.7 * invScale
+                    }
+                  >
+                    <title>{`${country.name} (${country.id})${country.hostsGcp ? ' · Google Cloud Host Country' : ''}`}</title>
+                  </path>
+                );
+              })}
+
+              {/* 24 Major World Inland Lakes & Seas (Great Lakes, Caspian Sea, Lake Victoria, Baikal) */}
+              <path
+                d={WORLD_LAKES_SVG_PATH}
+                className="fill-[#e0f2fe] dark:fill-[#060c18] stroke-slate-400/60 dark:stroke-[#1e3a5f]"
+                strokeWidth={0.5 * invScale}
               />
 
-              {/* Stylized Continent Landmasses */}
-              {CONTINENT_PATHS.map((cont) => (
-                <path
-                  key={cont.name}
-                  d={cont.d}
-                  className="fill-slate-200/90 dark:fill-[#0f172a] stroke-slate-400 dark:stroke-[#1e3a5f]"
-                  strokeWidth="1.4"
-                />
-              ))}
+              {/* US State & Canadian Province Boundary Lines for Regional Precision */}
+              <path
+                d={ADMIN1_STATES_SVG_PATH}
+                fill="none"
+                className="stroke-slate-400/55 dark:stroke-[#26436c]"
+                strokeWidth={0.55 * invScale}
+                strokeDasharray="1.8 1.8"
+              />
 
               {/* Google Cloud Subsea Fiber Backbone Mesh */}
               {showSubseaBackbone &&
@@ -3696,8 +3881,8 @@ export default function GlobalNetworkWorldMap({
                   <path
                     d={
                       buildArcPath(
-                        480,
-                        255,
+                        HYBRID_GATEWAY_POINT.x,
+                        HYBRID_GATEWAY_POINT.y,
                         selectedRegion.x,
                         selectedRegion.y
                       ).d
@@ -3708,14 +3893,16 @@ export default function GlobalNetworkWorldMap({
                     strokeDasharray="5 3"
                     strokeOpacity="0.75"
                   />
-                  <g transform={`translate(480, 255) scale(${invScale})`}>
-                    <circle r={6} fill="#4285f4" stroke="#020617" strokeWidth="1.5" />
-                    <circle r={12} fill="none" stroke="#4285f4" strokeDasharray="2 2" />
+                  <g
+                    transform={`translate(${HYBRID_GATEWAY_POINT.x}, ${HYBRID_GATEWAY_POINT.y}) scale(${invScale})`}
+                  >
+                    <circle r={5} fill="#4285f4" stroke="#020617" strokeWidth="1.4" />
+                    <circle r={10} fill="none" stroke="#4285f4" strokeDasharray="2 2" />
                     <rect
-                      x={-58}
-                      y={9}
-                      width={116}
-                      height={12}
+                      x={-62}
+                      y={8}
+                      width={124}
+                      height={11.5}
                       rx={3}
                       fill="#020617"
                       fillOpacity="0.9"
@@ -3723,14 +3910,14 @@ export default function GlobalNetworkWorldMap({
                       strokeWidth="0.7"
                     />
                     <text
-                      y={17.5}
+                      y={16.2}
                       textAnchor="middle"
                       fill="#d2e3fc"
-                      fontSize="6.8"
+                      fontSize="6.5"
                       fontWeight="bold"
                       fontFamily="monospace"
                     >
-                      On-Prem / IAP Gateway
+                      Corp Hybrid / IAP Gateway
                     </text>
                   </g>
                 </g>
@@ -3784,7 +3971,7 @@ export default function GlobalNetworkWorldMap({
                   opacity={spotlightMode && zoom >= 1.8 ? 0.35 : 0.85}
                 >
                   <circle
-                    r={4}
+                    r={3.5}
                     fill={
                       orig.kind === 'THREAT_SCANNER'
                         ? '#f43f5e'
@@ -3792,12 +3979,14 @@ export default function GlobalNetworkWorldMap({
                         ? '#10b981'
                         : '#4285f4'
                     }
-                  />
+                  >
+                    <title>{`${orig.label} (${orig.ip})`}</title>
+                  </circle>
                   <text
-                    y={-7}
+                    y={-6}
                     textAnchor="middle"
                     fill="#94a3b8"
-                    fontSize="8"
+                    fontSize="7.2"
                     fontFamily="monospace"
                   >
                     {orig.ip}
@@ -3899,7 +4088,7 @@ export default function GlobalNetworkWorldMap({
                 </g>
               ))}
 
-              {/* All 40 Official Google Cloud Regions & 121 Orbiting Availability Zones (Z-ordered & Tactical Spotlight) */}
+              {/* All 40 Official Google Cloud Regions & 121 Orbiting Availability Zones (Exact WGS84 Projected) */}
               {sortedRegionsForRender.map((reg) => {
                 const workloads = regionWorkloadsMap[reg.id];
                 const hasWorkloads = (workloads?.totalCount || 0) > 0;
@@ -3912,31 +4101,31 @@ export default function GlobalNetworkWorldMap({
                 // Only the selected/hovered region expands its Availability Zone constellation in Spotlight Mode!
                 const shouldRenderZones =
                   showZoneRings &&
-                  (isSelected || isHovered || (!spotlightMode && zoom >= 2.0));
-                const showDetailedZones = isSelected || isHovered || zoom >= 2.1;
-                const zoneOrbitRadius = isSelected || isHovered ? 24 : 15;
+                  (isSelected || isHovered || (!spotlightMode && zoom >= 2.2));
+                const showDetailedZones = isSelected || isHovered || zoom >= 2.2;
+                const zoneOrbitRadius = isSelected || isHovered ? 22 : 14;
 
-                // Tactical Spotlight Opacity: Selected/Hovered = 1.0, Peers/Workloads = subtle, Unselected Neighbors = Ghost Mode (0.18)
+                // Tactical Spotlight Opacity: Selected/Hovered = 1.0, Peers/Workloads = subtle, Unselected Neighbors = clear dot
                 const nodeOpacity = isFocusedNode
                   ? 1
                   : !spotlightMode
-                  ? 0.92
+                  ? 0.94
                   : zoom >= 1.5
                   ? isPeer
-                    ? 0.42
+                    ? 0.65
                     : hasWorkloads
-                    ? 0.38
-                    : 0.18
+                    ? 0.75
+                    : 0.38
                   : isPeer || hasWorkloads
-                  ? 0.85
-                  : 0.45;
+                  ? 0.9
+                  : 0.62;
 
                 // In Spotlight Mode, hide rectangular text pills on unselected neighbor nodes to eliminate dense cluster overlap
                 const shouldShowLabelPill =
                   isFocusedNode ||
                   !spotlightMode ||
                   hasWorkloads ||
-                  (isPeer && zoom >= 1.8);
+                  (isPeer && zoom >= 1.9);
 
                 // Determine core node color based on active Map Lens (Traffic / Carbon / Spot)
                 let lensColor = '#475569';
@@ -3968,6 +4157,17 @@ export default function GlobalNetworkWorldMap({
                     : '#64748b';
                 }
 
+                // Directional label offset so dense European/Asian/US region labels fan out cleanly
+                const labelDx = isFocusedNode
+                  ? 0
+                  : reg.labelOffset?.dx ?? 0;
+                const labelDy = isFocusedNode
+                  ? shouldRenderZones
+                    ? zoneOrbitRadius + 11
+                    : 15
+                  : reg.labelOffset?.dy ?? 14;
+                const pillWidth = Math.max(reg.name.length * 4.3, 50);
+
                 return (
                   <g
                     key={reg.id}
@@ -3982,13 +4182,13 @@ export default function GlobalNetworkWorldMap({
                     }}
                     className="cursor-pointer transition-opacity duration-200"
                   >
-                    {/* Large Invisible Hitbox Circle so Clicking any Ghost or Active Region is Effortless */}
-                    <circle r={24} fill="transparent" />
+                    {/* Tight Non-Colliding Hitbox Circle so Dense European/US Clusters Never Steal Neighbor Clicks */}
+                    <circle r={7.5} fill="transparent" />
 
                     {/* Halo for Focused Region, Active Workload Region, or Severed Chaos Region */}
                     {(isFocusedNode || (hasWorkloads && !spotlightMode)) && (
                       <circle
-                        r={isSelected || isSevered ? 36 : isHovered ? 28 : 22}
+                        r={isSelected || isSevered ? 32 : isHovered ? 24 : 18}
                         fill={
                           isSevered
                             ? 'url(#chaosRegionHalo)'
@@ -4020,7 +4220,7 @@ export default function GlobalNetworkWorldMap({
                     {/* VPC Firewall Perimeter Shield Ring */}
                     {hasWorkloads && !isSevered && (isFocusedNode || !spotlightMode) && (
                       <circle
-                        r={14}
+                        r={11.5}
                         fill="none"
                         stroke="#1a73e8"
                         strokeWidth="1"
@@ -4074,9 +4274,9 @@ export default function GlobalNetworkWorldMap({
                                 }
                               }}
                             >
-                              <circle r={8} fill="transparent" />
+                              <circle r={6.5} fill="transparent" />
                               <circle
-                                r={isZoneSelected ? 4.8 : 3.8}
+                                r={isZoneSelected ? 4.4 : 3.4}
                                 fill={
                                   isZoneSevered
                                     ? '#f43f5e'
@@ -4087,7 +4287,7 @@ export default function GlobalNetworkWorldMap({
                                 stroke="#020617"
                                 strokeWidth="1.2"
                               >
-                                <title>{`Zone ${z} (Click to inspect)`}</title>
+                                <title>{`Zone ${z} · ${reg.city} (${reg.gpsLabel})`}</title>
                               </circle>
                               {showDetailedZones && (
                                 <text
@@ -4100,7 +4300,7 @@ export default function GlobalNetworkWorldMap({
                                       ? '#34d399'
                                       : '#e0f2fe'
                                   }
-                                  fontSize="7"
+                                  fontSize="6.8"
                                   fontWeight="bold"
                                   fontFamily="monospace"
                                 >
@@ -4112,89 +4312,104 @@ export default function GlobalNetworkWorldMap({
                         );
                       })}
 
-                    {/* Region Core Node (Compact Radar Dot in Ghost Mode, Full Glowing Core when Selected/Hovered) */}
+                    {/* Region Core Node (Exact WGS84 Geographic Coordinate Pin) */}
                     <circle
                       r={
                         isSelected || isSevered
-                          ? 7.5
+                          ? 6.4
                           : isHovered
-                          ? 6.5
+                          ? 5.6
                           : hasWorkloads
-                          ? 5
+                          ? 4.4
                           : isPeer
-                          ? 4.2
-                          : 3.4
+                          ? 3.4
+                          : 2.8
                       }
                       fill={lensColor}
                       stroke="#020617"
-                      strokeWidth="1.4"
+                      strokeWidth="1.2"
                     >
-                      <title>{`${reg.name} (${reg.city}) — Click to focus & expand ${reg.zones.length} Availability Zones`}</title>
+                      <title>{`${reg.name} — ${reg.city} [${reg.countryCode}] · GPS ${reg.gpsLabel} — Click to focus & expand ${reg.zones.length} Availability Zones`}</title>
                     </circle>
 
-                    {/* Region Label Pill — Shown for Focused, Active, or Peer Regions (or all when Spotlight Focus is OFF) */}
+                    {/* Precision Center Pinpoint Dot on Selected/Hovered Region */}
+                    {isFocusedNode && (
+                      <circle r={1.6} fill="#ffffff" pointerEvents="none" />
+                    )}
+
+                    {/* Leader Line + Region Label Pill */}
                     {shouldShowLabelPill && (
-                      <g
-                        transform={`translate(0, ${
-                          shouldRenderZones ? zoneOrbitRadius + 11 : 15
-                        })`}
-                      >
-                        <rect
-                          x={-(Math.max(reg.name.length * 4.4, 52) / 2)}
-                          y={-7.5}
-                          width={Math.max(reg.name.length * 4.4, 52)}
-                          height={11}
-                          rx={3}
-                          fill="#020617"
-                          fillOpacity="0.92"
-                          stroke={
-                            isSevered
-                              ? '#f43f5e'
-                              : isSelected
-                              ? '#10b981'
-                              : isHovered
-                              ? '#669df6'
-                              : hasWorkloads
-                              ? '#1a73e8'
-                              : '#1e293b'
-                          }
-                          strokeWidth={
-                            isSelected || isHovered || isSevered ? '1.1' : '0.6'
-                          }
-                        />
-                        <text
-                          y={0.8}
-                          textAnchor="middle"
-                          fill={
-                            isSevered
-                              ? '#fda4af'
-                              : isSelected
-                              ? '#34d399'
-                              : isHovered
-                              ? '#669df6'
-                              : hasWorkloads
-                              ? '#f8fafc'
-                              : '#cbd5e1'
-                          }
-                          fontSize={isSelected || isHovered ? '7.5' : '6.5'}
-                          fontWeight={
-                            isSelected || isHovered || hasWorkloads
-                              ? 'bold'
-                              : 'normal'
-                          }
-                          fontFamily="monospace"
-                        >
-                          {isSevered ? `${reg.name}` : reg.name}
-                        </text>
+                      <g>
+                        {!isFocusedNode && (Math.abs(labelDx) > 4 || Math.abs(labelDy) > 10) && (
+                          <line
+                            x1={0}
+                            y1={0}
+                            x2={labelDx}
+                            y2={labelDy - 2}
+                            stroke={hasWorkloads ? '#3b82f6' : '#475569'}
+                            strokeOpacity="0.55"
+                            strokeWidth="0.7"
+                          />
+                        )}
+                        <g transform={`translate(${labelDx}, ${labelDy})`}>
+                          <rect
+                            x={-(pillWidth / 2)}
+                            y={-7.5}
+                            width={pillWidth}
+                            height={11}
+                            rx={3}
+                            fill="#020617"
+                            fillOpacity="0.92"
+                            stroke={
+                              isSevered
+                                ? '#f43f5e'
+                                : isSelected
+                                ? '#10b981'
+                                : isHovered
+                                ? '#669df6'
+                                : hasWorkloads
+                                ? '#1a73e8'
+                                : '#1e293b'
+                            }
+                            strokeWidth={
+                              isSelected || isHovered || isSevered ? '1.1' : '0.6'
+                            }
+                          />
+                          <text
+                            y={0.8}
+                            textAnchor="middle"
+                            fill={
+                              isSevered
+                                ? '#fda4af'
+                                : isSelected
+                                ? '#34d399'
+                                : isHovered
+                                ? '#669df6'
+                                : hasWorkloads
+                                ? '#f8fafc'
+                                : '#cbd5e1'
+                            }
+                            fontSize={isSelected || isHovered ? '7.3' : '6.3'}
+                            fontWeight={
+                              isSelected || isHovered || hasWorkloads
+                                ? 'bold'
+                                : 'normal'
+                            }
+                            fontFamily="monospace"
+                          >
+                            {reg.name}
+                          </text>
+                        </g>
                       </g>
                     )}
 
-                    {/* City / Carbon / Spot subtitle for Focused Region (or when Map Lens is Carbon/Spot) */}
+                    {/* City + GPS Subtitle for Focused Region (or when Map Lens is Carbon/Spot) */}
                     {(isFocusedNode ||
-                      (!spotlightMode && zoom >= 1.8) ||
+                      (!spotlightMode && zoom >= 2.2) ||
                       (mapLens !== 'TRAFFIC' && (isFocusedNode || isPeer))) && (
                       <text
-                        y={shouldRenderZones ? zoneOrbitRadius + 20 : 24}
+                        x={labelDx}
+                        y={labelDy + 9.5}
                         textAnchor="middle"
                         fill={
                           mapLens === 'CARBON_GRID'
@@ -4205,7 +4420,7 @@ export default function GlobalNetworkWorldMap({
                             ? '#a7f3d0'
                             : '#94a3b8'
                         }
-                        fontSize="6.2"
+                        fontSize="6.1"
                         fontFamily="monospace"
                       >
                         {mapLens === 'CARBON_GRID'
@@ -4215,26 +4430,26 @@ export default function GlobalNetworkWorldMap({
                               0.018 +
                               (100 - reg.cfePercent) * 0.0002
                             ).toFixed(3)}/hr`
-                          : `${reg.city} · ${reg.zones.length} Zones`}
+                          : `${reg.city} (${reg.gpsLabel})`}
                       </text>
                     )}
 
                     {hasWorkloads && (
-                      <g transform="translate(8, -15)">
+                      <g transform="translate(6, -13)">
                         <rect
                           x={0}
                           y={0}
-                          width={20}
-                          height={11}
-                          rx={3.5}
+                          width={18}
+                          height={10.5}
+                          rx={3}
                           fill={isSevered ? '#e11d48' : '#0284c7'}
                         />
                         <text
-                          x={10}
-                          y={8}
+                          x={9}
+                          y={7.6}
                           textAnchor="middle"
                           fill="#ffffff"
-                          fontSize="7.5"
+                          fontSize="7"
                           fontWeight="bold"
                           fontFamily="monospace"
                         >
@@ -4260,16 +4475,16 @@ export default function GlobalNetworkWorldMap({
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
-                  <span>ALLOWED</span>
+                  <span>Selected / Allowed</span>
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
-                  <span>BLOCKED / OUTAGE</span>
+                  <span>Blocked / Outage</span>
                 </span>
               </div>
-              <span className="text-blue-400 font-bold">
-                Selected: {selectedRegion.name} ({selectedRegion.city} ·{' '}
-                {selectedZoneName}) · All 40 GCP Regions Mapped
+              <span className="text-blue-500 dark:text-blue-400 font-bold">
+                Selected: {selectedRegion.name} · {selectedRegion.city} [
+                {selectedRegion.countryCode}] · GPS {selectedRegion.gpsLabel}
               </span>
             </div>
           </div>
@@ -4405,10 +4620,13 @@ export default function GlobalNetworkWorldMap({
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                     {selectedRegion.cfePercent}% CFE Green Grid
                   </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+                    GPS {selectedRegion.gpsLabel}
+                  </span>
                 </div>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  {selectedRegion.city} · {selectedRegion.continent} (
-                  {selectedRegion.gco2} gCO2eq/kWh)
+                  {selectedRegion.city} [{selectedRegion.countryCode}] ·{' '}
+                  {selectedRegion.continent} ({selectedRegion.gco2} gCO2eq/kWh)
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1">
