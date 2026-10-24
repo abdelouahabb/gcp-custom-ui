@@ -2429,15 +2429,17 @@ app.get('/api/project/:projectId/service-accounts', async (req, res) => {
 // 9. POST /api/project/:projectId/provision -> 100% Real GCP Resource Creation via REST APIs
 app.post('/api/project/:projectId/provision', async (req, res) => {
   const { projectId } = req.params;
-  const {
-    serviceType, // 'GCS_BUCKET' | 'BIGQUERY_DATASET' | 'COMPUTE_VM' | 'CLOUD_RUN'
-    name,
-    region = 'us-east1',
-    zone = 'us-east1-b',
-    config = {},
-  } = req.body || {};
+  const rawBody = req.body || {};
+  const serviceType = rawBody.serviceType; // 'GCS_BUCKET' | 'BIGQUERY_DATASET' | 'COMPUTE_VM' | 'CLOUD_RUN'
+  const name = rawBody.name || rawBody.serviceName || rawBody.resourceName;
+  const region = rawBody.region || 'us-east1';
+  const zone = rawBody.zone || 'us-east1-b';
+  const config =
+    rawBody.config && typeof rawBody.config === 'object'
+      ? { ...rawBody, ...rawBody.config }
+      : { ...rawBody };
 
-  if (!name || !name.trim()) {
+  if (!name || !String(name).trim()) {
     return res.status(400).json({ error: 'Resource name is required.' });
   }
 
@@ -3233,21 +3235,45 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         },
       };
 
-      const op = await gcpFetch(
-        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
-          projectId
-        )}/locations/${encodeURIComponent(
-          region
-        )}/services?serviceId=${encodeURIComponent(cleanName)}`,
-        token,
-        projectId,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: serviceBody,
-          timeout: 12000,
+      let op;
+      try {
+        op = await gcpFetch(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(
+            region
+          )}/services?serviceId=${encodeURIComponent(cleanName)}`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: serviceBody,
+            timeout: 12000,
+          }
+        );
+      } catch (postErr) {
+        const msg = String(postErr.message || '');
+        if (msg.includes('409') || msg.toLowerCase().includes('already exists')) {
+          op = await gcpFetch(
+            `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+              projectId
+            )}/locations/${encodeURIComponent(
+              region
+            )}/services/${encodeURIComponent(cleanName)}`,
+            token,
+            projectId,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: serviceBody,
+              timeout: 12000,
+            }
+          );
+        } else {
+          throw postErr;
         }
-      );
+      }
 
       // If enableDirectIap is true, provision IAP Service Agent and grant roles/run.invoker
       if (enableDirectIap) {
@@ -3350,6 +3376,14 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
       return res.json({
         ok: true,
         serviceAccount: runtimeServiceAccount || null,
+        resource: {
+          name: cleanName,
+          region,
+          uri:
+            op?.response?.uri ||
+            op?.uri ||
+            `https://console.cloud.google.com/run/detail/${region}/${cleanName}/metrics?project=${projectId}`,
+        },
         message: `Dispatched real Cloud Run deployment for "${cleanName}" in ${region} (${cpu} vCPU, ${memory}${gpuBadge}, ${billingBadge}${vpcBadge}${storageBadge}, scale ${minInstances}→${maxInstances}, ${
           allowUnauthenticated ? 'Public HTTPS' : 'IAM Auth'
         }${saBadge})!`,

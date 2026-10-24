@@ -546,23 +546,22 @@ export default function VmFleetAndSsh({
     try {
       const payload = {
         serviceType: 'CLOUD_RUN',
+        name: migrateForm.serviceName,
         serviceName: migrateForm.serviceName,
         region: migrateForm.region,
-        containerImage: migrateForm.containerImage,
-        containerPort: Number(migrateForm.containerPort) || 8080,
-        cpu: migrateForm.cpu,
-        memory: migrateForm.memory,
-        minInstances: 0,
-        maxInstances: Number(migrateForm.maxInstances) || 10,
-        allowUnauthenticated: true,
-        ingress: 'INGRESS_TRAFFIC_ALL',
-        executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
-        cpuThrottling: true,
-        startupCpuBoost: true,
-        envVars: {
-          MIGRATED_FROM_GCE_VM: vm.name,
-          SOURCE_VM_ZONE: vm.zone,
-          SOURCE_MACHINE_TYPE: vm.machineType,
+        config: {
+          containerImage: migrateForm.containerImage,
+          containerPort: Number(migrateForm.containerPort) || 8080,
+          cpu: migrateForm.cpu,
+          memory: migrateForm.memory,
+          minInstances: 0,
+          maxInstances: Number(migrateForm.maxInstances) || 10,
+          allowUnauthenticated: true,
+          ingress: 'INGRESS_TRAFFIC_ALL',
+          executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
+          cpuIdle: true,
+          startupCpuBoost: true,
+          envVars: `MIGRATED_FROM_GCE_VM=${vm.name},SOURCE_VM_ZONE=${vm.zone},SOURCE_MACHINE_TYPE=${vm.machineType}`,
         },
       };
       const res = await axios.post(
