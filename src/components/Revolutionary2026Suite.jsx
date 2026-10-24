@@ -35,6 +35,7 @@ import Wave12RoadsterFlightDeckStudio from './Wave12RoadsterFlightDeckStudio';
 import Wave13StarlinkNeuralinkStudio from './Wave13StarlinkNeuralinkStudio';
 import Wave14QuantumTimeTravelDoctorStudio from './Wave14QuantumTimeTravelDoctorStudio';
 import Wave15DysonSupplyLoggingTlsStudio from './Wave15DysonSupplyLoggingTlsStudio';
+import FivePersonaCommandCenter from './FivePersonaCommandCenter';
 import { useTimezone } from '../context/TimezoneContext';
 
 //Hourly base pricing lookup (USD/hr) for real-time burn-rate estimation
@@ -203,6 +204,8 @@ export default function Revolutionary2026Suite({
   onOpenProvision,
   onDeleteResource,
   onSelectStudioTab,
+  onOpenBigQuerySql,
+  onOpenTimeMachine,
   onOpenHealthAndDrift,
   onSelectProject,
   onRunInShell,
@@ -1149,6 +1152,12 @@ export default function Revolutionary2026Suite({
                     if (
                       cat.id === 'ALPHA_BETA' &&
                       ![
+                        'FIVE_PERSONA_COUNCIL',
+                        'FIVE_PERSONA_ARCHITECT',
+                        'FIVE_PERSONA_CLOUD_ENG',
+                        'FIVE_PERSONA_DATA_ENG',
+                        'FIVE_PERSONA_NETOPS',
+                        'FIVE_PERSONA_DEVSECOPS',
                         'WAVE15_DYSON_MOONSHOT',
                         'WAVE14_QUANTUM_DOCTOR',
                         'WAVE13_STARLINK_NEURALINK',
@@ -1157,7 +1166,7 @@ export default function Revolutionary2026Suite({
                         'GCLOUD_ALPHA_BETA',
                       ].includes(subTab)
                     ) {
-                      setSubTab('WAVE15_DYSON_MOONSHOT');
+                      setSubTab('FIVE_PERSONA_COUNCIL');
                     }
                   }}
                   title={cat.label}
@@ -1186,6 +1195,15 @@ export default function Revolutionary2026Suite({
         {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
+            {
+              id: 'FIVE_PERSONA_COUNCIL',
+              category: 'ALPHA_BETA',
+              badge: '5-PERSONA BOARD',
+              label:
+                '5-Persona Enterprise Board (Architect, Cloud Eng, Data Eng, NetOps & DevSecOps)',
+              tip: '5-Persona Enterprise Architecture Board & Pre-Flight War-Room: (1) Cloud Architect Region Blackout SPOF Drill & Org Policies, (2) Cloud Engineer ClickOps-to-GitOps .tf Exporter & Undo Saga, (3) Data Engineer Column Lineage DAG & Quarantine DLQ Replay, (4) Network Engineer 4-Hop Packet Tracer & IPAM CIDR Map, and (5) DevSecOps Binary Authz @sha256, IAM Escalation & Zero-Key OIDC',
+              icon: ShieldCheck,
+            },
             {
               id: 'WAVE15_DYSON_MOONSHOT',
               category: 'ALPHA_BETA',
@@ -1449,6 +1467,31 @@ export default function Revolutionary2026Suite({
           liveBurn={burn}
           onSelectProject={onSelectProject}
           onRunInShell={onRunInShell}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
+      )}
+
+      {/* FLAGSHIP 5-PERSONA ENTERPRISE ARCHITECTURE BOARD & PRE-FLIGHT WAR-ROOM */}
+      {String(subTab || '').startsWith('FIVE_PERSONA_') && (
+        <FivePersonaCommandCenter
+          projectId={projectId}
+          initialPersona={
+            subTab === 'FIVE_PERSONA_CLOUD_ENG'
+              ? 'CLOUD_ENGINEER'
+              : subTab === 'FIVE_PERSONA_DATA_ENG'
+              ? 'DATA_ENGINEER'
+              : subTab === 'FIVE_PERSONA_NETOPS'
+              ? 'NETWORK_ENGINEER'
+              : subTab === 'FIVE_PERSONA_DEVSECOPS'
+              ? 'DEVSECOPS'
+              : 'ARCHITECT'
+          }
+          onNavigateTab={onSelectStudioTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
+          onRunInShell={onRunInShell}
+          onOpenHealthAndDrift={onOpenHealthAndDrift}
+          onOpenTimeMachine={onOpenTimeMachine}
           onShowToast={onShowToast}
           onShowError={onShowError}
         />

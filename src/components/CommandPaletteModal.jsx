@@ -149,6 +149,20 @@ export default function CommandPaletteModal({
         }
       },
       {
+        id: 'open-five-persona-enterprise-board',
+        category: '2026 Innovation Lab (Star)',
+        title: 'Open 5-Persona Enterprise Architecture Board (Architect, Cloud Eng, Data Eng, NetOps & DevSecOps)',
+        subtitle: 'Live Region Blackout SPOF Drill, Org Policies, ClickOps-to-GitOps .tf Exporter, Column Lineage & Quarantine DLQ Replay, 4-Hop Packet Tracer & Binary Authz + OIDC WIF',
+        keywords: '5 persona architect cloud engineer data engineer network engineer devsecops blackout spof org policy terraform import undo column lineage quarantine dlq packet connectivity trace ipam cidr binary authorization oidc workload identity',
+        badge: '5-PERSONA BOARD',
+        badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+        icon: ShieldCheck,
+        run: () => {
+          onSelectTab('INNOVATION_LAB', 'FIVE_PERSONA_COUNCIL');
+          onClose();
+        }
+      },
+      {
         id: 'open-gcloud-590-wave3-frontier',
         category: '2026 Innovation Lab (Star)',
         title: 'Open [GA/BETA/ALPHA] Google Cloud SDK 590.0.1 Frontier Lab (Wave 1–3: 8-Pillar Probe, Agent Registry, Model Armor, Cluster Director & Compliance Manager)',

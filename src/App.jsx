@@ -1285,6 +1285,11 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // 3D-0. 5-Persona Enterprise Readiness Drills & Traces (/enterprise-personas/action)
+    if (rawUrl.includes('/enterprise-personas/action')) {
+      return null;
+    }
+
     // 3D. [GA / BETA / ALPHA] gcloud 590.0.1 Frontier Lab Mutations (/alpha-beta/action)
     if (rawUrl.includes('/alpha-beta/action')) {
       const act = String(body.action || '').toUpperCase();
@@ -3504,8 +3509,22 @@ function CloudPulseCockpit() {
               </div>
             </div>
 
-            {/* Top-Right Cluster: [ALPHA/BETA] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
+            {/* Top-Right Cluster: [5-Persona Board] + [SDK 590.0.1] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
             <div className="flex items-center gap-2.5 shrink-0">
+              {/* 1-Click 5-Persona Enterprise Architecture Board Launcher */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInnovationSubTab('FIVE_PERSONA_COUNCIL');
+                  setActiveTab('INNOVATION_LAB');
+                }}
+                title="Open 5-Persona Enterprise Architecture Board & Pre-Flight War-Room: (1) Cloud Architect Region Blackout SPOF Drill & Org Policies, (2) Cloud Engineer ClickOps-to-GitOps .tf Exporter & Undo Saga, (3) Data Engineer Column Lineage DAG & Quarantine DLQ Replay, (4) Network Engineer 4-Hop Packet Tracer & IPAM CIDR Map, and (5) DevSecOps Binary Authz @sha256, IAM Escalation & Zero-Key OIDC"
+                className="inline-flex items-center gap-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40 rounded-xl px-3 py-2.5 text-xs font-mono font-extrabold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span>[5-Persona Board]</span>
+              </button>
+
               {/* 1-Click [GA/BETA/ALPHA] gcloud 590.0.1 Frontier Lab Launcher */}
               <button
                 type="button"
@@ -4092,6 +4111,11 @@ function CloudPulseCockpit() {
                   onOpenProvision={handleOpenProvision}
                   onDeleteResource={handleDeleteResource}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                  onOpenTimeMachine={() => setTimeMachineOpen(true)}
+                  onOpenBigQuerySql={(sqlText) => {
+                    if (sqlText) setBigQueryInitialSql(sqlText);
+                    setActiveTab('BIGQUERY_STUDIO');
+                  }}
                   onSelectStudioTab={handleNavigateStudioTab}
                   onSelectProject={(pid) => {
                     sessionStorage.setItem(
