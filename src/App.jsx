@@ -3073,6 +3073,8 @@ function CloudPulseCockpit() {
                 <SreWarRoomPerimeterStudio
                   projectId={selectedProjectId}
                   onTriggerToast={showToast}
+                  onRunInShell={handleRunInShell}
+                  onNavigateTab={(tabId) => setActiveTab(tabId)}
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
