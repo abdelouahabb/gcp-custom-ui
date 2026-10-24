@@ -954,12 +954,42 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/wave15/logging-ai-surgeon') ||
       rawUrl.includes('/wave15/tls-x509-inspector') ||
       rawUrl.includes('/enterprise-personas/tribunal') ||
+      rawUrl.includes('/enterprise-personas/zkp-verify') ||
+      rawUrl.includes('/enterprise-personas/intent-compiler') ||
       (rawUrl.includes('/enterprise-personas/action') &&
-        String(body.action || '').toUpperCase() !==
-          'EXECUTE_TRIBUNAL_LIVE_REMEDIATION');
+        !['EXECUTE_TRIBUNAL_LIVE_REMEDIATION', 'ROLLBACK_TRIBUNAL_REMEDIATION'].includes(
+          String(body.action || '').toUpperCase()
+        ));
 
     if (isReadOnlyOrDryRun) {
       return null;
+    }
+
+    // 3A-0000-rollback. 10-Persona Tribunal Rollback Capsule Reverter
+    if (
+      rawUrl.includes('/enterprise-personas/action') &&
+      String(body.action || '').toUpperCase() ===
+        'ROLLBACK_TRIBUNAL_REMEDIATION'
+    ) {
+      const capId = body.capsuleId || 'Rollback Capsule';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Restore Pre-Remediation GCP State from Rollback Capsule "${capId}"?`,
+        headerBadge: '10-Persona Launch Tribunal · 2030 Rollback Capsule',
+        targetLabel: 'Target Pre-Mutation Rollback Capsule',
+        resourceKind: 'Compute Firewall / GCS Bucket Pre-Mutation Snapshot',
+        targetName: capId,
+        location: body.region || 'Global / Multi-Region',
+        projectId,
+        method: 'REVERT CAPSULE',
+        endpoint: rawUrl,
+        confirmLabel: `Revert to Pre-Fix GCP State`,
+        cancelToast: 'Rollback capsule revert cancelled.',
+        whatHappensNext: `1. Reads the SHA-256 sealed pre-mutation resource JSON stored in Rollback Capsule "${capId}".\n2. Calls PATCH against Google Cloud REST APIs to restore the exact pre-remediation sourceRanges or iamConfiguration.`,
+        costWarning: `ZERO COST IMPACT ($0.00/MO): Restoring firewall rules or bucket IAM settings incurs $0.00/mo.`,
+        impactWarning: `Restores the previous resource configuration on project "${projectId}".`,
+      };
     }
 
     // 3A-0000. 10-Persona Tribunal Live GCP Remediation (LOCK_FIREWALL_TO_IAP | ENFORCE_BUCKET_PAP)

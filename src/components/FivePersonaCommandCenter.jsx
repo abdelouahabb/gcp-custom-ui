@@ -158,6 +158,18 @@ export default function FivePersonaCommandCenter({
   const [tribunalSubTab, setTribunalSubTab] = useState('ROLL_CALL');
   const [remediatingTarget, setRemediatingTarget] = useState('');
 
+  // 2030 Horizon State: Multi-Project Fleet Tribunal, ZKP Verifier, Intent Compiler & Rollback Capsules
+  const [fleetTribunalData, setFleetTribunalData] = useState(null);
+  const [fleetLoading, setFleetLoading] = useState(false);
+  const [zkpVerificationResult, setZkpVerificationResult] = useState(null);
+  const [zkpVerifying, setZkpVerifying] = useState(false);
+  const [intentPrompt, setIntentPrompt] = useState(
+    'Lock project to strict Zero-Trust & $0.00/mo Always-Free invariance'
+  );
+  const [intentModel, setIntentModel] = useState('gemini-3.8-flash');
+  const [compiledIntentPlan, setCompiledIntentPlan] = useState(null);
+  const [intentCompiling, setIntentCompiling] = useState(false);
+
   // Network Engineer interactive Connectivity Trace inputs
   const [traceSource, setTraceSource] = useState(
     'Cloud Run v2 Service (us-central1)'
@@ -270,11 +282,145 @@ export default function FivePersonaCommandCenter({
         onShowError?.(
           err.response?.data?.error ||
             err.message ||
-            `Live GCP remediation failed for ${resourceName}`
+            `Live GCP remediation failed for ${targetResource}`
         );
       }
     } finally {
       setRemediatingTarget('');
+    }
+  };
+
+  const revertRollbackCapsule = async (capsuleId) => {
+    if (!projectId || !capsuleId) return;
+    setRemediatingTarget(`revert:${capsuleId}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/enterprise-personas/action`,
+        {
+          action: 'ROLLBACK_TRIBUNAL_REMEDIATION',
+          region,
+          capsuleId,
+        }
+      );
+      setLastReceipt(res.data);
+      if (res.data?.summary) {
+        onShowToast?.(res.data.summary);
+      }
+      await Promise.all([fetchPersonaOverview(), runLaunchTribunal()]);
+    } catch (err) {
+      if (!err?.__cancelledByUser) {
+        onShowError?.(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to revert Rollback Capsule ${capsuleId}`
+        );
+      }
+    } finally {
+      setRemediatingTarget('');
+    }
+  };
+
+  const runFleetTribunal = async () => {
+    setFleetLoading(true);
+    try {
+      const res = await axios.get('/api/enterprise-personas/fleet-tribunal');
+      setFleetTribunalData(res.data);
+      onShowToast?.(
+        `Evaluated ${res.data?.totalProjectsEvaluated || 0} active GCP projects in parallel (Estate Avg: ${res.data?.estateAverageScore || 0}/100)`
+      );
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to run Multi-Project Fleet Tribunal.'
+      );
+    } finally {
+      setFleetLoading(false);
+    }
+  };
+
+  const verifyZkpBlindProof = async () => {
+    const proof = tribunalData?.blindedComplianceProof;
+    if (!projectId || !proof) return;
+    setZkpVerifying(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/enterprise-personas/zkp-verify`,
+        {
+          statement: proof.statement,
+          ed25519SignatureHex: proof.ed25519SignatureHex,
+          publicKeyPem: proof.publicKeyPem,
+          commitments: proof.commitments,
+        }
+      );
+      setZkpVerificationResult(res.data);
+      if (res.data?.summary) {
+        onShowToast?.(res.data.summary);
+      }
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to verify Blinded ZKP Compliance Proof.'
+      );
+    } finally {
+      setZkpVerifying(false);
+    }
+  };
+
+  const downloadZkpCertificate = () => {
+    const proof = tribunalData?.blindedComplianceProof;
+    if (!proof) return;
+    const blob = new Blob([JSON.stringify(proof, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `CloudPulse-2030-ZKP-Blind-Attestation-${
+      proof.statement?.blindedProjectHash?.slice(0, 12) || 'cert'
+    }.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    onShowToast?.(
+      'Exported Zero-Knowledge Blinded Compliance Proof Certificate (.json)'
+    );
+  };
+
+  const runIntentCompiler = async (customPrompt) => {
+    if (!projectId) return;
+    const promptToUse = customPrompt || intentPrompt;
+    if (customPrompt) setIntentPrompt(customPrompt);
+    setIntentCompiling(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/enterprise-personas/intent-compiler`,
+        {
+          intentPrompt: promptToUse,
+          model: intentModel,
+          region,
+        }
+      );
+      setCompiledIntentPlan(res.data);
+      onShowToast?.(
+        `Compiled 10-Persona Control-Plane Plan via ${res.data?.modelUsed} in ${res.data?.compileLatencyMs}ms`
+      );
+    } catch (err) {
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to compile Intent-to-Control-Plane plan.'
+      );
+    } finally {
+      setIntentCompiling(false);
     }
   };
 
@@ -619,36 +765,62 @@ export default function FivePersonaCommandCenter({
             </div>
           </div>
 
-          {/* Sub-navigation tabs for the 4 Swarm Intelligence Views */}
+          {/* Sub-navigation tabs for the 8 Swarm & 2030 Horizon Intelligence Views */}
           <div className="flex flex-wrap items-center gap-2">
             {[
               {
                 id: 'ROLL_CALL',
-                label: '01 · 10-Persona Roll-Call & Live GCP Remediator',
+                label: '01 · 10-Persona Roll-Call & Live Remediator',
               },
               {
                 id: 'RIPPLE_GRAPH',
-                label: `02 · Cross-Persona Blast-Radius Ripple Chains (${
+                label: `02 · Cross-Persona Ripple Chains (${
                   (tribunalData.liveCrossPersonaChains || []).length
                 })`,
               },
               {
                 id: 'PARETO_SOLVER',
-                label: '03 · Multi-Persona Pareto Conflict Solver (Cost vs. HA vs. Zero-Trust)',
+                label: '03 · Pareto Conflict Solver',
               },
               {
                 id: 'MERKLE_DIFF',
-                label: `04 · T0 vs. T_Now SHA-256 Merkle State Diff (${
-                  tribunalData.merkleDiff?.stateChanged
-                    ? 'DELTA_DETECTED'
-                    : 'ZERO_DRIFT'
+                label: `04 · T0 vs. T_Now Merkle Diff & Undo Capsules (${
+                  (tribunalData.rollbackCapsules || []).length
                 })`,
+              },
+              {
+                id: 'MULTI_PROJECT_FLEET',
+                label: '05 · [2030] Multi-Project Fleet Tribunal',
+              },
+              {
+                id: 'PRE_CRIME_72H',
+                label: `06 · [2030] T_+72h Pre-Crime Forecaster (${
+                  tribunalData.preCrime72hForecast?.overall72hRiskLevel ||
+                  'ACTIVE'
+                })`,
+              },
+              {
+                id: 'ZKP_BLIND_PROOF',
+                label: '07 · [2030] ZKP / Ed25519 Blinded Proof & Verifier',
+              },
+              {
+                id: 'INTENT_COMPILER',
+                label: '08 · [2030] Intent-to-Control-Plane Compiler',
               },
             ].map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setTribunalSubTab(tab.id)}
+                onClick={() => {
+                  setTribunalSubTab(tab.id);
+                  if (
+                    tab.id === 'MULTI_PROJECT_FLEET' &&
+                    !fleetTribunalData &&
+                    !fleetLoading
+                  ) {
+                    runFleetTribunal();
+                  }
+                }}
                 className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-extrabold border transition-colors cursor-pointer ${
                   tribunalSubTab === tab.id
                     ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
@@ -935,6 +1107,428 @@ export default function FivePersonaCommandCenter({
                   </div>
                 ))}
               </div>
+
+              {/* Pre-Mutation Rollback Capsules */}
+              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-zinc-900 dark:text-white">
+                    2030 Pre-Mutation Rollback Capsules (1-Click GCP State Revert)
+                  </span>
+                  <span className="text-[10px] text-zinc-500">
+                    {(tribunalData.rollbackCapsules || []).length} Capsule(s) Sealed
+                  </span>
+                </div>
+                {(tribunalData.rollbackCapsules || []).length === 0 ? (
+                  <div className="text-[11px] text-zinc-500">
+                    When you click "Fix Live" on any firewall rule or GCS bucket in Sub-Tab 01, the exact pre-mutation GCP resource JSON is sealed here with a SHA-256 hash so you can revert in 1 click.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {(tribunalData.rollbackCapsules || []).map((cap) => (
+                      <div
+                        key={cap.capsuleId}
+                        className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-[11px]"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="font-extrabold text-zinc-900 dark:text-white">
+                            {cap.remediationType} · {cap.targetResource}
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            Capsule SHA-256: {cap.capsuleSha256?.slice(0, 16)}... ·{' '}
+                            {cap.reverted ? 'REVERTED' : 'ACTIVE'}
+                          </div>
+                        </div>
+                        {!cap.reverted && (
+                          <button
+                            type="button"
+                            disabled={
+                              remediatingTarget === `revert:${cap.capsuleId}`
+                            }
+                            onClick={() => revertRollbackCapsule(cap.capsuleId)}
+                            className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold cursor-pointer shrink-0"
+                          >
+                            {remediatingTarget === `revert:${cap.capsuleId}`
+                              ? 'Reverting...'
+                              : 'Revert to Pre-Fix State'}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 5: [2030] MULTI-PROJECT FLEET TRIBUNAL & CROSS-ESTATE ARBITRATOR */}
+          {tribunalSubTab === 'MULTI_PROJECT_FLEET' && (
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="font-extrabold text-zinc-900 dark:text-white">
+                    Multi-Project Cross-Estate Fleet Tribunal (All Active GCP Projects in Parallel)
+                  </span>
+                  {fleetTribunalData && (
+                    <span className="ml-2 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[10px] font-extrabold">
+                      {fleetTribunalData.totalProjectsEvaluated} Projects · Estate Avg:{' '}
+                      {fleetTribunalData.estateAverageScore}/100 ·{' '}
+                      {fleetTribunalData.totalProbeLatencyMs}ms
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={runFleetTribunal}
+                  disabled={fleetLoading}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer"
+                >
+                  {fleetLoading
+                    ? 'Probing All Active GCP Projects...'
+                    : 'Re-Probe All Active Projects'}
+                </button>
+              </div>
+
+              {fleetLoading && !fleetTribunalData ? (
+                <div className="text-[11px] text-zinc-500 py-4">
+                  Discovering all ACTIVE Google Cloud projects via cloudresourcemanager.googleapis.com and running parallel 10-Persona probes...
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(fleetTribunalData?.projects || []).map((proj, idx) => (
+                    <div
+                      key={proj.projectId}
+                      className={`p-3 rounded-xl border space-y-2 ${
+                        proj.projectId === projectId
+                          ? 'border-blue-500 bg-blue-500/5'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-zinc-900 dark:text-white truncate">
+                          #{idx + 1} · {proj.projectId}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                            proj.readinessScore >= 90
+                              ? 'bg-emerald-500/20 text-emerald-500'
+                              : 'bg-amber-500/20 text-amber-500'
+                          }`}
+                        >
+                          {proj.readinessScore}/100
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-zinc-500">
+                        {proj.verdict} · {proj.probeLatencyMs}ms
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                        <div className="p-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                          Open 0.0.0.0/0 FW:{' '}
+                          <strong
+                            className={
+                              proj.counts?.openSensitiveFirewalls > 0
+                                ? 'text-amber-500'
+                                : 'text-emerald-500'
+                            }
+                          >
+                            {proj.counts?.openSensitiveFirewalls ?? 0}/
+                            {proj.counts?.firewalls ?? 0}
+                          </strong>
+                        </div>
+                        <div className="p-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                          Unenforced PAP:{' '}
+                          <strong
+                            className={
+                              proj.counts?.unhardenedBuckets > 0
+                                ? 'text-amber-500'
+                                : 'text-emerald-500'
+                            }
+                          >
+                            {proj.counts?.unhardenedBuckets ?? 0}/
+                            {proj.counts?.gcsBuckets ?? 0}
+                          </strong>
+                        </div>
+                        <div className="p-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                          Cloud Run Svcs:{' '}
+                          <strong>{proj.counts?.cloudRunServices ?? 0}</strong>
+                        </div>
+                        <div className="p-1.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                          Zombie Disks:{' '}
+                          <strong>{proj.counts?.zombieDisks ?? 0}</strong>
+                        </div>
+                      </div>
+                      <div className="text-[9px] text-indigo-500 truncate">
+                        SHA-256: {proj.merkleSealSha256}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SUB-TAB 6: [2030] T_NOW -> T_+72H PRE-CRIME FORECASTER */}
+          {tribunalSubTab === 'PRE_CRIME_72H' &&
+            tribunalData.preCrime72hForecast && (
+              <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="font-extrabold text-zinc-900 dark:text-white">
+                      T_Now → T_+72h Pre-Crime Outage, Quota-Wall &amp; Drift Trajectory Engine
+                    </span>
+                    <span className="ml-2 px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 text-[10px] font-extrabold">
+                      {tribunalData.preCrime72hForecast.overall72hRiskLevel}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-zinc-500">
+                    Horizon: +{tribunalData.preCrime72hForecast.horizonHours}h
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(tribunalData.preCrime72hForecast.trajectories || []).map(
+                    (tr) => (
+                      <div
+                        key={tr.id}
+                        className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-extrabold text-zinc-900 dark:text-white">
+                            {tr.metric}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${
+                              tr.status === 'WARN'
+                                ? 'bg-amber-500/20 text-amber-500'
+                                : 'bg-emerald-500/20 text-emerald-500'
+                            }`}
+                          >
+                            {tr.domain} · {tr.status}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                          <strong>T_Now Live:</strong> {tr.tNowValue}
+                        </div>
+                        <div className="text-[11px] text-blue-600 dark:text-blue-400">
+                          <strong>T_+72h Projection:</strong>{' '}
+                          {tr.tPlus72hProjection}
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          Time-to-Threshold: <code>{tr.timeToThreshold}</code>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+          {/* SUB-TAB 7: [2030] ZERO-KNOWLEDGE / ED25519 BLINDED COMPLIANCE PROOF & VERIFIER */}
+          {tribunalSubTab === 'ZKP_BLIND_PROOF' &&
+            tribunalData.blindedComplianceProof && (
+              <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="font-extrabold text-zinc-900 dark:text-white">
+                      Zero-Knowledge / Blinded Cryptographic Compliance Proof (
+                      {tribunalData.blindedComplianceProof.algorithm})
+                    </span>
+                    <span className="ml-2 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[10px] font-extrabold">
+                      ZERO INTERNAL RESOURCE NAME LEAKAGE
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={verifyZkpBlindProof}
+                      disabled={zkpVerifying}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold cursor-pointer"
+                    >
+                      {zkpVerifying
+                        ? 'Verifying Ed25519...'
+                        : 'Verify Ed25519 + Merkle Proof Live'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={downloadZkpCertificate}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer"
+                    >
+                      Export ZKP Certificate (.json)
+                    </button>
+                  </div>
+                </div>
+
+                {zkpVerificationResult && (
+                  <div
+                    className={`p-3 rounded-xl border text-[11px] ${
+                      zkpVerificationResult.verified
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                        : 'border-rose-500/40 bg-rose-500/10 text-rose-500'
+                    }`}
+                  >
+                    <strong>{zkpVerificationResult.summary}</strong>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px]">
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-500">
+                      Blinded Project Commitment &amp; Merkle Root
+                    </div>
+                    <div className="font-bold text-indigo-500 break-all">
+                      {
+                        tribunalData.blindedComplianceProof.statement
+                          ?.blindedMerkleRoot
+                      }
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-500">
+                      Ed25519 (RFC 8032) Digital Signature
+                    </div>
+                    <div className="font-bold text-emerald-500 break-all">
+                      {tribunalData.blindedComplianceProof.ed25519SignatureHex}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {(tribunalData.blindedComplianceProof.commitments || [])
+                    .slice(0, 9)
+                    .map((c) => (
+                      <div
+                        key={c.commitmentId}
+                        className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1 text-[10px]"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-zinc-900 dark:text-white">
+                            {c.commitmentId} · {c.blindedIdentifier}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                              c.compliant
+                                ? 'bg-emerald-500/20 text-emerald-500'
+                                : 'bg-amber-500/20 text-amber-500'
+                            }`}
+                          >
+                            {c.compliant ? 'COMPLIANT' : 'NEEDS_SCOPE'}
+                          </span>
+                        </div>
+                        <div className="text-zinc-500">{c.invariantClaim}</div>
+                        <div className="text-[9px] text-indigo-500 truncate">
+                          Commitment: {c.pedersenSha256Commitment}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+          {/* SUB-TAB 8: [2030] INTENT-TO-CONTROL-PLANE COMPILER */}
+          {tribunalSubTab === 'INTENT_COMPILER' && (
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="font-extrabold text-zinc-900 dark:text-white">
+                    2030 Intent-to-Control-Plane Compiler (10-Persona Policy Synthesis + Terraform HCL)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={intentModel}
+                    onChange={(e) => setIntentModel(e.target.value)}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold"
+                  >
+                    <option value="gemini-3.8-flash">
+                      gemini-3.8-flash (-80% Context Cache)
+                    </option>
+                    <option value="gemini-3.1-pro">
+                      gemini-3.1-pro (Deep Reasoning)
+                    </option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => runIntentCompiler()}
+                    disabled={intentCompiling}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer"
+                  >
+                    {intentCompiling
+                      ? 'Compiling 10-Persona Plan...'
+                      : 'Compile Intent Plan'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  'Lock project to strict Zero-Trust & $0.00/mo Always-Free invariance',
+                  'Eliminate all public 0.0.0.0/0 ingress & enforce Cloud IAP (35.235.240.0/20)',
+                  'Architect multi-region Gemini 3.8 Flash + 3.1 Pro RAG Lakehouse',
+                  'Prepare SOC2 / ISO-27001 cryptographic compliance & Zero-Key OIDC',
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => runIntentCompiler(preset)}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 text-[10px] text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                type="text"
+                value={intentPrompt}
+                onChange={(e) => setIntentPrompt(e.target.value)}
+                placeholder="Type any architectural outcome or security intent..."
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono"
+              />
+
+              {compiledIntentPlan && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 pt-1">
+                  <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(compiledIntentPlan.personaAmendments || []).map((pa) => (
+                      <div
+                        key={pa.code}
+                        className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1 text-[10px]"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-zinc-900 dark:text-white">
+                            [{pa.code}] {pa.role}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-500 text-[9px] font-extrabold">
+                            {pa.verdict}
+                          </span>
+                        </div>
+                        <div className="text-zinc-600 dark:text-zinc-400">
+                          {pa.directive}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="lg:col-span-5 p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold text-emerald-400">
+                        Compiled Terraform HCL (main.tf)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            compiledIntentPlan.compiledTerraformHcl || '',
+                            'Compiled Intent Terraform HCL'
+                          )
+                        }
+                        className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] cursor-pointer"
+                      >
+                        Copy HCL
+                      </button>
+                    </div>
+                    <pre className="text-[10px] text-zinc-300 overflow-x-auto whitespace-pre-wrap">
+                      {compiledIntentPlan.compiledTerraformHcl}
+                    </pre>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

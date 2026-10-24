@@ -32,28 +32,30 @@ import {
 const DOC_SECTIONS = [
   {
     id: 'ten-persona-enterprise-board-and-contextual-studio-helpers',
-    wave: '2026 ENTERPRISE WAR-ROOM · 10-PERSONA AUTONOMOUS LAUNCH TRIBUNAL, MERKLE STATE DIFF & CONTEXTUAL STUDIO HELPERS',
+    wave: '2026–2030 ENTERPRISE WAR-ROOM · 10-PERSONA LAUNCH TRIBUNAL, MULTI-PROJECT FLEET ARBITRATOR, T_+72H PRE-CRIME, ZKP ED25519 PROOF & INTENT COMPILER',
     title:
-      '10-Persona Enterprise Architecture Board, Live Cryptographic Launch Tribunal (GO / NO-GO Voting), Cross-Persona Ripple Graph, Pareto Conflict Solver, T0 vs. T_Now SHA-256 Merkle Diff & Contextual Studio Helpers',
-    badge: '10-PERSONA TRIBUNAL + STUDIO HELPERS',
+      '10-Persona Enterprise Architecture Board, Live Cryptographic Launch Tribunal (GO / NO-GO Voting), Multi-Project Fleet Tribunal, T_+72h Pre-Crime Forecaster, Zero-Knowledge / Ed25519 Blinded Compliance Proof, Intent-to-Control-Plane Compiler & Contextual Studio Helpers',
+    badge: '10-PERSONA TRIBUNAL + 2030 HORIZON',
     badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: ShieldCheck,
     targetTab: 'INNOVATION_LAB',
     problemSolved:
       'Standard cloud consoles present raw resource tables without role-specific pre-flight guards or cross-domain consensus, forcing specialized engineers (Architects, Platform Ops, Data Engineers, NetOps, DevSecOps, AI/MLOps, SREs, DBREs, FinOps, and K8s Engineers) to context-switch across dozens of pages or hold hours of manual architecture review meetings before production sign-off.',
     howItWorks: [
-      '10-Persona Autonomous Launch Tribunal (POST /api/project/:id/enterprise-personas/tribunal): Simultaneously executes 20 parallel live Google Cloud REST API probes against your active project and computes each of the 10 personas\' live vote (APPROVE, CONDITIONAL_WARN, VETO_BLOCK), readiness score (0-100), live resource evidence, and 1-click Live GCP Remediation (EXECUTE_TRIBUNAL_LIVE_REMEDIATION -> LOCK_FIREWALL_TO_IAP via PATCH compute.googleapis.com/compute/v1/projects/:id/global/firewalls/:name to 35.235.240.0/20 IAP TCP Forwarding, and ENFORCE_BUCKET_PAP via PATCH storage.googleapis.com/storage/v1/b/:bucket to publicAccessPrevention="enforced" + uniformBucketLevelAccess=true).',
-      'Live Cross-Persona Dependency & Blast-Radius Ripple Chains + Multi-Persona Pareto Conflict Solver: Dynamically maps how live VPCs, Firewall rules, IAM Service Accounts, and GCS Buckets ripple across all 10 engineering domains, and resolves FinOps (-60% Spend) vs. SRE/Architect (99.99% Multi-Region HA) vs. DevSecOps (Zero-Trust IAP + 0 Keys) trade-offs against your real project inventory.',
-      'T0 vs. T_Now Cryptographic SHA-256 Merkle Snapshot Diff & Executive Dossier Exporter: Captures a baseline T0 snapshot of all 10 personas\' live GCP metrics sealed with a SHA-256 Merkle hash (merkleSealSha256), computes real-time deltas after live remediations or mutations, and exports a 1-click Markdown CTO/CISO/CFO Architecture Dossier.',
-      'Personas 01–10 Deep-Dive Lenses & Embedded Contextual Helpers (PersonaContextualHelper.jsx): Every engineering studio across CloudPulse embeds its matching contextual persona helper bar with live telemetry pills, 1-click live actions, and instant jump to the 10-Persona Launch Tribunal.',
+      'Sub-Tabs 01–04 (10-Persona Roll-Call, Ripple Chains, Pareto Solver & SHA-256 Merkle Diff + Rollback Capsules): Executes 20 parallel live Google Cloud REST API probes against your active project, computes each of the 10 personas\' live vote (APPROVE, CONDITIONAL_WARN, VETO_BLOCK) and score (0-100), executes 1-click Live GCP Remediations (EXECUTE_TRIBUNAL_LIVE_REMEDIATION -> LOCK_FIREWALL_TO_IAP and ENFORCE_BUCKET_PAP) while automatically sealing pre-mutation GCP state into 1-Click Rollback Capsules (ROLLBACK_TRIBUNAL_REMEDIATION), maps cross-persona blast-radius ripple chains, solves Pareto Cost vs. HA vs. Zero-Trust trade-offs, and tracks T0 vs. T_Now SHA-256 Merkle state deltas.',
+      'Sub-Tab 05 ([2030] Multi-Project Cross-Estate Fleet Tribunal — GET /api/enterprise-personas/fleet-tribunal): Discovers all ACTIVE GCP projects on your authenticated account via cloudresourcemanager.googleapis.com and probes their 10-Persona readiness in parallel, ranking every project on a unified Sovereignty Leaderboard.',
+      'Sub-Tab 06 ([2030] T_Now -> T_+72h Pre-Crime Forecaster): Projects 72-hour control-plane trajectories across severity>=ERROR log velocity, world-open firewall & unhardened bucket exposure-hours, 72h idle disk/IP burn, and IAM Zero-Key governance.',
+      'Sub-Tab 07 ([2030] Zero-Knowledge / Ed25519 Blinded Compliance Proof & Verifier — POST /api/project/:id/enterprise-personas/zkp-verify): Generates salted SHA-256 Pedersen-style commitments (H(salt || kind || name || status)) signed with Ed25519 (RFC 8032) so external auditors can mathematically verify compliance in microseconds without seeing a single internal resource name, bucket name, or Service Account email.',
+      'Sub-Tab 08 ([2030] Intent-to-Control-Plane Compiler — POST /api/project/:id/enterprise-personas/intent-compiler): Compiles natural-language engineering intents across all 10 Personas using your live project inventory + Gemini (gemini-3.8-flash / gemini-3.1-pro) into persona amendments and copy-ready Terraform HCL (main.tf).',
     ],
     apisUsed: [
-      'POST /api/project/:id/enterprise-personas/tribunal (20 Parallel Live GCP REST Probes + SHA-256 Merkle Seal & Diff)',
-      'GET /api/project/:id/enterprise-personas/overview (10-Persona Unified Telemetry & In-Memory Studio Cache)',
-      'POST /api/project/:id/enterprise-personas/action (10 Live Persona Actions + EXECUTE_TRIBUNAL_LIVE_REMEDIATION across Compute Firewalls & GCS Buckets)',
+      'GET & POST /api/project/:id/enterprise-personas/tribunal (20 Parallel Live GCP REST Probes + SHA-256 Merkle Diff + T_+72h Forecast + ZKP Proof)',
+      'GET /api/enterprise-personas/fleet-tribunal (Multi-Project Cross-Estate Parallel Fleet Tribunal)',
+      'POST /api/project/:id/enterprise-personas/zkp-verify & POST /api/project/:id/enterprise-personas/intent-compiler',
+      'GET /api/project/:id/enterprise-personas/overview & POST /api/project/:id/enterprise-personas/action (EXECUTE_TRIBUNAL_LIVE_REMEDIATION + ROLLBACK_TRIBUNAL_REMEDIATION)',
     ],
     billingImpact:
-      '100% $0.00/mo control-plane inspection, SHA-256 Merkle state verification, and zero-cost pre-flight validation; live firewall IAP lockdown and GCS PAP enforcement incur $0.00/mo.',
+      '100% $0.00/mo control-plane inspection, Ed25519 / SHA-256 cryptographic verification, and zero-cost pre-flight validation; live firewall IAP lockdown and GCS PAP enforcement incur $0.00/mo.',
   },
   {
     id: 'wave16-autonomous-cloud-soc-and-zero-trust-soar-war-room',
