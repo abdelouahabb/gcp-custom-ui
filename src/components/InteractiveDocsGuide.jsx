@@ -32,30 +32,29 @@ import {
 const DOC_SECTIONS = [
   {
     id: 'wave16-autonomous-cloud-soc-and-zero-trust-soar-war-room',
-    wave: 'WAVE 16 MOONSHOT · 10-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC & SOAR WAR-ROOM ($0.00/MO SIEM LICENSE TAX)',
+    wave: 'WAVE 16 MOONSHOT · 15-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC & PURPLE-TEAM SOAR WAR-ROOM ($0.00/MO SIEM LICENSE TAX)',
     title:
-      'Wave 16: 10-Pillar Autonomous Google Cloud Security Operations Center (SOC) & Zero-Trust SOAR War-Room — MITRE Kill-Chains, Toxic Combinations, $0/mo Canary Grid, IAM Time-Machine & Defcon-1 Lockdown',
+      'Wave 16: 15-Pillar Autonomous Google Cloud Security Operations Center (SOC) & Purple-Team SOAR War-Room — MITRE Kill-Chains, Toxic Combinations, $0/mo Canary Grid, IAM Time-Machine, Transitive Escalation Solver, TLS 1.3 Socket Prober & Purple-Team BAS Stopwatch',
     badge: 'CLOUD SOC TAB (PRIMARY STARRED)',
     badgeColor: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40',
     icon: ShieldAlert,
     targetTab: 'CLOUD_SOC',
     problemSolved:
-      'Legacy cloud SIEMs (Chronicle, Splunk, Datadog SIEM, SCC Enterprise) cost $3,000–$25,000+/mo yet act as passive log viewers that flood operators with uncorrelated alerts while requiring manual multi-tab CLI/Console actions during an active intrusion. CloudPulse Wave 16 turns your live Google Cloud control plane into a $0.00/mo, 10-pillar autonomous detection, deception, IAM rollback, and 1-click SOAR containment war-room.',
+      'Legacy cloud SIEMs (Chronicle, Splunk, Datadog SIEM, SCC Enterprise) cost $3,000–$25,000+/mo yet act as passive log viewers that flood operators with uncorrelated alerts while requiring manual multi-tab CLI/Console actions during an active intrusion. CloudPulse Wave 16 turns your live Google Cloud control plane into a $0.00/mo, 15-pillar (3x5 Bento Grid) autonomous detection, deception, IAM rollback, TLS 1.3 socket inspection, Purple-Team BAS stopwatch, and 1-click SOAR containment war-room.',
     howItWorks: [
-      'Pillars 01–02 (MITRE ATT&CK Kill-Chains, /32 IP Quarantine & 3-Vector Toxic Combinations Graph): Ingests live cloudaudit.googleapis.com entries via logging.googleapis.com/v2/entries:list, groups behavioral progression by (principalEmail, callerIp), quarantines external attacker IPs via priority-100 VPC INGRESS DENY ALL rules (BLOCK_ATTACKER_IP_CIDR), and maps Public Ingress x Over-Privileged Runtime Identity x Crown Jewels with 1-click Zero-Trust remediation.',
-      'Pillars 03–05 (Supply-Chain @sha256 & .json SA Key Disabler, $0.00/mo Active Canary Deception Grid & Gemini 3.8 Flash / 3.1 Pro SOC Commander): Audits Cloud Run @sha256 image digests, disables user-managed Service Account .json keys in 1 click (DISABLE_SERVICE_ACCOUNT_KEY), deploys 3 real $0.00/mo GCP canary tripwires (cloudpulse-soc-canary-master-key metadata-only Secret Manager secret, soc-canary-vault-admin zero-role decoy SA, and cloudpulse-soc-canary-trap-log VPC recon trap), and chains every SOAR action into an Ed25519 (RFC 8032) cryptographic receipt ledger.',
-      'Pillars 06–08 (IAM Policy Time-Machine, Outbound Exfiltration & GCS Firewall, and WIF + Service Account In-Place Freeze): Captures Ed25519-signed projects:getIamPolicy checkpoints with 1-click atomic setIamPolicy rollback and Zero-Lockout Owner Safety Guard (RESTORE_IAM_CHECKPOINT), audits Cloud Logging sinks/exclusions, locks GCS buckets with publicAccessPrevention="enforced" (LOCK_GCS_BUCKET_PUBLIC_ACCESS), and freezes/unfreezes compromised Service Accounts in-place (serviceAccounts:disable / :enable).',
-      'Pillars 09–10 (Cross-Project Multi-Estate SOC Federation Matrix & 1-Click Defcon-1 Atomic Project Lockdown): Probes all ACTIVE GCP projects on your account in parallel (GET /api/soc/fleet-matrix) for side-by-side Zero-Trust posture comparison, and provides a 1-click 5-stage Defcon-1 Atomic Lockdown playbook (EXECUTE_DEFCON1_LOCKDOWN).',
+      'Pillars 01–05 (MITRE Kill-Chains & /32 IP Quarantine, 3-Vector Toxic Combinations, Supply-Chain @sha256 & .json SA Key Disabler, $0.00/mo Canary Deception Grid, and Gemini 3.8 Flash / 3.1 Pro SOC Commander): Correlates live cloudaudit.googleapis.com entries, blocks attacker IPs via priority-100 VPC INGRESS DENY ALL rules, severs public-to-SA toxic paths, disables leaked .json SA keys, arms 3 $0.00/mo GCP canary tripwires, and seals every action in an Ed25519 (RFC 8032) cryptographic ledger.',
+      'Pillars 06–10 (IAM Policy Time-Machine, Exfiltration & GCS Firewall, WIF & SA Freeze, Multi-Project SOC Federation Matrix, and 1-Click Defcon-1 Atomic Lockdown): Snapshots projects:getIamPolicy with 1-click atomic rollback and Zero-Lockout Owner Safety Guard, locks GCS buckets with publicAccessPrevention="enforced", freezes compromised Service Accounts in-place (:disable/:enable), compares Zero-Trust posture across all ACTIVE GCP projects in parallel (/api/soc/fleet-matrix), and executes a 5-stage Defcon-1 lockdown.',
+      'Pillars 11–15 (10X Deep-Defense: Transitive IAM Privilege-Escalation Solver, VM vTPM & 169.254.169.254 SSH-Key Forensics, Live TLS 1.3 X.509 & HTTP Header Socket Prober, BigQuery DLP Schema Classifier & Secret Rotation Hygiene, and 4-Stage Purple-Team BAS Stopwatch): Solves 1-hop and 2-hop actAs/TokenCreator/setIamPolicy escalation graphs with 1-click edge severing, audits Compute commonInstanceMetadata[ssh-keys] and enforces OS Login (enable-oslogin=TRUE), performs live Node.js tls.connect/https.request probes on .run.app/.appspot.com endpoints, rotates stale >90-day Secret Manager versions in 1 click, and runs a 4-stage live Purple-Team BAS drill with millisecond SIEM readback verification.',
     ],
     apisUsed: [
-      'GET /api/project/:id/soc/overview & POST /api/project/:id/soc/action',
-      'GET /api/soc/fleet-matrix & POST /api/project/:id/soc/ai-commander',
+      'GET /api/project/:id/soc/overview & POST /api/project/:id/soc/action (19 Real SOAR Actions)',
+      'GET /api/soc/fleet-matrix, POST /api/project/:id/soc/deep-probe, POST /api/project/:id/soc/purple-team-drill & POST /api/project/:id/soc/ai-commander',
       'POST https://logging.googleapis.com/v2/entries:list & entries:write',
-      'POST https://cloudresourcemanager.googleapis.com/v1/projects/:id:getIamPolicy & :setIamPolicy',
-      'POST & PATCH https://compute.googleapis.com/compute/v1/projects/:id/global/firewalls, PATCH https://storage.googleapis.com/storage/v1/b/:bucket & POST https://iam.googleapis.com/v1/projects/:id/serviceAccounts/:email:disable',
+      'POST https://cloudresourcemanager.googleapis.com/v1/projects/:id:getIamPolicy, :setIamPolicy & :testIamPermissions',
+      'POST https://compute.googleapis.com/compute/v1/projects/:id/setCommonInstanceMetadata, PATCH https://storage.googleapis.com/storage/v1/b/:bucket & POST https://secretmanager.googleapis.com/v1/projects/:id/secrets/:secretId:addVersion',
     ],
     billingImpact:
-      '100% $0.00/mo SIEM license tax — Secret Manager metadata-only canary containers (0 versions), IAM Decoy Service Accounts, VPC firewall rules, GCS publicAccessPrevention locks, and Cloud Audit Admin Activity logs incur $0.00/mo.',
+      '100% $0.00/mo SIEM license tax — Secret Manager metadata-only canary containers (0 versions), IAM Decoy Service Accounts, VPC firewall rules, GCS publicAccessPrevention locks, TLS 1.3 socket probes, and Cloud Audit Admin Activity logs incur $0.00/mo.',
   },
   {
     id: 'cloudrun-compose-up-multi-container-studio',

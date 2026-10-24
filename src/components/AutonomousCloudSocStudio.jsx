@@ -93,6 +93,41 @@ const SOC_PILLARS = [
     subtitle: '1-Click 5-Stage Coordinated Project Perimeter Seal',
     icon: Lock,
   },
+  {
+    id: 'IAM_ESCALATION_SOLVER',
+    step: '11',
+    title: 'Transitive IAM Escalation',
+    subtitle: 'actAs / TokenCreator / setIamPolicy Graph & 1-Click Sever',
+    icon: ShieldAlert,
+  },
+  {
+    id: 'VM_METADATA_SHIELDED',
+    step: '12',
+    title: 'VM vTPM & 169.254.169.254',
+    subtitle: 'OS Login, Serial-Port Backdoor & SSH-Key Forensics',
+    icon: Terminal,
+  },
+  {
+    id: 'TLS_HEADER_DEEP_PROBE',
+    step: '13',
+    title: 'Live TLS 1.3 & HTTP Headers',
+    subtitle: 'Real X.509 Socket Handshake, HSTS/CSP & Unauth Probe',
+    icon: Activity,
+  },
+  {
+    id: 'DATA_DLP_SECRET_HYGIENE',
+    step: '14',
+    title: 'BigQuery DLP & Secret Rotation',
+    subtitle: 'PII Schema Classifier, Public ACLs & 1-Click Secret Rotate',
+    icon: Key,
+  },
+  {
+    id: 'PURPLE_TEAM_BAS_ARENA',
+    step: '15',
+    title: 'Purple-Team BAS Stopwatch',
+    subtitle: '4-Stage Live MITRE Attack Simulation & SIEM Latency Proof',
+    icon: Zap,
+  },
 ];
 
 export default function AutonomousCloudSocStudio({
@@ -115,6 +150,14 @@ export default function AutonomousCloudSocStudio({
   // Multi-Project SOC Federation Matrix (Pillar 09)
   const [fleetMatrix, setFleetMatrix] = useState(null);
   const [fleetLoading, setFleetLoading] = useState(false);
+
+  // Live TLS 1.3 & HTTP Header Deep Probe (Pillar 13)
+  const [deepProbeResult, setDeepProbeResult] = useState(null);
+  const [deepProbeLoading, setDeepProbeLoading] = useState(false);
+
+  // Purple-Team Breach & Attack Simulation Stopwatch (Pillar 15)
+  const [purpleDrillResult, setPurpleDrillResult] = useState(null);
+  const [purpleDrillLoading, setPurpleDrillLoading] = useState(false);
 
   // Gemini Incident Commander state
   const [selectedAiModel, setSelectedAiModel] = useState('gemini-3.8-flash');
@@ -163,6 +206,55 @@ export default function AutonomousCloudSocStudio({
     }
   }, []);
 
+  const handleRunDeepProbe = useCallback(async () => {
+    if (!projectId) return;
+    setDeepProbeLoading(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/soc/deep-probe`
+      );
+      setDeepProbeResult(res.data);
+    } catch (err) {
+      setStatusBanner({
+        type: 'error',
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          'Failed to execute live TLS 1.3 & HTTP header deep probe.',
+      });
+    } finally {
+      setDeepProbeLoading(false);
+    }
+  }, [projectId]);
+
+  const handleRunPurpleTeamDrill = async () => {
+    if (!projectId) return;
+    setPurpleDrillLoading(true);
+    setStatusBanner(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/soc/purple-team-drill`
+      );
+      setPurpleDrillResult(res.data);
+      setStatusBanner({
+        type: 'success',
+        message: res.data?.message || 'Purple-Team BAS drill completed!',
+        receipt: res.data?.receipt || null,
+      });
+      await fetchSocOverview();
+    } catch (err) {
+      setStatusBanner({
+        type: 'error',
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          'Purple-Team BAS drill failed.',
+      });
+    } finally {
+      setPurpleDrillLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchSocOverview();
   }, [fetchSocOverview]);
@@ -171,7 +263,22 @@ export default function AutonomousCloudSocStudio({
     if (activePillar === 'FLEET_SOC_MATRIX' && !fleetMatrix && !fleetLoading) {
       fetchFleetSocMatrix();
     }
-  }, [activePillar, fleetMatrix, fleetLoading, fetchFleetSocMatrix]);
+    if (
+      activePillar === 'TLS_HEADER_DEEP_PROBE' &&
+      !deepProbeResult &&
+      !deepProbeLoading
+    ) {
+      handleRunDeepProbe();
+    }
+  }, [
+    activePillar,
+    fleetMatrix,
+    fleetLoading,
+    fetchFleetSocMatrix,
+    deepProbeResult,
+    deepProbeLoading,
+    handleRunDeepProbe,
+  ]);
 
   const handleExecuteSocAction = async (busyKey, payload) => {
     if (!projectId) return;
@@ -279,6 +386,29 @@ export default function AutonomousCloudSocStudio({
     frozenServiceAccountsCount: 0,
     highPrivilegeSaCount: 0,
   };
+  const iamEscalationGraph = socData?.iamEscalationGraph || {
+    totalPathsCount: 0,
+    criticalPathsCount: 0,
+    customPrincipalPathsCount: 0,
+    paths: [],
+  };
+  const vmMetadataAndShieldedRadar = socData?.vmMetadataAndShieldedRadar || {
+    projectOsLoginEnabled: false,
+    projectSerialPortEnabled: false,
+    projectWideSshKeysCount: 0,
+    projectWideSshKeys: [],
+    hasProjectStartupScript: false,
+    vmsInspectedCount: 0,
+    vms: [],
+    postureStatus: 'METADATA_HARDENING_RECOMMENDED',
+  };
+  const dataDlpAndSecretHygiene = socData?.dataDlpAndSecretHygiene || {
+    datasets: [],
+    secrets: [],
+    publicDatasetsCount: 0,
+    piiColumnsCount: 0,
+    staleSecretsCount: 0,
+  };
   const attestation = socData?.cryptographicAttestation || {};
 
   return (
@@ -290,7 +420,7 @@ export default function AutonomousCloudSocStudio({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-mono font-extrabold">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>WAVE 16 · AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC & SOAR WAR-ROOM</span>
+                <span>WAVE 16 · 15-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC &amp; PURPLE-TEAM SOAR WAR-ROOM</span>
               </span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
                 100% REAL GCP REST APIs · $0.00/MO SIEM LICENSE TAX
@@ -1879,6 +2009,517 @@ export default function AutonomousCloudSocStudio({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 11: TRANSITIVE IAM IMPERSONATION & PRIVILEGE-ESCALATION SOLVER
+         ==================================================================== */}
+      {activePillar === 'IAM_ESCALATION_SOLVER' && (
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-red-500" />
+                <span>
+                  Transitive IAM Impersonation &amp; Privilege-Escalation Graph Solver (`actAs` / `TokenCreator` / `setIamPolicy`)
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Solves 1-hop and 2-hop transitive privilege escalation vectors across Project IAM (<code className="font-mono">projects:getIamPolicy</code>) and per-Service-Account resource IAM policies (<code className="font-mono">serviceAccounts:getIamPolicy</code>). Sever any risky escalation edge in 1 click (with automatic IAM Vault backup).
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="px-2.5 py-1 rounded bg-red-500/15 border border-red-500/30 text-red-500 font-bold">
+                {iamEscalationGraph.criticalPathsCount} Critical Vector(s)
+              </span>
+              <span className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500">
+                {iamEscalationGraph.totalPathsCount} Total Escalation Paths
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {iamEscalationGraph.paths.map((p) => (
+              <div
+                key={p.id}
+                className={`p-3 rounded-xl border text-xs font-mono space-y-1.5 ${
+                  p.severity === 'CRITICAL'
+                    ? 'border-red-500/40 bg-red-500/5'
+                    : p.severity === 'HIGH'
+                    ? 'border-amber-500/40 bg-amber-500/5'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40'
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                        p.severity === 'CRITICAL'
+                          ? 'bg-red-600 text-white'
+                          : p.severity === 'HIGH'
+                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+                      }`}
+                    >
+                      {p.severity} · {p.scope}
+                    </span>
+                    <span className="font-extrabold text-zinc-900 dark:text-white">
+                      {p.sourceMember}
+                    </span>
+                    <span className="text-cyan-600 dark:text-cyan-400 font-bold">
+                      --[{p.role}]--&gt;
+                    </span>
+                    <span className="text-zinc-600 dark:text-zinc-300">
+                      {p.targetResource}
+                    </span>
+                  </div>
+
+                  {p.canSeverSafely && !p.isGoogleManagedAgent && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleExecuteSocAction(`SEVER:${p.id}`, {
+                          action: 'SEVER_IAM_ESCALATION_BINDING',
+                          roleToSever: p.role,
+                          memberToSever: p.sourceMember,
+                          scopeToSever: p.scope,
+                        })
+                      }
+                      disabled={Boolean(actionBusy)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Sever Escalation Edge</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-[11px] text-zinc-500">
+                  <strong>{p.technique}:</strong> {p.mechanism}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 12: COMPUTE VM SHIELDED INTEGRITY (vTPM), SSRF 169.254.169.254 & SSH-KEY FORENSICS
+         ==================================================================== */}
+      {activePillar === 'VM_METADATA_SHIELDED' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-cyan-500" />
+                  <span>
+                    Compute Engine Project Metadata (`commonInstanceMetadata`), IAM OS Login, Serial-Port Backdoor &amp; SSH-Key Forensics
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Audits <code className="font-mono">compute.googleapis.com/compute/v1/projects/{projectId}</code> for injected project-wide SSH keys, interactive serial-port backdoors, startup-script persistence hooks, and VM <code className="font-mono">vTPM</code> / <code className="font-mono">169.254.169.254</code> SSRF token exposure.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleExecuteSocAction('HARDEN_OSLOGIN', {
+                    action: 'HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT',
+                  })
+                }
+                disabled={Boolean(actionBusy)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>
+                  {actionBusy === 'HARDEN_OSLOGIN'
+                    ? 'Hardening Project Metadata...'
+                    : '1-Click Enforce IAM OS Login & Disable Serial Port'}
+                </span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-400">IAM OS Login (`enable-oslogin`)</div>
+                <div
+                  className={`font-bold mt-0.5 ${
+                    vmMetadataAndShieldedRadar.projectOsLoginEnabled
+                      ? 'text-emerald-500'
+                      : 'text-amber-500'
+                  }`}
+                >
+                  {vmMetadataAndShieldedRadar.projectOsLoginEnabled
+                    ? 'ENABLED (TRUE · IAM Enforced)'
+                    : 'NOT ENFORCED (Legacy SSH Keys Active)'}
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-400">Serial Port (`serial-port-enable`)</div>
+                <div
+                  className={`font-bold mt-0.5 ${
+                    vmMetadataAndShieldedRadar.projectSerialPortEnabled
+                      ? 'text-red-500'
+                      : 'text-emerald-500'
+                  }`}
+                >
+                  {vmMetadataAndShieldedRadar.projectSerialPortEnabled
+                    ? 'ENABLED (Interactive Backdoor Risk)'
+                    : 'DISABLED (Hardened)'}
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-400">Project-Wide Static SSH Keys</div>
+                <div
+                  className={`font-bold mt-0.5 ${
+                    vmMetadataAndShieldedRadar.projectWideSshKeysCount > 0
+                      ? 'text-amber-500'
+                      : 'text-emerald-500'
+                  }`}
+                >
+                  {vmMetadataAndShieldedRadar.projectWideSshKeysCount} Injected Key(s)
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-400">Zonal VMs Inspected</div>
+                <div className="font-bold text-zinc-900 dark:text-white mt-0.5">
+                  {vmMetadataAndShieldedRadar.vmsInspectedCount} VM(s)
+                </div>
+              </div>
+            </div>
+
+            {vmMetadataAndShieldedRadar.projectWideSshKeys.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
+                  Project-Wide `commonInstanceMetadata.items[ssh-keys]` Inventory:
+                </div>
+                {vmMetadataAndShieldedRadar.projectWideSshKeys.map((k, idx) => (
+                  <div
+                    key={`${k.username}-${idx}`}
+                    className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs font-mono flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <div>
+                      <span className="font-bold text-zinc-900 dark:text-white">
+                        User: {k.username}
+                      </span>{' '}
+                      <span className="text-cyan-500">({k.algorithm})</span>
+                    </div>
+                    <span className="text-zinc-500 truncate max-w-md">
+                      {k.fingerprintPreview}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 13: LIVE ENDPOINT TLS 1.3 X.509, HTTP HEADERS & UNAUTH PROBER
+         ==================================================================== */}
+      {activePillar === 'TLS_HEADER_DEEP_PROBE' && (
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-cyan-500" />
+                <span>
+                  Live Endpoint TLS 1.3 X.509 Cipher, HTTP Security Headers (`HSTS`/`CSP`/`CORS`) &amp; Unauthenticated Surface Prober
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Performs real Node.js <code className="font-mono">https.request</code> + <code className="font-mono">tls.connect</code> handshakes against your project&apos;s live Cloud Run, App Engine, GCS, and Vertex AI endpoints without credentials to verify edge authentication and TLS 1.3 X.509 certificates.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRunDeepProbe}
+              disabled={deepProbeLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${deepProbeLoading ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {deepProbeLoading
+                  ? 'Probing Live TLS 1.3 Sockets...'
+                  : 'Run Live TLS 1.3 & Header Socket Probe'}
+              </span>
+            </button>
+          </div>
+
+          {deepProbeResult ? (
+            <div className="space-y-2.5">
+              {(deepProbeResult.endpoints || []).map((ep) => (
+                <div
+                  key={ep.url}
+                  className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono space-y-2"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-extrabold">
+                        {ep.type}
+                      </span>
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        {ep.name}
+                      </span>
+                      <span className="text-zinc-500">({ep.latencyMs}ms)</span>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                        ep.unauthPosture.includes('UNAUTHENTICATED_PUBLIC_200')
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                          : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                      }`}
+                    >
+                      {ep.unauthPosture} · Score {ep.hardeningScore}/100
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+                    <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-zinc-400">TLS &amp; AEAD Cipher</div>
+                      <div className="font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                        {ep.tlsProtocol} · {ep.cipherName}
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-zinc-400">X.509 Issuer &amp; Expiry</div>
+                      <div className="font-bold text-zinc-800 dark:text-zinc-200 truncate">
+                        {ep.certIssuer} ({ep.certDaysRemaining ?? '?'}d left)
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-zinc-400">X.509 SHA-256 Fingerprint</div>
+                      <div className="font-bold text-cyan-600 dark:text-cyan-400 truncate">
+                        {ep.certFingerprint256}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-center text-xs font-mono text-zinc-500">
+              {deepProbeLoading
+                ? 'Performing live TLS 1.3 X.509 socket handshakes...'
+                : 'Click "Run Live TLS 1.3 & Header Socket Probe" to inspect live endpoints.'}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 14: BIGQUERY DLP PII CLASSIFIER & SECRET ROTATION HYGIENE
+         ==================================================================== */}
+      {activePillar === 'DATA_DLP_SECRET_HYGIENE' && (
+        <div className="space-y-4">
+          {/* BigQuery Dataset ACL & PII Column Classifier */}
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+              BigQuery Lakehouse Dataset ACLs &amp; Schema PII/Credential Column Classifier (`bigquery.googleapis.com/v2`)
+            </h3>
+            {dataDlpAndSecretHygiene.datasets.length === 0 ? (
+              <div className="text-xs font-mono text-zinc-500">
+                No BigQuery datasets found in {projectId}.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dataDlpAndSecretHygiene.datasets.map((ds) => (
+                  <div
+                    key={ds.datasetId}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono space-y-1.5"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                            ds.isPublicAcl
+                              ? 'bg-red-600 text-white'
+                              : ds.sensitiveColumnsCount > 0
+                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                              : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                          }`}
+                        >
+                          {ds.status}
+                        </span>
+                        <span className="font-extrabold text-zinc-900 dark:text-white">
+                          {projectId}:{ds.datasetId}
+                        </span>
+                        <span className="text-zinc-500">
+                          ({ds.location} · {ds.tablesCount} tables · {ds.accessGrantsCount} ACL grants)
+                        </span>
+                      </div>
+
+                      {ds.isPublicAcl && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleExecuteSocAction(`LOCK_BQ:${ds.datasetId}`, {
+                              action: 'LOCK_BIGQUERY_DATASET_PUBLIC_ACL',
+                              datasetId: ds.datasetId,
+                            })
+                          }
+                          disabled={Boolean(actionBusy)}
+                          className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          Strip Public Dataset ACL
+                        </button>
+                      )}
+                    </div>
+
+                    {ds.sensitiveColumns.length > 0 && (
+                      <div className="text-[11px] text-amber-600 dark:text-amber-300">
+                        Sensitive / PII Columns Detected ({ds.sensitiveColumnsCount}):{' '}
+                        {ds.sensitiveColumns
+                          .map((c) => `${c.tableId}.${c.columnName} (${c.type})`)
+                          .join(', ')}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Secret Manager Active Version Rotation Hygiene */}
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+              Secret Manager Active Version Age &amp; 1-Click 256-Bit Cryptographic Rotation (`secretmanager.googleapis.com/v1`)
+            </h3>
+            {dataDlpAndSecretHygiene.secrets.length === 0 ? (
+              <div className="text-xs font-mono text-zinc-500">
+                No Secret Manager secrets provisioned in {projectId}.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dataDlpAndSecretHygiene.secrets.map((sec) => (
+                  <div
+                    key={sec.secretId}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-bold">
+                          {sec.rotationStatus}
+                        </span>
+                        <span className="font-extrabold text-zinc-900 dark:text-white">
+                          {sec.secretId}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">
+                        Enabled Versions: <strong>{sec.enabledVersionsCount}</strong> / {sec.totalVersionsCount} · Latest Version Age: <strong>{sec.latestVersionAgeDays} day(s)</strong>
+                      </div>
+                    </div>
+
+                    {!sec.isCanary && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleExecuteSocAction(`ROTATE_SEC:${sec.secretId}`, {
+                            action: 'ROTATE_SECRET_VERSION_NOW',
+                            secretId: sec.secretId,
+                          })
+                        }
+                        disabled={Boolean(actionBusy)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Rotate Secret Version (:addVersion)</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 15: AUTONOMOUS PURPLE-TEAM BREACH & ATTACK SIMULATION (BAS) STOPWATCH
+         ==================================================================== */}
+      {activePillar === 'PURPLE_TEAM_BAS_ARENA' && (
+        <div className="p-4 rounded-xl border border-violet-500/40 bg-white dark:bg-zinc-950 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-500" />
+                <span>
+                  Autonomous 4-Stage Purple-Team Breach &amp; Attack Simulation (BAS) + SIEM Detection Stopwatch
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Executes a live, non-destructive 4-stage MITRE ATT&amp;CK validation against real Google Cloud APIs (<code className="font-mono">T1526</code> Service Discovery -&gt; <code className="font-mono">T1098</code> <code className="font-mono">:testIamPermissions</code> Blast-Radius Recon -&gt; <code className="font-mono">T1552.005</code> Honey-Secret Canary Fire -&gt; <code className="font-mono">entries:list</code> Round-Trip SIEM Verification) and seals an Ed25519 scorecard.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRunPurpleTeamDrill}
+              disabled={purpleDrillLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+            >
+              <Zap className="w-4 h-4" />
+              <span>
+                {purpleDrillLoading
+                  ? 'Executing 4-Stage Live BAS Drill...'
+                  : 'Launch 4-Stage Purple-Team BAS Drill Now'}
+              </span>
+            </button>
+          </div>
+
+          {purpleDrillResult ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
+                <span className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-extrabold">
+                  Detection Coverage: {purpleDrillResult.detectionCoveragePct}%
+                </span>
+                <span className="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-bold">
+                  Total Stopwatch Latency: {purpleDrillResult.totalDrillLatencyMs}ms
+                </span>
+                <span className="text-zinc-500">
+                  Correlation ID: {purpleDrillResult.drillCorrelationId}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {(purpleDrillResult.stages || []).map((st) => (
+                  <div
+                    key={st.stage}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        Stage {st.stage} · [{st.mitreId}] {st.tactic}
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                        {st.latencyMs}ms
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-cyan-600 dark:text-cyan-400 break-all">
+                      API: {st.apiProbed}
+                    </div>
+                    <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                      {st.finding}
+                    </div>
+                    <div className="text-[10px] font-bold text-emerald-500">
+                      Status: {st.detectionStatus}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-xs font-mono text-zinc-500">
+              Click &ldquo;Launch 4-Stage Purple-Team BAS Drill Now&rdquo; to benchmark your project&apos;s end-to-end SIEM detection latency in milliseconds.
+            </div>
+          )}
         </div>
       )}
     </div>
