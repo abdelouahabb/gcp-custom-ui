@@ -2838,7 +2838,8 @@ function CloudPulseCockpit() {
   const handleNavigateStudioTab = useCallback((tabId, subTab) => {
     if (!tabId) return;
     if (tabId === 'TIME_MACHINE') {
-      setTimeMachineOpen(true);
+      setSovereignSubTab('MERKLE_DRIFT');
+      setActiveTab('SOVEREIGN_STUDIO');
       return;
     }
     const normalizedTab =
@@ -4111,7 +4112,7 @@ function CloudPulseCockpit() {
                   onOpenProvision={handleOpenProvision}
                   onDeleteResource={handleDeleteResource}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onOpenTimeMachine={() => setTimeMachineOpen(true)}
+                  onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
                   onOpenBigQuerySql={(sqlText) => {
                     if (sqlText) setBigQueryInitialSql(sqlText);
                     setActiveTab('BIGQUERY_STUDIO');
@@ -4169,7 +4170,7 @@ function CloudPulseCockpit() {
                   }
                   onNavigateTab={handleNavigateStudioTab}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onOpenTimeMachine={() => setTimeMachineOpen(true)}
+                  onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
                   onOpenProvision={handleOpenProvision}
                   onRunInShell={handleRunInShell}
                   onRefreshGlobal={() =>
@@ -4197,7 +4198,7 @@ function CloudPulseCockpit() {
                   }
                   onNavigateTab={handleNavigateStudioTab}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onOpenTimeMachine={() => setTimeMachineOpen(true)}
+                  onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />
@@ -4219,7 +4220,7 @@ function CloudPulseCockpit() {
                     )
                   }
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onOpenTimeMachine={() => setTimeMachineOpen(true)}
+                  onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import {
-  Search, Mic, MicOff, Terminal, Rocket, Server, Moon, Sun, ShieldAlert,
+  Search, Mic, MicOff, Terminal, Rocket, Server, Moon, Sun, ShieldAlert, ShieldCheck,
   FileCode, Network, DollarSign, Zap, Sparkles, X, ArrowRight, CheckCircle2,
   Loader2, PowerOff, Key, Database, Globe, Cpu
 } from 'lucide-react';
