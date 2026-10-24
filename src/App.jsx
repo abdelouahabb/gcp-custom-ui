@@ -83,6 +83,7 @@ import GdeStreamerPrivacyShield, {
 } from './components/GdeStreamerPrivacyShield';
 import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
+import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -1575,6 +1576,41 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // 3G-4. Wave 16 Autonomous Cloud SOC Read-Only AI Commander Briefing (Bypass Gatekeeper)
+    if (rawUrl.includes('/soc/ai-commander')) {
+      return null;
+    }
+
+    // 3G-5. Wave 16 Autonomous Cloud SOC SOAR & Canary Actions (/soc/action)
+    if (rawUrl.includes('/soc/action')) {
+      const socAct = String(body.action || 'SOC_SOAR_ACTION');
+      const socTarget =
+        body.targetIpCidr ||
+        body.serviceName ||
+        body.firewallRuleName ||
+        body.serviceAccountEmail ||
+        body.canaryType ||
+        projectId;
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Confirm Autonomous Cloud SOC Action (${socAct})?`,
+        headerBadge: 'Wave 16 Autonomous Cloud SOC & SOAR Gatekeeper',
+        targetLabel: 'Target Security Perimeter / Identity / Canary Resource',
+        resourceKind: `Autonomous Cloud SOC · ${socAct}`,
+        targetName: String(socTarget),
+        location: body.region || 'Global / Project-Wide',
+        projectId,
+        method: `SOC ${socAct.slice(0, 18)}`,
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Execute ${socAct}`,
+        cancelToast: `SOC action (${socAct}) cancelled.`,
+        whatHappensNext: `1. Executes real Google Cloud REST API mutation (${socAct}) on "${socTarget}" in project "${projectId}".\n2. Signs the mutation receipt with Ed25519 (RFC 8032) and appends it to the hash-chained SOC Forensic Ledger.`,
+        costWarning: `ZERO-COST ($0.00/MO) SECURITY OPERATION: VPC Firewall rules, Cloud Run IAM bindings, Service Account key disables, and $0.00/mo SOC Canary Tripwires incur $0.00/mo in Google Cloud license or compute charges.`,
+        impactWarning: `Please verify the target ("${socTarget}") before executing this live security operation.`,
+      };
+    }
+
     // 3H. Universal Catch-All for All Remaining 1-Tap Cloud Mutations (Provision, Patch, Seal Secrets, Firewall Edit, Quantum Nexus, Wave 10, Data Engineer, Multi-Cloud Parity, API Enable, etc.)
     const actName =
       body.action ||
@@ -2178,6 +2214,14 @@ function CloudPulseCockpit() {
 
     // IV. Security, Incident SRE, FinOps, Logs & Docs
     {
+      id: 'CLOUD_SOC',
+      group: 'SECURITY_SRE',
+      label: 'Cloud SOC',
+      isStar: true,
+      tip: 'Wave 16 Next-Gen Autonomous Google Cloud SOC & SOAR War-Room ($0/mo SIEM Tax): Live cloudaudit MITRE ATT&CK Kill-Chains, 3-Vector Toxic Combinations Graph, @sha256 Supply-Chain & .json Key Disabler, $0/mo Active Canary Deception Grid, and Gemini 3.8/3.1 Incident Commander + Ed25519 Ledger',
+      icon: ShieldCheck,
+    },
+    {
       id: 'SOVEREIGN_STUDIO',
       group: 'SECURITY_SRE',
       label: 'IAM',
@@ -2665,6 +2709,7 @@ function CloudPulseCockpit() {
           {loadingOverview &&
           !overview &&
           activeTab !== 'AWS_AZURE_PARITY' &&
+          activeTab !== 'CLOUD_SOC' &&
           activeTab !== 'DOCS_GUIDE' ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -3153,6 +3198,17 @@ function CloudPulseCockpit() {
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
+                />
+              )}
+
+              {activeTab === 'CLOUD_SOC' && (
+                <AutonomousCloudSocStudio
+                  projectId={selectedProjectId}
+                  onRunInShell={handleRunInShell}
+                  onRefreshGlobal={() => {
+                    fetchProjectOverview(selectedProjectId);
+                    setVmRefreshTrigger((c) => c + 1);
+                  }}
                 />
               )}
 
