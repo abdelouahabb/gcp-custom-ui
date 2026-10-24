@@ -59790,7 +59790,7 @@ app.post(
     try {
       const token = await resolveRequestToken(req);
 
-      if (action === 'PROVE_REACHABILITY') {
+      if (action === 'PROVE_REACHABILITY' || action === 'PROVE_VPC_REACHABILITY') {
         const sourceIp = String(payload.sourceIp || '35.235.240.18').trim();
         const destIp = String(payload.destIp || '10.128.0.2').trim();
         const protocol = String(payload.protocol || 'tcp').toLowerCase();
@@ -59914,14 +59914,14 @@ app.post(
         });
       }
 
-      if (action === 'BQ_TIME_TRAVEL_DRY_RUN') {
+      if (action === 'BQ_TIME_TRAVEL_DRY_RUN' || action === 'DRY_RUN_BQ_TIME_TRAVEL') {
         const datasetId = String(payload.datasetId || '').trim();
         const minutesAgo = Math.max(1, Math.min(10080, Number(payload.minutesAgo || 60)));
         const location = String(payload.location || 'US').toUpperCase();
 
-        // Discover first table in dataset if any, otherwise run time-travel against INFORMATION_SCHEMA
-        let targetTable = null;
-        if (datasetId) {
+        // Discover first table in dataset if any, otherwise use payload.targetTable or INFORMATION_SCHEMA
+        let targetTable = payload.targetTable ? String(payload.targetTable).trim() : null;
+        if (datasetId && !targetTable) {
           const tblRes = await gcpFetch(
             `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
               projectId
@@ -59952,7 +59952,8 @@ app.post(
           projectId,
           {
             method: 'POST',
-            data: {
+            headers: { 'Content-Type': 'application/json' },
+            body: {
               configuration: {
                 query: {
                   query: timeTravelSql,
@@ -60004,7 +60005,8 @@ app.post(
           projectId,
           {
             method: 'POST',
-            data: {
+            headers: { 'Content-Type': 'application/json' },
+            body: {
               onHostMaintenance: 'MIGRATE',
               automaticRestart: true,
             },
@@ -60017,6 +60019,71 @@ app.post(
           operationType: op?.operationType || 'setScheduling',
           operationStatus: op?.status || 'RUNNING',
           message: `Configured ${instanceName} (${zone}) for Zero-Reboot Live Host Migration (onHostMaintenance=MIGRATE, automaticRestart=true).`,
+        });
+      }
+
+      if (action === 'ADD_GLOBAL_VPC_SUBNET') {
+        const networkName = String(payload.networkName || 'default').trim();
+        const subnetName = String(payload.subnetName || 'global-span-subnet')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-');
+        const region = String(payload.region || 'europe-west1').trim();
+        const ipCidrRange = String(payload.ipCidrRange || '10.214.0.0/20').trim();
+
+        const op = await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/regions/${encodeURIComponent(region)}/subnetworks`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              name: subnetName,
+              network: `projects/${projectId}/global/networks/${networkName}`,
+              ipCidrRange,
+              privateIpGoogleAccess: true,
+            },
+          }
+        );
+        return res.json({
+          status: 'OK',
+          operation: op,
+          message: `Spanned Global VPC "${networkName}" into ${region} with subnet "${subnetName}" (${ipCidrRange}, Private Google Access=ON, $0 VPC Peering)!`,
+        });
+      }
+
+      if (action === 'RESERVE_GLOBAL_ANYCAST_IP') {
+        const addressName = String(
+          payload.addressName || 'cloudpulse-global-anycast-ip'
+        )
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-');
+
+        const op = await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/global/addresses`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              name: addressName,
+              ipVersion: 'IPV4',
+              addressType: 'EXTERNAL',
+              networkTier: 'PREMIUM',
+            },
+          }
+        );
+        return res.json({
+          status: 'OK',
+          operation: op,
+          message: `Reserved Global Premium Tier Anycast IPv4 "${addressName}" in ${projectId}!`,
         });
       }
 
