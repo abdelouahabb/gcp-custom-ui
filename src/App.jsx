@@ -4020,6 +4020,26 @@ function CloudPulseCockpit() {
                   <SortableKpiRow
                     summary={overview?.summary}
                     fetchLatencyMs={overview?.fetchLatencyMs}
+                    onNavigateTab={(tabId) => setActiveTab(tabId)}
+                    onScrollToApis={() => {
+                      const scrollNow = () => {
+                        const el = document.getElementById(
+                          'emergency-api-killswitch-section'
+                        );
+                        if (el) {
+                          el.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start',
+                          });
+                        }
+                      };
+                      if (activeTab !== 'OVERVIEW') {
+                        setActiveTab('OVERVIEW');
+                        setTimeout(scrollNow, 120);
+                      } else {
+                        scrollNow();
+                      }
+                    }}
                   />
 
                   {/* 2026 Beyond-Console Innovation Lab */}
@@ -4083,8 +4103,8 @@ function CloudPulseCockpit() {
                           domain: 'II. Compute, Containers & CI/CD',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'VM_SSH', label: 'VM', meta: `${overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
-                            { id: 'CLOUD_STORAGE', label: 'Cloud Storage', meta: `${overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
+                            { id: 'VM_SSH', label: 'VM', meta: `${overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms ?? 0} VMs · Browser SSH` },
+                            { id: 'CLOUD_STORAGE', label: 'Cloud Storage', meta: `${overview?.summary?.liveBucketsCount ?? overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
                             { id: 'CLOUD_RUN', label: 'Cloud Run', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
                             { id: 'GKE_STUDIO', label: 'GKE', meta: 'Autopilot, Spot GPUs & K8s YAML' },
                             { id: 'WAVE9_STUDIO', label: 'Cloud Build', meta: 'GitHub CI/CD & SLSA-3 SBOM' },
@@ -4191,13 +4211,15 @@ function CloudPulseCockpit() {
                     onAskCopilot={handleOpenCopilotWithPrompt}
                   />
 
-                  <EmergencyApiKillSwitch
-                    projectId={selectedProjectId}
-                    enabledApis={overview?.enabledApis || []}
-                    onRefresh={() => fetchProjectOverview(selectedProjectId)}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
+                  <div id="emergency-api-killswitch-section">
+                    <EmergencyApiKillSwitch
+                      projectId={selectedProjectId}
+                      enabledApis={overview?.enabledApis || []}
+                      onRefresh={() => fetchProjectOverview(selectedProjectId)}
+                      onShowToast={showToast}
+                      onShowError={setErrorBanner}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -4820,6 +4842,26 @@ function CloudPulseCockpit() {
                   <SortableKpiRow
                     summary={overview?.summary}
                     fetchLatencyMs={overview?.fetchLatencyMs}
+                    onNavigateTab={(tabId) => setActiveTab(tabId)}
+                    onScrollToApis={() => {
+                      const scrollNow = () => {
+                        const el = document.getElementById(
+                          'emergency-api-killswitch-section'
+                        );
+                        if (el) {
+                          el.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start',
+                          });
+                        }
+                      };
+                      if (activeTab !== 'OVERVIEW') {
+                        setActiveTab('OVERVIEW');
+                        setTimeout(scrollNow, 120);
+                      } else {
+                        scrollNow();
+                      }
+                    }}
                   />
                   <TelemetryCharts
                     telemetry={overview?.telemetry}

@@ -22,6 +22,7 @@ import {
   TrendingUp,
   GripVertical,
   Palette,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -43,29 +44,48 @@ function SortableKpiCard({ item }) {
 
   const Icon = item.icon;
 
+  const handleCardKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      item.onPrimaryClick?.();
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm transition-all duration-300 hover:border-blue-500/40 ${
+      role="button"
+      tabIndex={0}
+      onClick={() => item.onPrimaryClick?.()}
+      onKeyDown={handleCardKeyDown}
+      title={item.clickHint || `Click to open ${item.title}`}
+      className={`group bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm transition-all duration-200 cursor-pointer select-none hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
         isDragging ? 'opacity-80 scale-[1.02] shadow-xl ring-2 ring-blue-500' : ''
       }`}
     >
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
             <Icon className="w-4 h-4" />
           </div>
-          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-            {item.title}
-          </span>
+          <div className="min-w-0">
+            <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider block truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              {item.title}
+            </span>
+            <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 flex items-center gap-0.5">
+              <span>{item.primaryTargetLabel}</span>
+              <ArrowUpRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </span>
+          </div>
         </div>
         <button
           type="button"
           {...attributes}
           {...listeners}
-          title="Drag to reorder KPI card"
-          className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-grab active:cursor-grabbing rounded transition-colors"
+          onClick={(e) => e.stopPropagation()}
+          title="Drag handle to reorder KPI card"
+          className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-grab active:cursor-grabbing rounded-lg transition-colors shrink-0"
         >
           <GripVertical className="w-4 h-4" />
         </button>
@@ -82,11 +102,30 @@ function SortableKpiCard({ item }) {
       </div>
 
       <div className="mt-2.5 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
-        <span>{item.subtitle}</span>
-        <span className="font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded">
+        <span className="truncate">{item.subtitle}</span>
+        <span className="font-mono text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded shrink-0">
           {item.badge}
         </span>
       </div>
+
+      {Array.isArray(item.quickLinks) && item.quickLinks.length > 0 && (
+        <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 flex flex-wrap items-center gap-1.5">
+          {item.quickLinks.map((link) => (
+            <button
+              key={link.label}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                link.onClick?.();
+              }}
+              className="px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-100 hover:bg-blue-600 text-zinc-700 hover:text-white dark:bg-zinc-900 dark:hover:bg-blue-600 dark:text-zinc-300 dark:hover:text-white border border-zinc-200/80 dark:border-zinc-800 transition-colors cursor-pointer inline-flex items-center gap-1"
+            >
+              <span>{link.label}</span>
+              <span>→</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -114,46 +153,170 @@ function SortableColorSwatch({ color }) {
   );
 }
 
-export default function SortableKpiRow({ summary, fetchLatencyMs }) {
+export default function SortableKpiRow({
+  summary,
+  fetchLatencyMs,
+  onNavigateTab,
+  onScrollToApis,
+}) {
   const { chartColors, setChartColors } = useTheme();
   const [showPalette, setShowPalette] = useState(false);
+
+  const bucketsCount = summary?.liveBucketsCount ?? summary?.storageBuckets ?? 0;
+  const datasetsCount =
+    summary?.liveDatasetsCount ?? summary?.bigqueryDatasets ?? 0;
+  const vmsCount = summary?.liveVmsCount ?? summary?.totalVms ?? 0;
+  const runCount = summary?.liveRunCount ?? summary?.cloudRunServices ?? 0;
+  const clustersCount = summary?.liveClustersCount ?? summary?.gkeClusters ?? 0;
+  const apisCount = summary?.enabledApisCount ?? 0;
+  const logsCount = summary?.liveLogsCount ?? 0;
+  const vpcsCount = summary?.liveVpcsCount ?? summary?.vpcNetworks ?? 0;
+  const firewallsCount =
+    summary?.liveFirewallsCount ?? summary?.firewallRules ?? 0;
+
+  const navigate = (tabId) => {
+    if (typeof onNavigateTab === 'function') {
+      onNavigateTab(tabId);
+    }
+  };
+
+  const handleOpenApisSection = () => {
+    if (typeof onScrollToApis === 'function') {
+      onScrollToApis();
+      return;
+    }
+    const el = document.getElementById('emergency-api-killswitch-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      navigate('MCP_HUB');
+    }
+  };
 
   const initialCards = [
     {
       id: 'kpi-storage',
       title: 'Storage & Datasets',
-      value: `${(summary?.liveBucketsCount || 0) + (summary?.liveDatasetsCount || 0)}`,
-      trendLabel: `${summary?.liveBucketsCount || 0} GCS · ${summary?.liveDatasetsCount || 0} BQ`,
+      value: `${bucketsCount + datasetsCount}`,
+      trendLabel: `${bucketsCount} GCS · ${datasetsCount} BQ`,
       subtitle: 'storage & bigquery APIs',
       badge: 'LIVE_GCP',
       icon: HardDrive,
+      primaryTargetLabel:
+        bucketsCount === 0 && datasetsCount > 0
+          ? 'Open BigQuery Studio'
+          : 'Open Cloud Storage Studio',
+      clickHint: 'Click to open Cloud Storage or BigQuery Studio',
+      onPrimaryClick: () =>
+        navigate(
+          bucketsCount === 0 && datasetsCount > 0
+            ? 'BIGQUERY_STUDIO'
+            : 'CLOUD_STORAGE'
+        ),
+      quickLinks: [
+        {
+          label: `GCS (${bucketsCount})`,
+          onClick: () => navigate('CLOUD_STORAGE'),
+        },
+        {
+          label: `BigQuery (${datasetsCount})`,
+          onClick: () => navigate('BIGQUERY_STUDIO'),
+        },
+        {
+          label: 'BigLake',
+          onClick: () => navigate('BIGLAKE_STUDIO'),
+        },
+      ],
     },
     {
       id: 'kpi-compute',
       title: 'Compute & Serverless',
-      value: `${(summary?.liveVmsCount || 0) + (summary?.liveRunCount || 0) + (summary?.liveClustersCount || 0)}`,
-      trendLabel: `${summary?.liveVmsCount || 0} VMs · ${summary?.liveRunCount || 0} Run`,
-      subtitle: `${summary?.liveClustersCount || 0} GKE Clusters`,
+      value: `${vmsCount + runCount + clustersCount}`,
+      trendLabel: `${vmsCount} VMs · ${runCount} Run`,
+      subtitle: `${clustersCount} GKE Clusters · ${vpcsCount} VPCs`,
       badge: 'LIVE_GCP',
       icon: Server,
+      primaryTargetLabel:
+        vmsCount === 0 && runCount > 0
+          ? 'Open Cloud Run Fleet'
+          : 'Open VM Fleet & Browser SSH',
+      clickHint: 'Click to open Compute VM Fleet, Cloud Run, or GKE Studio',
+      onPrimaryClick: () =>
+        navigate(
+          vmsCount === 0 && runCount > 0
+            ? 'CLOUD_RUN'
+            : vmsCount === 0 && clustersCount > 0
+            ? 'GKE_STUDIO'
+            : 'VM_SSH'
+        ),
+      quickLinks: [
+        {
+          label: `VMs & SSH (${vmsCount})`,
+          onClick: () => navigate('VM_SSH'),
+        },
+        {
+          label: `Cloud Run (${runCount})`,
+          onClick: () => navigate('CLOUD_RUN'),
+        },
+        {
+          label: `GKE (${clustersCount})`,
+          onClick: () => navigate('GKE_STUDIO'),
+        },
+      ],
     },
     {
       id: 'kpi-apis',
       title: 'Enabled Service APIs',
-      value: `${summary?.enabledApisCount || 0}`,
+      value: `${apisCount}`,
       trendLabel: 'Active Quota',
       subtitle: 'serviceusage.googleapis.com',
       badge: 'ENABLED',
       icon: ShieldCheck,
+      primaryTargetLabel: 'Jump to API Kill-Switch & Quotas',
+      clickHint:
+        'Click to jump to the live Service API Kill-Switch & Quota Manager',
+      onPrimaryClick: handleOpenApisSection,
+      quickLinks: [
+        {
+          label: `API Kill-Switch (${apisCount})`,
+          onClick: handleOpenApisSection,
+        },
+        {
+          label: '48 MCP Servers',
+          onClick: () => navigate('MCP_HUB'),
+        },
+        {
+          label: `VPC & FW (${firewallsCount})`,
+          onClick: () => navigate('VPC_NETWORKS'),
+        },
+      ],
     },
     {
       id: 'kpi-logs',
       title: 'Cloud Audit Stream',
-      value: `${summary?.liveLogsCount || 0} events`,
+      value: `${logsCount} events`,
       trendLabel: 'Live Tail Ready',
       subtitle: 'logging.googleapis.com',
       badge: `${fetchLatencyMs || 240}ms`,
       icon: Activity,
+      primaryTargetLabel: 'Open Live Logs & Cloud Shell',
+      clickHint:
+        'Click to open Live Cloud Logging Streamer, Trace Waterfall & Cloud Shell',
+      onPrimaryClick: () => navigate('LOGS_SHELL'),
+      quickLinks: [
+        {
+          label: 'Live Logs & Shell',
+          onClick: () => navigate('LOGS_SHELL'),
+        },
+        {
+          label: 'Cloud SOC',
+          onClick: () => navigate('CLOUD_SOC'),
+        },
+        {
+          label: 'SRE War-Room',
+          onClick: () => navigate('SRE_WAR_ROOM'),
+        },
+      ],
     },
   ];
 
@@ -165,7 +328,7 @@ export default function SortableKpiRow({ summary, fetchLatencyMs }) {
   ]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
   const orderedCards = cardOrder
@@ -196,10 +359,12 @@ export default function SortableKpiRow({ summary, fetchLatencyMs }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h6 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-          100% Live Google Cloud Project Telemetry (Drag Cards to Reorder)
-        </h6>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h6 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            100% Live Google Cloud Project Telemetry (Click Card to Open Studio · Drag Handle to Reorder)
+          </h6>
+        </div>
         <button
           type="button"
           onClick={() => setShowPalette((p) => !p)}
