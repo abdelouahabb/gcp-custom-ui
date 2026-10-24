@@ -45,6 +45,7 @@ export default function AwsAzureEnvySuiteStudio({
   initialTab = 'RESOURCE_GROUPS',
   onSwitchCloudFamily,
   onNavigateToGcpTab,
+  onOpenHealthAndDrift,
   onRunInShell,
   onShowToast,
   onShowError,
@@ -56,6 +57,12 @@ export default function AwsAzureEnvySuiteStudio({
         ? 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE'
         : 'RESOURCE_GROUPS')
   );
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveSubTab(initialTab);
+    }
+  }, [initialTab]);
   const [loading, setLoading] = useState(false);
   const [actionBusy, setActionBusy] = useState('');
   const [data, setData] = useState(null);
@@ -2247,6 +2254,61 @@ export default function AwsAzureEnvySuiteStudio({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {onOpenHealthAndDrift && (
+              <button
+                type="button"
+                onClick={onOpenHealthAndDrift}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer"
+                title="Open 1-Tap Project Health, Drift, FinOps & Control-Plane Synthesis Hub"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Health &amp; Drift Hub</span>
+              </button>
+            )}
+
+            {onNavigateToGcpTab && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToGcpTab('INNOVATION_LAB', 'TERRAFORM')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer"
+                  title="Jump to 2026 Beyond-Console Innovation Lab (22 Labs, Reverse-Terraform & Moonshots)"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>2026 Innovation →</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToGcpTab('CLOUD_SOC')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer"
+                  title="Jump to Wave 16 Autonomous 20-Pillar Cloud SOC & SOAR Studio"
+                >
+                  <Radar className="w-3.5 h-3.5" />
+                  <span>Cloud SOC (20-Pillar) →</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToGcpTab('SRE_WAR_ROOM')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm cursor-pointer"
+                  title="Jump to Wave 8 Principal 12-Pillar SRE War-Room & SLO Burn Studio"
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>SRE War-Room (12-Pillar) →</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onNavigateToGcpTab('SOVEREIGN_STUDIO', 'TIME_MACHINE')
+                  }
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-purple-600 hover:bg-purple-500 text-white shadow-sm cursor-pointer"
+                  title="Jump to Wave 7 SHA-256 Cloud State Time-Machine & Drift Radar"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Time-Machine &amp; Drift →</span>
+                </button>
+              </>
+            )}
+
             {onSwitchCloudFamily && (
               <div className="inline-flex items-center p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold">
                 <button
@@ -2352,9 +2414,11 @@ export default function AwsAzureEnvySuiteStudio({
             gcpServicesInvolved: [
               { name: 'Compute Engine VMs (Labels & Stop/Delete)', tab: 'VM_SSH' },
               { name: 'Cloud Run v2 Services (Labels & Delete)', tab: 'CLOUD_RUN' },
-              { name: 'Cloud Storage Buckets', tab: 'STORAGE_GOVERNANCE' },
+              { name: 'Cloud Storage Buckets', tab: 'CLOUD_STORAGE' },
               { name: 'BigQuery Datasets', tab: 'BIGQUERY_STUDIO' },
-              { name: 'IAM & Resource Manager Tags', tab: 'SOVEREIGN_STUDIO' },
+              { name: 'IAM & Resource Manager Tags', tab: 'SOVEREIGN_STUDIO', subTab: 'IAM_SURGEON' },
+              { name: '1-Tap Health & Drift Hub', openHealthAndDrift: true },
+              { name: '2026 Innovation (Live Topology)', tab: 'INNOVATION_LAB', subTab: 'TOPOLOGY' },
             ],
             apisEnabled: [
               'compute.googleapis.com',
@@ -2378,8 +2442,9 @@ export default function AwsAzureEnvySuiteStudio({
             gcpServicesInvolved: [
               { name: 'Cloud Run v2 Autoscaler (min/maxInstances)', tab: 'CLOUD_RUN' },
               { name: 'Compute Engine VMs (instances.stop)', tab: 'VM_SSH' },
-              { name: 'Cloud Pub/Sub Alert Topic', tab: 'FUNCTIONS_STUDIO' },
+              { name: '2026 Innovation (Night-Mode FinOps Sleep)', tab: 'INNOVATION_LAB', subTab: 'FINOPS_SLEEP' },
               { name: 'FinOps & Cloud Billing Budgets', tab: 'FINOPS' },
+              { name: '1-Tap Health & Drift Hub (Runway)', openHealthAndDrift: true },
             ],
             apisEnabled: [
               'pubsub.googleapis.com',
@@ -2398,7 +2463,8 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Reads project IAM policy (`projects:getIamPolicy`), evaluates permissions via `projects:testIamPermissions` against your live credentials, and when you click "1-Click Grant Least-Privilege Role", appends an IAM binding (`projects:setIamPolicy`) on the project for the target member.',
             gcpServicesInvolved: [
-              { name: 'Cloud IAM Policy & Role Bindings', tab: 'SOVEREIGN_STUDIO' },
+              { name: 'IAM Surgeon & SA Key Kill-Switch', tab: 'SOVEREIGN_STUDIO', subTab: 'IAM_SURGEON' },
+              { name: 'Wave 16 Cloud SOC (IAM Escalation & Time-Machine)', tab: 'CLOUD_SOC' },
               { name: 'Cloud Audit Logs (SetIamPolicy)', tab: 'LOGS_SHELL' },
             ],
             apisEnabled: [
@@ -2415,8 +2481,9 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Uploads objects directly into your Cloud Storage Bucket (`storage.objects.insert` multipart upload) and mints expiring V4 Signed URLs / Zero-SA-Key SAS Bridge tokens backed by OAuth2 / IAM Credentials (`iamcredentials.projects.serviceAccounts.signBlob`).',
             gcpServicesInvolved: [
-              { name: 'Cloud Storage Buckets & Objects', tab: 'STORAGE_GOVERNANCE' },
-              { name: 'IAM Service Account SignBlob', tab: 'SOVEREIGN_STUDIO' },
+              { name: 'Cloud Storage Buckets & Objects', tab: 'CLOUD_STORAGE' },
+              { name: 'Wave 16 Cloud SOC (GCS Exfiltration Firewall)', tab: 'CLOUD_SOC' },
+              { name: 'IAM Service Account SignBlob', tab: 'SOVEREIGN_STUDIO', subTab: 'IAM_SURGEON' },
             ],
             apisEnabled: [
               'storage.googleapis.com',
@@ -2452,10 +2519,12 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Captures a cryptographic state snapshot of your live Compute Engine VMs, Cloud Run services, GCS Buckets, and BigQuery Datasets; compares live GCP API state against the baseline to flag out-of-band console drift; and exports ready-to-apply Google Cloud Terraform HCL (`google_cloud_run_v2_service`, `google_compute_instance`, `google_storage_bucket`) & Pulumi TypeScript.',
             gcpServicesInvolved: [
+              { name: 'SHA-256 Time-Machine & Drift Radar', tab: 'SOVEREIGN_STUDIO', subTab: 'TIME_MACHINE' },
+              { name: '2026 Innovation (Reverse-Terraform & Imports)', tab: 'INNOVATION_LAB', subTab: 'TERRAFORM' },
+              { name: '1-Tap Health & Drift Hub (GitOps Bridge)', openHealthAndDrift: true },
               { name: 'Cloud Run v2 Services', tab: 'CLOUD_RUN' },
               { name: 'Compute Engine VMs', tab: 'VM_SSH' },
-              { name: 'Cloud Storage Buckets', tab: 'STORAGE_GOVERNANCE' },
-              { name: 'BigQuery Datasets', tab: 'BIGQUERY_STUDIO' },
+              { name: 'Cloud Storage Buckets', tab: 'CLOUD_STORAGE' },
             ],
             apisEnabled: [
               'run.googleapis.com',
@@ -2548,10 +2617,11 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Audits your live Compute Engine VMs (public IPv4 exposure, non-Spot pricing), VPC Firewall Rules (`0.0.0.0/0` port 22/3389), Cloud Storage Buckets (public access prevention), and Cloud Run services (`minInstanceCount > 0` idle burn), and executes 1-click live GCP remediations.',
             gcpServicesInvolved: [
+              { name: '1-Tap Health & Drift Hub', openHealthAndDrift: true },
+              { name: 'Wave 16 Cloud SOC (12 Zero-Trust Invariants)', tab: 'CLOUD_SOC' },
+              { name: 'Wave 8 SRE War-Room (6 SRE Invariants)', tab: 'SRE_WAR_ROOM' },
               { name: 'VPC Firewall Perimeter', tab: 'VPC_NETWORKS' },
-              { name: 'Compute Engine VMs', tab: 'VM_SSH' },
-              { name: 'Cloud Storage Governance', tab: 'STORAGE_GOVERNANCE' },
-              { name: 'Cloud Run Fleet', tab: 'CLOUD_RUN' },
+              { name: 'Cloud Storage Governance', tab: 'CLOUD_STORAGE' },
             ],
             apisEnabled: [
               'recommender.googleapis.com',
@@ -2604,9 +2674,10 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Correlates live GCP security signals (open `0.0.0.0/0` SSH/RDP firewall rules, exposed Service Account keys, unauthenticated Cloud Run endpoints) and executes 1-click SOAR quarantine actions: locking SSH firewall rules to Google IAP (`35.235.240.0/20`) or isolating compromised workloads.',
             gcpServicesInvolved: [
+              { name: 'Wave 16 · 20-Pillar Autonomous Cloud SOC', tab: 'CLOUD_SOC' },
+              { name: 'Wave 8 · 12-Pillar SRE War-Room', tab: 'SRE_WAR_ROOM' },
+              { name: 'IAM & Service Account Key Kill-Switch', tab: 'SOVEREIGN_STUDIO', subTab: 'IAM_SURGEON' },
               { name: 'VPC Firewall Rules (IAP Quarantine)', tab: 'VPC_NETWORKS' },
-              { name: 'IAM & Service Account Keys', tab: 'SOVEREIGN_STUDIO' },
-              { name: 'SRE Incident War-Room', tab: 'SRE_WAR_ROOM' },
             ],
             apisEnabled: [
               'securitycenter.googleapis.com',
@@ -2679,8 +2750,9 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Queries Google Cloud Audit Logs (`cloudaudit.googleapis.com/activity`, `data_access`, and `policy`) via `logging.googleapis.com/v2/entries:list` & Log Analytics SQL (`global._Default._AllLogs`) and generates 1-click Undo `gcloud` CLI commands for every mutation.',
             gcpServicesInvolved: [
+              { name: 'Wave 16 Cloud SOC (MITRE ATT&CK Kill-Chains)', tab: 'CLOUD_SOC' },
+              { name: 'SHA-256 Time-Machine & Drift Radar', tab: 'SOVEREIGN_STUDIO', subTab: 'TIME_MACHINE' },
               { name: 'Cloud Logging & Audit Timeline', tab: 'LOGS_SHELL' },
-              { name: 'IAM Security & Drift Radar', tab: 'SOVEREIGN_STUDIO' },
             ],
             apisEnabled: [
               'logging.googleapis.com',
@@ -2715,9 +2787,10 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Configures a multi-model Vertex AI Model Garden router (`Gemini 3.1 Pro -> Gemini 3.8 Flash -> Claude 3.7 Sonnet on Vertex AI`), runs Cloud Data Loss Prevention (Sensitive Data Protection / DLP) PII redaction + Prompt-Injection interception before model invocation, and enforces a daily USD token spend cap.',
             gcpServicesInvolved: [
+              { name: 'Wave 16 Cloud SOC (Ed25519 AI Model-Armor)', tab: 'CLOUD_SOC' },
+              { name: '2026 Innovation (Model Armor & -80% Cache)', tab: 'INNOVATION_LAB', subTab: 'MODEL_ARMOR_FINOPS' },
               { name: 'Vertex AI & Model Garden Studio', tab: 'WAVE9_STUDIO' },
               { name: 'Cloud Run AI Gateway Endpoint', tab: 'CLOUD_RUN' },
-              { name: 'DLP & Security Guardrails', tab: 'SOVEREIGN_STUDIO' },
             ],
             apisEnabled: [
               'aiplatform.googleapis.com',
@@ -2867,8 +2940,10 @@ export default function AwsAzureEnvySuiteStudio({
             whatGcpCreatesOrMutates:
               'Aggregates live telemetry across Google Cloud Monitoring (`monitoring.googleapis.com/v3`), Cloud Logging, Cloud Run ingress QPS, and Cross-Region Network Intelligence Center latency matrices into a single giant-screen NOC Command Wall.',
             gcpServicesInvolved: [
+              { name: 'Wave 8 · 12-Pillar SRE War-Room', tab: 'SRE_WAR_ROOM' },
+              { name: 'Wave 16 · 20-Pillar Cloud SOC', tab: 'CLOUD_SOC' },
+              { name: '1-Tap Health & Drift Hub', openHealthAndDrift: true },
               { name: 'Global 40-Region Subsea Map', tab: 'GLOBAL_MAP' },
-              { name: 'SRE Incident War-Room', tab: 'SRE_WAR_ROOM' },
               { name: 'FinOps & Monitoring Telemetry', tab: 'FINOPS' },
             ],
             apisEnabled: [
@@ -3292,7 +3367,11 @@ export default function AwsAzureEnvySuiteStudio({
                       <button
                         key={svc.name}
                         type="button"
-                        onClick={() => onNavigateToGcpTab?.(svc.tab)}
+                        onClick={() =>
+                          svc.openHealthAndDrift
+                            ? onOpenHealthAndDrift?.()
+                            : onNavigateToGcpTab?.(svc.tab, svc.subTab)
+                        }
                         title={`Jump to ${svc.name} studio in CloudPulse to inspect manually`}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
                       >

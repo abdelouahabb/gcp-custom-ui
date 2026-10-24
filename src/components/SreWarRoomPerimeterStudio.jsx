@@ -2992,6 +2992,27 @@ export default function SreWarRoomPerimeterStudio({
                   >
                     Open Wave 16 Autonomous Cloud SOC &rarr;
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onNavigateTab('AWS_AZURE_PARITY', 'EVENTBRIDGE_PIPES')
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer"
+                  >
+                    AWS &amp; Azure Parity (EventBridge &amp; Route 53) &rarr;
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onNavigateTab(
+                        'ALIBABA_HUAWEI_PARITY',
+                        'ALIYUN_PTS_MSE_FLASH_SALE_SURGE'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-extrabold cursor-pointer"
+                  >
+                    Alibaba 11.11 Surge &amp; Huawei DataV NOC &rarr;
+                  </button>
                 </>
               )}
             </div>

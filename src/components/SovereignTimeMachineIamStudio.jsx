@@ -899,6 +899,16 @@ export default function SovereignTimeMachineIamStudio({
                 >
                   <span>Cloud SOC &rarr;</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onNavigateTab('AWS_AZURE_PARITY', 'CFN_ARM_STACKS')
+                  }
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
+                  title="Jump to AWS CloudFormation / Azure ARM Drift & IAM Simulator Bridge"
+                >
+                  <span>AWS / Azure Parity &rarr;</span>
+                </button>
               </>
             )}
             <button

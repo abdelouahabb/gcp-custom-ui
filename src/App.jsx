@@ -2822,6 +2822,24 @@ function CloudPulseCockpit() {
   const [activeTab, setActiveTab] = useState('OVERVIEW');
   const [innovationSubTab, setInnovationSubTab] = useState('TOPOLOGY');
   const [sovereignSubTab, setSovereignSubTab] = useState('IAM_SURGEON');
+  const [awsAzureSubTab, setAwsAzureSubTab] = useState('RESOURCE_GROUPS');
+  const [alibabaHuaweiSubTab, setAlibabaHuaweiSubTab] = useState(
+    'ALIYUN_PTS_MSE_FLASH_SALE_SURGE'
+  );
+
+  const handleNavigateStudioTab = useCallback((tabId, subTab) => {
+    if (!tabId) return;
+    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
+      setSovereignSubTab(subTab);
+    } else if (subTab && tabId === 'INNOVATION_LAB') {
+      setInnovationSubTab(subTab);
+    } else if (subTab && tabId === 'AWS_AZURE_PARITY') {
+      setAwsAzureSubTab(subTab);
+    } else if (subTab && tabId === 'ALIBABA_HUAWEI_PARITY') {
+      setAlibabaHuaweiSubTab(subTab);
+    }
+    setActiveTab(tabId);
+  }, []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
@@ -3827,6 +3845,7 @@ function CloudPulseCockpit() {
           {loadingOverview &&
           !overview &&
           activeTab !== 'AWS_AZURE_PARITY' &&
+          activeTab !== 'ALIBABA_HUAWEI_PARITY' &&
           activeTab !== 'CLOUD_SOC' &&
           activeTab !== 'SRE_WAR_ROOM' &&
           activeTab !== 'SOVEREIGN_STUDIO' &&
@@ -3880,14 +3899,7 @@ function CloudPulseCockpit() {
                     onOpenProvision={handleOpenProvision}
                     onDeleteResource={handleDeleteResource}
                     onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                    onSelectStudioTab={(tabId, subTab) => {
-                      if (subTab && tabId === 'SOVEREIGN_STUDIO') {
-                        setSovereignSubTab(subTab);
-                      } else if (subTab && tabId === 'INNOVATION_LAB') {
-                        setInnovationSubTab(subTab);
-                      }
-                      setActiveTab(tabId);
-                    }}
+                    onSelectStudioTab={handleNavigateStudioTab}
                     onSelectProject={(pid) => {
                       sessionStorage.setItem(
                         'cloudpulse_project_explicit',
@@ -4056,14 +4068,7 @@ function CloudPulseCockpit() {
                   onOpenProvision={handleOpenProvision}
                   onDeleteResource={handleDeleteResource}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onSelectStudioTab={(tabId, subTab) => {
-                    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
-                      setSovereignSubTab(subTab);
-                    } else if (subTab && tabId === 'INNOVATION_LAB') {
-                      setInnovationSubTab(subTab);
-                    }
-                    setActiveTab(tabId);
-                  }}
+                  onSelectStudioTab={handleNavigateStudioTab}
                   onSelectProject={(pid) => {
                     sessionStorage.setItem(
                       'cloudpulse_project_explicit',
@@ -4174,14 +4179,7 @@ function CloudPulseCockpit() {
                   initialSubTab={sovereignSubTab}
                   onTriggerToast={showToast}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onNavigateTab={(tabId, subTab) => {
-                    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
-                      setSovereignSubTab(subTab);
-                    } else if (subTab && tabId === 'INNOVATION_LAB') {
-                      setInnovationSubTab(subTab);
-                    }
-                    setActiveTab(tabId);
-                  }}
+                  onNavigateTab={handleNavigateStudioTab}
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
@@ -4194,14 +4192,7 @@ function CloudPulseCockpit() {
                   onTriggerToast={showToast}
                   onRunInShell={handleRunInShell}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onNavigateTab={(tabId, subTab) => {
-                    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
-                      setSovereignSubTab(subTab);
-                    } else if (subTab && tabId === 'INNOVATION_LAB') {
-                      setInnovationSubTab(subTab);
-                    }
-                    setActiveTab(tabId);
-                  }}
+                  onNavigateTab={handleNavigateStudioTab}
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
                   }
@@ -4321,7 +4312,7 @@ function CloudPulseCockpit() {
                 <AwsAzureEnvySuiteStudio
                   key="aws-azure-parity"
                   cloudFamily="AWS_AZURE"
-                  initialTab="RESOURCE_GROUPS"
+                  initialTab={awsAzureSubTab}
                   projectId={selectedProjectId}
                   onSwitchCloudFamily={(family) =>
                     setActiveTab(
@@ -4330,7 +4321,8 @@ function CloudPulseCockpit() {
                         : 'AWS_AZURE_PARITY'
                     )
                   }
-                  onNavigateToGcpTab={(tabId) => setActiveTab(tabId)}
+                  onNavigateToGcpTab={handleNavigateStudioTab}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
@@ -4341,7 +4333,7 @@ function CloudPulseCockpit() {
                 <AwsAzureEnvySuiteStudio
                   key="alibaba-huawei-parity"
                   cloudFamily="ALIBABA_HUAWEI"
-                  initialTab="ALIYUN_PTS_MSE_FLASH_SALE_SURGE"
+                  initialTab={alibabaHuaweiSubTab}
                   projectId={selectedProjectId}
                   onSwitchCloudFamily={(family) =>
                     setActiveTab(
@@ -4350,7 +4342,8 @@ function CloudPulseCockpit() {
                         : 'AWS_AZURE_PARITY'
                     )
                   }
-                  onNavigateToGcpTab={(tabId) => setActiveTab(tabId)}
+                  onNavigateToGcpTab={handleNavigateStudioTab}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
@@ -4362,14 +4355,7 @@ function CloudPulseCockpit() {
                   projectId={selectedProjectId}
                   onRunInShell={handleRunInShell}
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                  onNavigateTab={(tabId, subTab) => {
-                    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
-                      setSovereignSubTab(subTab);
-                    } else if (subTab && tabId === 'INNOVATION_LAB') {
-                      setInnovationSubTab(subTab);
-                    }
-                    setActiveTab(tabId);
-                  }}
+                  onNavigateTab={handleNavigateStudioTab}
                   onRefreshGlobal={() => {
                     fetchProjectOverview(selectedProjectId);
                     setVmRefreshTrigger((c) => c + 1);
@@ -4379,10 +4365,7 @@ function CloudPulseCockpit() {
 
               {activeTab === 'DOCS_GUIDE' && (
                 <InteractiveDocsGuide
-                  onNavigateToFeature={(tabId, subTab) => {
-                    if (subTab) setInnovationSubTab(subTab);
-                    setActiveTab(tabId);
-                  }}
+                  onNavigateToFeature={handleNavigateStudioTab}
                   onOpenCommandPalette={() => setCommandPaletteOpen(true)}
                 />
               )}
@@ -4509,14 +4492,7 @@ function CloudPulseCockpit() {
           fetchProjectOverview(selectedProjectId);
           setVmRefreshTrigger((c) => c + 1);
         }}
-        onSelectTab={(tab, subTab) => {
-          if (subTab && tab === 'SOVEREIGN_STUDIO') {
-            setSovereignSubTab(subTab);
-          } else if (subTab && tab === 'INNOVATION_LAB') {
-            setInnovationSubTab(subTab);
-          }
-          setActiveTab(tab);
-        }}
+        onSelectTab={handleNavigateStudioTab}
         onShowToast={showToast}
       />
 

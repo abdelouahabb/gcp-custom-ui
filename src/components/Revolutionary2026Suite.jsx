@@ -1063,6 +1063,22 @@ export default function Revolutionary2026Suite({
                   style:
                     'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
                 },
+                {
+                  key: 'AWS_AZURE_PARITY',
+                  tabId: 'AWS_AZURE_PARITY',
+                  subTab: 'RESOURCE_GROUPS',
+                  label: 'AWS & Azure Parity (20 Bridges)',
+                  style:
+                    'border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/25',
+                },
+                {
+                  key: 'ALIBABA_HUAWEI_PARITY',
+                  tabId: 'ALIBABA_HUAWEI_PARITY',
+                  subTab: 'ALIYUN_PTS_MSE_FLASH_SALE_SURGE',
+                  label: 'Alibaba & Huawei Parity (8 Bridges)',
+                  style:
+                    'border-orange-500/40 bg-orange-500/15 text-orange-700 dark:text-orange-300 hover:bg-orange-500/25',
+                },
               ].map((item) => (
                 <button
                   key={item.key}

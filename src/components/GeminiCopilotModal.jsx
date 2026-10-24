@@ -533,6 +533,35 @@ export default function GeminiCopilotModal({
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   )}
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectTab('AWS_AZURE_PARITY', 'TRUSTED_ADVISOR');
+                        onClose();
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>AWS / Azure Parity</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectTab(
+                          'ALIBABA_HUAWEI_PARITY',
+                          'HUAWEI_DATAV_NOC_COMMAND_WALL'
+                        );
+                        onClose();
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Alibaba / Huawei NOC</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
 

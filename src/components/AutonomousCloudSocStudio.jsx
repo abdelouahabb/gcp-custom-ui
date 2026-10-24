@@ -669,6 +669,15 @@ export default function AutonomousCloudSocStudio({
                   <GitBranch className="w-3.5 h-3.5 text-purple-400" />
                   <span>Time-Machine &amp; Drift</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('AWS_AZURE_PARITY', 'GUARDDUTY_SOAR')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-amber-500/40 text-amber-300 text-xs font-extrabold transition-colors cursor-pointer"
+                  title="Jump to AWS GuardDuty / Microsoft Sentinel SOAR & CloudTrail Lake Bridge"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <span>GuardDuty / Sentinel SOAR</span>
+                </button>
               </>
             )}
 
