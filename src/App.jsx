@@ -3879,7 +3879,15 @@ function CloudPulseCockpit() {
                     }}
                     onOpenProvision={handleOpenProvision}
                     onDeleteResource={handleDeleteResource}
-                    onSelectStudioTab={(tabId) => setActiveTab(tabId)}
+                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                    onSelectStudioTab={(tabId, subTab) => {
+                      if (subTab && tabId === 'SOVEREIGN_STUDIO') {
+                        setSovereignSubTab(subTab);
+                      } else if (subTab && tabId === 'INNOVATION_LAB') {
+                        setInnovationSubTab(subTab);
+                      }
+                      setActiveTab(tabId);
+                    }}
                     onSelectProject={(pid) => {
                       sessionStorage.setItem(
                         'cloudpulse_project_explicit',
@@ -4047,7 +4055,15 @@ function CloudPulseCockpit() {
                   }}
                   onOpenProvision={handleOpenProvision}
                   onDeleteResource={handleDeleteResource}
-                  onSelectStudioTab={(tabId) => setActiveTab(tabId)}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                  onSelectStudioTab={(tabId, subTab) => {
+                    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
+                      setSovereignSubTab(subTab);
+                    } else if (subTab && tabId === 'INNOVATION_LAB') {
+                      setInnovationSubTab(subTab);
+                    }
+                    setActiveTab(tabId);
+                  }}
                   onSelectProject={(pid) => {
                     sessionStorage.setItem(
                       'cloudpulse_project_explicit',
@@ -4161,6 +4177,8 @@ function CloudPulseCockpit() {
                   onNavigateTab={(tabId, subTab) => {
                     if (subTab && tabId === 'SOVEREIGN_STUDIO') {
                       setSovereignSubTab(subTab);
+                    } else if (subTab && tabId === 'INNOVATION_LAB') {
+                      setInnovationSubTab(subTab);
                     }
                     setActiveTab(tabId);
                   }}
@@ -4179,6 +4197,8 @@ function CloudPulseCockpit() {
                   onNavigateTab={(tabId, subTab) => {
                     if (subTab && tabId === 'SOVEREIGN_STUDIO') {
                       setSovereignSubTab(subTab);
+                    } else if (subTab && tabId === 'INNOVATION_LAB') {
+                      setInnovationSubTab(subTab);
                     }
                     setActiveTab(tabId);
                   }}
@@ -4345,6 +4365,8 @@ function CloudPulseCockpit() {
                   onNavigateTab={(tabId, subTab) => {
                     if (subTab && tabId === 'SOVEREIGN_STUDIO') {
                       setSovereignSubTab(subTab);
+                    } else if (subTab && tabId === 'INNOVATION_LAB') {
+                      setInnovationSubTab(subTab);
                     }
                     setActiveTab(tabId);
                   }}
@@ -4490,6 +4512,8 @@ function CloudPulseCockpit() {
         onSelectTab={(tab, subTab) => {
           if (subTab && tab === 'SOVEREIGN_STUDIO') {
             setSovereignSubTab(subTab);
+          } else if (subTab && tab === 'INNOVATION_LAB') {
+            setInnovationSubTab(subTab);
           }
           setActiveTab(tab);
         }}

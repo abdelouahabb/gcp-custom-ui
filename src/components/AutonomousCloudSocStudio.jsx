@@ -644,6 +644,15 @@ export default function AutonomousCloudSocStudio({
               <>
                 <button
                   type="button"
+                  onClick={() => onNavigateTab('INNOVATION_LAB', 'TERRAFORM')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-blue-500/40 text-blue-300 text-xs font-extrabold transition-colors cursor-pointer"
+                  title="Jump to 2026 Innovation Lab (22 Labs, Reverse-Terraform & Moonshots)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                  <span>2026 Innovation</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => onNavigateTab('SRE_WAR_ROOM')}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-rose-500/40 text-rose-300 text-xs font-extrabold transition-colors cursor-pointer"
                   title="Jump to Wave 8 Principal SRE War-Room, Multi-Window SLO Burn & VPC-SC Architect"

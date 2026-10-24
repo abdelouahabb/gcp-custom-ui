@@ -203,6 +203,7 @@ export default function Revolutionary2026Suite({
   onOpenProvision,
   onDeleteResource,
   onSelectStudioTab,
+  onOpenHealthAndDrift,
   onSelectProject,
   onRunInShell,
   onShowToast,
@@ -215,10 +216,12 @@ export default function Revolutionary2026Suite({
   const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState([]);
   const [auditData, setAuditData] = useState(null);
+  const [sreBridgeData, setSreBridgeData] = useState(null);
+  const [socBridgeData, setSocBridgeData] = useState(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [hibernateBusy, setHibernateBusy] = useState(false);
   const [copiedType, setCopiedType] = useState(null);
-  const [iacFormat, setIacFormat] = useState('TERRAFORM'); // 'TERRAFORM' | 'GCLOUD_SH'
+  const [iacFormat, setIacFormat] = useState('TERRAFORM'); // 'TERRAFORM' | 'TERRAFORM_IMPORT' | 'GCLOUD_SH' | 'SESSION_GITOPS_DELTA'
 
   // Vertex AI Model Armor & Context Caching FinOps State
   const [promptToTest, setPromptToTest] = useState(
@@ -284,7 +287,7 @@ export default function Revolutionary2026Suite({
     if (!projectId) return;
     setLoadingAudit(true);
     try {
-      const [vmRes, secRes, secretsRes, sqlRes, gkeRes, arRes] = await Promise.all([
+      const [vmRes, secRes, secretsRes, sqlRes, gkeRes, arRes, sreRes, socRes] = await Promise.all([
         axios
           .get(`/api/project/${encodeURIComponent(projectId)}/vms`)
           .catch(() => ({ data: { vms: [] } })),
@@ -303,9 +306,17 @@ export default function Revolutionary2026Suite({
         axios
           .get(`/api/project/${encodeURIComponent(projectId)}/wave9/supply-chain`)
           .catch(() => ({ data: { repositories: [] } })),
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/wave8/war-room`)
+          .catch(() => ({ data: null })),
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/wave16/soc/overview`)
+          .catch(() => ({ data: null })),
       ]);
       setVms(vmRes.data?.vms || []);
       setAuditData(secRes.data);
+      setSreBridgeData(sreRes.data);
+      setSocBridgeData(socRes.data);
       setExtraIacInventory({
         secrets: secretsRes.data?.secrets || [],
         sqlInstances: sqlRes.data?.instances || [],
@@ -962,59 +973,106 @@ export default function Revolutionary2026Suite({
         </div>
       </div>
 
-      {/* 2026 Deep-Dive Innovation Studios Launchpad */}
-      {onSelectStudioTab && (
-        <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
-              2026 Deep-Dive Studios
-            </span>
-            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-              Jump straight to our newest 2026 specialized engineering breakthroughs:
-            </span>
+      {/* 2026 Deep-Dive Innovation Studios & Cross-Plane Telemetry Launchpad */}
+      {(onSelectStudioTab || onOpenHealthAndDrift) && (
+        <div className="p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
+                2026 Connected Ecosystem Bridge
+              </span>
+              <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                Live Cross-Studio Wiring — Health &amp; Drift, 20-Pillar Cloud SOC, 12-Pillar SRE War-Room &amp; Specialized Studios:
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+              {socBridgeData?.summary && (
+                <span className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30 font-bold">
+                  SOC Posture: {socBridgeData.summary.socPostureScore}/100 ({socBridgeData.selfHealingGuardian?.invariantsPassedCount ?? 12}/{socBridgeData.selfHealingGuardian?.totalInvariantsCount ?? 12} Invariants)
+                </span>
+              )}
+              {sreBridgeData && (
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 font-bold">
+                  SRE Score: {sreBridgeData.srePostureScore ?? 100}/100 · SLO Budget: {sreBridgeData.sloBurn?.errorBudgetRemainingPct ?? 100}%
+                </span>
+              )}
+            </div>
           </div>
+
           <div className="flex flex-wrap items-center gap-1.5">
-            {[
-              {
-                tabId: 'WAVE10_FRONTIER',
-                label: 'Spanner Graph, Vector & $65/mo 100-PU Studio',
-                style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
-              },
-              {
-                tabId: 'DATA_ENGINEER_STUDIO',
-                label: 'Data Mesh, Serverless Spark & Iceberg',
-                style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
-              },
-              {
-                tabId: 'BIGLAKE_STUDIO',
-                label: 'BigLake & Apache Iceberg Lakehouse Studio',
-                style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
-              },
-              {
-                tabId: 'SOVEREIGN_STUDIO',
-                label: 'SA .json Key & OAuth Token Kill-Switch',
-                style: 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25',
-              },
-              {
-                tabId: 'FUNCTIONS_STUDIO',
-                label: 'Eventarc (90+ Events) & Workflows Matrix',
-                style: 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
-              },
-              {
-                tabId: 'SRE_WAR_ROOM',
-                label: 'SRE War-Room & VPC-SC Perimeter',
-                style: 'border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-300 hover:bg-red-500/25',
-              },
-            ].map((item) => (
+            {onOpenHealthAndDrift && (
               <button
-                key={item.tabId}
                 type="button"
-                onClick={() => onSelectStudioTab(item.tabId)}
-                className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold transition-all cursor-pointer ${item.style}`}
+                onClick={onOpenHealthAndDrift}
+                className="px-2.5 py-1 rounded-lg border border-emerald-500/50 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30 text-[11px] font-mono font-extrabold transition-all cursor-pointer"
               >
-                {item.label} →
+                1-Tap Health &amp; Drift Hub →
               </button>
-            ))}
+            )}
+            {onSelectStudioTab &&
+              [
+                {
+                  key: 'CLOUD_SOC',
+                  tabId: 'CLOUD_SOC',
+                  label: `Wave 16 · 20-Pillar Cloud SOC (${socBridgeData?.summary?.socGrade || 'A+'})`,
+                  style:
+                    'border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25',
+                },
+                {
+                  key: 'SRE_WAR_ROOM',
+                  tabId: 'SRE_WAR_ROOM',
+                  label: `Wave 8 · 12-Pillar SRE War-Room (${sreBridgeData?.sreGrade || 'A+'})`,
+                  style:
+                    'border-indigo-500/40 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/25',
+                },
+                {
+                  key: 'TIME_MACHINE',
+                  tabId: 'SOVEREIGN_STUDIO',
+                  subTab: 'TIME_MACHINE',
+                  label: 'SHA-256 Time-Machine & Drift Radar',
+                  style:
+                    'border-purple-500/40 bg-purple-500/15 text-purple-700 dark:text-purple-300 hover:bg-purple-500/25',
+                },
+                {
+                  key: 'IAM_SURGEON',
+                  tabId: 'SOVEREIGN_STUDIO',
+                  subTab: 'IAM_SURGEON',
+                  label: 'SA .json Key & OAuth Token Kill-Switch',
+                  style:
+                    'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25',
+                },
+                {
+                  key: 'WAVE10_FRONTIER',
+                  tabId: 'WAVE10_FRONTIER',
+                  label: 'Spanner Graph, Vector & $65/mo 100-PU Studio',
+                  style:
+                    'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
+                },
+                {
+                  key: 'BIGLAKE_STUDIO',
+                  tabId: 'BIGLAKE_STUDIO',
+                  label: 'BigLake & Apache Iceberg Lakehouse Studio',
+                  style:
+                    'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
+                },
+                {
+                  key: 'DATA_ENGINEER_STUDIO',
+                  tabId: 'DATA_ENGINEER_STUDIO',
+                  label: 'Data Mesh, Serverless Spark & Iceberg',
+                  style:
+                    'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/25',
+                },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => onSelectStudioTab(item.tabId, item.subTab)}
+                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold transition-all cursor-pointer ${item.style}`}
+                >
+                  {item.label} →
+                </button>
+              ))}
           </div>
         </div>
       )}
@@ -1849,7 +1907,7 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
         </div>
       )}
 
-      {/* TAB 3: 1-TAP REVERSE-TERRAFORM, STATE IMPORT & GCLOUD BLUEPRINT EXPORTER */}
+      {/* TAB 3: 1-TAP REVERSE-TERRAFORM, STATE IMPORT, GCLOUD & SESSION GITOPS DELTA EXPORTER */}
       {subTab === 'TERRAFORM' && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1890,16 +1948,36 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               >
                 Master gcloud Clone Script (deploy.sh)
               </button>
+              <button
+                type="button"
+                onClick={() => setIacFormat('SESSION_GITOPS_DELTA')}
+                title="Inspect live ClickOps-to-GitOps Terraform HCL patches generated from your Wave 8 SRE War-Room & Wave 16 Cloud SOC actions"
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
+                  iacFormat === 'SESSION_GITOPS_DELTA'
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                Session ClickOps-to-GitOps Delta (SRE + SOC)
+              </button>
             </div>
 
             <button
               type="button"
               onClick={() => {
+                const sessionDeltaText =
+                  sreBridgeData?.healthAndSocBridge?.gitOpsBridge
+                    ?.terraformPatchHcl ||
+                  socBridgeData?.healthAndDriftBridge?.gitOpsBridge
+                    ?.terraformPatchHcl ||
+                  '# 0 session mutations recorded yet in Flight Recorder.';
                 const text =
                   iacFormat === 'TERRAFORM'
                     ? generatedTerraform
                     : iacFormat === 'TERRAFORM_IMPORT'
                     ? generatedTerraformImports
+                    : iacFormat === 'SESSION_GITOPS_DELTA'
+                    ? sessionDeltaText
                     : generatedGcloudScript;
                 navigator.clipboard?.writeText(text);
                 setCopiedType(iacFormat);
@@ -1922,6 +2000,8 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                       ? 'main.tf'
                       : iacFormat === 'TERRAFORM_IMPORT'
                       ? 'imports.tf'
+                      : iacFormat === 'SESSION_GITOPS_DELTA'
+                      ? 'session_delta.tf'
                       : 'deploy-stack.sh'}
                   </span>
                 </>
@@ -1934,6 +2014,12 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
               ? generatedTerraform
               : iacFormat === 'TERRAFORM_IMPORT'
               ? generatedTerraformImports
+              : iacFormat === 'SESSION_GITOPS_DELTA'
+              ? sreBridgeData?.healthAndSocBridge?.gitOpsBridge
+                  ?.terraformPatchHcl ||
+                socBridgeData?.healthAndDriftBridge?.gitOpsBridge
+                  ?.terraformPatchHcl ||
+                '# 0 session mutations recorded yet in Flight Recorder.\n# Execute any control-plane action in Wave 8 SRE War-Room or Wave 16 Cloud SOC to auto-generate declarative Terraform HCL patches here.'
               : generatedGcloudScript}
           </pre>
         </div>
@@ -1946,20 +2032,42 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
             <div className="text-xs text-zinc-500">
               Live audit of open <code className="font-mono">0.0.0.0/0</code>{' '}
               VPC Firewall rules, unauthenticated Cloud Run endpoints, and IAM
-              Service Accounts in <strong className="font-mono">{projectId}</strong>.
+              Service Accounts in <strong className="font-mono">{projectId}</strong> — wired directly to Wave 16 Cloud SOC &amp; Wave 7 IAM Surgeon.
             </div>
-            <button
-              type="button"
-              onClick={fetchExtraData}
-              disabled={loadingAudit}
-              title="Re-query live GCP Compute Firewalls, Cloud Run ingress policies, and IAM Service Accounts"
-              className="inline-flex items-center gap-1.5 text-xs font-mono bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 cursor-pointer"
-            >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`}
-              />
-              <span>Re-Scan Posture</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {onSelectStudioTab && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('CLOUD_SOC')}
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-bold cursor-pointer"
+                  >
+                    Open 20-Pillar Cloud SOC →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectStudioTab('SOVEREIGN_STUDIO', 'IAM_SURGEON')
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-bold cursor-pointer"
+                  >
+                    Open IAM Surgeon &amp; SA Key Kill-Switch →
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={fetchExtraData}
+                disabled={loadingAudit}
+                title="Re-query live GCP Compute Firewalls, Cloud Run ingress policies, and IAM Service Accounts"
+                className="inline-flex items-center gap-1.5 text-xs font-mono bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`}
+                />
+                <span>Re-Scan Posture</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1990,23 +2098,34 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                   {f.title}
                 </div>
                 <p className="text-[11px] text-zinc-500">{f.recommendation}</p>
-                {onDeleteResource && f.resourceName !== 'default-allow-ssh' && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onDeleteResource({
-                        type: 'VPC Firewall Rule',
-                        name: f.resourceName,
-                        region: 'global',
-                      })
-                    }
-                    title={`Immediately delete open firewall rule "${f.resourceName}" from project ${projectId}`}
-                    className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-red-500 hover:underline"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    <span>1-Tap Delete Open Firewall Rule</span>
-                  </button>
-                )}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {onDeleteResource && f.resourceName !== 'default-allow-ssh' && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onDeleteResource({
+                          type: 'VPC Firewall Rule',
+                          name: f.resourceName,
+                          region: 'global',
+                        })
+                      }
+                      title={`Immediately delete open firewall rule "${f.resourceName}" from project ${projectId}`}
+                      className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-red-500 hover:underline cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>1-Tap Delete Open Firewall Rule</span>
+                    </button>
+                  )}
+                  {onSelectStudioTab && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectStudioTab('CLOUD_SOC')}
+                      className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                    >
+                      Quarantine in Cloud SOC →
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -2014,8 +2133,21 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
           {/* IAM Service Accounts Inventory */}
           {auditData?.serviceAccounts?.length > 0 && (
             <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
-              <div className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
-                Active IAM Service Accounts ({auditData.serviceAccounts.length})
+              <div className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 flex items-center justify-between">
+                <span>
+                  Active IAM Service Accounts ({auditData.serviceAccounts.length})
+                </span>
+                {onSelectStudioTab && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectStudioTab('SOVEREIGN_STUDIO', 'IAM_SURGEON')
+                    }
+                    className="text-[11px] font-mono font-bold text-amber-500 hover:underline cursor-pointer"
+                  >
+                    Manage Keys, JIT &amp; Freeze SAs →
+                  </button>
+                )}
               </div>
               <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {auditData.serviceAccounts.map((sa) => (
@@ -2029,9 +2161,22 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                       </div>
                       <div className="text-[11px] text-zinc-500">{sa.email}</div>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                      {sa.disabled ? 'DISABLED' : 'ACTIVE IAM SA'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                        {sa.disabled ? 'DISABLED' : 'ACTIVE IAM SA'}
+                      </span>
+                      {onSelectStudioTab && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onSelectStudioTab('SOVEREIGN_STUDIO', 'IAM_SURGEON')
+                          }
+                          className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                        >
+                          Key Kill-Switch →
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2101,9 +2246,20 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
                   Inspect user prompts and RAG outputs before they hit Gemini / Claude on Vertex AI. Blocks system-prompt extraction, IAM key leaks, and PII exfiltration at the GCP edge.
                 </p>
               </div>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/15 text-red-500 border border-red-500/30">
-                OWASP LLM01 GUARD
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/15 text-red-500 border border-red-500/30">
+                  OWASP LLM01 GUARD
+                </span>
+                {onSelectStudioTab && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudioTab('CLOUD_SOC')}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10.5px] font-mono font-bold cursor-pointer"
+                  >
+                    Ed25519 AI Red-Team Ledger (Cloud SOC) →
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-1.5">

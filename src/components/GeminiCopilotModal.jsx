@@ -511,6 +511,19 @@ export default function GeminiCopilotModal({
                     <button
                       type="button"
                       onClick={() => {
+                        onSelectTab('INNOVATION_LAB', 'TERRAFORM');
+                        onClose();
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>2026 Innovation Lab</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
                         onSelectTab('SOVEREIGN_STUDIO', 'TIME_MACHINE');
                         onClose();
                       }}

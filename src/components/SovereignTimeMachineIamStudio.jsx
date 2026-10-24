@@ -877,6 +877,14 @@ export default function SovereignTimeMachineIamStudio({
               <>
                 <button
                   type="button"
+                  onClick={() => onNavigateTab('INNOVATION_LAB', 'TERRAFORM')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
+                  title="Jump to 2026 Beyond-Console Innovation Lab (22 Labs, Reverse-Terraform & Moonshots)"
+                >
+                  <span>2026 Innovation &rarr;</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => onNavigateTab('SRE_WAR_ROOM')}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
                   title="Jump to Wave 8 Principal SRE War-Room, Multi-Window SLO Burn & VPC-SC Architect"
