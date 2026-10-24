@@ -4220,6 +4220,7 @@ function CloudPulseCockpit() {
                     actionLoading={actionLoading}
                     onRunInShell={handleRunInShell}
                     onAskCopilot={handleOpenCopilotWithPrompt}
+                    onSelectTab={(tabId) => setActiveTab(tabId)}
                   />
 
                   <div id="emergency-api-killswitch-section">
@@ -4781,6 +4782,9 @@ function CloudPulseCockpit() {
                     onOpenProvisionVm={() => handleOpenProvision('COMPUTE_VM')}
                     refreshTrigger={vmRefreshTrigger}
                     onVmDeleted={() => fetchProjectOverview(selectedProjectId)}
+                    onRunInShell={handleRunInShell}
+                    onSelectTab={(tabId) => setActiveTab(tabId)}
+                    onShowToast={showToast}
                   />
                 </div>
               )}

@@ -1045,16 +1045,27 @@ gcloud iam workload-identity-pools providers create-oidc "azure-ad-provider" \\
                       Auto-Restart: {vm.automaticRestart ? 'ON' : 'OFF'}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    disabled={updatingVmName === vm.name}
-                    onClick={() => handleEnforceVmLiveMigration(vm)}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer disabled:opacity-50"
-                  >
-                    {updatingVmName === vm.name
-                      ? 'Updating Scheduling...'
-                      : 'Verify / Enforce Live Migration (setScheduling)'}
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {onSelectTab && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectTab('VM_SSH')}
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
+                      >
+                        Migrate VM → Cloud Run ($0 Idle)
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={updatingVmName === vm.name}
+                      onClick={() => handleEnforceVmLiveMigration(vm)}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {updatingVmName === vm.name
+                        ? 'Updating Scheduling...'
+                        : 'Verify / Enforce Live Migration (setScheduling)'}
+                    </button>
+                  </div>
                 </div>
               ))
             )}

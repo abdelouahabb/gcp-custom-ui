@@ -47,6 +47,7 @@ export default function ResourceControlCenter({
   actionLoading,
   onRunInShell,
   onAskCopilot,
+  onSelectTab,
 }) {
   const { formatShortDate, shortTzName } = useTimezone();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -602,6 +603,23 @@ export default function ResourceControlCenter({
                   {actionLoading
                     ? 'Applying Policy...'
                     : 'Apply FinOps Autoclass / Rightsizing (-28% Cost)'}
+                </button>
+              )}
+
+              {selectedResource.type === 'Compute Engine VM' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSelectTab) {
+                      onSelectTab('VM_SSH');
+                    }
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[8px] px-[16px] py-[9px] text-xs font-bold transition-colors shadow-sm cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>
+                    Migrate VM ({selectedResource.name}) → Cloud Run (Scale-to-$0.00)
+                  </span>
                 </button>
               )}
 
