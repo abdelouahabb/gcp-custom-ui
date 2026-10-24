@@ -337,28 +337,28 @@ const DOC_SECTIONS = [
   },
   {
     id: 'gcloud-590-alpha-beta-frontier-wave1-wave2-wave3',
-    wave: '[ALPHA / BETA] GCLOUD 590.0.0 FRONTIER LAB · WAVE 1 + WAVE 2 + WAVE 3 (15 PRE-GA CAPABILITIES + SDK 588→590 PROMOTION LEDGER)',
+    wave: '[GA / BETA / ALPHA] GCLOUD 590.0.1 FRONTIER LAB · WAVE 1 + WAVE 2 + WAVE 3 (18 CAPABILITIES + 8-PILLAR PROBE + SDK 588→590.0.1 PROMOTION LEDGER)',
     title:
-      '[ALPHA / BETA] gcloud 590.0.0 Frontier Lab — Worker Pools, Multi-Region Run, Agent Registry & MCP, PAM JIT, Model Armor, Cluster Director & Lustre, NetApp Storage QoS, Database Center, Cloud Quotas & Audit Manager',
-    badge: '2026 INNOVATION LAB (WAVE 1–3 · SDK 590.0.0)',
+      '[GA / BETA / ALPHA] gcloud 590.0.1 Frontier Lab — Worker Pools, Multi-Region Run, Agent Registry & MCP, PAM JIT, Model Armor, Cluster Director & Lustre, NetApp Storage QoS, Database Center, Cloud Quotas, Audit Manager, Observability, Orchestration Pipelines & Compliance Manager',
+    badge: '2026 INNOVATION LAB (WAVE 1–3 · SDK 590.0.1)',
     badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
     icon: Rocket,
     targetTab: 'INNOVATION_LAB',
     targetSubTab: 'GCLOUD_ALPHA_BETA',
     problemSolved:
-      'Google Cloud SDK 590.0.0 (2026.10.16) ships powerful pre-GA capabilities inside `gcloud beta` and `gcloud alpha` alongside track promotions (such as GA `gcloud run services update --iap`) and updated syntax flags across `quotas`, `audit-manager`, `cluster-director`, `lustre`, `netapp`, and `database-center`.',
+      'Google Cloud SDK 590.0.1 (2026.10.22) promotes 14 command groups to General Availability (`agent-registry`, `agent-identity`, `pam`, `policy-troubleshoot`, `service-health`, `cloudlocationfinder`, `model-armor`, `developer-knowledge`, `app-topology`, `design-center`, `quotas`, `cluster-director`, `observability`, `compliance-manager`) while expanding `gcloud beta orchestration-pipelines` and `gcloud alpha database-center`.',
     howItWorks: [
-      'Explicit [BETA · PUBLIC PREVIEW] & [ALPHA · EARLY ACCESS] Badging + Wave 1 / Wave 2 / Wave 3 (590.0.0) Filter Bar: Filter between ALL WAVES (11), WAVE 1 (5), WAVE 2 (5), and WAVE 3 (590.0.0 · NEW) or ALL TRACKS, [BETA] ONLY, and [ALPHA] ONLY.',
-      'Wave 1 (01–05): (01) [BETA] Cloud Run Worker Pools & Multi-Region Services, (02) [ALPHA] Autonomous Agent Registry & MCP Servers, (03) [ALPHA] Privileged Access Manager (PAM) JIT & IAM 403 Policy Troubleshooter, (04) [ALPHA] Personalized Service Health & Cloud Run Fault-Injection, and (05) [BETA] App Hub & Application Optimize.',
-      'Wave 2 (06–10): (06) [ALPHA] Vertex AI Model Armor Prompt-Injection & SDP/PII Firewall, (07) [ALPHA] Developer Knowledge MCP, App-Topology & Design Center, (08) [BETA] Cloud Quotas Live Adjuster (`--project`), (09) [ALPHA] Sovereign Audit Manager & Software Delivery Trust (`--framework` & `--output-FileName`), and (10) [ALPHA] AI Hypercomputer Cluster Director & Managed Lustre (`--per-unit-storage-throughput=1000`).',
-      'Wave 3 (11 · SDK 590.0.0 5-Pillar Live Frontier Scan): Runs parallel live discovery across (1) AI Hypercomputer Cluster Director & Lustre, (2) Google Cloud NetApp Volumes & Storage Pools QoS (`netapp.googleapis.com`), (3) Database Center Fleet Health (`databasecenter.googleapis.com`), (4) Cloud Quotas Adjuster & Preferences (`cloudquotas.googleapis.com`), and (5) Sovereign Audit Manager (`auditmanager.googleapis.com`) alongside a verified SDK 588.0.0 -> 590.0.0 Flag & Track Promotion Ledger.',
+      'Explicit [GA · PROMOTED 590.0.1], [BETA · PUBLIC PREVIEW] & [ALPHA · EARLY ACCESS] Badging + Wave 1 / Wave 2 / Wave 3 (590.0.1) Filter Bar + Cross-Studio Bridges to Cloud SOC, SRE War-Room, Multi-Cloud Parity, Sovereign IAM, Data Engineer, Time-Machine, and 1-Tap Health & Drift Hub.',
+      'Wave 1 (01–05): (01) [BETA] Cloud Run Worker Pools & Multi-Region Services, (02) [GA] Autonomous Agent Registry & MCP Servers, (03) [GA] Privileged Access Manager (PAM) JIT & IAM 403 Policy Troubleshooter, (04) [GA/ALPHA] Personalized Service Health & Cloud Run Fault-Injection, and (05) [GA/BETA] App Hub, Cloud Location Finder & Application Optimize.',
+      'Wave 2 (06–10): (06) [GA] Vertex AI Model Armor Prompt-Injection & SDP/PII Firewall, (07) [GA] Developer Knowledge MCP, App-Topology & Design Center, (08) [GA/BETA] Cloud Quotas Preferences & Live Adjuster, (09) [GA/ALPHA] Sovereign Audit Manager & Software Delivery Trust, and (10) [GA] AI Hypercomputer Cluster Director & Managed Lustre.',
+      'Wave 3 (11 · SDK 590.0.1 8-Pillar Live Frontier Scan): Runs parallel live discovery across (1) AI Hypercomputer Cluster Director & Lustre [GA], (2) Google Cloud NetApp Volumes & Storage Pools QoS [GA/BETA], (3) Database Center Fleet Health [ALPHA], (4) Cloud Quotas Adjuster & Preferences [GA/BETA], (5) Sovereign Audit Manager [GA], (6) Cloud Observability Scopes & Trace Scopes [GA], (7) Declarative Orchestration Pipelines [BETA], and (8) Cloud Compliance Manager Frameworks & Controls [GA] alongside the SDK 588.0 -> 590.0.0 -> 590.0.1 Track Promotion Ledger.',
     ],
     apisUsed: [
       'GET /api/project/:id/alpha-beta/overview & POST /api/project/:id/alpha-beta/action (SCAN_WAVE3_GCLOUD_590_FRONTIER)',
-      'gcloud beta / gcloud alpha 590.0.0 CLI + v1beta / v1alpha REST bridges',
+      'gcloud 590.0.1 GA / beta / alpha CLI + v1 / v1beta / v1alpha REST bridges',
     ],
     billingImpact:
-      'Discovery, 5-pillar Wave 3 scanning, and policy troubleshooting run at $0.00; every mutating [ALPHA] or [BETA] action is intercepted by the Universal 1-Tap Cost Gatekeeper.',
+      'Discovery, 8-pillar Wave 3 scanning, and policy troubleshooting run at $0.00; every mutating action is intercepted by the Universal 1-Tap Cost Gatekeeper.',
   },
   {
     id: 'universal-1-tap-cloud-action-cost-gatekeeper',

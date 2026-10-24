@@ -27321,7 +27321,7 @@ app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
 
     res.json({
       projectId,
-      gcloudSdkVersion: '590.0.0 (2026.10.16)',
+      gcloudSdkVersion: '590.0.1 (2026.10.22)',
       dakAttributionEnv: 'CLOUDSDK_METRICS_ENVIRONMENT="datacloud.antigravity"',
       dakMandatoryLabel: 'datacloud:antigravity',
       datasets,
@@ -27339,27 +27339,27 @@ app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
         {
           cli: 'gcloud dataplex datascans create data-profile / data-quality',
           feature: 'Automated Dataplex Profiling & Quality Gatekeeper',
-          status: 'GA (SDK 590.0.0)',
+          status: 'GA (SDK 590.0.1)',
         },
         {
           cli: 'gcloud dataplex data-products create',
           feature: 'Dataplex Data Mesh Products & SLA Contracts',
-          status: 'GA (SDK 590.0.0)',
+          status: 'GA (SDK 590.0.1)',
         },
         {
           cli: 'gcloud dataplex dbt metadata-jobs',
           feature: 'Native dbt-core Manifest -> Dataplex Lineage Sync',
-          status: 'GA (SDK 590.0.0)',
+          status: 'GA (SDK 590.0.1)',
         },
         {
           cli: 'gcloud beta orchestration-pipelines',
           feature: 'Data Agent Kit Declarative deployment.yaml & Pipeline Orchestrator',
-          status: 'DAK + SDK 590.0.0',
+          status: 'DAK + SDK 590.0.1',
         },
         {
           cli: 'gcloud dataplex entries search --semantic-search',
           feature: 'Data Agent Kit Natural-Language & Keyword Universal Catalog Discovery',
-          status: 'DAK + SDK 590.0.0',
+          status: 'DAK + SDK 590.0.1',
         },
       ],
     });
@@ -38849,7 +38849,6 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
       ),
       runGcloudAlphaBetaJson(
         [
-          'alpha',
           'agent-registry',
           'mcp-servers',
           'list',
@@ -38865,9 +38864,17 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
       sdkVerRes.status === 'fulfilled' && sdkVerRes.value?.data
         ? sdkVerRes.value.data
         : {
-            'Google Cloud SDK': '590.0.0',
-            alpha: '2026.10.16',
-            beta: '2026.10.16',
+            'Google Cloud SDK': '590.0.1',
+            alpha: '2026.10.22',
+            beta: '2026.10.22',
+            core: '2026.10.22',
+            bq: '2.1.41',
+            'bundled-python3-unix': '3.14.8',
+            kubectl: '1.35.3',
+            minikube: '1.38.1',
+            skaffold: '2.25.0',
+            'terraform-tools': '0.12.3',
+            gsutil: '5.38',
           };
 
     const runServices =
@@ -38999,9 +39006,17 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
       region,
       scannedAt: new Date().toISOString(),
       sdk: {
-        coreVersion: sdkVersions['Google Cloud SDK'] || '590.0.0',
-        alphaVersion: sdkVersions.alpha || '2026.10.16',
-        betaVersion: sdkVersions.beta || '2026.10.16',
+        coreVersion: sdkVersions['Google Cloud SDK'] || '590.0.1',
+        alphaVersion: sdkVersions.alpha || '2026.10.22',
+        betaVersion: sdkVersions.beta || '2026.10.22',
+        bqVersion: sdkVersions.bq || '2.1.41',
+        kubectlVersion: sdkVersions.kubectl || '1.35.3',
+        pythonVersion: sdkVersions['bundled-python3-unix'] || '3.14.8',
+        terraformToolsVersion: sdkVersions['terraform-tools'] || '0.12.3',
+        skaffoldVersion: sdkVersions.skaffold || '2.25.0',
+        minikubeVersion: sdkVersions.minikube || '1.38.1',
+        gsutilVersion: sdkVersions.gsutil || '5.38',
+        components: sdkVersions,
       },
       releaseChannelWarnings: {
         ALPHA:
@@ -39011,7 +39026,7 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
       },
       betaCloudRun: {
         releaseTrack: 'BETA',
-        releaseBadge: `[BETA] gcloud beta run (${sdkVersions.beta || '2026.10.16'}) · --iap promoted to GA`,
+        releaseBadge: `[BETA] gcloud beta run (${sdkVersions.beta || '2026.10.22'}) · --iap & compose promoted to GA`,
         workerPools,
         multiRegionServices,
         runInstances,
@@ -39032,71 +39047,71 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
         },
       },
       alphaAgenticMcp: {
-        releaseTrack: 'ALPHA',
+        releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          `[ALPHA + BETA] gcloud alpha agent-registry & beta agent-identity (${sdkVersions.alpha || '2026.10.16'})`,
+          `[GA + ALPHA] gcloud agent-registry & agent-identity (${sdkVersions.core || '2026.10.22'})`,
         mcpServers,
         cliDiagnostic:
           mcpServersCliRes.status === 'fulfilled'
             ? mcpServersCliRes.value.stderr ||
-              'agentregistry.googleapis.com/v1alpha ready for discovery'
-            : 'agentregistry.googleapis.com/v1alpha ready',
+              'agentregistry.googleapis.com (GA in 590.0.1) ready for discovery'
+            : 'agentregistry.googleapis.com ready',
         capabilities: [
           {
             id: 'mcp-servers',
-            track: 'ALPHA',
-            command: `gcloud alpha agent-registry mcp-servers list --project=${projectId} --location=global`,
-            searchCommand: `gcloud alpha agent-registry mcp-servers search --project=${projectId} --location=global`,
+            track: 'GA',
+            command: `gcloud agent-registry mcp-servers list --project=${projectId} --location=global`,
+            searchCommand: `gcloud agent-registry mcp-servers search --project=${projectId} --location=global`,
             description:
-              'Discover and inspect Model Context Protocol (MCP) servers registered in Google Cloud Agent Registry.',
+              'Discover and inspect Model Context Protocol (MCP) servers registered in Google Cloud Agent Registry (promoted to GA in SDK 590.0.1).',
           },
           {
             id: 'agents-and-skills',
-            track: 'ALPHA',
-            command: `gcloud alpha agent-registry agents list --project=${projectId} --location=global`,
+            track: 'ALPHA_AND_BETA',
+            command: `gcloud agent-registry agents list --project=${projectId} --location=global`,
             skillsCommand: `gcloud alpha agent-registry skills list --project=${projectId} --location=global`,
             description:
-              'List autonomous AI agents, reusable Agent Skills, and Agent-to-Service Bindings.',
+              'List autonomous AI agents (GA in 590.0.1), endpoints, bindings, and reusable Agent Skills ([ALPHA]).',
           },
           {
             id: 'agent-identity-audit',
-            track: 'BETA',
-            command: `gcloud beta agent-identity access-summaries list --project=${projectId} --location=global`,
-            summaryCommand: `gcloud beta agent-identity auth-providers list --project=${projectId} --location=global`,
+            track: 'GA',
+            command: `gcloud agent-identity access-summaries list --project=${projectId} --location=global`,
+            summaryCommand: `gcloud agent-identity auth-providers list --project=${projectId} --location=global`,
             description:
-              'Audit AI Agent Identity access-summaries and OAuth/OIDC auth-providers (promoted to BETA & GA in SDK 590.0.0).',
+              'Audit AI Agent Identity access-summaries and OAuth/OIDC auth-providers (promoted to GA in SDK 590.0.1).',
           },
         ],
       },
       alphaZeroStandingIam: {
-        releaseTrack: 'ALPHA',
+        releaseTrack: 'GA',
         releaseBadge:
-          `[GA / ALPHA] gcloud pam & policy-troubleshoot iam (${sdkVersions.alpha || '2026.10.16'})`,
+          `[GA · 590.0.1] gcloud pam & policy-troubleshoot iam (${sdkVersions.core || '2026.10.22'})`,
         pamEntitlements,
         serviceAccounts,
       },
       alphaResilienceAndHealth: {
-        releaseTrack: 'ALPHA',
+        releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          `[ALPHA] gcloud alpha service-health & fault-testing (${sdkVersions.alpha || '2026.10.16'})`,
+          `[GA] gcloud service-health & [ALPHA] fault-testing (${sdkVersions.alpha || '2026.10.22'})`,
         serviceHealthEvents,
       },
       wave2Catalog: {
         wave: 'WAVE_2',
-        sdkVersion: sdkVersions['Google Cloud SDK'] || '590.0.0',
+        sdkVersion: sdkVersions['Google Cloud SDK'] || '590.0.1',
         pillars: [
           {
             id: 'WAVE2_MODEL_ARMOR',
-            track: 'ALPHA',
-            badge: '[ALPHA] gcloud alpha model-armor (templates & floorsettings)',
+            track: 'GA',
+            badge: '[GA · 590.0.1] gcloud model-armor (templates & floorsettings)',
             summary:
               'LLM-agnostic Prompt Injection & Jailbreak firewall, Sensitive Data Protection (SDP) PII redaction, Malicious URI filtering, and Project AI Safety Floor Settings.',
           },
           {
             id: 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY',
-            track: 'ALPHA',
+            track: 'GA',
             badge:
-              '[ALPHA] gcloud alpha developer-knowledge + app-topology + design-center',
+              '[GA · 590.0.1] gcloud developer-knowledge + app-topology + design-center',
             summary:
               'Grounded natural-language engineering answers directly from Google Cloud Developer Knowledge corpus + live Application Topology graph generation.',
           },
@@ -39104,23 +39119,23 @@ app.get('/api/project/:projectId/alpha-beta/overview', async (req, res) => {
             id: 'WAVE2_BETA_CLOUD_QUOTAS',
             track: 'BETA',
             badge:
-              '[BETA] gcloud beta quotas (adjuster, preferences, info)',
+              '[GA + BETA · 590.0.1] gcloud quotas (preferences, info) & beta quotas adjuster',
             summary:
               'Autonomous Cloud Quotas Adjuster (auto-requests quota before HTTP 429 exhaustion) and declarative QuotaPreferences for FinOps hard ceilings.',
           },
           {
             id: 'WAVE2_AUDIT_DELIVERY_TRUST',
-            track: 'ALPHA',
+            track: 'ALPHA_AND_BETA',
             badge:
-              '[ALPHA] gcloud alpha audit-manager & software-delivery-trust',
+              '[GA · 590.0.1] gcloud audit-manager + compliance-manager & [ALPHA] software-delivery-trust',
             summary:
-              'Continuous compliance Audit Reports (SOC2, ISO27001, PCI-DSS, FedRAMP) and CEL-based Software Delivery Trust cryptographic supply-chain policies.',
+              'Continuous compliance Audit Reports (SOC2, ISO27001, PCI-DSS, FedRAMP), Compliance Manager Cloud Controls, and CEL-based Software Delivery Trust cryptographic supply-chain policies.',
           },
           {
             id: 'WAVE2_AI_HYPERCOMPUTER_HPC',
-            track: 'ALPHA',
+            track: 'GA',
             badge:
-              '[ALPHA] gcloud alpha cluster-director & lustre & mldiagnostics',
+              '[GA · 590.0.1] gcloud cluster-director & lustre + [ALPHA] mldiagnostics',
             summary:
               'AI Hypercomputer Cluster Director (Slurm / GKE A3 Mega / H200 / TPU v6e Trillium) with Managed Lustre parallel filesystems and ML Diagnostics.',
           },
@@ -39392,14 +39407,13 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 4. [ALPHA] SCAN AGENT REGISTRY (MCP SERVERS, AGENTS, SKILLS) & AGENT IDENTITY
-    //    (gcloud alpha agent-registry & gcloud alpha agent-identity)
+    // 4. [GA + ALPHA] SCAN AGENT REGISTRY (MCP SERVERS, AGENTS, SKILLS) & AGENT IDENTITY
+    //    (gcloud agent-registry [GA in 590.0.1] & gcloud agent-identity [GA in 590.0.1])
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_AGENT_REGISTRY') {
       const [mcpRes, agentsRes, skillsRes, eventsRes] = await Promise.all([
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'agent-registry',
             'mcp-servers',
             'list',
@@ -39411,7 +39425,6 @@ spec:
         ),
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'agent-registry',
             'agents',
             'list',
@@ -39435,9 +39448,8 @@ spec:
         ),
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'agent-identity',
-            'access-events',
+            'access-summaries',
             'list',
             `--project=${projectId}`,
             '--location=global',
@@ -39449,16 +39461,16 @@ spec:
 
       return res.json({
         success: true,
-        releaseTrack: 'ALPHA',
+        releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[ALPHA] gcloud alpha agent-registry & agent-identity (v1alpha)',
+          '[GA · 590.0.1] gcloud agent-registry & agent-identity + [ALPHA] skills',
         preGaNotice:
-          'Google Cloud Agent Registry (MCP Servers, Agents, Skills) and Agent Identity are Early Access [ALPHA] APIs (agentregistry.googleapis.com/v1alpha & agentidentity.googleapis.com/v1alpha).',
+          'In Google Cloud SDK 590.0.1 (2026.10.22), `gcloud agent-registry` (mcp-servers, agents, endpoints, services, bindings) and `gcloud agent-identity` (access-summaries, auth-providers) are promoted to GA, while `gcloud alpha agent-registry skills` remains in Early Access [ALPHA].',
         executedCommand: `${mcpRes.command} && ${agentsRes.command} && ${skillsRes.command} && ${eventsRes.command}`,
         probes: [
           {
-            name: 'MCP Servers (gcloud alpha agent-registry mcp-servers)',
-            track: 'ALPHA',
+            name: '[GA · 590.0.1] MCP Servers (gcloud agent-registry mcp-servers list)',
+            track: 'GA',
             command: mcpRes.command,
             ok: mcpRes.ok,
             durationMs: mcpRes.durationMs,
@@ -39466,8 +39478,8 @@ spec:
             output: mcpRes.stdout || mcpRes.stderr,
           },
           {
-            name: 'Autonomous Agents (gcloud alpha agent-registry agents)',
-            track: 'ALPHA',
+            name: '[GA · 590.0.1] Autonomous Agents (gcloud agent-registry agents list)',
+            track: 'GA',
             command: agentsRes.command,
             ok: agentsRes.ok,
             durationMs: agentsRes.durationMs,
@@ -39475,7 +39487,7 @@ spec:
             output: agentsRes.stdout || agentsRes.stderr,
           },
           {
-            name: 'Agent Skills (gcloud alpha agent-registry skills)',
+            name: '[ALPHA] Agent Skills (gcloud alpha agent-registry skills list)',
             track: 'ALPHA',
             command: skillsRes.command,
             ok: skillsRes.ok,
@@ -39484,8 +39496,8 @@ spec:
             output: skillsRes.stdout || skillsRes.stderr,
           },
           {
-            name: 'Agent Identity Access Events (gcloud alpha agent-identity access-events)',
-            track: 'ALPHA',
+            name: '[GA · 590.0.1] Agent Identity Access Summaries (gcloud agent-identity access-summaries list)',
+            track: 'GA',
             command: eventsRes.command,
             ok: eventsRes.ok,
             durationMs: eventsRes.durationMs,
@@ -39497,8 +39509,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 5. [ALPHA] LIVE IAM POLICY TROUBLESHOOTER
-    //    (gcloud alpha policy-troubleshoot iam + policytroubleshooter.googleapis.com/v1)
+    // 5. [GA · 590.0.1] LIVE IAM POLICY TROUBLESHOOTER
+    //    (gcloud policy-troubleshoot iam + policytroubleshooter.googleapis.com/v1)
     // ------------------------------------------------------------------------
     if (action === 'TROUBLESHOOT_ALPHA_IAM_POLICY') {
       const targetResource =
@@ -39540,7 +39552,6 @@ spec:
 
       const cliRes = await runGcloudAlphaBetaJson(
         [
-          'alpha',
           'policy-troubleshoot',
           'iam',
           targetResource,
@@ -39555,10 +39566,10 @@ spec:
       const effectiveResult = restTroubleshoot || cliRes.data || {};
       return res.json({
         success: true,
-        releaseTrack: 'ALPHA',
-        releaseBadge: '[ALPHA] gcloud alpha policy-troubleshoot iam',
+        releaseTrack: 'GA',
+        releaseBadge: '[GA · 590.0.1] gcloud policy-troubleshoot iam',
         preGaNotice:
-          '`gcloud alpha policy-troubleshoot iam` evaluates IAM allow/deny policies, resource hierarchy inheritance, and CEL conditions via policytroubleshooter.googleapis.com.',
+          'Promoted to GA in Google Cloud SDK 590.0.1: `gcloud policy-troubleshoot iam` evaluates IAM allow/deny policies, resource hierarchy inheritance, and CEL conditions via policytroubleshooter.googleapis.com.',
         executedCommand: cliRes.command,
         principal: callerEmail,
         permission: permission || 'run.services.create',
@@ -39575,14 +39586,13 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 6. [ALPHA] PRIVILEGED ACCESS MANAGER (PAM) JIT ENTITLEMENT & ONBOARDING CHECK
-    //    (gcloud alpha pam check-onboarding-status & entitlements list)
+    // 6. [GA · 590.0.1] PRIVILEGED ACCESS MANAGER (PAM) JIT ENTITLEMENT & ONBOARDING CHECK
+    //    (gcloud pam check-onboarding-status & entitlements list)
     // ------------------------------------------------------------------------
     if (action === 'CHECK_OR_CREATE_ALPHA_PAM_JIT') {
       const [onboardRes, entListRes] = await Promise.all([
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'pam',
             'check-onboarding-status',
             `--project=${projectId}`,
@@ -39593,7 +39603,6 @@ spec:
         ),
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'pam',
             'entitlements',
             'list',
@@ -39605,13 +39614,13 @@ spec:
         ),
       ]);
 
-      const jitCreateCli = `gcloud alpha pam entitlements create ${pamEntitlementId} \\
+      const jitCreateCli = `gcloud pam entitlements create ${pamEntitlementId} \\
   --project=${projectId} \\
   --location=global \\
   --max-request-duration=${pamDurationSeconds}s \\
   --role-bindings=role=${pamRole}`;
 
-      const jitGrantRequestCli = `gcloud alpha pam grants create \\
+      const jitGrantRequestCli = `gcloud pam grants create \\
   --project=${projectId} \\
   --location=global \\
   --entitlement=${pamEntitlementId} \\
@@ -39620,10 +39629,10 @@ spec:
 
       return res.json({
         success: true,
-        releaseTrack: 'ALPHA',
-        releaseBadge: '[ALPHA] gcloud alpha pam (Privileged Access Manager)',
+        releaseTrack: 'GA',
+        releaseBadge: '[GA · 590.0.1] gcloud pam (Privileged Access Manager)',
         preGaNotice:
-          '`gcloud alpha pam` manages Zero-Standing-Privilege (ZSP) Just-In-Time temporary IAM elevation entitlements and time-boxed grants.',
+          'Promoted to GA in Google Cloud SDK 590.0.1: `gcloud pam` manages Zero-Standing-Privilege (ZSP) Just-In-Time temporary IAM elevation entitlements and time-boxed grants.',
         executedCommand: `${onboardRes.command} && ${entListRes.command}`,
         onboardingStatus: onboardRes.data || onboardRes.stdout || onboardRes.stderr,
         entitlements: Array.isArray(entListRes.data) ? entListRes.data : [],
@@ -39636,14 +39645,13 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 7. [ALPHA] PERSONALIZED SERVICE HEALTH & FAULT-TESTING EXPERIMENTS
-    //    (gcloud alpha service-health events & gcloud alpha fault-testing)
+    // 7. [GA + ALPHA] PERSONALIZED SERVICE HEALTH & FAULT-TESTING EXPERIMENTS
+    //    (gcloud service-health events [GA] & gcloud alpha fault-testing [ALPHA])
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_SERVICE_HEALTH_AND_FAULT_TESTING') {
       const [shRes, ftExpRes, ftWinRes] = await Promise.all([
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'service-health',
             'events',
             'list',
@@ -39681,11 +39689,11 @@ spec:
 
       return res.json({
         success: true,
-        releaseTrack: 'ALPHA',
+        releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[ALPHA] gcloud alpha service-health & gcloud alpha fault-testing',
+          '[GA · 590.0.1] gcloud service-health & [ALPHA] gcloud alpha fault-testing',
         preGaNotice:
-          '`gcloud alpha service-health` queries personalized Google Cloud upstream incident feeds (`servicehealth.googleapis.com`), while `gcloud alpha fault-testing` manages Chaos Fault Injection experiments and freeze windows.',
+          'Promoted to GA in SDK 590.0.1: `gcloud service-health` queries personalized Google Cloud upstream incident feeds (`servicehealth.googleapis.com`), while `gcloud alpha fault-testing` manages Chaos Fault Injection experiments and freeze windows.',
         executedCommand: `${shRes.command} && ${ftExpRes.command}`,
         serviceHealthEvents: Array.isArray(shRes.data) ? shRes.data : [],
         faultExperiments: Array.isArray(ftExpRes.data) ? ftExpRes.data : [],
@@ -39699,14 +39707,13 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 8. [BETA / ALPHA] APP OPTIMIZE REPORTS, CLOUD LOCATION FINDER & CLOUD ASSET INVENTORY
-    //    (gcloud beta app-optimize, gcloud alpha cloudlocationfinder, gcloud asset list)
+    // 8. [GA + BETA] APP OPTIMIZE REPORTS, CLOUD LOCATION FINDER & CLOUD ASSET INVENTORY
+    //    (gcloud beta app-optimize, gcloud cloudlocationfinder [GA], gcloud asset list [GA])
     // ------------------------------------------------------------------------
     if (action === 'RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE') {
       const [locRes, appOptRes, resTypesRes] = await Promise.all([
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'cloudlocationfinder',
             'cloud-locations',
             'list',
@@ -39756,11 +39763,11 @@ spec:
 
       return res.json({
         success: true,
-        releaseTrack: 'ALPHA_AND_BETA',
+        releaseTrack: 'BETA',
         releaseBadge:
-          '[BETA] app-optimize + [ALPHA] cloudlocationfinder & cloudasset inventory',
+          '[BETA] app-optimize + [GA · 590.0.1] cloudlocationfinder & cloudasset inventory',
         preGaNotice:
-          'Pre-flight verifies & auto-enables `cloudlocationfinder.googleapis.com`, `appoptimize.googleapis.com`, and `cloudasset.googleapis.com` on your active project (enforcing `--billing-project` so ADC quota projects never leak), then runs `gcloud alpha cloudlocationfinder`, `gcloud beta app-optimize reports list --location=global`, and `gcloud asset list` (zero 143 MiB `config-connector` binary download!).',
+          'Pre-flight verifies & auto-enables `cloudlocationfinder.googleapis.com`, `appoptimize.googleapis.com`, and `cloudasset.googleapis.com` on your active project (enforcing `--billing-project` so ADC quota projects never leak), then runs GA `gcloud cloudlocationfinder`, `[BETA] gcloud beta app-optimize reports list --location=global`, and GA `gcloud asset list`.',
         executedCommand: `${locRes.command} && ${appOptRes.command} && ${resTypesRes.command}`,
         cloudLocations: Array.isArray(locRes.data) ? locRes.data : [],
         appOptimizeReports: Array.isArray(appOptRes.data) ? appOptRes.data : [],
@@ -39777,18 +39784,17 @@ spec:
     }
 
     // ========================================================================
-    // WAVE 2: GCLOUD ALPHA & BETA FRONTIER ACTIONS
+    // WAVE 2: GCLOUD 590.0.1 FRONTIER ACTIONS
     // ========================================================================
 
     // ------------------------------------------------------------------------
-    // 9. [ALPHA] MODEL ARMOR LLM FIREWALL & AI SAFETY FLOOR SCAN + SANITIZATION
-    //    (gcloud alpha model-armor templates & floorsettings)
+    // 9. [GA · 590.0.1] MODEL ARMOR LLM FIREWALL & AI SAFETY FLOOR SCAN + SANITIZATION
+    //    (gcloud model-armor templates & floorsettings)
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_MODEL_ARMOR_AND_SANITIZE') {
       const [tplListRes, floorRes] = await Promise.all([
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'model-armor',
             'templates',
             'list',
@@ -39800,7 +39806,6 @@ spec:
         ),
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'model-armor',
             'floorsettings',
             'describe',
@@ -39837,11 +39842,11 @@ spec:
       return res.json({
         success: true,
         wave: 'WAVE_2',
-        releaseTrack: 'ALPHA',
+        releaseTrack: 'GA',
         releaseBadge:
-          '[ALPHA] gcloud alpha model-armor (templates, floorsettings, sanitize-user-prompt)',
+          '[GA · 590.0.1] gcloud model-armor (templates, floorsettings, sanitize-user-prompt)',
         preGaNotice:
-          '`gcloud alpha model-armor` provides LLM-agnostic Prompt Injection & Jailbreak detection, Sensitive Data Protection (SDP) redaction, Malicious URI filtering, and organization/project AI Safety Floor Settings (`modelarmor.googleapis.com/v1alpha`).',
+          'Promoted to GA in Google Cloud SDK 590.0.1: `gcloud model-armor` provides LLM-agnostic Prompt Injection & Jailbreak detection, Sensitive Data Protection (SDP) redaction, Malicious URI filtering, and organization/project AI Safety Floor Settings (`modelarmor.googleapis.com/v1`).',
         executedCommand: `${tplListRes.command} && ${floorRes.command}`,
         templates: Array.isArray(tplListRes.data) ? tplListRes.data : [],
         floorSetting: floorRes.data || {
@@ -39888,7 +39893,7 @@ spec:
                 : 'No untrusted URI detected.',
             },
           ],
-          cliSanitizeRecipe: `gcloud alpha model-armor templates sanitize-user-prompt ${modelArmorTemplateId} --location=${region} --project=${projectId} --user-prompt-data-text=${JSON.stringify(
+          cliSanitizeRecipe: `gcloud model-armor templates sanitize-user-prompt ${modelArmorTemplateId} --location=${region} --project=${projectId} --user-prompt-data-text=${JSON.stringify(
             promptText
           )}`,
         },
@@ -39899,8 +39904,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 10. [ALPHA] 1-TAP DEPLOY MODEL ARMOR LLM FIREWALL TEMPLATE
-    //     (gcloud alpha model-armor templates create)
+    // 10. [GA · 590.0.1] 1-TAP DEPLOY MODEL ARMOR LLM FIREWALL TEMPLATE
+    //     (gcloud model-armor templates create)
     // ------------------------------------------------------------------------
     if (action === 'DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE') {
       const cleanId =
@@ -39911,7 +39916,6 @@ spec:
           .slice(0, 45) || 'cp-llm-shield-strict';
 
       const cliArgs = [
-        'alpha',
         'model-armor',
         'templates',
         'create',
@@ -39927,19 +39931,19 @@ spec:
       ];
       const createRes = await runGcloudAlphaBetaJson(cliArgs, 15000);
       recordFlightEvent(projectId, {
-        action: 'ALPHA_MODEL_ARMOR_TEMPLATE_CREATE',
-        resourceType: 'MODEL_ARMOR_TEMPLATE_ALPHA',
+        action: 'GA_MODEL_ARMOR_TEMPLATE_CREATE',
+        resourceType: 'MODEL_ARMOR_TEMPLATE_GA_590_1',
         resourceName: cleanId,
         region,
-        details: `[ALPHA] Executed: ${createRes.command} (${createRes.ok ? 'CREATED' : 'CLI_DIAGNOSTIC'})`,
+        details: `[GA · 590.0.1] Executed: ${createRes.command} (${createRes.ok ? 'CREATED' : 'CLI_DIAGNOSTIC'})`,
       });
       return res.json({
         success: true,
         wave: 'WAVE_2',
-        releaseTrack: 'ALPHA',
-        releaseBadge: '[ALPHA] gcloud alpha model-armor templates create',
+        releaseTrack: 'GA',
+        releaseBadge: '[GA · 590.0.1] gcloud model-armor templates create',
         preGaNotice:
-          'Creates a Model Armor security template enforcing Prompt Injection & Jailbreak blocking, Malicious URI filtering, and Responsible AI guardrails.',
+          'Promoted to GA in Google Cloud SDK 590.0.1: creates a Model Armor security template enforcing Prompt Injection & Jailbreak blocking, Malicious URI filtering, and Responsible AI guardrails.',
         executedCommand: createRes.command,
         cliOk: createRes.ok,
         templateId: cleanId,
@@ -39951,8 +39955,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 11. [ALPHA] DEVELOPER KNOWLEDGE GROUNDED QUERY & APP TOPOLOGY GRAPH
-    //     (gcloud alpha developer-knowledge answer-query & gcloud alpha app-topology)
+    // 11. [GA · 590.0.1] DEVELOPER KNOWLEDGE GROUNDED QUERY & APP TOPOLOGY GRAPH
+    //     (gcloud developer-knowledge answer-query & gcloud app-topology & design-center)
     // ------------------------------------------------------------------------
     if (action === 'QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY') {
       const queryStr =
@@ -39961,7 +39965,6 @@ spec:
       const [dkAnswerRes, topoDomainsRes, designSpacesRes] = await Promise.all([
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'developer-knowledge',
             'answer-query',
             `--query=${queryStr}`,
@@ -39972,7 +39975,6 @@ spec:
         ),
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'app-topology',
             'domains',
             'list',
@@ -39984,7 +39986,6 @@ spec:
         ),
         runGcloudAlphaBetaJson(
           [
-            'alpha',
             'design-center',
             'spaces',
             'list',
@@ -39999,11 +40000,11 @@ spec:
       return res.json({
         success: true,
         wave: 'WAVE_2',
-        releaseTrack: 'ALPHA',
+        releaseTrack: 'GA',
         releaseBadge:
-          '[ALPHA] gcloud alpha developer-knowledge + app-topology + design-center',
+          '[GA · 590.0.1] gcloud developer-knowledge + app-topology + design-center',
         preGaNotice:
-          '`gcloud alpha developer-knowledge answer-query` executes grounded natural-language retrieval against `docs.cloud.google.com`, while `gcloud alpha app-topology` and `gcloud alpha design-center` inspect application resource dependency graphs and Application Design Center spaces.',
+          'Promoted to GA in Google Cloud SDK 590.0.1: `gcloud developer-knowledge answer-query` executes grounded natural-language retrieval against `docs.cloud.google.com`, while `gcloud app-topology` and `gcloud design-center` inspect application resource dependency graphs and Application Design Center spaces.',
         executedCommand: `${dkAnswerRes.command} && ${topoDomainsRes.command} && ${designSpacesRes.command}`,
         query: queryStr,
         groundedAnswer:
@@ -40023,7 +40024,7 @@ spec:
         designCenterSpaces: Array.isArray(designSpacesRes.data)
           ? designSpacesRes.data
           : [],
-        graphGenerateCli: `gcloud alpha app-topology resources-graph generate --project=${projectId} --location=${region}`,
+        graphGenerateCli: `gcloud app-topology resources-graph generate --project=${projectId} --location=${region}`,
         stdout:
           dkAnswerRes.stdout || topoDomainsRes.stdout || designSpacesRes.stdout,
         stderr: [
@@ -40041,14 +40042,13 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 12. [BETA] CLOUD QUOTAS AUTONOMOUS ADJUSTER & QUOTA PREFERENCES SCAN
-    //     (gcloud beta quotas info, preferences, adjuster settings — SDK 590.0.0)
+    // 12. [GA + BETA · 590.0.1] CLOUD QUOTAS AUTONOMOUS ADJUSTER & QUOTA PREFERENCES SCAN
+    //     (gcloud quotas info & preferences [GA] + gcloud beta quotas adjuster settings [BETA])
     // ------------------------------------------------------------------------
     if (action === 'SCAN_BETA_CLOUD_QUOTAS') {
       const [qPrefRes, qAdjRes, qInfoRes] = await Promise.all([
         runGcloudAlphaBetaJson(
           [
-            'beta',
             'quotas',
             'preferences',
             'list',
@@ -40071,7 +40071,6 @@ spec:
         ),
         runGcloudAlphaBetaJson(
           [
-            'beta',
             'quotas',
             'info',
             'list',
@@ -40089,9 +40088,9 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'BETA',
         releaseBadge:
-          '[GA / BETA] gcloud beta quotas (info, preferences, adjuster settings · SDK 590.0.0)',
+          '[GA + BETA · 590.0.1] gcloud quotas (info, preferences) & beta quotas adjuster settings',
         preGaNotice:
-          '`gcloud beta quotas` interacts with `cloudquotas.googleapis.com/v1beta` to inspect service QuotaInfo, declare desired QuotaPreferences (increases or FinOps hard ceilings), and toggle the Autonomous Quota Adjuster.',
+          'In SDK 590.0.1, `gcloud quotas info` and `gcloud quotas preferences` are GA (`cloudquotas.googleapis.com/v1`), while `gcloud beta quotas adjuster settings` toggles the Autonomous Quota Adjuster (`v1beta`).',
         executedCommand: `${qPrefRes.command} && ${qAdjRes.command} && ${qInfoRes.command}`,
         quotaPreferences: Array.isArray(qPrefRes.data) ? qPrefRes.data : [],
         quotaAdjusterSettings: qAdjRes.data || {
@@ -40112,8 +40111,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 13. [BETA] 1-TAP APPLY QUOTA PREFERENCE OR TOGGLE QUOTA ADJUSTER
-    //     (gcloud beta quotas adjuster settings update / preferences create)
+    // 13. [GA + BETA · 590.0.1] 1-TAP APPLY QUOTA PREFERENCE OR TOGGLE QUOTA ADJUSTER
+    //     (gcloud beta quotas adjuster settings update / gcloud quotas preferences create)
     // ------------------------------------------------------------------------
     if (action === 'APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER') {
       const cleanEnablement =
@@ -40136,7 +40135,7 @@ spec:
         12000
       );
 
-      const prefCreateCli = `gcloud beta quotas preferences create --service=${quotaService} --quota-id=${quotaId} --preferred-value=${Number(
+      const prefCreateCli = `gcloud quotas preferences create --service=${quotaService} --quota-id=${quotaId} --preferred-value=${Number(
         quotaPreferredValue || 64
       )} --project=${projectId} --dimensions=region=${region} --email=sre@example.com --justification="CloudPulse 2026 FinOps & Capacity Guardrail"`;
 
@@ -40145,16 +40144,16 @@ spec:
         resourceType: 'CLOUD_QUOTAS_ADJUSTER_BETA',
         resourceName: `${quotaService}/${quotaId} (Adjuster=${cleanEnablement})`,
         region: 'global',
-        details: `[BETA] Executed: ${adjRes.command}`,
+        details: `[GA/BETA · 590.0.1] Executed: ${adjRes.command}`,
       });
 
       return res.json({
         success: true,
         wave: 'WAVE_2',
         releaseTrack: 'BETA',
-        releaseBadge: '[GA / BETA] gcloud beta quotas adjuster & preferences (SDK 590.0.0)',
+        releaseBadge: '[GA + BETA · 590.0.1] gcloud beta quotas adjuster & gcloud quotas preferences',
         preGaNotice:
-          'Updates Cloud Quotas Adjuster settings (`cloudquotas.googleapis.com/v1beta`) and synthesizes the declarative `QuotaPreference` CLI command.',
+          'Updates Cloud Quotas Adjuster settings (`cloudquotas.googleapis.com/v1beta`) and synthesizes the GA declarative `gcloud quotas preferences create` command.',
         executedCommand: adjRes.command,
         cliOk: adjRes.ok,
         quotaPreferenceCreateCli: prefCreateCli,
@@ -40166,8 +40165,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 14. [GA / ALPHA] CONTINUOUS AUDIT MANAGER & SOFTWARE DELIVERY TRUST SCAN
-    //     (gcloud audit-manager audit-schedules list & gcloud alpha software-delivery-trust)
+    // 14. [GA / ALPHA · 590.0.1] CONTINUOUS AUDIT MANAGER, COMPLIANCE MANAGER & DELIVERY TRUST SCAN
+    //     (gcloud audit-manager & gcloud compliance-manager [GA] + gcloud alpha software-delivery-trust)
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST') {
       const [schedulesRes, sdtPolRes, sdtAttRes] = await Promise.all([
@@ -40213,9 +40212,9 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[GA] gcloud audit-manager audit-schedules + [ALPHA] software-delivery-trust (SDK 590.0.0)',
+          '[GA · 590.0.1] gcloud audit-manager + compliance-manager & [ALPHA] software-delivery-trust',
         preGaNotice:
-          'In SDK 590.0.0, `gcloud audit-manager` is promoted to GA (`audit-schedules list`, `audit-scopes generate`, `audit-reports generate`, `enrollments add`), while `gcloud alpha software-delivery-trust` enforces Common Expression Language (CEL) policies over cryptographic SLSA build attestations.',
+          'In SDK 590.0.1, `gcloud audit-manager` and `gcloud compliance-manager` are GA (`audit-schedules list`, `audit-reports generate`, `frameworks list`, `cloud-controls list`), while `gcloud alpha software-delivery-trust` enforces Common Expression Language (CEL) policies over cryptographic SLSA build attestations.',
         executedCommand: `${schedulesRes.command} && ${sdtPolRes.command} && ${sdtAttRes.command}`,
         auditScopes: Array.isArray(schedulesRes.data) ? schedulesRes.data : [],
         auditEnrollments: [],
@@ -40244,8 +40243,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 15. [GA / ALPHA] 1-TAP GENERATE COMPLIANCE AUDIT REPORT / DELIVERY TRUST POLICY
-    //     (gcloud audit-manager audit-reports generate — SDK 590.0.0)
+    // 15. [GA / ALPHA · 590.0.1] 1-TAP GENERATE COMPLIANCE AUDIT REPORT / DELIVERY TRUST POLICY
+    //     (gcloud audit-manager audit-reports generate — SDK 590.0.1)
     // ------------------------------------------------------------------------
     if (action === 'GENERATE_ALPHA_AUDIT_OR_TRUST_POLICY') {
       const cleanStandard = String(complianceStandard || 'fedramp_moderate')
@@ -40278,10 +40277,10 @@ spec:
 
       recordFlightEvent(projectId, {
         action: 'ALPHA_AUDIT_REPORT_AND_DELIVERY_TRUST',
-        resourceType: 'AUDIT_MANAGER_GA_590',
+        resourceType: 'AUDIT_MANAGER_GA_590_1',
         resourceName: `${cleanStandard} / ${cleanPolicyId}`,
         region,
-        details: `[GA/ALPHA] Executed: ${auditGenRes.command}`,
+        details: `[GA/ALPHA · 590.0.1] Executed: ${auditGenRes.command}`,
       });
 
       return res.json({
@@ -40289,7 +40288,7 @@ spec:
         wave: 'WAVE_2',
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[GA] gcloud audit-manager audit-reports generate (SDK 590.0.0)',
+          '[GA · 590.0.1] gcloud audit-manager audit-reports generate',
         preGaNotice:
           'Triggers an Audit Manager compliance evaluation (`auditmanager.googleapis.com` with `--compliance-framework` and `--report-format=odf`) and generates the CEL-enforced Software Delivery Trust policy command.',
         executedCommand: auditGenRes.command,
@@ -40304,15 +40303,14 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 16. [BETA / GA] AI HYPERCOMPUTER CLUSTER DIRECTOR, MANAGED LUSTRE & ML DIAGNOSTICS
-    //     (gcloud beta cluster-director & gcloud lustre & gcloud alpha mldiagnostics)
+    // 16. [GA · 590.0.1] AI HYPERCOMPUTER CLUSTER DIRECTOR & MANAGED LUSTRE
+    //     (gcloud cluster-director [GA in 590.0.1] & gcloud lustre [GA])
     // ------------------------------------------------------------------------
     if (action === 'SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE') {
       const zone = `${region}-a`;
       const [cdClustersRes, lustreRes, cdLocRes] = await Promise.all([
         runGcloudAlphaBetaJson(
           [
-            'beta',
             'cluster-director',
             'clusters',
             'list',
@@ -40335,7 +40333,6 @@ spec:
         ),
         runGcloudAlphaBetaJson(
           [
-            'beta',
             'cluster-director',
             'locations',
             'list',
@@ -40349,18 +40346,18 @@ spec:
       return res.json({
         success: true,
         wave: 'WAVE_2',
-        releaseTrack: 'BETA',
+        releaseTrack: 'GA',
         releaseBadge:
-          '[BETA] gcloud beta cluster-director + [GA] gcloud lustre (SDK 590.0.0)',
+          '[GA · 590.0.1] gcloud cluster-director + gcloud lustre (SDK 590.0.1)',
         preGaNotice:
-          'In SDK 590.0.0, `gcloud beta cluster-director` is promoted to Public Preview [BETA] for topology-aware AI Hypercomputer clusters, and `gcloud lustre` is promoted to GA for parallel filesystems.',
+          'In Google Cloud SDK 590.0.1 (2026.10.22), both `gcloud cluster-director` (topology-aware AI Hypercomputer clusters) and `gcloud lustre` (Managed Lustre parallel filesystems) are General Availability [GA].',
         executedCommand: `${cdClustersRes.command} && ${lustreRes.command}`,
         clusters: Array.isArray(cdClustersRes.data) ? cdClustersRes.data : [],
         lustreInstances: Array.isArray(lustreRes.data) ? lustreRes.data : [],
         supportedLocations: Array.isArray(cdLocRes.data)
           ? cdLocRes.data.slice(0, 16)
           : [],
-        quickstartCli: `gcloud beta cluster-director clusters create ${clusterDirectorId} --project=${projectId} --location=${region} --quickstart-cluster`,
+        quickstartCli: `gcloud cluster-director clusters create ${clusterDirectorId} --project=${projectId} --location=${region} --quickstart-cluster`,
         lustreCreateCli: `gcloud lustre instances create cp-lustre-scratch-01 --project=${projectId} --location=${zone} --capacity-gib=18000 --per-unit-storage-throughput=1000 --network=projects/${projectId}/global/networks/default`,
         stdout: cdClustersRes.stdout || lustreRes.stdout || cdLocRes.stdout,
         stderr: [cdClustersRes.stderr, lustreRes.stderr, cdLocRes.stderr]
@@ -40374,8 +40371,8 @@ spec:
     }
 
     // ------------------------------------------------------------------------
-    // 17. [BETA] 1-TAP PROVISION AI HYPERCOMPUTER CLUSTER DIRECTOR BLUEPRINT
-    //     (gcloud beta cluster-director clusters create — SDK 590.0.0)
+    // 17. [GA · 590.0.1] 1-TAP PROVISION AI HYPERCOMPUTER CLUSTER DIRECTOR BLUEPRINT
+    //     (gcloud cluster-director clusters create — SDK 590.0.1)
     // ------------------------------------------------------------------------
     if (action === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT') {
       const cleanClusterId =
@@ -40386,7 +40383,6 @@ spec:
 
       const createRes = await runGcloudAlphaBetaJson(
         [
-          'beta',
           'cluster-director',
           'clusters',
           'create',
@@ -40400,21 +40396,21 @@ spec:
       );
 
       recordFlightEvent(projectId, {
-        action: 'BETA_CLUSTER_DIRECTOR_CREATE',
-        resourceType: 'CLUSTER_DIRECTOR_HPC_BETA',
+        action: 'GA_CLUSTER_DIRECTOR_CREATE',
+        resourceType: 'CLUSTER_DIRECTOR_HPC_GA_590_1',
         resourceName: `${cleanClusterId} (${acceleratorProfile})`,
         region,
-        details: `[BETA] Executed: ${createRes.command}`,
+        details: `[GA · 590.0.1] Executed: ${createRes.command}`,
       });
 
       return res.json({
         success: true,
         wave: 'WAVE_2',
-        releaseTrack: 'BETA',
+        releaseTrack: 'GA',
         releaseBadge:
-          '[BETA] gcloud beta cluster-director clusters create (SDK 590.0.0)',
+          '[GA · 590.0.1] gcloud cluster-director clusters create (SDK 590.0.1)',
         preGaNotice:
-          'Dispatches AI Hypercomputer Cluster Director provisioning (`hypercomputecluster.googleapis.com/v1beta`) with Slurm scheduler, compact placement topology, and high-bandwidth VPC fabric.',
+          'Promoted to GA in SDK 590.0.1: dispatches AI Hypercomputer Cluster Director provisioning (`hypercomputecluster.googleapis.com/v1`) with Slurm scheduler, compact placement topology, and high-bandwidth VPC fabric.',
         executedCommand: createRes.command,
         cliOk: createRes.ok,
         clusterId: cleanClusterId,
@@ -40427,86 +40423,142 @@ spec:
     }
 
     // ========================================================================
-    // 18. [WAVE 3 · GCLOUD 590.0.0 (2026.10.16)] 5-PILLAR LIVE FRONTIER SCAN
+    // 18. [WAVE 3 · GCLOUD 590.0.1 (2026.10.22)] 8-PILLAR LIVE FRONTIER SCAN
     //     1. gcloud beta gemini cloud-assist investigations list
     //     2. gcloud parametermanager parameters list
     //     3. gcloud vector-search collections list
     //     4. gcloud alpha number-registry discovered-ranges list
     //     5. gcloud alpha mldiagnostics machine-learning-run list
+    //     6. gcloud observability scopes describe _Default + trace-scopes list [NEW 590.0.1 GA]
+    //     7. gcloud beta orchestration-pipelines resource-types list [NEW 590.0.1 BETA]
+    //     8. gcloud compliance-manager frameworks list [NEW 590.0.1 GA]
     // ========================================================================
     if (action === 'SCAN_WAVE3_GCLOUD_590_FRONTIER') {
-      const [geminiAssistRes, paramMgrRes, vecSearchRes, numRegRes, mlDiagRes] =
-        await Promise.all([
-          runGcloudAlphaBetaJson(
-            [
-              'beta',
-              'gemini',
-              'cloud-assist',
-              'investigations',
-              'list',
-              `--project=${projectId}`,
-              '--location=global',
-              '--format=json',
-            ],
-            8500
-          ),
-          runGcloudAlphaBetaJson(
-            [
-              'parametermanager',
-              'parameters',
-              'list',
-              `--project=${projectId}`,
-              '--location=global',
-              '--format=json',
-            ],
-            8500
-          ),
-          runGcloudAlphaBetaJson(
-            [
-              'vector-search',
-              'collections',
-              'list',
-              `--project=${projectId}`,
-              `--location=${region}`,
-              '--format=json',
-            ],
-            8500
-          ),
-          runGcloudAlphaBetaJson(
-            [
-              'alpha',
-              'number-registry',
-              'discovered-ranges',
-              'list',
-              `--project=${projectId}`,
-              '--location=global',
-              '--format=json',
-            ],
-            8500
-          ),
-          runGcloudAlphaBetaJson(
-            [
-              'alpha',
-              'mldiagnostics',
-              'machine-learning-run',
-              'list',
-              `--project=${projectId}`,
-              `--location=${region}`,
-              '--format=json',
-            ],
-            8500
-          ),
-        ]);
+      const [
+        geminiAssistRes,
+        paramMgrRes,
+        vecSearchRes,
+        numRegRes,
+        mlDiagRes,
+        obsScopesRes,
+        obsTraceScopesRes,
+        orchTypesRes,
+        complianceFwRes,
+      ] = await Promise.all([
+        runGcloudAlphaBetaJson(
+          [
+            'beta',
+            'gemini',
+            'cloud-assist',
+            'investigations',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'parametermanager',
+            'parameters',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'vector-search',
+            'collections',
+            'list',
+            `--project=${projectId}`,
+            `--location=${region}`,
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'number-registry',
+            'discovered-ranges',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'alpha',
+            'mldiagnostics',
+            'machine-learning-run',
+            'list',
+            `--project=${projectId}`,
+            `--location=${region}`,
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'observability',
+            'scopes',
+            'describe',
+            '_Default',
+            '--location=global',
+            `--project=${projectId}`,
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'observability',
+            'trace-scopes',
+            'list',
+            '--location=global',
+            `--project=${projectId}`,
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'beta',
+            'orchestration-pipelines',
+            'resource-types',
+            'list',
+            '--format=json',
+          ],
+          8500
+        ),
+        runGcloudAlphaBetaJson(
+          [
+            'compliance-manager',
+            'frameworks',
+            'list',
+            `--project=${projectId}`,
+            '--location=global',
+            '--format=json',
+          ],
+          8500
+        ),
+      ]);
 
       return res.json({
         success: true,
         wave: 'WAVE_3',
         releaseTrack: 'ALPHA_AND_BETA',
         releaseBadge:
-          '[SDK 590.0.0 · 2026.10.16] gemini cloud-assist + parametermanager + vector-search + number-registry + mldiagnostics',
+          '[SDK 590.0.1 · 2026.10.22] 8-Pillar Live Probe: gemini cloud-assist + parametermanager + vector-search + number-registry + mldiagnostics + observability + orchestration-pipelines + compliance-manager',
         preGaNotice:
-          'Executes 5 parallel Google Cloud SDK 590.0.0 (2026.10.16) CLI probes across Gemini Cloud Assist Investigations, Parameter Manager, Vector Search Collections, Cloud Number Registry (IPAM), and ML Diagnostics.',
-        executedCommand: `${geminiAssistRes.command} && ${paramMgrRes.command} && ${vecSearchRes.command} && ${numRegRes.command} && ${mlDiagRes.command}`,
+          'Executes 8 parallel Google Cloud SDK 590.0.1 (2026.10.22) CLI probes across Gemini Cloud Assist Investigations, Parameter Manager, Vector Search Collections, Cloud Number Registry (IPAM), ML Diagnostics, Cloud Observability Scopes/TraceScopes [GA], Declarative Orchestration Pipelines Resource Schema Registry [BETA], and Unified Compliance Manager Frameworks [GA].',
+        executedCommand: `${geminiAssistRes.command} && ${paramMgrRes.command} && ${vecSearchRes.command} && ${numRegRes.command} && ${mlDiagRes.command} && ${obsScopesRes.command} && ${orchTypesRes.command} && ${complianceFwRes.command}`,
         investigations: Array.isArray(geminiAssistRes.data)
           ? geminiAssistRes.data
           : [],
@@ -40516,9 +40568,19 @@ spec:
           : [],
         discoveredIpRanges: Array.isArray(numRegRes.data) ? numRegRes.data : [],
         mlDiagnosticRuns: Array.isArray(mlDiagRes.data) ? mlDiagRes.data : [],
+        observabilityDefaultScope: obsScopesRes.data || null,
+        observabilityTraceScopes: Array.isArray(obsTraceScopesRes.data)
+          ? obsTraceScopesRes.data
+          : [],
+        orchestrationPipelineResourceTypes: Array.isArray(orchTypesRes.data)
+          ? orchTypesRes.data
+          : [],
+        complianceManagerFrameworks: Array.isArray(complianceFwRes.data)
+          ? complianceFwRes.data
+          : [],
         probes: [
           {
-            name: '[BETA/GA] Gemini Cloud Assist Investigations (gcloud beta gemini cloud-assist investigations list)',
+            name: '[BETA] Gemini Cloud Assist Investigations (gcloud beta gemini cloud-assist investigations list)',
             track: 'BETA',
             command: geminiAssistRes.command,
             ok: geminiAssistRes.ok,
@@ -40532,7 +40594,7 @@ spec:
               '[] (0 active investigations)',
           },
           {
-            name: '[GA/BETA] Parameter Manager (gcloud parametermanager parameters list)',
+            name: '[GA] Parameter Manager (gcloud parametermanager parameters list)',
             track: 'GA',
             command: paramMgrRes.command,
             ok: paramMgrRes.ok,
@@ -40543,7 +40605,7 @@ spec:
             output: paramMgrRes.stdout || paramMgrRes.stderr,
           },
           {
-            name: '[GA/BETA] Vector Search Collections (gcloud vector-search collections list)',
+            name: '[GA] Vector Search Collections (gcloud vector-search collections list)',
             track: 'GA',
             command: vecSearchRes.command,
             ok: vecSearchRes.ok,
@@ -40571,19 +40633,60 @@ spec:
             count: Array.isArray(mlDiagRes.data) ? mlDiagRes.data.length : 0,
             output: mlDiagRes.stdout || mlDiagRes.stderr,
           },
+          {
+            name: '[GA · 590.0.1] Cloud Observability Scopes & TraceScopes (gcloud observability scopes describe _Default & trace-scopes list)',
+            track: 'GA',
+            command: `${obsScopesRes.command} && ${obsTraceScopesRes.command}`,
+            ok: obsScopesRes.ok || obsTraceScopesRes.ok,
+            durationMs: obsScopesRes.durationMs + obsTraceScopesRes.durationMs,
+            count: Array.isArray(obsTraceScopesRes.data)
+              ? obsTraceScopesRes.data.length
+              : obsScopesRes.ok
+              ? 1
+              : 0,
+            output:
+              obsScopesRes.stdout ||
+              obsTraceScopesRes.stdout ||
+              obsScopesRes.stderr,
+          },
+          {
+            name: '[BETA · 590.0.1] Declarative Orchestration Pipelines Resource Types (gcloud beta orchestration-pipelines resource-types list)',
+            track: 'BETA',
+            command: orchTypesRes.command,
+            ok: orchTypesRes.ok,
+            durationMs: orchTypesRes.durationMs,
+            count: Array.isArray(orchTypesRes.data)
+              ? orchTypesRes.data.length
+              : 0,
+            output: orchTypesRes.stdout || orchTypesRes.stderr,
+          },
+          {
+            name: '[GA · 590.0.1] Unified Compliance Manager Frameworks (gcloud compliance-manager frameworks list)',
+            track: 'GA',
+            command: complianceFwRes.command,
+            ok: complianceFwRes.ok,
+            durationMs: complianceFwRes.durationMs,
+            count: Array.isArray(complianceFwRes.data)
+              ? complianceFwRes.data.length
+              : 0,
+            output: complianceFwRes.stdout || complianceFwRes.stderr,
+          },
         ],
         stdout:
+          obsScopesRes.stdout ||
+          orchTypesRes.stdout ||
           geminiAssistRes.stdout ||
           paramMgrRes.stdout ||
-          vecSearchRes.stdout ||
-          numRegRes.stdout ||
-          mlDiagRes.stdout,
+          vecSearchRes.stdout,
         stderr: [
           geminiAssistRes.stderr,
           paramMgrRes.stderr,
           vecSearchRes.stderr,
           numRegRes.stderr,
           mlDiagRes.stderr,
+          obsScopesRes.stderr,
+          orchTypesRes.stderr,
+          complianceFwRes.stderr,
         ]
           .filter(Boolean)
           .join('\n'),
@@ -40592,7 +40695,10 @@ spec:
           paramMgrRes.durationMs +
           vecSearchRes.durationMs +
           numRegRes.durationMs +
-          mlDiagRes.durationMs,
+          mlDiagRes.durationMs +
+          obsScopesRes.durationMs +
+          orchTypesRes.durationMs +
+          complianceFwRes.durationMs,
       });
     }
 
@@ -40624,7 +40730,6 @@ app.post(
         await Promise.allSettled([
           runGcloudAlphaBetaJson(
             [
-              'alpha',
               'biglake',
               'iceberg',
               'catalogs',
@@ -40636,7 +40741,6 @@ app.post(
           ),
           runGcloudAlphaBetaJson(
             [
-              'alpha',
               'managed-kafka',
               'clusters',
               'list',
@@ -40648,7 +40752,6 @@ app.post(
           ),
           runGcloudAlphaBetaJson(
             [
-              'alpha',
               'dataplex',
               'lakes',
               'list',
@@ -41869,7 +41972,7 @@ app.post('/api/project/:projectId/wave11/stress-audit', async (req, res) => {
     },
     {
       studioId: 'ALPHA_BETA_LAB',
-      studioName: '[ALPHA/BETA] gcloud 590.0.0 Frontier Lab (Wave 1–3)',
+      studioName: '[ALPHA/BETA/GA] gcloud 590.0.1 Frontier Lab (Wave 1–3)',
       endpoint: `/api/project/${encProj}/alpha-beta/overview`,
     },
     {

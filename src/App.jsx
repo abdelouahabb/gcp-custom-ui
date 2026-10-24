@@ -1285,7 +1285,7 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // 3D. [ALPHA / BETA] gcloud 590.0.0 Frontier Lab Mutations (/alpha-beta/action)
+    // 3D. [GA / BETA / ALPHA] gcloud 590.0.1 Frontier Lab Mutations (/alpha-beta/action)
     if (rawUrl.includes('/alpha-beta/action')) {
       const act = String(body.action || '').toUpperCase();
       // Exempt read-only CLI inspection, troubleshooting, and discovery scans
@@ -1318,7 +1318,7 @@ function classifyDestructiveAxiosConfig(config) {
         targetLabel: `Target [${track}] Resource / Operation`,
         resourceKind: isBeta
           ? 'gcloud beta (Public Preview API)'
-          : 'gcloud alpha (Early Access v1alpha API)',
+          : 'gcloud 590.0.1 GA / alpha API',
         targetName: `${target} [${track}]`,
         location: body.region || 'global',
         projectId,
@@ -1332,25 +1332,25 @@ function classifyDestructiveAxiosConfig(config) {
             : act === 'DEPLOY_BETA_MULTI_REGION_SERVICE'
             ? `1. Probes "gcloud beta run multi-region-services" on project "${projectId}".\n2. Synthesizes the multi-region Knative Service specification across ${(body.regions || []).join(', ') || 'us-central1, europe-west1'}.`
             : act === 'DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE'
-            ? `1. Invokes "gcloud alpha model-armor templates create ${body.modelArmorTemplateId || 'cp-llm-shield-strict'}" in ${body.region || 'us-central1'}.\n2. Enables Prompt Injection & Jailbreak blocking, Malicious URI filtering, and Responsible AI filters on modelarmor.googleapis.com.`
+            ? `1. Invokes GA "gcloud model-armor templates create ${body.modelArmorTemplateId || 'cp-llm-shield-strict'}" in ${body.region || 'us-central1'}.\n2. Enables Prompt Injection & Jailbreak blocking, Malicious URI filtering, and Responsible AI filters on modelarmor.googleapis.com.`
             : act === 'APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER'
-            ? `1. Invokes "gcloud beta quotas adjuster settings update --enablement=${body.quotaAdjusterEnablement || 'ENABLED'}" on project "${projectId}".\n2. Prepares the declarative QuotaPreference configuration for ${body.quotaService || 'compute.googleapis.com'} / ${body.quotaId || 'CPUS-per-project-region'}.`
+            ? `1. Invokes "gcloud beta quotas adjuster settings update --enablement=${body.quotaAdjusterEnablement || 'ENABLED'}" on project "${projectId}".\n2. Prepares the declarative GA QuotaPreference configuration (gcloud quotas preferences) for ${body.quotaService || 'compute.googleapis.com'} / ${body.quotaId || 'CPUS-per-project-region'}.`
             : act === 'GENERATE_ALPHA_AUDIT_OR_TRUST_POLICY'
-            ? `1. Invokes "gcloud audit-manager audit-reports generate --compliance-framework=${String(body.complianceStandard || 'fedramp_moderate').toLowerCase()} --report-format=odf" in ${body.region || 'us-central1'}.\n2. Synthesizes the CEL-enforced Software Delivery Trust policy (${body.deliveryTrustPolicyId || 'cp-slsa-l3-enforcer'}).`
+            ? `1. Invokes GA "gcloud audit-manager audit-reports generate --compliance-framework=${String(body.complianceStandard || 'fedramp_moderate').toLowerCase()} --report-format=odf" in ${body.region || 'us-central1'}.\n2. Synthesizes the CEL-enforced Software Delivery Trust policy (${body.deliveryTrustPolicyId || 'cp-slsa-l3-enforcer'}).`
             : act === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT'
-            ? `1. Invokes "gcloud beta cluster-director clusters create ${body.clusterDirectorId || 'cp-ai-hypercomputer-01'} --quickstart-cluster" in ${body.region || 'us-central1'}.\n2. Orchestrates topology-aware AI Hypercomputer compute, Slurm scheduling, and VPC networking.`
-            : `1. Executes the [${track}] gcloud 590.0.0 CLI / REST operation (${act}) against project "${projectId}".`,
+            ? `1. Invokes GA "gcloud cluster-director clusters create ${body.clusterDirectorId || 'cp-ai-hypercomputer-01'} --quickstart-cluster" in ${body.region || 'us-central1'}.\n2. Orchestrates topology-aware AI Hypercomputer compute, Slurm scheduling, and VPC networking.`
+            : `1. Executes the [${track}] gcloud 590.0.1 CLI / REST operation (${act}) against project "${projectId}".`,
         costWarning:
           act === 'DEPLOY_BETA_WORKER_POOL'
             ? `CONTINUOUS WORKER BILLING WARNING ([BETA]): Cloud Run Worker Pools run non-HTTP background instances continuously (${body.instances || 1} instance(s) active 24/7) and do NOT scale to zero when idle. You will be billed hourly for vCPU and Memory until the worker pool is deleted or scaled down.`
             : act === 'DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE'
-            ? `MODEL ARMOR & SDP BILLING NOTICE ([GA/ALPHA]): Creating a Model Armor template is free of fixed hourly compute cost, but invoking sanitize-user-prompt / sanitize-model-response and Sensitive Data Protection (SDP) inspection incurs per-token / per-MB API inspection charges.`
+            ? `MODEL ARMOR & SDP BILLING NOTICE ([GA 590.0.1]): Creating a Model Armor template is free of fixed hourly compute cost, but invoking sanitize-user-prompt / sanitize-model-response and Sensitive Data Protection (SDP) inspection incurs per-token / per-MB API inspection charges.`
             : act === 'APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER'
-            ? `QUOTA CEILING & FINOPS WARNING ([BETA]): Enabling the Autonomous Quota Adjuster allows Google Cloud to automatically request higher quota limits when utilization nears 80%. Raising quota ceilings does not charge by itself, but permits higher maximum resource consumption.`
+            ? `QUOTA CEILING & FINOPS WARNING ([GA/BETA]): Enabling the Autonomous Quota Adjuster allows Google Cloud to automatically request higher quota limits when utilization nears 80%. Raising quota ceilings does not charge by itself, but permits higher maximum resource consumption.`
             : act === 'PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT'
-            ? `HIGH-COST AI HYPERCOMPUTER WARNING ([BETA]): Cluster Director provisions multi-node HPC / GPU / TPU Slurm clusters (${body.acceleratorProfile || 'A3 Mega / H100'}). If fulfilled in your project, GPU/TPU nodes and Managed Lustre storage incur high hourly compute charges ($/hr).`
-            : `PRE-GA [${track}] & COST NOTICE: [${track}] commands invoke pre-GA Google Cloud APIs. Any provisioned compute, multi-region replicas, compliance reports, or entitlements follow Google Cloud Preview pricing and SLA terms.`,
-        impactWarning: `You are executing a Pre-GA [${track}] operation on live project "${projectId}".`,
+            ? `HIGH-COST AI HYPERCOMPUTER WARNING ([GA 590.0.1]): Cluster Director provisions multi-node HPC / GPU / TPU Slurm clusters (${body.acceleratorProfile || 'A3 Mega / H100'}). If fulfilled in your project, GPU/TPU nodes and Managed Lustre storage incur high hourly compute charges ($/hr).`
+            : `PRE-GA [${track}] & COST NOTICE: [${track}] commands invoke Google Cloud SDK 590.0.1 APIs. Any provisioned compute, multi-region replicas, compliance reports, or entitlements follow Google Cloud pricing and SLA terms.`,
+        impactWarning: `You are executing a [${track}] operation on live project "${projectId}".`,
       };
     }
 
@@ -3323,7 +3323,7 @@ function CloudPulseCockpit() {
       id: 'DATA_ENGINEER_STUDIO',
       group: 'DATA_AI',
       label: 'Data Engineer',
-      tip: '2026 Data Engineering Studio (GCloud SDK 590.0.0 & Data Agent Kit): Medallion Builder, Dataform/dbt SQLX, Dataplex Profiling, Schema Mapper, Serverless DAGs & Zero-Cluster Serverless Spark on BigLake Iceberg',
+      tip: '2026 Data Engineering Studio (GCloud SDK 590.0.1 & Data Agent Kit): Medallion Builder, Dataform/dbt SQLX, Dataplex Profiling, Schema Mapper, Serverless DAGs & Zero-Cluster Serverless Spark on BigLake Iceberg',
       icon: Layers,
     },
     {
@@ -3482,18 +3482,18 @@ function CloudPulseCockpit() {
 
             {/* Top-Right Cluster: [ALPHA/BETA] Lab Launcher + Live GCP Project Switcher + Primary Provision Resource CTA */}
             <div className="flex items-center gap-2.5 shrink-0">
-              {/* 1-Click [ALPHA/BETA] gcloud 590.0.0 Frontier Lab Launcher */}
+              {/* 1-Click [GA/BETA/ALPHA] gcloud 590.0.1 Frontier Lab Launcher */}
               <button
                 type="button"
                 onClick={() => {
                   setInnovationSubTab('GCLOUD_ALPHA_BETA');
                   setActiveTab('INNOVATION_LAB');
                 }}
-                title="Open [ALPHA/BETA] gcloud 590.0.0 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [ALPHA], PAM JIT IAM [ALPHA], Cluster Director & Lustre [ALPHA], NetApp QoS [BETA], Database Center [ALPHA], Cloud Quotas Adjuster [BETA] & Audit Manager [ALPHA])"
+                title="Open [GA/BETA/ALPHA] gcloud 590.0.1 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Model Armor [GA], Cluster Director [GA], Lustre [GA], NetApp QoS [GA/BETA], Database Center [ALPHA], Cloud Quotas [GA/BETA], Observability [GA], Orchestration Pipelines [BETA] & Compliance Manager [GA])"
                 className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 rounded-xl px-3 py-2.5 text-xs font-mono font-extrabold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                <span>[ALPHA/BETA] Lab</span>
+                <span>[SDK 590.0.1] Lab</span>
               </button>
 
               {/* Live GCP Project Dropdown */}
