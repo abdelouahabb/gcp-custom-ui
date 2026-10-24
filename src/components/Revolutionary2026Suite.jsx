@@ -1198,10 +1198,10 @@ export default function Revolutionary2026Suite({
             {
               id: 'FIVE_PERSONA_COUNCIL',
               category: 'ALPHA_BETA',
-              badge: '5-PERSONA BOARD',
+              badge: '10-PERSONA BOARD',
               label:
-                '5-Persona Enterprise Board (Architect, Cloud Eng, Data Eng, NetOps & DevSecOps)',
-              tip: '5-Persona Enterprise Architecture Board & Pre-Flight War-Room: (1) Cloud Architect Region Blackout SPOF Drill & Org Policies, (2) Cloud Engineer ClickOps-to-GitOps .tf Exporter & Undo Saga, (3) Data Engineer Column Lineage DAG & Quarantine DLQ Replay, (4) Network Engineer 4-Hop Packet Tracer & IPAM CIDR Map, and (5) DevSecOps Binary Authz @sha256, IAM Escalation & Zero-Key OIDC',
+                '10-Persona Enterprise Board & Launch Tribunal (01–10 Engineering Roles)',
+              tip: '10-Persona Enterprise Architecture Board & Autonomous Launch Tribunal: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps Lead, (06) AI/MLOps, (07) SRE Commander, (08) DBRE, (09) FinOps & GreenOps, and (10) K8s Platform Engineer + Live SHA-256 Merkle Diff',
               icon: ShieldCheck,
             },
             {

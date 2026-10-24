@@ -55105,15 +55105,18 @@ app.post(
 // ============================================================================
 const personaTribunalSnapshots = new Map();
 
-app.post(
+app.all(
   '/api/project/:projectId/enterprise-personas/tribunal',
   async (req, res) => {
     const { projectId } = req.params;
-    const {
-      region = 'us-central1',
-      saveAsBaseline = false,
-      resetBaseline = false,
-    } = req.body || {};
+    const region =
+      req.body?.region || req.query?.region || 'us-central1';
+    const saveAsBaseline = Boolean(
+      req.body?.saveAsBaseline || req.query?.saveAsBaseline === 'true'
+    );
+    const resetBaseline = Boolean(
+      req.body?.resetBaseline || req.query?.resetBaseline === 'true'
+    );
 
     try {
       const token = await resolveRequestToken(req);

@@ -952,10 +952,62 @@ function classifyDestructiveAxiosConfig(config) {
         !body.uploadToBucket) ||
       rawUrl.includes('/wave15/logging-correlator') ||
       rawUrl.includes('/wave15/logging-ai-surgeon') ||
-      rawUrl.includes('/wave15/tls-x509-inspector');
+      rawUrl.includes('/wave15/tls-x509-inspector') ||
+      rawUrl.includes('/enterprise-personas/tribunal') ||
+      (rawUrl.includes('/enterprise-personas/action') &&
+        String(body.action || '').toUpperCase() !==
+          'EXECUTE_TRIBUNAL_LIVE_REMEDIATION');
 
     if (isReadOnlyOrDryRun) {
       return null;
+    }
+
+    // 3A-0000. 10-Persona Tribunal Live GCP Remediation (LOCK_FIREWALL_TO_IAP | ENFORCE_BUCKET_PAP)
+    if (
+      rawUrl.includes('/enterprise-personas/action') &&
+      String(body.action || '').toUpperCase() ===
+        'EXECUTE_TRIBUNAL_LIVE_REMEDIATION'
+    ) {
+      const remType = String(body.remediationType || '').toUpperCase();
+      const targetRes = body.targetResource || 'GCP Resource';
+      if (remType === 'LOCK_FIREWALL_TO_IAP') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Lock VPC Firewall Rule "${targetRes}" to Cloud IAP (35.235.240.0/20)?`,
+          headerBadge: '10-Persona Launch Tribunal · Live NetOps Remediation',
+          targetLabel: 'Target VPC Firewall Rule',
+          resourceKind: 'Compute Engine Firewall Rule (compute.googleapis.com/v1)',
+          targetName: targetRes,
+          location: 'Global VPC',
+          projectId,
+          method: 'PATCH FIREWALL',
+          endpoint: rawUrl,
+          confirmLabel: `Lock "${targetRes}" to Cloud IAP (35.235.240.0/20)`,
+          cancelToast: `Firewall remediation on "${targetRes}" cancelled.`,
+          whatHappensNext: `1. Calls PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${targetRes}.\n2. Replaces world-open 0.0.0.0/0 sourceRanges with Google Cloud IAP TCP forwarding (35.235.240.0/20).\n3. Re-runs the 10-Persona Launch Tribunal and updates the T0 vs. T_Now SHA-256 Merkle Diff.`,
+          costWarning: `ZERO COST IMPACT ($0.00/MO): Updating VPC firewall sourceRanges and using Cloud IAP TCP forwarding incurs $0.00/mo.`,
+          impactWarning: `Direct public internet connections to ports governed by "${targetRes}" will be blocked unless tunnelled through authenticated Google Cloud IAP (gcloud compute start-iap-tunnel).`,
+        };
+      }
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Enforce PublicAccessPrevention & Uniform Access on "gs://${targetRes}"?`,
+        headerBadge: '10-Persona Launch Tribunal · Live DevSecOps Remediation',
+        targetLabel: 'Target Cloud Storage Bucket',
+        resourceKind: 'Cloud Storage Bucket IAM Config (storage.googleapis.com/v1)',
+        targetName: `gs://${targetRes}`,
+        location: body.region || 'Multi-Region / Regional',
+        projectId,
+        method: 'PATCH BUCKET PAP',
+        endpoint: rawUrl,
+        confirmLabel: `Enforce PublicAccessPrevention on gs://${targetRes}`,
+        cancelToast: `Bucket hardening on "gs://${targetRes}" cancelled.`,
+        whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${targetRes}.\n2. Sets iamConfiguration.publicAccessPrevention="enforced" and uniformBucketLevelAccess.enabled=true.\n3. Re-runs the 10-Persona Launch Tribunal and updates the T0 vs. T_Now SHA-256 Merkle Diff.`,
+        costWarning: `ZERO COST IMPACT ($0.00/MO): Enforcing Public Access Prevention and Uniform Bucket-Level Access incurs $0.00/mo.`,
+        impactWarning: `Blocks any public allUsers / allAuthenticatedUsers object ACLs on "gs://${targetRes}" in project "${projectId}".`,
+      };
     }
 
     // 3A-0000a. Wave 15 SLSA v1.0 DSSE Provenance Upload to GCS (/wave15/attest-slsa-provenance with uploadToBucket)

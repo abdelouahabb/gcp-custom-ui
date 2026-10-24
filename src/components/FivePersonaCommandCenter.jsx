@@ -210,14 +210,16 @@ export default function FivePersonaCommandCenter({
       if (!projectId) return;
       setTribunalLoading(true);
       try {
-        const res = await axios.post(
+        const res = await axios.get(
           `/api/project/${encodeURIComponent(
             projectId
           )}/enterprise-personas/tribunal`,
           {
-            region,
-            saveAsBaseline: Boolean(options.captureBaseline),
-            resetBaseline: Boolean(options.captureBaseline),
+            params: {
+              region,
+              saveAsBaseline: Boolean(options.captureBaseline),
+              resetBaseline: Boolean(options.captureBaseline),
+            },
           }
         );
         setTribunalData(res.data);
