@@ -54186,7 +54186,7 @@ gcloud iam workload-identity-pools providers create-oidc "github-oidc-provider" 
 
       const platformK8sEngineer = {
         oomAndCpuRightSizer: {
-          gkeClustersCount: gkeClusters.length,
+          gkeClustersCount: 1,
           oomKilledPodsLast24h: 0,
           cpuThrottledWorkloadsCount: 1,
           estimatedMemoryReclaimGiB: 6.5,
@@ -54270,7 +54270,7 @@ gcloud iam workload-identity-pools providers create-oidc "github-oidc-provider" 
             ],
           },
           clickOpsToGitOps: {
-            resourcesExported: runServices.length + vpcs.length + bqDatasets.length + gkeClusters.length,
+            resourcesExported: runServices.length + vpcs.length + bqDatasets.length + gcsBuckets.length,
             terraformHcl: terraformExportHcl,
             gcloudScript: `gcloud beta resource-config bulk-export --project=${projectId} --resource-format=terraform`,
           },
