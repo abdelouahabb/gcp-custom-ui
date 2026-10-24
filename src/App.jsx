@@ -877,6 +877,10 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/benchmark') ||
       rawUrl.includes('/provision/preflight') ||
       rawUrl.includes('/tunnels/probe') ||
+      rawUrl.includes('/tunnels/start') ||
+      rawUrl.includes('/tunnels/stop') ||
+      rawUrl.includes('/wave8/war-room/synthetic-probe') ||
+      rawUrl.includes('/wave8/war-room/ai-sre-commander') ||
       rawUrl.includes('/dlp-scan') ||
       rawUrl.includes('/functions/test-event') ||
       rawUrl.includes('/ai-copilot') ||
@@ -1610,55 +1614,1142 @@ function classifyDestructiveAxiosConfig(config) {
 
     // 3G-5. Wave 16 Autonomous Cloud SOC SOAR & Canary Actions (/soc/action)
     if (rawUrl.includes('/soc/action')) {
-      const socAct = String(body.action || 'SOC_SOAR_ACTION');
+      const socAct = String(body.action || 'SOC_SOAR_ACTION').toUpperCase();
       const socTarget =
         body.targetIpCidr ||
         body.serviceName ||
         body.firewallRuleName ||
         body.serviceAccountEmail ||
+        body.bucketName ||
+        body.datasetId ||
+        body.secretId ||
+        body.subnetName ||
+        body.zoneName ||
+        body.repoName ||
+        body.routeName ||
+        body.exclusionName ||
         body.canaryType ||
         projectId;
+
+      const socSpecs = {
+        BLOCK_ATTACKER_IP_CIDR: {
+          title: `Quarantine Attacker CIDR "${body.targetIpCidr || socTarget}" at VPC Perimeter?`,
+          resourceKind: 'VPC Ingress DENY Firewall Rule (compute.googleapis.com/v1)',
+          targetName: `${body.targetIpCidr || socTarget} (VPC: ${body.network || 'default'})`,
+          confirmLabel: `Create Priority-100 VPC DENY Rule (${body.targetIpCidr || socTarget})`,
+          whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls to create a priority-100 INGRESS DENY-ALL rule blocking source CIDR "${body.targetIpCidr || socTarget}" across VPC network "${body.network || 'default'}".\n2. Immediately drops all TCP, UDP, and ICMP packets originating from "${body.targetIpCidr || socTarget}" before they reach any VM or GKE node.\n3. Signs an Ed25519 (RFC 8032) forensic containment receipt and generates matching google_compute_firewall Terraform HCL.`,
+          costWarning: `ZERO COST ($0.00/MO): Google Cloud VPC Firewall rules and packet-drop enforcement at the Andromeda virtual switch layer incur $0.00/mo.`,
+          impactWarning: `All inbound network traffic from "${body.targetIpCidr || socTarget}" into VPC "${body.network || 'default'}" will be dropped immediately. You can remove the quarantine rule anytime with 1 click.`,
+        },
+        DELETE_QUARANTINE_RULE: {
+          gateType: 'DELETE',
+          title: `Remove VPC Quarantine Firewall Rule "${body.firewallRuleName || socTarget}"?`,
+          resourceKind: 'VPC Quarantine Firewall Rule (compute.googleapis.com/v1)',
+          targetName: String(body.firewallRuleName || socTarget),
+          confirmLabel: `Delete Quarantine Rule "${body.firewallRuleName || socTarget}"`,
+          whatHappensNext: `1. Calls DELETE https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${body.firewallRuleName || socTarget}.\n2. Lifts the priority-100 IP CIDR quarantine block on the VPC network.\n3. Appends an Ed25519 un-quarantine audit receipt to the SOC Forensic Ledger.`,
+          costWarning: `ZERO COST ($0.00/MO): Deleting a VPC firewall rule is a free control-plane operation.`,
+          impactWarning: `Traffic from the previously quarantined IP CIDR will no longer be blocked by rule "${body.firewallRuleName || socTarget}".`,
+        },
+        REVOKE_CLOUDRUN_PUBLIC_INGRESS: {
+          title: `Revoke Public Internet Access (allUsers) on Cloud Run "${body.serviceName || socTarget}"?`,
+          resourceKind: 'Cloud Run v2 IAM Policy (run.googleapis.com/v2)',
+          targetName: `${body.serviceName || socTarget} (${body.region || 'us-central1'})`,
+          confirmLabel: `Strip allUsers & Enforce Zero-Trust IAM Auth`,
+          whatHappensNext: `1. Fetches the current IAM policy via GET https://run.googleapis.com/v2/projects/${projectId}/locations/${body.region || 'us-central1'}/services/${body.serviceName || socTarget}:getIamPolicy.\n2. Removes "allUsers" and "allAuthenticatedUsers" from roles/run.invoker while preserving authorized service accounts and IAM principals.\n3. Commits the hardened policy via :setIamPolicy and records an Ed25519 receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Updating Cloud Run IAM policies incurs $0.00/mo and prevents unauthenticated billable container invocations.`,
+          impactWarning: `Unauthenticated requests to "${body.serviceName || socTarget}" without a valid Google IAM Bearer/OIDC token will immediately receive HTTP 403 Forbidden.`,
+        },
+        LOCK_OPEN_VPC_FIREWALL_TO_IAP: {
+          title: `Lock Open VPC Firewall Rule "${body.firewallRuleName || socTarget}" to Cloud IAP Only?`,
+          resourceKind: 'VPC Firewall Source Range Hardening (compute.googleapis.com/v1)',
+          targetName: `${body.firewallRuleName || socTarget} (0.0.0.0/0 -> 35.235.240.0/20)`,
+          confirmLabel: `Replace 0.0.0.0/0 with Cloud IAP Range (35.235.240.0/20)`,
+          whatHappensNext: `1. Calls PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${body.firewallRuleName || socTarget}.\n2. Replaces open public internet source CIDR "0.0.0.0/0" with Google Cloud Identity-Aware Proxy's official TCP forwarding range "35.235.240.0/20".\n3. Seals an Ed25519 remediation receipt in the SOC Forensic Ledger.`,
+          costWarning: `ZERO COST ($0.00/MO): Locking SSH/RDP firewall rules to Cloud IAP TCP forwarding is 100% free ($0.00/mo).`,
+          impactWarning: `Direct public internet SSH/RDP connections to port 22/3389 will be blocked; engineers must connect via "gcloud compute ssh --tunnel-through-iap" or the CloudPulse SSH terminal.`,
+        },
+        TOMBSTONE_APP_ENGINE_EDGE_DENY: {
+          title: `Enforce App Engine Edge Firewall DENY Rule (${body.sourceRange || '203.0.113.0/24'})?`,
+          resourceKind: 'App Engine Edge Ingress Firewall (appengine.googleapis.com/v1)',
+          targetName: `${projectId}.appspot.com · Priority ${body.priority || 1000} DENY`,
+          confirmLabel: `Deploy App Engine Edge DENY Rule`,
+          whatHappensNext: `1. Calls POST/PATCH https://appengine.googleapis.com/v1/apps/${projectId}/firewall/ingressRules.\n2. Inserts a high-priority DENY ingress rule blocking "${body.sourceRange || '203.0.113.0/24'}" at Google's Global Front End (GFE) before requests reach App Engine instances.\n3. Signs an Ed25519 receipt in the SOC Forensic Ledger.`,
+          costWarning: `ZERO COST ($0.00/MO): App Engine Edge Firewall blocks traffic at the GFE edge without waking or billing App Engine instances.`,
+          impactWarning: `Requests matching "${body.sourceRange || '203.0.113.0/24'}" to ${projectId}.appspot.com will immediately receive HTTP 403 Forbidden.`,
+        },
+        DISABLE_SERVICE_ACCOUNT_KEY: {
+          title: `Disable Leaked/Aging Service Account Key "${body.keyId || socTarget}"?`,
+          resourceKind: 'IAM Service Account User-Managed Key (iam.googleapis.com/v1)',
+          targetName: `${body.serviceAccountEmail || 'Service Account'} · Key ${String(body.keyId || '').slice(0, 16)}`,
+          confirmLabel: `Immediately Disable RSA Private Key`,
+          whatHappensNext: `1. Calls POST https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${body.serviceAccountEmail}/keys/${body.keyId}:disable.\n2. Immediately deactivates the RSA key pair across Google Cloud IAM while preserving key metadata for forensic investigation (reversible via :enable).\n3. Records an Ed25519 containment receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Disabling or re-enabling IAM Service Account keys is a free IAM control-plane operation.`,
+          impactWarning: `Any external script or CI/CD runner authenticating with JSON key "${String(body.keyId || '').slice(0, 12)}..." will immediately fail token exchange until migrated to Workload Identity Federation or re-enabled.`,
+        },
+        DEPLOY_ZERO_COST_CANARY_TRAP: {
+          title: `Deploy $0.00/mo Zero-Cost Deception Canary Tripwire (${body.canaryType || 'SECRET_HONEYTOKEN'})?`,
+          resourceKind: 'Cloud Deception Honey-Token & Audit Tripwire',
+          targetName:
+            body.canaryType === 'GCS_HONEYBUCKET'
+              ? `gs://${projectId}-soc-canary-vault`
+              : `projects/${projectId}/secrets/soc-canary-master-billing-key-2026`,
+          confirmLabel: `Arm $0.00/mo Deception Canary Tripwire`,
+          whatHappensNext:
+            body.canaryType === 'GCS_HONEYBUCKET'
+              ? `1. Calls POST https://storage.googleapis.com/storage/v1/b?project=${projectId} to provision decoy bucket "${projectId}-soc-canary-vault" hardened with Public Access Prevention and Uniform IAM.\n2. Arms the Cloud Audit Logs tripwire monitoring storage.googleapis.com access events on the decoy bucket.\n3. Seals an Ed25519 canary deployment receipt.`
+              : `1. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets to create decoy secret "soc-canary-master-billing-key-2026" and seeds a fake canary credential payload.\n2. Arms the Cloud Audit Logs tripwire monitoring secretmanager.googleapis.com AccessSecretVersion events.\n3. Seals an Ed25519 canary deployment receipt.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00/MO): Secret Manager includes 6 active secret versions and 10,000 accesses/month for $0.00/mo, and an empty decoy GCS bucket costs $0.00/mo.`,
+          impactWarning: `Creates a live decoy honey-token in project "${projectId}" that triggers a CRITICAL SOC alert whenever an unauthorized principal attempts to read it.`,
+        },
+        TRIGGER_CANARY_AUDIT_PROBE: {
+          title: `Fire Live Canary Audit Tripwire Verification Probe?`,
+          resourceKind: 'Cloud Audit Logs Canary Verification Probe',
+          targetName: `projects/${projectId}/secrets/soc-canary-master-billing-key-2026`,
+          confirmLabel: `Trigger Live Canary Access & Verify Cloud Audit Log`,
+          whatHappensNext: `1. Calls GET https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/soc-canary-master-billing-key-2026 to generate a real cloudaudit.googleapis.com audit trail entry.\n2. Writes a structured CANARY_TRIPWIRE_VERIFICATION event to Cloud Logging (logging.googleapis.com/v2/entries:write).\n3. Verifies end-to-end tripwire detection latency and signs an Ed25519 receipt.`,
+          costWarning: `ZERO COST ($0.00): 1 Secret Manager metadata read and 1 Cloud Logging entry fall well within the Always-Free Tier.`,
+          impactWarning: `Generates a real canary verification audit event in Cloud Logging for project "${projectId}".`,
+        },
+        CAPTURE_IAM_CHECKPOINT: {
+          title: `Capture SHA-256 Golden IAM Policy Checkpoint for "${projectId}"?`,
+          resourceKind: 'Resource Manager IAM Policy Snapshot (cloudresourcemanager.googleapis.com/v1)',
+          targetName: `projects/${projectId} (Live IAM Bindings Snapshot)`,
+          confirmLabel: `Capture Golden IAM Checkpoint ($0.00)`,
+          whatHappensNext: `1. Calls POST https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:getIamPolicy to fetch all live role bindings, conditions, and auditConfigs.\n2. Computes a canonical SHA-256 Merkle digest of the entire IAM policy graph.\n3. Stores the Golden Checkpoint in the SOC state vault for 1-click drift rollback.`,
+          costWarning: `100% READ-ONLY SNAPSHOT ($0.00): Reading and hashing the project IAM policy incurs $0.00.`,
+          impactWarning: `Captures a point-in-time IAM policy baseline without modifying any existing permissions.`,
+        },
+        RESTORE_IAM_CHECKPOINT: {
+          title: `Roll Back Project IAM Policy to Golden Checkpoint "${body.checkpointId || 'Latest'}"?`,
+          resourceKind: 'Resource Manager IAM Policy Rollback (cloudresourcemanager.googleapis.com/v1)',
+          targetName: `projects/${projectId} -> Checkpoint ${body.checkpointId || 'Golden Baseline'}`,
+          confirmLabel: `Restore IAM Policy to Golden Checkpoint`,
+          whatHappensNext: `1. Loads the verified IAM bindings from Golden Checkpoint "${body.checkpointId || 'latest'}".\n2. Calls POST https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:setIamPolicy to overwrite unauthorized role drifts and restore the exact checkpointed bindings.\n3. Signs an Ed25519 IAM rollback receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Restoring project IAM bindings via Resource Manager API is free ($0.00).`,
+          impactWarning: `Any IAM role bindings added after Checkpoint "${body.checkpointId || 'latest'}" was captured will be removed immediately.`,
+        },
+        LOCK_GCS_BUCKET_PUBLIC_ACCESS: {
+          title: `Enforce Public Access Prevention & Uniform IAM on Bucket "${body.bucketName || socTarget}"?`,
+          resourceKind: 'Cloud Storage Bucket Security Policy (storage.googleapis.com/storage/v1)',
+          targetName: `gs://${body.bucketName || socTarget}`,
+          confirmLabel: `Lock Bucket "${body.bucketName || socTarget}" (Enforce PAP + UBLA)`,
+          whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${body.bucketName || socTarget} with iamConfiguration.publicAccessPrevention="enforced" and uniformBucketLevelAccess.enabled=true.\n2. Strips any "allUsers" or "allAuthenticatedUsers" bindings from the bucket's IAM policy.\n3. Appends an Ed25519 receipt and google_storage_bucket Terraform HCL.`,
+          costWarning: `ZERO COST ($0.00/MO): Enforcing Public Access Prevention and Uniform Bucket-Level Access incurs $0.00 and protects against unauthorized public egress bandwidth charges.`,
+          impactWarning: `Blocks all anonymous public internet reads/writes on gs://${body.bucketName || socTarget}; only IAM-authorized principals can access objects.`,
+        },
+        LOCK_ALL_GCS_BUCKETS_PUBLIC_ACCESS: {
+          title: `Enforce Public Access Prevention & Uniform IAM Across ALL Buckets in "${projectId}"?`,
+          resourceKind: 'Fleet-Wide Cloud Storage Hardening (storage.googleapis.com/storage/v1)',
+          targetName: `All Cloud Storage Buckets in ${projectId}`,
+          confirmLabel: `Lock All GCS Buckets (PAP + Uniform IAM)`,
+          whatHappensNext: `1. Lists all Cloud Storage buckets in project "${projectId}" via GET https://storage.googleapis.com/storage/v1/b?project=${projectId}.\n2. Executes PATCH https://storage.googleapis.com/storage/v1/b/<bucket> on every bucket to set publicAccessPrevention="enforced" and uniformBucketLevelAccess.enabled=true.\n3. Seals a fleet-wide Ed25519 hardening receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Updating bucket IAM configuration metadata across your fleet incurs $0.00/mo.`,
+          impactWarning: `Enforces Zero-Trust Public Access Prevention across every Cloud Storage bucket in "${projectId}".`,
+        },
+        DELETE_LOG_EXCLUSION: {
+          gateType: 'DELETE',
+          title: `Delete Cloud Logging Sink Exclusion Filter "${body.exclusionName || socTarget}"?`,
+          resourceKind: 'Cloud Logging Exclusion Filter (logging.googleapis.com/v2)',
+          targetName: `projects/${projectId}/exclusions/${body.exclusionName || socTarget}`,
+          confirmLabel: `Delete Log Exclusion & Restore Full Audit Visibility`,
+          whatHappensNext: `1. Calls DELETE https://logging.googleapis.com/v2/projects/${projectId}/exclusions/${body.exclusionName || socTarget}.\n2. Immediately stops dropping log entries matched by that exclusion filter so 100% of audit/system logs flow into the _Default sink.\n3. Records an Ed25519 anti-tampering receipt.`,
+          costWarning: `LOGGING INGESTION NOTICE: Removing an exclusion filter restores log ingestion into Cloud Logging (first 50 GiB/project/month is Always Free at $0.00/mo; $0.50/GiB beyond 50 GiB).`,
+          impactWarning: `Log entries previously suppressed by "${body.exclusionName || socTarget}" will immediately resume ingestion into Cloud Logging.`,
+        },
+        TOGGLE_SERVICE_ACCOUNT_FREEZE: {
+          title: `${body.disable !== false ? 'Freeze & Disable' : 'Unfreeze & Re-Enable'} Service Account "${body.serviceAccountEmail || socTarget}"?`,
+          resourceKind: 'IAM Service Account Kill-Switch (iam.googleapis.com/v1)',
+          targetName: String(body.serviceAccountEmail || socTarget),
+          confirmLabel: `${body.disable !== false ? 'Freeze Service Account Immediately' : 'Re-Enable Service Account'}`,
+          whatHappensNext: `1. Calls POST https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${body.serviceAccountEmail || socTarget}:${body.disable !== false ? 'disable' : 'enable'}.\n2. Immediately ${body.disable !== false ? 'suspends all OAuth2 token minting and key authentication' : 'restores normal IAM authentication'} for "${body.serviceAccountEmail || socTarget}".\n3. Records an Ed25519 identity containment receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Freezing or unfreezing an IAM Service Account is a free control-plane operation.`,
+          impactWarning:
+            body.disable !== false
+              ? `Workloads running as "${body.serviceAccountEmail || socTarget}" will be blocked from minting new GCP access tokens until you click Unfreeze.`
+              : `Restores normal IAM authentication for "${body.serviceAccountEmail || socTarget}".`,
+        },
+        EXECUTE_DEFCON1_LOCKDOWN: {
+          title: `Execute DEFCON-1 Multi-Vector Project Perimeter Lockdown on "${projectId}"?`,
+          resourceKind: 'Autonomous Multi-API Emergency Perimeter Lockdown',
+          targetName: `${projectId} (Cloud Run IAM + VPC IAP + GCS PAP)`,
+          confirmLabel: `Execute DEFCON-1 Perimeter Lockdown ($0.00)`,
+          whatHappensNext: `1. Cloud Run Ingress Lockdown: Strips "allUsers" / "allAuthenticatedUsers" from public Cloud Run services via run.googleapis.com/v2.\n2. VPC Firewall Hardening: Restricts open 0.0.0.0/0 SSH/RDP firewall rules to Cloud IAP range 35.235.240.0/20 via compute.googleapis.com/v1.\n3. Cloud Storage Lockdown: Enforces publicAccessPrevention="enforced" and Uniform IAM across all project buckets via storage.googleapis.com/storage/v1.\n4. Seals a Golden IAM Checkpoint and Ed25519 DEFCON-1 forensic receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): All DEFCON-1 containment operations mutate IAM, firewall, and bucket ACL control-plane policies at $0.00/mo.`,
+          impactWarning: `HIGH-IMPACT CONTAINMENT: Locks down public unauthenticated Cloud Run endpoints, open 0.0.0.0/0 SSH/RDP firewall rules, and public GCS buckets across "${projectId}".`,
+        },
+        SEVER_IAM_ESCALATION_BINDING: {
+          title: `Sever High-Risk IAM Privilege Escalation Binding (${body.role || 'Admin Role'}) from "${body.member || socTarget}"?`,
+          resourceKind: 'Project IAM Policy Binding Surgery (cloudresourcemanager.googleapis.com/v1)',
+          targetName: `${body.member || socTarget} -> ${body.role || 'roles/owner'}`,
+          confirmLabel: `Remove "${body.role || 'Role'}" from "${body.member || socTarget}"`,
+          whatHappensNext: `1. Fetches current project IAM bindings via POST https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:getIamPolicy.\n2. Surgically removes principal "${body.member || socTarget}" from role "${body.role}" while keeping all other roles and principals intact.\n3. Commits the updated policy via :setIamPolicy and signs an Ed25519 receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Modifying project IAM bindings is a free control-plane operation.`,
+          impactWarning: `Principal "${body.member || socTarget}" will immediately lose permissions granted by "${body.role}" on project "${projectId}".`,
+        },
+        HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT: {
+          title: `Enforce Project-Wide IAM OS Login & Disable VM Serial Port Access on "${projectId}"?`,
+          resourceKind: 'Compute Engine Common Instance Metadata (compute.googleapis.com/v1)',
+          targetName: `projects/${projectId} (enable-oslogin=TRUE, serial-port-enable=FALSE)`,
+          confirmLabel: `Enforce OS Login & Disable Serial Port Project-Wide`,
+          whatHappensNext: `1. Reads existing project metadata via GET https://compute.googleapis.com/compute/v1/projects/${projectId}.\n2. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/setCommonInstanceMetadata with "enable-oslogin=TRUE" and "serial-port-enable=FALSE" while preserving all other metadata keys.\n3. Signs an Ed25519 CIS Benchmark compliance receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Enforcing IAM OS Login and disabling interactive serial console access is 100% free ($0.00/mo).`,
+          impactWarning: `All Compute Engine VMs in "${projectId}" will authenticate SSH sessions via Google Cloud IAM roles (roles/compute.osLogin) + 2FA instead of static SSH keys.`,
+        },
+        PURGE_PROJECT_WIDE_SSH_KEYS: {
+          title: `Purge Project-Wide Static SSH Keys from Compute Engine Metadata on "${projectId}"?`,
+          resourceKind: 'Compute Engine Metadata SSH Key Purge (compute.googleapis.com/v1)',
+          targetName: `projects/${projectId}/commonInstanceMetadata (ssh-keys / sshKeys)`,
+          confirmLabel: `Purge Static Project SSH Keys & Enforce OS Login`,
+          whatHappensNext: `1. Inspects commonInstanceMetadata on project "${projectId}" via compute.googleapis.com/v1.\n2. Strips legacy project-wide "ssh-keys", "sshKeys", and "block-project-ssh-keys=false" entries and sets "enable-oslogin=TRUE".\n3. Commits via setCommonInstanceMetadata and seals an Ed25519 receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Updating Compute Engine project metadata incurs $0.00/mo.`,
+          impactWarning: `Removes lateral-movement static SSH public keys shared across all VMs in "${projectId}".`,
+        },
+        LOCK_BIGQUERY_DATASET_PUBLIC_ACL: {
+          title: `Revoke Public Access (allUsers / allAuthenticatedUsers) on BigQuery Dataset "${body.datasetId || socTarget}"?`,
+          resourceKind: 'BigQuery Dataset Access Control List (bigquery.googleapis.com/bigquery/v2)',
+          targetName: `${projectId}:${body.datasetId || socTarget}`,
+          confirmLabel: `Lock BigQuery Dataset ACL ("${body.datasetId || socTarget}")`,
+          whatHappensNext: `1. Fetches dataset metadata via GET https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${body.datasetId || socTarget}.\n2. Filters out any access[] entries granting access to "allUsers" or "allAuthenticatedUsers".\n3. Calls PATCH https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${body.datasetId || socTarget} and signs an Ed25519 receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Hardening BigQuery dataset ACLs is free ($0.00/mo) and prevents unauthorized third parties from running queries against your tables.`,
+          impactWarning: `Dataset "${body.datasetId || socTarget}" will only be accessible to explicitly authorized IAM principals in "${projectId}".`,
+        },
+        ROTATE_SECRET_VERSION_NOW: {
+          title: `Cryptographically Rotate Secret Manager Secret "${body.secretId || socTarget}" Now?`,
+          resourceKind: 'Secret Manager Cryptographic Version Rotation (secretmanager.googleapis.com/v1)',
+          targetName: `projects/${projectId}/secrets/${body.secretId || socTarget}`,
+          confirmLabel: `Mint Fresh 256-Bit SecretVersion & Disable Old Versions`,
+          whatHappensNext: `1. Generates 256 bits of CSPRNG cryptographic entropy.\n2. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${body.secretId || socTarget}:addVersion to append a new ENABLED SecretVersion.\n3. Calls :disable on superseded older versions (so they stop billing and cannot be read) and seals an Ed25519 rotation receipt.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 WITHIN FREE TIER): Disabling old versions ensures only 1 active version remains billed (first 6 active secret versions per month across the project are $0.00/mo Always Free).`,
+          impactWarning: `Workloads referencing "${body.secretId || socTarget}@latest" will immediately receive the newly rotated secret version on their next read.`,
+        },
+        ROTATE_ALL_STALE_SECRETS: {
+          title: `Batch-Rotate All Stale / Unversioned Secrets Across Project "${projectId}"?`,
+          resourceKind: 'Secret Manager Fleet Cryptographic Rotation (secretmanager.googleapis.com/v1)',
+          targetName: `All Stale Secrets in ${projectId}`,
+          confirmLabel: `Rotate All Stale Secrets to Fresh Version`,
+          whatHappensNext: `1. Lists all secrets in project "${projectId}" via GET https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets.\n2. Appends a fresh 256-bit cryptographic SecretVersion (:addVersion) to every secret whose latest version is >90 days old or missing, and disables stale prior versions.\n3. Seals a fleet-wide Ed25519 rotation receipt.`,
+          costWarning: `ZERO NET VERSION CREEP: Prior versions are automatically disabled ($0.00/mo for disabled versions), keeping active version counts minimal.`,
+          impactWarning: `Rotates all stale secrets in "${projectId}" and disables their superseded versions.`,
+        },
+        ENFORCE_SUBNET_PRIVATE_GOOGLE_ACCESS: {
+          title: `Enable Private Google Access (PGA) on VPC Subnet "${body.subnetName || socTarget}" (${body.region || 'us-central1'})?`,
+          resourceKind: 'VPC Subnetwork Private Google Access (compute.googleapis.com/v1)',
+          targetName: `projects/${projectId}/regions/${body.region || 'us-central1'}/subnetworks/${body.subnetName || socTarget}`,
+          confirmLabel: `Enable Private Google Access ($0.00/mo)`,
+          whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/regions/${body.region || 'us-central1'}/subnetworks/${body.subnetName || socTarget}/setPrivateIpGoogleAccess with {"privateIpGoogleAccess": true}.\n2. Routes traffic from internal-only VMs/containers to *.googleapis.com over Google's internal Andromeda backbone without requiring public NAT IPs.\n3. Signs an Ed25519 receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Enabling Private Google Access on VPC subnets is 100% free ($0.00/mo) and avoids Cloud NAT gateway hourly/per-GB processing fees for Google API traffic.`,
+          impactWarning: `Workloads in subnet "${body.subnetName || socTarget}" (${body.region || 'us-central1'}) can now reach Google Cloud APIs privately without external IPv4 addresses.`,
+        },
+        ENFORCE_ALL_SUBNETS_PGA: {
+          title: `Enforce Private Google Access (PGA) Across ALL VPC Subnets in "${projectId}"?`,
+          resourceKind: 'Fleet-Wide VPC Subnetwork PGA Hardening (compute.googleapis.com/v1)',
+          targetName: `All VPC Subnetworks in ${projectId}`,
+          confirmLabel: `Enable PGA on All Non-Compliant Subnets ($0.00/mo)`,
+          whatHappensNext: `1. Queries GET https://compute.googleapis.com/compute/v1/projects/${projectId}/aggregated/subnetworks across all regions.\n2. Calls POST .../subnetworks/<name>/setPrivateIpGoogleAccess with {"privateIpGoogleAccess": true} on every subnet where privateIpGoogleAccess is false.\n3. Seals a fleet-wide Ed25519 network perimeter receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Private Google Access is completely free across all regions and VPC subnets ($0.00/mo).`,
+          impactWarning: `Enables Private Google Access across 100% of VPC subnets in project "${projectId}" with zero downtime.`,
+        },
+        ENABLE_CLOUD_DNS_DNSSEC: {
+          title: `Enable Cryptographic DNSSEC Signing on Cloud DNS Zone "${body.zoneName || socTarget}"?`,
+          resourceKind: 'Cloud DNS Managed Zone DNSSEC (dns.googleapis.com/dns/v1)',
+          targetName: `projects/${projectId}/managedZones/${body.zoneName || socTarget}`,
+          confirmLabel: `Enable DNSSEC Signing on "${body.zoneName || socTarget}"`,
+          whatHappensNext: `1. Calls PATCH https://dns.googleapis.com/dns/v1/projects/${projectId}/managedZones/${body.zoneName || socTarget} with dnssecConfig.state="on".\n2. Google Cloud DNS automatically provisions KSK and ZSK cryptographic signing keys and signs zone RRsets with RRSIG records.\n3. Signs an Ed25519 DNS integrity receipt.`,
+          costWarning: `ZERO EXTRA CHARGE FOR DNSSEC ($0.00): Enabling DNSSEC on an existing Cloud DNS Managed Zone incurs $0.00 in additional charges.`,
+          impactWarning: `Cryptographically signs DNS responses for zone "${body.zoneName || socTarget}" to prevent DNS spoofing and cache poisoning.`,
+        },
+        PROVISION_HARDENED_DNS_ZONE: {
+          title: `Provision DNSSEC-Hardened Cloud DNS Zone "${body.zoneName || 'cloudpulse-soc-zone'}"?`,
+          resourceKind: 'Cloud DNS Managed Zone with DNSSEC (dns.googleapis.com/dns/v1)',
+          targetName: `${body.zoneName || 'cloudpulse-soc-zone'} (${body.dnsName || `${projectId}.internal.`})`,
+          confirmLabel: `Create DNSSEC-Hardened Cloud DNS Zone`,
+          whatHappensNext: `1. Enables dns.googleapis.com on project "${projectId}" if not yet active.\n2. Calls POST https://dns.googleapis.com/dns/v1/projects/${projectId}/managedZones to create zone "${body.zoneName || 'cloudpulse-soc-zone'}" (${body.dnsName || `${projectId}.internal.`}) with dnssecConfig.state="on".\n3. Seals an Ed25519 receipt.`,
+          costWarning: `CLOUD DNS PRICING NOTICE: Google Cloud DNS bills $0.20 per managed zone per month (prorated hourly at ~$0.00027/hr) plus $0.40 per million DNS queries.`,
+          impactWarning: `Creates a live DNSSEC-signed Cloud DNS Managed Zone in project "${projectId}".`,
+        },
+        PROVISION_SOC_KMS_KEYRING: {
+          title: `Provision Cloud KMS KeyRing & 90-Day Auto-Rotating CMEK Key in "${projectId}"?`,
+          resourceKind: 'Cloud KMS KeyRing + Symmetric CryptoKey (cloudkms.googleapis.com/v1)',
+          targetName: `projects/${projectId}/locations/global/keyRings/cloudpulse-soc-keyring/cryptoKeys/soc-cmek-primary-key`,
+          confirmLabel: `Provision KMS KeyRing & 90-Day Auto-Rotating Key`,
+          whatHappensNext: `1. Enables cloudkms.googleapis.com on project "${projectId}" if not yet active.\n2. Creates KeyRing "cloudpulse-soc-keyring" in location "global" via POST https://cloudkms.googleapis.com/v1/projects/${projectId}/locations/global/keyRings.\n3. Creates symmetric ENCRYPT_DECRYPT CryptoKey "soc-cmek-primary-key" configured with a 90-day automatic rotation schedule (rotationPeriod="7776000s").`,
+          costWarning: `CLOUD KMS PRICING NOTICE: KeyRings are free ($0.00). Each active software symmetric CryptoKey version costs $0.06/month ($0.00 within the Cloud Billing Free Trial credit envelope) plus $0.03 per 10,000 cryptographic operations.`,
+          impactWarning: `Creates a permanent Cloud KMS KeyRing and 90-day auto-rotating CMEK key in project "${projectId}". (Note: KMS KeyRings cannot be deleted once created, though individual key versions can be disabled/destroyed.)`,
+        },
+        DISABLE_UNUSED_GCP_API: {
+          title: `Disable Attack-Surface Google Cloud API "${body.serviceName || socTarget}" on "${projectId}"?`,
+          resourceKind: 'Service Usage API Surface Reduction (serviceusage.googleapis.com/v1)',
+          targetName: `projects/${projectId}/services/${body.serviceName || socTarget}`,
+          confirmLabel: `Disable API "${body.serviceName || socTarget}"`,
+          whatHappensNext: `1. Calls POST https://serviceusage.googleapis.com/v1/projects/${projectId}/services/${body.serviceName || socTarget}:disable with disableDependentServices=false.\n2. Deactivates the unused API endpoint on project "${projectId}" so compromised credentials cannot abuse it.\n3. Records an Ed25519 attack-surface reduction receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Disabling unused APIs is free and prevents accidental resource provisioning on that API.`,
+          impactWarning: `Blocks calls to "${body.serviceName || socTarget}" in project "${projectId}". You can re-enable it anytime with 1 click.`,
+        },
+        HARDEN_BINARY_AUTH_POLICY: {
+          title: `Enforce Binary Authorization Container Attestation Policy on "${projectId}"?`,
+          resourceKind: 'Binary Authorization Policy (binaryauthorization.googleapis.com/v1)',
+          targetName: `projects/${projectId}/policy (${body.evaluationMode || 'REQUIRE_ATTESTATION'})`,
+          confirmLabel: `Enforce Binary Authorization Policy ($0.00)`,
+          whatHappensNext: `1. Enables binaryauthorization.googleapis.com on project "${projectId}" if not yet active.\n2. Calls PUT https://binaryauthorization.googleapis.com/v1/projects/${projectId}/policy with globalPolicyEvaluationMode="ENABLE", evaluationMode="${body.evaluationMode || 'REQUIRE_ATTESTATION'}", and dryRun=${body.dryRun !== false} (audit enforcement).\n3. Signs an Ed25519 container supply-chain receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Configuring Binary Authorization policy evaluation in audit/dry-run mode incurs $0.00/mo.`,
+          impactWarning: `Updates the project-wide Binary Authorization container admission policy on "${projectId}".`,
+        },
+        PROVISION_IMMUTABLE_ARTIFACT_REPO: {
+          title: `Provision Immutable-Tag Docker Artifact Registry "${body.repoName || 'cloudpulse-immutable-containers'}"?`,
+          resourceKind: 'Artifact Registry Docker Repository (artifactregistry.googleapis.com/v1)',
+          targetName: `projects/${projectId}/locations/${body.region || 'us-central1'}/repositories/${body.repoName || 'cloudpulse-immutable-containers'}`,
+          confirmLabel: `Create Immutable Docker Repository ($0.00 Empty)`,
+          whatHappensNext: `1. Enables artifactregistry.googleapis.com on project "${projectId}" if not yet active.\n2. Calls POST https://artifactregistry.googleapis.com/v1/projects/${projectId}/locations/${body.region || 'us-central1'}/repositories?repositoryId=${body.repoName || 'cloudpulse-immutable-containers'} with format="DOCKER" and dockerConfig.immutableTags=true.\n3. Seals an Ed25519 supply-chain receipt.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 UP TO 0.5 GB): Empty Artifact Registry repositories cost $0.00/mo, and Google Cloud includes 0.5 GB of free Artifact Registry storage per month ($0.10/GB-mo beyond 0.5 GB).`,
+          impactWarning: `Creates a live Docker repository in "${body.region || 'us-central1'}" where image tags cannot be overwritten or mutated once pushed.`,
+        },
+        ENFORCE_ARTIFACT_REPO_IMMUTABLE_TAGS: {
+          title: `Lock Container Image Tags (immutableTags=true) on Repository "${body.repoName || socTarget}"?`,
+          resourceKind: 'Artifact Registry Tag Immutability (artifactregistry.googleapis.com/v1)',
+          targetName: `projects/${projectId}/locations/${body.location || 'us-central1'}/repositories/${body.repoName || socTarget}`,
+          confirmLabel: `Enforce Immutable Image Tags ($0.00)`,
+          whatHappensNext: `1. Calls PATCH https://artifactregistry.googleapis.com/v1/projects/${projectId}/locations/${body.location || 'us-central1'}/repositories/${body.repoName || socTarget}?updateMask=dockerConfig.immutableTags with dockerConfig.immutableTags=true.\n2. Prevents attackers or compromised CI pipelines from overwriting existing tags (like :latest or :prod) with trojanized images.\n3. Signs an Ed25519 supply-chain receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Enforcing immutable Docker tags on Artifact Registry incurs $0.00/mo.`,
+          impactWarning: `Existing container tags inside "${body.repoName || socTarget}" can no longer be overwritten; each push must use a unique version tag.`,
+        },
+        DELETE_SUSPICIOUS_VPC_ROUTE: {
+          gateType: 'DELETE',
+          title: `Delete Suspicious VPC Network Route "${body.routeName || socTarget}"?`,
+          resourceKind: 'VPC Network Route (compute.googleapis.com/v1)',
+          targetName: `projects/${projectId}/global/routes/${body.routeName || socTarget}`,
+          confirmLabel: `Delete Suspicious VPC Route "${body.routeName || socTarget}"`,
+          whatHappensNext: `1. Calls DELETE https://compute.googleapis.com/compute/v1/projects/${projectId}/global/routes/${body.routeName || socTarget}.\n2. Removes the custom next-hop route from the VPC routing table.\n3. Seals an Ed25519 network containment receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Deleting a custom VPC route is a free control-plane operation.`,
+          impactWarning: `Permanently removes custom route "${body.routeName || socTarget}" from project "${projectId}".`,
+        },
+      };
+
+      const matchedSoc = socSpecs[socAct];
+      if (matchedSoc) {
+        return {
+          gateType: matchedSoc.gateType || 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: matchedSoc.title,
+          headerBadge: 'Wave 16 Autonomous Cloud SOC & SOAR Gatekeeper',
+          targetLabel: 'Target Security Perimeter / Identity / Resource',
+          resourceKind: matchedSoc.resourceKind,
+          targetName: matchedSoc.targetName,
+          location: body.region || body.location || 'Global / Project-Wide',
+          projectId,
+          method: `SOC · ${socAct.slice(0, 22)}`,
+          endpoint: rawUrl,
+          confirmLabel: matchedSoc.confirmLabel,
+          cancelToast: `SOC action (${socAct}) cancelled — no changes made.`,
+          whatHappensNext: matchedSoc.whatHappensNext,
+          costWarning: matchedSoc.costWarning,
+          impactWarning: matchedSoc.impactWarning,
+        };
+      }
+    }
+
+    // 3G-6. Wave 8 Principal SRE War-Room Live Remediation & Observability Actions (/wave8/war-room/sre-action)
+    if (rawUrl.includes('/wave8/war-room/sre-action')) {
+      const sreAct = String(body.action || 'SRE_WAR_ROOM_ACTION').toUpperCase();
+      const sreSpecs = {
+        CREATE_CLOUD_MONITORING_UPTIME_CHECK: {
+          title: `Provision Global Cloud Monitoring HTTPS Uptime Check "${body.displayName || 'CloudPulse Production HTTPS Probe'}"?`,
+          resourceKind: 'Cloud Monitoring Uptime Check Config (monitoring.googleapis.com/v3)',
+          targetName: `https://${body.host || `${projectId}.appspot.com`}${body.path || '/'} (60s Period)`,
+          confirmLabel: `Create Global HTTPS Uptime Check ($0.00/mo)`,
+          whatHappensNext: `1. Calls POST https://monitoring.googleapis.com/v3/projects/${projectId}/uptimeCheckConfigs.\n2. Configures Google Cloud Monitoring edge probers across US, Europe, and Asia-Pacific to execute an HTTPS GET request against "https://${body.host || `${projectId}.appspot.com`}${body.path || '/'}" every 60 seconds with a 10s timeout and SSL certificate validation.\n3. Signs an Ed25519 SRE runbook receipt in the War-Room Flight Recorder.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00/MO): Google Cloud Monitoring includes 1 million Uptime Check executions per billing account per month for $0.00/mo Always Free (a 60s probe across 3 regions uses ~129,600 checks/mo = $0.00/mo).`,
+          impactWarning: `Provisions a live global HTTPS Uptime Check in Cloud Monitoring for project "${projectId}". You can delete it anytime with 1 click.`,
+        },
+        DELETE_CLOUD_MONITORING_UPTIME_CHECK: {
+          gateType: 'DELETE',
+          title: `Delete Cloud Monitoring Uptime Check "${String(body.checkName || '').split('/').pop() || 'Uptime Check'}"?`,
+          resourceKind: 'Cloud Monitoring Uptime Check Config (monitoring.googleapis.com/v3)',
+          targetName: String(body.checkName || 'projects/uptimeCheckConfigs'),
+          confirmLabel: `Delete Uptime Check Config`,
+          whatHappensNext: `1. Calls DELETE https://monitoring.googleapis.com/v3/${String(body.checkName || '').replace(/^\/+/, '')}.\n2. Immediately stops global prober execution for this Uptime Check configuration.\n3. Records an Ed25519 teardown receipt in the SRE War-Room ledger.`,
+          costWarning: `ZERO COST ($0.00/MO): Deleting an Uptime Check configuration is a free control-plane operation.`,
+          impactWarning: `Permanently removes Uptime Check "${String(body.checkName || '').split('/').pop()}" from Cloud Monitoring in project "${projectId}".`,
+        },
+        CREATE_SLO_ALERT_POLICY: {
+          title: `Provision Cloud Monitoring SLO Burn-Rate Alert Policy "${body.displayName || 'CloudPulse 2026 — Golden Signal SLO Fast-Burn Alert'}"?`,
+          resourceKind: 'Cloud Monitoring AlertPolicy (monitoring.googleapis.com/v3)',
+          targetName: `projects/${projectId}/alertPolicies (${body.displayName || 'Golden Signal SLO Fast-Burn Alert'})`,
+          confirmLabel: `Create SLO Burn-Rate Alert Policy ($0.00/mo)`,
+          whatHappensNext: `1. Calls POST https://monitoring.googleapis.com/v3/projects/${projectId}/alertPolicies.\n2. Creates an active MQL/MetricThreshold AlertPolicy watching Cloud Run HTTP 5xx error rates (run.googleapis.com/request_count with response_code_class="5xx") over a 300-second rolling window with 30-minute auto-close.\n3. Attaches SRE runbook documentation and signs an Ed25519 receipt.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00/MO): Cloud Monitoring AlertPolicies watching built-in Google Cloud metrics (run.googleapis.com/*) are 100% free ($0.00/mo).`,
+          impactWarning: `Creates a live AlertPolicy in Google Cloud Monitoring for project "${projectId}".`,
+        },
+        TOGGLE_ALERT_POLICY: {
+          title: `${body.enabled ? 'Enable' : 'Mute / Disable'} Cloud Monitoring Alert Policy "${String(body.policyName || '').split('/').pop()}"?`,
+          resourceKind: 'Cloud Monitoring AlertPolicy State (monitoring.googleapis.com/v3)',
+          targetName: `${String(body.policyName || '').split('/').pop()} -> enabled=${Boolean(body.enabled)}`,
+          confirmLabel: `${body.enabled ? 'Enable Alert Policy' : 'Disable Alert Policy'}`,
+          whatHappensNext: `1. Calls PATCH https://monitoring.googleapis.com/v3/${String(body.policyName || '').replace(/^\/+/, '')}?updateMask=enabled with {"enabled": ${Boolean(body.enabled)}}.\n2. Immediately ${body.enabled ? 'activates threshold evaluation and incident firing' : 'mutes incident firing without deleting the policy definition'}.\n3. Signs an Ed25519 SRE receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Toggling AlertPolicy state is a free control-plane update.`,
+          impactWarning: `Updates live evaluation state of AlertPolicy "${String(body.policyName || '').split('/').pop()}" in project "${projectId}".`,
+        },
+        DELETE_ALERT_POLICY: {
+          gateType: 'DELETE',
+          title: `Delete Cloud Monitoring Alert Policy "${String(body.policyName || '').split('/').pop()}"?`,
+          resourceKind: 'Cloud Monitoring AlertPolicy (monitoring.googleapis.com/v3)',
+          targetName: String(body.policyName || 'AlertPolicy'),
+          confirmLabel: `Delete Alert Policy`,
+          whatHappensNext: `1. Calls DELETE https://monitoring.googleapis.com/v3/${String(body.policyName || '').replace(/^\/+/, '')}.\n2. Permanently removes the AlertPolicy definition from Cloud Monitoring.\n3. Records an Ed25519 teardown receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Deleting an AlertPolicy incurs $0.00.`,
+          impactWarning: `Permanently removes AlertPolicy "${String(body.policyName || '').split('/').pop()}" from project "${projectId}".`,
+        },
+        CREATE_LOG_BASED_SLI_METRIC: {
+          title: `Provision Cloud Logging SLI Counter Metric "${body.metricName || 'cloudpulse_sre_error_burst_sli'}"?`,
+          resourceKind: 'Cloud Logging Log-Based Metric (logging.googleapis.com/v2)',
+          targetName: `projects/${projectId}/metrics/${body.metricName || 'cloudpulse_sre_error_burst_sli'}`,
+          confirmLabel: `Provision Log-Based SLI Metric ($0.00/mo)`,
+          whatHappensNext: `1. Calls POST/PUT https://logging.googleapis.com/v2/projects/${projectId}/metrics/${body.metricName || 'cloudpulse_sre_error_burst_sli'}.\n2. Registers an INT64 DELTA counter metric in logging.googleapis.com/user/${body.metricName || 'cloudpulse_sre_error_burst_sli'} matching filter: \`${body.filter || 'severity>=ERROR'}\`.\n3. Signs an Ed25519 SRE observability receipt.`,
+          costWarning: `100% FREE ($0.00/MO): Google Cloud charges $0.00/mo for user-defined Cloud Logging log-based metrics.`,
+          impactWarning: `Creates/updates live log-based metric "${body.metricName || 'cloudpulse_sre_error_burst_sli'}" in project "${projectId}".`,
+        },
+        CREATE_LOG_SLI_5XX: {
+          title: `Provision Golden SLI Log Metric "cloudpulse_sre_http_5xx_sli" (HTTP 5xx Fault Counter)?`,
+          resourceKind: 'Cloud Logging Log-Based SLI Metric (logging.googleapis.com/v2)',
+          targetName: `projects/${projectId}/metrics/cloudpulse_sre_http_5xx_sli`,
+          confirmLabel: `Create HTTP 5xx Golden SLI Metric ($0.00/mo)`,
+          whatHappensNext: `1. Calls POST https://logging.googleapis.com/v2/projects/${projectId}/metrics.\n2. Creates INT64 DELTA log-based counter metric "cloudpulse_sre_http_5xx_sli" matching filter \`httpRequest.status>=500 OR severity>=ERROR\` across Cloud Run, GKE, and Load Balancers.\n3. Exposes metric \`logging.googleapis.com/user/cloudpulse_sre_http_5xx_sli\` to Cloud Monitoring SLOs and signs an Ed25519 receipt.`,
+          costWarning: `100% FREE ($0.00/MO): User-defined log-based metrics in Cloud Logging incur $0.00/mo.`,
+          impactWarning: `Provisions live Golden SLI metric "cloudpulse_sre_http_5xx_sli" in project "${projectId}".`,
+        },
+        CREATE_LOG_SLI_IAM_403: {
+          title: `Provision Golden SLI Log Metric "cloudpulse_sre_iam_403_deny_sli" (IAM Permission Denied Counter)?`,
+          resourceKind: 'Cloud Logging Log-Based SLI Metric (logging.googleapis.com/v2)',
+          targetName: `projects/${projectId}/metrics/cloudpulse_sre_iam_403_deny_sli`,
+          confirmLabel: `Create IAM 403 Deny SLI Metric ($0.00/mo)`,
+          whatHappensNext: `1. Calls POST https://logging.googleapis.com/v2/projects/${projectId}/metrics.\n2. Creates INT64 DELTA log-based counter metric "cloudpulse_sre_iam_403_deny_sli" matching Cloud Audit Logs filter \`protoPayload.status.code=7 OR protoPayload.status.message:"PERMISSION_DENIED"\`.\n3. Exposes metric \`logging.googleapis.com/user/cloudpulse_sre_iam_403_deny_sli\` for zero-trust anomaly alerting and signs an Ed25519 receipt.`,
+          costWarning: `100% FREE ($0.00/MO): User-defined log-based metrics in Cloud Logging incur $0.00/mo.`,
+          impactWarning: `Provisions live Golden SLI metric "cloudpulse_sre_iam_403_deny_sli" in project "${projectId}".`,
+        },
+        BOOTSTRAP_ALL_GOLDEN_SLI_METRICS: {
+          title: `Bootstrap All 3 Golden SLI Log-Based Metrics (HTTP 5xx, IAM 403, Chaos Drill) on "${projectId}"?`,
+          resourceKind: '3 Cloud Logging Golden SLI Counter Metrics (logging.googleapis.com/v2)',
+          targetName: `cloudpulse_sre_http_5xx_sli + cloudpulse_sre_iam_403_deny_sli + cloudpulse_sre_chaos_drill_sli`,
+          confirmLabel: `Bootstrap All 3 Golden SLI Metrics ($0.00/mo)`,
+          whatHappensNext: `1. Calls POST/PUT https://logging.googleapis.com/v2/projects/${projectId}/metrics to upsert "cloudpulse_sre_http_5xx_sli" (HTTP 5xx / ERROR rate).\n2. Upserts "cloudpulse_sre_iam_403_deny_sli" (Cloud Audit PERMISSION_DENIED spikes).\n3. Upserts "cloudpulse_sre_chaos_drill_sli" (War-Room Chaos Game-Day synthetic fault markers) and signs an Ed25519 receipt.`,
+          costWarning: `100% FREE ($0.00/MO): All 3 Cloud Logging log-based counter metrics are completely free ($0.00/mo) in Google Cloud.`,
+          impactWarning: `Provisions all 3 Golden SLI log-based metrics in project "${projectId}" for real-time SLO burn-rate tracking.`,
+        },
+        DELETE_LOG_BASED_SLI_METRIC: {
+          gateType: 'DELETE',
+          title: `Delete Cloud Logging SLI Metric "${body.metricName || 'Log Metric'}"?`,
+          resourceKind: 'Cloud Logging Log-Based Metric (logging.googleapis.com/v2)',
+          targetName: `projects/${projectId}/metrics/${body.metricName}`,
+          confirmLabel: `Delete Log Metric "${body.metricName}"`,
+          whatHappensNext: `1. Calls DELETE https://logging.googleapis.com/v2/projects/${projectId}/metrics/${encodeURIComponent(body.metricName || '')}.\n2. Removes the custom log-based counter metric definition (underlying log entries in _Default remain untouched).\n3. Signs an Ed25519 teardown receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Deleting a log-based metric definition is free.`,
+          impactWarning: `Permanently deletes log-based metric "${body.metricName}" from project "${projectId}".`,
+        },
+        START_OR_RESET_GCE_VM: {
+          title: `${String(body.powerOp || 'START').toUpperCase()} Compute Engine VM "${body.vmName}" in Zone "${body.zone}"?`,
+          resourceKind: 'Compute Engine VM Instance Power Control (compute.googleapis.com/v1)',
+          targetName: `projects/${projectId}/zones/${body.zone}/instances/${body.vmName}`,
+          confirmLabel: `${String(body.powerOp || 'START').toUpperCase()} VM "${body.vmName}"`,
+          whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${body.zone}/instances/${body.vmName}/${String(body.powerOp || 'start').toLowerCase()}.\n2. Enqueues a live Compute Engine Zone Operation to ${String(body.powerOp || 'start').toLowerCase()} VM "${body.vmName}".\n3. Signs an Ed25519 compute recovery receipt in the SRE War-Room ledger.`,
+          costWarning:
+            String(body.powerOp || 'start').toLowerCase() === 'stop'
+              ? `COMPUTE HALTED ($0.00/HR CPU/RAM): Stopping "${body.vmName}" halts hourly vCPU/RAM charges, though attached Persistent Disks ($0.04–$0.17/GB-mo) continue billing.`
+              : `ACTIVE VM BILLING NOTICE: Starting or resetting "${body.vmName}" runs active vCPU and RAM in zone "${body.zone}" at standard Compute Engine hourly rates.`,
+          impactWarning: `Changes live power state (${String(body.powerOp || 'START').toUpperCase()}) of Compute Engine VM "${body.vmName}" in "${body.zone}".`,
+        },
+        ENFORCE_ALL_SUBNETS_PGA: {
+          title: `Enforce Private Google Access (PGA) Across All Non-Compliant VPC Subnets in "${projectId}"?`,
+          resourceKind: 'VPC Subnetwork Private Google Access (compute.googleapis.com/v1)',
+          targetName: `All Non-PGA VPC Subnets in ${projectId}`,
+          confirmLabel: `Enable PGA Across All Subnets ($0.00/mo)`,
+          whatHappensNext: `1. Lists all regional subnetworks via GET https://compute.googleapis.com/compute/v1/projects/${projectId}/aggregated/subnetworks.\n2. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/regions/<region>/subnetworks/<subnet>/setPrivateIpGoogleAccess with {"privateIpGoogleAccess": true} on every subnet missing PGA.\n3. Seals an Ed25519 perimeter remediation receipt.`,
+          costWarning: `ZERO COST ($0.00/MO): Enabling Private Google Access across all VPC subnets is 100% free ($0.00/mo).`,
+          impactWarning: `Enables Private Google Access on all VPC subnetworks in "${projectId}" with zero network interruption.`,
+        },
+        PUBLISH_TEST_PUBSUB_EVENT: {
+          title: `Publish Live Diagnostic Event to Pub/Sub Topic "${body.topicName}"?`,
+          resourceKind: 'Cloud Pub/Sub Message Publish (pubsub.googleapis.com/v1)',
+          targetName: `projects/${projectId}/topics/${body.topicName}`,
+          confirmLabel: `Publish Live Diagnostic Message ($0.00)`,
+          whatHappensNext: `1. Base64-encodes the JSON diagnostic payload and attaches SRE trace attributes (source="cloudpulse-sre-war-room", projectId="${projectId}").\n2. Calls POST https://pubsub.googleapis.com/v1/projects/${projectId}/topics/${body.topicName}:publish.\n3. Returns the official Google Cloud Pub/Sub messageId and signs an Ed25519 receipt.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00): Cloud Pub/Sub includes 10 GiB of message throughput per month for $0.00/mo Always Free.`,
+          impactWarning: `Publishes 1 live message to Pub/Sub topic "${body.topicName}" in project "${projectId}", which will be delivered to any attached subscribers.`,
+        },
+        ATTACH_DLQ_TO_SUBSCRIPTION: {
+          title: `Wire Dead-Letter Queue (DLQ) Topic "${body.dlqTopicName || `${body.subscriptionName}-dlq`}" to Subscription "${body.subscriptionName}"?`,
+          resourceKind: 'Cloud Pub/Sub DeadLetterPolicy (pubsub.googleapis.com/v1)',
+          targetName: `projects/${projectId}/subscriptions/${body.subscriptionName} -> DLQ ${body.dlqTopicName || `${body.subscriptionName}-dlq`}`,
+          confirmLabel: `Provision & Attach Dead-Letter Queue ($0.00/mo)`,
+          whatHappensNext: `1. Ensures Dead-Letter Topic "projects/${projectId}/topics/${body.dlqTopicName || `${body.subscriptionName}-dlq`}" exists via PUT https://pubsub.googleapis.com/v1/projects/${projectId}/topics/${body.dlqTopicName || `${body.subscriptionName}-dlq`}.\n2. Calls PATCH https://pubsub.googleapis.com/v1/projects/${projectId}/subscriptions/${body.subscriptionName}?updateMask=deadLetterPolicy with maxDeliveryAttempts=${body.maxDeliveryAttempts || 5}.\n3. Signs an Ed25519 poison-pill resilience receipt.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00/MO): Pub/Sub topics and subscriptions have $0.00/mo fixed hourly cost (first 10 GiB/mo message volume is Always Free).`,
+          impactWarning: `Messages on subscription "${body.subscriptionName}" that fail delivery ${body.maxDeliveryAttempts || 5} times will automatically route to "${body.dlqTopicName || `${body.subscriptionName}-dlq`}" instead of blocking the queue.`,
+        },
+        CAPTURE_SRE_MERKLE_SNAPSHOT: {
+          title: `Capture Cryptographic SHA-256 SRE Infrastructure Merkle Snapshot on "${projectId}"?`,
+          resourceKind: 'SRE Golden Baseline Merkle Tree (Read-Only Snapshot)',
+          targetName: `${projectId} (Cloud Run + VMs + VPC PGA + Uptime + Alerts + Pub/Sub)`,
+          confirmLabel: `Capture Golden SRE Merkle Snapshot ($0.00)`,
+          whatHappensNext: `1. Reads live state across Cloud Run services, Compute VMs, VPC Subnets, Uptime Checks, Alert Policies, and Pub/Sub Subscriptions in "${projectId}".\n2. Computes a deterministic SHA-256 Merkle root hash across all 6 infrastructure vectors.\n3. Saves the baseline in the SRE War-Room Drift Detector and signs an Ed25519 receipt.`,
+          costWarning: `100% READ-ONLY SNAPSHOT ($0.00): Capturing a cryptographic state baseline modifies zero resources and costs $0.00.`,
+          impactWarning: `Saves a new Golden SRE Merkle Baseline for project "${projectId}" to detect future configuration drift.`,
+        },
+      };
+
+      const matchedSre = sreSpecs[sreAct];
+      if (matchedSre) {
+        return {
+          gateType: matchedSre.gateType || 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: matchedSre.title,
+          headerBadge: 'Wave 8 Principal SRE War-Room & Observability Gatekeeper',
+          targetLabel: 'Target SRE Observability / Reliability Resource',
+          resourceKind: matchedSre.resourceKind,
+          targetName: matchedSre.targetName,
+          location: body.zone || body.region || 'Global / Multi-Region',
+          projectId,
+          method: `SRE · ${sreAct.slice(0, 22)}`,
+          endpoint: rawUrl,
+          confirmLabel: matchedSre.confirmLabel,
+          cancelToast: `SRE War-Room action (${sreAct}) cancelled.`,
+          whatHappensNext: matchedSre.whatHappensNext,
+          costWarning: matchedSre.costWarning,
+          impactWarning: matchedSre.impactWarning,
+        };
+      }
+    }
+
+    // 3G-7. Wave 8 Principal SRE War-Room Chaos Game-Day Incident Drill (/wave8/war-room/incident-drill)
+    if (rawUrl.includes('/wave8/war-room/incident-drill')) {
+      const scenario = String(body.scenario || 'CLOUD_RUN_COLD_START_SPIKE').toUpperCase();
+      const isResolve = scenario === 'RESOLVE_INCIDENT';
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm Autonomous Cloud SOC Action (${socAct})?`,
-        headerBadge: 'Wave 16 Autonomous Cloud SOC & SOAR Gatekeeper',
-        targetLabel: 'Target Security Perimeter / Identity / Canary Resource',
-        resourceKind: `Autonomous Cloud SOC · ${socAct}`,
-        targetName: String(socTarget),
-        location: body.region || 'Global / Project-Wide',
+        title: isResolve
+          ? `Emit Live All-Clear Incident Resolution Marker to Cloud Logging ("${projectId}")?`
+          : `Execute Live SRE Chaos Game-Day Telemetry Drill (${scenario})?`,
+        headerBadge: 'Wave 8 SRE Chaos Game-Day & Incident Telemetry Gatekeeper',
+        targetLabel: 'Target Cloud Logging Stream & SLI Pipeline',
+        resourceKind: 'Cloud Logging Structured Event (logging.googleapis.com/v2/entries:write)',
+        targetName: `projects/${projectId}/logs/cloudpulse-sre-war-room (${scenario})`,
+        location: 'Global Cloud Logging',
         projectId,
-        method: `SOC ${socAct.slice(0, 18)}`,
+        method: isResolve ? 'RESOLVE INCIDENT' : `CHAOS DRILL · ${scenario.slice(0, 16)}`,
         endpoint: rawUrl,
-        confirmLabel: `Confirm & Execute ${socAct}`,
-        cancelToast: `SOC action (${socAct}) cancelled.`,
-        whatHappensNext: `1. Executes real Google Cloud REST API mutation (${socAct}) on "${socTarget}" in project "${projectId}".\n2. Signs the mutation receipt with Ed25519 (RFC 8032) and appends it to the hash-chained SOC Forensic Ledger.`,
-        costWarning: `ZERO-COST ($0.00/MO) SECURITY OPERATION: VPC Firewall rules, Cloud Run IAM bindings, Service Account key disables, and $0.00/mo SOC Canary Tripwires incur $0.00/mo in Google Cloud license or compute charges.`,
-        impactWarning: `Please verify the target ("${socTarget}") before executing this live security operation.`,
+        confirmLabel: isResolve
+          ? `Write All-Clear Resolution Entry ($0.00)`
+          : `Inject Live "${scenario}" Telemetry Entry ($0.00)`,
+        cancelToast: `SRE Incident Drill (${scenario}) cancelled.`,
+        whatHappensNext: isResolve
+          ? `1. Calls POST https://logging.googleapis.com/v2/entries:write on logName "projects/${projectId}/logs/cloudpulse-sre-war-room".\n2. Writes a structured severity="NOTICE" INCIDENT_RESOLVED event closing out the active Game-Day drill.\n3. Signs an Ed25519 resolution receipt in the War-Room Flight Recorder.`
+          : `1. Calls POST https://logging.googleapis.com/v2/entries:write on logName "projects/${projectId}/logs/cloudpulse-sre-war-room".\n2. Injects a real severity="ERROR" structured JSON payload for scenario "${scenario}" with labels {sre_war_room_drill: "true", scenario: "${scenario}"} so your Cloud Logging SLI metrics and Cloud Monitoring AlertPolicies can be verified end-to-end without taking down production workloads.\n3. Signs an Ed25519 Game-Day drill receipt.`,
+        costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00): Writing 1 structured JSON log entry (~1 KB) into Cloud Logging falls within the 50 GiB/month Always-Free Cloud Logging ingestion allowance ($0.00).`,
+        impactWarning: isResolve
+          ? `Appends a structured NOTICE resolution marker into Cloud Logging for project "${projectId}".`
+          : `Writes 1 real ERROR log entry into "projects/${projectId}/logs/cloudpulse-sre-war-room" to test your log-based SLI counters and alert policies safely.`,
       };
     }
 
-    // 3H. Universal Catch-All for All Remaining 1-Tap Cloud Mutations (Provision, Patch, Seal Secrets, Firewall Edit, Quantum Nexus, Wave 10, Data Engineer, Multi-Cloud Parity, API Enable, etc.)
-    const actName =
+    // 3G-8. Wave 8 VPC Subnet Private Google Access Enforcer (/wave8/vpc-sc-perimeter/enable-pga)
+    if (rawUrl.includes('/wave8/vpc-sc-perimeter/enable-pga')) {
+      const subName = body.subnetName || 'default';
+      const reg = body.region || 'us-central1';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Enable Private Google Access (PGA) on VPC Subnet "${subName}" (${reg})?`,
+        headerBadge: 'Wave 8 Zero-Trust VPC Perimeter Gatekeeper',
+        targetLabel: 'Target Regional VPC Subnetwork',
+        resourceKind: 'VPC Subnetwork Private Google Access (compute.googleapis.com/v1)',
+        targetName: `projects/${projectId}/regions/${reg}/subnetworks/${subName}`,
+        location: reg,
+        projectId,
+        method: 'ENABLE SUBNET PGA',
+        endpoint: rawUrl,
+        confirmLabel: `Enable Private Google Access on "${subName}" ($0.00/mo)`,
+        cancelToast: `Private Google Access change on "${subName}" cancelled.`,
+        whatHappensNext: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/regions/${reg}/subnetworks/${subName}/setPrivateIpGoogleAccess with {"privateIpGoogleAccess": true}.\n2. Enables internal-only VMs and GKE nodes in "${subName}" (${reg}) to reach *.googleapis.com over Google's private Andromeda network without public IPv4 addresses.\n3. Records the remediation in the SRE War-Room Flight Recorder.`,
+        costWarning: `ZERO COST ($0.00/MO): Google Cloud charges $0.00/mo for enabling Private Google Access on VPC subnets.`,
+        impactWarning: `Enables Private Google Access on subnet "${subName}" in region "${reg}" with zero packet loss or downtime.`,
+      };
+    }
+
+    // 3G-9. Wave 8 Pub/Sub Topic + Dead-Letter Queue Pair Provisioner (/wave8/pubsub-dlq/provision-pair)
+    if (rawUrl.includes('/wave8/pubsub-dlq/provision-pair')) {
+      const baseTopic = body.topicName || 'cloudpulse-events';
+      const maxAtt = body.maxDeliveryAttempts || 5;
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Provision Pub/Sub Topic "${baseTopic}" + Auto-Wired Dead-Letter Queue (DLQ)?`,
+        headerBadge: 'Wave 8 Pub/Sub Dead-Letter Queue Architect Gatekeeper',
+        targetLabel: '3-Resource Pub/Sub Resilient Messaging Topology',
+        resourceKind: 'Primary Topic + DLQ Topic + Subscription with deadLetterPolicy (pubsub.googleapis.com/v1)',
+        targetName: `${baseTopic} + ${baseTopic}-dlq + ${baseTopic}-sub (maxAttempts=${maxAtt})`,
+        location: 'Global Pub/Sub Backbone',
+        projectId,
+        method: 'PROVISION PUBSUB + DLQ',
+        endpoint: rawUrl,
+        confirmLabel: `Provision Topic, DLQ & Subscription ($0.00 Idle)`,
+        cancelToast: `Pub/Sub + DLQ provisioning for "${baseTopic}" cancelled.`,
+        whatHappensNext: `1. Calls PUT https://pubsub.googleapis.com/v1/projects/${projectId}/topics/${baseTopic} to create the primary event topic.\n2. Calls PUT https://pubsub.googleapis.com/v1/projects/${projectId}/topics/${baseTopic}-dlq to create the dedicated Dead-Letter Queue topic.\n3. Calls PUT https://pubsub.googleapis.com/v1/projects/${projectId}/subscriptions/${baseTopic}-sub wired with deadLetterPolicy.deadLetterTopic="projects/${projectId}/topics/${baseTopic}-dlq" and maxDeliveryAttempts=${maxAtt}.`,
+        costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 IDLE / 10 GIB FREE): Pub/Sub topics and subscriptions have $0.00/mo base cost, and the first 10 GiB of message throughput each month is Always Free.`,
+        impactWarning: `Provisions 2 Pub/Sub topics and 1 DLQ-protected subscription in project "${projectId}".`,
+      };
+    }
+
+    // 3G-10. Universal Resource Provisioner (/provision)
+    if (rawUrl.endsWith('/provision')) {
+      const svcType = String(body.serviceType || body.resourceType || 'CLOUD_RESOURCE').toUpperCase();
+      const resName =
+        body.name ||
+        body.bucketName ||
+        body.datasetId ||
+        body.serviceName ||
+        body.instanceName ||
+        body.clusterName ||
+        body.networkName ||
+        body.ruleName ||
+        'new-gcp-resource';
+      const loc = body.region || body.zone || body.location || 'us-central1';
+      const provSpecs = {
+        GCS_BUCKET: {
+          title: `Provision Cloud Storage Bucket "gs://${resName}" in ${loc}?`,
+          kind: `Cloud Storage Bucket (${body.storageClass || 'STANDARD'} · storage.googleapis.com/storage/v1)`,
+          what: `1. Calls POST https://storage.googleapis.com/storage/v1/b?project=${projectId} with name="${resName}", location="${loc}", and storageClass="${body.storageClass || 'STANDARD'}".\n2. Enforces Uniform Bucket-Level Access (uniformBucketLevelAccess.enabled=true) and Public Access Prevention (publicAccessPrevention="enforced").\n3. Records a reversible creation receipt in the Cloud Flight Recorder.`,
+          cost: `ALWAYS-FREE TIER ELIGIBLE ($0.00 EMPTY): Empty buckets cost $0.00/mo. Standard storage in US-CENTRAL1/US-EAST1/US-WEST1 includes 5 GB-months Always Free ($0.020/GB-mo beyond Free Tier).`,
+        },
+        BIGQUERY_DATASET: {
+          title: `Provision BigQuery Dataset "${projectId}:${resName}" in ${loc}?`,
+          kind: `BigQuery Dataset (bigquery.googleapis.com/bigquery/v2)`,
+          what: `1. Calls POST https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets with datasetReference.datasetId="${resName}" and location="${loc}".\n2. Configures default table expiration and storage billing model metadata.\n3. Records a reversible creation receipt in the Cloud Flight Recorder.`,
+          cost: `ZERO IDLE COST ($0.00/MO): Creating a BigQuery dataset container is 100% free ($0.00/mo). Google Cloud includes 10 GiB of active table storage and 1 TiB of SQL queries per month Always Free.`,
+        },
+        CLOUD_RUN: {
+          title: `Deploy Cloud Run Gen2 Service "${resName}" in ${loc}?`,
+          kind: `Cloud Run v2 Service (run.googleapis.com/v2)`,
+          what: `1. Calls POST https://run.googleapis.com/v2/projects/${projectId}/locations/${loc}/services?serviceId=${resName}.\n2. Deploys container image "${body.image || 'us-docker.pkg.dev/cloudrun/container/hello'}" with minInstanceCount=${body.minInstances ?? 0}, maxInstanceCount=${body.maxInstances ?? 10}, and CPU/Memory limits.\n3. Configures IAM invoker policy (${body.allowUnauthenticated ? 'Public allUsers' : 'Private IAM Authenticated'}).`,
+          cost:
+            Number(body.minInstances || 0) > 0
+              ? `WARM INSTANCE BILLING WARNING: Because minInstances=${body.minInstances} (> 0), this Cloud Run service will keep ${body.minInstances} container instance(s) warm 24/7 and bill continuously for vCPU and Memory.`
+              : `SCALE-TO-ZERO ($0.00/HR IDLE): Configured with minInstanceCount=0 and request-only CPU billing (2 million requests/mo, 180,000 vCPU-sec/mo, and 360,000 GiB-sec/mo Always Free).`,
+        },
+        COMPUTE_VM: {
+          title: `Provision Compute Engine VM "${resName}" (${body.machineType || 'e2-micro'}) in ${loc}?`,
+          kind: `Compute Engine VM Instance (${body.machineType || 'e2-micro'} · compute.googleapis.com/v1)`,
+          what: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${loc}/instances.\n2. Provisions VM "${resName}" with machineType="${body.machineType || 'e2-micro'}", boot disk (${body.diskSizeGb || 10} GB ${body.diskType || 'pd-standard'}), and VPC network "${body.network || 'default'}".\n3. Polls the live Zone Operation until the VM reaches RUNNING state.`,
+          cost: `CONTINUOUS VM & DISK BILLING NOTICE: Running a Compute Engine VM bills hourly for vCPU/RAM plus monthly for its Persistent Boot Disk. (Note: 1 e2-micro instance in us-central1, us-west1, or us-east1 with up to 30 GB pd-standard disk is eligible for the Google Cloud Always-Free Tier.)`,
+        },
+        GKE_CLUSTER: {
+          title: `Provision Google Kubernetes Engine (GKE) Cluster "${resName}" in ${loc}?`,
+          kind: `GKE Kubernetes Cluster (${body.autopilot !== false ? 'Autopilot' : 'Standard'} · container.googleapis.com/v1)`,
+          what: `1. Calls POST https://container.googleapis.com/v1/projects/${projectId}/locations/${loc}/clusters.\n2. Bootstraps control plane and node provisioning for GKE cluster "${resName}".\n3. Registers the cluster in the GKE Fleet Studio.`,
+          cost: `GKE CLUSTER & NODE BILLING WARNING: GKE charges $0.10/hr (~$73.00/mo) per cluster management fee (after the 1 free zonal/Autopilot cluster tier per billing account) plus active worker node/pod vCPU, Memory, and Persistent Disk charges.`,
+        },
+        CLOUD_SQL: {
+          title: `Provision Cloud SQL Database Instance "${resName}" (${body.databaseVersion || 'POSTGRES_15'}) in ${loc}?`,
+          kind: `Cloud SQL Instance (${body.databaseVersion || 'POSTGRES_15'} · sqladmin.googleapis.com/sql/v1beta4)`,
+          what: `1. Calls POST https://sqladmin.googleapis.com/sql/v1beta4/projects/${projectId}/instances.\n2. Provisions managed relational database instance "${resName}" with tier "${body.tier || 'db-f1-micro'}" in "${loc}".\n3. Configures automated backups and storage auto-increase.`,
+          cost: `CONTINUOUS DATABASE BILLING WARNING: Cloud SQL instances do NOT scale to $0 when idle — they bill continuously per hour for instance vCPU/RAM tier (${body.tier || 'db-f1-micro'}) plus SSD/HDD storage ($0.09–$0.17/GB-mo) until stopped or deleted.`,
+        },
+        VPC_NETWORK: {
+          title: `Provision Custom VPC Network "${resName}" on "${projectId}"?`,
+          kind: `VPC Network (compute.googleapis.com/v1)`,
+          what: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/global/networks with name="${resName}" and autoCreateSubnetworks=${Boolean(body.autoCreateSubnetworks)}.\n2. Registers the global Andromeda virtual network routing plane.`,
+          cost: `ZERO IDLE COST ($0.00/MO): Creating a VPC network and subnets incurs $0.00/mo in fixed charges (standard egress rates apply only to actual traffic).`,
+        },
+        VPC_FIREWALL: {
+          title: `Create VPC Firewall Rule "${resName}" on Network "${body.network || 'default'}"?`,
+          kind: `VPC Firewall Rule (compute.googleapis.com/v1)`,
+          what: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls.\n2. Configures ${body.direction || 'INGRESS'} firewall rule "${resName}" with priority ${body.priority || 1000} and sourceRanges ${JSON.stringify(body.sourceRanges || ['35.235.240.0/20'])}.`,
+          cost: `ZERO COST ($0.00/MO): VPC Firewall rules incur $0.00/mo in Google Cloud.`,
+        },
+      };
+      const spec = provSpecs[svcType] || {
+        title: `Provision ${svcType} "${resName}" in ${loc}?`,
+        kind: `${svcType} (Google Cloud Control Plane API)`,
+        what: `1. Validates project quotas and API readiness on "${projectId}".\n2. Provisions live ${svcType} resource "${resName}" in "${loc}" via official Google Cloud REST APIs.\n3. Logs a reversible creation receipt in the Cloud Flight Recorder.`,
+        cost: `CLOUD BILLING NOTICE: Provisioning "${resName}" (${svcType}) in "${loc}" creates a live resource on project "${projectId}" billed according to its service tier.`,
+      };
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: spec.title,
+        headerBadge: 'CloudPulse 2026 Live Resource Provisioning Gatekeeper',
+        targetLabel: 'New Google Cloud Resource to Provision',
+        resourceKind: spec.kind,
+        targetName: `${resName} (${loc})`,
+        location: loc,
+        projectId,
+        method: `PROVISION ${svcType}`,
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Provision "${resName}"`,
+        cancelToast: `Provisioning of "${resName}" cancelled — 0 resources created.`,
+        whatHappensNext: spec.what,
+        costWarning: spec.cost,
+        impactWarning: `Creates live ${svcType} resource "${resName}" in project "${projectId}" (${loc}).`,
+      };
+    }
+
+    // 3G-11. Cloud Run Service Configuration Patch, Traffic Split, Secret Sealing & Compose
+    if (rawUrl.includes('/cloudrun/')) {
+      const sealMatch = rawUrl.match(/\/cloudrun\/([^/]+)\/([^/]+)\/seal-secrets/);
+      if (sealMatch) {
+        const reg = decodeURIComponent(sealMatch[1]);
+        const svc = decodeURIComponent(sealMatch[2]);
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Seal Plaintext Env Vars into Secret Manager on Cloud Run "${svc}"?`,
+          headerBadge: 'Cloud Run Plaintext-to-Secret Manager Surgeon Gatekeeper',
+          targetLabel: 'Target Cloud Run Service & Secret Manager Vault',
+          resourceKind: 'Cloud Run v2 Revision + Secret Manager (run.googleapis.com/v2 + secretmanager.googleapis.com/v1)',
+          targetName: `${svc} (${reg})`,
+          location: reg,
+          projectId,
+          method: 'SEAL ENV SECRETS',
+          endpoint: rawUrl,
+          confirmLabel: `Encrypt Env Vars into Secret Manager & Roll Revision`,
+          cancelToast: `Secret sealing on "${svc}" cancelled.`,
+          whatHappensNext: `1. Creates encrypted secrets in Secret Manager (secretmanager.googleapis.com/v1) for the selected plaintext environment variables on "${svc}".\n2. Grants roles/secretmanager.secretAccessor to "${svc}"'s runtime Service Account.\n3. Calls PATCH https://run.googleapis.com/v2/projects/${projectId}/locations/${reg}/services/${svc} replacing plaintext values with secretKeyRef pointers and rolls a new revision.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 WITHIN FREE TIER): Google Cloud Secret Manager includes 6 active secret versions and 10,000 access operations per month for $0.00/mo ($0.06/version-mo beyond Free Tier).`,
+          impactWarning: `Replaces plaintext environment variables on "${svc}" (${reg}) with hardware-encrypted Secret Manager references.`,
+        };
+      }
+      const trafficMatch = rawUrl.match(/\/cloudrun\/([^/]+)\/([^/]+)\/traffic/);
+      if (trafficMatch) {
+        const reg = decodeURIComponent(trafficMatch[1]);
+        const svc = decodeURIComponent(trafficMatch[2]);
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Update Live HTTPS Revision Traffic Split on Cloud Run "${svc}"?`,
+          headerBadge: 'Cloud Run Zero-Rebuild Traffic Router Gatekeeper',
+          targetLabel: 'Target Cloud Run Service & Traffic Allocation',
+          resourceKind: 'Cloud Run v2 Traffic Split (run.googleapis.com/v2)',
+          targetName: `${svc} (${reg})`,
+          location: reg,
+          projectId,
+          method: 'UPDATE TRAFFIC SPLIT',
+          endpoint: rawUrl,
+          confirmLabel: `Apply Live Traffic Split on "${svc}" ($0.00)`,
+          cancelToast: `Traffic split update on "${svc}" cancelled.`,
+          whatHappensNext: `1. Calls PATCH https://run.googleapis.com/v2/projects/${projectId}/locations/${reg}/services/${svc}?updateMask=traffic.\n2. Re-weights live HTTPS load balancer traffic across the selected revisions without rebuilding any container image.`,
+          costWarning: `ZERO COST ($0.00): Adjusting traffic percentages across existing Cloud Run revisions is a free control-plane operation.`,
+          impactWarning: `Immediately shifts production HTTPS request routing across revisions of "${svc}" (${reg}).`,
+        };
+      }
+      if (rawUrl.includes('/cloudrun/compose')) {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Deploy Multi-Container Docker Compose Stack to Cloud Run (${body.region || 'us-central1'})?`,
+          headerBadge: 'Cloud Run Docker Compose Synthesizer Gatekeeper',
+          targetLabel: 'Docker Compose Services to Materialize on Cloud Run',
+          resourceKind: 'Multi-Service Cloud Run v2 Deployment (run.googleapis.com/v2)',
+          targetName: `${projectId} (${body.region || 'us-central1'})`,
+          location: body.region || 'us-central1',
+          projectId,
+          method: 'DEPLOY COMPOSE STACK',
+          endpoint: rawUrl,
+          confirmLabel: `Deploy Compose Services to Cloud Run`,
+          cancelToast: `Docker Compose deployment cancelled.`,
+          whatHappensNext: `1. Parses the Docker Compose YAML service dependency graph.\n2. Deploys each service to Cloud Run v2 (run.googleapis.com/v2) in "${body.region || 'us-central1'}" with scale-to-zero (minInstanceCount=0).\n3. Automatically injects discovered .run.app upstream URLs as environment variables into dependent services.`,
+          costWarning: `SCALE-TO-ZERO DEFAULT ($0.00/HR IDLE): Each composed Cloud Run service defaults to minInstanceCount=0 so idle containers incur $0.00/hr.`,
+          impactWarning: `Provisions live Cloud Run v2 services in "${body.region || 'us-central1'}" on project "${projectId}".`,
+        };
+      }
+      const patchRunMatch = rawUrl.match(/\/cloudrun\/([^/]+)\/([^/]+)$/);
+      if (patchRunMatch && method === 'patch') {
+        const reg = decodeURIComponent(patchRunMatch[1]);
+        const svc = decodeURIComponent(patchRunMatch[2]);
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Update Live Configuration & Roll Revision on Cloud Run "${svc}" (${reg})?`,
+          headerBadge: 'Cloud Run v2 Revision & Scaling Gatekeeper',
+          targetLabel: 'Target Cloud Run Service',
+          resourceKind: 'Cloud Run v2 Service Template Patch (run.googleapis.com/v2)',
+          targetName: `${svc} (${reg})`,
+          location: reg,
+          projectId,
+          method: 'PATCH CLOUD RUN',
+          endpoint: rawUrl,
+          confirmLabel: `Apply Changes & Roll Revision on "${svc}"`,
+          cancelToast: `Configuration update on "${svc}" cancelled.`,
+          whatHappensNext: `1. Fetches current service spec via GET https://run.googleapis.com/v2/projects/${projectId}/locations/${reg}/services/${svc}.\n2. Applies your requested scaling (minInstances/maxInstances), CPU/Memory, Startup CPU Boost, or Environment Variable updates.\n3. Calls PATCH https://run.googleapis.com/v2/projects/${projectId}/locations/${reg}/services/${svc} and rolls a new live revision.`,
+          costWarning:
+            Number(body.minInstances || 0) > 0
+              ? `WARM INSTANCE BILLING WARNING: Setting minInstances=${body.minInstances} keeps ${body.minInstances} instance(s) running 24/7 and incurs continuous hourly vCPU and Memory billing.`
+              : `FINOPS NOTICE: Setting minInstances=0 with cpuIdle=true ensures "${svc}" scales to $0.00/hr when idle.`,
+          impactWarning: `Deploys a new revision on live Cloud Run service "${svc}" in "${reg}".`,
+        };
+      }
+    }
+
+    // 3G-12. Cloud Storage Bucket Governance Patch, Object Upload, Rewrite, Teleport & DLP Redact
+    if (rawUrl.includes('/storage/buckets/')) {
+      const bktMatch = rawUrl.match(/\/storage\/buckets\/([^/?]+)/);
+      const bktName = bktMatch ? decodeURIComponent(bktMatch[1]) : 'gcs-bucket';
+      if (rawUrl.includes('/dlp-redact')) {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Redact Sensitive PII/Secrets In-Place in Object "${body.objectName || 'object'}" (gs://${bktName})?`,
+          headerBadge: 'Cloud Storage In-RAM DLP Redaction Gatekeeper',
+          targetLabel: 'Target Cloud Storage Object to Sanitize',
+          resourceKind: 'Cloud Storage Object Overwrite (storage.googleapis.com/upload/storage/v1)',
+          targetName: `gs://${bktName}/${body.objectName || ''}`,
+          location: 'Cloud Storage',
+          projectId,
+          method: 'DLP REDACT OBJECT',
+          endpoint: rawUrl,
+          confirmLabel: `Overwrite Object with Redacted Payload`,
+          cancelToast: `DLP redaction on gs://${bktName}/${body.objectName || ''} cancelled.`,
+          whatHappensNext: `1. Masks detected PII, API keys, and credential patterns in memory with "[REDACTED_BY_CLOUDPULSE_DLP]".\n2. Uploads the sanitized byte stream to POST https://storage.googleapis.com/upload/storage/v1/b/${bktName}/o?uploadType=media&name=${encodeURIComponent(body.objectName || '')}.`,
+          costWarning: `MINIMAL COST ($0.00): 1 Class A object write operation ($0.005 per 1,000 operations; first 5,000 Class A ops/mo are Always Free).`,
+          impactWarning: `Replaces live object "gs://${bktName}/${body.objectName || ''}" with the redacted content (previous generation is retained if Object Versioning is enabled).`,
+        };
+      }
+      if (rawUrl.includes('/objects/rewrite')) {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Server-Side Rewrite Object "${body.objectName}" to Storage Class "${body.storageClass || 'NEARLINE'}"?`,
+          headerBadge: 'Cloud Storage Zero-Egress Storage Class Rewrite Gatekeeper',
+          targetLabel: 'Target Cloud Storage Object',
+          resourceKind: `Cloud Storage Rewrite (storage.googleapis.com/storage/v1 · -> ${body.storageClass || 'NEARLINE'})`,
+          targetName: `gs://${bktName}/${body.objectName}`,
+          location: 'Cloud Storage',
+          projectId,
+          method: `REWRITE -> ${body.storageClass || 'NEARLINE'}`,
+          endpoint: rawUrl,
+          confirmLabel: `Rewrite Object to ${body.storageClass || 'NEARLINE'}`,
+          cancelToast: `Object storage class rewrite cancelled.`,
+          whatHappensNext: `1. Calls POST https://storage.googleapis.com/storage/v1/b/${bktName}/o/${encodeURIComponent(body.objectName || '')}/rewriteTo/b/${bktName}/o/${encodeURIComponent(body.objectName || '')} with storageClass="${body.storageClass || 'NEARLINE'}".\n2. Transitions the object's storage tier server-side inside Google's network with zero download/upload bandwidth.`,
+          costWarning: `STORAGE TIER NOTICE: Nearline (30d min), Coldline (90d min), and Archive (365d min) reduce monthly per-GB storage rates up to 94% ($0.0012/GB-mo Archive), but incur early-deletion or per-GB data retrieval fees if read frequently.`,
+          impactWarning: `Updates the live storage class of "gs://${bktName}/${body.objectName}".`,
+        };
+      }
+      if (rawUrl.includes('/teleport')) {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Teleport Bucket "gs://${bktName}" to Target Region "${body.targetLocation || 'US'}"?`,
+          headerBadge: 'Cloud Storage Cross-Region Bucket Teleporter Gatekeeper',
+          targetLabel: 'Source Bucket -> Destination Regional Bucket',
+          resourceKind: 'Cloud Storage Server-Side Object Rewrite (storage.googleapis.com/storage/v1)',
+          targetName: `gs://${bktName} -> gs://${body.targetBucketName || `${bktName}-${String(body.targetLocation || 'us').toLowerCase()}`}`,
+          location: body.targetLocation || 'US',
+          projectId,
+          method: 'TELEPORT BUCKET',
+          endpoint: rawUrl,
+          confirmLabel: `Teleport Bucket to ${body.targetLocation || 'US'}`,
+          cancelToast: `Bucket teleportation cancelled.`,
+          whatHappensNext: `1. Creates destination bucket "gs://${body.targetBucketName || `${bktName}-${String(body.targetLocation || 'us').toLowerCase()}`}" in "${body.targetLocation || 'US'}" via storage.googleapis.com/storage/v1.\n2. Server-side rewrites objects from "gs://${bktName}" directly across Google's internal backbone.`,
+          costWarning: `CROSS-REGION REWRITE NOTICE: Copying objects between different GCP regions incurs standard Google Cloud inter-region network replication fees ($0.02–$0.12/GB) plus destination bucket storage.`,
+          impactWarning: `Creates destination bucket and copies objects into "${body.targetLocation || 'US'}" on project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/objects') && method === 'post') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Upload Object "${body.objectName || body.name || 'new-object'}" to Bucket "gs://${bktName}"?`,
+          headerBadge: 'Cloud Storage Live Object Upload Gatekeeper',
+          targetLabel: 'Target Cloud Storage Bucket & Object Key',
+          resourceKind: 'Cloud Storage Object Upload (storage.googleapis.com/upload/storage/v1)',
+          targetName: `gs://${bktName}/${body.objectName || body.name || 'object'}`,
+          location: 'Cloud Storage',
+          projectId,
+          method: 'UPLOAD GCS OBJECT',
+          endpoint: rawUrl,
+          confirmLabel: `Upload Object to gs://${bktName}`,
+          cancelToast: `Object upload to gs://${bktName} cancelled.`,
+          whatHappensNext: `1. Streams payload to POST https://storage.googleapis.com/upload/storage/v1/b/${bktName}/o?uploadType=media&name=${encodeURIComponent(body.objectName || body.name || 'object')}.\n2. Verifies CRC32C/MD5 object checksum in bucket "gs://${bktName}".`,
+          costWarning: `STORAGE & CLASS A OPS NOTICE: Counts as 1 Class A write operation (first 5,000 Class A ops/mo and 5 GB Standard storage in US regions are Always Free).`,
+          impactWarning: `Writes live object "${body.objectName || body.name || 'object'}" into bucket "gs://${bktName}" on project "${projectId}".`,
+        };
+      }
+      if (method === 'patch') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Update Governance & Lifecycle Policy on Bucket "gs://${bktName}"?`,
+          headerBadge: 'Cloud Storage Bucket Policy & FinOps Gatekeeper',
+          targetLabel: 'Target Cloud Storage Bucket',
+          resourceKind: 'Cloud Storage Bucket Metadata Patch (storage.googleapis.com/storage/v1)',
+          targetName: `gs://${bktName}`,
+          location: 'Cloud Storage',
+          projectId,
+          method: 'PATCH GCS BUCKET',
+          endpoint: rawUrl,
+          confirmLabel: `Apply Policy Update to gs://${bktName} ($0.00)`,
+          cancelToast: `Bucket policy update on gs://${bktName} cancelled.`,
+          whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${bktName}.\n2. Updates the requested bucket properties (Uniform Bucket-Level Access, Public Access Prevention, Autoclass, Object Versioning, Soft-Delete retention window, or Lifecycle rules).`,
+          costWarning: `ZERO API COST ($0.00): Updating bucket governance metadata is free ($0.00). Enabling Object Versioning retains historical object generations which bill at standard per-GB storage rates until pruned by a lifecycle rule.`,
+          impactWarning: `Modifies live bucket configuration on "gs://${bktName}" in project "${projectId}".`,
+        };
+      }
+    }
+
+    // 3G-13. BigQuery Dataset Billing Model Patch, Table Creation & Live SQL Execution
+    if (rawUrl.includes('/bigquery/')) {
+      if (rawUrl.includes('/bigquery/query')) {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Execute Live Standard SQL Query Job on BigQuery ("${projectId}")?`,
+          headerBadge: 'BigQuery On-Demand SQL Execution & Cost Gatekeeper',
+          targetLabel: 'Target BigQuery SQL Execution Engine',
+          resourceKind: 'BigQuery Query Job (bigquery.googleapis.com/bigquery/v2/projects/jobs)',
+          targetName: `${projectId} (${body.location || 'US'})`,
+          location: body.location || 'US',
+          projectId,
+          method: 'EXECUTE BIGQUERY SQL',
+          endpoint: rawUrl,
+          confirmLabel: `Execute Live BigQuery SQL Job`,
+          cancelToast: `BigQuery SQL execution cancelled.`,
+          whatHappensNext: `1. Submits your Standard SQL query to POST https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/jobs with useLegacySql=false.\n2. Streams the resulting rows, execution timeline, and slot-ms telemetry back to the BigQuery Studio.`,
+          costWarning: `BIGQUERY SCAN BILLING NOTICE: On-demand SQL queries bill based on bytes scanned ($6.25 per TiB scanned), with the first 1 TiB of query data processed each month 100% FREE ($0.00 Always-Free Tier). DDL/DML statements (CREATE/INSERT/UPDATE/DELETE) will mutate target tables.`,
+          impactWarning: `Runs a live BigQuery job in project "${projectId}" (${body.location || 'US'}).`,
+        };
+      }
+      const bqTableMatch = rawUrl.match(/\/bigquery\/datasets\/([^/]+)\/tables/);
+      if (bqTableMatch) {
+        const dsId = decodeURIComponent(bqTableMatch[1]);
+        const tblId = body.tableId || 'new_table';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Create BigQuery Table "${dsId}.${tblId}" in Project "${projectId}"?`,
+          headerBadge: 'BigQuery Schema & Partitioning Gatekeeper',
+          targetLabel: 'Target BigQuery Dataset & Table',
+          resourceKind: 'BigQuery Table (bigquery.googleapis.com/bigquery/v2)',
+          targetName: `${projectId}:${dsId}.${tblId}`,
+          location: body.location || 'US',
+          projectId,
+          method: 'CREATE BQ TABLE',
+          endpoint: rawUrl,
+          confirmLabel: `Create Table "${dsId}.${tblId}" ($0.00 Empty)`,
+          cancelToast: `BigQuery table creation cancelled.`,
+          whatHappensNext: `1. Calls POST https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${dsId}/tables.\n2. Registers table "${tblId}" with the defined typed column schema${body.timePartitioning ? ' and time partitioning' : ''}.`,
+          costWarning: `ZERO IDLE COST ($0.00/MO): Empty BigQuery tables cost $0.00/mo, and the first 10 GiB of active table storage per month is Always Free.`,
+          impactWarning: `Creates live table "${dsId}.${tblId}" in project "${projectId}".`,
+        };
+      }
+      const bqDsMatch = rawUrl.match(/\/bigquery\/datasets\/([^/]+)$/);
+      if (bqDsMatch && method === 'patch') {
+        const dsId = decodeURIComponent(bqDsMatch[1]);
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Update Dataset Configuration / Storage Billing Model on "${dsId}"?`,
+          headerBadge: 'BigQuery Dataset & Physical Billing Gatekeeper',
+          targetLabel: 'Target BigQuery Dataset',
+          resourceKind: 'BigQuery Dataset Patch (bigquery.googleapis.com/bigquery/v2)',
+          targetName: `${projectId}:${dsId} (${body.storageBillingModel || 'Metadata Patch'})`,
+          location: 'Multi-Region / Regional',
+          projectId,
+          method: 'PATCH BQ DATASET',
+          endpoint: rawUrl,
+          confirmLabel: `Update Dataset "${dsId}"`,
+          cancelToast: `BigQuery dataset update on "${dsId}" cancelled.`,
+          whatHappensNext: `1. Fetches current dataset etag via GET https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${dsId}.\n2. Calls PATCH https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${dsId} to update storageBillingModel (${body.storageBillingModel || 'PHYSICAL'}), defaultTableExpirationMs, or labels.`,
+          costWarning: `STORAGE BILLING MODEL NOTICE: Switching a dataset to PHYSICAL (compressed) storage billing typically cuts storage bills by 50%–75% thanks to Capacitor columnar compression, though Google Cloud enforces a 14-day cooldown before switching back to LOGICAL.`,
+          impactWarning: `Updates live dataset settings on "${projectId}:${dsId}".`,
+        };
+      }
+    }
+
+    // 3G-14. VPC Firewall Rule Patch (/firewalls/:ruleName)
+    if (rawUrl.includes('/firewalls/') && method === 'patch') {
+      const fwName = decodeURIComponent(rawUrl.split('/firewalls/')[1]?.split('?')[0] || 'firewall-rule');
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Update Live VPC Firewall Rule "${fwName}" on "${projectId}"?`,
+        headerBadge: 'VPC Firewall Rule & IAP Security Gatekeeper',
+        targetLabel: 'Target VPC Firewall Rule',
+        resourceKind: 'Compute Engine VPC Firewall (compute.googleapis.com/v1)',
+        targetName: `projects/${projectId}/global/firewalls/${fwName}`,
+        location: 'Global VPC Perimeter',
+        projectId,
+        method: 'PATCH FIREWALL RULE',
+        endpoint: rawUrl,
+        confirmLabel: `Update Firewall Rule "${fwName}" ($0.00)`,
+        cancelToast: `Firewall rule update on "${fwName}" cancelled.`,
+        whatHappensNext: `1. Calls PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${fwName}.\n2. Updates source CIDR ranges (${body.sourceRanges ? JSON.stringify(body.sourceRanges) : 'configured CIDRs'}), allowed ports/protocols, priority, or disabled state across the VPC network.`,
+        costWarning: `ZERO COST ($0.00/MO): Modifying VPC Firewall rules is a free control-plane operation.`,
+        impactWarning: `Immediately updates packet filtering for all VMs matching firewall rule "${fwName}" in project "${projectId}".`,
+      };
+    }
+
+    // 3G-15. Google Cloud API Enable / Toggle (/apis/enable or /apis/toggle)
+    if (rawUrl.includes('/apis/enable') || rawUrl.includes('/apis/toggle')) {
+      const apiName = body.serviceName || body.apiName || (Array.isArray(body.apis) ? body.apis.join(', ') : 'googleapis.com');
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Enable Google Cloud API "${apiName}" on Project "${projectId}"?`,
+        headerBadge: 'Service Usage API Activation Gatekeeper',
+        targetLabel: 'Target Google Cloud Service API',
+        resourceKind: 'Service Usage API (serviceusage.googleapis.com/v1)',
+        targetName: `projects/${projectId}/services/${apiName}`,
+        location: 'Global Project Control Plane',
+        projectId,
+        method: 'ENABLE GCP API',
+        endpoint: rawUrl,
+        confirmLabel: `Enable "${apiName}" ($0.00 Activation)`,
+        cancelToast: `API activation for "${apiName}" cancelled.`,
+        whatHappensNext: `1. Calls POST https://serviceusage.googleapis.com/v1/projects/${projectId}/services/${apiName}:enable.\n2. Polls the Service Usage long-running operation until the API endpoint is active and ready to serve requests on "${projectId}".`,
+        costWarning: `ZERO ACTIVATION COST ($0.00): Enabling a Google Cloud API in Service Usage is free ($0.00). Billing only occurs if you subsequently provision billable resources or exceed the API's monthly free quota.`,
+        impactWarning: `Activates service API "${apiName}" on project "${projectId}".`,
+      };
+    }
+
+    // 3G-16. Sovereign IAM, Secrets & KMS, Chrono-Logs, Cloud Functions, Supply Chain, Wave 10, Quantum Nexus, Data Engineer & Parity Actions
+    if (
+      rawUrl.includes('/service-accounts/grant-act-as') ||
+      rawUrl.includes('/sovereign/') ||
+      rawUrl.includes('/chrono-logs/') ||
+      rawUrl.includes('/functions/') ||
+      rawUrl.includes('/cloud-build/') ||
+      rawUrl.includes('/wave9/') ||
+      rawUrl.includes('/biglake/') ||
+      rawUrl.includes('/finops/always-free-enforcer') ||
+      rawUrl.includes('/wave10/action') ||
+      rawUrl.includes('/quantum-nexus/action') ||
+      rawUrl.includes('/data-engineer/action') ||
+      rawUrl.includes('/aws-azure-parity/action') ||
+      rawUrl.includes('/zombies/exterminate')
+    ) {
+      const act = String(body.action || body.actionType || '').toUpperCase();
+      if (rawUrl.includes('/service-accounts/grant-act-as')) {
+        const sa = body.serviceAccountEmail || 'service-account';
+        const member = body.member || 'user/principal';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Grant "roles/iam.serviceAccountUser" on "${sa}" to "${member}"?`,
+          headerBadge: 'IAM Service Account ActAs Permission Gatekeeper',
+          targetLabel: 'Target IAM Service Account & Principal',
+          resourceKind: 'Service Account IAM Policy (iam.googleapis.com/v1)',
+          targetName: `${sa} <- ${member}`,
+          location: 'Global IAM',
+          projectId,
+          method: 'GRANT ACT-AS ROLE',
+          endpoint: rawUrl,
+          confirmLabel: `Grant ServiceAccountUser Role ($0.00)`,
+          cancelToast: `IAM ActAs grant cancelled.`,
+          whatHappensNext: `1. Fetches the resource-level IAM policy on Service Account "${sa}" via POST https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${sa}:getIamPolicy.\n2. Appends "${member}" to role "roles/iam.serviceAccountUser" and commits via :setIamPolicy.`,
+          costWarning: `ZERO COST ($0.00/MO): IAM policy bindings are 100% free in Google Cloud.`,
+          impactWarning: `Allows "${member}" to attach and deploy workloads running as Service Account "${sa}".`,
+        };
+      }
+      if (rawUrl.includes('/sovereign/secrets-kms/create-secret')) {
+        const sid = body.secretId || 'new-secret';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Create Secret Manager Secret "${sid}" & Seed Initial Encrypted Version?`,
+          headerBadge: 'Secret Manager Hardware-Encrypted Vault Gatekeeper',
+          targetLabel: 'Target Secret Manager Secret',
+          resourceKind: 'Secret Manager Secret + Version (secretmanager.googleapis.com/v1)',
+          targetName: `projects/${projectId}/secrets/${sid}`,
+          location: body.replication || 'Automatic Global Replication',
+          projectId,
+          method: 'CREATE SECRET',
+          endpoint: rawUrl,
+          confirmLabel: `Create Secret "${sid}"`,
+          cancelToast: `Secret creation for "${sid}" cancelled.`,
+          whatHappensNext: `1. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets?secretId=${sid} with automatic global replication.\n2. Calls POST https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${sid}:addVersion to store the AES-256 encrypted payload.`,
+          costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 WITHIN FREE TIER): Google Cloud Secret Manager includes 6 active secret versions and 10,000 access operations per month for $0.00/mo ($0.06/version-mo beyond Free Tier).`,
+          impactWarning: `Creates live secret "${sid}" in Secret Manager on project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/finops/always-free-enforcer')) {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Enforce $0.00/mo Always-Free Tier Guardrails Across "${projectId}"?`,
+          headerBadge: 'FinOps Always-Free Tier Enforcer Gatekeeper',
+          targetLabel: 'Project-Wide Compute & Serverless Fleet',
+          resourceKind: 'Cloud Run Scale-to-Zero + Request-Only CPU Enforcer (run.googleapis.com/v2)',
+          targetName: `${projectId} (minInstanceCount -> 0, cpuIdle -> true)`,
+          location: 'All Project Regions',
+          projectId,
+          method: 'ENFORCE FREE TIER',
+          endpoint: rawUrl,
+          confirmLabel: `Clamp Warm Instances to 0 ($0.00/hr Idle)`,
+          cancelToast: `Always-Free Enforcer cancelled.`,
+          whatHappensNext: `1. Scans all Cloud Run v2 services in project "${projectId}" for warm instances (minInstanceCount > 0) or always-allocated CPU.\n2. Patches warm services via run.googleapis.com/v2 to enforce minInstanceCount=0 and cpuIdle=true so idle compute drops to $0.00/hr.`,
+          costWarning: `FINOPS COST REDUCTION ($0.00/HR IDLE): Eliminates 24/7 idle container charges across your Cloud Run fleet.`,
+          impactWarning: `Reconfigures warm Cloud Run services in "${projectId}" to scale down to 0 instances when idle.`,
+        };
+      }
+      if (rawUrl.includes('/zombies/exterminate')) {
+        return {
+          gateType: 'DELETE',
+          releaseTrack: 'GA',
+          title: `Exterminate Unattached Zombie Cloud Resources in "${projectId}"?`,
+          headerBadge: 'FinOps Zombie Resource Exterminator Gatekeeper',
+          targetLabel: 'Unattached Static IPs / Orphaned Disks / Idle Revisions',
+          resourceKind: 'Compute Engine Addresses & Disks (compute.googleapis.com/v1)',
+          targetName: body.resourceName || body.name || `Zombie Resources in ${projectId}`,
+          location: body.region || body.zone || 'Project-Wide',
+          projectId,
+          method: 'EXTERMINATE ZOMBIES',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete Zombie Resource(s)`,
+          cancelToast: `Zombie extermination cancelled.`,
+          whatHappensNext: `1. Calls DELETE on the selected unattached Static External IP address(es) (compute.googleapis.com/v1/.../addresses) or orphaned Persistent Disks (compute.googleapis.com/v1/.../disks).\n2. Immediately stops ongoing hourly/monthly idle waste charges.`,
+          costWarning: `FINOPS SAVINGS: Releasing an unattached Static IPv4 address saves $7.30/mo ($0.01/hr), and deleting an unattached Persistent Disk saves $0.04–$0.17/GB-mo.`,
+          impactWarning: `Permanently deletes the selected unattached zombie resource(s) from project "${projectId}".`,
+        };
+      }
+    }
+
+    // 3H. Smart Payload-Introspecting Fallback for Any Remaining Cloud Action
+    const actName = String(
       body.action ||
-      body.actionType ||
-      body.resourceType ||
-      body.serviceType ||
-      method.toUpperCase();
+        body.actionType ||
+        body.resourceType ||
+        body.serviceType ||
+        method.toUpperCase()
+    );
+    const cleanRouteSegment = rawUrl
+      .replace(`/api/project/${encodeURIComponent(projectId)}/`, '')
+      .replace(`/api/project/${projectId}/`, '')
+      .split('?')[0];
     const targetResource =
       body.name ||
+      body.displayName ||
       body.serviceName ||
       body.datasetId ||
       body.bucketName ||
       body.secretId ||
+      body.topicName ||
+      body.subscriptionName ||
+      body.vmName ||
       body.clusterName ||
       body.instanceName ||
       body.ruleName ||
+      body.firewallRuleName ||
+      body.metricName ||
+      body.policyName ||
+      body.checkName ||
+      body.serviceAccountEmail ||
       body.slug ||
-      rawUrl.replace(`/api/project/${projectId}`, '') ||
+      cleanRouteSegment ||
       'Google Cloud Resource';
     const targetLoc =
       body.region || body.zone || body.location || 'Global / Regional';
+    const payloadSummaryKeys = Object.keys(body || {})
+      .filter((k) => !['action', 'actionType', 'confirmed'].includes(k))
+      .slice(0, 4)
+      .map((k) => `${k}=${JSON.stringify(body[k]).slice(0, 40)}`)
+      .join(', ');
 
     return {
       gateType: 'ONE_TAP_CLOUD_ACTION',
@@ -1667,20 +2758,20 @@ function classifyDestructiveAxiosConfig(config) {
         : rawUrl.includes('beta')
         ? 'BETA'
         : 'GA',
-      title: `Confirm 1-Tap Cloud Action on "${targetResource}"?`,
-      headerBadge: 'CloudPulse 2026 1-Tap Cloud Mutation & Cost Gatekeeper',
-      targetLabel: 'Target Cloud Resource / API Mutation',
-      resourceKind: `${method.toUpperCase()} · ${actName}`,
+      title: `Confirm Live Cloud Operation "${actName}" on "${targetResource}"?`,
+      headerBadge: 'CloudPulse 2026 Live Cloud Control-Plane Gatekeeper',
+      targetLabel: 'Target Google Cloud Resource & Operation',
+      resourceKind: `${cleanRouteSegment} · ${actName}`,
       targetName: String(targetResource),
       location: String(targetLoc),
       projectId,
-      method: `1-TAP ${String(actName).slice(0, 22).toUpperCase()}`,
+      method: `${String(actName).slice(0, 24).toUpperCase()}`,
       endpoint: rawUrl,
-      confirmLabel: 'Confirm & Execute in Google Cloud',
-      cancelToast: `1-Tap Cloud Action cancelled — no changes made to "${projectId}".`,
-      whatHappensNext: `1. Sends an authenticated ${method.toUpperCase()} request to ${rawUrl} on Google Cloud project "${projectId}".\n2. Provisions or mutates "${targetResource}" (${targetLoc}) via official Google Cloud REST / CLI control-plane APIs.\n3. Records the mutation in the session Cloud Flight Recorder for audit & rollback tracking.`,
-      costWarning: `CLOUD BILLING & STATE NOTICE: This command modifies live Google Cloud infrastructure or configuration in "${projectId}". Provisioning compute, storage, databases, warm containers (minInstances > 0), or enabling paid APIs may incur hourly or usage-based charges on your Cloud Billing account.`,
-      impactWarning: `Please verify the target resource ("${targetResource}"), region ("${targetLoc}"), and billing impact before confirming execution.`,
+      confirmLabel: `Confirm & Execute "${actName}" on GCP`,
+      cancelToast: `Operation "${actName}" cancelled — no changes made to "${projectId}".`,
+      whatHappensNext: `1. Authenticates with your active Google Cloud OAuth2 / ADC token against project "${projectId}".\n2. Executes control-plane operation "${actName}" targeting "${targetResource}" in scope "${targetLoc}"${payloadSummaryKeys ? ` with parameters (${payloadSummaryKeys})` : ''}.\n3. Verifies the live Google Cloud API response and records a cryptographic audit entry in the session Flight Recorder.`,
+      costWarning: `CLOUD BILLING & CONTROL-PLANE NOTICE: Control-plane metadata, IAM, firewall, and policy mutations incur $0.00/mo. If this operation provisions active compute, databases, or storage in "${projectId}", standard Google Cloud regional pricing and Always-Free Tier allowances apply.`,
+      impactWarning: `Executes "${actName}" on live resource "${targetResource}" (${targetLoc}) in project "${projectId}".`,
     };
   }
 
@@ -3516,6 +4607,16 @@ function MandatoryDeleteConfirmationModal({
     impactWarning ||
     `This operation executes a live Google Cloud API call (${method}) against "${targetName}" in project "${projectId}".`;
 
+  const parsedExecutionSteps = String(effectiveWhatHappens || '')
+    .split(/\n+|(?=\b[1-9]\.\s)/)
+    .map((line) => line.replace(/^[0-9]+\.\s*/, '').trim())
+    .filter(Boolean);
+
+  const showSeparateImpactBox =
+    Boolean(impactWarning) &&
+    Boolean(whatHappensNext) &&
+    String(impactWarning).trim() !== String(whatHappensNext).trim();
+
   const effectiveCostWarning =
     costWarning ||
     (isOneTapAction
@@ -3644,16 +4745,42 @@ function MandatoryDeleteConfirmationModal({
           </div>
 
           {/* 1. What Happens Next (Step-by-Step Cloud Execution) */}
-          <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-1.5">
+          <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed space-y-2">
             <div className="font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider text-[10px] font-mono flex items-center justify-between gap-2">
               <span>1. What Happens Next (Live Cloud Execution Sequence)</span>
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30">
                 PRE-EXECUTION PREVIEW
               </span>
             </div>
-            <p className="font-medium">{effectiveWhatHappens}</p>
+            {parsedExecutionSteps.length > 1 ? (
+              <div className="space-y-1.5">
+                {parsedExecutionSteps.map((stepText, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2.5 p-2 rounded-lg bg-white/75 dark:bg-zinc-900/80 border border-indigo-500/20"
+                  >
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 shrink-0 mt-0.5">
+                      STEP 0{idx + 1}
+                    </span>
+                    <span className="font-medium text-[11px] sm:text-xs break-words">
+                      {stepText}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="font-medium">{effectiveWhatHappens}</p>
+            )}
+            {showSeparateImpactBox && (
+              <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/25 text-[11px] font-medium text-indigo-950 dark:text-indigo-200">
+                <span className="font-mono font-extrabold uppercase text-[9px] tracking-wider text-indigo-600 dark:text-indigo-400 mr-1.5">
+                  Operational Impact:
+                </span>
+                {impactWarning}
+              </div>
+            )}
             <div className="text-[10px] font-mono text-zinc-500 truncate pt-0.5">
-              API Endpoint: {endpoint}
+              Control-Plane Route: {endpoint}
             </div>
           </div>
 
