@@ -4361,17 +4361,22 @@ export default function AutonomousCloudSocStudio({
                     checkpointLabel: `Invariant ${inv.id} Signed Checkpoint`,
                   });
                 }
-                if (inv.id === 'INV-07' || inv.id === 'INV-08') {
-                  return setActivePillar('EXFILTRATION_RADAR');
+                if (inv.id === 'INV-07') {
+                  return setActivePillar('TOXIC_GRAPH');
                 }
-                if (inv.id === 'INV-09') {
+                if (inv.id === 'INV-08') {
                   return setActivePillar('SUPPLY_CHAIN');
                 }
+                if (inv.id === 'INV-09') {
+                  return setActivePillar('EXFILTRATION_RADAR');
+                }
                 if (inv.id === 'INV-10') {
-                  return setActivePillar('DATA_DLP_SECRET_HYGIENE');
+                  return handleExecuteSocAction(`HEAL_${inv.id}`, {
+                    action: 'ROTATE_ALL_STALE_SECRETS',
+                  });
                 }
                 if (inv.id === 'INV-11') {
-                  return setActivePillar('TOXIC_GRAPH');
+                  return setActivePillar('DATA_DLP_SECRET_HYGIENE');
                 }
                 if (inv.id === 'INV-12') {
                   return handleExecuteSocAction(`HEAL_${inv.id}`, {
@@ -4389,11 +4394,11 @@ export default function AutonomousCloudSocStudio({
                   'INV-04': 'VM_METADATA_SHIELDED',
                   'INV-05': 'CANARY_GRID',
                   'INV-06': 'IAM_TIME_MACHINE',
-                  'INV-07': 'EXFILTRATION_RADAR',
-                  'INV-08': 'EXFILTRATION_RADAR',
-                  'INV-09': 'SUPPLY_CHAIN',
+                  'INV-07': 'TOXIC_GRAPH',
+                  'INV-08': 'SUPPLY_CHAIN',
+                  'INV-09': 'EXFILTRATION_RADAR',
                   'INV-10': 'DATA_DLP_SECRET_HYGIENE',
-                  'INV-11': 'TOXIC_GRAPH',
+                  'INV-11': 'DATA_DLP_SECRET_HYGIENE',
                   'INV-12': 'VM_METADATA_SHIELDED',
                 };
                 setActivePillar(map[inv.id] || 'KILL_CHAINS');
