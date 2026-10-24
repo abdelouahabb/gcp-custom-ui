@@ -47,11 +47,13 @@ const DOC_SECTIONS = [
       'Sub-Tab 06 ([2030] T_Now -> T_+72h Pre-Crime Forecaster): Projects 72-hour control-plane trajectories across severity>=ERROR log velocity, world-open firewall & unhardened bucket exposure-hours, 72h idle disk/IP burn, and IAM Zero-Key governance.',
       'Sub-Tab 07 ([2030] Zero-Knowledge / Ed25519 Blinded Compliance Proof & Verifier — POST /api/project/:id/enterprise-personas/zkp-verify): Generates salted SHA-256 Pedersen-style commitments (H(salt || kind || name || status)) signed with Ed25519 (RFC 8032) so external auditors can mathematically verify compliance in microseconds without seeing a single internal resource name, bucket name, or Service Account email.',
       'Sub-Tab 08 ([2030] Intent-to-Control-Plane Compiler — POST /api/project/:id/enterprise-personas/intent-compiler): Compiles natural-language engineering intents across all 10 Personas using your live project inventory + Gemini (gemini-3.8-flash / gemini-3.1-pro) into persona amendments and copy-ready Terraform HCL (main.tf).',
+      'Sub-Tab 09 ([2030] 6-Practitioner Agentless Workbench — Kill the 2010 VM & Network Console): Replaces 2010-era VM tables, static firewall lists, cryptic IAM 403 errors, manual BigQuery schemas, and Terraform import pain across 6 hands-on engineering disciplines with ZERO guest agents required inside VMs: (A) Agentless VM Hypervisor Serial-Port 1 X-Ray (/serialPort?port=1), Live Linux Kernel /proc Telemetry (/proc/loadavg, /proc/meminfo, /proc/net/tcp) & 1-Click VM-to-Cloud-Run Gen2 Transpiler, (B) Live L3/L4/L6 Wire-Speed Socket Timing Waterfall (DNS -> TCP SYN-ACK -> TLS 1.3 + X.509) & VPC Firewall Mathematical Shadow/Redundancy Analyzer, (C) Software Engineer Live IAM 403 Permission Debugger (:testIamPermissions), Polyglot SDK Generator & Data Engineer Recursive JSON-to-BigQuery STRUCT/REPEATED DDL Compiler, and (D) DevSecOps Mathematical Shannon-Entropy H(X) Secret Scanner & DevOps Live Terraform 1.5+ import {} Block Generator.',
     ],
     apisUsed: [
       'GET & POST /api/project/:id/enterprise-personas/tribunal (20 Parallel Live GCP REST Probes + SHA-256 Merkle Diff + T_+72h Forecast + ZKP Proof)',
       'GET /api/enterprise-personas/fleet-tribunal (Multi-Project Cross-Estate Parallel Fleet Tribunal)',
       'POST /api/project/:id/enterprise-personas/zkp-verify & POST /api/project/:id/enterprise-personas/intent-compiler',
+      'POST /api/project/:id/enterprise-personas/agentless-vm-xray, /wire-packet-waterfall, /practitioner-devkit & /devsecops-entropy-gitops',
       'GET /api/project/:id/enterprise-personas/overview & POST /api/project/:id/enterprise-personas/action (EXECUTE_TRIBUNAL_LIVE_REMEDIATION + ROLLBACK_TRIBUNAL_REMEDIATION)',
     ],
     billingImpact:
