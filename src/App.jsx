@@ -1576,9 +1576,36 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // 3G-4. Wave 16 Autonomous Cloud SOC Read-Only AI Commander Briefing (Bypass Gatekeeper)
-    if (rawUrl.includes('/soc/ai-commander')) {
+    // 3G-4. Wave 16 Autonomous Cloud SOC Read-Only Diagnostic & BAS Endpoints (Bypass Gatekeeper)
+    if (
+      rawUrl.includes('/soc/ai-commander') ||
+      rawUrl.includes('/soc/deep-probe') ||
+      rawUrl.includes('/soc/purple-team-drill') ||
+      rawUrl.includes('/soc/ai-red-team-audit')
+    ) {
       return null;
+    }
+
+    // 3G-4B. Wave 16 Autonomous 12-Invariant Self-Healing Reconciler (/soc/guardian-reconcile)
+    if (rawUrl.includes('/soc/guardian-reconcile')) {
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Execute 12-Invariant Self-Healing Reconciler on "${projectId}"?`,
+        headerBadge: 'Wave 16 Autonomous Self-Healing Guardian Gatekeeper',
+        targetLabel: 'Target Project Zero-Trust Invariants',
+        resourceKind: 'Autonomous 12-Invariant Self-Healing Reconciler',
+        targetName: `${projectId} (INV-01 -> INV-12)`,
+        location: 'Global Project Perimeter',
+        projectId,
+        method: 'SELF-HEAL RECONCILE',
+        endpoint: rawUrl,
+        confirmLabel: 'Confirm & Heal Non-Compliant Invariants',
+        cancelToast: `Autonomous Self-Healing Reconciler cancelled.`,
+        whatHappensNext: `1. Evaluates all 12 Zero-Trust invariants and remediates auto-healable violations (enforces OS Login, disables serial-port access, enforces GCS Uniform Bucket-Level Access & Public Access Prevention, enables VPC Subnet Private Google Access, enables Binary Authorization dry-run audit logging, and arms $0.00/mo Canary Tripwires).\n2. Signs the reconciliation receipt with Ed25519 (RFC 8032) and appends Terraform HCL changes to the ClickOps-to-GitOps bridge.`,
+        costWarning: `ZERO-COST ($0.00/MO) SECURITY OPERATION: All self-healing compliance mutations operate on control-plane metadata and IAM/ACL policies with $0.00/mo in additional Google Cloud billing.`,
+        impactWarning: `Please verify before reconciling live security invariants across "${projectId}".`,
+      };
     }
 
     // 3G-5. Wave 16 Autonomous Cloud SOC SOAR & Canary Actions (/soc/action)

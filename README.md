@@ -315,6 +315,31 @@
       3. **1-Click Deploy (`DEPLOY_COMPOSE_UP`)**: Deploys the compiled multi-container `containers[]` pod directly via `run.googleapis.com/v2` (`GEN2` execution environment) or runs `gcloud run compose up compose.yaml --region=<REGION> --project=<PROJECT_ID>` in the Cloud Shell.
       4. **Reverse-Export Any Live Cloud Run Service to `compose.yaml` (`EXPORT_SERVICE_TO_COMPOSE`)**: Click any running Cloud Run v2 service pill in the drawer to reverse-engineer its live `containers[]`, `volumeMounts`, `env`, and `secretKeyRef` bindings into a portable `compose.yaml`.
 
+54. **Wave 16: 20-Pillar Autonomous Google Cloud Zero-Trust SOC, Purple-Team BAS, Model-Armor AI Red-Team & 12-Invariant Self-Healing Reconciler (`src/components/AutonomousCloudSocStudio.jsx` & `server/index.js`)**
+    - **Why It Matters**: Enterprise SIEMs and CNAPPs frequently charge `$2,000–$10,000+/mo` and still emit disconnected alerts without remediation. CloudPulse's **`Cloud SOC ★`** main menu tab delivers a **20-Pillar (`4x5` Bento Grid) Autonomous Zero-Trust Security Operations Center** powered 100% by real Google Cloud REST APIs with `$0.00/mo` SIEM license tax.
+    - **20 Live Zero-Trust Pillars (`01`–`20`)**:
+      1. **Pillar `01` (`KILL_CHAINS`)**: Live `cloudaudit.googleapis.com` MITRE ATT&CK Behavioral Kill-Chain Correlator, **Forensic Breach & Risk Attribution Explainer** (showing the exact mathematical risk formula, actor context badge, per-method security impact breakdown, and raw Cloud Audit event timeline), and 1-Click `/32` VPC Perimeter IP Quarantine (`priority: 100, direction: INGRESS, denied: all`).
+      2. **Pillar `02` (`TOXIC_GRAPH`)**: 3-Vector Toxic Combinations Attack-Path Graph (*Public Ingress &times; Over-Privileged Runtime Identity &times; Crown Jewels*) + 1-Click Public `allUsers` Sever & VPC `0.0.0.0/0` -> IAP (`35.235.240.0/20`) Lock.
+      3. **Pillar `03` (`SUPPLY_CHAIN`)**: Container `@sha256` Digest & Secret Manager `secretKeyRef` Pin Verifier + 1-Click User-Managed `.json` Service Account Key Disabler (`iam.googleapis.com/v1/.../keys/:id:disable`).
+      4. **Pillar `04` (`CANARY_GRID`)**: `$0.00/mo` Active Canary Deception Tripwire Grid (*Honey-Secret `cloudpulse-soc-canary-master-key`*, *Decoy Service Account `soc-canary-vault-admin`*, and *VPC Dark-Port Recon Trap `23/445/1433/6379`*).
+      5. **Pillar `05` (`AI_COMMANDER`)**: Gemini 3.8 Flash & Gemini 3.1 Pro Incident Commander + `Ed25519 (RFC 8032)` Cryptographic Forensic Ledger (`server/.data/wave16-soc-forensic-ledger.json`).
+      6. **Pillar `06` (`IAM_TIME_MACHINE`)**: `Ed25519` `etag` IAM Policy Vault & 1-Click Atomic `:setIamPolicy` Rollback.
+      7. **Pillar `07` (`EXFILTRATION_RADAR`)**: Cloud Logging Sink Exfiltration Detector, Audit-Log Blinding Exclusion Purge (`logging.googleapis.com/v2`), & 1-Click GCS Public Access Prevention + UBLA Enforcer.
+      8. **Pillar `08` (`WIF_IDENTITY_FREEZE`)**: Workload Identity Federation (`WIF`) OIDC Pool Inspector & 1-Click Compromised Service Account Freeze/Unfreeze (`:disable` / `:enable`).
+      9. **Pillar `09` (`FLEET_SOC_MATRIX`)**: Multi-Project Cross-Estate SOC Federation Matrix (`GET /api/soc/fleet-matrix`) across all active GCP projects.
+      10. **Pillar `10` (`DEFCON1_LOCKDOWN`)**: 1-Click 5-Stage Coordinated Defcon-1 Atomic Project Lockdown.
+      11. **Pillar `11` (`IAM_ESCALATION_SOLVER`)**: Transitive IAM Privilege Escalation Solver (`iam.serviceAccounts.actAs`, `getAccessToken`, `signBlob`, `keys.create`, `setIamPolicy`) & 1-Click Binding Sever.
+      12. **Pillar `12` (`VM_METADATA_SHIELDED`)**: Compute Engine `169.254.169.254` SSRF Metadata, `enable-oslogin=TRUE` Enforcer, `serial-port-enable=FALSE` Backdoor Closer, Static SSH-Key Purger & Shielded VM vTPM X-Ray.
+      13. **Pillar `13` (`TLS_HEADER_DEEP_PROBE`)**: Live TLS 1.3 Socket Handshake, X.509 Certificate Expiration & HTTP Security Header (`HSTS`, `CSP`, `X-Frame-Options`) Deep Probe (`POST /api/project/:id/soc/deep-probe`).
+      14. **Pillar `14` (`DATA_DLP_SECRET_HYGIENE`)**: BigQuery PII/Credential Column Schema Classifier, 1-Click Public Dataset ACL Stripper, & 1-Click 256-Bit Secret Manager Version Rotator (`:addVersion`).
+      15. **Pillar `15` (`PURPLE_TEAM_BAS_ARENA`)**: 4-Stage Autonomous Purple-Team Breach & Attack Simulation (`BAS`) & End-to-End SIEM Detection Latency Stopwatch (`POST /api/project/:id/soc/purple-team-drill`).
+      16. **Pillar `16` (`AI_RED_TEAM_FIREWALL`)**: Vertex AI & Gemini Model-Armor Red-Team Prompt-Injection, `169.254.169.254` SSRF & IAM Tool-Call Hijack Live Arena (`POST /api/project/:id/soc/ai-red-team-audit`).
+      17. **Pillar `17` (`DNS_EGRESS_KMS_FORENSICS`)**: Cloud DNS Zone DNSSEC Enforcer (`ENABLE_CLOUD_DNS_DNSSEC`), VPC `0.0.0.0/0` Egress Route Hijack Inspector, VPC Subnet Private Google Access Enforcer (`ENFORCE_SUBNET_PRIVATE_GOOGLE_ACCESS`), & Cloud KMS KeyRing Auditor.
+      18. **Pillar `18` (`API_SURFACE_MINIMIZER`)**: Live Enabled GCP API Attack-Surface Minimizer (`serviceusage.googleapis.com/v1`) with Zero-Lockout Core API Guard & 1-Click Unused High-Risk API Disabler (`DISABLE_UNUSED_GCP_API`).
+      19. **Pillar `19` (`ARTIFACT_VULN_ATTESTOR`)**: Artifact Registry Repository Inspector & 1-Click Binary Authorization Policy Hardener (`HARDEN_BINARY_AUTH_POLICY` -> `globalPolicyEvaluationMode: ENABLE` + `DRYRUN_AUDIT_LOG_ONLY`).
+      20. **Pillar `20` (`AUTONOMOUS_SELF_HEALING_GUARDIAN`)**: Continuous 12-Invariant Zero-Trust Compliance Engine (`INV-01` -> `INV-12`) & 1-Click Full-Project Self-Healing Reconciler (`POST /api/project/:id/soc/guardian-reconcile`).
+    - **Bidirectional `Health & Drift` <-> `Cloud SOC` <-> `ClickOps-to-GitOps (main.tf + imports.tf)` Bridge**: Every SOAR action in the Cloud SOC automatically records a live Flight Mutation and synthesizes copy-ready Terraform 1.5+ HCL (`git diff main.tf` + `imports.tf`) in both the Cloud SOC top command bar and the **Health & Drift (`Health`)** modal (`Tab 5: 15/20-Pillar Cloud SOC & SOAR`).
+
 > **Full Engineering & User Manual**: Read [**`docs/REVOLUTIONARY_FEATURES_GUIDE.md`**](docs/REVOLUTIONARY_FEATURES_GUIDE.md) or click the **`Docs & Guide`** tab directly inside the app for step-by-step explanations of every feature, the exact GCP REST APIs called, and billing impact.
 
 ---

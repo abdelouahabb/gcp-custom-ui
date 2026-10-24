@@ -128,6 +128,41 @@ const SOC_PILLARS = [
     subtitle: '4-Stage Live MITRE Attack Simulation & SIEM Latency Proof',
     icon: Zap,
   },
+  {
+    id: 'AI_RED_TEAM_FIREWALL',
+    step: '16',
+    title: 'AI Red-Team & Model-Armor',
+    subtitle: 'Gemini/Vertex Prompt-Injection, SSRF & IAM Tool-Call Hijack Arena',
+    icon: Sparkles,
+  },
+  {
+    id: 'DNS_EGRESS_KMS_FORENSICS',
+    step: '17',
+    title: 'DNSSEC, VPC Egress & KMS',
+    subtitle: 'Cloud DNS Zones, 0.0.0.0/0 Route Hijack, PGA & KMS Rotation',
+    icon: Server,
+  },
+  {
+    id: 'API_SURFACE_MINIMIZER',
+    step: '18',
+    title: 'API Attack-Surface Minimizer',
+    subtitle: 'Live serviceusage Scorer & 1-Click Unused High-Risk API Disabler',
+    icon: Layers,
+  },
+  {
+    id: 'ARTIFACT_VULN_ATTESTOR',
+    step: '19',
+    title: 'Artifact & Binary Auth Policy',
+    subtitle: 'Artifact Registry Digest Audit & Binary Authorization Enforcer',
+    icon: FileCode2,
+  },
+  {
+    id: 'AUTONOMOUS_SELF_HEALING_GUARDIAN',
+    step: '20',
+    title: '12-Invariant Self-Healing',
+    subtitle: 'Continuous Zero-Trust Invariant Engine & 1-Click Full Reconciler',
+    icon: ShieldCheck,
+  },
 ];
 
 export default function AutonomousCloudSocStudio({
@@ -163,6 +198,14 @@ export default function AutonomousCloudSocStudio({
   // Purple-Team Breach & Attack Simulation Stopwatch (Pillar 15)
   const [purpleDrillResult, setPurpleDrillResult] = useState(null);
   const [purpleDrillLoading, setPurpleDrillLoading] = useState(false);
+
+  // Vertex AI & Gemini Model-Armor Red-Team Arena (Pillar 16)
+  const [aiRedTeamResult, setAiRedTeamResult] = useState(null);
+  const [aiRedTeamLoading, setAiRedTeamLoading] = useState(false);
+
+  // Autonomous 12-Invariant Self-Healing Guardian (Pillar 20)
+  const [guardianReconcileResult, setGuardianReconcileResult] = useState(null);
+  const [guardianReconcileLoading, setGuardianReconcileLoading] = useState(false);
 
   // Gemini Incident Commander state
   const [selectedAiModel, setSelectedAiModel] = useState('gemini-3.8-flash');
@@ -260,6 +303,67 @@ export default function AutonomousCloudSocStudio({
     }
   };
 
+  const handleRunAiRedTeamAudit = useCallback(async () => {
+    if (!projectId) return;
+    setAiRedTeamLoading(true);
+    setStatusBanner(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/soc/ai-red-team-audit`,
+        { model: selectedAiModel }
+      );
+      setAiRedTeamResult(res.data);
+      setStatusBanner({
+        type: 'success',
+        message:
+          res.data?.message ||
+          'Vertex AI & Gemini Model-Armor Red-Team audit completed!',
+        receipt: res.data?.receipt || null,
+      });
+    } catch (err) {
+      setStatusBanner({
+        type: 'error',
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          'AI Red-Team Model-Armor audit failed.',
+      });
+    } finally {
+      setAiRedTeamLoading(false);
+    }
+  }, [projectId, selectedAiModel]);
+
+  const handleRunGuardianReconcile = async () => {
+    if (!projectId) return;
+    setGuardianReconcileLoading(true);
+    setStatusBanner(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/soc/guardian-reconcile`
+      );
+      setGuardianReconcileResult(res.data);
+      setStatusBanner({
+        type: 'success',
+        message:
+          res.data?.message ||
+          'Autonomous 12-Invariant Self-Healing Reconciler executed!',
+        receipt: res.data?.receipt || null,
+      });
+      await fetchSocOverview();
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err) {
+      setStatusBanner({
+        type: 'error',
+        message:
+          err.response?.data?.error ||
+          err.message ||
+          'Autonomous Self-Healing Reconciler failed.',
+      });
+    } finally {
+      setGuardianReconcileLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchSocOverview();
   }, [fetchSocOverview]);
@@ -275,6 +379,13 @@ export default function AutonomousCloudSocStudio({
     ) {
       handleRunDeepProbe();
     }
+    if (
+      activePillar === 'AI_RED_TEAM_FIREWALL' &&
+      !aiRedTeamResult &&
+      !aiRedTeamLoading
+    ) {
+      handleRunAiRedTeamAudit();
+    }
   }, [
     activePillar,
     fleetMatrix,
@@ -283,6 +394,9 @@ export default function AutonomousCloudSocStudio({
     deepProbeResult,
     deepProbeLoading,
     handleRunDeepProbe,
+    aiRedTeamResult,
+    aiRedTeamLoading,
+    handleRunAiRedTeamAudit,
   ]);
 
   const handleExecuteSocAction = async (busyKey, payload) => {
@@ -414,6 +528,42 @@ export default function AutonomousCloudSocStudio({
     piiColumnsCount: 0,
     staleSecretsCount: 0,
   };
+  const dnsEgressAndKmsRadar = socData?.dnsEgressAndKmsRadar || {
+    dnsZones: [],
+    unsecuredPublicDnsZonesCount: 0,
+    vpcRoutes: [],
+    defaultInternetRoutesCount: 0,
+    customInternetHijackRoutesCount: 0,
+    subnets: [],
+    subnetsWithoutPrivateGoogleAccessCount: 0,
+    kmsKeyRings: [],
+  };
+  const apiSurfaceMinimizer = socData?.apiSurfaceMinimizer || {
+    enabledApisCount: 0,
+    unusedHighRiskApisCount: 0,
+    protectedCoreApisCount: 0,
+    apis: [],
+  };
+  const artifactAndBinAuthRadar = socData?.artifactAndBinAuthRadar || {
+    repositoriesCount: 0,
+    repositories: [],
+    binaryAuthorization: {
+      apiEnabled: false,
+      globalPolicyEvaluationMode: 'ENABLE',
+      defaultEvaluationMode: 'ALWAYS_ALLOW',
+      defaultEnforcementMode: 'ENFORCED_BLOCK_AND_AUDIT_LOG',
+      description: 'Default Binary Authorization container admission policy',
+      updateTime: null,
+      isHardened: false,
+    },
+  };
+  const selfHealingGuardian = socData?.selfHealingGuardian || {
+    totalInvariantsCount: 12,
+    invariantsPassedCount: 12,
+    invariantsViolatedCount: 0,
+    complianceScorePct: 100,
+    invariants: [],
+  };
   const healthAndDriftBridge = socData?.healthAndDriftBridge || null;
   const attestation = socData?.cryptographicAttestation || {};
 
@@ -426,10 +576,13 @@ export default function AutonomousCloudSocStudio({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-mono font-extrabold">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>WAVE 16 · 15-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC &amp; PURPLE-TEAM SOAR WAR-ROOM</span>
+                <span>WAVE 16 · 20-PILLAR AUTONOMOUS GOOGLE CLOUD ZERO-TRUST SOC &amp; PURPLE-TEAM SOAR WAR-ROOM</span>
               </span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
                 100% REAL GCP REST APIs · $0.00/MO SIEM LICENSE TAX
+              </span>
+              <span className="px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono font-bold">
+                12-Invariant Guardian: {selfHealingGuardian.invariantsPassedCount}/{selfHealingGuardian.totalInvariantsCount} ({selfHealingGuardian.complianceScorePct}%)
               </span>
               {healthAndDriftBridge?.merkleSnapshot?.merkleRootShort && (
                 <span className="px-2 py-0.5 rounded bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 text-[10px] font-mono font-bold">
@@ -443,10 +596,10 @@ export default function AutonomousCloudSocStudio({
               )}
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-              Next-Gen Autonomous Cloud Security Operations Center (`{projectId}`)
+              Next-Gen Autonomous 20-Pillar Cloud Security Operations Center (`{projectId}`)
             </h2>
             <p className="text-xs text-zinc-400 max-w-4xl">
-              Correlates live <code className="text-cyan-300">cloudaudit.googleapis.com</code> MITRE ATT&amp;CK kill-chains, maps 3-vector <strong>Toxic Combinations</strong> (<em>Public Ingress &times; Over-Privileged Runtime Identity &times; Crown Jewels</em>), verifies container <code className="text-cyan-300">@sha256</code> supply-chain integrity, arms <strong>$0.00/mo Active Canary Deception Tripwires</strong>, and seals every SOAR containment action in an <strong>Ed25519 (RFC 8032)</strong> cryptographic ledger + live <strong>ClickOps-to-GitOps (`main.tf`)</strong> diff.
+              Correlates live <code className="text-cyan-300">cloudaudit.googleapis.com</code> MITRE ATT&amp;CK kill-chains, maps 3-vector <strong>Toxic Combinations</strong>, verifies container <code className="text-cyan-300">@sha256</code> supply-chain &amp; Binary Authorization integrity, stress-tests <strong>Gemini &amp; Vertex AI Model-Armor</strong>, audits DNSSEC/Egress/KMS &amp; API attack surface, enforces <strong>12 Formal Zero-Trust Invariants</strong>, and seals every SOAR action in an <strong>Ed25519 (RFC 8032)</strong> ledger + live <strong>ClickOps-to-GitOps (`main.tf`)</strong> diff.
             </p>
           </div>
 
@@ -490,6 +643,18 @@ export default function AutonomousCloudSocStudio({
               <FileCode2 className="w-3.5 h-3.5" />
               <span>
                 GitOps HCL Bridge ({healthAndDriftBridge?.flightMutationsCount || 0})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActivePillar('AUTONOMOUS_SELF_HEALING_GUARDIAN')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
+              title="Open 12-Invariant Zero-Trust Compliance Engine & 1-Click Self-Healing Reconciler"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>
+                Self-Healing ({selfHealingGuardian.invariantsPassedCount}/{selfHealingGuardian.totalInvariantsCount})
               </span>
             </button>
 
@@ -2814,6 +2979,650 @@ export default function AutonomousCloudSocStudio({
               Click &ldquo;Launch 4-Stage Purple-Team BAS Drill Now&rdquo; to benchmark your project&apos;s end-to-end SIEM detection latency in milliseconds.
             </div>
           )}
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 16: VERTEX AI & GEMINI MODEL-ARMOR RED-TEAM PROMPT-INJECTION ARENA
+         ==================================================================== */}
+      {activePillar === 'AI_RED_TEAM_FIREWALL' && (
+        <div className="p-4 rounded-xl border border-violet-500/40 bg-white dark:bg-zinc-950 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-violet-500" />
+                <span>
+                  Vertex AI &amp; Gemini Model-Armor Red-Team Prompt-Injection, SSRF (`169.254.169.254`) &amp; IAM Tool-Call Hijack Arena
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Inspects live Vertex AI endpoints (<code className="font-mono">aiplatform.googleapis.com</code>) &amp; enabled GenAI APIs, then fires 5 OWASP LLM Top-10 / MITRE ATLAS adversarial payloads (<code className="font-mono">AML.T0051.000</code> Direct Override, <code className="font-mono">AML.T0051.001</code> 169.254.169.254 SSRF, <code className="font-mono">AML.T0054</code> IAM Key Minting, <code className="font-mono">AML.T0024</code> Honey-Secret Exfiltration, and <code className="font-mono">AML.T0043</code> Base64 Log-Blinding) against your live Model-Armor Guardrail &amp; Gemini ({selectedAiModel}).
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={selectedAiModel}
+                onChange={(e) => setSelectedAiModel(e.target.value)}
+                className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-800 dark:text-zinc-200"
+              >
+                <option value="gemini-3.8-flash">gemini-3.8-flash (Fast Arena)</option>
+                <option value="gemini-3.1-pro">gemini-3.1-pro (Deep Reasoning)</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={handleRunAiRedTeamAudit}
+                disabled={aiRedTeamLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>
+                  {aiRedTeamLoading
+                    ? 'Firing 5 OWASP LLM Payloads...'
+                    : 'Run 5-Vector AI Red-Team & Model-Armor Audit'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {aiRedTeamResult ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">Model-Armor Shield Rate</div>
+                  <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {aiRedTeamResult.shieldPassRatePct}% ({aiRedTeamResult.vectorsBlockedCount}/{aiRedTeamResult.vectorsTestedCount} Blocked)
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">Target Gemini Model</div>
+                  <div className="text-base font-extrabold text-violet-600 dark:text-violet-400 mt-0.5">
+                    {aiRedTeamResult.modelTested}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">Vertex AI / GenLanguage APIs</div>
+                  <div className="text-base font-extrabold text-cyan-600 dark:text-cyan-400 mt-0.5">
+                    Vertex: {aiRedTeamResult.vertexAiEnabled ? 'ON' : 'OFF'} · GenAI: {aiRedTeamResult.genLangEnabled ? 'ON' : 'OFF'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[10px] text-zinc-500">Audit Execution Time</div>
+                  <div className="text-base font-extrabold text-zinc-900 dark:text-white mt-0.5">
+                    {aiRedTeamResult.latencyMs}ms
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {(aiRedTeamResult.vectors || []).map((vec) => (
+                  <div
+                    key={vec.id}
+                    className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        [{vec.mitreAtlasId}] {vec.category}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
+                        {vec.status}
+                      </span>
+                    </div>
+
+                    <div className="p-2 rounded bg-zinc-950 text-red-300 text-[11px] border border-zinc-800 break-words">
+                      <span className="text-zinc-500 font-bold">Adversarial Payload: </span>
+                      {vec.adversarialPayload}
+                    </div>
+
+                    <div className="text-[11px] text-cyan-700 dark:text-cyan-300">
+                      <span className="font-bold">Firewall Rule: </span>
+                      {vec.deterministicFirewallRule}
+                    </div>
+
+                    <div className="p-2 rounded bg-zinc-100 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-300">
+                      <span className="font-bold text-violet-500">{vec.defenseLayer}: </span>
+                      {vec.modelResponseSnippet}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-xs font-mono text-zinc-500">
+              Click &ldquo;Run 5-Vector AI Red-Team &amp; Model-Armor Audit&rdquo; to test prompt-injection, SSRF (`169.254.169.254`), and IAM tool-call hijack defenses.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 17: CLOUD DNS DNSSEC, VPC EGRESS ROUTE HIJACK, SUBNET PGA & CLOUD KMS AUDITOR
+         ==================================================================== */}
+      {activePillar === 'DNS_EGRESS_KMS_FORENSICS' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+            <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+              <div className="text-[10px] text-zinc-500">Cloud DNS Managed Zones</div>
+              <div
+                className={`text-base font-extrabold mt-0.5 ${
+                  dnsEgressAndKmsRadar.unsecuredPublicDnsZonesCount > 0
+                    ? 'text-red-500'
+                    : 'text-emerald-500'
+                }`}
+              >
+                {dnsEgressAndKmsRadar.dnsZones.length} Zones ({dnsEgressAndKmsRadar.unsecuredPublicDnsZonesCount} DNSSEC Off)
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+              <div className="text-[10px] text-zinc-500">VPC Egress Routes (`0.0.0.0/0`)</div>
+              <div
+                className={`text-base font-extrabold mt-0.5 ${
+                  dnsEgressAndKmsRadar.customInternetHijackRoutesCount > 0
+                    ? 'text-red-500'
+                    : 'text-emerald-500'
+                }`}
+              >
+                {(dnsEgressAndKmsRadar.vpcRoutes || []).length} Routes ({dnsEgressAndKmsRadar.customInternetHijackRoutesCount} Hijack Risk)
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+              <div className="text-[10px] text-zinc-500">VPC Subnets Missing Private Google Access</div>
+              <div
+                className={`text-base font-extrabold mt-0.5 ${
+                  dnsEgressAndKmsRadar.subnetsWithoutPrivateGoogleAccessCount > 0
+                    ? 'text-amber-500'
+                    : 'text-emerald-500'
+                }`}
+              >
+                {dnsEgressAndKmsRadar.subnetsWithoutPrivateGoogleAccessCount} / {dnsEgressAndKmsRadar.subnets.length} Missing PGA
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+              <div className="text-[10px] text-zinc-500">Cloud KMS KeyRings (`cloudkms.googleapis.com`)</div>
+              <div className="text-base font-extrabold mt-0.5 text-cyan-500">
+                {(dnsEgressAndKmsRadar.kmsKeyRings || []).length} KeyRing(s) Inspected
+              </div>
+            </div>
+          </div>
+
+          {/* Cloud DNS Zones & 1-Click DNSSEC Enforcer */}
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+              Cloud DNS Managed Zones &amp; 1-Click DNSSEC Cryptographic Signing Enforcer (`dns.googleapis.com/v1`)
+            </h3>
+            {dnsEgressAndKmsRadar.dnsZones.length === 0 ? (
+              <div className="text-xs font-mono text-zinc-500">
+                No Cloud DNS Managed Zones provisioned in {projectId}.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dnsEgressAndKmsRadar.dnsZones.map((z) => (
+                  <div
+                    key={z.name}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            !z.isHardened
+                              ? 'bg-red-500/20 text-red-600 dark:text-red-300'
+                              : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                          }`}
+                        >
+                          {z.isHardened ? 'DNSSEC_HARDENED' : 'VULNERABLE_NO_DNSSEC'}
+                        </span>
+                        <span className="font-extrabold text-zinc-900 dark:text-white">
+                          {z.name} ({z.dnsName})
+                        </span>
+                        <span className="text-zinc-500">
+                          Visibility: {z.visibility} · DNSSEC: {z.dnssecState}
+                        </span>
+                      </div>
+                    </div>
+                    {!z.isHardened && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleExecuteSocAction(`DNSSEC:${z.name}`, {
+                            action: 'ENABLE_CLOUD_DNS_DNSSEC',
+                            zoneName: z.name,
+                          })
+                        }
+                        disabled={Boolean(actionBusy)}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        Enable DNSSEC Signing Now
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* VPC Subnets & 1-Click Private Google Access (PGA) Enforcer */}
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+              VPC Subnetworks &amp; 1-Click Private Google Access (`privateIpGoogleAccess`) Enforcer (`compute.googleapis.com`)
+            </h3>
+            {dnsEgressAndKmsRadar.subnets.length === 0 ? (
+              <div className="text-xs font-mono text-zinc-500">
+                No VPC subnetworks discovered in {projectId}.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {dnsEgressAndKmsRadar.subnets.map((sn) => (
+                  <div
+                    key={`${sn.region}:${sn.name}`}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            sn.privateIpGoogleAccess
+                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                              : 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                          }`}
+                        >
+                          {sn.privateIpGoogleAccess ? 'PGA_ENABLED' : 'PGA_DISABLED'}
+                        </span>
+                        <span className="font-extrabold text-zinc-900 dark:text-white">
+                          {sn.name} ({sn.region})
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">
+                        CIDR: {sn.ipCidrRange} · VPC: {sn.network} · Purpose: {sn.purpose}
+                      </div>
+                    </div>
+
+                    {!sn.privateIpGoogleAccess && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleExecuteSocAction(`PGA:${sn.region}:${sn.name}`, {
+                            action: 'ENFORCE_SUBNET_PRIVATE_GOOGLE_ACCESS',
+                            region: sn.region,
+                            subnetName: sn.name,
+                          })
+                        }
+                        disabled={Boolean(actionBusy)}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50"
+                      >
+                        Enable PGA
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* VPC Egress Route Table & Cloud KMS KeyRings */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                VPC Route Table Egress Forensics (`0.0.0.0/0` Next-Hop Inspector)
+              </h3>
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {(dnsEgressAndKmsRadar.vpcRoutes || []).map((rt) => (
+                  <div
+                    key={rt.name}
+                    className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-bold text-zinc-900 dark:text-white truncate">
+                        {rt.name} ({rt.destRange})
+                      </div>
+                      <div className="text-[10px] text-zinc-500 truncate">
+                        VPC: {rt.network} · NextHop: {rt.nextHop} · Priority: {rt.priority}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                        rt.isCustomInternetHijackRisk
+                          ? 'bg-red-500/20 text-red-500'
+                          : 'bg-emerald-500/20 text-emerald-500'
+                      }`}
+                    >
+                      {rt.isCustomInternetHijackRisk ? 'CUSTOM_EGRESS_HIJACK_RISK' : 'VERIFIED_ROUTE'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2.5">
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                Cloud KMS KeyRing Inventory (`cloudkms.googleapis.com/v1`)
+              </h3>
+              {(dnsEgressAndKmsRadar.kmsKeyRings || []).length === 0 ? (
+                <div className="text-xs font-mono text-zinc-500">
+                  No Cloud KMS KeyRings found in global location for {projectId} (using Google-managed encryption keys).
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                  {(dnsEgressAndKmsRadar.kmsKeyRings || []).map((kr) => (
+                    <div
+                      key={kr.fullName}
+                      className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <div className="font-bold text-zinc-900 dark:text-white">
+                          {kr.name}
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          {kr.fullName} · Created: {kr.createTime}
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-500">
+                        ACTIVE_KEYRING
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 18: LIVE ENABLED GCP API ATTACK-SURFACE MINIMIZER
+         ==================================================================== */}
+      {activePillar === 'API_SURFACE_MINIMIZER' && (
+        <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-cyan-500" />
+                <span>
+                  Live Enabled GCP API Attack-Surface Minimizer (`serviceusage.googleapis.com/v1`)
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Inspects all <strong>{apiSurfaceMinimizer.enabledApisCount}</strong> enabled Google Cloud APIs on <code className="font-mono">{projectId}</code>, protects <strong>{apiSurfaceMinimizer.protectedCoreApisCount}</strong> core security/identity APIs with a Zero-Lockout Guard, and flags unused high-blast-radius APIs for 1-click deactivation.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="px-2.5 py-1 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 font-bold">
+                Enabled APIs: {apiSurfaceMinimizer.enabledApisCount}
+              </span>
+              <span className="px-2.5 py-1 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 font-bold">
+                Unused High-Risk: {apiSurfaceMinimizer.unusedHighRiskApisCount}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[520px] overflow-y-auto">
+            {(apiSurfaceMinimizer.apis || []).map((svc) => (
+              <div
+                key={svc.serviceName}
+                className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono flex flex-wrap items-center justify-between gap-2"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        svc.isUnusedHighRisk
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                          : svc.isProtectedCore
+                          ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-300'
+                          : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                      }`}
+                    >
+                      {svc.isUnusedHighRisk
+                        ? 'UNUSED_HIGH_RISK'
+                        : svc.isProtectedCore
+                        ? 'PROTECTED_CORE_API'
+                        : 'ACTIVE_SERVICE'}
+                    </span>
+                    <span className="font-extrabold text-zinc-900 dark:text-white truncate">
+                      {svc.serviceName}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    <strong>{svc.title}</strong> — {svc.attackVector}
+                  </div>
+                </div>
+
+                {svc.canDisableSafely && svc.isUnusedHighRisk && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleExecuteSocAction(`DISABLE_API:${svc.serviceName}`, {
+                        action: 'DISABLE_UNUSED_GCP_API',
+                        apiServiceName: svc.serviceName,
+                      })
+                    }
+                    disabled={Boolean(actionBusy)}
+                    className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    Disable API
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 19: ARTIFACT REGISTRY & BINARY AUTHORIZATION POLICY ENFORCER
+         ==================================================================== */}
+      {activePillar === 'ARTIFACT_VULN_ATTESTOR' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <FileCode2 className="w-4 h-4 text-cyan-500" />
+                  <span>
+                    Binary Authorization Cryptographic Admission Policy (`binaryauthorization.googleapis.com/v1`)
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Audits your project-wide Binary Authorization policy and enables 1-click <code className="font-mono">DRYRUN_AUDIT_LOG_ONLY</code> + Google system policy evaluation (<code className="font-mono">globalPolicyEvaluationMode: ENABLE</code>) so every unattested container deployment is logged in Cloud Audit Logs without breaking active workloads.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleExecuteSocAction('HARDEN_BINAUTH', {
+                    action: 'HARDEN_BINARY_AUTH_POLICY',
+                  })
+                }
+                disabled={Boolean(actionBusy)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>
+                  {actionBusy === 'HARDEN_BINAUTH'
+                    ? 'Hardening Binary Authorization...'
+                    : 'Harden Binary Authorization Policy (Audit + System Policy)'}
+                </span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono">
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">Enforcement Mode</div>
+                <div className="text-sm font-extrabold text-cyan-600 dark:text-cyan-400 mt-0.5">
+                  {artifactAndBinAuthRadar.binaryAuthorization?.defaultEnforcementMode || 'ENFORCED_BLOCK_AND_AUDIT_LOG'}
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">Default Evaluation Mode</div>
+                <div className="text-sm font-extrabold text-zinc-900 dark:text-white mt-0.5">
+                  {artifactAndBinAuthRadar.binaryAuthorization?.defaultEvaluationMode || 'ALWAYS_ALLOW'}
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[10px] text-zinc-500">Global System Policy Evaluation</div>
+                <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {artifactAndBinAuthRadar.binaryAuthorization?.globalPolicyEvaluationMode || 'ENABLE'} ({artifactAndBinAuthRadar.binaryAuthorization?.isHardened ? 'HARDENED' : 'DEFAULT'})
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+              Artifact Registry Repositories (`artifactregistry.googleapis.com/v1`)
+            </h3>
+            {artifactAndBinAuthRadar.repositories.length === 0 ? (
+              <div className="text-xs font-mono text-zinc-500">
+                No Artifact Registry repositories found in us-central1 for {projectId}.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {artifactAndBinAuthRadar.repositories.map((repo) => (
+                  <div
+                    key={repo.fullName || `${repo.location}/${repo.name}`}
+                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-xs font-mono space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        {repo.location}/{repo.name} ({repo.format})
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-bold">
+                        {repo.encryptionType}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Immutable Tags: {repo.immutableTags ? 'YES' : 'NO'} · Created: {repo.createTime}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          PILLAR 20: AUTONOMOUS 12-INVARIANT ZERO-TRUST GUARDIAN & SELF-HEALING RECONCILER
+         ==================================================================== */}
+      {activePillar === 'AUTONOMOUS_SELF_HEALING_GUARDIAN' && (
+        <div className="p-4 rounded-xl border border-emerald-500/40 bg-white dark:bg-zinc-950 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <span>
+                  Autonomous 12-Invariant Zero-Trust Compliance Engine &amp; 1-Click Self-Healing Reconciler (`INV-01` &rarr; `INV-12`)
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Continuously evaluates 12 formal mathematical security invariants across IAM, Compute Metadata, Cloud Storage, BigQuery, Secret Manager, VPC Firewall Perimeter, and Canary Deception, and heals every auto-remediable violation in one atomic pass.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRunGuardianReconcile}
+              disabled={guardianReconcileLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>
+                {guardianReconcileLoading
+                  ? 'Executing Full-Project Self-Healing...'
+                  : 'Execute 1-Click Autonomous Self-Healing Reconciler'}
+              </span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] text-zinc-500">Zero-Trust Invariant Score</div>
+              <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {selfHealingGuardian.complianceScorePct}% ({selfHealingGuardian.invariantsPassedCount}/{selfHealingGuardian.totalInvariantsCount} Passing)
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] text-zinc-500">Violated Invariants</div>
+              <div
+                className={`text-base font-extrabold mt-0.5 ${
+                  selfHealingGuardian.invariantsViolatedCount > 0
+                    ? 'text-amber-500'
+                    : 'text-emerald-500'
+                }`}
+              >
+                {selfHealingGuardian.invariantsViolatedCount} Violation(s)
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] text-zinc-500">1-Click Auto-Healable</div>
+              <div className="text-base font-extrabold text-cyan-600 dark:text-cyan-400 mt-0.5">
+                {selfHealingGuardian.invariantsViolatedCount} Invariant(s)
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] text-zinc-500">GitOps HCL Sync</div>
+              <div className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                {healthAndDriftBridge?.flightMutationsCount || 0} HCL Mutation(s)
+              </div>
+            </div>
+          </div>
+
+          {guardianReconcileResult && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono space-y-2">
+              <div className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                Latest Self-Healing Reconciler Run ({(guardianReconcileResult.healedLog || []).length} Plane(s) Reconciled in {guardianReconcileResult.latencyMs}ms):
+              </div>
+              <div className="grid grid-cols-1 gap-1.5">
+                {(guardianReconcileResult.healedLog || []).map((line, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2 rounded bg-white/80 dark:bg-zinc-900/80 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                  >
+                    {line}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {selfHealingGuardian.invariants.map((inv) => (
+              <div
+                key={inv.id}
+                className={`p-3.5 rounded-xl border text-xs font-mono space-y-1.5 ${
+                  inv.passed
+                    ? 'border-emerald-500/30 bg-emerald-500/5'
+                    : 'border-amber-500/40 bg-amber-500/10'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-extrabold text-zinc-900 dark:text-white">
+                    [{inv.id}] {inv.title}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                      inv.passed
+                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                        : 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                    }`}
+                  >
+                    {inv.passed ? 'COMPLIANT (PASS)' : 'VIOLATION DETECTED'}
+                  </span>
+                </div>
+                <div className="text-[10px] text-cyan-600 dark:text-cyan-400">
+                  Category: <code>{inv.category}</code> · Target Invariant: <code>{inv.targetInvariant}</code>
+                </div>
+                <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                  Live Project State: <strong>{inv.currentValue}</strong>
+                </div>
+                <div className="text-[10px] text-zinc-500">
+                  Auto-Heal Mode: <strong>{inv.autoHealable ? '1-Click Auto-Reconcilable via Self-Healing Guardian' : 'Operator Review'}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
