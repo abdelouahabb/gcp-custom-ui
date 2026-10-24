@@ -133,9 +133,34 @@ function normalizePersonaId(raw) {
   return raw;
 }
 
+function buildDefaultSampleJson(projId = 'gcp-project', reg = 'us-central1') {
+  const cleanProj = String(projId || 'gcp-project').trim();
+  const cleanReg = String(reg || 'us-central1').trim();
+  return JSON.stringify(
+    {
+      event_id: `evt_${cleanProj.replace(/[^a-z0-9]/gi, '_')}_01`,
+      event_timestamp: '2026-10-24T20:45:00Z',
+      project_id: cleanProj,
+      region: cleanReg,
+      service_tier: 'cloud-run-gen2',
+      latency_ms: 14.8,
+      zero_trust_verified: true,
+      caller_identity: {
+        principal: `serviceAccount:runtime@${cleanProj}.iam.gserviceaccount.com`,
+        mtls_spiffe_id: `spiffe://${cleanProj}.svc.id.goog/ns/prod/sa/runtime`,
+        hop_count: 2,
+      },
+      tags: ['production', cleanReg, cleanProj],
+    },
+    null,
+    2
+  );
+}
+
 export default function FivePersonaCommandCenter({
   projectId,
   initialPersona = 'ARCHITECT',
+  initialTribunalSubTab = 'ROLL_CALL',
   onNavigateTab,
   onOpenBigQuerySql,
   onRunInShell,
@@ -155,7 +180,9 @@ export default function FivePersonaCommandCenter({
   const [lastReceipt, setLastReceipt] = useState(null);
   const [tribunalData, setTribunalData] = useState(null);
   const [tribunalLoading, setTribunalLoading] = useState(false);
-  const [tribunalSubTab, setTribunalSubTab] = useState('ROLL_CALL');
+  const [tribunalSubTab, setTribunalSubTab] = useState(
+    initialTribunalSubTab || 'ROLL_CALL'
+  );
   const [remediatingTarget, setRemediatingTarget] = useState('');
 
   // 2030 Horizon State: Multi-Project Fleet Tribunal, ZKP Verifier, Intent Compiler & Rollback Capsules
@@ -178,32 +205,17 @@ export default function FivePersonaCommandCenter({
   const [practitionerLoading, setPractitionerLoading] = useState(false);
   const [waterfallHost, setWaterfallHost] = useState('compute.googleapis.com');
   const [waterfallPort, setWaterfallPort] = useState(443);
-  const [sampleJsonInput, setSampleJsonInput] = useState(
-    JSON.stringify(
-      {
-        event_id: 'evt_2030_99182',
-        event_timestamp: '2026-10-24T20:45:00Z',
-        service_tier: 'cloud-run-gen2',
-        latency_ms: 14.8,
-        zero_trust_verified: true,
-        caller_identity: {
-          principal: 'serviceAccount:api-gateway@gcp.iam.gserviceaccount.com',
-          mtls_spiffe_id: 'spiffe://gcp.internal/ns/prod/sa/api-gateway',
-          hop_count: 2,
-        },
-        tags: ['production', 'us-central1', 'agentless-2030'],
-      },
-      null,
-      2
-    )
+  const [sampleJsonEdited, setSampleJsonEdited] = useState(false);
+  const [sampleJsonInput, setSampleJsonInput] = useState(() =>
+    buildDefaultSampleJson(projectId, 'us-central1')
   );
 
   // Network Engineer interactive Connectivity Trace inputs
   const [traceSource, setTraceSource] = useState(
-    'Cloud Run v2 Service (us-central1)'
+    `Cloud Run v2 Service (${region})`
   );
   const [traceDest, setTraceDest] = useState(
-    '10.128.0.10:5432 (AlloyDB / Cloud SQL Private IP)'
+    `AlloyDB / Cloud SQL Private IP (${projectId || 'vpc'})`
   );
   const [traceProtocol, setTraceProtocol] = useState('TCP');
   const [tracePort, setTracePort] = useState(5432);
@@ -216,6 +228,22 @@ export default function FivePersonaCommandCenter({
       setActivePersona(normalizePersonaId(initialPersona));
     }
   }, [initialPersona]);
+
+  useEffect(() => {
+    if (initialTribunalSubTab) {
+      setTribunalSubTab(initialTribunalSubTab);
+    }
+  }, [initialTribunalSubTab]);
+
+  useEffect(() => {
+    if (!sampleJsonEdited && projectId) {
+      setSampleJsonInput(buildDefaultSampleJson(projectId, region));
+    }
+    setTraceSource(`Cloud Run v2 Service (${region})`);
+    if (projectId) {
+      setTraceDest(`AlloyDB / Cloud SQL Private IP (${projectId})`);
+    }
+  }, [projectId, region, sampleJsonEdited]);
 
   const copyText = (text, key) => {
     navigator.clipboard?.writeText(text);
@@ -2031,15 +2059,31 @@ export default function FivePersonaCommandCenter({
                         <span className="truncate text-zinc-700 dark:text-zinc-300">
                           {pm.permission}
                         </span>
-                        <span
-                          className={`px-1.5 py-0.5 rounded font-extrabold shrink-0 ${
-                            pm.status === 'GRANTED'
-                              ? 'bg-emerald-500/15 text-emerald-500'
-                              : 'bg-rose-500/15 text-rose-500'
-                          }`}
-                        >
-                          {pm.status}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {pm.fixCli && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRunInShell
+                                  ? onRunInShell(pm.fixCli)
+                                  : copyText(pm.fixCli, `Grant ${pm.leastPrivilegeRole}`)
+                              }
+                              title={pm.fixCli}
+                              className="px-1.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-bold cursor-pointer"
+                            >
+                              {onRunInShell ? 'Grant in Shell' : 'Copy Role CLI'}
+                            </button>
+                          )}
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-extrabold shrink-0 ${
+                              pm.status === 'GRANTED'
+                                ? 'bg-emerald-500/15 text-emerald-500'
+                                : 'bg-rose-500/15 text-rose-500'
+                            }`}
+                          >
+                            {pm.status}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2048,7 +2092,7 @@ export default function FivePersonaCommandCenter({
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[10px]">
                         <span className="font-bold text-zinc-700 dark:text-zinc-300">
-                          Raw Event JSON Payload
+                          Raw Event JSON Payload ({devkitData?.resolvedDataset || projectId})
                         </span>
                         <button
                           type="button"
@@ -2062,7 +2106,10 @@ export default function FivePersonaCommandCenter({
                       <textarea
                         rows={5}
                         value={sampleJsonInput}
-                        onChange={(e) => setSampleJsonInput(e.target.value)}
+                        onChange={(e) => {
+                          setSampleJsonEdited(true);
+                          setSampleJsonInput(e.target.value);
+                        }}
                         className="w-full p-2 rounded-lg bg-zinc-950 text-emerald-400 text-[9.5px] font-mono border border-zinc-800"
                       />
                     </div>

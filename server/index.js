@@ -54128,11 +54128,11 @@ gcloud iam workload-identity-pools providers create-oidc "github-oidc-provider" 
           routingRule: 'Route <4k-token classification/RAG to gemini-3.8-flash (-80% Context Cache); route multi-step architecture synthesis to gemini-3.1-pro.',
         },
         ragVectorIndexSync: {
-          indexName: `${projectId}.lakehouse_gold.embeddings_hnsw_idx`,
+          indexName: `${projectId}.${primaryDataset}.embeddings_hnsw_idx`,
           recallScorePct: 97.9,
           unindexedDeltaRows: 12,
           embeddingModel: 'text-embedding-005',
-          embeddingSyncSql: `CALL BQ.REFRESH_MATERIALIZED_VIEW('${projectId}.lakehouse_gold.mv_rag_chunks');`,
+          embeddingSyncSql: `CALL BQ.REFRESH_MATERIALIZED_VIEW('${projectId}.${primaryDataset}.mv_rag_chunks');`,
         },
         acceleratorZoneFinder: [
           { zone: `${region}-a`, accelerator: 'NVIDIA L4 (24GB)', availability: 'HIGH_AVAILABILITY', spotPreemptionRatePct: 2.1, hourlySpotUsd: 0.28 },
@@ -55882,7 +55882,8 @@ app.all(
       const primaryBucketName =
         gcsBuckets[0]?.name || `${projectId}-lakehouse`;
       const primaryDatasetName =
-        bqDatasets[0]?.datasetReference?.datasetId || 'lakehouse_gold';
+        bqDatasets[0]?.datasetReference?.datasetId ||
+        `${projectId.replace(/[^a-zA-Z0-9_]/g, '_')}_lakehouse`;
       const primaryFwName =
         riskyFirewalls[0]?.name || firewalls[0]?.name || 'default-allow-internal';
 
@@ -56693,7 +56694,8 @@ app.post(
         serviceAccounts[0]?.email ||
         `${projectId}@appspot.gserviceaccount.com`;
       const targetDataset =
-        datasets[0]?.datasetReference?.datasetId || 'lakehouse_gold';
+        datasets[0]?.datasetReference?.datasetId ||
+        `${projectId.replace(/[^a-zA-Z0-9_]/g, '_')}_lakehouse`;
 
       const selectedModel =
         model === 'gemini-3.1-pro' ? 'gemini-3.1-pro' : 'gemini-3.8-flash';
@@ -57010,7 +57012,11 @@ app.post(
       ).map((it) => it.key);
 
       // 4. Compile 1-Click VM-to-Cloud-Run Gen2 Containerizer Blueprint
-      const sourceVmName = selectedVm?.name || 'legacy-pet-vm-01';
+      const hostSlug = os
+        .hostname()
+        .replace(/[^a-z0-9-]/gi, '-')
+        .toLowerCase();
+      const sourceVmName = selectedVm?.name || `${projectId}-${hostSlug}`;
       const sourceMachine = selectedVm?.machineType || 'e2-standard-2';
       const estVmMonthlyUsd = sourceMachine.includes('micro')
         ? 7.11
@@ -57355,45 +57361,88 @@ app.post(
         'compute.firewalls.update',
         'iam.serviceAccounts.actAs',
       ],
-      sampleJsonPayload = JSON.stringify(
-        {
-          event_id: 'evt_2030_99182',
-          event_timestamp: '2026-10-24T20:50:00Z',
-          customer_tier: 'ENTERPRISE_ZERO_TRUST',
-          latency_ms: 14.8,
-          success: true,
-          model_metadata: {
-            model_id: 'gemini-3.8-flash',
-            prompt_tokens: 1420,
-            context_cached: true,
-          },
-          tags: ['iap-verified', 'us-central1', 'slsa-v1'],
-        },
-        null,
-        2
-      ),
-      targetDataset = 'lakehouse_gold',
+      sampleJsonPayload,
+      targetDataset = '',
       targetTable = 'telemetry_events_v2030',
     } = req.body || {};
 
     try {
       const token = await resolveRequestToken(req);
 
-      // 1. Live IAM Permission Debugger via projects:testIamPermissions
-      const permRes = await gcpFetch(
-        `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
-          projectId
-        )}:testIamPermissions`,
-        token,
-        projectId,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: { permissions: permissionsToTest },
-          timeout: 4500,
-        }
-      );
-      const grantedSet = new Set(permRes?.permissions || []);
+      // 1. Live IAM Permission Debugger + Live BigQuery Datasets + Live Account Discovery in parallel
+      const [permSettled, bqDsSettled, saDiscovered] = await Promise.all([
+        gcpFetch(
+          `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}:testIamPermissions`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: { permissions: permissionsToTest },
+            timeout: 4500,
+          }
+        ).catch(() => ({ permissions: [] })),
+        gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets?maxResults=10`,
+          token,
+          projectId,
+          { timeout: 4000 }
+        ).catch(() => ({ datasets: [] })),
+        discoverProjectServiceAccounts(projectId, token).catch(() => ({
+          recommendedServiceAccount: '',
+        })),
+      ]);
+
+      const { activeAccount } = discoverLocalGcloudAccounts();
+      const liveSaEmail =
+        saDiscovered?.recommendedServiceAccount ||
+        `${projectId}@appspot.gserviceaccount.com`;
+      const callerMember =
+        activeAccount && activeAccount.includes('@')
+          ? activeAccount.endsWith('.gserviceaccount.com')
+            ? `serviceAccount:${activeAccount}`
+            : `user:${activeAccount}`
+          : `serviceAccount:${liveSaEmail}`;
+
+      const liveDatasetIds = (bqDsSettled?.datasets || [])
+        .map((d) => d.datasetReference?.datasetId)
+        .filter(Boolean);
+      const resolvedDataset =
+        targetDataset ||
+        liveDatasetIds[0] ||
+        `${projectId.replace(/[^a-zA-Z0-9_]/g, '_')}_lakehouse`;
+
+      const effectiveJsonPayload =
+        sampleJsonPayload ||
+        JSON.stringify(
+          {
+            event_id: `evt_${projectId.replace(/[^a-z0-9]/gi, '_')}_01`,
+            event_timestamp: new Date().toISOString(),
+            project_id: projectId,
+            region,
+            latency_ms: 14.8,
+            zero_trust_verified: true,
+            caller_identity: {
+              principal: callerMember,
+              runtime_sa: liveSaEmail,
+              mtls_spiffe_id: `spiffe://${projectId}.svc.id.goog/ns/prod/sa/runtime`,
+            },
+            model_metadata: {
+              model_id: 'gemini-3.8-flash',
+              prompt_tokens: 1420,
+              context_cached: true,
+            },
+            tags: ['iap-verified', region, projectId],
+          },
+          null,
+          2
+        );
+
+      const grantedSet = new Set(permSettled?.permissions || []);
       const roleMapping = {
         'run.services.create': 'roles/run.admin',
         'run.routes.invoke': 'roles/run.invoker',
@@ -57414,7 +57463,7 @@ app.post(
           leastPrivilegeRole: suggestedRole,
           fixCli: granted
             ? null
-            : `gcloud projects add-iam-policy-binding ${projectId} --member="user:YOUR_EMAIL" --role="${suggestedRole}"`,
+            : `gcloud projects add-iam-policy-binding ${projectId} --member="${callerMember}" --role="${suggestedRole}"`,
         };
       });
 
@@ -57422,11 +57471,11 @@ app.post(
       let parsedObj = {};
       try {
         parsedObj =
-          typeof sampleJsonPayload === 'string'
-            ? JSON.parse(sampleJsonPayload)
-            : sampleJsonPayload;
+          typeof effectiveJsonPayload === 'string'
+            ? JSON.parse(effectiveJsonPayload)
+            : effectiveJsonPayload;
       } catch (_e) {
-        parsedObj = { raw_payload: String(sampleJsonPayload) };
+        parsedObj = { raw_payload: String(effectiveJsonPayload) };
       }
 
       function inferBqType(val) {
@@ -57470,24 +57519,24 @@ app.post(
 
       const compiledBigQueryDdl = `-- ============================================================================
 -- CloudPulse 2030 Zero-ETL JSON-to-BigQuery STRUCT/REPEATED DDL Compiler
--- Project: ${projectId} · Physical Compressed Storage (-62% Storage Bill)
+-- Project: ${projectId} · Dataset: ${resolvedDataset} · Physical Storage (-62%)
 -- ============================================================================
-CREATE SCHEMA IF NOT EXISTS \`${projectId}.${targetDataset}\`
+CREATE SCHEMA IF NOT EXISTS \`${projectId}.${resolvedDataset}\`
 OPTIONS(location = 'US');
 
-CREATE OR REPLACE TABLE \`${projectId}.${targetDataset}.${targetTable}\` (
+CREATE OR REPLACE TABLE \`${projectId}.${resolvedDataset}.${targetTable}\` (
 ${ddlColumns.join(',\n')}
 )
 ${timestampCol ? `PARTITION BY DATE(${timestampCol})` : ''}
 ${stringCols.length > 0 ? `CLUSTER BY ${stringCols.join(', ')}` : ''}
 OPTIONS(
-  description = 'Auto-compiled by CloudPulse 2030 Data Engineer Workbench',
+  description = 'Auto-compiled by CloudPulse 2030 Data Engineer Workbench for ${projectId}',
   require_partition_filter = ${timestampCol ? 'true' : 'false'}
 );`;
 
-      // 3. Polyglot SDK Snippets wired to live projectId
+      // 3. Polyglot SDK Snippets wired to live projectId & resolvedDataset
       const polyglotSdk = {
-        typescript: `// TypeScript Zero-Key OIDC Client for ${projectId}
+        typescript: `// TypeScript Zero-Key OIDC Client for ${projectId} (${region})
 export async function invokeCloudPulseEndpoint(idToken: string, payload: unknown) {
   const res = await fetch("https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/gemini-3.8-flash:generateContent", {
     method: "POST",
@@ -57501,13 +57550,13 @@ export async function invokeCloudPulseEndpoint(idToken: string, payload: unknown
   if (!res.ok) throw new Error(\`GCP HTTP \${res.status}: \${await res.text()}\`);
   return res.json();
 }`,
-        python: `# Python ADC + BigQuery Streaming Client for ${projectId}
+        python: `# Python ADC + BigQuery Streaming Client for ${projectId}.${resolvedDataset}
 import google.auth
 from google.cloud import bigquery
 
 creds, _ = google.auth.default(quota_project_id="${projectId}")
 bq = bigquery.Client(project="${projectId}", credentials=creds)
-errors = bq.insert_rows_json("${projectId}.${targetDataset}.${targetTable}", [{"event_id": "evt_01"}])
+errors = bq.insert_rows_json("${projectId}.${resolvedDataset}.${targetTable}", [{"event_id": "evt_${projectId.replace(/[^a-z0-9]/gi, '_')}_01"}])
 assert not errors, f"BigQuery insert errors: {errors}"`,
       };
 
@@ -57515,6 +57564,10 @@ assert not errors, f"BigQuery insert errors: {errors}"`,
         status: 'OK',
         projectId,
         region,
+        callerMember,
+        resolvedDataset,
+        liveDatasetIds,
+        defaultJsonPayload: effectiveJsonPayload,
         permissionSummary: {
           grantedCount: permissionMatrix.filter((p) => p.status === 'GRANTED')
             .length,
