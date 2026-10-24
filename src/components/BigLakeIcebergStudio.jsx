@@ -53,12 +53,24 @@ const BIGLAKE_TABS = [
 
 export default function BigLakeIcebergStudio({
   projectId,
+  initialSubTab,
   onRunInShell,
   onOpenBigQuerySql,
+  onOpenDataEngineerStudio,
+  onNavigateTab,
+  onOpenHealthAndDrift,
+  onOpenTimeMachine,
   onShowToast,
   onShowError,
 }) {
-  const [activeTab, setActiveTab] = useState('METASTORE_CATALOGS');
+  const [activeTab, setActiveTab] = useState(
+    initialSubTab || 'METASTORE_CATALOGS'
+  );
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [copiedId, setCopiedId] = useState(null);
 
   // Live GCP state
@@ -534,6 +546,90 @@ OPTIONS (
             <div className="text-[10px] text-zinc-500">
               BigQuery + Spark + Trino + Vertex AI
             </div>
+          </div>
+        </div>
+
+        {/* Cross-Studio Open Lakehouse Ecosystem Bridges */}
+        <div className="pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <Layers className="w-3.5 h-3.5 text-indigo-500" />
+            <span>BigLake Iceberg Ecosystem Bridges:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() =>
+                onOpenDataEngineerStudio
+                  ? onOpenDataEngineerStudio('SERVERLESS_SPARK')
+                  : onNavigateTab?.('DATA_ENGINEER_STUDIO', 'SERVERLESS_SPARK')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
+            >
+              Serverless Spark 3.5 ($0 Idle) →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onOpenDataEngineerStudio
+                  ? onOpenDataEngineerStudio('MEDALLION_ELT')
+                  : onNavigateTab?.('DATA_ENGINEER_STUDIO', 'MEDALLION_ELT')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer transition-colors"
+            >
+              Data Engineer Medallion &amp; Dataplex →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onOpenBigQuerySql
+                  ? onOpenBigQuerySql(bigLakeArtifacts.primaryDdl)
+                  : onNavigateTab?.('BIGQUERY_STUDIO')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
+            >
+              Open Iceberg DDL in BigQuery →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('AWS_AZURE_PARITY')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 cursor-pointer transition-colors"
+            >
+              AWS S3 / Azure Omni Parity →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateTab?.('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer transition-colors"
+            >
+              [SDK 590.0.1] BigLake Iceberg CLI →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('SRE_WAR_ROOM')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer transition-colors"
+            >
+              VPC-SC Lakehouse Perimeter →
+            </button>
+            {onOpenTimeMachine && (
+              <button
+                type="button"
+                onClick={onOpenTimeMachine}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition-colors"
+              >
+                SHA-256 Time-Machine
+              </button>
+            )}
+            {onOpenHealthAndDrift && (
+              <button
+                type="button"
+                onClick={onOpenHealthAndDrift}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors"
+              >
+                1-Tap Health &amp; Drift Hub
+              </button>
+            )}
           </div>
         </div>
 
@@ -1419,6 +1515,13 @@ OPTIONS (
           projectId={projectId}
           onRunInShell={onRunInShell}
           onOpenBigQuerySql={onOpenBigQuerySql}
+          onNavigateTab={onNavigateTab}
+          onOpenBigLakeStudio={(sub) => setActiveTab(sub || 'COMPACTION_DOCTOR')}
+          onOpenServerlessSpark={() =>
+            onOpenDataEngineerStudio
+              ? onOpenDataEngineerStudio('SERVERLESS_SPARK')
+              : onNavigateTab?.('DATA_ENGINEER_STUDIO', 'SERVERLESS_SPARK')
+          }
           onShowToast={onShowToast}
           onShowError={onShowError}
         />

@@ -2826,19 +2826,43 @@ function CloudPulseCockpit() {
   const [alibabaHuaweiSubTab, setAlibabaHuaweiSubTab] = useState(
     'ALIYUN_PTS_MSE_FLASH_SALE_SURGE'
   );
+  const [dataEngineerSubTab, setDataEngineerSubTab] =
+    useState('ICEBERG_50_MATRIX');
+  const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
 
   const handleNavigateStudioTab = useCallback((tabId, subTab) => {
     if (!tabId) return;
-    if (subTab && tabId === 'SOVEREIGN_STUDIO') {
-      setSovereignSubTab(subTab);
-    } else if (subTab && tabId === 'INNOVATION_LAB') {
-      setInnovationSubTab(subTab);
-    } else if (subTab && tabId === 'AWS_AZURE_PARITY') {
-      setAwsAzureSubTab(subTab);
-    } else if (subTab && tabId === 'ALIBABA_HUAWEI_PARITY') {
-      setAlibabaHuaweiSubTab(subTab);
+    if (tabId === 'TIME_MACHINE') {
+      setTimeMachineOpen(true);
+      return;
     }
-    setActiveTab(tabId);
+    const normalizedTab =
+      tabId === 'DATA_ENGINEER'
+        ? 'DATA_ENGINEER_STUDIO'
+        : tabId === 'BIGQUERY'
+        ? 'BIGQUERY_STUDIO'
+        : tabId === 'BIGLAKE'
+        ? 'BIGLAKE_STUDIO'
+        : tabId === 'CLOUD_SQL'
+        ? 'CLOUD_SQL_STUDIO'
+        : tabId === 'SPANNER'
+        ? 'WAVE10_FRONTIER'
+        : tabId;
+
+    if (subTab && normalizedTab === 'SOVEREIGN_STUDIO') {
+      setSovereignSubTab(subTab);
+    } else if (subTab && normalizedTab === 'INNOVATION_LAB') {
+      setInnovationSubTab(subTab);
+    } else if (subTab && normalizedTab === 'AWS_AZURE_PARITY') {
+      setAwsAzureSubTab(subTab);
+    } else if (subTab && normalizedTab === 'ALIBABA_HUAWEI_PARITY') {
+      setAlibabaHuaweiSubTab(subTab);
+    } else if (subTab && normalizedTab === 'DATA_ENGINEER_STUDIO') {
+      setDataEngineerSubTab(subTab);
+    } else if (subTab && normalizedTab === 'BIGLAKE_STUDIO') {
+      setBigLakeSubTab(subTab);
+    }
+    setActiveTab(normalizedTab);
   }, []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
@@ -4107,7 +4131,21 @@ function CloudPulseCockpit() {
                 <BigQueryStudio
                   projectId={selectedProjectId}
                   initialSql={bigQueryInitialSql}
-                  onOpenBigLakeStudio={() => setActiveTab('BIGLAKE_STUDIO')}
+                  onOpenBigLakeStudio={(sub) =>
+                    handleNavigateStudioTab(
+                      'BIGLAKE_STUDIO',
+                      sub || 'METASTORE_CATALOGS'
+                    )
+                  }
+                  onOpenDataEngineerStudio={(sub) =>
+                    handleNavigateStudioTab(
+                      'DATA_ENGINEER_STUDIO',
+                      sub || 'MEDALLION_ELT'
+                    )
+                  }
+                  onNavigateTab={handleNavigateStudioTab}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                  onOpenTimeMachine={() => setTimeMachineOpen(true)}
                   onOpenProvision={handleOpenProvision}
                   onRunInShell={handleRunInShell}
                   onRefreshGlobal={() =>
@@ -4121,11 +4159,21 @@ function CloudPulseCockpit() {
               {activeTab === 'BIGLAKE_STUDIO' && (
                 <BigLakeIcebergStudio
                   projectId={selectedProjectId}
+                  initialSubTab={bigLakeSubTab}
                   onRunInShell={handleRunInShell}
                   onOpenBigQuerySql={(sqlText) => {
                     if (sqlText) setBigQueryInitialSql(sqlText);
                     setActiveTab('BIGQUERY_STUDIO');
                   }}
+                  onOpenDataEngineerStudio={(sub) =>
+                    handleNavigateStudioTab(
+                      'DATA_ENGINEER_STUDIO',
+                      sub || 'SERVERLESS_SPARK'
+                    )
+                  }
+                  onNavigateTab={handleNavigateStudioTab}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                  onOpenTimeMachine={() => setTimeMachineOpen(true)}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />
@@ -4134,6 +4182,20 @@ function CloudPulseCockpit() {
               {activeTab === 'DATA_ENGINEER_STUDIO' && (
                 <DataEngineeringStudio
                   projectId={selectedProjectId}
+                  initialSubTab={dataEngineerSubTab}
+                  onNavigateTab={handleNavigateStudioTab}
+                  onOpenBigQuerySql={(sqlText) => {
+                    if (sqlText) setBigQueryInitialSql(sqlText);
+                    setActiveTab('BIGQUERY_STUDIO');
+                  }}
+                  onOpenBigLakeStudio={(sub) =>
+                    handleNavigateStudioTab(
+                      'BIGLAKE_STUDIO',
+                      sub || 'METASTORE_CATALOGS'
+                    )
+                  }
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                  onOpenTimeMachine={() => setTimeMachineOpen(true)}
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
@@ -4146,6 +4208,12 @@ function CloudPulseCockpit() {
                   onOpenProvisionCloudSql={() =>
                     handleOpenProvision('CLOUD_SQL')
                   }
+                  onNavigateTab={handleNavigateStudioTab}
+                  onOpenBigQuerySql={(sqlText) => {
+                    if (sqlText) setBigQueryInitialSql(sqlText);
+                    setActiveTab('BIGQUERY_STUDIO');
+                  }}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
                   onRunInShell={handleRunInShell}
                   onRefreshOverview={() =>
                     fetchProjectOverview(selectedProjectId)
@@ -4167,6 +4235,12 @@ function CloudPulseCockpit() {
               {activeTab === 'WAVE10_FRONTIER' && (
                 <Wave10Frontier2026Studio
                   projectId={selectedProjectId}
+                  onNavigateTab={handleNavigateStudioTab}
+                  onOpenBigQuerySql={(sqlText) => {
+                    if (sqlText) setBigQueryInitialSql(sqlText);
+                    setActiveTab('BIGQUERY_STUDIO');
+                  }}
+                  onOpenHealthAndDrift={() => setCopilotOpen(true)}
                   onRunInShell={handleRunInShell}
                   onShowToast={showToast}
                   onShowError={setErrorBanner}

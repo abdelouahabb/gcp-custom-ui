@@ -759,6 +759,9 @@ export default function IcebergLakehousePlaybookMatrix({
   projectId,
   onRunInShell,
   onOpenBigQuerySql,
+  onNavigateTab,
+  onOpenBigLakeStudio,
+  onOpenServerlessSpark,
   onShowToast,
   onShowError,
 }) {
@@ -1081,15 +1084,15 @@ df.printSchema()
 print(f"Verified Open Iceberg REST Table ${catalogId}.${datasetId}.${tbl} across Spark & BigQuery!")`
 }`;
 
-    // 3. gcloud 588.0.0 CLI (GA + [BETA] + [ALPHA] commands)
+    // 3. gcloud 590.0.1 CLI (Promoted GA + [BETA] + [ALPHA] commands)
     const cliCode = `# Playbook #${p.num}: ${p.title}
 # Release Track: [${p.track}] | Active Project: ${projectId} | Region: ${region}
 
-# 1. [${p.track}] Inspect BigLake Iceberg REST Catalogs & Namespaces
-gcloud alpha biglake iceberg catalogs list --project=${projectId}
+# 1. [GA 590.0.1] Inspect BigLake Iceberg REST Catalogs & Namespaces
+gcloud biglake iceberg catalogs list --project=${projectId}
 
-# 2. Submit Zero-Cluster Serverless Spark Batch against Iceberg REST Catalog
-gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase()}.py \\
+# 2. [GA 590.0.1] Submit Zero-Cluster Serverless Spark Batch against Iceberg REST Catalog
+gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase()}.py \\
   --project=${projectId} \\
   --region=${region} \\
   --batch=cp-${p.num}-${ Date.now().toString().slice(-4) } \\
@@ -1248,19 +1251,19 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-rose-500">[ALPHA] Iceberg REST Catalogs</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 590.0.1] Iceberg REST Catalogs</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.icebergRestCatalogs?.length || 0} Discovered
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-rose-500">[ALPHA] Managed Kafka</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 590.0.1] Managed Kafka</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.managedKafkaClusters?.length || 0} Clusters
               </div>
             </div>
             <div className="p-2 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] text-rose-500">[ALPHA] Dataplex Lakes</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">[GA 590.0.1] Dataplex Lakes</div>
               <div className="font-extrabold">
                 {probeResult.liveEstate.dataplexLakes?.length || 0} Lakes
               </div>
@@ -2006,6 +2009,72 @@ gcloud beta dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLower
                       : `1-Tap Bootstrap #${activePlaybook.num} [${activePlaybook.track}]`}
                   </span>
                 </button>
+              </div>
+
+              {/* Domain-Aware Companion Studio Cross-Wire Bar */}
+              <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[10px] font-mono font-extrabold uppercase text-zinc-500 dark:text-zinc-400">
+                  Playbook #{activePlaybook.num} Companion Studios:
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {onOpenServerlessSpark && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenServerlessSpark({
+                          bucket: bucketName,
+                          batchId: `cp-${activePlaybook.num}-${activePlaybook.id
+                            .toLowerCase()
+                            .slice(0, 14)
+                            .replace(/_/g, '-')}`,
+                        })
+                      }
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
+                    >
+                      Load in Serverless Spark →
+                    </button>
+                  )}
+                  {(onOpenBigLakeStudio || onNavigateTab) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenBigLakeStudio
+                          ? onOpenBigLakeStudio('COMPACTION_DOCTOR')
+                          : onNavigateTab?.('BIGLAKE_STUDIO', 'COMPACTION_DOCTOR')
+                      }
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer"
+                    >
+                      BigLake Compaction Doctor →
+                    </button>
+                  )}
+                  {onNavigateTab && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab('WAVE10_FRONTIER')}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
+                      >
+                        Spanner HTAP &amp; Graph →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab('AWS_AZURE_PARITY')}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 cursor-pointer"
+                      >
+                        AWS S3 / Azure Omni →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onNavigateTab('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
+                        }
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer"
+                      >
+                        [SDK 590.0.1] Lab →
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -100,6 +100,10 @@ const SQL_TIERS = {
 export default function CloudSqlAndAlloyDbStudio({
   projectId,
   onOpenProvisionSql,
+  onOpenProvisionCloudSql,
+  onNavigateTab,
+  onOpenBigQuerySql,
+  onOpenHealthAndDrift,
   onRunInShell,
   onRefreshOverview,
   onShowToast,
@@ -520,10 +524,10 @@ WITH (m = 16, ef_construction = 64);`;
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            {onOpenProvisionSql && (
+            {(onOpenProvisionSql || onOpenProvisionCloudSql) && (
               <button
                 type="button"
-                onClick={onOpenProvisionSql}
+                onClick={onOpenProvisionSql || onOpenProvisionCloudSql}
                 title="Open the full 5-Step Cloud SQL & AlloyDB Compliance Wizard in the Provisioning Modal"
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-colors shadow-sm cursor-pointer"
               >
@@ -605,6 +609,70 @@ WITH (m = 16, ef_construction = 64);`;
             <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
               Sub-second point-in-time clone ready
             </div>
+          </div>
+        </div>
+
+        {/* Cross-Studio OLTP -> Lakehouse CDC & HTAP Ecosystem Bridges */}
+        <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <Layers className="w-3.5 h-3.5 text-cyan-500" />
+            <span>OLTP ↔ Lakehouse CDC &amp; HTAP Bridges:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateTab?.('DATA_ENGINEER_STUDIO', 'MEDALLION_ELT')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
+            >
+              Datastream CDC → Medallion Builder →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onOpenBigQuerySql
+                  ? onOpenBigQuerySql(
+                      `-- Federated Cloud SQL / AlloyDB -> BigQuery Zero-ETL Query (${sqlName})\nSELECT * FROM EXTERNAL_QUERY('${projectId}.${sqlRegion}.${sqlName}-conn', 'SELECT id, doc_uri, created_at FROM ${vectorTableName} ORDER BY created_at DESC LIMIT 100');`
+                    )
+                  : onNavigateTab?.('BIGQUERY_STUDIO')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer transition-colors"
+            >
+              Federate in BigQuery (`EXTERNAL_QUERY`) →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('WAVE10_FRONTIER')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
+            >
+              Spanner 100-PU &amp; ISO GQL Graph →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('ALIBABA_HUAWEI_PARITY')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer transition-colors"
+            >
+              PolarDB / GaussDB 1.6s Clone Parity →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateTab?.('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer transition-colors"
+            >
+              [SDK 590.0.1] Database Center →
+            </button>
+            {onOpenHealthAndDrift && (
+              <button
+                type="button"
+                onClick={onOpenHealthAndDrift}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors"
+              >
+                1-Tap Health &amp; Drift Hub
+              </button>
+            )}
           </div>
         </div>
       </div>

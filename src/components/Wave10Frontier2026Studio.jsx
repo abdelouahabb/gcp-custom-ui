@@ -152,6 +152,9 @@ LIMIT 5;`,
 
 export default function Wave10Frontier2026Studio({
   projectId,
+  onNavigateTab,
+  onOpenBigQuerySql,
+  onOpenHealthAndDrift,
   onRunInShell,
   onShowToast,
 }) {
@@ -599,6 +602,79 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
             <div className="text-[10px] text-zinc-500">
               {spannerEdition} · {spannerDialect === 'POSTGRESQL' ? 'PostgreSQL PGAdapter' : 'GoogleSQL + ISO GQL'}
             </div>
+          </div>
+        </div>
+
+        {/* Cross-Studio Spanner HTAP, CDC & Lakehouse Bridges */}
+        <div className="pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <Layers className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Spanner HTAP &amp; CDC Ecosystem Bridges:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() =>
+                onOpenBigQuerySql
+                  ? onOpenBigQuerySql(
+                      `-- Zero-ETL Spanner -> BigQuery Federated HTAP Join (${spannerName})\nSELECT * FROM EXTERNAL_QUERY('${projectId}.us.${spannerName}', 'SELECT CustomerId, OrderId, OrderTotalUsd, OrderStatus FROM ${childTable} LIMIT 100');`
+                    )
+                  : onNavigateTab?.('BIGQUERY_STUDIO')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
+            >
+              Federate in BigQuery (`EXTERNAL_QUERY`) →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateTab?.('DATA_ENGINEER_STUDIO', 'SERVERLESS_SPARK')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer transition-colors"
+            >
+              Export Graph to Serverless Spark Iceberg →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateTab?.('DATA_ENGINEER_STUDIO', 'ICEBERG_50_MATRIX')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
+            >
+              50-Playbook Iceberg HTAP Matrix →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('CLOUD_SQL_STUDIO')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 cursor-pointer transition-colors"
+            >
+              Cloud SQL &amp; AlloyDB ScaNN →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('ALIBABA_HUAWEI_PARITY')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer transition-colors"
+            >
+              PolarDB / GaussDB HTAP Parity →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateTab?.('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer transition-colors"
+            >
+              [SDK 590.0.1] Database Center →
+            </button>
+            {onOpenHealthAndDrift && (
+              <button
+                type="button"
+                onClick={onOpenHealthAndDrift}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors"
+              >
+                1-Tap Health &amp; Drift Hub
+              </button>
+            )}
           </div>
         </div>
 

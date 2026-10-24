@@ -28,11 +28,24 @@ import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 
 export default function DataEngineeringStudio({
   projectId,
+  initialSubTab,
+  onNavigateTab,
+  onOpenBigQuerySql,
+  onOpenBigLakeStudio,
+  onOpenHealthAndDrift,
+  onOpenTimeMachine,
   onShowToast,
   onShowError,
   onRunInShell,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('ICEBERG_50_MATRIX');
+  const [activeSubTab, setActiveSubTab] = useState(
+    initialSubTab || 'ICEBERG_50_MATRIX'
+  );
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [loading, setLoading] = useState(false);
   const [busyAction, setBusyAction] = useState('');
   const [copiedKey, setCopiedKey] = useState('');
@@ -929,6 +942,102 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
             </div>
           </div>
         </div>
+
+        {/* Unified Data & Lakehouse Cross-Studio Ecosystem Bridge Bar */}
+        <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <Layers className="w-3.5 h-3.5 text-blue-500" />
+            <span>Data &amp; Lakehouse Mesh Bridges:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() =>
+                onOpenBigQuerySql
+                  ? onOpenBigQuerySql('')
+                  : onNavigateTab?.('BIGQUERY_STUDIO')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
+            >
+              BigQuery Capacitor &amp; SQL X-Ray →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onOpenBigLakeStudio
+                  ? onOpenBigLakeStudio('METASTORE_CATALOGS')
+                  : onNavigateTab?.('BIGLAKE_STUDIO', 'METASTORE_CATALOGS')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer transition-colors"
+            >
+              BigLake Iceberg &amp; Compaction →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('WAVE10_FRONTIER')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
+            >
+              Spanner Graph (100-PU) &amp; Zero-ETL →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('CLOUD_SQL_STUDIO')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 cursor-pointer transition-colors"
+            >
+              Cloud SQL &amp; AlloyDB Columnar →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateTab?.('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer transition-colors"
+            >
+              [SDK 590.0.1] Orchestration &amp; DB Center →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateTab?.('INNOVATION_LAB', 'WAVE15_DYSON_MOONSHOT')
+              }
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30 cursor-pointer transition-colors"
+            >
+              Wave 15 Vector &amp; Z-Score SQL →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('ALIBABA_HUAWEI_PARITY')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer transition-colors"
+            >
+              PolarDB / Hologres HTAP Parity →
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('SRE_WAR_ROOM')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition-colors"
+            >
+              VPC-SC Lakehouse Perimeter →
+            </button>
+            {onOpenTimeMachine && (
+              <button
+                type="button"
+                onClick={onOpenTimeMachine}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition-colors"
+              >
+                SHA-256 Time-Machine
+              </button>
+            )}
+            {onOpenHealthAndDrift && (
+              <button
+                type="button"
+                onClick={onOpenHealthAndDrift}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors"
+              >
+                1-Tap Health &amp; Drift Hub
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 8 Symmetrical Sub-Studio Navigation Cards (2x4 Equal-Sized Bento Grid) */}
@@ -1027,6 +1136,19 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
         <IcebergLakehousePlaybookMatrix
           projectId={projectId}
           onRunInShell={onRunInShell}
+          onOpenBigQuerySql={onOpenBigQuerySql}
+          onNavigateTab={onNavigateTab}
+          onOpenBigLakeStudio={onOpenBigLakeStudio}
+          onOpenServerlessSpark={({ bucket, batchId }) => {
+            if (bucket) setSparkBucket(bucket);
+            if (batchId) setSparkBatchId(batchId);
+            setActiveSubTab('SERVERLESS_SPARK');
+            onShowToast?.(
+              `Loaded Iceberg Playbook into Serverless Spark Studio (${
+                batchId || 'spark-iceberg-batch'
+              })`
+            );
+          }}
           onShowToast={onShowToast}
           onShowError={onShowError}
         />
@@ -1295,21 +1417,47 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-500 pt-1 border-t border-zinc-200 dark:border-zinc-800">
                     <span>
                       Clean Rows: <strong className="text-emerald-500">{p.rowsProcessed}</strong> · Quarantined Dups: <strong className="text-amber-500">{p.quarantinedRows}</strong>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCleanSourceDs(p.bronzeDataset);
-                        setCleanTargetDs(p.silverDataset);
-                        setActiveSubTab('DATAFORM_SQLX');
-                      }}
-                      className="text-blue-500 hover:underline font-bold cursor-pointer"
-                    >
-                      Open in SQLX Studio →
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCleanSourceDs(p.bronzeDataset);
+                          setCleanTargetDs(p.silverDataset);
+                          setActiveSubTab('DATAFORM_SQLX');
+                        }}
+                        className="text-blue-500 hover:underline font-bold cursor-pointer"
+                      >
+                        Open in SQLX Studio →
+                      </button>
+                      {onOpenBigQuerySql && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenBigQuerySql(
+                              `-- Medallion Silver -> Gold Inspection (${p.name})\nSELECT *\nFROM \`${projectId}.${p.silverDataset}.cleaned_events\`\nWHERE DATE(${orderByCol}) >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)\nQUALIFY ROW_NUMBER() OVER (PARTITION BY ${dedupKey} ORDER BY ${orderByCol} DESC) = 1\nLIMIT 100;`
+                            )
+                          }
+                          className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+                        >
+                          Dry-Run in BigQuery X-Ray →
+                        </button>
+                      )}
+                      {onOpenBigLakeStudio && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenBigLakeStudio('METASTORE_CATALOGS')
+                          }
+                          className="text-indigo-500 hover:underline font-bold cursor-pointer"
+                        >
+                          BigLake Catalog →
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1437,8 +1585,21 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               >
                 {busyAction === 'RUN_SQL'
                   ? 'Running Auto-Clean & QUALIFY Deduplication on BigQuery...'
-                  : '▶Execute Auto-Clean & Deduplicate SQL Live on BigQuery'}
+                  : '▶ Execute Auto-Clean & Deduplicate SQL Live on BigQuery'}
               </button>
+              {onOpenBigQuerySql && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenBigQuerySql(
+                      `-- Dataform / dbt Auto-Clean & QUALIFY Deduplication Model (${cleanSourceDs}.${cleanSourceTable} -> ${cleanTargetDs}.${cleanTargetTable})\nSELECT\n  TRIM(CAST(${dedupKey} AS STRING)) AS ${dedupKey},\n  SAFE_CAST(${orderByCol} AS TIMESTAMP) AS ${orderByCol},\n  TO_HEX(SHA256(LOWER(TRIM(CAST(user_email AS STRING))))) AS user_email_sha256,\n  SAFE_CAST(revenue_usd AS NUMERIC) AS revenue_usd\nFROM \`${projectId}.${cleanSourceDs}.${cleanSourceTable}\`\nWHERE ${dedupKey} IS NOT NULL\nQUALIFY ROW_NUMBER() OVER (\n  PARTITION BY ${dedupKey}\n  ORDER BY ${orderByCol} DESC\n) = 1;`
+                    )
+                  }
+                  className="py-2.5 px-3.5 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-mono font-extrabold cursor-pointer transition-colors"
+                >
+                  Open in BigQuery SQL X-Ray →
+                </button>
+              )}
             </div>
 
             {cleanQueryResult && (
@@ -1757,9 +1918,39 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 Maps raw Bronze fields to strongly-typed Silver/Gold columns and checks downstream BigQuery views &amp; BI dashboards before any schema change.
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-              0 BREAKING DOWNSTREAM CHANGES
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                0 BREAKING DOWNSTREAM CHANGES
+              </span>
+              {onOpenBigQuerySql && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const selectLines = schemaMappings
+                      .map((m) =>
+                        m.isPii
+                          ? `  TO_HEX(SHA256(LOWER(TRIM(CAST(${m.sourceField} AS STRING))))) AS ${m.targetField}`
+                          : `  SAFE_CAST(${m.sourceField} AS ${m.targetType}) AS ${m.targetField}`
+                      )
+                      .join(',\n');
+                    const ddl = `-- Zero-Breakage Schema Contract View (${cleanSourceDs}.${cleanSourceTable} -> ${cleanTargetDs}.v_${cleanTargetTable}_contract)\nCREATE OR REPLACE VIEW \`${projectId}.${cleanTargetDs}.v_${cleanTargetTable}_contract\` AS\nSELECT\n${selectLines}\nFROM \`${projectId}.${cleanSourceDs}.${cleanSourceTable}\`\nWHERE ${dedupKey} IS NOT NULL\nQUALIFY ROW_NUMBER() OVER (PARTITION BY ${dedupKey} ORDER BY ${orderByCol} DESC) = 1;`;
+                    onOpenBigQuerySql(ddl);
+                  }}
+                  className="px-3 py-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer transition-colors"
+                >
+                  Synthesize Contract View DDL in BigQuery Studio →
+                </button>
+              )}
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('CLOUD_SOC')}
+                  className="px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                >
+                  Audit PII Columns in Cloud SOC →
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -1871,13 +2062,24 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     <div className="text-[11px] font-mono text-zinc-500 truncate">
                       {j.sqlPreview}
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono pt-1 border-t border-zinc-200 dark:border-zinc-800">
                       <span className="text-amber-500 font-bold">
                         {j.recommendation}
                       </span>
-                      <span className="text-zinc-400">
-                        On-Demand: ${j.onDemandCostUsd}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-zinc-400">
+                          On-Demand: ${j.onDemandCostUsd}
+                        </span>
+                        {onOpenBigQuerySql && j.sqlPreview && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenBigQuerySql(j.sqlPreview)}
+                            className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-bold cursor-pointer"
+                          >
+                            Optimize in BQ X-Ray →
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -2201,13 +2403,30 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                         {r.description}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => copyText(r.dakUri, r.entryName)}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
-                    >
-                      {copiedKey === r.entryName ? '✓ Copied' : 'Copy URI'}
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => copyText(r.dakUri, r.entryName)}
+                        className="px-2.5 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
+                      >
+                        {copiedKey === r.entryName ? '✓ Copied' : 'Copy URI'}
+                      </button>
+                      {onOpenBigQuerySql &&
+                        (String(r.system).toUpperCase().includes('BIGQUERY') ||
+                          String(r.system).toUpperCase().includes('BIGLAKE')) && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenBigQuerySql(
+                                `-- Dataplex Semantic Catalog Asset: ${r.displayName} (${r.dakUri})\nSELECT *\nFROM \`${projectId}.${r.displayName.includes('.') ? r.displayName : `analytics_lakehouse.${r.displayName}`}\`\nLIMIT 100;`
+                              )
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer shrink-0"
+                          >
+                            Query in BQ →
+                          </button>
+                        )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2421,6 +2640,34 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     : 'Submit Live Serverless Spark Iceberg Batch ($0 Idle)'}
                 </span>
               </button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab('ICEBERG_50_MATRIX')}
+                  className="px-2.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  50 Iceberg Playbooks →
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenBigLakeStudio
+                      ? onOpenBigLakeStudio('COMPACTION_DOCTOR')
+                      : onNavigateTab?.('BIGLAKE_STUDIO', 'COMPACTION_DOCTOR')
+                  }
+                  className="px-2.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer"
+                >
+                  BigLake Z-Order Compaction →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab?.('WAVE10_FRONTIER')}
+                  className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
+                >
+                  Spanner Graph Export →
+                </button>
+              </div>
             </div>
 
             {/* Active Serverless Spark Batches */}
