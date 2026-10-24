@@ -153,6 +153,10 @@ export default function FivePersonaCommandCenter({
   const [copiedKey, setCopiedKey] = useState('');
   const [overview, setOverview] = useState(null);
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [tribunalData, setTribunalData] = useState(null);
+  const [tribunalLoading, setTribunalLoading] = useState(false);
+  const [tribunalSubTab, setTribunalSubTab] = useState('ROLL_CALL');
+  const [remediatingTarget, setRemediatingTarget] = useState('');
 
   // Network Engineer interactive Connectivity Trace inputs
   const [traceSource, setTraceSource] = useState(
@@ -201,9 +205,93 @@ export default function FivePersonaCommandCenter({
     }
   }, [projectId, region, onShowError]);
 
+  const runLaunchTribunal = useCallback(
+    async (options = {}) => {
+      if (!projectId) return;
+      setTribunalLoading(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/enterprise-personas/tribunal`,
+          {
+            region,
+            saveAsBaseline: Boolean(options.captureBaseline),
+            resetBaseline: Boolean(options.captureBaseline),
+          }
+        );
+        setTribunalData(res.data);
+        if (options.toastMessage) {
+          onShowToast?.(options.toastMessage);
+        }
+      } catch (err) {
+        onShowError?.(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to convene 10-Persona Launch Tribunal.'
+        );
+      } finally {
+        setTribunalLoading(false);
+      }
+    },
+    [projectId, region, onShowToast, onShowError]
+  );
+
   useEffect(() => {
     fetchPersonaOverview();
-  }, [fetchPersonaOverview]);
+    runLaunchTribunal();
+  }, [fetchPersonaOverview, runLaunchTribunal]);
+
+  const runLiveRemediation = async (remediationType, targetResource) => {
+    if (!projectId || !remediationType || !targetResource) return;
+    const key = `${remediationType}:${targetResource}`;
+    setRemediatingTarget(key);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/enterprise-personas/action`,
+        {
+          action: 'EXECUTE_TRIBUNAL_LIVE_REMEDIATION',
+          region,
+          remediationType,
+          targetResource,
+        }
+      );
+      setLastReceipt(res.data);
+      if (res.data?.summary) {
+        onShowToast?.(res.data.summary);
+      }
+      await Promise.all([fetchPersonaOverview(), runLaunchTribunal()]);
+    } catch (err) {
+      if (!err?.__cancelledByUser) {
+        onShowError?.(
+          err.response?.data?.error ||
+            err.message ||
+            `Live GCP remediation failed for ${resourceName}`
+        );
+      }
+    } finally {
+      setRemediatingTarget('');
+    }
+  };
+
+  const downloadExecutiveDossier = () => {
+    const md = tribunalData?.executiveDossierMarkdown;
+    if (!md) return;
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `CloudPulse-10-Persona-Tribunal-${projectId}-${region}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    onShowToast?.(
+      `Exported 10-Persona Executive Architecture Dossier for ${projectId}`
+    );
+  };
 
   const runPersonaAction = async (action, extraPayload = {}) => {
     if (!projectId) return;
@@ -223,7 +311,7 @@ export default function FivePersonaCommandCenter({
       if (res.data?.summary) {
         onShowToast?.(res.data.summary);
       }
-      await fetchPersonaOverview();
+      await Promise.all([fetchPersonaOverview(), runLaunchTribunal()]);
     } catch (err) {
       if (!err?.__cancelledByUser) {
         onShowError?.(
@@ -253,17 +341,22 @@ export default function FivePersonaCommandCenter({
           <div className="space-y-1.5 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-[10px] font-mono font-extrabold uppercase tracking-wider">
-                5-PERSONA ENTERPRISE ARCHITECTURE BOARD &amp; PRE-FLIGHT WAR-ROOM
+                10-PERSONA ENTERPRISE ARCHITECTURE BOARD &amp; AUTONOMOUS LAUNCH TRIBUNAL
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 100% LIVE CONTROL-PLANE TELEMETRY · SDK {overview?.sdkVersion || '590.0.1 (2026.10.22)'}
               </span>
+              {tribunalData?.merkleSealSha256 && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                  SHA-256 SEAL: {tribunalData.merkleSealSha256.slice(0, 16)}...
+                </span>
+              )}
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              Cloud Architect · Cloud Engineer · Data Engineer · Network Engineer · DevSecOps Lead
+              10-Persona Enterprise Engineering Board · Live Cryptographic Launch Tribunal &amp; Cross-Domain Swarm
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Every specialist lens below answers the exact production sign-off questions demanded by enterprise engineering boards: <strong>Region Blackout SPOF Drills &amp; Org Policies</strong>, <strong>ClickOps-to-GitOps `.tf` Import &amp; Undo Sagas</strong>, <strong>Column-Level Lineage &amp; Quarantine DLQ Replay</strong>, <strong>4-Hop Packet Reachability &amp; IPAM CIDR Collision Maps</strong>, and <strong>Binary Authorization `@sha256` + Multi-Hop IAM Escalation + Zero-Key OIDC</strong>.
+              Simultaneously probes 20 live Google Cloud REST APIs across <strong>01 Cloud Architect</strong>, <strong>02 Cloud Engineer</strong>, <strong>03 Data Engineer</strong>, <strong>04 Network Engineer</strong>, <strong>05 DevSecOps</strong>, <strong>06 AI/MLOps</strong>, <strong>07 SRE Commander</strong>, <strong>08 DBRE</strong>, <strong>09 FinOps &amp; GreenOps</strong>, and <strong>10 K8s Platform Engineer</strong>—computing live <strong>GO / NO-GO</strong> cryptographic votes, cross-persona blast-radius ripple chains, Pareto trade-offs, and <strong>T0 vs. T_Now SHA-256 Merkle Snapshot Diffs</strong>.
             </p>
           </div>
 
@@ -280,14 +373,25 @@ export default function FivePersonaCommandCenter({
             </select>
             <button
               type="button"
-              onClick={fetchPersonaOverview}
-              disabled={loading}
+              onClick={() => {
+                fetchPersonaOverview();
+                runLaunchTribunal({
+                  toastMessage: `Re-evaluated 10-Persona Launch Tribunal against live ${projectId} control plane`,
+                });
+              }}
+              disabled={loading || tribunalLoading}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-mono font-extrabold cursor-pointer transition-colors"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 ${
+                  loading || tribunalLoading ? 'animate-spin' : ''
+                }`}
               />
-              <span>{loading ? 'Probing 5 Lenses...' : 'Sync All 5 Lenses'}</span>
+              <span>
+                {loading || tribunalLoading
+                  ? 'Probing 10 Lenses...'
+                  : 'Sync All 10 Lenses & Tribunal'}
+              </span>
             </button>
           </div>
         </div>
@@ -433,6 +537,404 @@ export default function FivePersonaCommandCenter({
           <div className="text-zinc-800 dark:text-zinc-200">
             {lastReceipt.summary}
           </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 10-PERSONA AUTONOMOUS LAUNCH TRIBUNAL & CROSS-DOMAIN SWARM ENGINE   */}
+      {/* =================================================================== */}
+      {tribunalData && (
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-mono font-extrabold">
+                  10-PERSONA LAUNCH TRIBUNAL
+                </span>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                    tribunalData.overallVerdict?.includes('NO_GO') ||
+                    tribunalData.overallVerdict?.includes('NO-GO')
+                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                      : tribunalData.overallVerdict?.includes('CONDITIONAL')
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                      : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                  }`}
+                >
+                  {tribunalData.overallVerdict} · COMPOSITE SCORE:{' '}
+                  {tribunalData.weightedScore ??
+                    tribunalData.compositeReadinessScore}
+                  /100
+                </span>
+                <span className="text-[10px] font-mono text-zinc-500">
+                  APPROVE: {tribunalData.approveCount ?? 0} · WARN:{' '}
+                  {tribunalData.warnCount ?? 0} · VETO:{' '}
+                  {tribunalData.vetoCount ?? 0} · PROBE:{' '}
+                  {tribunalData.probeLatencyMs ?? 0}ms
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 font-mono">
+                100% Real Multi-API Probe across {projectId} ({region}) · SHA-256 Attestation Seal:{' '}
+                <code className="text-indigo-600 dark:text-indigo-400">
+                  {tribunalData.merkleSealSha256}
+                </code>
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  runLaunchTribunal({
+                    captureBaseline: true,
+                    toastMessage: `Captured new T0 SHA-256 Merkle Baseline for ${projectId}`,
+                  })
+                }
+                disabled={tribunalLoading}
+                className="px-2.5 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-mono font-extrabold cursor-pointer"
+              >
+                Snapshot T0 Baseline
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  copyText(
+                    tribunalData.executiveDossierMarkdown || '',
+                    '10-Persona Executive Dossier (.md)'
+                  )
+                }
+                className="px-2.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-extrabold cursor-pointer"
+              >
+                Copy CTO/CISO Dossier
+              </button>
+              <button
+                type="button"
+                onClick={downloadExecutiveDossier}
+                className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
+              >
+                Export Dossier (.md)
+              </button>
+            </div>
+          </div>
+
+          {/* Sub-navigation tabs for the 4 Swarm Intelligence Views */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              {
+                id: 'ROLL_CALL',
+                label: '01 · 10-Persona Roll-Call & Live GCP Remediator',
+              },
+              {
+                id: 'RIPPLE_GRAPH',
+                label: `02 · Cross-Persona Blast-Radius Ripple Chains (${
+                  (tribunalData.liveCrossPersonaChains || []).length
+                })`,
+              },
+              {
+                id: 'PARETO_SOLVER',
+                label: '03 · Multi-Persona Pareto Conflict Solver (Cost vs. HA vs. Zero-Trust)',
+              },
+              {
+                id: 'MERKLE_DIFF',
+                label: `04 · T0 vs. T_Now SHA-256 Merkle State Diff (${
+                  tribunalData.merkleDiff?.stateChanged
+                    ? 'DELTA_DETECTED'
+                    : 'ZERO_DRIFT'
+                })`,
+              },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setTribunalSubTab(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-extrabold border transition-colors cursor-pointer ${
+                  tribunalSubTab === tab.id
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                    : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* SUB-TAB 1: 10-PERSONA ROLL-CALL VOTING GRID & LIVE GCP REMEDIATOR */}
+          {tribunalSubTab === 'ROLL_CALL' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2.5">
+              {(tribunalData.votes || tribunalData.personaVotes || []).map(
+                (pv) => {
+                  const remAction =
+                    pv.liveActionableRemediation?.remediationType ||
+                    pv.remediationAction;
+                  const remTarget =
+                    pv.liveActionableRemediation?.targetResource ||
+                    pv.remediationTarget;
+                  const remKey = `${remAction}:${remTarget}`;
+                  const isRemediating = remediatingTarget === remKey;
+                  const cliCmd = pv.remediationCli || pv.cliRemediation;
+                  return (
+                    <div
+                      key={pv.code}
+                      className={`p-3 rounded-xl border flex flex-col justify-between gap-2 text-xs font-mono ${
+                        pv.vote === 'VETO_BLOCK'
+                          ? 'border-rose-500/50 bg-rose-500/5'
+                          : pv.vote === 'CONDITIONAL_WARN'
+                          ? 'border-amber-500/40 bg-amber-500/5'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60'
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActivePersona(
+                                normalizePersonaId(pv.personaId || pv.persona)
+                              )
+                            }
+                            className="font-extrabold text-zinc-900 dark:text-white hover:text-blue-500 text-left cursor-pointer"
+                          >
+                            [{pv.code}] {pv.role}
+                          </button>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                              pv.vote === 'VETO_BLOCK'
+                                ? 'bg-rose-500/20 text-rose-500'
+                                : pv.vote === 'CONDITIONAL_WARN'
+                                ? 'bg-amber-500/20 text-amber-500'
+                                : 'bg-emerald-500/20 text-emerald-500'
+                            }`}
+                          >
+                            {pv.vote} · {pv.score}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
+                          {pv.liveMetrics || pv.liveMetric}
+                        </div>
+                        <div className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-snug">
+                          {pv.liveFinding || pv.finding}
+                        </div>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-zinc-200/70 dark:border-zinc-800/70 flex flex-wrap items-center justify-between gap-1">
+                        {remAction && remTarget ? (
+                          <button
+                            type="button"
+                            disabled={isRemediating}
+                            onClick={() =>
+                              runLiveRemediation(remAction, remTarget)
+                            }
+                            className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-extrabold cursor-pointer"
+                          >
+                            {isRemediating
+                              ? 'Patching GCP...'
+                              : `Fix Live (${remTarget})`}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActivePersona(
+                                normalizePersonaId(pv.personaId || pv.persona)
+                              )
+                            }
+                            className="text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                          >
+                            Inspect Lens →
+                          </button>
+                        )}
+                        {cliCmd && onRunInShell && (
+                          <button
+                            type="button"
+                            onClick={() => onRunInShell(cliCmd)}
+                            className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[9px] font-bold cursor-pointer"
+                          >
+                            Run CLI
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          )}
+
+          {/* SUB-TAB 2: LIVE CROSS-PERSONA DEPENDENCY & BLAST-RADIUS RIPPLE CHAINS */}
+          {tribunalSubTab === 'RIPPLE_GRAPH' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(tribunalData.liveCrossPersonaChains || []).map((chain) => (
+                <div
+                  key={chain.chainId || chain.id}
+                  className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2 text-xs font-mono"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-extrabold text-zinc-900 dark:text-white">
+                      {chain.title || chain.trigger}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-500">
+                      {chain.triggerPersona || 'CROSS-DOMAIN'}
+                    </span>
+                  </div>
+                  {chain.liveResourceAnchor && (
+                    <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                      Anchor: {chain.liveResourceAnchor}
+                    </div>
+                  )}
+                  <div className="space-y-1 text-[11px] text-zinc-600 dark:text-zinc-300">
+                    {(chain.rippleSequence || [chain.blastRadius]).map(
+                      (step, idx) => (
+                        <div key={idx}>{step}</div>
+                      )
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-zinc-500">
+                        Impacted Personas:
+                      </span>
+                      {(chain.impactedPersonas || []).map((p) => (
+                        <span
+                          key={p}
+                          className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold"
+                        >
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                    {chain.safeExecutionOrderCli && onRunInShell && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRunInShell(chain.safeExecutionOrderCli)
+                        }
+                        className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        Verify Chain CLI
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* SUB-TAB 3: MULTI-PERSONA PARETO CONFLICT SOLVER */}
+          {tribunalSubTab === 'PARETO_SOLVER' &&
+            tribunalData.paretoConflictSolver && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                  <span className="font-extrabold text-zinc-900 dark:text-white">
+                    {tribunalData.paretoConflictSolver.conflictTitle}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold">
+                    {tribunalData.paretoConflictSolver.paretoVerdict}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {(tribunalData.paretoConflictSolver.matrix || []).map(
+                    (row) => (
+                      <div
+                        key={row.dimension}
+                        className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2 text-xs font-mono"
+                      >
+                        <div className="font-extrabold text-zinc-900 dark:text-white">
+                          {row.dimension}
+                        </div>
+                        <div className="space-y-1 text-[10px]">
+                          <div className="p-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                            <span className="text-emerald-500 font-bold">
+                              [09 FinOps]:
+                            </span>{' '}
+                            {row.finOpsDemand}
+                          </div>
+                          <div className="p-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                            <span className="text-blue-500 font-bold">
+                              [01/07 SRE/Arch]:
+                            </span>{' '}
+                            {row.sreArchitectDemand}
+                          </div>
+                          <div className="p-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                            <span className="text-rose-500 font-bold">
+                              [05 DevSecOps]:
+                            </span>{' '}
+                            {row.devSecOpsDemand}
+                          </div>
+                        </div>
+                        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                          Pareto Synthesis: {row.paretoSolution}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+          {/* SUB-TAB 4: T0 vs. T_NOW CRYPTOGRAPHIC SHA-256 MERKLE SNAPSHOT DIFF */}
+          {tribunalSubTab === 'MERKLE_DIFF' && tribunalData.merkleDiff && (
+            <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2.5 text-xs font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="font-extrabold text-zinc-900 dark:text-white">
+                    T0 vs. T_Now Cryptographic Merkle State Verification
+                  </span>{' '}
+                  <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-500 text-[10px] font-extrabold">
+                    {tribunalData.merkleDiff.stateChanged
+                      ? `STATE_MUTATED (Score Delta: ${tribunalData.merkleDiff.scoreDelta})`
+                      : 'VERIFIED_ZERO_DRIFT'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-zinc-500">
+                  T0 Captured: {tribunalData.merkleDiff.baselineCapturedAt}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-zinc-500 text-[10px]">
+                    T0 Baseline SHA-256 Merkle Root
+                  </div>
+                  <div className="font-bold text-indigo-500 break-all">
+                    {tribunalData.merkleDiff.baselineMerkleRoot}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-zinc-500 text-[10px]">
+                    T_Now Live SHA-256 Merkle Root (
+                    {tribunalData.merkleDiff.currentCapturedAt})
+                  </div>
+                  <div className="font-bold text-emerald-500 break-all">
+                    {tribunalData.merkleDiff.currentMerkleRoot}
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                {(tribunalData.merkleDiff.metricDeltas || []).map((d) => (
+                  <div
+                    key={d.metric}
+                    className="flex items-center justify-between px-2.5 py-1.5 rounded bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px]"
+                  >
+                    <span className="font-bold truncate pr-2">{d.metric}</span>
+                    <span className="shrink-0">
+                      <code>{d.t0}</code> → <code>{d.tNow}</code> (
+                      <strong
+                        className={
+                          d.delta === 0
+                            ? 'text-zinc-500'
+                            : d.delta < 0
+                            ? 'text-emerald-500'
+                            : 'text-amber-500'
+                        }
+                      >
+                        {d.delta > 0 ? `+${d.delta}` : d.delta}
+                      </strong>
+                      )
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
