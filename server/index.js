@@ -19076,7 +19076,7 @@ app.get(
         ? `&generation=${encodeURIComponent(requestedGeneration)}`
         : '';
 
-      const [metaRes, mediaRes, iamRes] = await Promise.all([
+      const [metaRes, mediaRes, iamRes, bucketMetaRes] = await Promise.all([
         gcpHttp.get(
           `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
             bucketName
@@ -19117,9 +19117,26 @@ app.get(
             }
           )
           .catch(() => ({ data: { bindings: [] } })),
+        gcpHttp
+          .get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+              timeout: 4000,
+            }
+          )
+          .catch(() => ({ data: {} })),
       ]);
 
       const meta = metaRes.data || {};
+      const papEnforced =
+        bucketMetaRes.data?.iamConfiguration?.publicAccessPrevention ===
+        'enforced';
       const encodedObjectPath = String(objectName)
         .split('/')
         .map((seg) => encodeURIComponent(seg))
@@ -19132,27 +19149,30 @@ app.get(
       )}/${encodedObjectPath}`;
       const gsUri = `gs://${bucketName}/${objectName}`;
 
-      const hasPublicObjectAcl = Array.isArray(meta.acl)
-        ? meta.acl.some(
-            (entry) =>
-              entry.entity === 'allUsers' ||
-              entry.entity === 'allAuthenticatedUsers'
-          )
-        : false;
+      const hasPublicObjectAcl =
+        !papEnforced && Array.isArray(meta.acl)
+          ? meta.acl.some(
+              (entry) =>
+                entry.entity === 'allUsers' ||
+                entry.entity === 'allAuthenticatedUsers'
+            )
+          : false;
 
       const iamBindings = Array.isArray(iamRes.data?.bindings)
         ? iamRes.data.bindings
         : [];
-      const hasPublicBucketIam = iamBindings.some(
-        (b) =>
-          /objectViewer|objectAdmin|legacyObjectReader|storage\.admin/i.test(
-            String(b.role || '')
-          ) &&
-          Array.isArray(b.members) &&
-          b.members.some(
-            (m) => m === 'allUsers' || m === 'allAuthenticatedUsers'
-          )
-      );
+      const hasPublicBucketIam =
+        !papEnforced &&
+        iamBindings.some(
+          (b) =>
+            /objectViewer|objectAdmin|legacyObjectReader|storage\.admin/i.test(
+              String(b.role || '')
+            ) &&
+            Array.isArray(b.members) &&
+            b.members.some(
+              (m) => m === 'allUsers' || m === 'allAuthenticatedUsers'
+            )
+        );
 
       const isPublic = Boolean(hasPublicObjectAcl || hasPublicBucketIam);
       const publicAccessScope = hasPublicObjectAcl

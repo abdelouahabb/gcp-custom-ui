@@ -2590,16 +2590,16 @@ export default function GcsObjectWorkbench({
                             .split('/')
                             .map((s) => encodeURIComponent(s))
                             .join('/');
-                          const url = `https://storage.googleapis.com/${encodeURIComponent(
+                          const url = `https://storage.cloud.google.com/${encodeURIComponent(
                             selectedBucket?.name || ''
                           )}/${encPath}`;
                           handleCopyText(url, `row-url-${o.name}`);
                           if (onShowToast) {
-                            onShowToast(`Copied HTTPS URI: ${url}`);
+                            onShowToast(`Copied Authenticated HTTPS URL: ${url}`);
                           }
                         }}
-                        className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
-                        title="Copy https://storage.googleapis.com/... URI"
+                        className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                        title="Copy Authenticated HTTPS URL (https://storage.cloud.google.com/...)"
                       >
                         {copiedKey === `row-url-${o.name}` ? (
                           <Check className="w-3 h-3 text-emerald-500" />
@@ -3042,49 +3042,55 @@ export default function GcsObjectWorkbench({
                       </button>
                     </div>
 
-                    {/* 3 Official GCS URIs: Public HTTPS, Authenticated Console HTTPS, and gs:// */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 text-[11px]">
-                      {/* 1. Public HTTPS URI */}
-                      <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
-                        <div className="min-w-0">
-                          <div className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400">
-                            Public HTTPS URL (storage.googleapis.com)
+                    {/* Official GCS URIs: Only show Public HTTPS URL when the object is actually Public (isPub === true) */}
+                    <div
+                      className={`grid grid-cols-1 ${
+                        isPub ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+                      } gap-2 text-[11px]`}
+                    >
+                      {/* 1. Public HTTPS URI — ONLY rendered when the object is Public */}
+                      {isPub && (
+                        <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-emerald-500/40 flex items-center justify-between gap-1.5">
+                          <div className="min-w-0">
+                            <div className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400">
+                              Public HTTPS URL (storage.googleapis.com)
+                            </div>
+                            <code
+                              className="text-zinc-800 dark:text-zinc-200 truncate block"
+                              title={publicUrl}
+                            >
+                              {publicUrl}
+                            </code>
                           </div>
-                          <code
-                            className="text-zinc-800 dark:text-zinc-200 truncate block"
-                            title={publicUrl}
-                          >
-                            {publicUrl}
-                          </code>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopyText(publicUrl, 'pub-https-uri')
+                              }
+                              className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
+                              title="Copy Public HTTPS URL"
+                            >
+                              {copiedKey === 'pub-https-uri' ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <a
+                              href={publicUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-emerald-500"
+                              title="Open Public HTTPS URL in new tab"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopyText(publicUrl, 'pub-https-uri')
-                            }
-                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
-                            title="Copy Public HTTPS URL"
-                          >
-                            {copiedKey === 'pub-https-uri' ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-500" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                          <a
-                            href={publicUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-emerald-500"
-                            title="Open Public HTTPS URL in new tab"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
-                      </div>
+                      )}
 
-                      {/* 2. Authenticated Console HTTPS URI */}
+                      {/* 2. Authenticated Console HTTPS URI (Always works via Google Cloud session) */}
                       <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
                         <div className="min-w-0">
                           <div className="text-[9px] uppercase font-bold text-blue-500">
