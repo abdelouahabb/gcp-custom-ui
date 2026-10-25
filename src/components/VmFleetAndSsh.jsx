@@ -480,7 +480,8 @@ export default function VmFleetAndSsh({
       diskMountPath: '/mnt/gce-disk',
       diskReadOnly: false,
       useDirectVmGcsRsync: false,
-      enableCloudRunGpu: rawType.startsWith('g2-') || rawType.startsWith('a2-') || rawType.startsWith('a3-'),
+      enableCloudRunGpu:
+        mt.startsWith('g2-') || mt.startsWith('a2-') || mt.startsWith('a3-'),
       enableMultiContainerSidecar: false,
       autoConvertCronToScheduler: false,
       simulatedHardwareScenario: 'AUTO',
