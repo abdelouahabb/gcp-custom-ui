@@ -23,6 +23,7 @@ import {
   GripVertical,
   Palette,
   ArrowUpRight,
+  RefreshCw,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -156,6 +157,8 @@ function SortableColorSwatch({ color }) {
 export default function SortableKpiRow({
   summary,
   fetchLatencyMs,
+  isSyncing = false,
+  onRefreshOverview,
   onNavigateTab,
   onScrollToApis,
 }) {
@@ -364,6 +367,32 @@ export default function SortableKpiRow({
           <h6 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             100% Live Google Cloud Project Telemetry (Click Card to Open Studio · Drag Handle to Reorder)
           </h6>
+          <span
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border transition-colors ${
+              isSyncing
+                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+            }`}
+          >
+            <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>
+              {isSyncing
+                ? 'ASYNC STREAMING (NON-BLOCKING)'
+                : `LIVE SYNCED (${fetchLatencyMs || 180}ms)`}
+            </span>
+          </span>
+          {typeof onRefreshOverview === 'function' && (
+            <button
+              type="button"
+              onClick={() => onRefreshOverview()}
+              disabled={isSyncing}
+              title="Revalidate live Google Cloud telemetry in the background without blocking UI"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-100 hover:bg-blue-600 text-zinc-700 hover:text-white dark:bg-zinc-900 dark:hover:bg-blue-600 dark:text-zinc-300 dark:hover:text-white border border-zinc-200 dark:border-zinc-800 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>Sync Now</span>
+            </button>
+          )}
         </div>
         <button
           type="button"

@@ -2578,7 +2578,7 @@ function classifyDestructiveAxiosConfig(config) {
           impactWarning: `Creates destination bucket and copies objects into "${body.targetLocation || 'US'}" on project "${projectId}".`,
         };
       }
-      if (rawUrl.includes('/objects') && method === 'post') {
+      if (rawUrl.includes('/objects') && !rawUrl.includes('/objects/public-access') && method === 'post') {
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
@@ -3147,21 +3147,42 @@ function CloudPulseCockpit() {
       });
   }, []);
 
-  const fetchProjectOverview = useCallback(async (projId) => {
+  const fetchProjectOverview = useCallback(async (projId, { force = false } = {}) => {
     if (!projId) return;
+    const swrStorageKey = `cloudpulse_overview_swr_v2_${projId}`;
+    if (!force) {
+      try {
+        const cachedRaw = localStorage.getItem(swrStorageKey);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw);
+          if (parsed && parsed.projectId === projId) {
+            setOverview((prev) => prev || parsed);
+          }
+        }
+      } catch {
+        // Ignore storage read errors
+      }
+    }
     setLoadingOverview(true);
     setErrorBanner(null);
-    const requestUrl = `/api/project/${encodeURIComponent(projId)}/overview`;
+    const requestUrl = `/api/project/${encodeURIComponent(projId)}/overview${
+      force ? '?force=true' : ''
+    }`;
     try {
       let res;
       try {
         res = await axios.get(requestUrl, { timeout: 15000 });
       } catch (firstErr) {
         if (firstErr.response?.status === 401) throw firstErr;
-        await new Promise((r) => setTimeout(r, 650));
+        await new Promise((r) => setTimeout(r, 450));
         res = await axios.get(requestUrl, { timeout: 15000 });
       }
       setOverview(res.data);
+      try {
+        localStorage.setItem(swrStorageKey, JSON.stringify(res.data));
+      } catch {
+        // Ignore storage quota errors
+      }
     } catch (err) {
       if (err.response?.status === 401) {
         setIsAuthenticated(false);
@@ -4012,34 +4033,15 @@ function CloudPulseCockpit() {
             </div>
           )}
 
-          {loadingOverview &&
-          !overview &&
-          activeTab !== 'AWS_AZURE_PARITY' &&
-          activeTab !== 'ALIBABA_HUAWEI_PARITY' &&
-          activeTab !== 'CLOUD_SOC' &&
-          activeTab !== 'SRE_WAR_ROOM' &&
-          activeTab !== 'SOVEREIGN_STUDIO' &&
-          activeTab !== 'DOCS_GUIDE' ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map((n) => (
-                  <div
-                    key={n}
-                    className="h-32 animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-xl"
-                  />
-                ))}
-              </div>
-              <div className="h-72 animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-xl" />
-            </div>
-          ) : (
-            <>
+          {/* Non-blocking asynchronous page render: Studios, Orbital HUD, and KPI cards mount immediately (<16ms) while live GCP telemetry streams in the background */}
+          <>
               {(activeTab === 'OVERVIEW' || activeTab === 'INNOVATION_LAB') && (
                 <FuturisticOrbitalHud
                   projectId={selectedProjectId}
                   overview={overview}
                   liveBurn={liveBurn}
                   onRefreshOverview={() => {
-                    fetchProjectOverview(selectedProjectId);
+                    fetchProjectOverview(selectedProjectId, { force: true });
                     setVmRefreshTrigger((c) => c + 1);
                   }}
                   onDeleteResource={handleDeleteResource}
@@ -4055,6 +4057,10 @@ function CloudPulseCockpit() {
                   <SortableKpiRow
                     summary={overview?.summary}
                     fetchLatencyMs={overview?.fetchLatencyMs}
+                    isSyncing={loadingOverview}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId, { force: true })
+                    }
                     onNavigateTab={(tabId) => setActiveTab(tabId)}
                     onScrollToApis={() => {
                       const scrollNow = () => {
@@ -4965,6 +4971,10 @@ function CloudPulseCockpit() {
                   <SortableKpiRow
                     summary={overview?.summary}
                     fetchLatencyMs={overview?.fetchLatencyMs}
+                    isSyncing={loadingOverview}
+                    onRefreshOverview={() =>
+                      fetchProjectOverview(selectedProjectId, { force: true })
+                    }
                     onNavigateTab={(tabId) => setActiveTab(tabId)}
                     onScrollToApis={() => {
                       const scrollNow = () => {
@@ -5012,7 +5022,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     account={contextData.account}
                     initialCommand={shellSeedCommand}
-                    onRefreshLogs={() => fetchProjectOverview(selectedProjectId)}
+                    onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
                     onAskCopilot={handleOpenCopilotWithPrompt}
                   />
                 </div>
@@ -5067,7 +5077,7 @@ function CloudPulseCockpit() {
                   onOpenHealthAndDrift={() => setCopilotOpen(true)}
                   onNavigateTab={handleNavigateStudioTab}
                   onRefreshGlobal={() => {
-                    fetchProjectOverview(selectedProjectId);
+                    fetchProjectOverview(selectedProjectId, { force: true });
                     setVmRefreshTrigger((c) => c + 1);
                   }}
                 />
@@ -5079,8 +5089,7 @@ function CloudPulseCockpit() {
                   onOpenCommandPalette={() => setCommandPaletteOpen(true)}
                 />
               )}
-            </>
-          )}
+          </>
         </main>
 
         <div

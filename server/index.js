@@ -181,21 +181,35 @@ function normalizeAndSortEnabledApis(rawServices = [], inferredServices = [], pr
 }
 
 async function fetchProjectEnabledApis(projectId, token) {
+  const cached = projectEnabledApisCache.get(projectId);
   const url = `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
     projectId
   )}/services?filter=state:ENABLED&pageSize=200`;
-  try {
-    const data = await gcpFetch(url, token, projectId, { timeout: 3500 });
-    return data?.services || [];
-  } catch {
+
+  const doFetch = async () => {
     try {
-      // Fallback without x-goog-user-project in case quota project header is rejected
-      const data = await gcpFetch(url, token, null, { timeout: 3000 });
-      return data?.services || [];
+      const data = await gcpFetch(url, token, projectId, { timeout: 2200 });
+      const list = data?.services || [];
+      if (list.length > 0) projectEnabledApisCache.set(projectId, list);
+      return list;
     } catch {
-      return projectEnabledApisCache.get(projectId) || [];
+      try {
+        const data = await gcpFetch(url, token, null, { timeout: 2000 });
+        const list = data?.services || [];
+        if (list.length > 0) projectEnabledApisCache.set(projectId, list);
+        return list;
+      } catch {
+        return projectEnabledApisCache.get(projectId) || [];
+      }
     }
+  };
+
+  if (cached && cached.length > 0) {
+    // Non-blocking background refresh so /overview never stalls on serviceusage pagination
+    doFetch().catch(() => null);
+    return cached;
   }
+  return doFetch();
 }
 
 function parseEnvVarsInput(envInput) {
@@ -1538,11 +1552,14 @@ app.get('/api/context', async (req, res) => {
 // ============================================================================
 // REAL PROJECT OVERVIEW, VM FLEET, SSH & PROVISIONING ENDPOINTS
 // ============================================================================
+const overviewSwrCache = new Map();
+const overviewInFlight = new Map();
 
-// 5. GET /api/project/:projectId/overview -> 100% Real GCP Project Telemetry
+// 5. GET /api/project/:projectId/overview -> 100% Real GCP Project Telemetry (Non-Blocking SWR)
 app.get('/api/project/:projectId/overview', async (req, res) => {
   const { projectId } = req.params;
   const includeDemo = req.query.demo === 'true';
+  const forceRefresh = req.query.force === 'true';
   const t0 = Date.now();
 
   try {
@@ -1553,74 +1570,79 @@ app.get('/api/project/:projectId/overview', async (req, res) => {
       });
     }
 
-    // Query all real Google Cloud APIs in parallel over IPv4
-    const [
-      bucketsRes,
-      datasetsRes,
-      runRes,
-      vmsRes,
-      gkeRes,
-      vpcsRes,
-      firewallsRes,
-      servicesRes,
-      logsRes,
-    ] = await Promise.allSettled([
-      gcpFetch(
-        `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
-        token,
-        projectId
-      ),
-      gcpFetch(
-        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
-        token,
-        projectId
-      ),
-      gcpFetch(
-        `https://run.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/services`,
-        token,
-        projectId
-      ),
-      gcpFetch(
-        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
-        token,
-        projectId,
-        { timeout: 3000 }
-      ),
-      gcpFetch(
-        `https://container.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/clusters`,
-        token,
-        projectId,
-        { timeout: 2500 }
-      ),
-      gcpFetch(
-        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
-        token,
-        projectId,
-        { timeout: 3000 }
-      ),
-      gcpFetch(
-        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls?maxResults=30`,
-        token,
-        projectId,
-        { timeout: 3000 }
-      ),
-      fetchProjectEnabledApis(projectId, token),
-      gcpFetch(
-        'https://logging.googleapis.com/v2/entries:list',
-        token,
-        projectId,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: {
-            resourceNames: [`projects/${projectId}`],
-            pageSize: 25,
-            orderBy: 'timestamp desc',
-          },
-          timeout: 3000,
-        }
-      ),
-    ]);
+    const buildOverviewPayload = async () => {
+      const startMs = Date.now();
+      // Query all real Google Cloud APIs in parallel over IPv4 with fast non-blocking timeouts
+      const [
+        bucketsRes,
+        datasetsRes,
+        runRes,
+        vmsRes,
+        gkeRes,
+        vpcsRes,
+        firewallsRes,
+        servicesRes,
+        logsRes,
+      ] = await Promise.allSettled([
+        gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}`,
+          token,
+          projectId,
+          { timeout: 2200 }
+        ),
+        gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets`,
+          token,
+          projectId,
+          { timeout: 2200 }
+        ),
+        gcpFetch(
+          `https://run.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/services`,
+          token,
+          projectId,
+          { timeout: 2200 }
+        ),
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+          token,
+          projectId,
+          { timeout: 2400 }
+        ),
+        gcpFetch(
+          `https://container.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/-/clusters`,
+          token,
+          projectId,
+          { timeout: 2000 }
+        ),
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/networks`,
+          token,
+          projectId,
+          { timeout: 2200 }
+        ),
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls?maxResults=30`,
+          token,
+          projectId,
+          { timeout: 2200 }
+        ),
+        fetchProjectEnabledApis(projectId, token),
+        gcpFetch(
+          'https://logging.googleapis.com/v2/entries:list',
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              resourceNames: [`projects/${projectId}`],
+              pageSize: 25,
+              orderBy: 'timestamp desc',
+            },
+            timeout: 2200,
+          }
+        ),
+      ]);
 
     const liveBuckets =
       bucketsRes.status === 'fulfilled' ? bucketsRes.value?.items || [] : [];
@@ -2037,82 +2059,118 @@ app.get('/api/project/:projectId/overview', async (req, res) => {
       },
     ];
 
-    res.json({
-      projectId,
-      account,
-      includeDemo,
-      fetchLatencyMs: Date.now() - t0,
-      summary: {
-        liveBucketsCount: liveBuckets.length,
-        liveDatasetsCount: liveDatasets.length,
-        liveRunCount: liveRunServices.length,
-        liveVmsCount: liveVmsRaw.length,
-        liveClustersCount: liveClusters.length,
-        liveVpcsCount: liveVpcs.length,
-        liveFirewallsCount: liveFirewalls.length,
-        enabledApisCount: liveEnabledApis.length,
-        liveLogsCount: formattedLogs.length,
-        totalResourcesCount: resources.length,
-      },
-      resources,
-      vpcs: liveVpcs.map((vpc) => ({
-        id: vpc.id || vpc.name,
-        name: vpc.name,
-        autoCreateSubnetworks: Boolean(vpc.autoCreateSubnetworks),
-        routingMode: vpc.routingConfig?.routingMode || 'REGIONAL',
-        mtu: vpc.mtu || 1460,
-        subnetsCount: (vpc.subnetworks || []).length,
-        subnetworks: (vpc.subnetworks || []).map((s) => {
-          const parts = s.split('/');
-          return {
-            name: parts[parts.length - 1],
-            region: parts[parts.indexOf('regions') + 1] || 'global',
-          };
-        }),
-        createdAt: vpc.creationTimestamp || new Date().toISOString(),
-        description: vpc.description || '',
-      })),
-      firewalls: liveFirewalls.map((fw) => ({
-        id: fw.id || fw.name,
-        name: fw.name,
-        description: fw.description || '',
-        network: fw.network?.split('/').pop() || 'default',
-        direction: fw.direction || 'INGRESS',
-        action: Array.isArray(fw.denied) && fw.denied.length > 0 ? 'DENY' : 'ALLOW',
-        priority: fw.priority ?? 1000,
-        disabled: Boolean(fw.disabled),
-        sourceRanges: fw.sourceRanges || [],
-        destinationRanges: fw.destinationRanges || [],
-        sourceTags: fw.sourceTags || [],
-        targetTags: fw.targetTags || [],
-        sourceServiceAccounts: fw.sourceServiceAccounts || [],
-        targetServiceAccounts: fw.targetServiceAccounts || [],
-        allowed: fw.allowed || [],
-        denied: fw.denied || [],
-        logConfig: fw.logConfig || { enable: false },
-        selfLink: fw.selfLink || '',
-        createdAt: fw.creationTimestamp || new Date().toISOString(),
-      })),
-      cloudRunServices: liveRunServices.map((s) =>
-        formatCloudRunService(s, projectId)
-      ),
-      enabledApis: liveEnabledApis,
-      logs: formattedLogs,
-      telemetry: {
-        finopsSeries,
-        inventoryBreakdown: {
-          buckets: liveBuckets.length,
-          datasets: liveDatasets.length,
-          vms: liveVmsRaw.length,
-          vpcs: liveVpcs.length,
-          firewalls: liveFirewalls.length,
-          cloudRun: liveRunServices.length,
-          gke: liveClusters.length,
-          enabledApis: liveEnabledApis.length,
-          auditLogs: formattedLogs.length,
+      const payload = {
+        projectId,
+        account,
+        includeDemo,
+        fetchLatencyMs: Date.now() - startMs,
+        summary: {
+          liveBucketsCount: liveBuckets.length,
+          liveDatasetsCount: liveDatasets.length,
+          liveRunCount: liveRunServices.length,
+          liveVmsCount: liveVmsRaw.length,
+          liveClustersCount: liveClusters.length,
+          liveVpcsCount: liveVpcs.length,
+          liveFirewallsCount: liveFirewalls.length,
+          enabledApisCount: liveEnabledApis.length,
+          liveLogsCount: formattedLogs.length,
+          totalResourcesCount: resources.length,
         },
-      },
-    });
+        resources,
+        vpcs: liveVpcs.map((vpc) => ({
+          id: vpc.id || vpc.name,
+          name: vpc.name,
+          autoCreateSubnetworks: Boolean(vpc.autoCreateSubnetworks),
+          routingMode: vpc.routingConfig?.routingMode || 'REGIONAL',
+          mtu: vpc.mtu || 1460,
+          subnetsCount: (vpc.subnetworks || []).length,
+          subnetworks: (vpc.subnetworks || []).map((s) => {
+            const parts = s.split('/');
+            return {
+              name: parts[parts.length - 1],
+              region: parts[parts.indexOf('regions') + 1] || 'global',
+            };
+          }),
+          createdAt: vpc.creationTimestamp || new Date().toISOString(),
+          description: vpc.description || '',
+        })),
+        firewalls: liveFirewalls.map((fw) => ({
+          id: fw.id || fw.name,
+          name: fw.name,
+          description: fw.description || '',
+          network: fw.network?.split('/').pop() || 'default',
+          direction: fw.direction || 'INGRESS',
+          action:
+            Array.isArray(fw.denied) && fw.denied.length > 0 ? 'DENY' : 'ALLOW',
+          priority: fw.priority ?? 1000,
+          disabled: Boolean(fw.disabled),
+          sourceRanges: fw.sourceRanges || [],
+          destinationRanges: fw.destinationRanges || [],
+          sourceTags: fw.sourceTags || [],
+          targetTags: fw.targetTags || [],
+          sourceServiceAccounts: fw.sourceServiceAccounts || [],
+          targetServiceAccounts: fw.targetServiceAccounts || [],
+          allowed: fw.allowed || [],
+          denied: fw.denied || [],
+          logConfig: fw.logConfig || { enable: false },
+          selfLink: fw.selfLink || '',
+          createdAt: fw.creationTimestamp || new Date().toISOString(),
+        })),
+        cloudRunServices: liveRunServices.map((s) =>
+          formatCloudRunService(s, projectId)
+        ),
+        enabledApis: liveEnabledApis,
+        logs: formattedLogs,
+        telemetry: {
+          finopsSeries,
+          inventoryBreakdown: {
+            buckets: liveBuckets.length,
+            datasets: liveDatasets.length,
+            vms: liveVmsRaw.length,
+            vpcs: liveVpcs.length,
+            firewalls: liveFirewalls.length,
+            cloudRun: liveRunServices.length,
+            gke: liveClusters.length,
+            enabledApis: liveEnabledApis.length,
+            auditLogs: formattedLogs.length,
+          },
+        },
+      };
+
+      overviewSwrCache.set(projectId, {
+        ts: Date.now(),
+        payload,
+      });
+      return payload;
+    };
+
+    const cachedEntry = overviewSwrCache.get(projectId);
+    if (cachedEntry && !forceRefresh) {
+      const ageMs = Date.now() - cachedEntry.ts;
+      if (ageMs > 12000 && !overviewInFlight.has(projectId)) {
+        const bgPromise = buildOverviewPayload().finally(() =>
+          overviewInFlight.delete(projectId)
+        );
+        overviewInFlight.set(projectId, bgPromise);
+      }
+      return res.json({
+        ...cachedEntry.payload,
+        cached: true,
+        cacheAgeMs: ageMs,
+        fetchLatencyMs: Date.now() - t0,
+      });
+    }
+
+    let pending = overviewInFlight.get(projectId);
+    if (!pending || forceRefresh) {
+      pending = buildOverviewPayload().finally(() =>
+        overviewInFlight.delete(projectId)
+      );
+      overviewInFlight.set(projectId, pending);
+    }
+
+    const freshPayload = await pending;
+    res.json(freshPayload);
   } catch (err) {
     res.status(500).json({
       error: err.response?.data?.error?.message || err.message,
