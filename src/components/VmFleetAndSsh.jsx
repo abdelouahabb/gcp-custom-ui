@@ -481,6 +481,8 @@ export default function VmFleetAndSsh({
       diskReadOnly: false,
       useDirectVmGcsRsync: false,
       enableCloudRunGpu: rawType.startsWith('g2-') || rawType.startsWith('a2-') || rawType.startsWith('a3-'),
+      enableMultiContainerSidecar: false,
+      autoConvertCronToScheduler: false,
       simulatedHardwareScenario: 'AUTO',
       containerImage: 'mirror.gcr.io/library/python:3.12-slim',
       containerPort: 8080,
@@ -599,6 +601,12 @@ export default function VmFleetAndSsh({
           useDirectVmGcsRsync: Boolean(migrateForm.useDirectVmGcsRsync),
           enableCloudRunGpu: Boolean(migrateForm.enableCloudRunGpu),
           gpuAcceleratorType: 'nvidia-l4',
+          enableMultiContainerSidecar: Boolean(
+            migrateForm.enableMultiContainerSidecar
+          ),
+          autoConvertCronToScheduler: Boolean(
+            migrateForm.autoConvertCronToScheduler
+          ),
           targetPath: migrateForm.targetPath || '/var/www/html',
           containerImage: migrateForm.containerImage,
           extractedBundleB64: migrateForm.extractedBundleB64,
@@ -622,6 +630,11 @@ export default function VmFleetAndSsh({
         mountedDiskBucket: res.data?.mountedDiskBucket || null,
         diskMountPath: res.data?.diskMountPath || '/mnt/gce-disk',
         syncedDiskFilesCount: res.data?.syncedDiskFilesCount || 0,
+        multiContainerSidecarDeployed: Boolean(
+          res.data?.multiContainerSidecarDeployed
+        ),
+        cloudSchedulerJobName: res.data?.cloudSchedulerJobName || null,
+        canaryVerification: res.data?.canaryVerification || null,
         message:
           res.data?.message ||
           `Migrated real files from VM ${vm.name} into Cloud Run Gen2 service ${migrateForm.serviceName}!`,
@@ -1316,7 +1329,7 @@ export default function VmFleetAndSsh({
                                 )}
                               </div>
 
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 flex-wrap">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1341,7 +1354,33 @@ export default function VmFleetAndSsh({
                                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
                                   }`}
                                 >
-                                  Auto-Generated Dockerfile
+                                  Dockerfile ({detectedVmRuntimeInfo?.mfitAssessment?.detectedRuntimePlugin || 'm2c'})
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setActiveExtractPreviewTab('M2C_PLAN')
+                                  }
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+                                    activeExtractPreviewTab === 'M2C_PLAN'
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                                  }`}
+                                >
+                                  m2c migration-plan.yaml
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setActiveExtractPreviewTab('KNATIVE_SKAFFOLD')
+                                  }
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+                                    activeExtractPreviewTab === 'KNATIVE_SKAFFOLD'
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                                  }`}
+                                >
+                                  service.knative.yaml + skaffold.yaml
                                 </button>
                               </div>
                             </div>
@@ -1369,6 +1408,32 @@ export default function VmFleetAndSsh({
                                   className="w-full rounded-lg bg-zinc-950 text-emerald-300 border border-zinc-800 p-2.5 text-[11px] font-mono"
                                 />
                               </div>
+                            ) : activeExtractPreviewTab === 'M2C_PLAN' ? (
+                              <div className="space-y-1.5">
+                                <div className="text-[10px] font-mono text-zinc-500">
+                                  Generated <strong>Migrate to Containers (m2c)</strong> plan at{' '}
+                                  <span className="text-zinc-700 dark:text-zinc-200 font-bold">
+                                    {detectedVmRuntimeInfo.stagingDir}/migration-plan.yaml
+                                  </span>
+                                  :
+                                </div>
+                                <pre className="w-full rounded-lg bg-zinc-950 text-amber-300 border border-zinc-800 p-2.5 text-[11px] font-mono overflow-x-auto max-h-48">
+                                  {detectedVmRuntimeInfo?.m2cArtifacts?.migrationPlanYaml}
+                                </pre>
+                              </div>
+                            ) : activeExtractPreviewTab === 'KNATIVE_SKAFFOLD' ? (
+                              <div className="space-y-1.5">
+                                <div className="text-[10px] font-mono text-zinc-500">
+                                  Declarative <strong>Knative v1 + Skaffold CI/CD</strong> manifests at{' '}
+                                  <span className="text-zinc-700 dark:text-zinc-200 font-bold">
+                                    {detectedVmRuntimeInfo.stagingDir}/service.knative.yaml
+                                  </span>
+                                  :
+                                </div>
+                                <pre className="w-full rounded-lg bg-zinc-950 text-purple-300 border border-zinc-800 p-2.5 text-[11px] font-mono overflow-x-auto max-h-48">
+                                  {`${detectedVmRuntimeInfo?.m2cArtifacts?.knativeServiceYaml || ''}\n---\n${detectedVmRuntimeInfo?.m2cArtifacts?.skaffoldYaml || ''}`}
+                                </pre>
+                              </div>
                             ) : (
                               <div className="space-y-1.5">
                                 <div className="text-[10px] font-mono text-zinc-500">
@@ -1381,6 +1446,106 @@ export default function VmFleetAndSsh({
                                 <pre className="w-full rounded-lg bg-zinc-950 text-blue-300 border border-zinc-800 p-2.5 text-[11px] font-mono overflow-x-auto">
                                   {detectedVmRuntimeInfo.generatedDockerfile}
                                 </pre>
+                              </div>
+                            )}
+
+                            {/* mfit 6-DIMENSION READINESS SCORECARD & "ON STEROIDS" AUTO-REMEDIATORS */}
+                            {detectedVmRuntimeInfo?.mfitAssessment && (
+                              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-2.5 text-xs">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="font-bold font-mono text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[11px]">
+                                      mfit Score: {detectedVmRuntimeInfo.mfitAssessment.overallFitScore}/100
+                                    </span>
+                                    <span>
+                                      GOOGLE mfit + m2c MODERNIZATION ENGINE ON STEROIDS (
+                                      {detectedVmRuntimeInfo.mfitAssessment.verdict})
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                                    Runtime Plugin:{' '}
+                                    <strong className="text-emerald-600 dark:text-emerald-400">
+                                      {detectedVmRuntimeInfo.mfitAssessment.detectedRuntimePlugin}
+                                    </strong>
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                                  {(detectedVmRuntimeInfo.mfitAssessment.dimensions || []).map(
+                                    (dim) => (
+                                      <div
+                                        key={dim.id}
+                                        className="p-2 rounded border bg-white/80 dark:bg-zinc-900/80 border-emerald-500/25"
+                                      >
+                                        <div className="flex items-center justify-between gap-1 font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-0.5">
+                                          <span>{dim.label}</span>
+                                          <span
+                                            className={`px-1.5 py-0.2 rounded text-[9px] ${
+                                              dim.status === 'PASS'
+                                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                                : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                                            }`}
+                                          >
+                                            {dim.status}
+                                          </span>
+                                        </div>
+                                        <div className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                          {dim.summary}
+                                        </div>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-1.5 border-t border-emerald-500/25">
+                                  <label className="inline-flex items-center gap-2 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(
+                                        migrateForm.enableMultiContainerSidecar
+                                      )}
+                                      onChange={(e) =>
+                                        setMigrateForm((prev) => ({
+                                          ...prev,
+                                          enableMultiContainerSidecar:
+                                            e.target.checked,
+                                        }))
+                                      }
+                                      className="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <span>
+                                      <strong>
+                                        Multi-Container Sidecar Pod (
+                                        <code>containers: [ingress, worker:9090]</code>)
+                                      </strong>{' '}
+                                      — Run background helper &amp; web server together sharing <code>127.0.0.1</code> &amp; <code>{migrateForm.diskMountPath}</code>
+                                    </span>
+                                  </label>
+
+                                  <label className="inline-flex items-center gap-2 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(
+                                        migrateForm.autoConvertCronToScheduler
+                                      )}
+                                      onChange={(e) =>
+                                        setMigrateForm((prev) => ({
+                                          ...prev,
+                                          autoConvertCronToScheduler:
+                                            e.target.checked,
+                                        }))
+                                      }
+                                      className="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <span>
+                                      <strong>
+                                        Auto-Convert VM Cron → Cloud Scheduler HTTP Job (
+                                        <code>*/15 * * * *</code>)
+                                      </strong>{' '}
+                                      — Keeps cron tasks alive even when Cloud Run scales to 0
+                                    </span>
+                                  </label>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -2108,6 +2273,23 @@ export default function VmFleetAndSsh({
                                   mounted at{' '}
                                   <strong>{migrationResult.diskMountPath}</strong> (
                                   {migrationResult.syncedDiskFilesCount} file(s) synced)
+                                </span>
+                              )}
+                              {migrationResult.multiContainerSidecarDeployed && (
+                                <span>
+                                  {' '}
+                                  · <strong>2-Container Sidecar Pod Active</strong>
+                                </span>
+                              )}
+                              {migrationResult.cloudSchedulerJobName && (
+                                <span>
+                                  {' '}
+                                  · <strong>Cloud Scheduler: {migrationResult.cloudSchedulerJobName}</strong>
+                                </span>
+                              )}
+                              {migrationResult.canaryVerification && (
+                                <span className="inline-block ml-1.5 px-2 py-0.5 rounded bg-emerald-600 text-white font-bold text-[10px]">
+                                  Canary Probe: HTTP {migrationResult.canaryVerification.httpStatus} ({migrationResult.canaryVerification.latencyMs}ms) Verified
                                 </span>
                               )}
                               {migrationResult.vmStopped
