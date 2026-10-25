@@ -26,6 +26,7 @@ import {
   X,
   Plus,
   FileText,
+  Terminal,
 } from 'lucide-react';
 
 // Helper: Check if an IPv4 address matches a CIDR range (e.g., "35.235.240.10" in "35.235.240.0/20")
@@ -231,6 +232,7 @@ export default function VpcNetworksAndFirewalls({
   loading = false,
   onShowToast,
   onShowError,
+  onSelectTab,
 }) {
   // Local optimistic firewall list so creates, edits, toggles, and deletes reflect immediately
   const [localFirewalls, setLocalFirewalls] = useState(firewalls);
@@ -1038,6 +1040,18 @@ export default function VpcNetworksAndFirewalls({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {onSelectTab && (
+              <button
+                type="button"
+                onClick={() => onSelectTab('VM_SSH')}
+                className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded-lg px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
+                title="Jump to VM Fleet & Self-Contained Xterm.js SSH Studio"
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>Open VM Fleet &amp; Xterm.js SSH</span>
+              </button>
+            )}
+
             <button
               type="button"
               disabled={loading}
@@ -2374,7 +2388,20 @@ export default function VpcNetworksAndFirewalls({
               </p>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <div className="flex items-center justify-end gap-2 pt-1 flex-wrap">
+              {onSelectTab && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingIapLockdownFw(null);
+                    onSelectTab('VM_SSH');
+                  }}
+                  className="mr-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold cursor-pointer"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>Open Xterm.js SSH Studio</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setPendingIapLockdownFw(null)}

@@ -24,6 +24,8 @@ import {
   Square,
   RotateCcw,
   Server,
+  Rocket,
+  ArrowUpRight,
 } from 'lucide-react';
 
 const VM_PTY_MACROS = [
@@ -65,6 +67,8 @@ export default function XtermWebSshTerminal({
   onFetchSerialConsole,
   serialConsoleOutput = '',
   serialLoading = false,
+  onOpenMigrateVm,
+  onSelectTab,
 }) {
   const isCloudRun = targetType === 'CLOUD_RUN';
   const containerRef = useRef(null);
@@ -893,6 +897,30 @@ export default function XtermWebSshTerminal({
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
+          {!isCloudRun && focusedVm && onOpenMigrateVm && (
+            <button
+              type="button"
+              onClick={() => onOpenMigrateVm(focusedVm)}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
+              title={`Open GCE → Cloud Run Modernization (mfit + m2c + GCS FUSE Disk Mount) for ${focusedVm.name}`}
+            >
+              <Rocket className="w-3 h-3" />
+              <span>Modernize → Cloud Run</span>
+            </button>
+          )}
+
+          {!isCloudRun && onSelectTab && (
+            <button
+              type="button"
+              onClick={() => onSelectTab('VPC_NETWORKS')}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
+              title="Open Enterprise VPC Firewall & IAP Zero-Trust Studio (0.0.0.0/0 ↔ 35.235.240.0/20)"
+            >
+              <Shield className="w-3 h-3 text-emerald-500" />
+              <span>Firewall / IAP</span>
+            </button>
+          )}
+
           {!isCloudRun && (
             <button
               type="button"
@@ -1219,6 +1247,42 @@ export default function XtermWebSshTerminal({
                   </>
                 )}
               </div>
+
+              {/* Cross-Studio Modernization & Firewall Quick Bridges */}
+              {(onOpenMigrateVm || onSelectTab) && (
+                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-wrap items-center justify-center gap-1.5">
+                  {onOpenMigrateVm && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenMigrateVm(focusedVm)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/25 text-[10px] font-bold transition-colors cursor-pointer"
+                    >
+                      <Rocket className="w-3 h-3" />
+                      <span>Modernize {focusedVm.name} → Cloud Run</span>
+                    </button>
+                  )}
+                  {onSelectTab && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onSelectTab('VPC_NETWORKS')}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold transition-colors cursor-pointer"
+                      >
+                        <Shield className="w-3 h-3 text-emerald-500" />
+                        <span>VPC Firewall / IAP (0.0.0.0/0 ↔ IAP)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSelectTab('CLOUD_RUN')}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold transition-colors cursor-pointer"
+                      >
+                        <span>Cloud Run Fleet</span>
+                        <ArrowUpRight className="w-3 h-3" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <>

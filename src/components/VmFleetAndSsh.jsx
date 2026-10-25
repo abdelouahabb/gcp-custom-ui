@@ -2343,6 +2343,20 @@ export default function VmFleetAndSsh({
                           </div>
 
                           <div className="flex items-center gap-2 flex-wrap">
+                            {migrationResult.vmStopped && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await handlePowerAction(vm, 'START');
+                                  setActiveSshVm(vm);
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-xs cursor-pointer"
+                                title={`Start stopped VM "${vm.name}" and reconnect Xterm.js SSH`}
+                              >
+                                <Play className="w-3 h-3 fill-current" />
+                                <span>Restart VM &amp; Open SSH</span>
+                              </button>
+                            )}
                             {onSelectTab && migrationResult.mountedDiskBucket && (
                               <button
                                 type="button"
@@ -2359,7 +2373,7 @@ export default function VmFleetAndSsh({
                                 onClick={() => onSelectTab('CLOUD_RUN')}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer"
                               >
-                                <span>Open Cloud Run Fleet</span>
+                                <span>Open Cloud Run Fleet &amp; Jobs</span>
                                 <ExternalLink className="w-3 h-3" />
                               </button>
                             )}
@@ -2520,6 +2534,8 @@ export default function VmFleetAndSsh({
               vms={vms}
               onSelectVm={(vm) => setActiveSshVm(vm)}
               onVmPowerAction={handlePowerAction}
+              onOpenMigrateVm={handleToggleMigrateVm}
+              onSelectTab={onSelectTab}
               powerBusyVm={powerBusyVm}
               pendingOps={pendingOps}
               defaultUsername={userShort || 'ubuntu'}

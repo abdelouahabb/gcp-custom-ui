@@ -4901,6 +4901,7 @@ function CloudPulseCockpit() {
                     loading={loadingOverview}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
+                    onSelectTab={(tab) => setActiveTab(tab)}
                   />
                 </div>
               )}

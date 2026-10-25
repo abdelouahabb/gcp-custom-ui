@@ -31,6 +31,33 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'self-contained-xterm-ssh-oslogin-iap-and-vm-modernization',
+    wave: '2026 COMPUTE, SSH & SERVERLESS MODERNIZATION · SELF-CONTAINED XTERM.JS VM CONTROL, OS LOGIN SWITCHER, IAP GUARDRAILS & GCE -> CLOUD RUN PIPELINE',
+    title:
+      'Self-Contained @xterm/xterm VM Control & SSH Studio, 1-Click SSH User / GCP OS Login Switcher, Ephemeral IP Auto-Sync, Zero-Trust IAP Hardening Warnings & End-to-End GCE -> Cloud Run Modernization',
+    badge: 'VM & SSH + CLOUD RUN + VPC FIREWALLS',
+    badgeColor: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
+    icon: Terminal,
+    targetTab: 'VM_SSH',
+    problemSolved:
+      'Stopping and restarting a Compute Engine VM assigns a new ephemeral natIP, while enabling Zero-Trust IAP (35.235.240.0/20) or IAM OS Login (enable-oslogin=TRUE) causes plain bash `gcloud compute ssh` to time out without `--tunnel-through-iap` and switches the Linux username from your local OS user (e.g., abdelouahab) to your IAM POSIX user (e.g., alabdelouahab_gmail_com). Furthermore, starting/stopping a VM or modernizing it to Cloud Run previously required jumping between separate sidebars and tabs.',
+    howItWorks: [
+      'Self-Contained VM Selector & Power Controls Inside Xterm.js (XtermWebSshTerminal.jsx): Choose any Compute Engine VM directly inside the Xterm.js header, click "Start VM & Connect SSH" (which starts the VM, polls until RUNNING, and auto-connects the PTY), "Stop VM", "Reboot", "Connect / Disconnect SSH", or click "Modernize -> Cloud Run" and "Firewall / IAP" without leaving the terminal.',
+      '1-Click SSH User Profile & GCP OS Login Mode Switcher (GET & POST /api/project/:id/vms/ssh-identity-mode): Switch between your local Linux username (abdelouahab -> /home/abdelouahab), email prefix (alabdelouahab), or IAM OS Login POSIX username (alabdelouahab_gmail_com -> /home/alabdelouahab_gmail_com) and toggle project metadata enable-oslogin=FALSE <-> TRUE in 1 click.',
+      'Live Ephemeral IP Auto-Sync & 2.2s TCP:22 Pre-Flight Probe (syncLiveVmStateAndProbe): Queries compute.googleapis.com/compute/v1/projects/:id/zones/:zone/instances/:name before every SSH handshake to sync newly assigned ephemeral external IPs, performs a 2.2-second TCP:22 reachability check, and automatically fails over to Cloud IAP TCP tunneling (--tunnel-through-iap) when direct port 22 is filtered.',
+      'Zero-Trust IAP Hardening Behavioral Impact Warning Modal & 1-Click Restore 0.0.0.0/0 (VpcNetworksAndFirewalls.jsx & AutonomousCloudSocStudio.jsx): Warns before locking 0.0.0.0/0 rules to 35.235.240.0/20 (explaining the --tunnel-through-iap CLI requirement and web-port impact) and adds a 1-click "Restore 0.0.0.0/0" rollback button on every IAP-locked firewall card.',
+      'Visual Cron Schedule Builder & Smart Cloud Run Service Decommission Drawer (VisualCronScheduleBuilder.jsx & CloudRunFleetManager.jsx): Point-and-click cron builder across VM migration, Cloud Run v2 Batch Jobs, and Cloud Scheduler, plus an interactive decommission drawer that optionally cleans up linked Cloud Scheduler triggers, companion Cloud Run v2 Jobs, and mounted volumes[].gcs FUSE disk buckets when deleting a Cloud Run service.',
+    ],
+    apisUsed: [
+      'GET & POST /api/project/:id/vms/ssh-identity-mode (compute.googleapis.com/compute/v1/projects/:id/setCommonInstanceMetadata)',
+      'WS /api/ws/ssh (Live Ephemeral natIP Sync + 2.2s TCP:22 Pre-Flight Probe + Automatic --tunnel-through-iap Failover)',
+      'POST /api/project/:id/vms/:vmName/extract-workload & POST /api/project/:id/vms/:vmName/migrate-to-cloudrun',
+      'PATCH /api/project/:id/firewalls/:name (35.235.240.0/20 <-> 0.0.0.0/0) & DELETE /api/project/:id/cloudrun/:region/:name',
+    ],
+    billingImpact:
+      'Stopping VMs directly from Xterm.js or after migrating to scale-to-zero Cloud Run Gen2 (minInstances: 0) immediately eliminates hourly VM compute burn ($0.00/hr idle).',
+  },
+  {
     id: 'ten-persona-enterprise-board-and-contextual-studio-helpers',
     wave: '2026–2030 ENTERPRISE WAR-ROOM · 10-PERSONA LAUNCH TRIBUNAL, MULTI-PROJECT FLEET ARBITRATOR, T_+72H PRE-CRIME, ZKP ED25519 PROOF & INTENT COMPILER',
     title:
