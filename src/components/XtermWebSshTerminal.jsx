@@ -20,6 +20,10 @@ import {
   User,
   Lock,
   Unlock,
+  Play,
+  Square,
+  RotateCcw,
+  Server,
 } from 'lucide-react';
 
 const VM_PTY_MACROS = [
@@ -48,6 +52,11 @@ export default function XtermWebSshTerminal({
   projectId,
   targetType = 'VM', // 'VM' | 'CLOUD_RUN'
   activeVm = null,
+  vms = [],
+  onSelectVm,
+  onVmPowerAction,
+  powerBusyVm = null,
+  pendingOps = {},
   cloudRunService = null,
   defaultUsername = 'ubuntu',
   isExpanded = false,
@@ -70,6 +79,51 @@ export default function XtermWebSshTerminal({
   const [selectedRevision, setSelectedRevision] = useState('LATEST');
   const [selectedContainer, setSelectedContainer] = useState('');
   const [selectedInstanceId, setSelectedInstanceId] = useState('');
+  const [selectedVmName, setSelectedVmName] = useState('');
+  const [autoConnectOnRunning, setAutoConnectOnRunning] = useState(false);
+
+  // Sync selectedVmName when activeVm or vms list changes
+  useEffect(() => {
+    if (activeVm?.name) {
+      setSelectedVmName(activeVm.name);
+    } else if (!selectedVmName && vms.length > 0) {
+      setSelectedVmName(vms[0].name);
+    }
+  }, [activeVm?.name, vms, selectedVmName]);
+
+  const focusedVm =
+    activeVm ||
+    vms.find((v) => v.name === selectedVmName) ||
+    vms[0] ||
+    null;
+
+  const focusedVmPendingOp = focusedVm ? pendingOps[focusedVm.name] : null;
+  const focusedVmEffectiveStatus = focusedVmPendingOp
+    ? focusedVmPendingOp.type
+    : focusedVm?.status || 'UNKNOWN';
+  const isFocusedVmRunning =
+    focusedVm?.status === 'RUNNING' &&
+    !['STOPPING', 'DELETING', 'SUSPENDING'].includes(focusedVmEffectiveStatus);
+  const isFocusedVmTransitional =
+    Boolean(focusedVmPendingOp) ||
+    ['PROVISIONING', 'STAGING', 'STOPPING', 'SUSPENDING', 'REBOOTING'].includes(
+      focusedVmEffectiveStatus
+    ) ||
+    (focusedVm && powerBusyVm === focusedVm.name);
+
+  // Auto-connect SSH once a VM started from Xterm reaches RUNNING
+  useEffect(() => {
+    if (
+      autoConnectOnRunning &&
+      focusedVm &&
+      focusedVm.status === 'RUNNING' &&
+      !focusedVmPendingOp &&
+      onSelectVm
+    ) {
+      setAutoConnectOnRunning(false);
+      onSelectVm(focusedVm);
+    }
+  }, [autoConnectOnRunning, focusedVm, focusedVmPendingOp, onSelectVm]);
 
   const [connStatus, setConnStatus] = useState({
     status: 'OFF',
@@ -235,10 +289,10 @@ export default function XtermWebSshTerminal({
 
   const displayCli = isCloudRun
     ? cloudRunSshCli
-    : activeVm
+    : (activeVm || focusedVm)
     ? `gcloud compute ssh ${
         customUsername ? `${customUsername}@` : ''
-      }${activeVm.name} --zone=${activeVm.zone} --project=${projectId}`
+      }${(activeVm || focusedVm).name} --zone=${(activeVm || focusedVm).zone} --project=${projectId}`
     : '';
 
   // Only initialize XTerm.js & WebSocket when `isSessionEnabled` is true
@@ -499,80 +553,171 @@ export default function XtermWebSshTerminal({
 
   const macrosToRender = isCloudRun ? CLOUD_RUN_PTY_MACROS : VM_PTY_MACROS;
 
+  const handleTriggerVmPower = async (action, connectAfterStart = false) => {
+    if (!focusedVm || !onVmPowerAction) return;
+    if (action === 'STOP' && isSessionEnabled && onDisconnect) {
+      onDisconnect();
+    }
+    if (action === 'START' && connectAfterStart) {
+      setAutoConnectOnRunning(true);
+    }
+    await onVmPowerAction(focusedVm, action);
+  };
+
   return (
     <div className="bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-full">
-      {/* Top Terminal Window Bar */}
+      {/* Row 1: Top Terminal Window Bar + Target VM Selector + Inline Start/Stop VM & SSH Session Controls */}
       <div className="bg-zinc-50 dark:bg-zinc-900/95 border-b border-zinc-200 dark:border-zinc-800 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="flex items-center gap-1.5 mr-1 shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          <div className="flex items-center gap-1.5 mr-0.5 shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
           </div>
-          <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
-          <span className="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
-            {isCloudRun && cloudRunService
-              ? `root@${cloudRunService.name} (${cloudRunService.region} · Cloud Run Container SSH)`
-              : sshEngine === 'cloud_shell'
-              ? `${customUsername}@cloud-shell (${projectId})`
-              : activeVm
-              ? `${customUsername}@${activeVm.name} (${activeVm.zone} · ${
-                  activeVm.externalIp !== 'None'
-                    ? activeVm.externalIp
-                    : activeVm.internalIp
-                })`
-              : 'SSH Standby (Off)'}
-          </span>
+          <Terminal className="w-4 h-4 text-emerald-500 shrink-0" />
+
+          {isCloudRun && cloudRunService ? (
+            <span className="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+              {`root@${cloudRunService.name} (${cloudRunService.region} · Cloud Run Container SSH)`}
+            </span>
+          ) : !isCloudRun && vms.length > 0 ? (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <select
+                value={focusedVm?.name || ''}
+                onChange={(e) => {
+                  const picked = vms.find((v) => v.name === e.target.value);
+                  setSelectedVmName(e.target.value);
+                  if (picked && isSessionEnabled && onSelectVm) {
+                    onSelectVm(picked);
+                  }
+                }}
+                className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                title="Select target Compute Engine VM directly from Xterm.js"
+              >
+                {vms.map((v) => (
+                  <option key={v.name} value={v.name}>
+                    {customUsername || 'ubuntu'}@{v.name} ({v.zone} ·{' '}
+                    {v.externalIp && v.externalIp !== 'None'
+                      ? v.externalIp
+                      : v.internalIp || 'No IP'}
+                    )
+                  </option>
+                ))}
+              </select>
+
+              {focusedVm && (
+                <span
+                  className={`inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md border ${
+                    isFocusedVmTransitional
+                      ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
+                      : isFocusedVmRunning
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isFocusedVmTransitional
+                        ? 'bg-amber-400'
+                        : isFocusedVmRunning
+                        ? 'bg-emerald-400'
+                        : 'bg-rose-400'
+                    }`}
+                  />
+                  <span>VM: {focusedVmEffectiveStatus}</span>
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+              {sshEngine === 'cloud_shell'
+                ? `${customUsername}@cloud-shell (${projectId})`
+                : 'No Compute Engine VMs in Project'}
+            </span>
+          )}
         </div>
 
+        {/* Inline VM Start / Stop / Reboot + Connect / Disconnect SSH Buttons right inside Xterm Header */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span
-            className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border ${
-              !isSessionEnabled
-                ? 'bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 border-zinc-300 dark:border-zinc-700'
-                : connStatus.status === 'CONNECTED'
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                : connStatus.status === 'CONNECTING'
-                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
-                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-300 dark:border-zinc-700'
-            }`}
-          >
-            {isSessionEnabled ? (
-              <Wifi className="w-3 h-3" />
-            ) : (
-              <WifiOff className="w-3 h-3" />
-            )}
-            <span>
-              {!isSessionEnabled
-                ? 'SSH OFF'
-                : connStatus.status === 'CONNECTED'
-                ? `LIVE · ${connStatus.engine}`
-                : connStatus.status}
-            </span>
-          </span>
+          {!isCloudRun && focusedVm && onVmPowerAction && (
+            <>
+              {isFocusedVmRunning ? (
+                <>
+                  {!isSessionEnabled && onSelectVm && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewMode('LIVE_SSH_PTY');
+                        onSelectVm(focusedVm);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer"
+                      title={`Connect interactive Xterm.js SSH to ${customUsername}@${focusedVm.name}`}
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      <span>Connect SSH</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={isFocusedVmTransitional}
+                    onClick={() => handleTriggerVmPower('STOP', false)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-rose-500/15 hover:bg-rose-600 text-rose-600 dark:text-rose-300 hover:text-white border border-rose-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                    title={`Stop VM "${focusedVm.name}" directly from Xterm.js`}
+                  >
+                    <Square className="w-2.5 h-2.5 fill-current" />
+                    <span>Stop VM</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isFocusedVmTransitional}
+                    onClick={() => handleTriggerVmPower('RESET', false)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+                    title={`Reboot VM "${focusedVm.name}"`}
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reboot</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={isFocusedVmTransitional}
+                    onClick={() => handleTriggerVmPower('START', true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                    title={`Start VM "${focusedVm.name}" and automatically launch SSH once RUNNING`}
+                  >
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>
+                      {isFocusedVmTransitional
+                        ? 'Starting VM...'
+                        : 'Start VM & Connect SSH'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isFocusedVmTransitional}
+                    onClick={() => handleTriggerVmPower('START', false)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+                    title={`Start VM "${focusedVm.name}" without opening SSH`}
+                  >
+                    <Play className="w-2.5 h-2.5" />
+                    <span>Start Only</span>
+                  </button>
+                </>
+              )}
+            </>
+          )}
 
           {isSessionEnabled && (
             <>
-              {!isCloudRun && (
-                <button
-                  type="button"
-                  onClick={() => setShowAuthModal((v) => !v)}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
-                    showAuthModal
-                      ? 'bg-blue-600 text-white border-blue-500'
-                      : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
-                  }`}
-                  title="Configure SSH Username, Port, Password, or Private Key PEM"
-                >
-                  <KeyRound className="w-3 h-3" />
-                  <span>SSH Auth / Key</span>
-                </button>
-              )}
-
               <button
                 type="button"
                 onClick={() => setReconnectNonce((n) => n + 1)}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
                 title="Reconnect interactive Web-SSH PTY session"
               >
                 <RefreshCw className="w-3 h-3" />
@@ -588,11 +733,11 @@ export default function XtermWebSshTerminal({
                     }
                     onDisconnect();
                   }}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-red-600/20 hover:bg-red-600 text-red-700 dark:text-red-300 hover:text-white border border-red-500/40 transition-colors cursor-pointer"
-                  title="Disconnect and turn off the active SSH session"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-zinc-200/80 dark:bg-zinc-800 hover:bg-rose-600 text-zinc-700 dark:text-zinc-300 hover:text-white border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+                  title="Disconnect the active SSH session"
                 >
                   <PowerOff className="w-3 h-3" />
-                  <span>Turn Off SSH</span>
+                  <span>Disconnect SSH</span>
                 </button>
               )}
             </>
@@ -602,7 +747,7 @@ export default function XtermWebSshTerminal({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
               title={
                 isExpanded
                   ? 'Restore split-pane layout'
@@ -612,7 +757,7 @@ export default function XtermWebSshTerminal({
               {isExpanded ? (
                 <>
                   <Minimize2 className="w-3 h-3" />
-                  <span>Split View</span>
+                  <span>Split</span>
                 </>
               ) : (
                 <>
@@ -625,241 +770,191 @@ export default function XtermWebSshTerminal({
         </div>
       </div>
 
-      {/* Mode Switcher + SSH Engine Selector Bar */}
-      <div className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/90 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2">
+      {/* Row 2: Compact Single-Bar User Picker + Identity Toggle + Engine + Serial Port */}
+      <div className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/90 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 font-mono">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setViewMode('LIVE_SSH_PTY')}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'LIVE_SSH_PTY'
-                ? 'bg-emerald-600 text-white shadow'
-                : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800'
-            }`}
-          >
-            <Terminal className="w-3 h-3" />
-            <span>
-              {isCloudRun
-                ? 'Interactive Cloud Run SSH (@xterm/xterm)'
-                : 'Interactive Xterm.js SSH PTY'}
-            </span>
-          </button>
-
           {!isCloudRun && (
-            <button
-              type="button"
-              onClick={() => {
-                setViewMode('SERIAL_PORT_1');
-                if (activeVm && onFetchSerialConsole) onFetchSerialConsole();
-              }}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'SERIAL_PORT_1'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800'
-              }`}
-            >
-              <FileText className="w-3 h-3" />
-              <span>Serial Port 1 Console (REST)</span>
-            </button>
-          )}
-
-          {isCloudRun && cloudRunService && (
-            <div className="flex items-center gap-1.5 ml-1">
-              <span className="text-[10px] font-mono text-zinc-500">
-                Revision:
-              </span>
-              <select
-                value={selectedRevision}
-                onChange={(e) => setSelectedRevision(e.target.value)}
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-800 dark:text-zinc-200"
-              >
-                <option value="LATEST">LATEST ({cloudRunService.latestReadyRevision || 'active'})</option>
-                {(cloudRunService.revisions || []).map((r) => (
-                  <option key={r.shortName} value={r.shortName}>
-                    {r.shortName}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={selectedContainer}
-                onChange={(e) => setSelectedContainer(e.target.value)}
-                placeholder="--container (optional)"
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 w-36"
-              />
-              <input
-                type="text"
-                value={selectedInstanceId}
-                onChange={(e) => setSelectedInstanceId(e.target.value)}
-                placeholder="--instance ID (optional)"
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 w-36"
-              />
-            </div>
-          )}
-        </div>
-
-        {viewMode === 'LIVE_SSH_PTY' && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-mono text-zinc-500">
-              SSH Engine:
-            </span>
-            {isCloudRun ? (
-              <select
-                value={sshEngine}
-                onChange={(e) => setSshEngine(e.target.value)}
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="cloudrun_ssh">
-                  gcloud beta run services ssh (Container SSH PTY)
-                </option>
-                <option value="cloudrun_proxy">
-                  gcloud beta run services proxy (Auth Local Proxy PTY)
-                </option>
-                <option value="cloudrun_logs">
-                  Live Cloud Run Logs + Container Admin PTY
-                </option>
-              </select>
-            ) : (
-              <select
-                value={sshEngine}
-                onChange={(e) => setSshEngine(e.target.value)}
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="auto">
-                  Auto (Native SSH2 + gcloud PTY Fallback)
-                </option>
-                <option value="ssh2">
-                  Direct SSH2 Protocol (Node.js ssh2 :22)
-                </option>
-                <option value="gcloud_pty">
-                  gcloud compute ssh Full Linux PTY
-                </option>
-                <option value="iap">
-                  Cloud IAP TCP Tunnel (--tunnel-through-iap)
-                </option>
-                <option value="cloud_shell">
-                  Local GCloud / Bash PTY Shell
-                </option>
-              </select>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* SSH User Profile & GCP OS Login Mode Selector Bar (for VM SSH) */}
-      {!isCloudRun && viewMode === 'LIVE_SSH_PTY' && (
-        <div className="bg-zinc-50/90 dark:bg-zinc-900/70 border-b border-zinc-200 dark:border-zinc-800/80 px-3.5 py-2 flex flex-col gap-1.5 font-mono">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 mr-0.5">
+            <>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-500">
                 <User className="w-3 h-3 text-emerald-500" />
-                <span>SSH User Profile:</span>
+                <span>User:</span>
               </span>
-
-              {(
-                identityInfo?.candidateUsers || [
-                  {
-                    username: customUsername || defaultUsername || 'ubuntu',
-                    label: `${customUsername || defaultUsername || 'ubuntu'} (Active)`,
-                    homeDir: `/home/${customUsername || defaultUsername || 'ubuntu'}`,
-                    requiresMode: 'METADATA_SSH',
-                  },
-                ]
-              ).map((cand) => {
-                const isSelected = customUsername === cand.username;
-                const isOsLoginCand = cand.requiresMode === 'OS_LOGIN';
-                return (
-                  <button
-                    key={cand.username}
-                    type="button"
-                    disabled={identityBusy}
-                    onClick={() => handleSelectSshUserProfile(cand)}
-                    title={`${cand.label} · Home: ${cand.homeDir}${
-                      isOsLoginCand
-                        ? ' (Uses Google Cloud IAM OS Login: enable-oslogin=TRUE)'
-                        : ' (Uses Standard Metadata SSH Keys: enable-oslogin=FALSE)'
-                    }`}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer border disabled:opacity-50 ${
-                      isSelected
-                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                        : 'bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
-                    }`}
-                  >
-                    <span>{cand.username}</span>
-                    <span
-                      className={`text-[9px] px-1 py-0.2 rounded ${
+              <div className="inline-flex items-center rounded-lg bg-zinc-100 dark:bg-zinc-900 p-0.5 border border-zinc-200 dark:border-zinc-800">
+                {(
+                  identityInfo?.candidateUsers || [
+                    {
+                      username: customUsername || defaultUsername || 'ubuntu',
+                      label: `${customUsername || defaultUsername || 'ubuntu'}`,
+                      homeDir: `/home/${customUsername || defaultUsername || 'ubuntu'}`,
+                      requiresMode: 'METADATA_SSH',
+                    },
+                  ]
+                ).map((cand) => {
+                  const isSelected = customUsername === cand.username;
+                  const isOsLoginCand = cand.requiresMode === 'OS_LOGIN';
+                  return (
+                    <button
+                      key={cand.username}
+                      type="button"
+                      disabled={identityBusy}
+                      onClick={() => handleSelectSshUserProfile(cand)}
+                      title={`${cand.label} (${cand.homeDir})`}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer disabled:opacity-50 ${
                         isSelected
-                          ? 'bg-black/25 text-emerald-100'
-                          : isOsLoginCand
-                          ? 'bg-amber-500/15 text-amber-500'
-                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                       }`}
                     >
-                      {isOsLoginCand ? 'IAM OS Login' : cand.homeDir}
-                    </span>
-                  </button>
-                );
-              })}
+                      {cand.username}
+                      {isOsLoginCand ? ' (IAM)' : ''}
+                    </button>
+                  );
+                })}
+              </div>
 
               {isSessionEnabled && connStatus.status === 'CONNECTED' && customUsername && (
                 <button
                   type="button"
                   onClick={() => sendToPty(`sudo su - ${customUsername}\r`)}
-                  title={`Switch immediately to ${customUsername} (/home/${customUsername}) inside the active terminal without reconnecting`}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
+                  title={`Run "sudo su - ${customUsername}" inside the active terminal`}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
                 >
-                  <span>su - {customUsername} (Instant)</span>
+                  su - {customUsername}
                 </button>
               )}
-            </div>
 
-            {identityInfo && (
-              <div className="flex items-center gap-1.5 flex-wrap">
+              {identityInfo && (
                 <button
                   type="button"
                   disabled={identityBusy}
                   onClick={handleToggleOsLoginMode}
                   title={
                     identityInfo.osLoginEnabled
-                      ? 'Project has enable-oslogin=TRUE (Google Cloud forces IAM user alabdelouahab_gmail_com). Click to unlock Standard Metadata SSH (enable-oslogin=FALSE) so you can use abdelouahab!'
-                      : 'Project has enable-oslogin=FALSE (Standard Metadata SSH — custom users like abdelouahab work in both CloudPulse and bash). Click to switch to IAM OS Login (enable-oslogin=TRUE).'
+                      ? `IAM OS Login is ON (enable-oslogin=TRUE, forces ${identityInfo.osLoginPosixUser}). Click to switch to Standard Metadata SSH so "${identityInfo.localOsUser}" is used.`
+                      : `Standard Metadata SSH is ON (enable-oslogin=FALSE, "${identityInfo.localOsUser}" unlocked). Click to toggle IAM OS Login.`
                   }
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border transition-colors cursor-pointer disabled:opacity-50 ${
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border cursor-pointer disabled:opacity-50 ${
                     identityInfo.osLoginEnabled
-                      ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border-amber-500/40'
-                      : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
+                      : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25'
                   }`}
                 >
                   {identityInfo.osLoginEnabled ? (
                     <>
-                      <Lock className="w-3 h-3" />
-                      <span>
-                        IAM OS Login Active (Forces {identityInfo.osLoginPosixUser}) · Click to Unlock &ldquo;{identityInfo.localOsUser}&rdquo;
-                      </span>
+                      <Lock className="w-2.5 h-2.5" />
+                      <span>OS Login: ON</span>
                     </>
                   ) : (
                     <>
-                      <Unlock className="w-3 h-3" />
-                      <span>
-                        Standard SSH Mode (`enable-oslogin=FALSE` · `{identityInfo.localOsUser}` Unlocked)
-                      </span>
+                      <Unlock className="w-2.5 h-2.5" />
+                      <span>OS Login: OFF</span>
                     </>
                   )}
                 </button>
-              </div>
-            )}
-          </div>
+              )}
+            </>
+          )}
 
-          {identityToast && (
-            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-              ✓ {identityToast}
+          {isCloudRun && cloudRunService && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-zinc-500">Revision:</span>
+              <select
+                value={selectedRevision}
+                onChange={(e) => setSelectedRevision(e.target.value)}
+                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-0.5 text-[11px] text-zinc-800 dark:text-zinc-200"
+              >
+                <option value="LATEST">
+                  LATEST ({cloudRunService.latestReadyRevision || 'active'})
+                </option>
+                {(cloudRunService.revisions || []).map((r) => (
+                  <option key={r.shortName} value={r.shortName}>
+                    {r.shortName}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {!isCloudRun && (
+            <button
+              type="button"
+              onClick={() => {
+                if (viewMode === 'SERIAL_PORT_1') {
+                  setViewMode('LIVE_SSH_PTY');
+                } else {
+                  setViewMode('SERIAL_PORT_1');
+                  if (focusedVm && onFetchSerialConsole) {
+                    onFetchSerialConsole(focusedVm);
+                  }
+                }
+              }}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1 border ${
+                viewMode === 'SERIAL_PORT_1'
+                  ? 'bg-blue-600 text-white border-blue-500'
+                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border-zinc-200 dark:border-zinc-800'
+              }`}
+              title="Toggle Compute Engine Serial Port 1 boot console logs"
+            >
+              <FileText className="w-3 h-3" />
+              <span>
+                {viewMode === 'SERIAL_PORT_1' ? 'Back to SSH PTY' : 'Serial Port 1'}
+              </span>
+            </button>
+          )}
+
+          {viewMode === 'LIVE_SSH_PTY' && (
+            <select
+              value={sshEngine}
+              onChange={(e) => setSshEngine(e.target.value)}
+              className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md px-2 py-0.5 text-[10px] text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-emerald-500"
+              title="Select SSH transport engine"
+            >
+              {isCloudRun ? (
+                <>
+                  <option value="cloudrun_ssh">Engine: Cloud Run SSH PTY</option>
+                  <option value="cloudrun_proxy">Engine: Auth Proxy PTY</option>
+                  <option value="cloudrun_logs">Engine: Live Logs + PTY</option>
+                </>
+              ) : (
+                <>
+                  <option value="auto">Engine: Auto (SSH2 + IAP/PTY)</option>
+                  <option value="ssh2">Engine: Direct SSH2 (:22)</option>
+                  <option value="gcloud_pty">Engine: gcloud compute ssh</option>
+                  <option value="iap">Engine: Cloud IAP Tunnel</option>
+                  <option value="cloud_shell">Engine: Local Bash Shell</option>
+                </>
+              )}
+            </select>
+          )}
+
+          {!isCloudRun && (
+            <button
+              type="button"
+              onClick={() => setShowAuthModal((v) => !v)}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] border transition-colors cursor-pointer ${
+                showAuthModal
+                  ? 'bg-blue-600 text-white border-blue-500'
+                  : 'bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
+              }`}
+              title="Custom SSH Port, Password, or Private Key PEM"
+            >
+              <KeyRound className="w-3 h-3" />
+              <span>Key/Port</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {identityToast && (
+        <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-3.5 py-1 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+          ✓ {identityToast}
         </div>
       )}
 
       {/* Optional Custom SSH Credentials Drawer (for VM SSH2) */}
-      {!isCloudRun && showAuthModal && isSessionEnabled && (
+      {!isCloudRun && showAuthModal && (
         <div className="bg-zinc-50 dark:bg-zinc-900/95 border-b border-zinc-200 dark:border-zinc-800 p-3.5 space-y-2.5 text-xs font-mono">
           <div className="flex items-center justify-between">
             <span className="font-bold text-emerald-400 flex items-center gap-1.5">
@@ -884,8 +979,11 @@ export default function XtermWebSshTerminal({
               <input
                 type="text"
                 value={customUsername}
-                onChange={(e) => setCustomUsername(e.target.value)}
-                placeholder="ubuntu"
+                onChange={(e) => {
+                  setUserManuallyPicked(true);
+                  setCustomUsername(e.target.value);
+                }}
+                placeholder="abdelouahab"
                 className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
               />
             </div>
@@ -931,37 +1029,200 @@ export default function XtermWebSshTerminal({
               type="button"
               onClick={() => {
                 setShowAuthModal(false);
-                setReconnectNonce((n) => n + 1);
+                if (isSessionEnabled) {
+                  setReconnectNonce((n) => n + 1);
+                } else if (focusedVm && onSelectVm) {
+                  onSelectVm(focusedVm);
+                }
               }}
               className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] cursor-pointer"
             >
-              Apply Credentials & Reconnect SSH2
+              Apply Credentials & Connect SSH
             </button>
           </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      {!isSessionEnabled ? (
-        <div className="p-8 flex-1 flex flex-col items-center justify-center text-center min-h-[380px] bg-white dark:bg-[#070709]">
-          <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center mb-3 text-zinc-500">
-            <WifiOff className="w-6 h-6" />
+      {viewMode === 'SERIAL_PORT_1' ? (
+        <div className="p-4 space-y-3 flex-1 flex flex-col">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-mono text-zinc-700 dark:text-zinc-300 font-bold">
+              Compute Engine Serial Port 1 Output ({(activeVm || focusedVm)?.name || 'VM'})
+            </div>
+            <button
+              type="button"
+              disabled={serialLoading}
+              onClick={() => onFetchSerialConsole && onFetchSerialConsole(activeVm || focusedVm)}
+              className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
+            >
+              {serialLoading ? 'Fetching...' : 'Refresh Serial Port 1'}
+            </button>
           </div>
-          <h4 className="text-sm font-mono font-extrabold text-zinc-800 dark:text-zinc-200 mb-1.5">
-            Web-SSH Client is Standby (Off by Default)
-          </h4>
-          <p className="text-xs font-mono text-zinc-400 max-w-md leading-relaxed mb-4">
-            No automatic SSH connection is opened when you visit this tab. Click the green{' '}
-            <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold">
-              SSH / Console
-            </span>{' '}
-            button on any VM card on the left to enable **`SSH Active`** and launch the live **`@xterm/xterm` + `ssh2`** interactive terminal.
-          </p>
-          <div className="text-[11px] font-mono text-zinc-500">
-            Click <span className="text-blue-400 font-bold">SSH Active (Turn Off)</span> at any time to close the SSH connection.
-          </div>
+          <pre className="flex-1 bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 rounded-lg p-3.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 whitespace-pre-wrap break-words overflow-y-auto min-h-[380px] max-h-[520px]">
+            {serialConsoleOutput ||
+              'Click "Refresh Serial Port 1" to read live kernel & systemd boot logs directly from the Compute Engine REST API without requiring port 22.'}
+          </pre>
         </div>
-      ) : viewMode === 'LIVE_SSH_PTY' ? (
+      ) : !isSessionEnabled ? (
+        <div className="p-6 flex-1 flex flex-col items-center justify-center text-center min-h-[390px] bg-white dark:bg-[#070709] font-mono">
+          {!isCloudRun && focusedVm ? (
+            <div className="w-full max-w-lg rounded-2xl border border-zinc-200 dark:border-zinc-800/90 bg-zinc-50/70 dark:bg-zinc-900/50 p-5 space-y-4 shadow-lg">
+              <div className="flex items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3 text-left">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${
+                      isFocusedVmRunning
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                        : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                    }`}
+                  >
+                    <Server className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-extrabold text-zinc-900 dark:text-white truncate">
+                      {focusedVm.name}
+                    </div>
+                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                      {focusedVm.zone} · {focusedVm.machineType} ·{' '}
+                      {focusedVm.externalIp && focusedVm.externalIp !== 'None'
+                        ? focusedVm.externalIp
+                        : focusedVm.internalIp || 'Private IP'}
+                    </div>
+                  </div>
+                </div>
+
+                <span
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border shrink-0 ${
+                    isFocusedVmTransitional
+                      ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
+                      : isFocusedVmRunning
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                  }`}
+                >
+                  {focusedVmEffectiveStatus}
+                </span>
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Target Linux User &amp; Home Directory:
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(
+                    identityInfo?.candidateUsers || [
+                      {
+                        username: customUsername || defaultUsername || 'ubuntu',
+                        label: `${customUsername || defaultUsername || 'ubuntu'}`,
+                        homeDir: `/home/${customUsername || defaultUsername || 'ubuntu'}`,
+                        requiresMode: 'METADATA_SSH',
+                      },
+                    ]
+                  ).map((cand) => {
+                    const isSelected = customUsername === cand.username;
+                    return (
+                      <button
+                        key={cand.username}
+                        type="button"
+                        disabled={identityBusy}
+                        onClick={() => handleSelectSshUserProfile(cand)}
+                        className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-300'
+                            : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-700'
+                        }`}
+                      >
+                        <div className="text-xs font-extrabold truncate">
+                          {cand.username}
+                        </div>
+                        <div className="text-[10px] opacity-75 truncate">
+                          {cand.homeDir}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Direct VM Start/Stop & SSH Launch Buttons inside Xterm Canvas */}
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                {isFocusedVmRunning ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onSelectVm && onSelectVm(focusedVm)}
+                      className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>
+                        Connect SSH as {customUsername}@{focusedVm.name}
+                      </span>
+                    </button>
+
+                    {onVmPowerAction && (
+                      <button
+                        type="button"
+                        disabled={isFocusedVmTransitional}
+                        onClick={() => handleTriggerVmPower('STOP', false)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-600 dark:text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Square className="w-3 h-3 fill-current" />
+                        <span>Stop VM</span>
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {onVmPowerAction && (
+                      <button
+                        type="button"
+                        disabled={isFocusedVmTransitional}
+                        onClick={() => handleTriggerVmPower('START', true)}
+                        className="flex-1 min-w-[220px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>
+                          {isFocusedVmTransitional
+                            ? `Starting ${focusedVm.name}... (Auto-Connecting SSH)`
+                            : `Start VM "${focusedVm.name}" & Connect SSH`}
+                        </span>
+                      </button>
+                    )}
+
+                    {onVmPowerAction && !isFocusedVmTransitional && (
+                      <button
+                        type="button"
+                        onClick={() => handleTriggerVmPower('START', false)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        <Play className="w-3 h-3" />
+                        <span>Start VM Only</span>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center mb-3 text-zinc-500">
+                <WifiOff className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-extrabold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                {isCloudRun
+                  ? 'Select a Cloud Run Service to Open Container SSH'
+                  : 'No Compute Engine VMs Found in Project'}
+              </h4>
+              <p className="text-xs text-zinc-400 max-w-md leading-relaxed">
+                {isCloudRun
+                  ? 'Click "SSH / Container Shell" on any Cloud Run service card to open an interactive container terminal.'
+                  : 'Provision a Compute Engine VM or switch Engine to "Local Bash Shell" above.'}
+              </p>
+            </>
+          )}
+        </div>
+      ) : (
         <div className="p-3 space-y-2.5 flex-1 flex flex-col">
           {/* CLI Copy Bar */}
           {displayCli && (
@@ -1037,26 +1298,6 @@ export default function XtermWebSshTerminal({
             </span>
             <span>{connStatus.message}</span>
           </div>
-        </div>
-      ) : (
-        <div className="p-4 space-y-3 flex-1 flex flex-col">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-xs font-mono text-zinc-700 dark:text-zinc-300 font-bold">
-              Compute Engine Serial Port 1 Output ({activeVm?.name || 'VM'})
-            </div>
-            <button
-              type="button"
-              disabled={serialLoading}
-              onClick={onFetchSerialConsole}
-              className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-mono font-bold cursor-pointer disabled:opacity-50"
-            >
-              {serialLoading ? 'Fetching...' : 'Refresh Serial Port 1'}
-            </button>
-          </div>
-          <pre className="flex-1 bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 rounded-lg p-3.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 whitespace-pre-wrap break-words overflow-y-auto min-h-[380px] max-h-[520px]">
-            {serialConsoleOutput ||
-              'Click "Refresh Serial Port 1" to read live kernel & systemd boot logs directly from the Compute Engine REST API without requiring port 22.'}
-          </pre>
         </div>
       )}
     </div>

@@ -406,28 +406,34 @@ export default function VmFleetAndSsh({
     }
   };
 
-  const handleFetchSerialConsole = useCallback(async () => {
-    if (!activeSshVm) return;
-    setSerialLoading(true);
-    try {
-      const res = await axios.post(
-        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
-          activeSshVm.name
-        )}/ssh`,
-        {
-          command: 'serial-console',
-          zone: activeSshVm.zone,
-        }
-      );
-      setSerialConsoleOutput(res.data?.output || '(Empty serial port output)');
-    } catch (err) {
-      setSerialConsoleOutput(
-        err.response?.data?.error || err.message || 'Failed to read Serial Port 1.'
-      );
-    } finally {
-      setSerialLoading(false);
-    }
-  }, [activeSshVm, projectId]);
+  const handleFetchSerialConsole = useCallback(
+    async (vmOverride = null) => {
+      const targetVm = vmOverride && vmOverride.name ? vmOverride : activeSshVm;
+      if (!targetVm) return;
+      setSerialLoading(true);
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/vms/${encodeURIComponent(targetVm.name)}/ssh`,
+          {
+            command: 'serial-console',
+            zone: targetVm.zone,
+          }
+        );
+        setSerialConsoleOutput(res.data?.output || '(Empty serial port output)');
+      } catch (err) {
+        setSerialConsoleOutput(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to read Serial Port 1.'
+        );
+      } finally {
+        setSerialLoading(false);
+      }
+    },
+    [activeSshVm, projectId]
+  );
 
   const formatVmDate = (iso) => {
     try {
@@ -2506,6 +2512,11 @@ export default function VmFleetAndSsh({
             <XtermWebSshTerminal
               projectId={projectId}
               activeVm={activeSshVm}
+              vms={vms}
+              onSelectVm={(vm) => setActiveSshVm(vm)}
+              onVmPowerAction={handlePowerAction}
+              powerBusyVm={powerBusyVm}
+              pendingOps={pendingOps}
               defaultUsername={userShort || 'ubuntu'}
               isExpanded={sshTerminalExpanded}
               onToggleExpand={() => setSshTerminalExpanded((prev) => !prev)}
