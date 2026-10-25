@@ -2356,9 +2356,46 @@ export default function GcsObjectWorkbench({
                   `gs://${inspectedObject.bucketName}/${inspectedObject.objectName}`;
                 const isPub = Boolean(inspectedObject.isPublic);
 
+                const scopeDetails =
+                  publicScopeMode === 'OBJECT_ACL'
+                    ? {
+                        badge: 'LEAST-PRIVILEGE · SINGLE OBJECT ONLY (ACL)',
+                        badgeClass:
+                          'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
+                        boxClass:
+                          'bg-emerald-500/[0.06] border-emerald-500/30 text-emerald-800 dark:text-emerald-200',
+                        btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+                        btnLabel: 'Expose Single Object Only (Object ACL)',
+                        summary: `Grants Fine-Grained ACL (entity: allUsers, role: READER) ONLY on ${inspectedObject.objectName}. Other objects in gs://${inspectedObject.bucketName} stay private.`,
+                        cli: `gcloud storage objects update ${gsUri} --add-acl-grant=entity=allUsers,role=READER`,
+                      }
+                    : publicScopeMode === 'BUCKET_IAM'
+                    ? {
+                        badge: 'BUCKET-WIDE PUBLIC READ · UNIFORM IAM',
+                        badgeClass:
+                          'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40',
+                        boxClass:
+                          'bg-amber-500/[0.07] border-amber-500/35 text-amber-800 dark:text-amber-200',
+                        btnClass: 'bg-amber-600 hover:bg-amber-700 text-white',
+                        btnLabel: 'Expose Bucket via Uniform IAM (allUsers)',
+                        summary: `Keeps Uniform Bucket-Level Access (UBLA) enabled and binds allUsers -> roles/storage.objectViewer on gs://${inspectedObject.bucketName} (makes all objects in this bucket publicly readable).`,
+                        cli: `gcloud storage buckets add-iam-policy-binding gs://${inspectedObject.bucketName} --member=allUsers --role=roles/storage.objectViewer`,
+                      }
+                    : {
+                        badge: 'SMART AUTO-NEGOTIATION (ACL -> IAM)',
+                        badgeClass:
+                          'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/40',
+                        boxClass:
+                          'bg-blue-500/[0.06] border-blue-500/30 text-blue-800 dark:text-blue-200',
+                        btnClass: 'bg-blue-600 hover:bg-blue-700 text-white',
+                        btnLabel: 'Convert to Public & Enable HTTPS URI (Auto)',
+                        summary: `Automatically relaxes Public Access Prevention to 'inherited' and applies per-object ACL if allowed, or falls back to Uniform Bucket IAM on gs://${inspectedObject.bucketName}.`,
+                        cli: `gcloud storage objects update ${gsUri} --add-acl-grant=entity=allUsers,role=READER`,
+                      };
+
                 return (
                   <div
-                    className={`p-3 rounded-xl border space-y-2.5 text-xs ${
+                    className={`p-3 rounded-xl border space-y-2.5 text-xs transition-all ${
                       isPub
                         ? 'bg-emerald-500/[0.07] border-emerald-500/40'
                         : 'bg-zinc-50/90 dark:bg-zinc-900/75 border-zinc-200 dark:border-zinc-800'
@@ -2380,30 +2417,47 @@ export default function GcsObjectWorkbench({
                             <span>PRIVATE (Zero-Trust Protected)</span>
                           </span>
                         )}
-                        <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
-                          Public & Authenticated HTTPS URIs
+                        <span
+                          className={`px-2 py-0.5 rounded-full border text-[10px] font-extrabold ${scopeDetails.badgeClass}`}
+                        >
+                          {scopeDetails.badge}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {!isPub && (
-                          <select
-                            value={publicScopeMode}
-                            onChange={(e) => setPublicScopeMode(e.target.value)}
-                            className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2 py-1 text-[10px] font-bold"
-                            title="Choose how public access is granted in GCS"
-                          >
-                            <option value="AUTO">
-                              Auto (Object ACL or Bucket IAM)
-                            </option>
-                            <option value="OBJECT_ACL">
-                              Single Object Only (Fine-Grained ACL)
-                            </option>
-                            <option value="BUCKET_IAM">
-                              Uniform Bucket IAM (allUsers ObjectViewer)
-                            </option>
-                          </select>
-                        )}
+                        <select
+                          value={publicScopeMode}
+                          onChange={(e) => {
+                            const nextMode = e.target.value;
+                            setPublicScopeMode(nextMode);
+                            if (onShowToast) {
+                              const labelMap = {
+                                AUTO: 'Auto Mode (Tries Single-Object ACL first, falls back to Bucket IAM)',
+                                OBJECT_ACL:
+                                  'Single Object Only Mode (Fine-Grained Object ACL: allUsers READER)',
+                                BUCKET_IAM:
+                                  'Uniform Bucket IAM Mode (Bucket-wide roles/storage.objectViewer)',
+                              };
+                              onShowToast(
+                                `Selected Public Access Mode: ${
+                                  labelMap[nextMode] || nextMode
+                                }`
+                              );
+                            }
+                          }}
+                          className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-[10px] font-bold cursor-pointer"
+                          title="Choose how public access is granted in GCS"
+                        >
+                          <option value="AUTO">
+                            Mode: Auto (Object ACL or Bucket IAM)
+                          </option>
+                          <option value="OBJECT_ACL">
+                            Mode: Single Object Only (Fine-Grained ACL)
+                          </option>
+                          <option value="BUCKET_IAM">
+                            Mode: Uniform Bucket IAM (allUsers ObjectViewer)
+                          </option>
+                        </select>
 
                         {isPub ? (
                           <button
@@ -2428,17 +2482,47 @@ export default function GcsObjectWorkbench({
                               busyKey === `pub-${inspectedObject.objectName}`
                             }
                             onClick={() => handleTogglePublicAccess(true)}
-                            className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                            className={`px-3 py-1 rounded-lg text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-colors ${scopeDetails.btnClass}`}
                           >
                             <Unlock className="w-3 h-3" />
                             <span>
                               {busyKey === `pub-${inspectedObject.objectName}`
                                 ? 'Converting to Public...'
-                                : 'Convert to Public & Enable HTTPS URI'}
+                                : scopeDetails.btnLabel}
                             </span>
                           </button>
                         )}
                       </div>
+                    </div>
+
+                    {/* Visual Policy Blast-Radius & CLI Preview Box that updates dynamically when Mode Select changes */}
+                    <div
+                      className={`p-2.5 rounded-lg border text-[11px] flex flex-wrap items-center justify-between gap-2 transition-all ${scopeDetails.boxClass}`}
+                    >
+                      <div className="space-y-0.5 flex-1 min-w-[240px]">
+                        <div className="font-bold">{scopeDetails.summary}</div>
+                        <div className="text-[10px] opacity-80 font-mono truncate">
+                          Equivalent CLI: <code>{scopeDetails.cli}</code>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopyText(scopeDetails.cli, 'pub-mode-cli')
+                        }
+                        className="px-2 py-1 rounded bg-white/80 dark:bg-zinc-950/80 border border-zinc-300 dark:border-zinc-800 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0 inline-flex items-center gap-1"
+                      >
+                        {copiedKey === 'pub-mode-cli' ? (
+                          <Check className="w-3 h-3 text-emerald-500" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                        <span>
+                          {copiedKey === 'pub-mode-cli'
+                            ? 'Copied CLI'
+                            : 'Copy Mode CLI'}
+                        </span>
+                      </button>
                     </div>
 
                     {/* 3 Official GCS URIs: Public HTTPS, Authenticated Console HTTPS, and gs:// */}
