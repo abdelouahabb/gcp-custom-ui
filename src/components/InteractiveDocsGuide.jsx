@@ -1563,6 +1563,33 @@ const DOC_SECTIONS = [
     billingImpact:
       '$0.00/mo control-plane & IAP TCP tunneling cost; stopping VMs directly from the Xterm.js header halts vCPU/RAM hourly billing immediately.',
   },
+  {
+    id: 'gcs-object-workbench-s3-minio-ceph-importer-and-swr-telemetry',
+    wave: 'WAVE 17 CLOUD STORAGE WORKBENCH & MULTI-CLOUD S3/MINIO/CEPH IMPORTER',
+    title:
+      '45. Cloud Storage Multi-Format Object Workbench, Official Public/Authenticated HTTPS URI Studio, V4 Signed URLs, Versioning Time-Machine, S3 / MinIO / Ceph RGW Importer & <16ms SWR Telemetry',
+    badge: 'GCS Object Workbench + AWS4-HMAC-SHA256 S3/MinIO/Ceph + V4 Signed URLs + SWR Cache',
+    badgeColor:
+      'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border-cyan-500/30',
+    icon: HardDrive,
+    targetTab: 'CLOUD_STORAGE',
+    problemSolved:
+      'The standard Google Cloud Console forces engineers to download objects locally just to inspect CSV/JSONL/Parquet/Notebooks or edit config files, shows confusing anonymous storage.googleapis.com XML AccessDenied links on private buckets, requires complex CLI tooling to generate V4 Signed URLs or restore noncurrent object generations, and offers no direct way to browse and stream objects from Amazon S3, MinIO, or Ceph RADOS Gateway (RGW) into GCS.',
+    howItWorks: [
+      'Multi-Format Object Workbench & Pro Line-Numbered Editor (GcsObjectWorkbench.jsx): Asymmetric 33% / 67% split workbench with live CSV/TSV/JSONL Data Grids, JSON Schema & JSONPath Explorers, Jupyter .ipynb Cell Viewers, Markdown/SVG Renderers, Zoomable Image Canvas, 256-Byte Binary/Parquet Hex+ASCII X-Ray, Side-by-Side Diffs, and Real-Time Client-Side Secret/PII Pre-Save Guardrail (scanTextForSecretsAndPii + 1-Tap Auto-Redact).',
+      'Official Public vs. Authenticated HTTPS URI Studio & Smart PAP Guardrail: Automatically hides the anonymous Public HTTPS URL (storage.googleapis.com) when an object is private (preventing XML AccessDenied errors) while always providing the Authenticated Console URL (storage.cloud.google.com) and gs:// URI. Supports 1-click Make Object Public (AUTO / OBJECT_ACL / BUCKET_IAM) with bucket-level publicAccessPrevention ("enforced") detection.',
+      '5 Enterprise Object Operations (Signed URLs, Versioning Time-Machine, Zero-Egress Rewrite, Holds & .tar Bundles): Generate time-limited V4 Signed URLs (15m, 1h, 24h, 7d for GET/PUT), inspect and restore historical object generations (rewriteTo), rename/move/duplicate/cross-bucket copy objects at zero network egress, toggle temporaryHold / eventBasedHold and per-object Storage Classes (STANDARD, NEARLINE, COLDLINE, ARCHIVE), and download multi-object POSIX .tar bundles.',
+      'S3 / MinIO / Ceph RADOS Gateway (RGW) Multi-Cloud Importer (Module M03): Built-in zero-dependency Node.js AWS4-HMAC-SHA256 request signer supporting both Path-Style (MinIO :9000, Ceph RGW :7480) and Virtual-Hosted (Amazon S3, Cloudflare R2) endpoints. Browse remote S3/MinIO/Ceph objects live, stream selected objects directly into gs://:bucketName with provenance metadata, or generate Google Cloud Storage Transfer Service (awsS3DataSource / awsS3CompatibleDataSource) and rclone sync specs.',
+      'Non-Blocking <16ms Stale-While-Revalidate (SWR) Live Project Telemetry & Equal-Width Enterprise UI: Dual-layer SWR cache (backend overviewSwrCache + frontend localStorage hydration) renders KPIs immediately on load and refreshes silently in the background, paired with equal-width enterprise button grids across Cloud Storage Studio and the 2026 Beyond-Console Innovation Lab.',
+    ],
+    apisUsed: [
+      'GET & POST /api/project/:id/storage/buckets/:b/objects, /objects/content, /objects/metadata, /objects/public-access, /objects/signed-url, /objects/versions, /objects/rewrite & /objects/bundle-download',
+      'POST /api/project/:id/storage/s3-compatible/list, /storage/buckets/:b/s3-compatible/import & /storage/buckets/:b/s3-compatible/transfer-job (AWS4-HMAC-SHA256 + storage.googleapis.com/upload/storage/v1 + storagetransfer.googleapis.com/v1)',
+      'GET /api/project/:id/overview (Non-Blocking Dual-Layer SWR Cache)',
+    ],
+    billingImpact:
+      '$0.00 egress for server-side GCS rewriteTo copies/renames; direct streaming S3/MinIO/Ceph ingress into GCS is $0.00 GCP ingress fee; Per-Object Storage Class tiering cuts cold object storage costs by up to 80% ($0.020 -> $0.0012/GB-mo).',
+  },
 ];
 
 export default function InteractiveDocsGuide({
