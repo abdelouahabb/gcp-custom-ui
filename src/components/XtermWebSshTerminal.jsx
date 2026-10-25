@@ -1969,13 +1969,13 @@ export default function XtermWebSshTerminal({
           </pre>
         </div>
       ) : !isSessionEnabled ? (
-        <div className="p-6 flex-1 flex flex-col items-center justify-center text-center min-h-[390px] bg-white dark:bg-[#070709] font-mono">
+        <div className="p-5 sm:p-6 flex-1 flex flex-col items-center justify-center text-center min-h-[390px] bg-white dark:bg-[#070709] font-mono">
           {!isCloudRun && focusedVm ? (
-            <div className="w-full max-w-lg rounded-2xl border border-zinc-200 dark:border-zinc-800/90 bg-zinc-50/70 dark:bg-zinc-900/50 p-5 space-y-4 shadow-lg">
-              <div className="flex items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3 text-left">
-                <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-full max-w-4xl rounded-2xl border border-zinc-200 dark:border-zinc-800/90 bg-zinc-50/70 dark:bg-zinc-900/50 p-5 sm:p-6 space-y-4 shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3.5 text-left">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center border shrink-0 ${
                       isFocusedVmRunning
                         ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
                         : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
@@ -1984,36 +1984,80 @@ export default function XtermWebSshTerminal({
                     <Server className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-extrabold text-zinc-900 dark:text-white truncate">
+                    <div className="text-base font-extrabold text-zinc-900 dark:text-white truncate">
                       {focusedVm.name}
                     </div>
-                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
                       {focusedVm.zone} · {focusedVm.machineType} ·{' '}
-                      {focusedVm.externalIp && focusedVm.externalIp !== 'None'
-                        ? focusedVm.externalIp
-                        : focusedVm.internalIp || 'Private IP'}
+                      {focusedVm.osImage || 'Linux VM'}
                     </div>
                   </div>
                 </div>
 
-                <span
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border shrink-0 ${
-                    isFocusedVmTransitional
-                      ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
-                      : isFocusedVmRunning
-                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                      : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                  }`}
-                >
-                  {focusedVmEffectiveStatus}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-1 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold">
+                    {identityInfo?.osLoginEnabled
+                      ? 'Auth: GCP IAM OS Login'
+                      : 'Auth: Metadata SSH Keys'}
+                  </span>
+                  <span
+                    className={`px-3 py-1 rounded-full text-[11px] font-extrabold border shrink-0 ${
+                      isFocusedVmTransitional
+                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
+                        : isFocusedVmRunning
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                    }`}
+                  >
+                    {focusedVmEffectiveStatus}
+                  </span>
+                </div>
+              </div>
+
+              {/* Adaptive 4-Column VM Telemetry Strip inside the Wide Launchpad Card */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-left">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[9px] uppercase text-zinc-400">
+                    External NAT IP
+                  </div>
+                  <div className="text-xs font-extrabold text-blue-600 dark:text-blue-400 mt-0.5 truncate">
+                    {focusedVm.externalIp && focusedVm.externalIp !== 'None'
+                      ? focusedVm.externalIp
+                      : 'None (IAP Tunnel)'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[9px] uppercase text-zinc-400">
+                    Internal VPC IP
+                  </div>
+                  <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
+                    {focusedVm.internalIp || '10.128.0.x'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[9px] uppercase text-zinc-400">
+                    Boot Disk &amp; OS
+                  </div>
+                  <div className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
+                    {focusedVm.diskSizeGb || 10} GB ·{' '}
+                    {focusedVm.diskType || 'pd-balanced'}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
+                  <div className="text-[9px] uppercase text-zinc-400">
+                    Selected SSH Target
+                  </div>
+                  <div className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
+                    {customUsername}@{focusedVm.name}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1.5 text-left">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  Target Linux User &amp; Home Directory:
+                  Target Linux User &amp; Home Directory (1-Click Switch):
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                   {(
                     identityInfo?.candidateUsers || [
                       {
@@ -2031,16 +2075,16 @@ export default function XtermWebSshTerminal({
                         type="button"
                         disabled={identityBusy}
                         onClick={() => handleSelectSshUserProfile(cand)}
-                        className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-300'
+                            ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-300 shadow-sm'
                             : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-700'
                         }`}
                       >
                         <div className="text-xs font-extrabold truncate">
                           {cand.username}
                         </div>
-                        <div className="text-[10px] opacity-75 truncate">
+                        <div className="text-[10px] opacity-75 truncate mt-0.5">
                           {cand.homeDir}
                         </div>
                       </button>

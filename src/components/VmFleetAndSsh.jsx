@@ -1109,55 +1109,13 @@ export default function VmFleetAndSsh({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        disabled={isDeleting}
-                        onClick={() => handleToggleMigrateVm(vm)}
-                        title="Migrate this Compute Engine VM instance to a Scale-to-$0.00 Cloud Run Gen2 Serverless Service (run.googleapis.com/v2)"
-                        className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
-                          openMigrateCloudRunVm === vm.name
-                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
-                        }`}
-                      >
-                        <Layers className="w-3.5 h-3.5" />
-                        <span>Migrate VM → Cloud Run</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={isDeleting}
-                        onClick={() =>
-                          setOpenTunnelVm((prev) =>
-                            prev === vm.name ? null : vm.name
-                          )
-                        }
-                        title="Open 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel (gcloud compute start-iap-tunnel for :22 SSH, :8080 Web, :5432 Postgres, :6379 Redis)"
-                        className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
-                          openTunnelVm === vm.name
-                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-                        }`}
-                      >
-                        <Wifi className="w-3.5 h-3.5" />
-                        <span>127.0.0.1 IAP Tunnel</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={isDeleting}
-                        onClick={() => {
-                          setScpTargetVmName(vm.name);
-                          setOpenScpTrigger((n) => n + 1);
-                        }}
-                        title={`Open Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader & In-Place Editor for ${vm.name}`}
-                        className="inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-bold border bg-teal-500/10 text-teal-600 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/20 transition-colors cursor-pointer disabled:opacity-40"
-                      >
-                        <FolderOpen className="w-3.5 h-3.5" />
-                        <span>SCP / SFTP Files</span>
-                      </button>
-
+                    <div
+                      className={`w-full grid grid-cols-2 ${
+                        sshTerminalExpanded || splitLayoutMode === '6_6'
+                          ? 'sm:grid-cols-4'
+                          : ''
+                      } gap-1.5 pt-1`}
+                    >
                       <button
                         type="button"
                         disabled={isDeleting}
@@ -1171,20 +1129,68 @@ export default function VmFleetAndSsh({
                             ? `SSH is active on ${vm.name} — click to disconnect & turn SSH off`
                             : `Click to enable & connect live interactive SSH to ${vm.name}`
                         }
-                        className={`inline-flex items-center gap-1.5 rounded-[8px] px-3.5 py-1.5 text-xs font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                           isSshActive
                             ? 'bg-blue-600 hover:bg-red-600 text-white'
                             : 'bg-blue-600 hover:bg-blue-700 text-white'
                         }`}
                       >
-                        <Terminal className="w-3.5 h-3.5" />
-                        <span>
+                        <Terminal className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">
                           {isDeleting
                             ? 'Deprovisioning...'
                             : isSshActive
-                            ? 'SSH Active (Turn Off)'
+                            ? 'SSH Active (Off)'
                             : 'SSH / Console'}
                         </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => {
+                          setScpTargetVmName(vm.name);
+                          setOpenScpTrigger((n) => n + 1);
+                        }}
+                        title={`Open Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader & In-Place Editor for ${vm.name}`}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border bg-teal-500/10 text-teal-600 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/20 transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">SCP / SFTP Files</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() =>
+                          setOpenTunnelVm((prev) =>
+                            prev === vm.name ? null : vm.name
+                          )
+                        }
+                        title="Open 127.0.0.1 Zero-Public-IP IAP TCP Port-Forward Tunnel (gcloud compute start-iap-tunnel for :22 SSH, :8080 Web, :5432 Postgres, :6379 Redis)"
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                          openTunnelVm === vm.name
+                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                        }`}
+                      >
+                        <Wifi className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">127.0.0.1 IAP Tunnel</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => handleToggleMigrateVm(vm)}
+                        title="Migrate this Compute Engine VM instance to a Scale-to-$0.00 Cloud Run Gen2 Serverless Service (run.googleapis.com/v2)"
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                          openMigrateCloudRunVm === vm.name
+                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                        }`}
+                      >
+                        <Layers className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">Migrate → Cloud Run</span>
                       </button>
                     </div>
                   </div>
