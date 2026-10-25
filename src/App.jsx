@@ -1718,7 +1718,10 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/objects/bundle-download') ||
       rawUrl.includes('/objects/public-access') ||
       rawUrl.includes('/objects/metadata') ||
-      rawUrl.includes('/objects/versions')
+      rawUrl.includes('/objects/versions') ||
+      (rawUrl.includes('/storage/buckets/') &&
+        (rawUrl.endsWith('/objects') || rawUrl.includes('/objects/rewrite')) &&
+        method === 'post')
     ) {
       return null;
     }
