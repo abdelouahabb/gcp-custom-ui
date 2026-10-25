@@ -26,6 +26,7 @@ import {
   ExternalLink,
   Layers,
   AlertTriangle,
+  FolderOpen,
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
@@ -129,6 +130,8 @@ export default function VmFleetAndSsh({
   const [openResizeVm, setOpenResizeVm] = useState(null);
   const [resizeMachineTarget, setResizeMachineTarget] = useState('e2-medium');
   const [openTunnelVm, setOpenTunnelVm] = useState(null);
+  const [openScpTrigger, setOpenScpTrigger] = useState(0);
+  const [scpTargetVmName, setScpTargetVmName] = useState('');
 
   // Live VM -> Cloud Run v2 Serverless Migrator state
   const [openMigrateCloudRunVm, setOpenMigrateCloudRunVm] = useState(null);
@@ -1080,6 +1083,20 @@ export default function VmFleetAndSsh({
                       >
                         <Wifi className="w-3.5 h-3.5" />
                         <span>127.0.0.1 IAP Tunnel</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => {
+                          setScpTargetVmName(vm.name);
+                          setOpenScpTrigger((n) => n + 1);
+                        }}
+                        title={`Open Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader & In-Place Editor for ${vm.name}`}
+                        className="inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-bold border bg-teal-500/10 text-teal-600 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/20 transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        <span>SCP / SFTP Files</span>
                       </button>
 
                       <button
@@ -2545,6 +2562,8 @@ export default function VmFleetAndSsh({
               onFetchSerialConsole={handleFetchSerialConsole}
               serialConsoleOutput={serialConsoleOutput}
               serialLoading={serialLoading}
+              openScpTrigger={openScpTrigger}
+              scpTargetVmName={scpTargetVmName}
             />
           </div>
         </div>

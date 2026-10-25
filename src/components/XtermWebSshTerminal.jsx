@@ -80,6 +80,8 @@ export default function XtermWebSshTerminal({
   serialLoading = false,
   onOpenMigrateVm,
   onSelectTab,
+  openScpTrigger = 0,
+  scpTargetVmName = '',
 }) {
   const isCloudRun = targetType === 'CLOUD_RUN';
   const containerRef = useRef(null);
@@ -87,7 +89,16 @@ export default function XtermWebSshTerminal({
   const fitAddonRef = useRef(null);
   const wsRef = useRef(null);
 
-  const [viewMode, setViewMode] = useState('LIVE_SSH_PTY'); // 'LIVE_SSH_PTY' | 'SERIAL_PORT_1'
+  const [viewMode, setViewMode] = useState('LIVE_SSH_PTY'); // 'LIVE_SSH_PTY' | 'SCP_FILE_MANAGER' | 'SERIAL_PORT_1'
+
+  useEffect(() => {
+    if (openScpTrigger > 0) {
+      if (scpTargetVmName) {
+        setSelectedVmName(scpTargetVmName);
+      }
+      setViewMode('SCP_FILE_MANAGER');
+    }
+  }, [openScpTrigger, scpTargetVmName]);
   const [sshEngine, setSshEngine] = useState(
     isCloudRun ? 'cloudrun_ssh' : 'auto'
   );
@@ -347,7 +358,7 @@ export default function XtermWebSshTerminal({
           )}/vms/${encodeURIComponent(targetVm.name)}/scp/list`,
           {
             params: {
-              zone: targetVm.zone || 'us-central1-f',
+              zone: targetVm.zone || '',
               username: customUsername || defaultUsername || 'ubuntu',
               path: targetPath || '~',
             },
@@ -407,7 +418,7 @@ export default function XtermWebSshTerminal({
         )}/scp/download`,
         {
           params: {
-            zone: targetVm.zone || 'us-central1-f',
+            zone: targetVm.zone || '',
             username: customUsername || defaultUsername || 'ubuntu',
             path: entry.path,
             mode: 'preview',
@@ -437,7 +448,7 @@ export default function XtermWebSshTerminal({
     const targetVm = activeVm || focusedVm;
     if (!targetVm || !entry?.path) return;
     const qs = new URLSearchParams({
-      zone: targetVm.zone || 'us-central1-f',
+      zone: targetVm.zone || '',
       username: customUsername || defaultUsername || 'ubuntu',
       path: entry.path,
       mode: 'raw',
@@ -482,7 +493,7 @@ export default function XtermWebSshTerminal({
           targetVm.name
         )}/scp/upload`,
         {
-          zone: targetVm.zone || 'us-central1-f',
+          zone: targetVm.zone || '',
           username: customUsername || defaultUsername || 'ubuntu',
           targetDir: scpPath || '~',
           files: encodedFiles,
@@ -517,7 +528,7 @@ export default function XtermWebSshTerminal({
           targetVm.name
         )}/scp/action`,
         {
-          zone: targetVm.zone || 'us-central1-f',
+          zone: targetVm.zone || '',
           username: customUsername || defaultUsername || 'ubuntu',
           action: 'WRITE_FILE',
           targetPath: scpEditorFile.path,
@@ -555,7 +566,7 @@ export default function XtermWebSshTerminal({
           targetVm.name
         )}/scp/action`,
         {
-          zone: targetVm.zone || 'us-central1-f',
+          zone: targetVm.zone || '',
           username: customUsername || defaultUsername || 'ubuntu',
           action: 'MKDIR',
           targetPath: fullTarget,
@@ -586,7 +597,7 @@ export default function XtermWebSshTerminal({
           targetVm.name
         )}/scp/action`,
         {
-          zone: targetVm.zone || 'us-central1-f',
+          zone: targetVm.zone || '',
           username: customUsername || defaultUsername || 'ubuntu',
           action: 'DELETE',
           targetPath: entryPath,

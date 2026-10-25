@@ -1022,11 +1022,22 @@ async function getLocalOrMetadataAccessToken(preferredEmail) {
 // Priority 2: Local gcloud / Cloud Run metadata session (if localSessionConnected is true)
 async function resolveRequestAuth(req) {
   const headerToken = req.headers['x-gcp-access-token'];
-  const headerAccount = req.headers['x-gcp-account'];
+  const headerAccount = String(req.headers['x-gcp-account'] || '').trim();
   if (headerToken && String(headerToken).trim()) {
+    let fallbackAcct = '';
+    if (!headerAccount || /^connected[\s_]*oauth[\s_]*user$/i.test(headerAccount)) {
+      try {
+        fallbackAcct = discoverLocalGcloudAccounts().activeAccount || os.userInfo().username || '';
+      } catch {
+        // ignore
+      }
+    }
     return {
       token: String(headerToken).trim(),
-      account: headerAccount ? String(headerAccount).trim() : 'Connected OAuth User',
+      account:
+        headerAccount && !/^connected[\s_]*oauth[\s_]*user$/i.test(headerAccount)
+          ? headerAccount
+          : fallbackAcct,
       authMode: 'BROWSER_TOKEN',
     };
   }
@@ -1177,7 +1188,10 @@ app.post('/api/auth/connect', async (req, res) => {
       );
       const freshToken = tokRes.data.access_token;
 
-      let resolvedEmail = 'gmail-user@gmail.com';
+      let resolvedEmail =
+        discoverLocalGcloudAccounts().activeAccount ||
+        os.userInfo().username ||
+        '';
       try {
         const info = await gcpHttp.get(
           `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(
@@ -1231,7 +1245,11 @@ app.post('/api/auth/connect', async (req, res) => {
           .json({ error: 'Please provide a valid OAuth 2.0 access token.' });
       }
       // Verify token & fetch real account email + projects
-      let resolvedEmail = email || 'oauth-user@googlecloud';
+      let resolvedEmail =
+        email ||
+        discoverLocalGcloudAccounts().activeAccount ||
+        os.userInfo().username ||
+        '';
       try {
         const info = await gcpHttp.get(
           `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(
@@ -1437,15 +1455,28 @@ app.get('/api/context', async (req, res) => {
 
     // Verify email if browser token didn't pass x-gcp-account
     let resolvedAccount = account;
-    if (authMode === 'BROWSER_TOKEN' && (!account || account === 'Connected OAuth User')) {
+    if (
+      authMode === 'BROWSER_TOKEN' &&
+      (!account || /^connected[\s_]*oauth[\s_]*user$/i.test(String(account)))
+    ) {
       try {
         const info = await gcpHttp.get(
           `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(token)}`,
           { timeout: 2500 }
         );
-        if (info.data?.email) resolvedAccount = info.data.email;
+        if (info.data?.email) {
+          resolvedAccount = info.data.email;
+        } else {
+          resolvedAccount =
+            discoverLocalGcloudAccounts().activeAccount ||
+            os.userInfo().username ||
+            '';
+        }
       } catch {
-        // ignore
+        resolvedAccount =
+          discoverLocalGcloudAccounts().activeAccount ||
+          os.userInfo().username ||
+          '';
       }
     }
 
@@ -2541,13 +2572,15 @@ async function resolveVmScpTarget({ projectId, vmName, zone, rawUsername, token 
     .replace(/[^a-zA-Z0-9._-]/g, '_');
 
   const privateKey = getLocalSshPrivateKey();
-  const cacheKey = `${projectId}:${zone}:${vmName}`;
+  const requestedZone = String(zone || '').trim();
+  const cacheKey = `${projectId}:${vmName}`;
   const cachedTarget = vmScpTargetCache.get(cacheKey);
   if (cachedTarget && Date.now() - cachedTarget.ts < 90 * 1000) {
     const pooled = sftpSessionPool.get(cachedTarget.hostIp);
     const tcp22Open = (pooled && pooled.alive) || cachedTarget.tcp22Open;
     return {
       sshUser,
+      zone: requestedZone || cachedTarget.zone,
       hostIp: cachedTarget.hostIp,
       vmStatus: cachedTarget.vmStatus,
       tcp22Open,
@@ -2556,22 +2589,43 @@ async function resolveVmScpTarget({ projectId, vmName, zone, rawUsername, token 
     };
   }
 
+  let resolvedZone = requestedZone;
   let hostIp = '';
   let vmStatus = 'RUNNING';
   try {
     if (token) {
-      const inst = await gcpFetch(
-        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
-          projectId
-        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
-          vmName
-        )}`,
-        token,
-        projectId,
-        { timeout: 4000 }
-      );
-      hostIp = inst?.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP || '';
-      vmStatus = inst?.status || 'RUNNING';
+      if (resolvedZone) {
+        const inst = await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/zones/${encodeURIComponent(resolvedZone)}/instances/${encodeURIComponent(
+            vmName
+          )}`,
+          token,
+          projectId,
+          { timeout: 4000 }
+        );
+        hostIp = inst?.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP || '';
+        vmStatus = inst?.status || 'RUNNING';
+      } else {
+        const agg = await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/aggregated/instances?filter=${encodeURIComponent(`name="${vmName}"`)}`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        );
+        for (const [scopeKey, scopeVal] of Object.entries(agg?.items || {})) {
+          const found = (scopeVal?.instances || []).find((i) => i.name === vmName);
+          if (found) {
+            resolvedZone = String(found.zone || scopeKey).split('/').pop() || '';
+            hostIp = found?.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP || '';
+            vmStatus = found?.status || 'RUNNING';
+            break;
+          }
+        }
+      }
     }
   } catch {
     // ignore
@@ -2608,6 +2662,7 @@ async function resolveVmScpTarget({ projectId, vmName, zone, rawUsername, token 
   const tcp22Open = await probePort22(hostIp, 1800);
   if (hostIp && vmStatus === 'RUNNING') {
     vmScpTargetCache.set(cacheKey, {
+      zone: resolvedZone,
       hostIp,
       vmStatus,
       tcp22Open,
@@ -2617,6 +2672,7 @@ async function resolveVmScpTarget({ projectId, vmName, zone, rawUsername, token 
 
   return {
     sshUser,
+    zone: resolvedZone,
     hostIp,
     vmStatus,
     tcp22Open,
@@ -2793,7 +2849,7 @@ async function execRemoteVmPython({
 // 1) GET /api/project/:projectId/vms/:vmName/scp/list -> List directory over SFTP or gcloud compute ssh/scp
 app.get('/api/project/:projectId/vms/:vmName/scp/list', async (req, res) => {
   const { projectId, vmName } = req.params;
-  const zone = String(req.query.zone || 'us-central1-f').trim();
+  const zone = String(req.query.zone || '').trim();
   const requestedPath = String(req.query.path || '~').trim() || '~';
   const rawUsername = req.query.username || '';
 
@@ -2808,6 +2864,7 @@ app.get('/api/project/:projectId/vms/:vmName/scp/list', async (req, res) => {
       rawUsername,
       token,
     });
+    const effectiveZone = target.zone || zone;
 
     if (target.vmStatus !== 'RUNNING') {
       return res.status(400).json({
@@ -2946,7 +3003,7 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
       const pyRes = await execRemoteVmPython({
         projectId,
         vmName,
-        zone,
+        zone: effectiveZone,
         sshUser: target.sshUser,
         needIap: target.needIap,
         pythonCode: pyListScript,
@@ -2967,7 +3024,7 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
       ok: true,
       projectId,
       vmName,
-      zone,
+      zone: effectiveZone,
       username: target.sshUser,
       hostIp: target.hostIp || 'IAP-Tunnel',
       engineUsed,
@@ -2976,10 +3033,10 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
       entries: payload.entries || [],
       cliUploadExample: `gcloud compute scp ./local-file.txt ${target.sshUser}@${vmName}:${
         payload.currentPath || `/home/${target.sshUser}`
-      }/ --zone=${zone} --project=${projectId}${iapFlag}`,
+      }/ --zone=${effectiveZone} --project=${projectId}${iapFlag}`,
       cliDownloadExample: `gcloud compute scp ${target.sshUser}@${vmName}:${
         payload.currentPath || `/home/${target.sshUser}`
-      }/<file> ./ --zone=${zone} --project=${projectId}${iapFlag}`,
+      }/<file> ./ --zone=${effectiveZone} --project=${projectId}${iapFlag}`,
     });
   } catch (err) {
     return res.status(400).json({
@@ -2994,7 +3051,7 @@ print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_pat
 // 2) GET /api/project/:projectId/vms/:vmName/scp/download -> Preview text file in UI or download raw attachment
 app.get('/api/project/:projectId/vms/:vmName/scp/download', async (req, res) => {
   const { projectId, vmName } = req.params;
-  const zone = String(req.query.zone || 'us-central1-f').trim();
+  const zone = String(req.query.zone || '').trim();
   const remotePath = String(req.query.path || '').trim();
   const mode = String(req.query.mode || 'preview').trim(); // 'preview' | 'raw'
   const rawUsername = req.query.username || '';
@@ -3014,6 +3071,7 @@ app.get('/api/project/:projectId/vms/:vmName/scp/download', async (req, res) => 
       rawUsername,
       token,
     });
+    const effectiveZone = target.zone || zone;
 
     const maxBytes = mode === 'raw' ? 25 * 1024 * 1024 : 512 * 1024;
     let fileBuffer = null;
@@ -3065,7 +3123,7 @@ print(json.dumps({'b64': base64.b64encode(b).decode('ascii'), 'size': len(b)}))
       const pyRes = await execRemoteVmPython({
         projectId,
         vmName,
-        zone,
+        zone: effectiveZone,
         sshUser: target.sshUser,
         needIap: target.needIap,
         pythonCode: pyReadScript,
@@ -3121,7 +3179,7 @@ print(json.dumps({'b64': base64.b64encode(b).decode('ascii'), 'size': len(b)}))
 app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
   const { projectId, vmName } = req.params;
   const {
-    zone = 'us-central1-f',
+    zone = '',
     username = '',
     targetDir = '~',
     files = [],
@@ -3142,6 +3200,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
       rawUsername: username,
       token,
     });
+    const effectiveZone = target.zone || zone;
 
     const sanitizedFiles = files.map((f) => {
       const cleanName = path.posix
@@ -3209,7 +3268,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
             'gcloud compute scp',
             ...localFilePaths.map((p) => JSON.stringify(p)),
             `${target.sshUser}@${vmName}:${JSON.stringify(remoteDestDir + '/')}`,
-            `--zone=${zone}`,
+            `--zone=${effectiveZone}`,
             `--project=${projectId}`,
             useIapTunnel ? '--tunnel-through-iap' : '',
             '--quiet',
@@ -3266,7 +3325,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
 app.post('/api/project/:projectId/vms/:vmName/scp/action', async (req, res) => {
   const { projectId, vmName } = req.params;
   const {
-    zone = 'us-central1-f',
+    zone = '',
     username = '',
     action = '',
     targetPath = '',
@@ -3292,6 +3351,7 @@ app.post('/api/project/:projectId/vms/:vmName/scp/action', async (req, res) => {
       rawUsername: username,
       token,
     });
+    const effectiveZone = target.zone || zone;
 
     const pyActionScript = `
 import os, sys, shutil, json
@@ -3361,7 +3421,7 @@ else:
       const pyRes = await execRemoteVmPython({
         projectId,
         vmName,
-        zone,
+        zone: effectiveZone,
         sshUser: target.sshUser,
         needIap: target.needIap,
         pythonCode: pyActionScript,
