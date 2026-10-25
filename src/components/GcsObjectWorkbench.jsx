@@ -39,6 +39,13 @@ import {
   Unlock,
   ExternalLink,
   Link,
+  Clock,
+  ShieldAlert,
+  ShieldCheck,
+  Archive,
+  CheckSquare,
+  Square,
+  Key,
 } from 'lucide-react';
 
 function formatBytes(bytes = 0) {
@@ -294,8 +301,83 @@ ORDER BY estimated_monthly_usd DESC;
   },
 ];
 
+// Client-side Pre-Save & Pre-Public Secret / PII Guardrail Scanner
+function scanTextForSecretsAndPii(text = '') {
+  const raw = String(text || '');
+  if (!raw) return [];
+  const rules = [
+    {
+      id: 'GCP_SA_PRIVATE_KEY',
+      label: 'GCP / RSA Private Key Block',
+      severity: 'CRITICAL',
+      regex: /-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA )?PRIVATE KEY-----/g,
+      replacement: '-----BEGIN PRIVATE KEY-----[REDACTED_BY_CLOUDPULSE_GUARDRAIL]-----END PRIVATE KEY-----',
+    },
+    {
+      id: 'GOOGLE_API_KEY',
+      label: 'Google Cloud / Maps / Gemini API Key (AIza...)',
+      severity: 'HIGH',
+      regex: /AIza[0-9A-Za-z\-_]{35}/g,
+      replacement: 'AIza[REDACTED_GOOGLE_API_KEY]',
+    },
+    {
+      id: 'GCP_OAUTH_TOKEN',
+      label: 'Google OAuth2 Access Token (ya29...)',
+      severity: 'CRITICAL',
+      regex: /ya29\.[0-9A-Za-z\-_]{25,}/g,
+      replacement: 'ya29.[REDACTED_GCP_OAUTH_TOKEN]',
+    },
+    {
+      id: 'AWS_ACCESS_KEY',
+      label: 'AWS IAM Access Key ID (AKIA...)',
+      severity: 'HIGH',
+      regex: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g,
+      replacement: 'AKIA[REDACTED_AWS_KEY]',
+    },
+    {
+      id: 'GITHUB_PAT',
+      label: 'GitHub Personal Access Token (ghp_/github_pat_)',
+      severity: 'HIGH',
+      regex: /\b(?:ghp_[0-9a-zA-Z]{36}|github_pat_[0-9a-zA-Z_]{40,})\b/g,
+      replacement: 'ghp_[REDACTED_GITHUB_TOKEN]',
+    },
+    {
+      id: 'GENERIC_SECRET_ASSIGN',
+      label: 'Hardcoded Password / Secret / Private Key Value',
+      severity: 'MEDIUM',
+      regex: /("(?:private_key_id|client_secret|password|api_secret|jwt_secret)"\s*:\s*")([^"\n]{8,})(")/gi,
+      replacement: '$1[REDACTED_SECRET]$3',
+    },
+    {
+      id: 'US_SSN_PII',
+      label: 'US Social Security Number (PII)',
+      severity: 'MEDIUM',
+      regex: /\b\d{3}-\d{2}-\d{4}\b/g,
+      replacement: '[REDACTED-SSN]',
+    },
+  ];
+
+  const findings = [];
+  for (const r of rules) {
+    const matches = raw.match(r.regex);
+    if (matches && matches.length > 0) {
+      findings.push({
+        id: r.id,
+        label: r.label,
+        severity: r.severity,
+        count: matches.length,
+        sample: String(matches[0]).slice(0, 36) + (matches[0].length > 36 ? '...' : ''),
+        regex: r.regex,
+        replacement: r.replacement,
+      });
+    }
+  }
+  return findings;
+}
+
 export default function GcsObjectWorkbench({
   projectId,
+  buckets = [],
   selectedBucket,
   objects = [],
   loadingObjects = false,
@@ -351,11 +433,28 @@ export default function GcsObjectWorkbench({
   const [composerStorageClass, setComposerStorageClass] = useState('STANDARD');
   const [composerBody, setComposerBody] = useState(OBJECT_TEMPLATES[0].body);
 
-  // Rename / Duplicate Object Inline State
+  // Rename / Move / Cross-Bucket Copy Inline State
   const [showRenameBar, setShowRenameBar] = useState(false);
+  const [renameTargetBucket, setRenameTargetBucket] = useState('');
   const [renameTargetPath, setRenameTargetPath] = useState('');
   const [renameDeleteSource, setRenameDeleteSource] = useState(true);
   const [publicScopeMode, setPublicScopeMode] = useState('AUTO'); // AUTO | OBJECT_ACL | BUCKET_IAM
+
+  // Multi-Object Selection & Bundle Download State
+  const [selectedObjectNames, setSelectedObjectNames] = useState([]);
+  const [bundlingDownload, setBundlingDownload] = useState(false);
+
+  // Time-Limited V4 Signed URL & Share Link State
+  const [signedUrlTtl, setSignedUrlTtl] = useState(3600); // 900 | 3600 | 86400 | 604800
+  const [signedUrlMethod, setSignedUrlMethod] = useState('GET'); // GET | PUT
+  const [signedUrlData, setSignedUrlData] = useState(null);
+  const [loadingSignedUrl, setLoadingSignedUrl] = useState(false);
+
+  // Object Versioning & Soft-Delete Time-Machine State
+  const [objectVersions, setObjectVersions] = useState([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [comparedGenerationData, setComparedGenerationData] = useState(null);
+  const [loadingCompareGen, setLoadingCompareGen] = useState(false);
 
   // Tabular Data Grid State (for CSV / TSV / JSONL / JSON arrays)
   const [tableFilter, setTableFilter] = useState('');
@@ -384,19 +483,23 @@ export default function GcsObjectWorkbench({
       setMetaCustomPairs(
         Object.entries(rawCustom).map(([k, v]) => ({ key: k, value: String(v) }))
       );
+      setRenameTargetBucket(inspectedObject.bucketName || selectedBucket?.name || '');
       setRenameTargetPath(inspectedObject.objectName || '');
       setImageDimensions(null);
+      setSignedUrlData(null);
+      setComparedGenerationData(null);
 
       // Default to PREVIEW for images/binaries, SPLIT for data/markdown/json, EDITOR for plain code
       if (inspectedObject.isImage || !inspectedObject.isTextLike) {
-        setStudioMode('PREVIEW');
+        setStudioMode((prev) => (prev === 'SPLIT' || prev === 'EDITOR' ? 'PREVIEW' : prev));
       }
     }
-  }, [inspectedObject]);
+  }, [inspectedObject, selectedBucket?.name]);
 
-  // Reset folder prefix when switching buckets
+  // Reset folder prefix & multi-select when switching buckets
   useEffect(() => {
     setCurrentFolderPrefix('');
+    setSelectedObjectNames([]);
   }, [selectedBucket?.name]);
 
   const handleCopyText = (text, key) => {
@@ -863,10 +966,11 @@ export default function GcsObjectWorkbench({
     }
   };
 
-  // Rename / Move or Duplicate Object in GCS
+  // Rename / Move / Duplicate or Cross-Bucket Copy Object in GCS
   const handleRenameOrCopyObject = async (e) => {
     if (e) e.preventDefault();
     if (!selectedBucket || !inspectedObject || !renameTargetPath.trim()) return;
+    const destBucket = (renameTargetBucket || selectedBucket.name).trim();
     const destName = renameTargetPath.trim().replace(/^\/+/, '');
     setBusyKey(`rename-${inspectedObject.objectName}`);
     try {
@@ -878,17 +982,22 @@ export default function GcsObjectWorkbench({
         )}/objects/rewrite`,
         {
           objectName: inspectedObject.objectName,
-          destinationBucket: selectedBucket.name,
+          destinationBucket: destBucket,
           destinationObjectName: destName,
           deleteSource: renameDeleteSource,
         }
       );
       if (onShowToast) {
-        onShowToast(res.data?.message || `Saved object to ${destName}!`);
+        onShowToast(
+          res.data?.message || `Saved object to gs://${destBucket}/${destName}!`
+        );
       }
       setShowRenameBar(false);
       await fetchObjects(selectedBucket.name, { silent: true });
-      await handleInspectObject({ name: destName }, { silent: true });
+      fetchBuckets({ silent: true });
+      if (destBucket === selectedBucket.name) {
+        await handleInspectObject({ name: destName }, { silent: true });
+      }
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -1020,6 +1129,262 @@ export default function GcsObjectWorkbench({
       }
     } finally {
       setBusyKey(null);
+    }
+  };
+
+  // Real-time Client-Side Secret & PII Pre-Save Guardrail Findings
+  const secretFindings = useMemo(
+    () => scanTextForSecretsAndPii(editedTextContent),
+    [editedTextContent]
+  );
+
+  const handleAutoRedactSecrets = () => {
+    let sanitized = String(editedTextContent || '');
+    for (const f of secretFindings) {
+      sanitized = sanitized.replace(f.regex, f.replacement);
+    }
+    setEditedTextContent(sanitized);
+    if (onShowToast) {
+      onShowToast(
+        `Redacted ${secretFindings.length} secret/PII pattern(s) in editor buffer. Click "Save Generation" to persist.`
+      );
+    }
+  };
+
+  // Feature 1: Generate Time-Limited V4 Signed URL & Temporary Share Link
+  const handleGenerateSignedUrl = async (
+    overrideTtl = signedUrlTtl,
+    overrideMethod = signedUrlMethod
+  ) => {
+    if (!selectedBucket || !inspectedObject) return;
+    setLoadingSignedUrl(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/objects/signed-url`,
+        {
+          objectName: inspectedObject.objectName,
+          ttlSeconds: overrideTtl,
+          httpMethod: overrideMethod,
+        }
+      );
+      setSignedUrlData(res.data);
+      if (res.data?.temporaryShareUrl) {
+        navigator.clipboard
+          ?.writeText(res.data.temporaryShareUrl)
+          .catch(() => null);
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || 'Failed to generate Signed Share URL.'
+        );
+      }
+    } finally {
+      setLoadingSignedUrl(false);
+    }
+  };
+
+  // Feature 2: Fetch All Historical Object Generations (Time-Machine)
+  const fetchObjectVersions = async (objName = inspectedObject?.objectName) => {
+    if (!selectedBucket || !objName) return;
+    setLoadingVersions(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/objects/versions?name=${encodeURIComponent(objName)}`
+      );
+      setObjectVersions(res.data?.versions || []);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || 'Failed to fetch object version history.'
+        );
+      }
+    } finally {
+      setLoadingVersions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (studioMode === 'VERSIONS' && inspectedObject?.objectName) {
+      fetchObjectVersions(inspectedObject.objectName);
+    }
+  }, [studioMode, inspectedObject?.objectName, selectedBucket?.name]);
+
+  // Diff a specific historical #generation against the current live buffer
+  const handleCompareGeneration = async (versionItem) => {
+    if (!selectedBucket || !versionItem?.generation) return;
+    setLoadingCompareGen(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/objects/content?name=${encodeURIComponent(
+          versionItem.name
+        )}&generation=${encodeURIComponent(versionItem.generation)}`
+      );
+      setComparedGenerationData({
+        generation: versionItem.generation,
+        updated: versionItem.updated,
+        size: versionItem.size,
+        textPreview: res.data?.textPreview || '',
+      });
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to load generation #${versionItem.generation}`
+        );
+      }
+    } finally {
+      setLoadingCompareGen(false);
+    }
+  };
+
+  // 1-Tap Restore Historical #generation to Live Object
+  const handleRestoreGeneration = async (versionItem) => {
+    if (!selectedBucket || !versionItem?.generation) return;
+    setBusyKey(`restore-gen-${versionItem.generation}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/objects/rewrite`,
+        {
+          objectName: versionItem.name,
+          sourceGeneration: versionItem.generation,
+          destinationBucket: selectedBucket.name,
+          destinationObjectName: versionItem.name,
+        }
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Restored generation #${versionItem.generation} to live!`
+        );
+      }
+      await handleInspectObject({ name: versionItem.name }, { silent: true });
+      await fetchObjectVersions(versionItem.name);
+      fetchObjects(selectedBucket.name, { silent: true });
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to restore generation #${versionItem.generation}`
+        );
+      }
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  // Feature 4: Toggle Object-Level Retention Holds (Temporary Hold / Event-Based Hold)
+  const handleToggleObjectHold = async (holdField, nextValue) => {
+    if (!selectedBucket || !inspectedObject) return;
+    setBusyKey(`hold-${holdField}-${inspectedObject.objectName}`);
+    try {
+      const res = await axios.patch(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/objects/metadata`,
+        {
+          objectName: inspectedObject.objectName,
+          [holdField]: Boolean(nextValue),
+        }
+      );
+      setInspectedObject((prev) =>
+        prev
+          ? {
+              ...prev,
+              metadata: {
+                ...(prev.metadata || {}),
+                ...(res.data?.metadata || {}),
+                [holdField]: Boolean(nextValue),
+              },
+            }
+          : prev
+      );
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Updated ${holdField} to ${nextValue ? 'ENABLED' : 'RELEASED'}!`
+        );
+      }
+      fetchObjects(selectedBucket.name, { silent: true });
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || `Failed to update ${holdField}.`
+        );
+      }
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  // Feature 5: Multi-Object .tar Bundle Downloader
+  const handleToggleSelectObject = (objName) => {
+    setSelectedObjectNames((prev) =>
+      prev.includes(objName)
+        ? prev.filter((n) => n !== objName)
+        : [...prev, objName]
+    );
+  };
+
+  const handleDownloadSelectedBundle = async () => {
+    if (!selectedBucket || selectedObjectNames.length === 0) return;
+    setBundlingDownload(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/objects/bundle-download`,
+        {
+          objectNames: selectedObjectNames,
+        },
+        {
+          responseType: 'blob',
+        }
+      );
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute(
+        'download',
+        `${selectedBucket.name}-bundle-${selectedObjectNames.length}files.tar`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      if (onShowToast) {
+        onShowToast(
+          `Downloaded ${selectedObjectNames.length} object(s) as POSIX .tar archive!`
+        );
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || 'Failed to download multi-object bundle.'
+        );
+      }
+    } finally {
+      setBundlingDownload(false);
     }
   };
 
@@ -2024,15 +2389,70 @@ export default function GcsObjectWorkbench({
             </select>
           </div>
 
-          {/* Drag-and-Drop Hint Banner */}
-          <div className="px-3 py-2 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/50 text-[10px] text-zinc-500 flex items-center justify-between">
-            <span>
-              Drop files here to upload to{' '}
-              <strong className="text-blue-500">
-                /{currentFolderPrefix || ''}
-              </strong>
-            </span>
-            <Upload className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+          {/* Drag-and-Drop Hint + Multi-Object Bundle Download Bar */}
+          <div className="space-y-2">
+            <div className="px-3 py-2 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/50 text-[10px] text-zinc-500 flex items-center justify-between">
+              <span>
+                Drop files here to upload to{' '}
+                <strong className="text-blue-500">
+                  /{currentFolderPrefix || ''}
+                </strong>
+              </span>
+              <Upload className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            </div>
+
+            {explorerItems.files.length > 0 && (
+              <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-[10px]">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allVisibleNames = explorerItems.files.map(
+                        (f) => f.name
+                      );
+                      const allSelected = allVisibleNames.every((n) =>
+                        selectedObjectNames.includes(n)
+                      );
+                      setSelectedObjectNames(allSelected ? [] : allVisibleNames);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <CheckSquare className="w-3 h-3 text-blue-500" />
+                    <span>
+                      {selectedObjectNames.length > 0
+                        ? `Selected (${selectedObjectNames.length})`
+                        : 'Select All'}
+                    </span>
+                  </button>
+                  {selectedObjectNames.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedObjectNames([])}
+                      className="px-2 py-1 rounded-lg text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-bold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={
+                    selectedObjectNames.length === 0 || bundlingDownload
+                  }
+                  onClick={handleDownloadSelectedBundle}
+                  title="Package selected objects into a single POSIX .tar archive and download"
+                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center gap-1 disabled:opacity-40 transition-colors"
+                >
+                  <Archive className="w-3 h-3" />
+                  <span>
+                    {bundlingDownload
+                      ? 'Packing .tar...'
+                      : `Bundle .tar (${selectedObjectNames.length})`}
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Object & Virtual Folder List */}
@@ -2098,6 +2518,7 @@ export default function GcsObjectWorkbench({
               {/* Object File Rows */}
               {explorerItems.files.map((o) => {
                 const isInspected = inspectedObject?.objectName === o.name;
+                const isChecked = selectedObjectNames.includes(o.name);
                 const displayName =
                   explorerMode === 'FOLDER' &&
                   o.name.startsWith(currentFolderPrefix)
@@ -2114,27 +2535,44 @@ export default function GcsObjectWorkbench({
                         : 'hover:bg-zinc-50 dark:hover:bg-zinc-950/60'
                     }`}
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                        <span className="truncate" title={o.name}>
-                          {displayName}
-                        </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold shrink-0">
-                          {fmt}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        <span>{formatBytes(o.size)}</span>
-                        <span>·</span>
-                        <span className="text-blue-500 font-bold">
-                          {o.storageClass}
-                        </span>
-                        {o.timeDeleted && (
-                          <span className="px-1 rounded bg-amber-500/20 text-amber-400">
-                            ARCHIVED GEN
-                          </span>
+                    <div className="min-w-0 flex-1 flex items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSelectObject(o.name);
+                        }}
+                        title="Select object for multi-file .tar bundle download"
+                        className="mt-0.5 text-zinc-400 hover:text-blue-500 shrink-0 cursor-pointer"
+                      >
+                        {isChecked ? (
+                          <CheckSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        ) : (
+                          <Square className="w-3.5 h-3.5" />
                         )}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span className="truncate" title={o.name}>
+                            {displayName}
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold shrink-0">
+                            {fmt}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span>{formatBytes(o.size)}</span>
+                          <span>·</span>
+                          <span className="text-blue-500 font-bold">
+                            {o.storageClass}
+                          </span>
+                          {o.timeDeleted && (
+                            <span className="px-1 rounded bg-amber-500/20 text-amber-400">
+                              ARCHIVED GEN
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -2255,28 +2693,28 @@ export default function GcsObjectWorkbench({
                   </div>
                 </div>
 
-                {/* Top Right Object Actions: Download, Rename/Copy, Fullscreen, Save */}
-                <div className="flex items-center gap-1.5 flex-wrap">
+                {/* Top Right Object Actions: Equal-Width Action Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={() =>
                       handleDownloadObject(inspectedObject.objectName)
                     }
-                    className="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                    className="h-8 px-2.5 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
                     title="Download full object to laptop"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <Download className="w-3.5 h-3.5 shrink-0" />
                     <span>Download</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setShowRenameBar((v) => !v)}
-                    className="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
-                    title="Rename, move, or duplicate object"
+                    className="h-8 px-2.5 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
+                    title="Rename, move, duplicate, or copy across buckets"
                   >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Rename / Copy</span>
+                    <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Move / Copy</span>
                   </button>
 
                   <button
@@ -2286,17 +2724,17 @@ export default function GcsObjectWorkbench({
                         r === 'FULL_STUDIO' ? 'COMPACT_LEFT' : 'FULL_STUDIO'
                       )
                     }
-                    className="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
+                    className="h-8 px-2.5 rounded-lg bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
                     title="Toggle Full-Width Editor Workspace"
                   >
                     {layoutRatio === 'FULL_STUDIO' ? (
                       <>
-                        <Minimize2 className="w-3.5 h-3.5" />
+                        <Minimize2 className="w-3.5 h-3.5 shrink-0" />
                         <span>Show Tree</span>
                       </>
                     ) : (
                       <>
-                        <Maximize2 className="w-3.5 h-3.5" />
+                        <Maximize2 className="w-3.5 h-3.5 shrink-0" />
                         <span>Expand</span>
                       </>
                     )}
@@ -2309,52 +2747,118 @@ export default function GcsObjectWorkbench({
                       disabled={
                         busyKey === `save-obj-${inspectedObject.objectName}`
                       }
-                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
+                      className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs"
                     >
-                      <Save className="w-3.5 h-3.5" />
+                      <Save className="w-3.5 h-3.5 shrink-0" />
                       <span>
                         {busyKey === `save-obj-${inspectedObject.objectName}`
-                          ? 'Saving Gen...'
-                          : 'Save Generation'}
+                          ? 'Saving...'
+                          : 'Save Gen'}
                       </span>
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Optional Rename / Move / Duplicate Bar */}
+              {/* Feature 5: Real-Time Client-Side Secret & PII Pre-Save Guardrail Banner */}
+              {inspectedObject.isTextLike && secretFindings.length > 0 && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-start gap-2.5 flex-1 min-w-[240px]">
+                    <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="font-extrabold text-amber-700 dark:text-amber-300">
+                        Pre-Save &amp; Pre-Public DLP Guardrail: {secretFindings.length} Credential / PII Pattern(s) Detected in Buffer!
+                      </div>
+                      <div className="text-[11px] text-zinc-600 dark:text-zinc-300 flex flex-wrap gap-1.5">
+                        {secretFindings.map((f) => (
+                          <span
+                            key={f.id}
+                            className="px-1.5 py-0.5 rounded bg-white/80 dark:bg-zinc-900 border border-amber-500/30 text-[10px] font-mono font-bold"
+                          >
+                            [{f.severity}] {f.label} ({f.count}x)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAutoRedactSecrets}
+                    className="h-8 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 shrink-0"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>1-Tap Auto-Redact Secrets</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Feature 3: Upgraded In-Place Rename, Move, Duplicate & Cross-Bucket Server-Side Copy Bar */}
               {showRenameBar && (
                 <form
                   onSubmit={handleRenameOrCopyObject}
-                  className="p-3 rounded-xl bg-blue-500/[0.08] border border-blue-500/30 flex flex-wrap items-center justify-between gap-2 text-xs"
+                  className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 text-xs"
                 >
-                  <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-                    <span className="font-bold text-blue-500 shrink-0">
-                      Target Path:
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      Server-Side Object Move, Rename, Duplicate &amp; Cross-Bucket Copy (Zero Egress)
                     </span>
-                    <input
-                      type="text"
-                      value={renameTargetPath}
-                      onChange={(e) => setRenameTargetPath(e.target.value)}
-                      className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1 font-bold"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-1.5 text-[11px] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={renameDeleteSource}
-                        onChange={(e) => setRenameDeleteSource(e.target.checked)}
-                      />
-                      <span>Move / Rename (delete source)</span>
-                    </label>
                     <button
-                      type="submit"
-                      disabled={busyKey === `rename-${inspectedObject.objectName}`}
-                      className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] cursor-pointer"
+                      type="button"
+                      onClick={() => setShowRenameBar(false)}
+                      className="text-[10px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 font-bold cursor-pointer"
                     >
-                      {renameDeleteSource ? 'Rename / Move' : 'Duplicate Object'}
+                      Close
                     </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                        Destination Bucket
+                      </label>
+                      <select
+                        value={renameTargetBucket || selectedBucket?.name || ''}
+                        onChange={(e) => setRenameTargetBucket(e.target.value)}
+                        className="w-full h-8 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2 text-xs font-bold"
+                      >
+                        {(buckets.length > 0 ? buckets : [selectedBucket].filter(Boolean)).map(
+                          (b) => (
+                            <option key={b.name} value={b.name}>
+                              gs://{b.name} ({b.location})
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                        Destination Object Key / Path
+                      </label>
+                      <input
+                        type="text"
+                        value={renameTargetPath}
+                        onChange={(e) => setRenameTargetPath(e.target.value)}
+                        className="w-full h-8 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
+                      />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <label className="flex items-center gap-1.5 text-[11px] cursor-pointer h-8 px-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={renameDeleteSource}
+                          onChange={(e) => setRenameDeleteSource(e.target.checked)}
+                        />
+                        <span className="truncate">
+                          {renameDeleteSource ? 'Move (Delete Source)' : 'Copy (Keep Source)'}
+                        </span>
+                      </label>
+                      <button
+                        type="submit"
+                        disabled={busyKey === `rename-${inspectedObject.objectName}`}
+                        className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer shrink-0"
+                      >
+                        {renameDeleteSource ? 'Move / Rename' : 'Copy Object'}
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
@@ -2650,35 +3154,35 @@ export default function GcsObjectWorkbench({
                 );
               })()}
 
-              {/* Studio Mode Switcher Tabs */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              {/* Studio Mode Switcher Tabs (Equal-Width 6-Column Grid) */}
+              <div className="border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 text-[11px]">
                   {inspectedObject.isTextLike && (
                     <button
                       type="button"
                       onClick={() => setStudioMode('SPLIT')}
-                      className={`px-3 py-1.5 rounded-xl font-extrabold cursor-pointer inline-flex items-center gap-1.5 ${
+                      className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                         studioMode === 'SPLIT'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                       }`}
                     >
-                      <Columns className="w-3.5 h-3.5" />
-                      <span>Split (Editor + Live Preview)</span>
+                      <Columns className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Split View</span>
                     </button>
                   )}
 
                   <button
                     type="button"
                     onClick={() => setStudioMode('PREVIEW')}
-                    className={`px-3 py-1.5 rounded-xl font-extrabold cursor-pointer inline-flex items-center gap-1.5 ${
+                    className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                       studioMode === 'PREVIEW'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                     }`}
                   >
-                    <Table className="w-3.5 h-3.5" />
-                    <span>Smart Preview ({activeFormat})</span>
+                    <Table className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Preview ({activeFormat})</span>
                   </button>
 
                   {inspectedObject.isTextLike && (
@@ -2686,27 +3190,27 @@ export default function GcsObjectWorkbench({
                       <button
                         type="button"
                         onClick={() => setStudioMode('EDITOR')}
-                        className={`px-3 py-1.5 rounded-xl font-extrabold cursor-pointer inline-flex items-center gap-1.5 ${
+                        className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                           studioMode === 'EDITOR'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                         }`}
                       >
-                        <Code className="w-3.5 h-3.5" />
-                        <span>Code Editor</span>
+                        <Code className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">Code Editor</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setStudioMode('DIFF')}
-                        className={`px-3 py-1.5 rounded-xl font-extrabold cursor-pointer inline-flex items-center gap-1.5 ${
+                        className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
                           studioMode === 'DIFF'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                         }`}
                       >
-                        <GitCompare className="w-3.5 h-3.5" />
-                        <span>
+                        <GitCompare className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">
                           Diff Changes
                           {previewAnalysis.hasUnsavedChanges ? ' ●' : ''}
                         </span>
@@ -2716,15 +3220,28 @@ export default function GcsObjectWorkbench({
 
                   <button
                     type="button"
-                    onClick={() => setStudioMode('METADATA')}
-                    className={`px-3 py-1.5 rounded-xl font-extrabold cursor-pointer inline-flex items-center gap-1.5 ${
-                      studioMode === 'METADATA'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300'
+                    onClick={() => setStudioMode('VERSIONS')}
+                    className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
+                      studioMode === 'VERSIONS'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                     }`}
                   >
-                    <Sliders className="w-3.5 h-3.5" />
-                    <span>Metadata, Headers & CLI</span>
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Versions &amp; Restore</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStudioMode('METADATA')}
+                    className={`w-full h-9 px-2.5 rounded-lg font-bold border cursor-pointer inline-flex items-center justify-center gap-1.5 truncate transition-colors ${
+                      studioMode === 'METADATA'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                    }`}
+                  >
+                    <Key className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Signed URLs &amp; Holds</span>
                   </button>
                 </div>
               </div>
@@ -2817,9 +3334,408 @@ export default function GcsObjectWorkbench({
                 </div>
               )}
 
-              {/* MODE 5: METADATA, CACHE-CONTROL HEADERS & CLI */}
+              {/* MODE 4B: OBJECT VERSIONING & SOFT-DELETE TIME-MACHINE */}
+              {studioMode === 'VERSIONS' && (
+                <div className="space-y-4 text-xs">
+                  <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <span>
+                          Object Generation Time-Machine — gs://{inspectedObject.bucketName}/{inspectedObject.objectName}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        Inspect every historical <code className="font-mono">#generation</code> stored by Google Cloud Storage Versioning, diff noncurrent generations against the live object, or restore any generation in 1 click.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fetchObjectVersions(inspectedObject.objectName)}
+                      disabled={loadingVersions}
+                      className="h-8 px-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingVersions ? 'animate-spin' : ''}`} />
+                      <span>Refresh Generations ({objectVersions.length})</span>
+                    </button>
+                  </div>
+
+                  {loadingVersions ? (
+                    <div className="p-6 text-center text-xs text-zinc-500 animate-pulse">
+                      Listing object generations from storage.googleapis.com...
+                    </div>
+                  ) : objectVersions.length === 0 ? (
+                    <div className="p-6 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center text-zinc-500">
+                      No generation records returned. Ensure Object Versioning is enabled on gs://{inspectedObject.bucketName}.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-zinc-200 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+                      {objectVersions.map((ver) => (
+                        <div
+                          key={ver.generation}
+                          className="p-3 bg-white dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-3"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                                Generation #{ver.generation}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                  ver.isLive
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                                }`}
+                              >
+                                {ver.isLive ? 'LIVE CURRENT VERSION' : 'NONCURRENT / ARCHIVED'}
+                              </span>
+                              <span className="text-[10px] text-zinc-500">
+                                {formatBytes(ver.size)} · {ver.storageClass}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-zinc-500">
+                              Updated: {ver.updated ? new Date(ver.updated).toLocaleString() : 'n/a'} · MD5: {ver.md5Hash || 'n/a'} · CRC32C: {ver.crc32c || 'n/a'}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 shrink-0 sm:w-64">
+                            <button
+                              type="button"
+                              disabled={loadingCompareGen}
+                              onClick={() => handleCompareGeneration(ver)}
+                              className="w-full h-8 px-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1"
+                            >
+                              <GitCompare className="w-3 h-3 shrink-0" />
+                              <span>Diff vs Live</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={
+                                ver.isLive ||
+                                busyKey === `restore-gen-${ver.generation}`
+                              }
+                              onClick={() => handleRestoreGeneration(ver)}
+                              className="w-full h-8 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-40"
+                            >
+                              <RotateCcw className="w-3 h-3 shrink-0" />
+                              <span>
+                                {busyKey === `restore-gen-${ver.generation}`
+                                  ? 'Restoring...'
+                                  : ver.isLive
+                                  ? 'Active Live'
+                                  : '1-Tap Restore'}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {comparedGenerationData && (
+                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                          Diff: Historical Generation #{comparedGenerationData.generation} vs Current Live Buffer
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setComparedGenerationData(null)}
+                          className="text-[10px] text-zinc-500 font-bold cursor-pointer"
+                        >
+                          Close Diff
+                        </button>
+                      </div>
+                      {(() => {
+                        const genDiff = computeLineDiff(
+                          comparedGenerationData.textPreview || '',
+                          editedTextContent || ''
+                        );
+                        return (
+                          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-auto max-h-72 bg-white dark:bg-zinc-950 font-mono text-xs divide-y divide-zinc-200/40 dark:divide-zinc-800/40">
+                            {genDiff.rows.map((r, idx) => (
+                              <div
+                                key={idx}
+                                className={`px-3 py-1 flex items-start gap-3 whitespace-pre-wrap ${
+                                  r.type === 'add'
+                                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                    : r.type === 'del'
+                                    ? 'bg-red-500/15 text-red-600 dark:text-red-300 line-through opacity-80'
+                                    : 'text-zinc-600 dark:text-zinc-400'
+                                }`}
+                              >
+                                <span className="w-8 text-[10px] text-zinc-400 select-none shrink-0">
+                                  {r.lineOld ?? ''}
+                                </span>
+                                <span className="w-8 text-[10px] text-zinc-400 select-none shrink-0">
+                                  {r.lineNew ?? ''}
+                                </span>
+                                <span className="w-4 font-extrabold select-none shrink-0">
+                                  {r.type === 'add' ? '+' : r.type === 'del' ? '-' : ' '}
+                                </span>
+                                <span className="flex-1 break-all">{r.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* MODE 5: SIGNED URLS, RETENTION HOLDS, METADATA & CLI */}
               {studioMode === 'METADATA' && (
                 <div className="space-y-4">
+                  {/* Feature 1: Time-Limited V4 Signed URL & Temporary Share Link Generator */}
+                  <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                          <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <span>
+                            Time-Limited V4 Signed URL &amp; Temporary Share Link Generator
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                          Share private objects for a fixed duration (15m to 7d) with cryptographic HMAC-SHA256 / V4 expiration — without making the bucket or object public.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={loadingSignedUrl}
+                        onClick={() =>
+                          handleGenerateSignedUrl(signedUrlTtl, signedUrlMethod)
+                        }
+                        className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>
+                          {loadingSignedUrl
+                            ? 'Signing...'
+                            : 'Generate Signed Share Link'}
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                      {[
+                        { label: '15 Min', ttl: 900 },
+                        { label: '1 Hour', ttl: 3600 },
+                        { label: '24 Hours', ttl: 86400 },
+                        { label: '7 Days', ttl: 604800 },
+                      ].map((opt) => (
+                        <button
+                          key={opt.ttl}
+                          type="button"
+                          onClick={() => {
+                            setSignedUrlTtl(opt.ttl);
+                            handleGenerateSignedUrl(opt.ttl, signedUrlMethod);
+                          }}
+                          className={`w-full h-8 rounded-lg font-bold border text-[11px] cursor-pointer ${
+                            signedUrlTtl === opt.ttl
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                          }`}
+                        >
+                          TTL: {opt.label}
+                        </button>
+                      ))}
+                      {['GET', 'PUT'].map((verb) => (
+                        <button
+                          key={verb}
+                          type="button"
+                          onClick={() => {
+                            setSignedUrlMethod(verb);
+                            handleGenerateSignedUrl(signedUrlTtl, verb);
+                          }}
+                          className={`w-full h-8 rounded-lg font-bold border text-[11px] cursor-pointer ${
+                            signedUrlMethod === verb
+                              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                              : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                          }`}
+                        >
+                          HTTP {verb}
+                        </button>
+                      ))}
+                    </div>
+
+                    {signedUrlData && (
+                      <div className="space-y-2 pt-1">
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                              Live Temporary Share Link ({signedUrlData.durationLabel} · {signedUrlData.httpMethod} · Expires {new Date(signedUrlData.expiresAtIso).toLocaleString()})
+                            </div>
+                            <code className="text-[11px] text-zinc-800 dark:text-zinc-200 truncate block">
+                              {signedUrlData.temporaryShareUrl}
+                            </code>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopyText(
+                                  signedUrlData.temporaryShareUrl,
+                                  'signed-temp-url'
+                                )
+                              }
+                              className="h-7 px-2 rounded bg-zinc-100 dark:bg-zinc-900 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                            >
+                              {copiedKey === 'signed-temp-url' ? (
+                                <Check className="w-3 h-3 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                              <span>Copy Link</span>
+                            </button>
+                            <a
+                              href={signedUrlData.temporaryShareUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="h-7 px-2 rounded bg-blue-600 text-white text-[10px] font-bold inline-flex items-center gap-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Open</span>
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-[10px] font-bold text-zinc-500">
+                              V4 Canonical Request URI (X-Goog-Algorithm=GOOG4-RSA-SHA256)
+                            </div>
+                            <code className="text-[11px] text-zinc-600 dark:text-zinc-400 truncate block">
+                              {signedUrlData.canonicalV4PreviewUrl}
+                            </code>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyText(
+                                signedUrlData.canonicalV4PreviewUrl,
+                                'signed-v4-url'
+                              )
+                            }
+                            className="h-7 px-2 rounded bg-zinc-100 dark:bg-zinc-900 text-[10px] font-bold cursor-pointer shrink-0 inline-flex items-center gap-1"
+                          >
+                            {copiedKey === 'signed-v4-url' ? (
+                              <Check className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            <span>Copy V4</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Feature 4: Object-Level Retention Holds (Temporary Hold & Event-Based Hold) + 4-Tier Storage Class */}
+                  <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 text-xs">
+                    <div className="font-extrabold text-zinc-900 dark:text-zinc-100 uppercase text-[11px]">
+                      Object-Level Retention Holds (SEC 17a-4 / Legal Hold) &amp; Storage Class Tiering
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                            Temporary Hold (temporaryHold)
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            Blocks object deletion or lifecycle purge while investigation is active
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={
+                            busyKey ===
+                            `hold-temporaryHold-${inspectedObject.objectName}`
+                          }
+                          onClick={() =>
+                            handleToggleObjectHold(
+                              'temporaryHold',
+                              !inspectedObject.metadata?.temporaryHold
+                            )
+                          }
+                          className={`h-8 px-3 rounded-lg font-bold text-[11px] cursor-pointer shrink-0 ${
+                            inspectedObject.metadata?.temporaryHold
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
+                          }`}
+                        >
+                          {inspectedObject.metadata?.temporaryHold
+                            ? 'HOLD ACTIVE (Release)'
+                            : 'Enable Temp Hold'}
+                        </button>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">
+                        <div>
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                            Event-Based Hold (eventBasedHold)
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            Resets retention clock until event hold is explicitly released
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={
+                            busyKey ===
+                            `hold-eventBasedHold-${inspectedObject.objectName}`
+                          }
+                          onClick={() =>
+                            handleToggleObjectHold(
+                              'eventBasedHold',
+                              !inspectedObject.metadata?.eventBasedHold
+                            )
+                          }
+                          className={`h-8 px-3 rounded-lg font-bold text-[11px] cursor-pointer shrink-0 ${
+                            inspectedObject.metadata?.eventBasedHold
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800'
+                          }`}
+                        >
+                          {inspectedObject.metadata?.eventBasedHold
+                            ? 'HOLD ACTIVE (Release)'
+                            : 'Enable Event Hold'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                      {['STANDARD', 'NEARLINE', 'COLDLINE', 'ARCHIVE'].map(
+                        (sc) => {
+                          const isCurrent =
+                            (inspectedObject.metadata?.storageClass ||
+                              'STANDARD') === sc;
+                          return (
+                            <button
+                              key={sc}
+                              type="button"
+                              onClick={() =>
+                                handleRewriteObjectClass(
+                                  { name: inspectedObject.objectName },
+                                  sc
+                                )
+                              }
+                              className={`w-full h-8 rounded-lg font-bold border text-[11px] cursor-pointer ${
+                                isCurrent
+                                  ? 'bg-blue-600 text-white border-blue-600'
+                                  : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                              }`}
+                            >
+                              Tier: {sc}
+                            </button>
+                          );
+                        }
+                      )}
+                    </div>
+                  </div>
                   <form
                     onSubmit={handleSaveObjectMetadata}
                     className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 text-xs"

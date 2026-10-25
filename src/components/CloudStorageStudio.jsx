@@ -836,58 +836,55 @@ export default function CloudStorageStudio({
   return (
     <div className="space-y-5">
       {/* Top Hero Banner + Sub-Navigation */}
-      <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
-                CLOUD STORAGE & OBJECT INTELLIGENCE STUDIO
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center shadow-xs">
+                <HardDrive className="w-4 h-4" />
+              </div>
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
+                Google Cloud Storage Fleet &amp; Object Intelligence Studio
+              </h2>
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                CLOUD STORAGE &amp; OBJECT INTELLIGENCE STUDIO
               </span>
               <span className="text-xs font-mono text-zinc-500">
                 Project: <strong className="text-zinc-900 dark:text-zinc-100">{projectId}</strong>
               </span>
             </div>
-            <h2 className="text-lg font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1 flex items-center gap-2">
-              <HardDrive className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-              <span>
-                Google Cloud Storage Fleet · Object X-Ray, FinOps Lifecycle &
-                Cross-Region Teleporter
-              </span>
-            </h2>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Inspect and upload live objects in-browser, enforce Zero-Trust PAP
-              & Uniform IAM, simulate 4-tier lifecycle savings with live GCP
-              pricing, or teleport buckets across 40 regions.
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Inspect, edit, sign, version, and upload live objects in-browser, enforce Zero-Trust PAP &amp; Uniform IAM, simulate 4-tier lifecycle savings, or teleport buckets across 40 regions.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="grid grid-cols-2 gap-2 shrink-0 sm:w-72">
             <button
               type="button"
               onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-extrabold shadow-sm cursor-pointer"
+              className="w-full h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs transition-colors cursor-pointer"
             >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>+ Create New Bucket</span>
+              <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>+ Create Bucket</span>
             </button>
 
             <button
               type="button"
-              onClick={fetchBuckets}
+              onClick={() => fetchBuckets()}
               disabled={loadingBuckets}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer"
+              className="w-full h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${loadingBuckets ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
+                className={`w-3.5 h-3.5 shrink-0 ${loadingBuckets ? 'animate-spin text-zinc-500 dark:text-zinc-400' : ''}`}
               />
               <span>Refresh Fleet</span>
             </button>
           </div>
         </div>
 
-        {/* Fleet KPI Strip */}
+        {/* Fleet KPI Strip (5 Equal Columns) */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 font-mono">
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] uppercase text-zinc-400">Live Buckets</div>
             <div className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               {fleetStats.totalBuckets}
@@ -895,7 +892,7 @@ export default function CloudStorageStudio({
             <div className="text-[10px] text-zinc-500">storage.googleapis.com</div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] uppercase text-zinc-400">
               Objects Sampled
             </div>
@@ -907,7 +904,7 @@ export default function CloudStorageStudio({
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] uppercase text-zinc-400">
               Zero-Trust Score
             </div>
@@ -925,7 +922,7 @@ export default function CloudStorageStudio({
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] uppercase text-zinc-400">
               Lifecycle Coverage
             </div>
@@ -938,7 +935,7 @@ export default function CloudStorageStudio({
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] uppercase text-zinc-400">
               Standard Rate
             </div>
@@ -951,69 +948,93 @@ export default function CloudStorageStudio({
           </div>
         </div>
 
-        {/* 4 Studio Sub-Tabs + Active Bucket Selector */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+        {/* 6 Equal-Width Studio Sub-Tabs + Active Bucket Selector */}
+        <div className="space-y-2.5 pt-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
+              Studio Workspace Mode (6 Equal-Width Modules):
+            </span>
+            {buckets.length > 0 && (
+              <div className="flex items-center gap-2 font-mono text-xs">
+                <span className="text-zinc-500 font-bold">Active Bucket:</span>
+                <select
+                  value={selectedBucket?.name || ''}
+                  onChange={(e) => {
+                    setSelectedBucketName(e.target.value);
+                    setInspectedObject(null);
+                  }}
+                  className="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 font-bold cursor-pointer"
+                >
+                  {buckets.map((b) => (
+                    <option key={b.name} value={b.name}>
+                      gs://{b.name} ({b.location.toUpperCase()} · {b.storageClass})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 font-mono text-xs">
             {[
               {
                 id: 'BUCKETS',
-                label: `Bucket Governance & Security (${buckets.length})`,
+                code: 'M01',
+                label: `Bucket Governance (${buckets.length})`,
               },
               {
                 id: 'OBJECTS',
-                label: `Object Browser, Uploader & Live Editor (${objects.length})`,
+                code: 'M02',
+                label: `Object Workbench (${objects.length})`,
               },
               {
                 id: 'FINOPS_LIFECYCLE',
-                label: 'Storage Temperature & Lifecycle Time-Crystal',
+                code: 'M03',
+                label: 'Lifecycle FinOps',
               },
               {
                 id: 'TELEPORT',
-                label: 'Cross-Region Bucket Teleporter (40 Regions)',
+                code: 'M04',
+                label: 'Region Teleporter (40)',
               },
               {
                 id: 'DLP_XRAY',
-                label: 'DLP Secret & PII X-Ray + 1-Tap Redactor',
+                code: 'M05',
+                label: 'DLP Secret & PII X-Ray',
               },
               {
                 id: 'RANSOMWARE_AIRGAP',
-                label: 'Ransomware Air-Gap & Clean-Room Auditor',
+                code: 'M06',
+                label: 'Ransomware Auditor',
               },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveSubTab(t.id)}
-                className={`px-3 py-1.5 rounded-xl font-bold border transition-all cursor-pointer ${
-                  activeSubTab === t.id
-                    ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-zinc-950 border-blue-500 shadow-sm'
-                    : 'bg-white/70 dark:bg-zinc-900/70 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+            ].map((t) => {
+              const active = activeSubTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveSubTab(t.id)}
+                  title={t.label}
+                  className={`w-full h-10 px-2.5 rounded-xl font-bold border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+                    active
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-zinc-50 dark:bg-[#16171a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                  }`}
+                >
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                      active
+                        ? 'bg-black/25 text-white'
+                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                    }`}
+                  >
+                    {t.code}
+                  </span>
+                  <span className="truncate">{t.label}</span>
+                </button>
+              );
+            })}
           </div>
-
-          {buckets.length > 0 && (
-            <div className="flex items-center gap-2 font-mono text-xs">
-              <span className="text-zinc-500 font-bold">Active Bucket:</span>
-              <select
-                value={selectedBucket?.name || ''}
-                onChange={(e) => {
-                  setSelectedBucketName(e.target.value);
-                  setInspectedObject(null);
-                }}
-                className="bg-zinc-50 dark:bg-zinc-900 text-blue-700 dark:text-blue-300 border border-blue-500/40 rounded-lg px-2.5 py-1.5 font-bold cursor-pointer"
-              >
-                {buckets.map((b) => (
-                  <option key={b.name} value={b.name}>
-                    gs://{b.name} ({b.location.toUpperCase()} · {b.storageClass})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1220,61 +1241,60 @@ export default function CloudStorageStudio({
                       </button>
                     </div>
 
-                    {/* 1-Tap Action Bar */}
+                    {/* 1-Tap Equal-Width Action Bar */}
                     <div
-                      className="flex flex-wrap items-center justify-between gap-1.5 pt-1"
+                      className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1.5"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {!isHardened && (
-                          <button
-                            type="button"
-                            disabled={busyKey === `harden-${b.name}`}
-                            onClick={() => handleHardenBucket(b)}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-extrabold cursor-pointer flex items-center gap-1 disabled:opacity-50"
-                          >
-                            <Lock className="w-3 h-3" />
-                            <span>
-                              {busyKey === `harden-${b.name}`
-                                ? 'Hardening...'
-                                : '1-Tap Harden (PAP + UBLA + Versioning)'}
-                            </span>
-                          </button>
-                        )}
+                      <button
+                        type="button"
+                        disabled={isHardened || busyKey === `harden-${b.name}`}
+                        onClick={() => handleHardenBucket(b)}
+                        className="w-full h-8 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                      >
+                        <Lock className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          {busyKey === `harden-${b.name}`
+                            ? 'Hardening...'
+                            : isHardened
+                            ? 'PAP + UBLA Active'
+                            : '1-Tap Harden'}
+                        </span>
+                      </button>
 
-                        <button
-                          type="button"
-                          disabled={busyKey === `lifecycle-${b.name}`}
-                          onClick={() => handleApplySmartLifecycle(b)}
-                          className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-extrabold cursor-pointer flex items-center gap-1 disabled:opacity-50"
-                        >
-                          <Leaf className="w-3 h-3" />
-                          <span>
-                            {busyKey === `lifecycle-${b.name}`
-                              ? 'Applying...'
-                              : '1-Tap 4-Tier Lifecycle'}
-                          </span>
-                        </button>
+                      <button
+                        type="button"
+                        disabled={busyKey === `lifecycle-${b.name}`}
+                        onClick={() => handleApplySmartLifecycle(b)}
+                        className="w-full h-8 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                      >
+                        <Leaf className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          {busyKey === `lifecycle-${b.name}`
+                            ? 'Applying...'
+                            : '4-Tier Lifecycle'}
+                        </span>
+                      </button>
 
-                        <button
-                          type="button"
-                          disabled={busyKey === `cors-${b.name}`}
-                          onClick={() => handleEnableCors(b)}
-                          className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
-                        >
-                          Enable Web CORS
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        disabled={busyKey === `cors-${b.name}`}
+                        onClick={() => handleEnableCors(b)}
+                        className="w-full h-8 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 disabled:opacity-50 truncate"
+                      >
+                        <Globe className="w-3 h-3 shrink-0" />
+                        <span className="truncate">Enable Web CORS</span>
+                      </button>
 
                       <button
                         type="button"
                         disabled={busyKey === `delete-${b.name}`}
                         onClick={() => handleEmptyAndDeleteBucket(b)}
-                        className="px-2 py-1 rounded-lg bg-red-500/15 hover:bg-red-600 hover:text-white text-red-500 border border-red-500/30 text-[10px] font-extrabold cursor-pointer flex items-center gap-1"
+                        className="w-full h-8 px-2 rounded-lg bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold cursor-pointer inline-flex items-center justify-center gap-1 truncate"
                         title="Empties all object versions and deletes bucket without 409 BucketNotEmpty error"
                       >
-                        <Trash2 className="w-3 h-3" />
-                        <span>
+                        <Trash2 className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
                           {busyKey === `delete-${b.name}`
                             ? 'Purging...'
                             : 'Empty & Delete'}
@@ -1295,6 +1315,7 @@ export default function CloudStorageStudio({
       {activeSubTab === 'OBJECTS' && (
         <GcsObjectWorkbench
           projectId={projectId}
+          buckets={buckets}
           selectedBucket={selectedBucket}
           objects={objects}
           loadingObjects={loadingObjects}

@@ -2578,7 +2578,7 @@ function classifyDestructiveAxiosConfig(config) {
           impactWarning: `Creates destination bucket and copies objects into "${body.targetLocation || 'US'}" on project "${projectId}".`,
         };
       }
-      if (rawUrl.includes('/objects') && !rawUrl.includes('/objects/public-access') && method === 'post') {
+      if (rawUrl.endsWith('/objects') && method === 'post') {
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',

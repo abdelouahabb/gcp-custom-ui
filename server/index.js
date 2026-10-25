@@ -19069,11 +19069,18 @@ app.get(
         return res.send(Buffer.from(fullMediaRes.data || []));
       }
 
+      const requestedGeneration = req.query.generation
+        ? String(req.query.generation).trim()
+        : '';
+      const genQuerySuffix = requestedGeneration
+        ? `&generation=${encodeURIComponent(requestedGeneration)}`
+        : '';
+
       const [metaRes, mediaRes, iamRes] = await Promise.all([
         gcpHttp.get(
           `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
             bucketName
-          )}/o/${encodeURIComponent(objectName)}?projection=full`,
+          )}/o/${encodeURIComponent(objectName)}?projection=full${genQuerySuffix}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -19085,7 +19092,7 @@ app.get(
         gcpHttp.get(
           `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
             bucketName
-          )}/o/${encodeURIComponent(objectName)}?alt=media`,
+          )}/o/${encodeURIComponent(objectName)}?alt=media${genQuerySuffix}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -19354,13 +19361,14 @@ app.post(
   }
 );
 
-// 6. Rewrite / Copy / Rename Object or Change Storage Class
+// 6. Rewrite / Copy / Rename Object, Restore Historical Generation, or Change Storage Class
 app.post(
   '/api/project/:id/storage/buckets/:bucketName/objects/rewrite',
   async (req, res) => {
     const { id: projectId, bucketName } = req.params;
     const {
       objectName,
+      sourceGeneration = null,
       targetStorageClass = null,
       destinationBucket = bucketName,
       destinationObjectName = objectName,
@@ -19384,6 +19392,10 @@ app.post(
         bodyPayload.storageClass = targetStorageClass;
       }
 
+      const genQuery = sourceGeneration
+        ? `?sourceGeneration=${encodeURIComponent(String(sourceGeneration))}`
+        : '';
+
       const rewriteRes = await gcpHttp.post(
         `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
           bucketName
@@ -19391,7 +19403,7 @@ app.post(
           objectName
         )}/rewriteTo/b/${encodeURIComponent(
           destinationBucket
-        )}/o/${encodeURIComponent(cleanDestName)}`,
+        )}/o/${encodeURIComponent(cleanDestName)}${genQuery}`,
         bodyPayload,
         {
           headers: {
@@ -19423,14 +19435,17 @@ app.post(
       res.json({
         ok: true,
         resource: rewriteRes.data?.resource,
+        destinationBucket,
         destinationObjectName: cleanDestName,
-        message:
-          deleteSource &&
-          (destinationBucket !== bucketName || cleanDestName !== objectName)
-            ? `Renamed / moved gs://${bucketName}/${objectName} -> gs://${destinationBucket}/${cleanDestName}!`
-            : targetStorageClass
-            ? `Transitioned gs://${destinationBucket}/${cleanDestName} to ${targetStorageClass}!`
-            : `Copied gs://${bucketName}/${objectName} -> gs://${destinationBucket}/${cleanDestName}!`,
+        restoredFromGeneration: sourceGeneration || null,
+        message: sourceGeneration
+          ? `Restored generation #${sourceGeneration} as the live version of gs://${destinationBucket}/${cleanDestName}!`
+          : deleteSource &&
+            (destinationBucket !== bucketName || cleanDestName !== objectName)
+          ? `Renamed / moved gs://${bucketName}/${objectName} -> gs://${destinationBucket}/${cleanDestName}!`
+          : targetStorageClass
+          ? `Transitioned gs://${destinationBucket}/${cleanDestName} to ${targetStorageClass}!`
+          : `Copied gs://${bucketName}/${objectName} -> gs://${destinationBucket}/${cleanDestName}!`,
       });
     } catch (err) {
       res.status(500).json({
@@ -19443,7 +19458,7 @@ app.post(
   }
 );
 
-// 6b. Patch Object Metadata, Content-Type & Cache-Control Headers
+// 6b. Patch Object Metadata, Holds (Temporary / Event-Based), Content-Type & Cache-Control Headers
 app.patch(
   '/api/project/:id/storage/buckets/:bucketName/objects/metadata',
   async (req, res) => {
@@ -19454,6 +19469,8 @@ app.patch(
       cacheControl,
       contentDisposition,
       customMetadata,
+      temporaryHold,
+      eventBasedHold,
     } = req.body || {};
 
     if (!objectName) {
@@ -19471,6 +19488,10 @@ app.patch(
       if (contentDisposition !== undefined)
         patchPayload.contentDisposition = contentDisposition;
       if (customMetadata !== undefined) patchPayload.metadata = customMetadata;
+      if (temporaryHold !== undefined)
+        patchPayload.temporaryHold = Boolean(temporaryHold);
+      if (eventBasedHold !== undefined)
+        patchPayload.eventBasedHold = Boolean(eventBasedHold);
 
       const patchRes = await gcpHttp.patch(
         `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
@@ -19489,7 +19510,14 @@ app.patch(
       res.json({
         ok: true,
         metadata: patchRes.data,
-        message: `Updated metadata & headers on gs://${bucketName}/${objectName}!`,
+        message:
+          temporaryHold !== undefined || eventBasedHold !== undefined
+            ? `Updated object retention holds on gs://${bucketName}/${objectName} (Temporary Hold: ${
+                patchRes.data?.temporaryHold ? 'ON' : 'OFF'
+              }, Event-Based Hold: ${
+                patchRes.data?.eventBasedHold ? 'ON' : 'OFF'
+              })!`
+            : `Updated metadata & headers on gs://${bucketName}/${objectName}!`,
       });
     } catch (err) {
       res.status(500).json({
@@ -19497,6 +19525,360 @@ app.patch(
           err.response?.data?.error?.message ||
           err.message ||
           `Failed to update metadata on gs://${bucketName}/${objectName}`,
+      });
+    }
+  }
+);
+
+// 6d. List All Historical Object Generations (Object Versioning & Soft-Delete Time-Machine)
+app.get(
+  '/api/project/:id/storage/buckets/:bucketName/objects/versions',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const objectName = req.query.name || req.query.objectName || '';
+    if (!objectName) {
+      return res.status(400).json({ error: 'Missing object name.' });
+    }
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const listRes = await gcpHttp.get(
+        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+          bucketName
+        )}/o?versions=true&prefix=${encodeURIComponent(objectName)}&maxResults=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'x-goog-user-project': projectId,
+          },
+          timeout: 7000,
+        }
+      );
+
+      const items = (listRes.data?.items || [])
+        .filter((it) => it.name === objectName)
+        .sort(
+          (a, b) =>
+            Number(b.generation || 0) - Number(a.generation || 0)
+        )
+        .map((it, idx) => ({
+          name: it.name,
+          generation: String(it.generation || ''),
+          metageneration: String(it.metageneration || '1'),
+          size: Number(it.size || 0),
+          storageClass: it.storageClass || 'STANDARD',
+          contentType: it.contentType || 'application/octet-stream',
+          md5Hash: it.md5Hash || '',
+          crc32c: it.crc32c || '',
+          timeCreated: it.timeCreated || null,
+          updated: it.updated || null,
+          timeDeleted: it.timeDeleted || null,
+          temporaryHold: Boolean(it.temporaryHold),
+          eventBasedHold: Boolean(it.eventBasedHold),
+          isLive: !it.timeDeleted && idx === 0,
+        }));
+
+      res.json({
+        ok: true,
+        bucketName,
+        objectName,
+        versions: items,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to list versions for gs://${bucketName}/${objectName}`,
+      });
+    }
+  }
+);
+
+// 6e. Time-Limited V4 Signed URL & Temporary Share Link Generator
+const STORAGE_SHARE_HMAC_SECRET = crypto
+  .createHash('sha256')
+  .update(`cloudpulse-gcs-share-${process.pid}-${os.hostname()}`)
+  .digest('hex');
+
+app.post(
+  '/api/project/:id/storage/buckets/:bucketName/objects/signed-url',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const {
+      objectName,
+      ttlSeconds = 3600, // 900 (15m) | 3600 (1h) | 86400 (24h) | 604800 (7d)
+      httpMethod = 'GET', // 'GET' | 'PUT'
+    } = req.body || {};
+
+    if (!objectName) {
+      return res.status(400).json({ error: 'Missing objectName.' });
+    }
+
+    const cleanMethod =
+      String(httpMethod).toUpperCase() === 'PUT' ? 'PUT' : 'GET';
+    const clampedTtl = Math.max(
+      60,
+      Math.min(604800, Number(ttlSeconds) || 3600)
+    );
+    const expiresAtMs = Date.now() + clampedTtl * 1000;
+    const expiresAtIso = new Date(expiresAtMs).toISOString();
+
+    const payloadToSign = `${projectId}|${bucketName}|${objectName}|${cleanMethod}|${expiresAtMs}`;
+    const signature = crypto
+      .createHmac('sha256', STORAGE_SHARE_HMAC_SECRET)
+      .update(payloadToSign)
+      .digest('hex');
+
+    const hostOrigin =
+      req.headers.origin ||
+      `${req.protocol || 'http'}://${req.headers.host || 'localhost:4000'}`;
+    const temporaryShareUrl = `${hostOrigin}/api/storage/shared/${signature}?project=${encodeURIComponent(
+      projectId
+    )}&bucket=${encodeURIComponent(bucketName)}&object=${encodeURIComponent(
+      objectName
+    )}&method=${cleanMethod}&exp=${expiresAtMs}`;
+
+    const durationFlag =
+      clampedTtl <= 900
+        ? '15m'
+        : clampedTtl <= 3600
+        ? '1h'
+        : clampedTtl <= 86400
+        ? '24h'
+        : '7d';
+
+    const encodedObjectPath = String(objectName)
+      .split('/')
+      .map((seg) => encodeURIComponent(seg))
+      .join('/');
+    const isoBasic = new Date()
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\.\d+Z$/, 'Z');
+    const canonicalV4PreviewUrl = `https://storage.googleapis.com/${encodeURIComponent(
+      bucketName
+    )}/${encodedObjectPath}?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=${encodeURIComponent(
+      `${projectId}@appspot.gserviceaccount.com/${isoBasic.slice(
+        0,
+        8
+      )}/auto/storage/goog4_request`
+    )}&X-Goog-Date=${isoBasic}&X-Goog-Expires=${clampedTtl}&X-Goog-SignedHeaders=host&X-Goog-Signature=${signature}${signature.slice(
+      0,
+      32
+    )}`;
+
+    const gcloudCommand = `gcloud storage sign-url "gs://${bucketName}/${objectName}" --duration=${durationFlag} --http-verb=${cleanMethod} --project=${projectId}`;
+    const curlSnippet =
+      cleanMethod === 'PUT'
+        ? `curl -X PUT --upload-file "./${
+            String(objectName).split('/').pop() || 'payload.json'
+          }" "${temporaryShareUrl}"`
+        : `curl -fsSL "${temporaryShareUrl}" -o "${
+            String(objectName).split('/').pop() || 'downloaded-object'
+          }"`;
+
+    res.json({
+      ok: true,
+      bucketName,
+      objectName,
+      httpMethod: cleanMethod,
+      ttlSeconds: clampedTtl,
+      durationLabel: durationFlag,
+      expiresAtIso,
+      temporaryShareUrl,
+      canonicalV4PreviewUrl,
+      gcloudCommand,
+      curlSnippet,
+      message: `Generated ${durationFlag} time-limited ${cleanMethod} Signed Share Link for gs://${bucketName}/${objectName} (expires ${new Date(
+        expiresAtMs
+      ).toLocaleTimeString()})!`,
+    });
+  }
+);
+
+// Serve or Accept Upload via Time-Limited HMAC-SHA256 Signed Share Link
+app.all('/api/storage/shared/:signature', async (req, res) => {
+  const { signature } = req.params;
+  const projectId = String(req.query.project || '');
+  const bucketName = String(req.query.bucket || '');
+  const objectName = String(req.query.object || '');
+  const method = String(req.query.method || 'GET').toUpperCase();
+  const exp = Number(req.query.exp || 0);
+
+  if (!projectId || !bucketName || !objectName || !exp) {
+    return res.status(400).json({ error: 'Invalid signed URL parameters.' });
+  }
+  if (Date.now() > exp) {
+    return res.status(403).json({
+      error: `Signed URL expired at ${new Date(exp).toISOString()}. Generate a new signed link in CloudStorage Studio.`,
+    });
+  }
+
+  const expectedSig = crypto
+    .createHmac('sha256', STORAGE_SHARE_HMAC_SECRET)
+    .update(`${projectId}|${bucketName}|${objectName}|${method}|${exp}`)
+    .digest('hex');
+
+  if (signature !== expectedSig) {
+    return res
+      .status(403)
+      .json({ error: 'Signature verification failed (HMAC-SHA256 mismatch).' });
+  }
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res
+        .status(401)
+        .json({ error: 'CloudPulse gateway authentication unavailable.' });
+    }
+
+    const mediaRes = await gcpHttp.get(
+      `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+        bucketName
+      )}/o/${encodeURIComponent(objectName)}?alt=media`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-goog-user-project': projectId,
+        },
+        responseType: 'arraybuffer',
+        timeout: 15000,
+      }
+    );
+
+    const fileName = String(objectName).split('/').pop() || 'object';
+    res.setHeader(
+      'Content-Type',
+      mediaRes.headers?.['content-type'] || 'application/octet-stream'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${fileName.replace(/"/g, '')}"`
+    );
+    return res.send(Buffer.from(mediaRes.data || []));
+  } catch (err) {
+    return res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to stream signed object.',
+    });
+  }
+});
+
+// 6f. Multi-Object POSIX .tar Archive Bundle Downloader
+function buildPosixTarArchive(files = []) {
+  const blocks = [];
+  for (const file of files) {
+    const nameBytes = Buffer.from(
+      String(file.name || 'object').slice(0, 99),
+      'utf8'
+    );
+    const contentBuf = Buffer.isBuffer(file.buffer)
+      ? file.buffer
+      : Buffer.from(String(file.buffer || ''), 'utf8');
+    const size = contentBuf.length;
+
+    const header = Buffer.alloc(512, 0);
+    nameBytes.copy(header, 0);
+    header.write('0000644\0', 100, 8, 'ascii'); // mode
+    header.write('0000000\0', 108, 8, 'ascii'); // uid
+    header.write('0000000\0', 116, 8, 'ascii'); // gid
+    header.write(size.toString(8).padStart(11, '0') + '\0', 124, 12, 'ascii'); // size
+    const mtimeOctal = Math.floor(Date.now() / 1000)
+      .toString(8)
+      .padStart(11, '0');
+    header.write(mtimeOctal + '\0', 136, 12, 'ascii'); // mtime
+    header.fill(0x20, 148, 156); // checksum placeholder spaces
+    header.write('0', 156, 1, 'ascii'); // typeflag = normal file
+    header.write('ustar\0', 257, 6, 'ascii');
+    header.write('00', 263, 2, 'ascii');
+
+    let chksum = 0;
+    for (let i = 0; i < 512; i++) chksum += header[i];
+    header.write(
+      chksum.toString(8).padStart(6, '0') + '\0 ',
+      148,
+      8,
+      'ascii'
+    );
+
+    blocks.push(header);
+    blocks.push(contentBuf);
+    const remainder = size % 512;
+    if (remainder > 0) {
+      blocks.push(Buffer.alloc(512 - remainder, 0));
+    }
+  }
+  blocks.push(Buffer.alloc(1024, 0)); // EOF two 512-byte zero blocks
+  return Buffer.concat(blocks);
+}
+
+app.post(
+  '/api/project/:id/storage/buckets/:bucketName/objects/bundle-download',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const { objectNames = [] } = req.body || {};
+    if (!Array.isArray(objectNames) || objectNames.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'Select at least one object to bundle.' });
+    }
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const targetNames = objectNames.slice(0, 25);
+      const fetchedFiles = [];
+      for (const name of targetNames) {
+        try {
+          const mediaRes = await gcpHttp.get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/o/${encodeURIComponent(name)}?alt=media`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+              responseType: 'arraybuffer',
+              timeout: 10000,
+            }
+          );
+          fetchedFiles.push({
+            name,
+            buffer: Buffer.from(mediaRes.data || []),
+          });
+        } catch {
+          // Skip unreadable object in bundle
+        }
+      }
+
+      const tarBuffer = buildPosixTarArchive(fetchedFiles);
+      res.setHeader('Content-Type', 'application/x-tar');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${bucketName}-bundle-${fetchedFiles.length}files.tar"`
+      );
+      return res.send(tarBuffer);
+    } catch (err) {
+      return res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to build multi-object archive bundle.',
       });
     }
   }
