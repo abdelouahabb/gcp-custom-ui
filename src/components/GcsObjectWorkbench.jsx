@@ -34,6 +34,11 @@ import {
   RotateCcw,
   FolderPlus,
   Edit3,
+  Globe,
+  Lock,
+  Unlock,
+  ExternalLink,
+  Link,
 } from 'lucide-react';
 
 function formatBytes(bytes = 0) {
@@ -350,6 +355,7 @@ export default function GcsObjectWorkbench({
   const [showRenameBar, setShowRenameBar] = useState(false);
   const [renameTargetPath, setRenameTargetPath] = useState('');
   const [renameDeleteSource, setRenameDeleteSource] = useState(true);
+  const [publicScopeMode, setPublicScopeMode] = useState('AUTO'); // AUTO | OBJECT_ACL | BUCKET_IAM
 
   // Tabular Data Grid State (for CSV / TSV / JSONL / JSON arrays)
   const [tableFilter, setTableFilter] = useState('');
@@ -947,6 +953,50 @@ export default function GcsObjectWorkbench({
       selectedBucket.name
     )}/objects/content?name=${encodeURIComponent(objectName)}&download=true`;
     window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  // Toggle Public Access & Generate Live Public HTTPS URI (https://storage.googleapis.com/...)
+  const handleTogglePublicAccess = async (makePublic = true) => {
+    if (!selectedBucket || !inspectedObject) return;
+    setBusyKey(`pub-${inspectedObject.objectName}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/objects/public-access`,
+        {
+          objectName: inspectedObject.objectName,
+          makePublic,
+          preferredScope: publicScopeMode,
+        }
+      );
+      if (res.data?.publicHttpsUrl && makePublic) {
+        navigator.clipboard
+          ?.writeText(res.data.publicHttpsUrl)
+          .catch(() => null);
+      }
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            (makePublic
+              ? `Converted to Public! Copied HTTPS URI: ${res.data?.publicHttpsUrl}`
+              : `Revoked public access on gs://${selectedBucket.name}/${inspectedObject.objectName}`)
+        );
+      }
+      await handleInspectObject({ name: inspectedObject.objectName });
+      await fetchBuckets();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            'Failed to update public access on Cloud Storage object.'
+        );
+      }
+    } finally {
+      setBusyKey(null);
+    }
   };
 
   // Compute grid column spans from layoutRatio
@@ -2070,6 +2120,31 @@ export default function GcsObjectWorkbench({
                     >
                       <button
                         type="button"
+                        onClick={() => {
+                          const encPath = String(o.name)
+                            .split('/')
+                            .map((s) => encodeURIComponent(s))
+                            .join('/');
+                          const url = `https://storage.googleapis.com/${encodeURIComponent(
+                            selectedBucket?.name || ''
+                          )}/${encPath}`;
+                          handleCopyText(url, `row-url-${o.name}`);
+                          if (onShowToast) {
+                            onShowToast(`Copied HTTPS URI: ${url}`);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                        title="Copy https://storage.googleapis.com/... URI"
+                      >
+                        {copiedKey === `row-url-${o.name}` ? (
+                          <Check className="w-3 h-3 text-emerald-500" />
+                        ) : (
+                          <Link className="w-3 h-3" />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => handleDownloadObject(o.name)}
                         className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white text-zinc-600 dark:text-zinc-300 cursor-pointer"
                         title="Download object to laptop"
@@ -2259,6 +2334,227 @@ export default function GcsObjectWorkbench({
                   </div>
                 </form>
               )}
+
+              {/* Google Cloud Console Public Access & HTTPS URI Generator Bar */}
+              {(() => {
+                const encObj = String(inspectedObject.objectName || '')
+                  .split('/')
+                  .map((s) => encodeURIComponent(s))
+                  .join('/');
+                const publicUrl =
+                  inspectedObject.publicHttpsUrl ||
+                  `https://storage.googleapis.com/${encodeURIComponent(
+                    inspectedObject.bucketName
+                  )}/${encObj}`;
+                const authConsoleUrl =
+                  inspectedObject.authenticatedHttpsUrl ||
+                  `https://storage.cloud.google.com/${encodeURIComponent(
+                    inspectedObject.bucketName
+                  )}/${encObj}`;
+                const gsUri =
+                  inspectedObject.gsUri ||
+                  `gs://${inspectedObject.bucketName}/${inspectedObject.objectName}`;
+                const isPub = Boolean(inspectedObject.isPublic);
+
+                return (
+                  <div
+                    className={`p-3 rounded-xl border space-y-2.5 text-xs ${
+                      isPub
+                        ? 'bg-emerald-500/[0.07] border-emerald-500/40'
+                        : 'bg-zinc-50/90 dark:bg-zinc-900/75 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isPub ? (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold inline-flex items-center gap-1">
+                            <Globe className="w-3 h-3" />
+                            <span>
+                              PUBLIC ON INTERNET (
+                              {inspectedObject.publicAccessScope || 'allUsers'})
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[10px] font-extrabold inline-flex items-center gap-1">
+                            <Lock className="w-3 h-3" />
+                            <span>PRIVATE (Zero-Trust Protected)</span>
+                          </span>
+                        )}
+                        <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
+                          Public & Authenticated HTTPS URIs
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {!isPub && (
+                          <select
+                            value={publicScopeMode}
+                            onChange={(e) => setPublicScopeMode(e.target.value)}
+                            className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2 py-1 text-[10px] font-bold"
+                            title="Choose how public access is granted in GCS"
+                          >
+                            <option value="AUTO">
+                              Auto (Object ACL or Bucket IAM)
+                            </option>
+                            <option value="OBJECT_ACL">
+                              Single Object Only (Fine-Grained ACL)
+                            </option>
+                            <option value="BUCKET_IAM">
+                              Uniform Bucket IAM (allUsers ObjectViewer)
+                            </option>
+                          </select>
+                        )}
+
+                        {isPub ? (
+                          <button
+                            type="button"
+                            disabled={
+                              busyKey === `pub-${inspectedObject.objectName}`
+                            }
+                            onClick={() => handleTogglePublicAccess(false)}
+                            className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+                          >
+                            <Lock className="w-3 h-3" />
+                            <span>
+                              {busyKey === `pub-${inspectedObject.objectName}`
+                                ? 'Revoking...'
+                                : 'Make Private (Revoke Public URI)'}
+                            </span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={
+                              busyKey === `pub-${inspectedObject.objectName}`
+                            }
+                            onClick={() => handleTogglePublicAccess(true)}
+                            className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                          >
+                            <Unlock className="w-3 h-3" />
+                            <span>
+                              {busyKey === `pub-${inspectedObject.objectName}`
+                                ? 'Converting to Public...'
+                                : 'Convert to Public & Enable HTTPS URI'}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 3 Official GCS URIs: Public HTTPS, Authenticated Console HTTPS, and gs:// */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 text-[11px]">
+                      {/* 1. Public HTTPS URI */}
+                      <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
+                        <div className="min-w-0">
+                          <div className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400">
+                            Public HTTPS URL (storage.googleapis.com)
+                          </div>
+                          <code
+                            className="text-zinc-800 dark:text-zinc-200 truncate block"
+                            title={publicUrl}
+                          >
+                            {publicUrl}
+                          </code>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyText(publicUrl, 'pub-https-uri')
+                            }
+                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
+                            title="Copy Public HTTPS URL"
+                          >
+                            {copiedKey === 'pub-https-uri' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <a
+                            href={publicUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-emerald-500"
+                            title="Open Public HTTPS URL in new tab"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* 2. Authenticated Console HTTPS URI */}
+                      <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
+                        <div className="min-w-0">
+                          <div className="text-[9px] uppercase font-bold text-blue-500">
+                            Authenticated URL (storage.cloud.google.com)
+                          </div>
+                          <code
+                            className="text-zinc-800 dark:text-zinc-200 truncate block"
+                            title={authConsoleUrl}
+                          >
+                            {authConsoleUrl}
+                          </code>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyText(authConsoleUrl, 'auth-https-uri')
+                            }
+                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
+                            title="Copy Authenticated Browser URL"
+                          >
+                            {copiedKey === 'auth-https-uri' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <a
+                            href={authConsoleUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500"
+                            title="Open Authenticated Console URL in new tab"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* 3. Native gs:// URI */}
+                      <div className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-1.5">
+                        <div className="min-w-0">
+                          <div className="text-[9px] uppercase font-bold text-zinc-400">
+                            Cloud Storage URI (gs://)
+                          </div>
+                          <code
+                            className="text-zinc-800 dark:text-zinc-200 truncate block"
+                            title={gsUri}
+                          >
+                            {gsUri}
+                          </code>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(gsUri, 'gs-uri')}
+                            className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:text-blue-500 cursor-pointer"
+                            title="Copy gs:// URI"
+                          >
+                            {copiedKey === 'gs-uri' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Studio Mode Switcher Tabs */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">

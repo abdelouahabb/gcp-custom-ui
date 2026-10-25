@@ -19011,11 +19011,11 @@ app.get(
         return res.send(Buffer.from(fullMediaRes.data || []));
       }
 
-      const [metaRes, mediaRes] = await Promise.all([
+      const [metaRes, mediaRes, iamRes] = await Promise.all([
         gcpHttp.get(
           `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
             bucketName
-          )}/o/${encodeURIComponent(objectName)}`,
+          )}/o/${encodeURIComponent(objectName)}?projection=full`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -19038,9 +19038,63 @@ app.get(
             timeout: 7000,
           }
         ),
+        gcpHttp
+          .get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/iam`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+              timeout: 4000,
+            }
+          )
+          .catch(() => ({ data: { bindings: [] } })),
       ]);
 
       const meta = metaRes.data || {};
+      const encodedObjectPath = String(objectName)
+        .split('/')
+        .map((seg) => encodeURIComponent(seg))
+        .join('/');
+      const publicHttpsUrl = `https://storage.googleapis.com/${encodeURIComponent(
+        bucketName
+      )}/${encodedObjectPath}`;
+      const authenticatedHttpsUrl = `https://storage.cloud.google.com/${encodeURIComponent(
+        bucketName
+      )}/${encodedObjectPath}`;
+      const gsUri = `gs://${bucketName}/${objectName}`;
+
+      const hasPublicObjectAcl = Array.isArray(meta.acl)
+        ? meta.acl.some(
+            (entry) =>
+              entry.entity === 'allUsers' ||
+              entry.entity === 'allAuthenticatedUsers'
+          )
+        : false;
+
+      const iamBindings = Array.isArray(iamRes.data?.bindings)
+        ? iamRes.data.bindings
+        : [];
+      const hasPublicBucketIam = iamBindings.some(
+        (b) =>
+          /objectViewer|objectAdmin|legacyObjectReader|storage\.admin/i.test(
+            String(b.role || '')
+          ) &&
+          Array.isArray(b.members) &&
+          b.members.some(
+            (m) => m === 'allUsers' || m === 'allAuthenticatedUsers'
+          )
+      );
+
+      const isPublic = Boolean(hasPublicObjectAcl || hasPublicBucketIam);
+      const publicAccessScope = hasPublicObjectAcl
+        ? 'OBJECT_ACL'
+        : hasPublicBucketIam
+        ? 'BUCKET_IAM'
+        : 'PRIVATE';
       const contentType = String(meta.contentType || 'text/plain').toLowerCase();
       const buf = Buffer.from(mediaRes.data || []);
 
@@ -19099,6 +19153,11 @@ app.get(
         objectName,
         bucketName,
         metadata: meta,
+        isPublic,
+        publicAccessScope,
+        publicHttpsUrl,
+        authenticatedHttpsUrl,
+        gsUri,
         isTextLike,
         isImage,
         detectedSignature,
@@ -19380,6 +19439,229 @@ app.patch(
           err.response?.data?.error?.message ||
           err.message ||
           `Failed to update metadata on gs://${bucketName}/${objectName}`,
+      });
+    }
+  }
+);
+
+// 6c. Toggle Object Public Access & Generate Live Public HTTPS URI (https://storage.googleapis.com/...)
+app.post(
+  '/api/project/:id/storage/buckets/:bucketName/objects/public-access',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const {
+      objectName,
+      makePublic = true,
+      preferredScope = 'AUTO', // 'AUTO' | 'OBJECT_ACL' | 'BUCKET_IAM'
+    } = req.body || {};
+
+    if (!objectName) {
+      return res.status(400).json({ error: 'Missing objectName.' });
+    }
+
+    const encodedObjectPath = String(objectName)
+      .split('/')
+      .map((seg) => encodeURIComponent(seg))
+      .join('/');
+    const publicHttpsUrl = `https://storage.googleapis.com/${encodeURIComponent(
+      bucketName
+    )}/${encodedObjectPath}`;
+    const authenticatedHttpsUrl = `https://storage.cloud.google.com/${encodeURIComponent(
+      bucketName
+    )}/${encodedObjectPath}`;
+    const gsUri = `gs://${bucketName}/${objectName}`;
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        'x-goog-user-project': projectId,
+      };
+
+      if (makePublic) {
+        // Step 1: Inspect bucket iamConfiguration so we can relax PAP ('inherited') if needed
+        const bucketRes = await gcpHttp.get(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+            bucketName
+          )}`,
+          { headers, timeout: 6000 }
+        );
+        const iamConfig = bucketRes.data?.iamConfiguration || {};
+        const papEnforced =
+          iamConfig.publicAccessPrevention === 'enforced';
+        const ublaEnabled = Boolean(
+          iamConfig.uniformBucketLevelAccess?.enabled
+        );
+
+        // Relax Public Access Prevention to 'inherited' so GCP allows allUsers access
+        if (papEnforced) {
+          await gcpHttp.patch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}`,
+            {
+              iamConfiguration: {
+                publicAccessPrevention: 'inherited',
+              },
+            },
+            { headers, timeout: 7000 }
+          );
+        }
+
+        let appliedScope = 'BUCKET_IAM';
+
+        // Try Single-Object Fine-Grained ACL first if UBLA is disabled or user requested OBJECT_ACL
+        if (!ublaEnabled || preferredScope === 'OBJECT_ACL') {
+          try {
+            if (ublaEnabled && preferredScope === 'OBJECT_ACL') {
+              await gcpHttp.patch(
+                `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                  bucketName
+                )}`,
+                {
+                  iamConfiguration: {
+                    publicAccessPrevention: 'inherited',
+                    uniformBucketLevelAccess: { enabled: false },
+                  },
+                },
+                { headers, timeout: 7000 }
+              );
+            }
+
+            await gcpHttp.post(
+              `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                bucketName
+              )}/o/${encodeURIComponent(objectName)}/acl`,
+              {
+                entity: 'allUsers',
+                role: 'READER',
+              },
+              { headers, timeout: 7000 }
+            );
+            appliedScope = 'OBJECT_ACL';
+          } catch {
+            appliedScope = 'BUCKET_IAM';
+          }
+        }
+
+        // If Uniform Bucket-Level Access (UBLA) is active or fallback needed, bind allUsers -> roles/storage.objectViewer
+        if (appliedScope === 'BUCKET_IAM') {
+          const iamGet = await gcpHttp.get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/iam`,
+            { headers, timeout: 6000 }
+          );
+          const policy = iamGet.data || { bindings: [] };
+          const bindings = Array.isArray(policy.bindings)
+            ? [...policy.bindings]
+            : [];
+          const viewerRole = 'roles/storage.objectViewer';
+          const existingBinding = bindings.find((b) => b.role === viewerRole && !b.condition);
+          if (existingBinding) {
+            if (!existingBinding.members.includes('allUsers')) {
+              existingBinding.members.push('allUsers');
+            }
+          } else {
+            bindings.push({
+              role: viewerRole,
+              members: ['allUsers'],
+            });
+          }
+
+          await gcpHttp.put(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/iam`,
+            {
+              ...policy,
+              bindings,
+            },
+            { headers, timeout: 7000 }
+          );
+        }
+
+        recordFlightEvent(projectId, {
+          actionType: 'STORAGE_OBJECT_PUBLIC_ENABLE',
+          title: `Enabled Public HTTPS URI for gs://${bucketName}/${objectName} (${appliedScope})`,
+          targetName: `${bucketName}/${objectName}`,
+          region: 'GLOBAL',
+          undoable: false,
+        });
+
+        return res.json({
+          ok: true,
+          isPublic: true,
+          publicAccessScope: appliedScope,
+          publicHttpsUrl,
+          authenticatedHttpsUrl,
+          gsUri,
+          message: `Object is now Public! Live HTTPS URI: ${publicHttpsUrl}`,
+        });
+      } else {
+        // Make Private: Revoke object ACL (if Fine-Grained) + remove allUsers from Bucket IAM
+        await gcpHttp
+          .delete(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/o/${encodeURIComponent(objectName)}/acl/allUsers`,
+            { headers, timeout: 5000 }
+          )
+          .catch(() => null);
+
+        try {
+          const iamGet = await gcpHttp.get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/iam`,
+            { headers, timeout: 6000 }
+          );
+          const policy = iamGet.data || { bindings: [] };
+          const cleanedBindings = (policy.bindings || [])
+            .map((b) => ({
+              ...b,
+              members: (b.members || []).filter(
+                (m) => m !== 'allUsers' && m !== 'allAuthenticatedUsers'
+              ),
+            }))
+            .filter((b) => b.members.length > 0);
+
+          await gcpHttp.put(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/iam`,
+            {
+              ...policy,
+              bindings: cleanedBindings,
+            },
+            { headers, timeout: 7000 }
+          );
+        } catch {
+          // ignore IAM cleanup error if only object ACL was used
+        }
+
+        return res.json({
+          ok: true,
+          isPublic: false,
+          publicAccessScope: 'PRIVATE',
+          publicHttpsUrl,
+          authenticatedHttpsUrl,
+          gsUri,
+          message: `Revoked public access on gs://${bucketName}/${objectName} (Private Zero-Trust restored).`,
+        });
+      }
+    } catch (err) {
+      return res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          `Failed to toggle public access on gs://${bucketName}/${objectName}`,
       });
     }
   }
