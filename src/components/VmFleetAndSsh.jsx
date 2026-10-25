@@ -123,6 +123,7 @@ export default function VmFleetAndSsh({
   const [copiedSshCli, setCopiedSshCli] = useState(false);
   const [sshTranscript, setSshTranscript] = useState([]);
   const [sshTerminalExpanded, setSshTerminalExpanded] = useState(false);
+  const [splitLayoutMode, setSplitLayoutMode] = useState('4_8'); // '4_8' (33% VM / 67% SSH) | '5_7' (42% / 58%) | '6_6' (50% / 50%)
   const [serialConsoleOutput, setSerialConsoleOutput] = useState('');
   const [serialLoading, setSerialLoading] = useState(false);
   const [selectedRegionFilter, setSelectedRegionFilter] = useState('ALL');
@@ -864,51 +865,109 @@ export default function VmFleetAndSsh({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-          {/* VM Fleet List */}
-          <div
-            className={`${
-              sshTerminalExpanded
-                ? 'xl:col-span-12 order-2'
-                : 'xl:col-span-6'
-            } space-y-3`}
-          >
-            {filteredVms.map((vm) => {
-              const pendingOp = pendingOps[vm.name];
-              const isDeleting =
-                pendingOp?.type === 'DELETING' ||
-                vm.status === 'DEPROVISIONING';
-              const isTransitional =
-                Boolean(pendingOp) ||
-                ['STOPPING', 'PROVISIONING', 'STAGING', 'SUSPENDING', 'DEPROVISIONING'].includes(
-                  vm.status
-                );
-              const effectiveStatus = pendingOp?.type || vm.status;
-              const isRunning =
-                vm.status === 'RUNNING' && !isDeleting && !pendingOp;
-              const isSuspended = vm.status === 'SUSPENDED' && !pendingOp;
-              const isStopped =
-                (vm.status === 'TERMINATED' || vm.status === 'STOPPED') &&
-                !isDeleting &&
-                !pendingOp;
-              const isSshActive = activeSshVm?.name === vm.name && !isDeleting;
-              const isBusy = powerBusyVm === vm.name || isTransitional;
-              const vmReg =
-                vm.region || vm.zone.split('-').slice(0, 2).join('-');
-
-              return (
-                <div
-                  key={vm.id}
-                  className={`relative overflow-hidden bg-white dark:bg-[#202124] border rounded-xl p-5 shadow-sm transition-all duration-300 ${
-                    isDeleting
-                      ? 'border-red-500/40 bg-zinc-100/70 dark:bg-zinc-900/60 opacity-65 grayscale-[60%] select-none'
-                      : isTransitional
-                      ? 'border-amber-500/40 opacity-85'
-                      : isSshActive
-                      ? 'border-blue-500 ring-1 ring-blue-500/40'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700'
+        <div className="space-y-2.5">
+          {/* Asymmetric Master-Detail Workspace Split Switcher */}
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800/80 text-[11px] font-mono">
+            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+              <Server className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                Master-Detail Workspace Layout:
+              </span>
+              <span className="hidden sm:inline text-zinc-500">
+                {openMigrateCloudRunVm || openTunnelVm
+                  ? 'Auto-expanded 50% / 50% while VM drawer is open'
+                  : splitLayoutMode === '4_8'
+                  ? 'Compact VM Sidebar (33%) · Wide SSH & SCP Workbench (67%)'
+                  : splitLayoutMode === '5_7'
+                  ? 'Balanced VM Sidebar (42%) · SSH & SCP Workbench (58%)'
+                  : 'Equal Split (50% / 50%)'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              {[
+                { id: '4_8', label: '33% VM / 67% SSH (Recommended)' },
+                { id: '5_7', label: '42% / 58%' },
+                { id: '6_6', label: '50% / 50%' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setSshTerminalExpanded(false);
+                    setSplitLayoutMode(opt.id);
+                  }}
+                  className={`px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer ${
+                    !sshTerminalExpanded && splitLayoutMode === opt.id
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
                   }`}
                 >
+                  {opt.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setSshTerminalExpanded((prev) => !prev)}
+                className={`px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer ${
+                  sshTerminalExpanded
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
+                }`}
+              >
+                {sshTerminalExpanded ? 'Exit Full-Width (100%)' : '100% Full SSH'}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+            {/* Compact Left VM Fleet Sidebar (Default 4/12 = 33%, auto-widens to 6/12 when a VM drawer is open) */}
+            <div
+              className={`${
+                sshTerminalExpanded
+                  ? 'xl:col-span-12 order-2'
+                  : openMigrateCloudRunVm || openTunnelVm || splitLayoutMode === '6_6'
+                  ? 'xl:col-span-6'
+                  : splitLayoutMode === '5_7'
+                  ? 'xl:col-span-5'
+                  : 'xl:col-span-4'
+              } space-y-3 transition-all duration-200`}
+            >
+              {filteredVms.map((vm) => {
+                const pendingOp = pendingOps[vm.name];
+                const isDeleting =
+                  pendingOp?.type === 'DELETING' ||
+                  vm.status === 'DEPROVISIONING';
+                const isTransitional =
+                  Boolean(pendingOp) ||
+                  ['STOPPING', 'PROVISIONING', 'STAGING', 'SUSPENDING', 'DEPROVISIONING'].includes(
+                    vm.status
+                  );
+                const effectiveStatus = pendingOp?.type || vm.status;
+                const isRunning =
+                  vm.status === 'RUNNING' && !isDeleting && !pendingOp;
+                const isSuspended = vm.status === 'SUSPENDED' && !pendingOp;
+                const isStopped =
+                  (vm.status === 'TERMINATED' || vm.status === 'STOPPED') &&
+                  !isDeleting &&
+                  !pendingOp;
+                const isSshActive = activeSshVm?.name === vm.name && !isDeleting;
+                const isBusy = powerBusyVm === vm.name || isTransitional;
+                const vmReg =
+                  vm.region || vm.zone.split('-').slice(0, 2).join('-');
+
+                return (
+                  <div
+                    key={vm.id}
+                    className={`relative overflow-hidden bg-white dark:bg-[#202124] border rounded-xl p-4 shadow-sm transition-all duration-300 ${
+                      isDeleting
+                        ? 'border-red-500/40 bg-zinc-100/70 dark:bg-zinc-900/60 opacity-65 grayscale-[60%] select-none'
+                        : isTransitional
+                        ? 'border-amber-500/40 opacity-85'
+                        : isSshActive
+                        ? 'border-blue-500 ring-1 ring-blue-500/40'
+                        : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700'
+                    }`}
+                  >
                   {/* Animated Top Progress Strip during GCP Zonal Operation */}
                   {isTransitional && (
                     <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
@@ -1130,8 +1189,14 @@ export default function VmFleetAndSsh({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
-                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
+                  <div
+                    className={`grid grid-cols-2 ${
+                      sshTerminalExpanded || splitLayoutMode === '6_6'
+                        ? 'sm:grid-cols-4'
+                        : ''
+                    } gap-2 mb-3.5`}
+                  >
+                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
                       <div className="text-[10px] uppercase text-zinc-500">
                         Internal VPC IP ({vm.network || 'default'})
                       </div>
@@ -1139,7 +1204,7 @@ export default function VmFleetAndSsh({
                         {vm.internalIp}
                       </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
+                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
                       <div className="text-[10px] uppercase text-zinc-500">
                         External NAT IP
                       </div>
@@ -1147,7 +1212,7 @@ export default function VmFleetAndSsh({
                         {vm.externalIp}
                       </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
+                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
                       <div className="text-[10px] uppercase text-zinc-500">
                         Boot Disk ({vm.diskType || 'pd-balanced'})
                       </div>
@@ -1155,7 +1220,7 @@ export default function VmFleetAndSsh({
                         {vm.diskSizeGb} GB · {vm.osImage}
                       </div>
                     </div>
-                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2.5">
+                    <div className="bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2">
                       <div className="text-[10px] uppercase text-zinc-500">
                         CPU Platform & Tags
                       </div>
@@ -2537,13 +2602,17 @@ export default function VmFleetAndSsh({
             })}
           </div>
 
-          {/* Real Open-Source Interactive Web-SSH (@xterm/xterm + SSH2 / Linux PTY) */}
+          {/* Wide Right Interactive Web-SSH & Visual SCP/SFTP Studio (Default 8/12 = 67%) */}
           <div
             className={`${
               sshTerminalExpanded
                 ? 'xl:col-span-12 order-1'
-                : 'xl:col-span-6'
-            } w-full`}
+                : openMigrateCloudRunVm || openTunnelVm || splitLayoutMode === '6_6'
+                ? 'xl:col-span-6'
+                : splitLayoutMode === '5_7'
+                ? 'xl:col-span-7'
+                : 'xl:col-span-8'
+            } w-full transition-all duration-200`}
           >
             <XtermWebSshTerminal
               projectId={projectId}
@@ -2565,6 +2634,7 @@ export default function VmFleetAndSsh({
               openScpTrigger={openScpTrigger}
               scpTargetVmName={scpTargetVmName}
             />
+          </div>
           </div>
         </div>
       )}
