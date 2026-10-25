@@ -479,6 +479,7 @@ export default function VmFleetAndSsh({
       diskBucketName: defaultBucket,
       diskMountPath: '/mnt/gce-disk',
       diskReadOnly: false,
+      useDirectVmGcsRsync: false,
       containerImage: 'mirror.gcr.io/library/python:3.12-slim',
       containerPort: 8080,
       cpu,
@@ -507,6 +508,7 @@ export default function VmFleetAndSsh({
       );
       const data = res.data || {};
       setDetectedVmRuntimeInfo(data);
+      const guardrails = data.diskMigrationGuardrails || {};
       setMigrateForm((prev) => ({
         ...prev,
         targetPath: data.resolvedDir || prev.targetPath,
@@ -514,6 +516,10 @@ export default function VmFleetAndSsh({
         migrationMode: data.detectedDockerImage
           ? 'CUSTOM_IMAGE'
           : 'MOUNT_GCS_FUSE_DISK',
+        useDirectVmGcsRsync: Boolean(
+          guardrails.exceedsInlineHttpSyncLimit ||
+            guardrails.isLargeProvisionedDisk
+        ),
         containerImage:
           data.detectedDockerImage ||
           'mirror.gcr.io/library/python:3.12-slim',
@@ -569,6 +575,8 @@ export default function VmFleetAndSsh({
           diskBucketName: migrateForm.diskBucketName,
           diskMountPath: migrateForm.diskMountPath || '/mnt/gce-disk',
           diskReadOnly: Boolean(migrateForm.diskReadOnly),
+          useDirectVmGcsRsync: Boolean(migrateForm.useDirectVmGcsRsync),
+          targetPath: migrateForm.targetPath || '/var/www/html',
           containerImage: migrateForm.containerImage,
           extractedBundleB64: migrateForm.extractedBundleB64,
           primaryFileName: migrateForm.primaryFileName || 'index.html',
@@ -1477,7 +1485,7 @@ export default function VmFleetAndSsh({
                       </div>
 
                       {migrateForm.migrationMode === 'MOUNT_GCS_FUSE_DISK' && (
-                        <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/30 space-y-2.5">
+                        <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/30 space-y-3">
                           <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                             <div className="font-bold text-blue-600 dark:text-blue-400">
                               PERSISTENT CLOUD RUN GEN2 DISK MOUNT (volumes[].gcs via Cloud Storage FUSE)
@@ -1554,6 +1562,135 @@ export default function VmFleetAndSsh({
                                   Read-Only (Immutable Disk Mount)
                                 </option>
                               </select>
+                            </div>
+                          </div>
+
+                          {/* LARGE DISK (e.g. 2 TB GCE Disk) & CLOUD STORAGE FUSE ARCHITECTURAL GUARDRAILS */}
+                          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/35 space-y-2.5 text-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="font-bold font-mono text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                                <span>
+                                  LARGE GCE DISK &amp; CLOUD STORAGE FUSE GUARDRAILS (100 GB – 2 TB+ DISK LIMITS)
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                                <span className="px-2 py-0.5 rounded bg-zinc-900/80 text-zinc-100">
+                                  Provisioned Disk:{' '}
+                                  {detectedVmRuntimeInfo?.diskMigrationGuardrails
+                                    ?.totalProvisionedDiskGb || 15}{' '}
+                                  GB ($
+                                  {detectedVmRuntimeInfo?.diskMigrationGuardrails
+                                    ?.provisionedGceMonthlyUsd ?? '1.50'}
+                                  /mo GCE PD)
+                                </span>
+                                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
+                                  Target Dir Used:{' '}
+                                  {(
+                                    (detectedVmRuntimeInfo?.diskMigrationGuardrails
+                                      ?.targetDirSizeBytes || 4096) / 1024
+                                  ).toFixed(1)}{' '}
+                                  KB (
+                                  {detectedVmRuntimeInfo?.diskMigrationGuardrails
+                                    ?.targetDirFileCount || 1}{' '}
+                                  files)
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                              {(
+                                detectedVmRuntimeInfo?.diskMigrationGuardrails
+                                  ?.architecturalWarnings || [
+                                  {
+                                    id: 'LARGE_DISK_TRANSFER_BOTTLENECK',
+                                    severity: 'WARNING',
+                                    title:
+                                      '1. What if this VM has a 2 TB Disk? (50 MB Browser Cap vs. Direct Andromeda Rsync)',
+                                    detail:
+                                      'Browser-mediated SSH extraction is capped at 50 MB so a 2 TB disk never crashes local RAM or times out HTTP. For 100 GB – 2 TB+ disks, enable "Direct VM → GCS Andromeda Parallel Rsync" below to stream directly from the VM to GCS at 20–100 Gbps ($0 regional egress).',
+                                  },
+                                  {
+                                    id: 'POSIX_LOCK_AND_DATABASE_WARNING',
+                                    severity: 'WARNING',
+                                    title:
+                                      '2. Object FUSE vs. Block Storage (No SQLite / PostgreSQL / MySQL on volumes[].gcs)',
+                                    detail:
+                                      'Cloud Storage FUSE has ~10–30 ms first-byte latency and no cross-instance POSIX file locks (flock/fcntl). Use volumes[].gcs for media, web assets, and blobs (up to Petabytes)—never for transactional database files (/var/lib/mysql, PG_VERSION, .sqlite).',
+                                  },
+                                  {
+                                    id: 'CLOUD_RUN_MEMORY_CACHE_AND_SMALL_FILES',
+                                    severity: 'INFO',
+                                    title:
+                                      '3. Cloud Run 32 GiB RAM Ceiling & Small-File Metadata Overhead',
+                                    detail:
+                                      'Cloud Run Gen2 caps container RAM at 32 GiB (shared with GCS FUSE metadata cache). Avoid mounting millions of tiny files (raw node_modules or .git) on FUSE; bake static dependencies into the container image and keep data/uploads on the mounted disk.',
+                                  },
+                                  {
+                                    id: 'PROVISIONED_VS_USED_COST_MATH',
+                                    severity: 'INFO',
+                                    title:
+                                      '4. 2 TB Provisioned Disk Cost Trap ($204.80/mo GCE PD vs. Pay-Per-Byte GCS FUSE)',
+                                    detail:
+                                      'A 2 TB (2,048 GB) GCE pd-balanced disk bills $204.80/mo even if 99% empty. On Cloud Run volumes[].gcs, you pay $0.020/GB/mo ONLY for actual bytes stored ($40.96/mo if all 2 TB are full—80% cheaper—or <$0.01/mo if only a few MB are used).',
+                                  },
+                                ]
+                              ).map((w) => (
+                                <div
+                                  key={w.id}
+                                  className={`p-2 rounded border ${
+                                    w.severity === 'CRITICAL'
+                                      ? 'bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-300'
+                                      : 'bg-white/70 dark:bg-zinc-900/70 border-amber-500/25 text-zinc-700 dark:text-zinc-300'
+                                  }`}
+                                >
+                                  <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-0.5">
+                                    {w.title}
+                                  </div>
+                                  <div className="leading-relaxed text-[11px]">
+                                    {w.detail}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-500/20">
+                              <label className="inline-flex items-center gap-2 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(migrateForm.useDirectVmGcsRsync)}
+                                  onChange={(e) =>
+                                    setMigrateForm((prev) => ({
+                                      ...prev,
+                                      useDirectVmGcsRsync: e.target.checked,
+                                    }))
+                                  }
+                                  className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                                />
+                                <span>
+                                  <strong>
+                                    Direct VM → GCS Andromeda Parallel Sync (
+                                    <code>gcloud storage rsync -r</code>)
+                                  </strong>{' '}
+                                  — Bypass browser 50 MB limit &amp; stream large disks directly from VM to{' '}
+                                  <code>gs://{migrateForm.diskBucketName}</code> at 20+ Gbps
+                                </span>
+                              </label>
+
+                              {onRunInShell && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onRunInShell(
+                                      `gcloud compute ssh ${vm.name} --zone=${vm.zone} --project=${projectId} --command="gcloud storage rsync -r ${migrateForm.targetPath || '/var/www/html'} gs://${migrateForm.diskBucketName} || gsutil -m rsync -r ${migrateForm.targetPath || '/var/www/html'} gs://${migrateForm.diskBucketName}"`
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-mono font-semibold bg-amber-600 hover:bg-amber-500 text-white cursor-pointer"
+                                >
+                                  <Terminal className="w-3 h-3" />
+                                  <span>Run Direct 20Gbps VM→GCS Rsync in Shell</span>
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>

@@ -2457,8 +2457,13 @@ app.post('/api/project/:projectId/vms/:vmName/extract-workload', async (req, res
     let primaryFileName = 'index.html';
     let extractedBundleB64 = '';
     let resolvedDir = safeTargetPath;
+    let targetDirSizeBytes = 0;
+    let targetDirFileCount = 0;
+    let filesystemTotalBytes = 0;
+    let filesystemUsedBytes = 0;
+    let detectedDatabaseFiles = [];
 
-    // 2. If VM is RUNNING, extract real files, listening ports, and Docker containers via SSH
+    // 2. If VM is RUNNING, extract real files, listening ports, disk size metrics, and Docker containers via SSH
     if (vmStatus === 'RUNNING') {
       const extractScript = [
         'export DEBIAN_FRONTEND=noninteractive',
@@ -2474,6 +2479,13 @@ app.post('/api/project/:projectId/vms/:vmName/extract-workload', async (req, res
         '  done',
         'fi',
         'echo "$TARGET_DIR"',
+        'echo "===DISK_METRICS==="',
+        'DIR_BYTES=$(du -sb "$TARGET_DIR" 2>/dev/null | awk \'{print $1}\' || echo 0)',
+        'FILE_CNT=$(find "$TARGET_DIR" -maxdepth 4 -type f 2>/dev/null | wc -l || echo 0)',
+        'DF_LINE=$(df -B1 "$TARGET_DIR" 2>/dev/null | tail -n 1 | awk \'{print $2"|"$3}\' || echo "0|0")',
+        'echo "${DIR_BYTES:-0}|${FILE_CNT:-0}|${DF_LINE:-0|0}"',
+        'echo "===DB_LOCK_FILES==="',
+        'find "$TARGET_DIR" -maxdepth 3 \\( -name "*.sqlite*" -o -name "*.db" -o -name "*.ibd" -o -name "PG_VERSION" -o -name "*.wal" -o -name "*.ldb" \\) 2>/dev/null | head -n 6 || true',
         'echo "===FILE_LIST==="',
         'ls -la "$TARGET_DIR" 2>/dev/null | head -n 25 || true',
         'echo "===PRIMARY_FILE==="',
@@ -2534,7 +2546,22 @@ app.post('/api/project/:projectId/vms/:vmName/extract-workload', async (req, res
         dockerPsOutput = parseSection('===DOCKER_PS===', '===PORTS===');
         listeningPortsOutput = parseSection('===PORTS===', '===TARGET_DIR===');
         resolvedDir =
-          parseSection('===TARGET_DIR===', '===FILE_LIST===') || safeTargetPath;
+          parseSection('===TARGET_DIR===', '===DISK_METRICS===') || safeTargetPath;
+        const diskMetricsRaw = parseSection('===DISK_METRICS===', '===DB_LOCK_FILES===');
+        if (diskMetricsRaw) {
+          const parts = diskMetricsRaw.split('|');
+          targetDirSizeBytes = Number(parts[0] || 0);
+          targetDirFileCount = Number(parts[1] || 0);
+          filesystemTotalBytes = Number(parts[2] || 0);
+          filesystemUsedBytes = Number(parts[3] || 0);
+        }
+        const dbLockRaw = parseSection('===DB_LOCK_FILES===', '===FILE_LIST===');
+        if (dbLockRaw) {
+          detectedDatabaseFiles = dbLockRaw
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean);
+        }
         fileListOutput = parseSection('===FILE_LIST===', '===PRIMARY_FILE===');
         const primaryRaw = parseSection('===PRIMARY_FILE===', '===TAR_B64===');
         if (primaryRaw.startsWith('FILE:')) {
@@ -2669,6 +2696,75 @@ CMD ["python3", "-m", "http.server", "8080", "--directory", "/workspace"]
       .replace(/^-+|-+$/g, '')
       .slice(0, 62);
 
+    const totalProvisionedDiskGb = attachedGceDisks.reduce(
+      (acc, d) => acc + Number(d.diskSizeGb || 0),
+      0
+    );
+    const inlineHttpSyncCapBytes = 50 * 1024 * 1024; // 50 MB browser/HTTP inline cap
+    const exceedsInlineHttpSyncLimit = targetDirSizeBytes > inlineHttpSyncCapBytes;
+    const isLargeProvisionedDisk = totalProvisionedDiskGb >= 100; // 100 GB to 64 TB (e.g. 2 TB disk)
+    const directVmToGcsRsyncCommand = `gcloud compute ssh ${vmName} --zone=${zone} --project=${projectId} --command="gcloud storage rsync -r ${resolvedDir} gs://${defaultDiskBucketName} || gsutil -m rsync -r ${resolvedDir} gs://${defaultDiskBucketName}"`;
+
+    const diskMigrationGuardrails = {
+      totalProvisionedDiskGb,
+      targetDirSizeBytes,
+      targetDirFileCount,
+      filesystemTotalBytes,
+      filesystemUsedBytes,
+      detectedDatabaseFiles,
+      inlineHttpSyncCapBytes,
+      exceedsInlineHttpSyncLimit,
+      isLargeProvisionedDisk,
+      hasDatabaseLockRisk: detectedDatabaseFiles.length > 0,
+      directVmToGcsRsyncCommand,
+      provisionedGceMonthlyUsd: Number((totalProvisionedDiskGb * 0.1).toFixed(2)),
+      gcsActualUsedMonthlyUsd: Number(
+        ((Math.max(targetDirSizeBytes, 1024 * 1024) / 1024 ** 3) * 0.02).toFixed(4)
+      ),
+      reference2TbComparison: {
+        gce2TbPdBalancedMonthlyUsd: 204.8,
+        gcs2TbFullStandardMonthlyUsd: 40.96,
+      },
+      architecturalWarnings: [
+        {
+          id: 'LARGE_DISK_TRANSFER_BOTTLENECK',
+          severity:
+            exceedsInlineHttpSyncLimit || isLargeProvisionedDisk ? 'CRITICAL' : 'INFO',
+          title:
+            '1. Large Disk Transfer Limit (e.g., 100 GB – 2 TB+ GCE Disks vs. 50 MB Browser Sync Cap)',
+          detail:
+            'Browser-mediated SSH tarball extraction is capped at 50 MB to prevent local RAM exhaustion and HTTP timeouts. For large disks (such as a 2 TB Persistent Disk), enable "Direct VM → GCS Andromeda Parallel Rsync" below so the VM streams directly to Cloud Storage over Google’s internal 20–100 Gbps network with $0 regional egress.',
+        },
+        {
+          id: 'POSIX_LOCK_AND_DATABASE_WARNING',
+          severity: detectedDatabaseFiles.length > 0 ? 'CRITICAL' : 'WARNING',
+          title:
+            '2. Block Storage vs. Object FUSE (No SQLite / MySQL / PostgreSQL on volumes[].gcs)',
+          detail:
+            detectedDatabaseFiles.length > 0
+              ? `Detected database/lock files (${detectedDatabaseFiles.join(
+                  ', '
+                )}) in ${resolvedDir}! Cloud Storage FUSE does not support POSIX byte-range file locks (flock/fcntl) across multiple Cloud Run instances—migrate relational/transactional databases to Cloud SQL or Cloud Filestore NFS instead.`
+              : 'Cloud Storage FUSE (volumes[].gcs) is an object-backed filesystem with ~10–30 ms first-byte latency and no cross-instance POSIX file locking (flock/fcntl). Use it for web assets, media, ML models, and documents (up to Petabytes)—never for live PostgreSQL, MySQL, or SQLite data directories.',
+        },
+        {
+          id: 'CLOUD_RUN_MEMORY_CACHE_AND_SMALL_FILES',
+          severity: targetDirFileCount > 10000 ? 'WARNING' : 'INFO',
+          title:
+            '3. Cloud Run 32 GiB RAM Ceiling & Small-File Metadata Overhead',
+          detail:
+            'Cloud Run Gen2 instances support up to 32 GiB RAM, and GCS FUSE caches stat/read metadata in container memory. Avoid mounting directories with hundreds of thousands of tiny files (like raw node_modules or .git) on GCS FUSE; bake static dependencies into the container image via Cloud Build and keep user uploads/assets on the mounted disk.',
+        },
+        {
+          id: 'PROVISIONED_VS_USED_COST_MATH',
+          severity: 'INFO',
+          title:
+            '4. 2 TB Provisioned Disk Cost Trap ($204.80/mo GCE PD vs. Pay-Per-Byte GCS FUSE)',
+          detail: `On Compute Engine, a 2 TB (2,048 GB) pd-balanced disk bills $204.80/mo whether you use 5 GB or 2 TB. On Cloud Run volumes[].gcs, you pay $0.020/GB/mo ONLY for actual bytes stored ($40.96/mo if all 2 TB are full, or <$0.05/mo if only a few MB are used).`,
+        },
+      ],
+    };
+
     const extractedFilesList = fs
       .readdirSync(htmlDir)
       .slice(0, 30)
@@ -2693,6 +2789,7 @@ CMD ["python3", "-m", "http.server", "8080", "--directory", "/workspace"]
       resolvedDir,
       attachedGceDisks,
       defaultDiskBucketName,
+      diskMigrationGuardrails,
       dockerPsOutput,
       detectedDockerImage,
       detectedPort,
@@ -2738,6 +2835,8 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
     diskBucketName = '',
     diskMountPath = '/mnt/gce-disk',
     diskReadOnly = false,
+    useDirectVmGcsRsync = false,
+    targetPath = '/var/www/html',
     containerImage = 'python:3.12-slim',
     extractedBundleB64 = '',
     primaryFileName = 'index.html',
@@ -2925,6 +3024,35 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
           }
         );
         syncedDiskFilesCount += 1;
+      }
+
+      // 4. For large disks (or when Direct VM -> GCS Andromeda Rsync is checked), stream directly from VM to GCS
+      if (useDirectVmGcsRsync) {
+        const cleanRemoteDir = String(targetPath || '/var/www/html')
+          .replace(/[^a-zA-Z0-9._/-]/g, '')
+          .trim() || '/var/www/html';
+        const rsyncScript = `gcloud storage rsync -r "${cleanRemoteDir}" "gs://${resolvedDiskBucket}" 2>/dev/null || gsutil -m rsync -r "${cleanRemoteDir}" "gs://${resolvedDiskBucket}" 2>/dev/null || true`;
+        try {
+          await new Promise((resolve) => {
+            execFile(
+              'gcloud',
+              [
+                'compute',
+                'ssh',
+                vmName,
+                `--zone=${zone}`,
+                `--project=${projectId}`,
+                `--command=${rsyncScript}`,
+                '--quiet',
+                '--ssh-flag=-o ConnectTimeout=8 -o StrictHostKeyChecking=no',
+              ],
+              { env: ATTRIBUTION_ENV, timeout: 25000 },
+              () => resolve()
+            );
+          });
+        } catch {
+          // Non-fatal if VM is stopped or lacks storage scope
+        }
       }
     }
 
