@@ -29,6 +29,9 @@ import {
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
+import VisualCronScheduleBuilder, {
+  describeCronInPlainEnglish,
+} from './VisualCronScheduleBuilder';
 
 const SSH_QUICK_CHIPS = [
   { label: 'Serial Console Logs (REST API)', cmd: 'serial-console' },
@@ -485,6 +488,7 @@ export default function VmFleetAndSsh({
         mt.startsWith('g2-') || mt.startsWith('a2-') || mt.startsWith('a3-'),
       enableMultiContainerSidecar: false,
       autoConvertCronToScheduler: false,
+      cronScheduleExpression: '*/15 * * * *',
       simulatedHardwareScenario: 'AUTO',
       containerImage: 'mirror.gcr.io/library/python:3.12-slim',
       containerPort: 8080,
@@ -609,6 +613,8 @@ export default function VmFleetAndSsh({
           autoConvertCronToScheduler: Boolean(
             migrateForm.autoConvertCronToScheduler
           ),
+          cronScheduleExpression:
+            migrateForm.cronScheduleExpression || '*/15 * * * *',
           targetPath: migrateForm.targetPath || '/var/www/html',
           containerImage: migrateForm.containerImage,
           extractedBundleB64: migrateForm.extractedBundleB64,
@@ -1542,12 +1548,32 @@ export default function VmFleetAndSsh({
                                     <span>
                                       <strong>
                                         Auto-Convert VM Cron → Cloud Run v2 Batch Job + Cloud Scheduler (
-                                        <code>*/15 * * * *</code>)
+                                        {describeCronInPlainEnglish(
+                                          migrateForm.cronScheduleExpression
+                                        )}
+                                        )
                                       </strong>{' '}
                                       — Deploys a native Cloud Run v2 Job (up to 24h timeout + shared FUSE disk) triggered via Scheduler <code>:run</code> API
                                     </span>
                                   </label>
                                 </div>
+
+                                {migrateForm.autoConvertCronToScheduler && (
+                                  <VisualCronScheduleBuilder
+                                    compact
+                                    value={
+                                      migrateForm.cronScheduleExpression ||
+                                      '*/15 * * * *'
+                                    }
+                                    onChange={(newCron) =>
+                                      setMigrateForm((prev) => ({
+                                        ...prev,
+                                        cronScheduleExpression: newCron,
+                                      }))
+                                    }
+                                    label="Visual Schedule Picker for Migrated VM Cron Job (No Cron Syntax Needed)"
+                                  />
+                                )}
                               </div>
                             )}
                           </div>

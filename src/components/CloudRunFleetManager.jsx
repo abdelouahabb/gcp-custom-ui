@@ -25,6 +25,9 @@ import {
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
+import VisualCronScheduleBuilder, {
+  describeCronInPlainEnglish,
+} from './VisualCronScheduleBuilder';
 
 const QUICK_TEMPLATES = [
   {
@@ -2297,7 +2300,11 @@ spec:
                         </span>
                       </div>
                       <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 break-all">
-                        Schedule: <strong>{sj.schedule}</strong> ({sj.timeZone}) · Target:{' '}
+                        Schedule:{' '}
+                        <strong className="text-indigo-600 dark:text-indigo-400">
+                          {describeCronInPlainEnglish(sj.schedule)}
+                        </strong>{' '}
+                        (<code>{sj.schedule}</code> · {sj.timeZone}) · Target:{' '}
                         <code>{sj.targetUri || 'N/A'}</code>
                       </div>
                       {sj.antiPatternWarning && (
@@ -2390,7 +2397,7 @@ spec:
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               <div>
                 <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
                   Cloud Run v2 Job Name
@@ -2432,24 +2439,6 @@ spec:
                   <option value="europe-west4">europe-west4 (Netherlands · L4 GPU)</option>
                   <option value="asia-southeast1">asia-southeast1 (Singapore · L4 GPU)</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
-                  Cron Schedule (Cloud Scheduler)
-                </label>
-                <input
-                  type="text"
-                  value={jobConvertForm.schedule}
-                  onChange={(e) =>
-                    setJobConvertForm((prev) => ({
-                      ...prev,
-                      schedule: e.target.value,
-                    }))
-                  }
-                  placeholder="*/15 * * * *"
-                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                />
               </div>
 
               <div>
@@ -2574,6 +2563,16 @@ spec:
                 />
               </div>
             </div>
+
+            {jobConvertForm.rewireCloudScheduler && (
+              <VisualCronScheduleBuilder
+                value={jobConvertForm.schedule}
+                onChange={(newCron) =>
+                  setJobConvertForm((prev) => ({ ...prev, schedule: newCron }))
+                }
+                label="When Should Cloud Scheduler Trigger This Cloud Run Job? (Visual Schedule Picker)"
+              />
+            )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-indigo-500/20">
               <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-zinc-800 dark:text-zinc-200">

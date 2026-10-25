@@ -15,6 +15,9 @@ import {
   Network,
   Shield,
 } from 'lucide-react';
+import VisualCronScheduleBuilder, {
+  describeCronInPlainEnglish,
+} from './VisualCronScheduleBuilder';
 
 const SERVICE_TABS = [
   {
@@ -4135,7 +4138,7 @@ export default function ResourceProvisionModal({
 
                 {runWorkloadKind === 'JOB' && (
                   <div className="pt-2 border-t border-indigo-500/20 space-y-2.5">
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
                           Parallel Task Shards
@@ -4192,19 +4195,6 @@ export default function ResourceProvisionModal({
                           <option value={5}>5 Retries</option>
                         </select>
                       </div>
-
-                      <div>
-                        <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
-                          Scheduler Cron (:run)
-                        </label>
-                        <input
-                          type="text"
-                          value={runJobSchedule}
-                          onChange={(e) => setRunJobSchedule(e.target.value)}
-                          placeholder="0 * * * *"
-                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
-                        />
-                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-zinc-700 dark:text-zinc-300">
@@ -4230,10 +4220,20 @@ export default function ResourceProvisionModal({
                           className="rounded border-indigo-400 text-indigo-600"
                         />
                         <span>
-                          Attach Cloud Scheduler Trigger (<code>{runJobSchedule}</code> → <code>:run</code> API)
+                          Attach Cloud Scheduler Trigger (
+                          <strong>{describeCronInPlainEnglish(runJobSchedule)}</strong> → <code>:run</code> API)
                         </span>
                       </label>
                     </div>
+
+                    {runJobAttachScheduler && (
+                      <VisualCronScheduleBuilder
+                        compact
+                        value={runJobSchedule}
+                        onChange={(newCron) => setRunJobSchedule(newCron)}
+                        label="Visual Schedule Picker (No Cron Syntax Needed)"
+                      />
+                    )}
                   </div>
                 )}
               </div>
