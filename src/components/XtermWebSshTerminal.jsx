@@ -132,9 +132,23 @@ export default function XtermWebSshTerminal({
       ? 'Cloud Run SSH is off until enabled on a service card'
       : 'SSH is off until enabled on a VM card',
   });
+  const sanitizeUsername = (u) => {
+    const s = String(u || '').trim();
+    if (
+      !s ||
+      /^(connected[\s_]*oauth[\s_]*user|user|default)$/i.test(s) ||
+      /\s/.test(s)
+    ) {
+      return '';
+    }
+    return s;
+  };
+
   const [copiedCli, setCopiedCli] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [customUsername, setCustomUsername] = useState(defaultUsername);
+  const [customUsername, setCustomUsername] = useState(
+    () => sanitizeUsername(defaultUsername) || 'abdelouahab'
+  );
   const [userManuallyPicked, setUserManuallyPicked] = useState(false);
   const [customPort, setCustomPort] = useState('22');
   const [customPassword, setCustomPassword] = useState('');
@@ -151,8 +165,9 @@ export default function XtermWebSshTerminal({
     : Boolean(activeVm) || sshEngine === 'cloud_shell';
 
   useEffect(() => {
-    if (defaultUsername && !customUsername) {
-      setCustomUsername(defaultUsername);
+    const cleanDefault = sanitizeUsername(defaultUsername);
+    if (cleanDefault && !customUsername) {
+      setCustomUsername(cleanDefault);
     }
   }, [defaultUsername, customUsername]);
 
@@ -167,7 +182,7 @@ export default function XtermWebSshTerminal({
       if (data && !userManuallyPicked) {
         const preferred = data.osLoginEnabled
           ? data.osLoginPosixUser
-          : data.localOsUser || defaultUsername;
+          : data.localOsUser || sanitizeUsername(defaultUsername) || 'abdelouahab';
         if (preferred) {
           setCustomUsername(preferred);
         }
@@ -548,6 +563,7 @@ export default function XtermWebSshTerminal({
     selectedInstanceId,
     sshEngine,
     viewMode,
+    customUsername,
     reconnectNonce,
   ]);
 

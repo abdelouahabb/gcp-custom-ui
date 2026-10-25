@@ -157,7 +157,12 @@ export default function VmFleetAndSsh({
   const [migrationResult, setMigrationResult] = useState(null);
   const [migrationError, setMigrationError] = useState(null);
 
-  const userShort = (account || 'user').split('@')[0];
+  const userShort =
+    account &&
+    String(account).includes('@') &&
+    !/connected.oauth.user/i.test(String(account))
+      ? String(account).split('@')[0]
+      : '';
 
   const fetchVms = useCallback(
     async (silent = false) => {

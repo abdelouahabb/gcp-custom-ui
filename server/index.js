@@ -2313,11 +2313,23 @@ app.get('/api/project/:projectId/vms/ssh-identity-mode', async (req, res) => {
     } catch {
       // ignore
     }
-    const emailStr = String(account || '').trim();
+    let emailStr = String(account || '').trim();
+    if (!emailStr.includes('@') || /connected.oauth.user/i.test(emailStr)) {
+      try {
+        const { activeAccount } = discoverLocalGcloudAccounts();
+        if (activeAccount && activeAccount.includes('@')) {
+          emailStr = activeAccount.trim();
+        } else {
+          emailStr = '';
+        }
+      } catch {
+        emailStr = '';
+      }
+    }
     const gcpPrefixUser = emailStr.includes('@')
       ? emailStr.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '_')
       : localOsUser;
-    const osLoginPosixUser = emailStr
+    const osLoginPosixUser = emailStr.includes('@')
       ? emailStr.replace(/[^a-zA-Z0-9_-]/g, '_')
       : `${gcpPrefixUser}_gmail_com`;
 
@@ -62637,7 +62649,12 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
   } catch {
     // ignore
   }
-  const rawUser = (params.get('username') || defaultOsUser).trim();
+  const rawUserParam = (params.get('username') || '').trim();
+  const isInvalidPlaceholderUser =
+    !rawUserParam ||
+    /^(connected[\s_]*oauth[\s_]*user|user|default)$/i.test(rawUserParam) ||
+    /\s/.test(rawUserParam);
+  const rawUser = isInvalidPlaceholderUser ? defaultOsUser : rawUserParam;
   const sshUsername = rawUser
     .split('@')[0]
     .replace(/[^a-zA-Z0-9._-]/g, '_');
