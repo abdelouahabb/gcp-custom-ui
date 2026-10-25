@@ -480,6 +480,8 @@ export default function VmFleetAndSsh({
       diskMountPath: '/mnt/gce-disk',
       diskReadOnly: false,
       useDirectVmGcsRsync: false,
+      enableCloudRunGpu: rawType.startsWith('g2-') || rawType.startsWith('a2-') || rawType.startsWith('a3-'),
+      simulatedHardwareScenario: 'AUTO',
       containerImage: 'mirror.gcr.io/library/python:3.12-slim',
       containerPort: 8080,
       cpu,
@@ -491,6 +493,25 @@ export default function VmFleetAndSsh({
       primaryFilePreview: '',
       extractedBundleB64: '',
     };
+  };
+
+  const CLOUD_RUN_GPU_SUPPORTED_REGIONS = [
+    'us-central1',
+    'us-east4',
+    'europe-west1',
+    'europe-west4',
+    'asia-east1',
+    'asia-northeast1',
+    'asia-southeast1',
+  ];
+
+  const getNearestGpuCompatibleRegion = (reg) => {
+    const r = String(reg || 'us-east1').toLowerCase();
+    if (CLOUD_RUN_GPU_SUPPORTED_REGIONS.includes(r)) return r;
+    if (r.startsWith('us-east') || r.startsWith('southamerica')) return 'us-east4';
+    if (r.startsWith('us-') || r.startsWith('northamerica')) return 'us-central1';
+    if (r.startsWith('europe-') || r.startsWith('me-')) return 'europe-west4';
+    return 'asia-southeast1';
   };
 
   const handleInspectVmForCloudRun = async (vm, customPath) => {
@@ -576,6 +597,8 @@ export default function VmFleetAndSsh({
           diskMountPath: migrateForm.diskMountPath || '/mnt/gce-disk',
           diskReadOnly: Boolean(migrateForm.diskReadOnly),
           useDirectVmGcsRsync: Boolean(migrateForm.useDirectVmGcsRsync),
+          enableCloudRunGpu: Boolean(migrateForm.enableCloudRunGpu),
+          gpuAcceleratorType: 'nvidia-l4',
           targetPath: migrateForm.targetPath || '/var/www/html',
           containerImage: migrateForm.containerImage,
           extractedBundleB64: migrateForm.extractedBundleB64,
@@ -1447,27 +1470,55 @@ export default function VmFleetAndSsh({
                               <option value="4Gi">4Gi</option>
                               <option value="8Gi">8Gi</option>
                               <option value="16Gi">16Gi</option>
+                              <option value="32Gi">32Gi</option>
                             </select>
                           </div>
                         </div>
 
                         <div>
                           <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
-                            Port &amp; Max Scale
+                            Target Cloud Run Region &amp; Max Scale
                           </label>
                           <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              value={migrateForm.containerPort}
+                            <select
+                              value={migrateForm.region}
                               onChange={(e) =>
                                 setMigrateForm((prev) => ({
                                   ...prev,
-                                  containerPort: e.target.value,
+                                  region: e.target.value,
                                 }))
                               }
-                              title="Container listening port"
-                              className="w-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                            />
+                              title="Target Cloud Run Region (L4 GPU supported regions marked)"
+                              className="w-2/3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                            >
+                              <option value="us-east1">
+                                us-east1 (S. Carolina · CPU Only)
+                              </option>
+                              <option value="us-east4">
+                                us-east4 (N. Virginia · L4 GPU Ready)
+                              </option>
+                              <option value="us-central1">
+                                us-central1 (Iowa · L4 GPU Ready)
+                              </option>
+                              <option value="us-west1">
+                                us-west1 (Oregon · CPU Only)
+                              </option>
+                              <option value="europe-west1">
+                                europe-west1 (Belgium · L4 GPU Ready)
+                              </option>
+                              <option value="europe-west4">
+                                europe-west4 (Netherlands · L4 GPU Ready)
+                              </option>
+                              <option value="asia-east1">
+                                asia-east1 (Taiwan · L4 GPU Ready)
+                              </option>
+                              <option value="asia-northeast1">
+                                asia-northeast1 (Tokyo · L4 GPU Ready)
+                              </option>
+                              <option value="asia-southeast1">
+                                asia-southeast1 (Singapore · L4 GPU Ready)
+                              </option>
+                            </select>
                             <input
                               type="number"
                               value={migrateForm.maxInstances}
@@ -1478,9 +1529,263 @@ export default function VmFleetAndSsh({
                                 }))
                               }
                               title="Max auto-scaling Cloud Run instances"
-                              className="w-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              className="w-1/3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                             />
                           </div>
+                        </div>
+                      </div>
+
+                      {/* GCE MACHINE TYPE, HIGH-END GPU / TPU ACCELERATOR CONVERSION & REGION COMPATIBILITY GUARDRAILS */}
+                      <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/35 space-y-2.5 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="font-bold font-mono text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                            <Cpu className="w-4 h-4 text-purple-500 shrink-0" />
+                            <span>
+                              GCE MACHINE FAMILY, GPU / TPU ACCELERATOR CONVERSION &amp; REGION COMPATIBILITY GUARDRAILS
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono uppercase text-zinc-500">
+                              Test / Override Source Hardware Profile:
+                            </span>
+                            <select
+                              value={migrateForm.simulatedHardwareScenario || 'AUTO'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const needsGpu =
+                                  val === 'HIGH_END_GPU_A100_H100' ||
+                                  val === 'CLOUD_TPU_V5E_V6E' ||
+                                  val === 'GCE_L4_GPU';
+                                setMigrateForm((prev) => ({
+                                  ...prev,
+                                  simulatedHardwareScenario: val,
+                                  enableCloudRunGpu: needsGpu
+                                    ? true
+                                    : prev.enableCloudRunGpu,
+                                  cpu: needsGpu
+                                    ? String(Math.max(4, Number(prev.cpu || 4)))
+                                    : val === 'ULTRA_CPU_RAM'
+                                    ? '8'
+                                    : prev.cpu,
+                                  memory: needsGpu
+                                    ? ['16Gi', '32Gi'].includes(prev.memory)
+                                      ? prev.memory
+                                      : '16Gi'
+                                    : val === 'ULTRA_CPU_RAM'
+                                    ? '32Gi'
+                                    : prev.memory,
+                                }));
+                              }}
+                              className="bg-white dark:bg-zinc-900 border border-purple-500/40 rounded-lg px-2 py-1 text-[11px] font-mono text-zinc-900 dark:text-zinc-100"
+                            >
+                              <option value="AUTO">
+                                Auto-Detected VM ({vm.machineType} in {vm.zone})
+                              </option>
+                              <option value="HIGH_END_GPU_A100_H100">
+                                High-End GPU VM (a3-highgpu-8g H100 80GB / a2-highgpu A100)
+                              </option>
+                              <option value="CLOUD_TPU_V5E_V6E">
+                                Cloud TPU VM (ct5lp-hightpu-4t TPU v5e / v6e Trillium)
+                              </option>
+                              <option value="GCE_L4_GPU">
+                                GCE L4 GPU VM (g2-standard-8 · 1x NVIDIA L4 24GB)
+                              </option>
+                              <option value="ULTRA_CPU_RAM">
+                                Ultra-Scale CPU VM (c3-standard-88 / n2-standard-64 · 64 vCPU / 256GB)
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+                          {/* Card 1: Accelerator Conversion Matrix */}
+                          <div
+                            className={`p-2.5 rounded-lg border ${
+                              migrateForm.simulatedHardwareScenario ===
+                                'HIGH_END_GPU_A100_H100' ||
+                              migrateForm.simulatedHardwareScenario ===
+                                'CLOUD_TPU_V5E_V6E' ||
+                              detectedVmRuntimeInfo
+                                ?.acceleratorAndRegionGuardrails
+                                ?.isHighEndGpuFamily ||
+                              detectedVmRuntimeInfo
+                                ?.acceleratorAndRegionGuardrails?.isTpuFamily
+                                ? 'bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200'
+                                : 'bg-white/70 dark:bg-zinc-900/70 border-purple-500/25 text-zinc-700 dark:text-zinc-300'
+                            }`}
+                          >
+                            <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+                              1. GPU / TPU → Cloud Run L4 Conversion
+                            </div>
+                            {migrateForm.simulatedHardwareScenario ===
+                              'CLOUD_TPU_V5E_V6E' ||
+                            detectedVmRuntimeInfo
+                              ?.acceleratorAndRegionGuardrails?.isTpuFamily ? (
+                              <p className="leading-relaxed">
+                                <strong>CRITICAL TPU LIMITATION:</strong> Cloud Run does{' '}
+                                <strong>NOT</strong> support Cloud TPUs (<code>libtpu</code> /{' '}
+                                <code>/dev/accel0</code>). To run on Cloud Run Gen2, convert the XLA backend from{' '}
+                                <code>jax[tpu]</code> / <code>torch_xla</code> to{' '}
+                                <strong>
+                                  CUDA on 1x <code>nvidia-l4</code> (24 GB VRAM)
+                                </strong>
+                                , or keep multi-host TPU slices on GKE Autopilot.
+                              </p>
+                            ) : migrateForm.simulatedHardwareScenario ===
+                                'HIGH_END_GPU_A100_H100' ||
+                              detectedVmRuntimeInfo
+                                ?.acceleratorAndRegionGuardrails
+                                ?.isHighEndGpuFamily ? (
+                              <p className="leading-relaxed">
+                                <strong>HIGH-END GPU DOWN-CONVERSION:</strong> Source VM uses{' '}
+                                <strong>A100 / H100 (80 GB HBM3)</strong>, but Cloud Run Gen2 only supports{' '}
+                                <strong>
+                                  1x <code>nvidia-l4</code> (24 GB GDDR6 VRAM)
+                                </strong>{' '}
+                                per instance. Models &gt;24 GB VRAM must be quantized (FP8 / AWQ INT4) to fit on L4, or deployed to GKE <code>a3-highgpu</code>.
+                              </p>
+                            ) : (
+                              <p className="leading-relaxed">
+                                Cloud Run Gen2 supports attaching{' '}
+                                <strong>
+                                  1x <code>nvidia-l4</code> GPU (24 GB VRAM)
+                                </strong>{' '}
+                                per container instance (requires minimum{' '}
+                                <code>4 vCPU</code> &amp; <code>16 GiB RAM</code>). Any A100/H100 or TPU VM must convert to <code>nvidia-l4</code>.
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Card 2: Region Compatibility Conflict Check */}
+                          {(() => {
+                            const isGpuRegionOk =
+                              CLOUD_RUN_GPU_SUPPORTED_REGIONS.includes(
+                                migrateForm.region
+                              );
+                            const nearestGpuReg =
+                              getNearestGpuCompatibleRegion(migrateForm.region);
+                            return (
+                              <div
+                                className={`p-2.5 rounded-lg border ${
+                                  migrateForm.enableCloudRunGpu && !isGpuRegionOk
+                                    ? 'bg-red-500/15 border-red-500/50 text-red-700 dark:text-red-300'
+                                    : 'bg-white/70 dark:bg-zinc-900/70 border-purple-500/25 text-zinc-700 dark:text-zinc-300'
+                                }`}
+                              >
+                                <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+                                  2. GPU Region &amp; Disk Co-Location Limit
+                                </div>
+                                {!isGpuRegionOk ? (
+                                  <div className="space-y-1.5">
+                                    <p className="leading-relaxed">
+                                      <strong>
+                                        REGION CONFLICT ({migrateForm.region}):
+                                      </strong>{' '}
+                                      Region <code>{migrateForm.region}</code> does{' '}
+                                      <strong>NOT</strong> have Cloud Run{' '}
+                                      <code>nvidia-l4</code> GPUs! Nearest GPU region is{' '}
+                                      <strong>{nearestGpuReg}</strong>, and your{' '}
+                                      <code>volumes[].gcs</code> disk bucket will also be provisioned in{' '}
+                                      <strong>{nearestGpuReg}</strong> for $0 egress.
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setMigrateForm((prev) => ({
+                                          ...prev,
+                                          region: nearestGpuReg,
+                                          enableCloudRunGpu: true,
+                                          cpu: String(
+                                            Math.max(4, Number(prev.cpu || 4))
+                                          ),
+                                          memory: ['16Gi', '32Gi'].includes(
+                                            prev.memory
+                                          )
+                                            ? prev.memory
+                                            : '16Gi',
+                                        }))
+                                      }
+                                      className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-[10px] cursor-pointer"
+                                    >
+                                      Auto-Switch Region &amp; Disk Bucket → {nearestGpuReg} (4 vCPU / 16Gi)
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p className="leading-relaxed">
+                                    Target region <code>{migrateForm.region}</code> is{' '}
+                                    <strong>Cloud Run L4 GPU Compatible</strong> (
+                                    <code>{CLOUD_RUN_GPU_SUPPORTED_REGIONS.join(', ')}</code>
+                                    ), and your <code>volumes[].gcs</code> disk bucket is co-located in{' '}
+                                    <code>{migrateForm.region}</code>.
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })()}
+
+                          {/* Card 3: vCPU / RAM Vertical Ceiling (8 vCPU / 32 GiB Max) */}
+                          <div
+                            className={`p-2.5 rounded-lg border ${
+                              migrateForm.simulatedHardwareScenario ===
+                                'ULTRA_CPU_RAM' ||
+                              detectedVmRuntimeInfo
+                                ?.acceleratorAndRegionGuardrails
+                                ?.exceedsCloudRunCpuRamCeiling
+                                ? 'bg-amber-500/15 border-amber-500/45 text-amber-800 dark:text-amber-200'
+                                : 'bg-white/70 dark:bg-zinc-900/70 border-purple-500/25 text-zinc-700 dark:text-zinc-300'
+                            }`}
+                          >
+                            <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+                              3. Per-Instance Ceiling (Max 8 vCPU / 32 GiB)
+                            </div>
+                            <p className="leading-relaxed">
+                              Cloud Run Gen2 caps a single container instance at{' '}
+                              <strong>8 vCPU &amp; 32 GiB RAM</strong>. If migrating a large vertical GCE VM (e.g., 32–88 vCPUs), Cloud Run replaces vertical scale-up with horizontal scale-out (<code>0 → {migrateForm.maxInstances}</code> instances of 8 vCPU / 32 GiB).
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-purple-500/20">
+                          <label className="inline-flex items-center gap-2 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(migrateForm.enableCloudRunGpu)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                const nearestReg = checked
+                                  ? getNearestGpuCompatibleRegion(
+                                      migrateForm.region
+                                    )
+                                  : migrateForm.region;
+                                setMigrateForm((prev) => ({
+                                  ...prev,
+                                  enableCloudRunGpu: checked,
+                                  region: nearestReg,
+                                  cpu: checked
+                                    ? String(Math.max(4, Number(prev.cpu || 4)))
+                                    : prev.cpu,
+                                  memory: checked
+                                    ? ['16Gi', '32Gi'].includes(prev.memory)
+                                      ? prev.memory
+                                      : '16Gi'
+                                    : prev.memory,
+                                }));
+                              }}
+                              className="rounded border-purple-400 text-purple-600 focus:ring-purple-500"
+                            />
+                            <span>
+                              <strong>
+                                Convert &amp; Attach Cloud Run Gen2 GPU (
+                                <code>1x nvidia-l4 · 24 GB VRAM</code>)
+                              </strong>{' '}
+                              — Auto-enforces min <code>4 vCPU / 16Gi RAM</code> &amp; switches region to nearest GPU-supported region (
+                              <code>
+                                {getNearestGpuCompatibleRegion(migrateForm.region)}
+                              </code>
+                              )
+                            </span>
+                          </label>
                         </div>
                       </div>
 

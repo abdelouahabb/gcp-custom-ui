@@ -2765,6 +2765,68 @@ CMD ["python3", "-m", "http.server", "8080", "--directory", "/workspace"]
       ],
     };
 
+    const rawMachineType =
+      vmInstance?.machineType?.split('/').pop() || 'e2-medium';
+    const sourceRegion = zone.split('-').slice(0, 2).join('-') || 'us-east1';
+    const cloudRunGpuSupportedRegions = [
+      'us-central1',
+      'us-east4',
+      'europe-west1',
+      'europe-west4',
+      'asia-east1',
+      'asia-northeast1',
+      'asia-southeast1',
+    ];
+    const isSourceRegionGpuCompatible =
+      cloudRunGpuSupportedRegions.includes(sourceRegion);
+    const recommendedGpuFallbackRegion = isSourceRegionGpuCompatible
+      ? sourceRegion
+      : sourceRegion.startsWith('us-east') || sourceRegion.startsWith('southamerica')
+      ? 'us-east4'
+      : sourceRegion.startsWith('us-') || sourceRegion.startsWith('northamerica')
+      ? 'us-central1'
+      : sourceRegion.startsWith('europe-') || sourceRegion.startsWith('me-')
+      ? 'europe-west4'
+      : 'asia-southeast1';
+
+    const guestAccelerators = (vmInstance?.guestAccelerators || []).map((a) => ({
+      acceleratorType: a.acceleratorType?.split('/').pop() || 'nvidia-l4',
+      acceleratorCount: Number(a.acceleratorCount || 1),
+    }));
+
+    const isHighEndGpuFamily =
+      rawMachineType.startsWith('a3-') ||
+      rawMachineType.startsWith('a2-') ||
+      guestAccelerators.some((g) => /h100|h200|a100|v100|p100|t4/i.test(g.acceleratorType));
+    const isTpuFamily =
+      rawMachineType.startsWith('ct') ||
+      rawMachineType.startsWith('tpu') ||
+      guestAccelerators.some((g) => /tpu/i.test(g.acceleratorType));
+    const isL4GpuFamily =
+      rawMachineType.startsWith('g2-') ||
+      guestAccelerators.some((g) => /l4/i.test(g.acceleratorType));
+
+    const vcpuMatch = rawMachineType.match(/-(\d+)$/);
+    const detectedVcpus = vcpuMatch ? Number(vcpuMatch[1]) : 2;
+    const exceedsCloudRunCpuRamCeiling = detectedVcpus > 8;
+
+    const acceleratorAndRegionGuardrails = {
+      sourceMachineType: rawMachineType,
+      detectedVcpus,
+      sourceRegion,
+      guestAccelerators,
+      isHighEndGpuFamily,
+      isTpuFamily,
+      isL4GpuFamily,
+      exceedsCloudRunCpuRamCeiling,
+      cloudRunSupportedGpuType: 'nvidia-l4 (1x 24 GB GDDR6 VRAM per instance)',
+      cloudRunMinGpuCpu: '4',
+      cloudRunMinGpuMemory: '16Gi',
+      cloudRunGpuSupportedRegions,
+      isSourceRegionGpuCompatible,
+      recommendedGpuFallbackRegion,
+    };
+
     const extractedFilesList = fs
       .readdirSync(htmlDir)
       .slice(0, 30)
@@ -2790,6 +2852,7 @@ CMD ["python3", "-m", "http.server", "8080", "--directory", "/workspace"]
       attachedGceDisks,
       defaultDiskBucketName,
       diskMigrationGuardrails,
+      acceleratorAndRegionGuardrails,
       dockerPsOutput,
       detectedDockerImage,
       detectedPort,
@@ -2836,6 +2899,8 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
     diskMountPath = '/mnt/gce-disk',
     diskReadOnly = false,
     useDirectVmGcsRsync = false,
+    enableCloudRunGpu = false,
+    gpuAcceleratorType = 'nvidia-l4',
     targetPath = '/var/www/html',
     containerImage = 'python:3.12-slim',
     extractedBundleB64 = '',
@@ -3080,20 +3145,38 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
             containerPort || 8080
           )} --directory /workspace`;
 
+    const effectiveCpu = enableCloudRunGpu
+      ? String(Math.max(4, Number(cpu || 4)))
+      : String(cpu || '1');
+    const effectiveMemory = enableCloudRunGpu
+      ? ['16Gi', '32Gi'].includes(String(memory))
+        ? String(memory)
+        : '16Gi'
+      : String(memory || '1Gi');
+
     const containerSpec = {
       image: effectiveImage,
       ports: [{ name: 'http1', containerPort: Number(containerPort || 8080) }],
       resources: {
         limits: {
-          cpu: String(cpu || '1'),
-          memory: String(memory || '1Gi'),
+          cpu: effectiveCpu,
+          memory: effectiveMemory,
+          ...(enableCloudRunGpu ? { 'nvidia.com/gpu': '1' } : {}),
         },
-        cpuIdle: true,
+        cpuIdle: enableCloudRunGpu ? false : true,
         startupCpuBoost: true,
       },
       env: [
         { name: 'MIGRATED_FROM_GCE_VM', value: String(vmName) },
         { name: 'SOURCE_VM_ZONE', value: String(zone) },
+        ...(enableCloudRunGpu
+          ? [
+              {
+                name: 'CLOUD_RUN_GPU_ACCELERATOR',
+                value: String(gpuAcceleratorType || 'nvidia-l4'),
+              },
+            ]
+          : []),
         ...(isGcsFuseDiskMode
           ? [
               { name: 'MOUNTED_GCS_DISK_BUCKET', value: resolvedDiskBucket },
@@ -3148,6 +3231,14 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
           maxInstanceCount: Math.max(1, Number(maxInstances || 10)),
         },
         executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
+        ...(enableCloudRunGpu
+          ? {
+              nodeSelector: {
+                accelerator: String(gpuAcceleratorType || 'nvidia-l4'),
+              },
+              gpuZonalRedundancyDisabled: true,
+            }
+          : {}),
         ...(isGcsFuseDiskMode
           ? {
               volumes: [
