@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import axios from 'axios';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -16,6 +17,9 @@ import {
   Shield,
   FileText,
   PowerOff,
+  User,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 
 const VM_PTY_MACROS = [
@@ -77,10 +81,16 @@ export default function XtermWebSshTerminal({
   const [copiedCli, setCopiedCli] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [customUsername, setCustomUsername] = useState(defaultUsername);
+  const [userManuallyPicked, setUserManuallyPicked] = useState(false);
   const [customPort, setCustomPort] = useState('22');
   const [customPassword, setCustomPassword] = useState('');
   const [customPrivateKey, setCustomPrivateKey] = useState('');
   const [reconnectNonce, setReconnectNonce] = useState(0);
+
+  // GCP SSH Identity Mode (Standard Metadata SSH User vs IAM OS Login POSIX User)
+  const [identityInfo, setIdentityInfo] = useState(null);
+  const [identityBusy, setIdentityBusy] = useState(false);
+  const [identityToast, setIdentityToast] = useState('');
 
   const isSessionEnabled = isCloudRun
     ? Boolean(cloudRunService)
@@ -91,6 +101,118 @@ export default function XtermWebSshTerminal({
       setCustomUsername(defaultUsername);
     }
   }, [defaultUsername, customUsername]);
+
+  const fetchSshIdentityMode = useCallback(async () => {
+    if (isCloudRun || !projectId) return;
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/vms/ssh-identity-mode`
+      );
+      const data = res.data || null;
+      setIdentityInfo(data);
+      if (data && !userManuallyPicked) {
+        const preferred = data.osLoginEnabled
+          ? data.osLoginPosixUser
+          : data.localOsUser || defaultUsername;
+        if (preferred) {
+          setCustomUsername(preferred);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [isCloudRun, projectId, userManuallyPicked, defaultUsername]);
+
+  useEffect(() => {
+    fetchSshIdentityMode();
+  }, [fetchSshIdentityMode]);
+
+  const handleSelectSshUserProfile = async (candidate) => {
+    if (!candidate?.username) return;
+    setUserManuallyPicked(true);
+    setCustomUsername(candidate.username);
+    const needsOsLogin = candidate.requiresMode === 'OS_LOGIN';
+
+    if (
+      identityInfo &&
+      projectId &&
+      Boolean(identityInfo.osLoginEnabled) !== needsOsLogin
+    ) {
+      setIdentityBusy(true);
+      setIdentityToast(
+        needsOsLogin
+          ? `Switching project to IAM OS Login (enable-oslogin=TRUE) for ${candidate.username}...`
+          : `Unlocking Standard Metadata SSH (enable-oslogin=FALSE) so you connect as "${candidate.username}" (/home/${candidate.username})...`
+      );
+      try {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/vms/ssh-identity-mode`,
+          {
+            enableOsLogin: needsOsLogin,
+            enableSerialPort: true,
+          }
+        );
+        setIdentityInfo((prev) =>
+          prev
+            ? {
+                ...prev,
+                osLoginEnabled: Boolean(res.data?.osLoginEnabled),
+                identityMode: res.data?.identityMode || prev.identityMode,
+              }
+            : prev
+        );
+        setIdentityToast(res.data?.message || '');
+        setTimeout(() => setIdentityToast(''), 5000);
+      } catch {
+        setIdentityToast('');
+      } finally {
+        setIdentityBusy(false);
+      }
+    }
+
+    if (isSessionEnabled) {
+      setReconnectNonce((n) => n + 1);
+    }
+  };
+
+  const handleToggleOsLoginMode = async () => {
+    if (!projectId || identityBusy) return;
+    const nextOsLogin = !identityInfo?.osLoginEnabled;
+    setIdentityBusy(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/ssh-identity-mode`,
+        {
+          enableOsLogin: nextOsLogin,
+          enableSerialPort: true,
+        }
+      );
+      const nextUser = nextOsLogin
+        ? identityInfo?.osLoginPosixUser || customUsername
+        : identityInfo?.localOsUser || defaultUsername;
+      setIdentityInfo((prev) =>
+        prev
+          ? {
+              ...prev,
+              osLoginEnabled: nextOsLogin,
+              identityMode: nextOsLogin ? 'OS_LOGIN' : 'METADATA_SSH',
+            }
+          : prev
+      );
+      if (nextUser) {
+        setCustomUsername(nextUser);
+      }
+      setIdentityToast(res.data?.message || '');
+      setTimeout(() => setIdentityToast(''), 5000);
+      if (isSessionEnabled) {
+        setReconnectNonce((n) => n + 1);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIdentityBusy(false);
+    }
+  };
 
   const sendToPty = useCallback((dataStr) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -113,7 +235,11 @@ export default function XtermWebSshTerminal({
 
   const displayCli = isCloudRun
     ? cloudRunSshCli
-    : activeVm?.sshCommand || '';
+    : activeVm
+    ? `gcloud compute ssh ${
+        customUsername ? `${customUsername}@` : ''
+      }${activeVm.name} --zone=${activeVm.zone} --project=${projectId}`
+    : '';
 
   // Only initialize XTerm.js & WebSocket when `isSessionEnabled` is true
   useEffect(() => {
@@ -619,6 +745,118 @@ export default function XtermWebSshTerminal({
           </div>
         )}
       </div>
+
+      {/* SSH User Profile & GCP OS Login Mode Selector Bar (for VM SSH) */}
+      {!isCloudRun && viewMode === 'LIVE_SSH_PTY' && (
+        <div className="bg-zinc-50/90 dark:bg-zinc-900/70 border-b border-zinc-200 dark:border-zinc-800/80 px-3.5 py-2 flex flex-col gap-1.5 font-mono">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 mr-0.5">
+                <User className="w-3 h-3 text-emerald-500" />
+                <span>SSH User Profile:</span>
+              </span>
+
+              {(
+                identityInfo?.candidateUsers || [
+                  {
+                    username: customUsername || defaultUsername || 'ubuntu',
+                    label: `${customUsername || defaultUsername || 'ubuntu'} (Active)`,
+                    homeDir: `/home/${customUsername || defaultUsername || 'ubuntu'}`,
+                    requiresMode: 'METADATA_SSH',
+                  },
+                ]
+              ).map((cand) => {
+                const isSelected = customUsername === cand.username;
+                const isOsLoginCand = cand.requiresMode === 'OS_LOGIN';
+                return (
+                  <button
+                    key={cand.username}
+                    type="button"
+                    disabled={identityBusy}
+                    onClick={() => handleSelectSshUserProfile(cand)}
+                    title={`${cand.label} · Home: ${cand.homeDir}${
+                      isOsLoginCand
+                        ? ' (Uses Google Cloud IAM OS Login: enable-oslogin=TRUE)'
+                        : ' (Uses Standard Metadata SSH Keys: enable-oslogin=FALSE)'
+                    }`}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer border disabled:opacity-50 ${
+                      isSelected
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                        : 'bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700'
+                    }`}
+                  >
+                    <span>{cand.username}</span>
+                    <span
+                      className={`text-[9px] px-1 py-0.2 rounded ${
+                        isSelected
+                          ? 'bg-black/25 text-emerald-100'
+                          : isOsLoginCand
+                          ? 'bg-amber-500/15 text-amber-500'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                      }`}
+                    >
+                      {isOsLoginCand ? 'IAM OS Login' : cand.homeDir}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {isSessionEnabled && connStatus.status === 'CONNECTED' && customUsername && (
+                <button
+                  type="button"
+                  onClick={() => sendToPty(`sudo su - ${customUsername}\r`)}
+                  title={`Switch immediately to ${customUsername} (/home/${customUsername}) inside the active terminal without reconnecting`}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 transition-colors cursor-pointer"
+                >
+                  <span>su - {customUsername} (Instant)</span>
+                </button>
+              )}
+            </div>
+
+            {identityInfo && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  disabled={identityBusy}
+                  onClick={handleToggleOsLoginMode}
+                  title={
+                    identityInfo.osLoginEnabled
+                      ? 'Project has enable-oslogin=TRUE (Google Cloud forces IAM user alabdelouahab_gmail_com). Click to unlock Standard Metadata SSH (enable-oslogin=FALSE) so you can use abdelouahab!'
+                      : 'Project has enable-oslogin=FALSE (Standard Metadata SSH — custom users like abdelouahab work in both CloudPulse and bash). Click to switch to IAM OS Login (enable-oslogin=TRUE).'
+                  }
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border transition-colors cursor-pointer disabled:opacity-50 ${
+                    identityInfo.osLoginEnabled
+                      ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border-amber-500/40'
+                      : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                  }`}
+                >
+                  {identityInfo.osLoginEnabled ? (
+                    <>
+                      <Lock className="w-3 h-3" />
+                      <span>
+                        IAM OS Login Active (Forces {identityInfo.osLoginPosixUser}) · Click to Unlock &ldquo;{identityInfo.localOsUser}&rdquo;
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="w-3 h-3" />
+                      <span>
+                        Standard SSH Mode (`enable-oslogin=FALSE` · `{identityInfo.localOsUser}` Unlocked)
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {identityToast && (
+            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+              ✓ {identityToast}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Optional Custom SSH Credentials Drawer (for VM SSH2) */}
       {!isCloudRun && showAuthModal && isSessionEnabled && (

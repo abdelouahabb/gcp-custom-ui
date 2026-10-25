@@ -2298,6 +2298,163 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
   }
 });
 
+// 7z. GET & POST /api/project/:projectId/vms/ssh-identity-mode
+// Inspects and toggles Google Cloud Project/VM `enable-oslogin` (Standard Metadata SSH User vs IAM OS Login POSIX User)
+// and discovers available Linux user profiles (`abdelouahab`, `alabdelouahab`, `alabdelouahab_gmail_com`, `ubuntu`, `root`).
+app.get('/api/project/:projectId/vms/ssh-identity-mode', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const { token, account } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    let localOsUser = 'ubuntu';
+    try {
+      localOsUser = os.userInfo().username || 'ubuntu';
+    } catch {
+      // ignore
+    }
+    const emailStr = String(account || '').trim();
+    const gcpPrefixUser = emailStr.includes('@')
+      ? emailStr.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '_')
+      : localOsUser;
+    const osLoginPosixUser = emailStr
+      ? emailStr.replace(/[^a-zA-Z0-9_-]/g, '_')
+      : `${gcpPrefixUser}_gmail_com`;
+
+    const projData = await gcpFetch(
+      `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+        projectId
+      )}`,
+      token,
+      projectId,
+      { timeout: 6000 }
+    );
+    const metaItems = projData?.commonInstanceMetadata?.items || [];
+    const osLoginItem = metaItems.find(
+      (i) => String(i.key || '').toLowerCase() === 'enable-oslogin'
+    );
+    const serialItem = metaItems.find(
+      (i) => String(i.key || '').toLowerCase() === 'serial-port-enable'
+    );
+    const osLoginEnabled =
+      String(osLoginItem?.value || 'FALSE').toUpperCase() === 'TRUE';
+    const serialPortEnabled =
+      String(serialItem?.value || 'TRUE').toUpperCase() === 'TRUE';
+
+    const candidateUsers = [];
+    const addCandidate = (username, label, homeDir, requiresMode) => {
+      if (!username || candidateUsers.some((u) => u.username === username)) return;
+      candidateUsers.push({ username, label, homeDir, requiresMode });
+    };
+
+    addCandidate(
+      localOsUser,
+      `${localOsUser} (Local OS / Primary Linux User)`,
+      `/home/${localOsUser}`,
+      'METADATA_SSH'
+    );
+    addCandidate(
+      gcpPrefixUser,
+      `${gcpPrefixUser} (GCP Account Prefix)`,
+      `/home/${gcpPrefixUser}`,
+      'METADATA_SSH'
+    );
+    addCandidate(
+      osLoginPosixUser,
+      `${osLoginPosixUser} (Google IAM OS Login User)`,
+      `/home/${osLoginPosixUser}`,
+      'OS_LOGIN'
+    );
+    addCandidate(
+      'ubuntu',
+      'ubuntu (Default Ubuntu Image User)',
+      '/home/ubuntu',
+      'METADATA_SSH'
+    );
+
+    return res.json({
+      projectId,
+      osLoginEnabled,
+      serialPortEnabled,
+      identityMode: osLoginEnabled ? 'OS_LOGIN' : 'METADATA_SSH',
+      localOsUser,
+      gcpPrefixUser,
+      osLoginPosixUser,
+      recommendedDefaultUser: osLoginEnabled ? osLoginPosixUser : localOsUser,
+      candidateUsers,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to inspect project SSH identity mode.',
+    });
+  }
+});
+
+app.post('/api/project/:projectId/vms/ssh-identity-mode', async (req, res) => {
+  const { projectId } = req.params;
+  const { enableOsLogin = false, enableSerialPort = true } = req.body || {};
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const projData = await gcpFetch(
+      `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+        projectId
+      )}`,
+      token,
+      projectId,
+      { timeout: 6000 }
+    );
+    const fingerprint = projData?.commonInstanceMetadata?.fingerprint || '';
+    const existingItems = (projData?.commonInstanceMetadata?.items || []).filter(
+      (i) =>
+        !['enable-oslogin', 'serial-port-enable'].includes(
+          String(i.key || '').toLowerCase()
+        )
+    );
+    existingItems.push(
+      { key: 'enable-oslogin', value: enableOsLogin ? 'TRUE' : 'FALSE' },
+      { key: 'serial-port-enable', value: enableSerialPort ? 'TRUE' : 'FALSE' }
+    );
+
+    await gcpFetch(
+      `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+        projectId
+      )}/setCommonInstanceMetadata`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        body: {
+          fingerprint,
+          items: existingItems,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return res.json({
+      ok: true,
+      osLoginEnabled: Boolean(enableOsLogin),
+      serialPortEnabled: Boolean(enableSerialPort),
+      identityMode: enableOsLogin ? 'OS_LOGIN' : 'METADATA_SSH',
+      message: enableOsLogin
+        ? 'Enabled Google Cloud IAM OS Login (enable-oslogin=TRUE). SSH sessions will use your IAM POSIX username (e.g., alabdelouahab_gmail_com).'
+        : 'Enabled Standard Metadata SSH Key Mode (enable-oslogin=FALSE). You can now connect directly as your custom Linux user (e.g., abdelouahab) in both CloudPulse and bash!',
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Failed to update project SSH identity mode.',
+    });
+  }
+});
+
 // 8. POST /api/project/:projectId/vms/:vmName/ssh -> Execute real command over gcloud compute ssh OR fetch real serial port console output
 app.post('/api/project/:projectId/vms/:vmName/ssh', async (req, res) => {
   const { projectId, vmName } = req.params;

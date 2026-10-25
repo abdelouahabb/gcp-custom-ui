@@ -4392,7 +4392,7 @@ export default function AutonomousCloudSocStudio({
             <div className="flex items-start gap-2 text-amber-700 dark:text-amber-200">
               <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <span>
-                <strong>CLI SSH Warning (INV-01):</strong> Healing <code className="font-bold">INV-01</code> locks <code className="font-bold">default-allow-ssh</code> to Google Cloud IAP (<code className="font-bold">35.235.240.0/20</code>). Once locked, running <code className="font-bold">gcloud compute ssh</code> in bash requires <code className="font-bold">--tunnel-through-iap</code> (or click <strong>Restore Direct SSH (0.0.0.0/0)</strong> to allow direct public-IP SSH).
+                <strong>CLI SSH Warning (INV-01 &amp; INV-03):</strong> Healing <code className="font-bold">INV-01</code> locks <code className="font-bold">default-allow-ssh</code> to Google Cloud IAP (<code className="font-bold">35.235.240.0/20</code>, requiring <code className="font-bold">--tunnel-through-iap</code> in bash), and healing <code className="font-bold">INV-03</code> sets <code className="font-bold">enable-oslogin=TRUE</code> (which forces your IAM email POSIX username instead of your local Linux username). You can switch between user profiles in 1 click inside the VM Web-SSH toolbar!
               </span>
             </div>
           </div>
