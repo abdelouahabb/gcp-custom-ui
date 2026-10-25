@@ -132,7 +132,10 @@ export default function VmFleetAndSsh({
     serviceName: '',
     region: 'us-central1',
     targetPath: '/var/www/html',
-    migrationMode: 'HYDRATE_VM_FILES', // 'HYDRATE_VM_FILES' | 'CUSTOM_IMAGE'
+    migrationMode: 'MOUNT_GCS_FUSE_DISK', // 'MOUNT_GCS_FUSE_DISK' | 'HYDRATE_VM_FILES' | 'CUSTOM_IMAGE'
+    diskBucketName: '',
+    diskMountPath: '/mnt/gce-disk',
+    diskReadOnly: false,
     containerImage: 'mirror.gcr.io/library/python:3.12-slim',
     containerPort: 8080,
     cpu: '1',
@@ -463,11 +466,19 @@ export default function VmFleetAndSsh({
       .replace(/[^a-z0-9-]/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 38);
+    const defaultBucket = `${projectId}-vmdisk-${cleanName}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 62);
     return {
       serviceName: `${cleanName}-cloudrun`,
       region: vmReg,
       targetPath: '/var/www/html',
-      migrationMode: 'HYDRATE_VM_FILES',
+      migrationMode: 'MOUNT_GCS_FUSE_DISK',
+      diskBucketName: defaultBucket,
+      diskMountPath: '/mnt/gce-disk',
+      diskReadOnly: false,
       containerImage: 'mirror.gcr.io/library/python:3.12-slim',
       containerPort: 8080,
       cpu,
@@ -499,9 +510,10 @@ export default function VmFleetAndSsh({
       setMigrateForm((prev) => ({
         ...prev,
         targetPath: data.resolvedDir || prev.targetPath,
+        diskBucketName: data.defaultDiskBucketName || prev.diskBucketName,
         migrationMode: data.detectedDockerImage
           ? 'CUSTOM_IMAGE'
-          : 'HYDRATE_VM_FILES',
+          : 'MOUNT_GCS_FUSE_DISK',
         containerImage:
           data.detectedDockerImage ||
           'mirror.gcr.io/library/python:3.12-slim',
@@ -554,6 +566,9 @@ export default function VmFleetAndSsh({
           maxInstances: Number(migrateForm.maxInstances) || 10,
           containerPort: Number(migrateForm.containerPort) || 8080,
           migrationMode: migrateForm.migrationMode,
+          diskBucketName: migrateForm.diskBucketName,
+          diskMountPath: migrateForm.diskMountPath || '/mnt/gce-disk',
+          diskReadOnly: Boolean(migrateForm.diskReadOnly),
           containerImage: migrateForm.containerImage,
           extractedBundleB64: migrateForm.extractedBundleB64,
           primaryFileName: migrateForm.primaryFileName || 'index.html',
@@ -573,6 +588,9 @@ export default function VmFleetAndSsh({
           res.data?.uri ||
           `https://${migrateForm.serviceName}-${projectId}.${migrateForm.region}.run.app`,
         vmStopped: Boolean(res.data?.vmStopped),
+        mountedDiskBucket: res.data?.mountedDiskBucket || null,
+        diskMountPath: res.data?.diskMountPath || '/mnt/gce-disk',
+        syncedDiskFilesCount: res.data?.syncedDiskFilesCount || 0,
         message:
           res.data?.message ||
           `Migrated real files from VM ${vm.name} into Cloud Run Gen2 service ${migrateForm.serviceName}!`,
@@ -1361,7 +1379,7 @@ export default function VmFleetAndSsh({
 
                         <div className="lg:col-span-2">
                           <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
-                            Stage 2 · How to Package Extracted VM Content
+                            Stage 2 · How to Attach / Package Extracted VM Disk Content
                           </label>
                           <select
                             value={migrateForm.migrationMode}
@@ -1373,8 +1391,11 @@ export default function VmFleetAndSsh({
                             }
                             className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                           >
+                            <option value="MOUNT_GCS_FUSE_DISK">
+                              Attach Persistent Cloud Storage FUSE Disk (volumes[].gcs → {migrateForm.diskMountPath})
+                            </option>
                             <option value="HYDRATE_VM_FILES">
-                              Hydrate Extracted VM Files into Cloud Run /workspace (&lt;8s)
+                              Hydrate Extracted VM Files into Ephemeral RAM Volume (/workspace)
                             </option>
                             <option value="CUSTOM_IMAGE">
                               Deploy Container Image ({migrateForm.containerImage})
@@ -1454,6 +1475,89 @@ export default function VmFleetAndSsh({
                           </div>
                         </div>
                       </div>
+
+                      {migrateForm.migrationMode === 'MOUNT_GCS_FUSE_DISK' && (
+                        <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/30 space-y-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                            <div className="font-bold text-blue-600 dark:text-blue-400">
+                              PERSISTENT CLOUD RUN GEN2 DISK MOUNT (volumes[].gcs via Cloud Storage FUSE)
+                            </div>
+                            {(detectedVmRuntimeInfo?.attachedGceDisks || []).length >
+                              0 && (
+                              <span className="text-[11px] text-zinc-500">
+                                Source GCE Disk:{' '}
+                                {detectedVmRuntimeInfo.attachedGceDisks
+                                  .map(
+                                    (d) =>
+                                      `${d.sourceDiskName} (${d.diskSizeGb}GB ${d.diskType})`
+                                  )
+                                  .join(', ')}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div>
+                              <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                                Persistent Disk Bucket (Auto-Created in {migrateForm.region})
+                              </label>
+                              <input
+                                type="text"
+                                value={migrateForm.diskBucketName}
+                                onChange={(e) =>
+                                  setMigrateForm((prev) => ({
+                                    ...prev,
+                                    diskBucketName: e.target.value
+                                      .toLowerCase()
+                                      .replace(/[^a-z0-9-]/g, '-'),
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                                Container Volume Mount Path
+                              </label>
+                              <input
+                                type="text"
+                                value={migrateForm.diskMountPath}
+                                onChange={(e) =>
+                                  setMigrateForm((prev) => ({
+                                    ...prev,
+                                    diskMountPath: e.target.value,
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                                Disk Access Mode
+                              </label>
+                              <select
+                                value={migrateForm.diskReadOnly ? 'RO' : 'RW'}
+                                onChange={(e) =>
+                                  setMigrateForm((prev) => ({
+                                    ...prev,
+                                    diskReadOnly: e.target.value === 'RO',
+                                  }))
+                                }
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                              >
+                                <option value="RW">
+                                  Read / Write (Shared POSIX Disk across 0→1000 instances)
+                                </option>
+                                <option value="RO">
+                                  Read-Only (Immutable Disk Mount)
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {migrateForm.migrationMode === 'CUSTOM_IMAGE' && (
                         <div>
@@ -1552,13 +1656,35 @@ export default function VmFleetAndSsh({
                               >
                                 {migrationResult.uri}
                               </a>
+                              {migrationResult.mountedDiskBucket && (
+                                <span>
+                                  {' '}
+                                  · Attached Persistent Disk:{' '}
+                                  <strong>
+                                    gs://{migrationResult.mountedDiskBucket}
+                                  </strong>{' '}
+                                  mounted at{' '}
+                                  <strong>{migrationResult.diskMountPath}</strong> (
+                                  {migrationResult.syncedDiskFilesCount} file(s) synced)
+                                </span>
+                              )}
                               {migrationResult.vmStopped
                                 ? ` · Source VM ${vm.name} automatically STOPPED.`
                                 : ''}
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {onSelectTab && migrationResult.mountedDiskBucket && (
+                              <button
+                                type="button"
+                                onClick={() => onSelectTab('CLOUD_STORAGE')}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer"
+                              >
+                                <HardDrive className="w-3 h-3" />
+                                <span>Inspect Disk Bucket</span>
+                              </button>
+                            )}
                             {onSelectTab && (
                               <button
                                 type="button"

@@ -2654,6 +2654,21 @@ CMD ["python3", "-m", "http.server", "8080", "--directory", "/workspace"]
 `;
     fs.writeFileSync(path.join(stagingDir, 'Dockerfile'), generatedDockerfile, 'utf8');
 
+    const attachedGceDisks = (vmInstance?.disks || []).map((d) => ({
+      deviceName: d.deviceName || 'persistent-disk-0',
+      sourceDiskName: d.source ? d.source.split('/').pop() : vmName,
+      diskSizeGb: Number(d.diskSizeGb || 15),
+      diskType: d.type || 'PERSISTENT',
+      boot: Boolean(d.boot),
+      mode: d.mode || 'READ_WRITE',
+    }));
+
+    const defaultDiskBucketName = `${projectId}-vmdisk-${vmName}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 62);
+
     const extractedFilesList = fs
       .readdirSync(htmlDir)
       .slice(0, 30)
@@ -2676,6 +2691,8 @@ CMD ["python3", "-m", "http.server", "8080", "--directory", "/workspace"]
       sshSucceeded,
       sshError,
       resolvedDir,
+      attachedGceDisks,
+      defaultDiskBucketName,
       dockerPsOutput,
       detectedDockerImage,
       detectedPort,
@@ -2702,9 +2719,11 @@ CMD ["python3", "-m", "http.server", "8080", "--directory", "/workspace"]
 
 // 8y-2. POST /api/project/:projectId/vms/:vmName/migrate-to-cloudrun
 // Deploys the actual extracted VM content/files into a live Cloud Run Gen2 service:
-// - Hydrates the extracted files (`extractedBundleB64` / `primaryFilePreview`) into an in-memory
-//   `/workspace` volume on Cloud Run v2 and serves them on `$PORT` (8080), OR deploys the
-//   discovered Docker container image from the VM.
+// - Mode 1 (`MOUNT_GCS_FUSE_DISK` - Recommended): Auto-creates/reuses a regional Cloud Storage bucket
+//   (`gs://<projectId>-vmdisk-<vmName>`), uploads all extracted VM disk files into it, and attaches it
+//   as a persistent Read/Write Volume Mount (`volumes[].gcs`) at `/mnt/gce-disk` on Cloud Run Gen2!
+// - Mode 2 (`HYDRATE_VM_FILES`): Hydrates extracted files into an in-memory `/workspace` RAM volume.
+// - Mode 3 (`CUSTOM_IMAGE`): Deploys a discovered Docker container image or Cloud Build image.
 app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, res) => {
   const { projectId, vmName } = req.params;
   const {
@@ -2715,7 +2734,10 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
     memory = '1Gi',
     maxInstances = 10,
     containerPort = 8080,
-    migrationMode = 'HYDRATE_VM_FILES', // 'HYDRATE_VM_FILES' | 'CUSTOM_IMAGE'
+    migrationMode = 'MOUNT_GCS_FUSE_DISK', // 'MOUNT_GCS_FUSE_DISK' | 'HYDRATE_VM_FILES' | 'CUSTOM_IMAGE'
+    diskBucketName = '',
+    diskMountPath = '/mnt/gce-disk',
+    diskReadOnly = false,
     containerImage = 'python:3.12-slim',
     extractedBundleB64 = '',
     primaryFileName = 'index.html',
@@ -2742,16 +2764,178 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
       null
     );
 
+    const cleanMountPath =
+      String(diskMountPath || '/mnt/gce-disk').startsWith('/')
+        ? String(diskMountPath || '/mnt/gce-disk').replace(/\/+$/, '') || '/mnt/gce-disk'
+        : `/${String(diskMountPath).replace(/\/+$/, '')}`;
+
+    // =========================================================================
+    // MODE 1: PERSISTENT CLOUD STORAGE FUSE DISK MOUNT (`volumes[].gcs`)
+    // =========================================================================
+    let resolvedDiskBucket = '';
+    let syncedDiskFilesCount = 0;
+    const isGcsFuseDiskMode = migrationMode === 'MOUNT_GCS_FUSE_DISK';
+
+    if (isGcsFuseDiskMode) {
+      resolvedDiskBucket = String(
+        diskBucketName || `${projectId}-vmdisk-${vmName}`
+      )
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 62);
+
+      // 1. Ensure the regional GCS disk bucket exists
+      let bucketExists = false;
+      try {
+        await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+            resolvedDiskBucket
+          )}`,
+          token,
+          projectId
+        );
+        bucketExists = true;
+      } catch {
+        bucketExists = false;
+      }
+
+      if (!bucketExists) {
+        await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(
+            projectId
+          )}`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              name: resolvedDiskBucket,
+              location: String(region || 'us-east1').toUpperCase(),
+              storageClass: 'STANDARD',
+              iamConfiguration: {
+                uniformBucketLevelAccess: { enabled: true },
+              },
+              labels: {
+                managed_by: 'cloudpulse-2026',
+                migrated_from_vm: String(vmName)
+                  .toLowerCase()
+                  .replace(/[^a-z0-9-_]/g, '-')
+                  .slice(0, 60),
+              },
+            },
+          }
+        );
+      }
+
+      // 2. Grant the Cloud Run runtime service account `roles/storage.objectAdmin` on the disk bucket
+      if (runtimeServiceAccount) {
+        try {
+          const iamPol = await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              resolvedDiskBucket
+            )}/iam`,
+            token,
+            projectId
+          );
+          const bindings = Array.isArray(iamPol?.bindings) ? iamPol.bindings : [];
+          const memberStr = `serviceAccount:${runtimeServiceAccount}`;
+          const existingRole = bindings.find(
+            (b) => b.role === 'roles/storage.objectAdmin'
+          );
+          if (existingRole) {
+            if (!existingRole.members.includes(memberStr)) {
+              existingRole.members.push(memberStr);
+            }
+          } else {
+            bindings.push({
+              role: 'roles/storage.objectAdmin',
+              members: [memberStr],
+            });
+          }
+          await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              resolvedDiskBucket
+            )}/iam`,
+            token,
+            projectId,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: { ...iamPol, bindings },
+            }
+          );
+        } catch {
+          // Non-fatal if project-level editor role already covers it
+        }
+      }
+
+      // 3. Upload all extracted VM disk files from stagingDir/html (plus latest primaryFilePreview) into `gs://${resolvedDiskBucket}`
+      const stagingHtmlDir = path.join(
+        os.tmpdir(),
+        `cloudpulse-vm-migrate-${projectId}-${vmName}`.replace(/[^a-zA-Z0-9_-]/g, '-'),
+        'html'
+      );
+      fs.mkdirSync(stagingHtmlDir, { recursive: true });
+      if (primaryFilePreview) {
+        fs.writeFileSync(
+          path.join(stagingHtmlDir, primaryFileName || 'index.html'),
+          primaryFilePreview,
+          'utf8'
+        );
+      }
+
+      const filesToUpload = fs
+        .readdirSync(stagingHtmlDir)
+        .filter((f) => {
+          try {
+            return fs.statSync(path.join(stagingHtmlDir, f)).isFile();
+          } catch {
+            return false;
+          }
+        })
+        .slice(0, 25);
+
+      for (const fname of filesToUpload) {
+        const contentBuf = fs.readFileSync(path.join(stagingHtmlDir, fname));
+        const contentType = fname.endsWith('.html')
+          ? 'text/html; charset=utf-8'
+          : fname.endsWith('.json')
+          ? 'application/json'
+          : fname.endsWith('.css')
+          ? 'text/css'
+          : fname.endsWith('.js')
+          ? 'application/javascript'
+          : 'application/octet-stream';
+
+        await axios.post(
+          `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+            resolvedDiskBucket
+          )}/o?uploadType=media&name=${encodeURIComponent(fname)}`,
+          contentBuf,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'x-goog-user-project': projectId,
+              'Content-Type': contentType,
+            },
+            timeout: 15000,
+          }
+        );
+        syncedDiskFilesCount += 1;
+      }
+    }
+
     const useHydratedFiles =
       migrationMode === 'HYDRATE_VM_FILES' &&
       (Boolean(extractedBundleB64) || Boolean(primaryFilePreview));
 
-    // When hydrating extracted VM files, we mount an in-memory volume at /workspace,
-    // unpack the real files extracted from the VM, and serve them via python3 http.server
-    // (or nginx) on $PORT so the Cloud Run URL immediately serves the VM's actual content!
-    const effectiveImage = useHydratedFiles
-      ? 'mirror.gcr.io/library/python:3.12-slim'
-      : containerImage || 'us-docker.pkg.dev/cloudrun/container/hello';
+    const effectiveImage =
+      isGcsFuseDiskMode || useHydratedFiles
+        ? 'mirror.gcr.io/library/python:3.12-slim'
+        : containerImage || 'us-docker.pkg.dev/cloudrun/container/hello';
 
     const fallbackHtmlB64 = Buffer.from(
       primaryFilePreview ||
@@ -2782,6 +2966,12 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
       env: [
         { name: 'MIGRATED_FROM_GCE_VM', value: String(vmName) },
         { name: 'SOURCE_VM_ZONE', value: String(zone) },
+        ...(isGcsFuseDiskMode
+          ? [
+              { name: 'MOUNTED_GCS_DISK_BUCKET', value: resolvedDiskBucket },
+              { name: 'MOUNTED_DISK_PATH', value: cleanMountPath },
+            ]
+          : []),
         ...(useHydratedFiles
           ? [
               {
@@ -2795,7 +2985,24 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
             ]
           : []),
       ],
-      ...(useHydratedFiles
+      ...(isGcsFuseDiskMode
+        ? {
+            command: [
+              'python3',
+              '-m',
+              'http.server',
+              String(Number(containerPort || 8080)),
+              '--directory',
+              cleanMountPath,
+            ],
+            volumeMounts: [
+              {
+                name: 'gce-persistent-disk',
+                mountPath: cleanMountPath,
+              },
+            ],
+          }
+        : useHydratedFiles
         ? {
             command: ['/bin/sh', '-c'],
             args: [hydrationStartupScript],
@@ -2813,7 +3020,19 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
           maxInstanceCount: Math.max(1, Number(maxInstances || 10)),
         },
         executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
-        ...(useHydratedFiles
+        ...(isGcsFuseDiskMode
+          ? {
+              volumes: [
+                {
+                  name: 'gce-persistent-disk',
+                  gcs: {
+                    bucket: resolvedDiskBucket,
+                    readOnly: Boolean(diskReadOnly),
+                  },
+                },
+              ],
+            }
+          : useHydratedFiles
           ? {
               volumes: [
                 {
@@ -2938,8 +3157,17 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
         liveServiceUri ||
         `https://console.cloud.google.com/run/detail/${region}/${cleanServiceName}/metrics?project=${projectId}`,
       vmStopped,
-      hydrationMode: useHydratedFiles ? 'HYDRATE_VM_FILES' : 'CUSTOM_IMAGE',
-      message: useHydratedFiles
+      mountedDiskBucket: isGcsFuseDiskMode ? resolvedDiskBucket : null,
+      diskMountPath: isGcsFuseDiskMode ? cleanMountPath : '/workspace',
+      syncedDiskFilesCount,
+      hydrationMode: isGcsFuseDiskMode
+        ? 'MOUNT_GCS_FUSE_DISK'
+        : useHydratedFiles
+        ? 'HYDRATE_VM_FILES'
+        : 'CUSTOM_IMAGE',
+      message: isGcsFuseDiskMode
+        ? `Synced ${syncedDiskFilesCount} file(s) from VM "${vmName}" into gs://${resolvedDiskBucket} and attached it as a persistent Read/Write Volume Mount (${cleanMountPath}) on Cloud Run Gen2 service "${cleanServiceName}" (${region}, Scale-to-$0.00)!`
+        : useHydratedFiles
         ? `Migrated real files extracted from VM "${vmName}" into Cloud Run Gen2 service "${cleanServiceName}" (${region}, minInstances=0 Scale-to-$0.00)!`
         : `Deployed container image "${effectiveImage}" from VM "${vmName}" to Cloud Run Gen2 service "${cleanServiceName}" (${region})!`,
     });
