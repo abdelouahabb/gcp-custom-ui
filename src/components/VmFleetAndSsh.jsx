@@ -25,6 +25,7 @@ import {
   ArrowRight,
   ExternalLink,
   Layers,
+  AlertTriangle,
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
