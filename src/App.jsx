@@ -1705,12 +1705,14 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // 3G-4. Wave 16 Autonomous Cloud SOC Read-Only Diagnostic & BAS Endpoints (Bypass Gatekeeper)
+    // 3G-4. Wave 16 Autonomous Cloud SOC Read-Only Diagnostic & BAS Endpoints + VM SCP/SFTP & SSH Identity Mode (Bypass Gatekeeper)
     if (
       rawUrl.includes('/soc/ai-commander') ||
       rawUrl.includes('/soc/deep-probe') ||
       rawUrl.includes('/soc/purple-team-drill') ||
-      rawUrl.includes('/soc/ai-red-team-audit')
+      rawUrl.includes('/soc/ai-red-team-audit') ||
+      rawUrl.includes('/vms/ssh-identity-mode') ||
+      rawUrl.includes('/scp/')
     ) {
       return null;
     }

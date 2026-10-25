@@ -1538,6 +1538,31 @@ const DOC_SECTIONS = [
     billingImpact:
       'Bills 0¢ the millisecond batch tasks exit(0) (100ms billing granularity), eliminates duplicate retry storms from 30m HTTP timeouts, and replaces 24/7 cron VMs.',
   },
+  {
+    id: 'self-contained-xterm-ssh-scp-sftp-oslogin-and-iap-guardrails',
+    wave: 'WAVE 16 VM SSH & SCP STUDIO',
+    title:
+      '44. Self-Contained @xterm/xterm VM Control, Dual-Engine Visual SCP / SFTP Remote File Browser, 1-Click OS Login User Switcher & IAP Guardrails',
+    badge: 'SSH2 SFTP + gcloud compute scp + IAP Tunnel + OS Login Switcher',
+    badgeColor:
+      'bg-teal-500/15 text-teal-600 dark:text-teal-300 border-teal-500/30',
+    icon: Terminal,
+    targetTab: 'VM_FLEET',
+    problemSolved:
+      'Restarting a VM changes its ephemeral IP, IAP firewall hardening blocks raw port 22 without --tunnel-through-iap, OS Login changes Linux usernames (abdelouahab vs alabdelouahab_gmail_com), and transferring/editing remote VM files via CLI flags is slow.',
+    howItWorks: [
+      'Self-Contained VM Power & SSH Controls inside @xterm/xterm: Select any VM, click Start VM & Connect SSH (polls until RUNNING and opens PTY), Stop VM, Reboot, or switch between abdelouahab and alabdelouahab_gmail_com (toggling enable-oslogin metadata in 1 click).',
+      'Dual-Engine Visual SCP / SFTP Remote File Browser, Uploader & In-Place Editor: Click "SCP / SFTP Files" to browse directories (~ Home, /var/log, /etc, /tmp), drag-and-drop multiple files to upload, download files with 1 click, edit files in-place, mkdir, chmod, rename, delete, or click "cd in SSH" to jump your interactive shell to that path.',
+      'Automatic SSH2 SFTP -> gcloud compute scp -> Cloud IAP Failover: Uses fast-path native Node.js ssh2 SFTP (SSH2_SFTP_DIRECT) when TCP:22 is reachable and automatically fails over to gcloud compute scp / ssh with --tunnel-through-iap when port 22 is locked to 35.235.240.0/20.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/vms/:vmName/scp/list & GET /api/project/:id/vms/:vmName/scp/download',
+      'POST /api/project/:id/vms/:vmName/scp/upload & POST /api/project/:id/vms/:vmName/scp/action (MKDIR, WRITE_FILE, RENAME, CHMOD, DELETE)',
+      'GET & POST /api/project/:id/vms/ssh-identity-mode (projects.get & projects.setCommonInstanceMetadata)',
+    ],
+    billingImpact:
+      '$0.00/mo control-plane & IAP TCP tunneling cost; stopping VMs directly from the Xterm.js header halts vCPU/RAM hourly billing immediately.',
+  },
 ];
 
 export default function InteractiveDocsGuide({

@@ -26,6 +26,17 @@ import {
   Server,
   Rocket,
   ArrowUpRight,
+  Folder,
+  FolderOpen,
+  FileCode,
+  Upload,
+  Download,
+  Trash2,
+  Plus,
+  Save,
+  CornerLeftUp,
+  Edit3,
+  HardDrive,
 } from 'lucide-react';
 
 const VM_PTY_MACROS = [
@@ -164,6 +175,27 @@ export default function XtermWebSshTerminal({
   const [identityBusy, setIdentityBusy] = useState(false);
   const [identityToast, setIdentityToast] = useState('');
 
+  // Visual SCP / SFTP Remote File Browser, Drag-and-Drop Uploader, Downloader & In-Place Editor State
+  const scpFileInputRef = useRef(null);
+  const [scpPath, setScpPath] = useState('~');
+  const [scpPathInput, setScpPathInput] = useState('~');
+  const [scpParentPath, setScpParentPath] = useState('/home');
+  const [scpEntries, setScpEntries] = useState([]);
+  const [scpEngineUsed, setScpEngineUsed] = useState('');
+  const [scpCliUpload, setScpCliUpload] = useState('');
+  const [scpCliDownload, setScpCliDownload] = useState('');
+  const [scpLoading, setScpLoading] = useState(false);
+  const [scpActionBusy, setScpActionBusy] = useState('');
+  const [scpError, setScpError] = useState('');
+  const [scpStatusMsg, setScpStatusMsg] = useState('');
+  const [scpFilter, setScpFilter] = useState('');
+  const [scpDragOver, setScpDragOver] = useState(false);
+  const [scpEditorFile, setScpEditorFile] = useState(null); // { path, fileName, content, isBinary, sizeBytes, isNew }
+  const [scpNewFolderPrompt, setScpNewFolderPrompt] = useState(false);
+  const [scpNewFolderName, setScpNewFolderName] = useState('');
+  const [scpConfirmDeletePath, setScpConfirmDeletePath] = useState(null);
+  const [copiedScpCli, setCopiedScpCli] = useState('');
+
   const isSessionEnabled = isCloudRun
     ? Boolean(cloudRunService)
     : Boolean(activeVm) || sshEngine === 'cloud_shell';
@@ -293,6 +325,285 @@ export default function XtermWebSshTerminal({
     }
     xtermRef.current?.focus();
   }, []);
+
+  const formatBytes = (bytes) => {
+    const n = Number(bytes || 0);
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+    return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
+
+  const fetchScpDirectory = useCallback(
+    async (targetPath = scpPath) => {
+      const targetVm = activeVm || focusedVm;
+      if (isCloudRun || !projectId || !targetVm?.name) return;
+      setScpLoading(true);
+      setScpError('');
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/vms/${encodeURIComponent(targetVm.name)}/scp/list`,
+          {
+            params: {
+              zone: targetVm.zone || 'us-central1-f',
+              username: customUsername || defaultUsername || 'ubuntu',
+              path: targetPath || '~',
+            },
+          }
+        );
+        const data = res.data || {};
+        const resolved = data.currentPath || targetPath || '~';
+        setScpPath(resolved);
+        setScpPathInput(resolved);
+        setScpParentPath(data.parentPath || '/');
+        setScpEntries(Array.isArray(data.entries) ? data.entries : []);
+        setScpEngineUsed(data.engineUsed || 'SSH2_SFTP_DIRECT');
+        setScpCliUpload(data.cliUploadExample || '');
+        setScpCliDownload(data.cliDownloadExample || '');
+      } catch (err) {
+        setScpError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to list remote directory via SCP/SFTP.'
+        );
+      } finally {
+        setScpLoading(false);
+      }
+    },
+    [
+      activeVm,
+      focusedVm,
+      isCloudRun,
+      projectId,
+      customUsername,
+      defaultUsername,
+      scpPath,
+    ]
+  );
+
+  useEffect(() => {
+    if (viewMode === 'SCP_FILE_MANAGER' && (activeVm || focusedVm)) {
+      fetchScpDirectory(scpPath || '~');
+    }
+  }, [
+    viewMode,
+    activeVm?.name,
+    focusedVm?.name,
+    customUsername,
+    fetchScpDirectory,
+  ]);
+
+  const handleOpenScpFilePreview = async (entry) => {
+    const targetVm = activeVm || focusedVm;
+    if (!targetVm || !entry?.path) return;
+    setScpActionBusy(`preview:${entry.path}`);
+    setScpError('');
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/download`,
+        {
+          params: {
+            zone: targetVm.zone || 'us-central1-f',
+            username: customUsername || defaultUsername || 'ubuntu',
+            path: entry.path,
+            mode: 'preview',
+          },
+        }
+      );
+      setScpEditorFile({
+        path: res.data?.path || entry.path,
+        fileName: res.data?.fileName || entry.name,
+        content: res.data?.content || '',
+        isBinary: Boolean(res.data?.isBinary),
+        sizeBytes: res.data?.sizeBytes ?? entry.sizeBytes,
+        isNew: false,
+      });
+    } catch (err) {
+      setScpError(
+        err.response?.data?.error ||
+          err.message ||
+          `Failed to read ${entry.name} via SCP/SFTP.`
+      );
+    } finally {
+      setScpActionBusy('');
+    }
+  };
+
+  const handleDownloadScpFileRaw = (entry) => {
+    const targetVm = activeVm || focusedVm;
+    if (!targetVm || !entry?.path) return;
+    const qs = new URLSearchParams({
+      zone: targetVm.zone || 'us-central1-f',
+      username: customUsername || defaultUsername || 'ubuntu',
+      path: entry.path,
+      mode: 'raw',
+    });
+    const url = `/api/project/${encodeURIComponent(
+      projectId
+    )}/vms/${encodeURIComponent(targetVm.name)}/scp/download?${qs.toString()}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleUploadScpFiles = async (fileList) => {
+    const targetVm = activeVm || focusedVm;
+    if (!targetVm || !fileList || fileList.length === 0) return;
+    setScpActionBusy('upload');
+    setScpError('');
+    setScpStatusMsg(`Uploading ${fileList.length} file(s) via SCP/SFTP...`);
+    try {
+      const encodedFiles = await Promise.all(
+        Array.from(fileList).map(
+          (file) =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const resultStr = String(reader.result || '');
+                const base64 = resultStr.includes(',')
+                  ? resultStr.split(',')[1]
+                  : '';
+                resolve({
+                  name: file.name,
+                  sizeBytes: file.size,
+                  contentBase64: base64,
+                });
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            })
+        )
+      );
+
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/upload`,
+        {
+          zone: targetVm.zone || 'us-central1-f',
+          username: customUsername || defaultUsername || 'ubuntu',
+          targetDir: scpPath || '~',
+          files: encodedFiles,
+        }
+      );
+      setScpStatusMsg(res.data?.message || 'SCP upload complete!');
+      setTimeout(() => setScpStatusMsg(''), 5000);
+      await fetchScpDirectory(scpPath);
+    } catch (err) {
+      setScpStatusMsg('');
+      setScpError(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to upload file(s) via SCP/SFTP.'
+      );
+    } finally {
+      setScpActionBusy('');
+      if (scpFileInputRef.current) {
+        scpFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleSaveScpEditorFile = async () => {
+    const targetVm = activeVm || focusedVm;
+    if (!targetVm || !scpEditorFile?.path) return;
+    setScpActionBusy('save-file');
+    setScpError('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/action`,
+        {
+          zone: targetVm.zone || 'us-central1-f',
+          username: customUsername || defaultUsername || 'ubuntu',
+          action: 'WRITE_FILE',
+          targetPath: scpEditorFile.path,
+          content: scpEditorFile.content,
+        }
+      );
+      setScpStatusMsg(
+        res.data?.message || `Saved ${scpEditorFile.fileName} to VM!`
+      );
+      setTimeout(() => setScpStatusMsg(''), 4500);
+      setScpEditorFile(null);
+      await fetchScpDirectory(scpPath);
+    } catch (err) {
+      setScpError(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to save remote file via SCP/SFTP.'
+      );
+    } finally {
+      setScpActionBusy('');
+    }
+  };
+
+  const handleCreateScpFolder = async () => {
+    const targetVm = activeVm || focusedVm;
+    const cleanName = scpNewFolderName.trim();
+    if (!targetVm || !cleanName) return;
+    const fullTarget =
+      scpPath === '/' ? `/${cleanName}` : `${scpPath}/${cleanName}`;
+    setScpActionBusy('mkdir');
+    setScpError('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/action`,
+        {
+          zone: targetVm.zone || 'us-central1-f',
+          username: customUsername || defaultUsername || 'ubuntu',
+          action: 'MKDIR',
+          targetPath: fullTarget,
+        }
+      );
+      setScpNewFolderName('');
+      setScpNewFolderPrompt(false);
+      setScpStatusMsg(res.data?.message || `Created folder ${cleanName}`);
+      setTimeout(() => setScpStatusMsg(''), 4000);
+      await fetchScpDirectory(scpPath);
+    } catch (err) {
+      setScpError(
+        err.response?.data?.error || err.message || 'Failed to create folder.'
+      );
+    } finally {
+      setScpActionBusy('');
+    }
+  };
+
+  const handleDeleteScpEntry = async (entryPath) => {
+    const targetVm = activeVm || focusedVm;
+    if (!targetVm || !entryPath) return;
+    setScpActionBusy(`del:${entryPath}`);
+    setScpError('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(
+          targetVm.name
+        )}/scp/action`,
+        {
+          zone: targetVm.zone || 'us-central1-f',
+          username: customUsername || defaultUsername || 'ubuntu',
+          action: 'DELETE',
+          targetPath: entryPath,
+        }
+      );
+      setScpConfirmDeletePath(null);
+      setScpStatusMsg(res.data?.message || `Deleted ${entryPath}`);
+      setTimeout(() => setScpStatusMsg(''), 4000);
+      await fetchScpDirectory(scpPath);
+    } catch (err) {
+      setScpError(
+        err.response?.data?.error || err.message || 'Failed to delete item.'
+      );
+    } finally {
+      setScpActionBusy('');
+    }
+  };
 
   const cloudRunSshCli = cloudRunService
     ? `gcloud beta run services ssh ${cloudRunService.name} --region=${
@@ -897,6 +1208,34 @@ export default function XtermWebSshTerminal({
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
+          {!isCloudRun && focusedVm && (
+            <button
+              type="button"
+              onClick={() => {
+                if (viewMode === 'SCP_FILE_MANAGER') {
+                  setViewMode('LIVE_SSH_PTY');
+                } else {
+                  setViewMode('SCP_FILE_MANAGER');
+                }
+              }}
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold transition-colors cursor-pointer border ${
+                viewMode === 'SCP_FILE_MANAGER'
+                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+              }`}
+              title={`Open Visual SCP / SFTP File Browser, Drag-and-Drop Uploader, Downloader & In-Place Editor for ${
+                (activeVm || focusedVm).name
+              }`}
+            >
+              <FolderOpen className="w-3 h-3" />
+              <span>
+                {viewMode === 'SCP_FILE_MANAGER'
+                  ? 'Back to SSH PTY'
+                  : 'SCP / SFTP Files'}
+              </span>
+            </button>
+          )}
+
           {!isCloudRun && focusedVm && onOpenMigrateVm && (
             <button
               type="button"
@@ -1088,7 +1427,517 @@ export default function XtermWebSshTerminal({
       )}
 
       {/* Main Content Area */}
-      {viewMode === 'SERIAL_PORT_1' ? (
+      {viewMode === 'SCP_FILE_MANAGER' && !isCloudRun ? (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setScpDragOver(true);
+          }}
+          onDragLeave={() => setScpDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setScpDragOver(false);
+            if (e.dataTransfer?.files?.length) {
+              handleUploadScpFiles(e.dataTransfer.files);
+            }
+          }}
+          className={`p-3.5 space-y-3 flex-1 flex flex-col font-mono bg-white dark:bg-[#09090c] relative ${
+            scpDragOver
+              ? 'ring-2 ring-emerald-500 bg-emerald-500/5'
+              : ''
+          }`}
+        >
+          <input
+            ref={scpFileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.length) {
+                handleUploadScpFiles(e.target.files);
+              }
+            }}
+          />
+
+          {/* Top SCP / SFTP Control & Path Bar */}
+          <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-xl p-2.5 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-zinc-900 dark:text-white">
+                  <HardDrive className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>
+                    SCP / SFTP File Studio ({customUsername}@
+                    {(activeVm || focusedVm)?.name})
+                  </span>
+                </span>
+                {scpEngineUsed && (
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                      scpEngineUsed.includes('IAP')
+                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    }`}
+                  >
+                    {scpEngineUsed === 'SSH2_SFTP_DIRECT'
+                      ? 'SSH2 SFTP Direct (:22)'
+                      : scpEngineUsed.includes('IAP')
+                      ? 'gcloud compute scp / IAP Tunnel'
+                      : 'gcloud compute scp Direct'}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  disabled={Boolean(scpActionBusy)}
+                  onClick={() => scpFileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+                  title="Upload one or more files from your laptop to this VM directory (or drag-and-drop files anywhere)"
+                >
+                  <Upload className="w-3 h-3" />
+                  <span>
+                    {scpActionBusy === 'upload'
+                      ? 'Uploading...'
+                      : '+ Upload File(s)'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const defaultFilePath =
+                      scpPath === '/'
+                        ? '/new-script.sh'
+                        : `${scpPath}/new-script.sh`;
+                    setScpEditorFile({
+                      path: defaultFilePath,
+                      fileName: 'new-script.sh',
+                      content: '#!/usr/bin/env bash\nset -euo pipefail\n\n',
+                      isBinary: false,
+                      sizeBytes: 0,
+                      isNew: true,
+                    });
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>+ New File</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setScpNewFolderPrompt((v) => !v)}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
+                >
+                  <Folder className="w-3 h-3 text-amber-400" />
+                  <span>+ Folder</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={scpLoading}
+                  onClick={() => fetchScpDirectory(scpPath)}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 ${scpLoading ? 'animate-spin' : ''}`}
+                  />
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Path Navigation + Quick Bookmark Pills */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => fetchScpDirectory(scpParentPath || '/')}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
+                title="Go to parent directory (..)"
+              >
+                <CornerLeftUp className="w-3 h-3" />
+                <span>Up (..)</span>
+              </button>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  fetchScpDirectory(scpPathInput || '~');
+                }}
+                className="flex-1 min-w-[200px] flex items-center gap-1"
+              >
+                <input
+                  type="text"
+                  value={scpPathInput}
+                  onChange={(e) => setScpPathInput(e.target.value)}
+                  placeholder="/home/abdelouahab"
+                  className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  type="submit"
+                  className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold cursor-pointer shrink-0"
+                >
+                  Go
+                </button>
+              </form>
+
+              {[
+                { label: '~ Home', path: `/home/${customUsername || 'ubuntu'}` },
+                { label: '/var/log', path: '/var/log' },
+                { label: '/etc', path: '/etc' },
+                { label: '/tmp', path: '/tmp' },
+                { label: '/opt', path: '/opt' },
+              ].map((bm) => (
+                <button
+                  key={bm.label}
+                  type="button"
+                  onClick={() => fetchScpDirectory(bm.path)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                    scpPath === bm.path
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                      : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  {bm.label}
+                </button>
+              ))}
+
+              <input
+                type="text"
+                value={scpFilter}
+                onChange={(e) => setScpFilter(e.target.value)}
+                placeholder="Filter files..."
+                className="w-32 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2 py-1 text-[10px] text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+
+            {scpNewFolderPrompt && (
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  value={scpNewFolderName}
+                  onChange={(e) => setScpNewFolderName(e.target.value)}
+                  placeholder="New folder name (e.g. backups)"
+                  className="flex-1 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-900 dark:text-zinc-100"
+                />
+                <button
+                  type="button"
+                  disabled={scpActionBusy === 'mkdir'}
+                  onClick={handleCreateScpFolder}
+                  className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+                >
+                  {scpActionBusy === 'mkdir' ? 'Creating...' : 'Create Folder'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScpNewFolderPrompt(false)}
+                  className="px-2 py-1 rounded-lg text-zinc-400 hover:text-white text-[10px]"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          {scpStatusMsg && (
+            <div className="p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 text-[11px] font-bold">
+              ✓ {scpStatusMsg}
+            </div>
+          )}
+
+          {scpError && (
+            <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-[11px] flex items-center justify-between gap-2">
+              <span>✕ {scpError}</span>
+              {!isFocusedVmRunning && onVmPowerAction && focusedVm && (
+                <button
+                  type="button"
+                  onClick={() => handleTriggerVmPower('START', false)}
+                  className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold shrink-0 cursor-pointer"
+                >
+                  Start VM Now
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* In-Place Remote File Editor / Viewer Drawer */}
+          {scpEditorFile ? (
+            <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900/90 border border-blue-500/40 rounded-xl p-3 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <FileCode className="w-4 h-4 text-blue-400 shrink-0" />
+                  {scpEditorFile.isNew ? (
+                    <input
+                      type="text"
+                      value={scpEditorFile.path}
+                      onChange={(e) =>
+                        setScpEditorFile((prev) => ({
+                          ...prev,
+                          path: e.target.value,
+                          fileName:
+                            e.target.value.split('/').pop() || 'new-file.txt',
+                        }))
+                      }
+                      className="flex-1 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs text-zinc-900 dark:text-white"
+                    />
+                  ) : (
+                    <span className="text-xs font-extrabold text-zinc-900 dark:text-white truncate">
+                      {scpEditorFile.path} ({formatBytes(scpEditorFile.sizeBytes)})
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {!scpEditorFile.isBinary && (
+                    <button
+                      type="button"
+                      disabled={scpActionBusy === 'save-file'}
+                      onClick={handleSaveScpEditorFile}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+                    >
+                      <Save className="w-3 h-3" />
+                      <span>
+                        {scpActionBusy === 'save-file'
+                          ? 'Saving via SCP...'
+                          : 'Save to VM via SCP/SFTP'}
+                      </span>
+                    </button>
+                  )}
+                  {!scpEditorFile.isNew && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDownloadScpFileRaw({
+                          path: scpEditorFile.path,
+                          name: scpEditorFile.fileName,
+                        })
+                      }
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer"
+                    >
+                      <Download className="w-3 h-3" />
+                      <span>Download to Laptop</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setScpEditorFile(null)}
+                    className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+                  >
+                    ✕ Close Editor
+                  </button>
+                </div>
+              </div>
+              <textarea
+                rows={15}
+                readOnly={scpEditorFile.isBinary}
+                value={scpEditorFile.content}
+                onChange={(e) =>
+                  setScpEditorFile((prev) => ({
+                    ...prev,
+                    content: e.target.value,
+                  }))
+                }
+                className="w-full flex-1 bg-white dark:bg-[#050507] border border-zinc-200 dark:border-zinc-800 rounded-lg p-3 text-xs font-mono text-zinc-900 dark:text-emerald-300 focus:outline-none focus:border-emerald-500 min-h-[280px]"
+              />
+            </div>
+          ) : (
+            /* Directory Entries Table */
+            <div className="flex-1 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col min-h-[300px] max-h-[440px]">
+              <div className="bg-zinc-100 dark:bg-zinc-900/90 border-b border-zinc-200 dark:border-zinc-800 px-3 py-1.5 grid grid-cols-12 gap-2 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500">
+                <div className="col-span-5">Name (Drag &amp; Drop Files Here)</div>
+                <div className="col-span-2">Size</div>
+                <div className="col-span-2">Permissions / Owner</div>
+                <div className="col-span-3 text-right">SCP / SFTP Actions</div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/70 bg-white dark:bg-[#070709]">
+                {scpLoading ? (
+                  <div className="p-8 text-center text-xs text-zinc-400">
+                    Connecting to {(activeVm || focusedVm)?.name} over SCP/SFTP...
+                  </div>
+                ) : scpEntries.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-zinc-500">
+                    Directory is empty — drag &amp; drop files here or click{' '}
+                    <strong>+ Upload File(s)</strong> above.
+                  </div>
+                ) : (
+                  scpEntries
+                    .filter((item) =>
+                      !scpFilter.trim()
+                        ? true
+                        : item.name
+                            .toLowerCase()
+                            .includes(scpFilter.trim().toLowerCase())
+                    )
+                    .map((entry) => {
+                      const isDir = entry.type === 'dir';
+                      return (
+                        <div
+                          key={entry.path}
+                          className="px-3 py-2 grid grid-cols-12 gap-2 items-center hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors text-xs"
+                        >
+                          <div className="col-span-5 flex items-center gap-2 min-w-0">
+                            {isDir ? (
+                              <Folder className="w-4 h-4 text-amber-400 shrink-0 fill-amber-400/20" />
+                            ) : (
+                              <FileCode className="w-4 h-4 text-blue-400 shrink-0" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                isDir
+                                  ? fetchScpDirectory(entry.path)
+                                  : handleOpenScpFilePreview(entry)
+                              }
+                              className={`truncate text-left font-bold hover:underline cursor-pointer ${
+                                isDir
+                                  ? 'text-amber-600 dark:text-amber-300'
+                                  : 'text-zinc-900 dark:text-zinc-100'
+                              }`}
+                              title={entry.path}
+                            >
+                              {entry.name}
+                              {isDir ? '/' : ''}
+                            </button>
+                          </div>
+
+                          <div className="col-span-2 text-[11px] text-zinc-500">
+                            {isDir ? 'DIR' : formatBytes(entry.sizeBytes)}
+                          </div>
+
+                          <div className="col-span-2 text-[10px] text-zinc-500 truncate">
+                            {entry.modeOctal || '644'} · {entry.owner}
+                          </div>
+
+                          <div className="col-span-3 flex items-center justify-end gap-1 flex-wrap">
+                            {isDir ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => fetchScpDirectory(entry.path)}
+                                  className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-bold cursor-pointer"
+                                >
+                                  Open
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setViewMode('LIVE_SSH_PTY');
+                                    if (!isSessionEnabled && onSelectVm && focusedVm) {
+                                      onSelectVm(focusedVm);
+                                    }
+                                    setTimeout(
+                                      () => sendToPty(`cd "${entry.path}" && ls -la\r`),
+                                      350
+                                    );
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
+                                  title="Open this folder inside the live Xterm.js SSH terminal"
+                                >
+                                  cd in SSH
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={
+                                    scpActionBusy === `preview:${entry.path}`
+                                  }
+                                  onClick={() => handleOpenScpFilePreview(entry)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer"
+                                  title="View or edit file in-place via SCP/SFTP"
+                                >
+                                  <Edit3 className="w-2.5 h-2.5" />
+                                  <span>
+                                    {scpActionBusy === `preview:${entry.path}`
+                                      ? '...'
+                                      : 'View/Edit'}
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadScpFileRaw(entry)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer"
+                                  title="Download file to your laptop via SCP/SFTP"
+                                >
+                                  <Download className="w-2.5 h-2.5" />
+                                  <span>Download</span>
+                                </button>
+                              </>
+                            )}
+
+                            {scpConfirmDeletePath === entry.path ? (
+                              <button
+                                type="button"
+                                disabled={scpActionBusy === `del:${entry.path}`}
+                                onClick={() => handleDeleteScpEntry(entry.path)}
+                                className="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px] font-extrabold cursor-pointer"
+                              >
+                                Confirm
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setScpConfirmDeletePath(entry.path)}
+                                className="p-1 rounded hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 cursor-pointer"
+                                title={`Delete ${entry.name}`}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Copy-Ready gcloud compute scp CLI Commands Bar */}
+          {(scpCliUpload || scpCliDownload) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pt-0.5">
+              {scpCliUpload && (
+                <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                  <code className="text-[10px] text-zinc-600 dark:text-zinc-300 truncate">
+                    $ {scpCliUpload}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(scpCliUpload);
+                      setCopiedScpCli('up');
+                      setTimeout(() => setCopiedScpCli(''), 1500);
+                    }}
+                    className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 shrink-0 cursor-pointer"
+                  >
+                    {copiedScpCli === 'up' ? '✓ Copied' : 'Copy Upload SCP'}
+                  </button>
+                </div>
+              )}
+              {scpCliDownload && (
+                <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                  <code className="text-[10px] text-zinc-600 dark:text-zinc-300 truncate">
+                    $ {scpCliDownload}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(scpCliDownload);
+                      setCopiedScpCli('down');
+                      setTimeout(() => setCopiedScpCli(''), 1500);
+                    }}
+                    className="text-[10px] font-bold text-blue-400 hover:text-blue-300 shrink-0 cursor-pointer"
+                  >
+                    {copiedScpCli === 'down' ? '✓ Copied' : 'Copy Download SCP'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : viewMode === 'SERIAL_PORT_1' ? (
         <div className="p-4 space-y-3 flex-1 flex flex-col">
           <div className="flex items-center justify-between gap-2">
             <div className="text-xs font-mono text-zinc-700 dark:text-zinc-300 font-bold">
@@ -1189,19 +2038,32 @@ export default function XtermWebSshTerminal({
                 </div>
               </div>
 
-              {/* Direct VM Start/Stop & SSH Launch Buttons inside Xterm Canvas */}
+              {/* Direct VM Start/Stop & SSH / SCP Launch Buttons inside Xterm Canvas */}
               <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                 {isFocusedVmRunning ? (
                   <>
                     <button
                       type="button"
                       onClick={() => onSelectVm && onSelectVm(focusedVm)}
-                      className="flex-1 min-w-[200px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+                      className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
                       <span>
                         Connect SSH as {customUsername}@{focusedVm.name}
                       </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewMode('SCP_FILE_MANAGER');
+                        fetchScpDirectory(scpPath || '~');
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold shadow-lg shadow-teal-600/20 transition-all cursor-pointer"
+                      title="Open Visual SCP / SFTP Remote File Browser, Uploader & In-Place Editor"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      <span>SCP / SFTP Files</span>
                     </button>
 
                     {onVmPowerAction && (

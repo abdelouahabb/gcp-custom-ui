@@ -2421,12 +2421,22 @@ app.post('/api/project/:projectId/vms/ssh-identity-mode', async (req, res) => {
       { timeout: 6000 }
     );
     const fingerprint = projData?.commonInstanceMetadata?.fingerprint || '';
-    const existingItems = (projData?.commonInstanceMetadata?.items || []).filter(
-      (i) =>
-        !['enable-oslogin', 'serial-port-enable'].includes(
-          String(i.key || '').toLowerCase()
-        )
-    );
+    const existingItems = (projData?.commonInstanceMetadata?.items || [])
+      .filter(
+        (i) =>
+          !['enable-oslogin', 'serial-port-enable'].includes(
+            String(i.key || '').toLowerCase()
+          )
+      )
+      .map((i) => {
+        if (String(i.key || '').toLowerCase() === 'ssh-keys') {
+          const cleanedLines = String(i.value || '')
+            .split('\n')
+            .filter((line) => !/^Connected_OAuth_User:/i.test(line.trim()));
+          return { key: i.key, value: cleanedLines.join('\n') };
+        }
+        return i;
+      });
     existingItems.push(
       { key: 'enable-oslogin', value: enableOsLogin ? 'TRUE' : 'FALSE' },
       { key: 'serial-port-enable', value: enableSerialPort ? 'TRUE' : 'FALSE' }
@@ -2463,6 +2473,899 @@ app.post('/api/project/:projectId/vms/ssh-identity-mode', async (req, res) => {
         err.response?.data?.error?.message ||
         err.message ||
         'Failed to update project SSH identity mode.',
+    });
+  }
+});
+
+// ============================================================================
+// 7z-B. REAL DUAL-ENGINE SCP / SFTP REMOTE FILE BROWSER, UPLOADER, DOWNLOADER & EDITOR
+//  - Engine 1: Native Node.js `ssh2` SFTP subprotocol (`conn.sftp()`) over TCP :22
+//  - Engine 2: `gcloud compute scp` / `gcloud compute ssh` with automatic
+//              `--tunnel-through-iap` failover when port 22 is IAP-locked
+// ============================================================================
+const vmScpTargetCache = new Map();
+let cachedSshPrivateKey = null;
+
+function getLocalSshPrivateKey() {
+  if (cachedSshPrivateKey) return cachedSshPrivateKey;
+  const gceKeyPath = path.join(os.homedir(), '.ssh', 'google_compute_engine');
+  const idRsaPath = path.join(os.homedir(), '.ssh', 'id_rsa');
+  if (fs.existsSync(gceKeyPath)) {
+    cachedSshPrivateKey = fs.readFileSync(gceKeyPath, 'utf8');
+  } else if (fs.existsSync(idRsaPath)) {
+    cachedSshPrivateKey = fs.readFileSync(idRsaPath, 'utf8');
+  }
+  return cachedSshPrivateKey;
+}
+
+async function resolveVmScpTarget({ projectId, vmName, zone, rawUsername, token }) {
+  let defaultOsUser = 'ubuntu';
+  try {
+    defaultOsUser = os.userInfo().username || 'ubuntu';
+  } catch {
+    // ignore
+  }
+  const cleanParam = String(rawUsername || '').trim();
+  const isInvalidPlaceholder =
+    !cleanParam ||
+    /^(connected[\s_]*oauth[\s_]*user|user|default)$/i.test(cleanParam) ||
+    /\s/.test(cleanParam);
+  const sshUser = (isInvalidPlaceholder ? defaultOsUser : cleanParam)
+    .split('@')[0]
+    .replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  const privateKey = getLocalSshPrivateKey();
+  const cacheKey = `${projectId}:${zone}:${vmName}`;
+  const cachedTarget = vmScpTargetCache.get(cacheKey);
+  if (cachedTarget && Date.now() - cachedTarget.ts < 90 * 1000) {
+    const pooled = sftpSessionPool.get(cachedTarget.hostIp);
+    const tcp22Open = (pooled && pooled.alive) || cachedTarget.tcp22Open;
+    return {
+      sshUser,
+      hostIp: cachedTarget.hostIp,
+      vmStatus: cachedTarget.vmStatus,
+      tcp22Open,
+      privateKey,
+      needIap: !tcp22Open || !cachedTarget.hostIp,
+    };
+  }
+
+  let hostIp = '';
+  let vmStatus = 'RUNNING';
+  try {
+    if (token) {
+      const inst = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+          projectId
+        )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+          vmName
+        )}`,
+        token,
+        projectId,
+        { timeout: 4000 }
+      );
+      hostIp = inst?.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP || '';
+      vmStatus = inst?.status || 'RUNNING';
+    }
+  } catch {
+    // ignore
+  }
+
+  const probePort22 = (ip, timeoutMs = 1800) =>
+    new Promise((resolve) => {
+      if (!ip || ip === 'None' || ip.startsWith('10.')) return resolve(false);
+      const pooled = sftpSessionPool.get(ip);
+      if (pooled && pooled.alive) return resolve(true);
+      const sock = new net.Socket();
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        try {
+          sock.destroy();
+        } catch {
+          // ignore
+        }
+        resolve(ok);
+      };
+      sock.setTimeout(timeoutMs);
+      sock.once('connect', () => finish(true));
+      sock.once('timeout', () => finish(false));
+      sock.once('error', () => finish(false));
+      try {
+        sock.connect(22, ip);
+      } catch {
+        finish(false);
+      }
+    });
+
+  const tcp22Open = await probePort22(hostIp, 1800);
+  if (hostIp && vmStatus === 'RUNNING') {
+    vmScpTargetCache.set(cacheKey, {
+      hostIp,
+      vmStatus,
+      tcp22Open,
+      ts: Date.now(),
+    });
+  }
+
+  return {
+    sshUser,
+    hostIp,
+    vmStatus,
+    tcp22Open,
+    privateKey,
+    needIap: !tcp22Open || !hostIp,
+  };
+}
+
+// Persistent SFTP Session Pool (keyed by hostIp) so folder clicks, file previews,
+// uploads, downloads & in-place edits reuse the active SSH2 SFTP channel in <100ms
+const sftpSessionPool = new Map();
+
+function openSingleSftpConnection({ hostIp, username, privateKey, readyTimeout = 10000 }) {
+  return new Promise((resolve, reject) => {
+    const conn = new Ssh2Client();
+    let settled = false;
+    const finish = (err, entry) => {
+      if (settled) return;
+      settled = true;
+      if (err) {
+        try {
+          conn.end();
+        } catch {
+          // ignore
+        }
+        reject(err);
+      } else {
+        resolve(entry);
+      }
+    };
+
+    conn.on('ready', () => {
+      conn.sftp((err, sftp) => {
+        if (err) return finish(err);
+        const entry = {
+          conn,
+          sftp,
+          hostIp,
+          username,
+          alive: true,
+          lastUsedAt: Date.now(),
+        };
+        const markClosed = () => {
+          entry.alive = false;
+          if (sftpSessionPool.get(hostIp) === entry) {
+            sftpSessionPool.delete(hostIp);
+          }
+        };
+        conn.on('close', markClosed);
+        conn.on('end', markClosed);
+        conn.on('error', markClosed);
+        finish(null, entry);
+      });
+    });
+    conn.on('error', (err) => finish(err));
+    try {
+      conn.connect({
+        host: hostIp,
+        port: 22,
+        username,
+        privateKey,
+        readyTimeout,
+        keepaliveInterval: 15000,
+        keepaliveCountMax: 3,
+      });
+    } catch (e) {
+      finish(e);
+    }
+  });
+}
+
+async function withSftpSession({ hostIp, sshUser, privateKey }, fn) {
+  if (!hostIp || !privateKey) {
+    throw new Error('No direct SSH2 host/key available');
+  }
+
+  // 1) Reuse pooled active SFTP session if healthy
+  const existing = sftpSessionPool.get(hostIp);
+  if (existing && existing.alive && Date.now() - existing.lastUsedAt < 10 * 60 * 1000) {
+    try {
+      existing.lastUsedAt = Date.now();
+      return await fn(existing.sftp, existing.conn, existing.username);
+    } catch {
+      existing.alive = false;
+      sftpSessionPool.delete(hostIp);
+    }
+  }
+
+  // 2) Try requested sshUser first, then fallback to candidate metadata/OS-Login users
+  const candidateUsers = Array.from(
+    new Set([
+      sshUser,
+      'abdelouahab',
+      'alabdelouahab_gmail_com',
+      'alabdelouahab',
+      'ubuntu',
+    ].filter(Boolean))
+  );
+
+  let lastErr = null;
+  for (const candidate of candidateUsers) {
+    try {
+      const entry = await openSingleSftpConnection({
+        hostIp,
+        username: candidate,
+        privateKey,
+        readyTimeout: 10000,
+      });
+      sftpSessionPool.set(hostIp, entry);
+      return await fn(entry.sftp, entry.conn, entry.username);
+    } catch (err) {
+      lastErr = err;
+      const msg = String(err?.message || '');
+      // If TCP connection itself timed out or refused, don't loop over other usernames
+      if (/Timed out while waiting|ECONNREFUSED|EHOSTUNREACH|ENETUNREACH/i.test(msg)) {
+        break;
+      }
+    }
+  }
+  throw lastErr || new Error('Unable to establish SSH2 SFTP session');
+}
+
+async function execRemoteVmPython({
+  projectId,
+  vmName,
+  zone,
+  sshUser,
+  needIap,
+  pythonCode,
+  args = [],
+  timeoutMs = 20000,
+}) {
+  const b64Script = Buffer.from(pythonCode, 'utf8').toString('base64');
+  const escapedArgs = args
+    .map((a) => `'${String(a).replace(/'/g, `'\\''`)}'`)
+    .join(' ');
+  const remoteCmd = `python3 -c "import base64,sys; exec(base64.b64decode('${b64Script}').decode('utf-8'))" ${escapedArgs}`;
+
+  const runSsh = async (useIapTunnel) => {
+    const cli = [
+      'gcloud compute ssh',
+      `${sshUser}@${vmName}`,
+      `--zone=${zone}`,
+      `--project=${projectId}`,
+      useIapTunnel ? '--tunnel-through-iap' : '',
+      '--quiet',
+      '--ssh-flag="-o StrictHostKeyChecking=no"',
+      '--ssh-flag="-o ConnectTimeout=10"',
+      `--command=${JSON.stringify(remoteCmd)}`,
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return execAsync(cli, {
+      timeout: timeoutMs,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  };
+
+  try {
+    const res = await runSsh(needIap);
+    return {
+      stdout: res.stdout || '',
+      stderr: res.stderr || '',
+      engineUsed: needIap ? 'GCLOUD_IAP_TUNNEL' : 'GCLOUD_SSH_DIRECT',
+    };
+  } catch (err) {
+    if (!needIap) {
+      const resIap = await runSsh(true);
+      return {
+        stdout: resIap.stdout || '',
+        stderr: resIap.stderr || '',
+        engineUsed: 'GCLOUD_IAP_TUNNEL',
+      };
+    }
+    throw err;
+  }
+}
+
+// 1) GET /api/project/:projectId/vms/:vmName/scp/list -> List directory over SFTP or gcloud compute ssh/scp
+app.get('/api/project/:projectId/vms/:vmName/scp/list', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const zone = String(req.query.zone || 'us-central1-f').trim();
+  const requestedPath = String(req.query.path || '~').trim() || '~';
+  const rawUsername = req.query.username || '';
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const target = await resolveVmScpTarget({
+      projectId,
+      vmName,
+      zone,
+      rawUsername,
+      token,
+    });
+
+    if (target.vmStatus !== 'RUNNING') {
+      return res.status(400).json({
+        error: `VM "${vmName}" is currently ${target.vmStatus}. Start the VM first to browse or transfer files via SCP/SFTP.`,
+        vmStatus: target.vmStatus,
+      });
+    }
+
+    const pyListScript = `
+import os, sys, stat, pwd, grp, json, datetime
+req_path = sys.argv[1] if len(sys.argv) > 1 else '~'
+if req_path == '~' or req_path.startswith('~/'):
+    req_path = os.path.expanduser(req_path)
+abs_path = os.path.abspath(req_path)
+if not os.path.exists(abs_path):
+    abs_path = os.path.expanduser('~')
+if not os.path.isdir(abs_path):
+    abs_path = os.path.dirname(abs_path)
+
+entries = []
+for name in os.listdir(abs_path):
+    full = os.path.join(abs_path, name)
+    try:
+        st = os.lstat(full)
+        is_link = stat.S_ISLNK(st.st_mode)
+        if is_link:
+            try:
+                st_real = os.stat(full)
+                is_dir = stat.S_ISDIR(st_real.st_mode)
+            except Exception:
+                is_dir = False
+        else:
+            is_dir = stat.S_ISDIR(st.st_mode)
+        perm_oct = oct(stat.S_IMODE(st.st_mode))[-3:]
+        perm_str = stat.filemode(st.st_mode)
+        try:
+            owner = pwd.getpwuid(st.st_uid).pw_name
+        except Exception:
+            owner = str(st.st_uid)
+        mtime_iso = datetime.datetime.utcfromtimestamp(st.st_mtime).isoformat() + 'Z'
+        entries.append({
+            'name': name,
+            'path': full,
+            'type': 'dir' if is_dir else ('symlink' if is_link else 'file'),
+            'sizeBytes': int(st.st_size) if not is_dir else 0,
+            'permissions': f"{perm_str} ({perm_oct})",
+            'modeOctal': perm_oct,
+            'owner': owner,
+            'modifiedAt': mtime_iso,
+        })
+    except Exception:
+        continue
+
+entries.sort(key=lambda x: (0 if x['type'] == 'dir' else 1, x['name'].lower()))
+print(json.dumps({'currentPath': abs_path, 'parentPath': os.path.dirname(abs_path), 'entries': entries}))
+`;
+
+    let payload = null;
+    let engineUsed = 'SSH2_SFTP_DIRECT';
+
+    if (target.tcp22Open && target.privateKey) {
+      try {
+        payload = await withSftpSession(target, async (sftp, _conn, connectedUsername) => {
+          const defaultHome = await new Promise((resolve) => {
+            sftp.realpath('.', (err, abs) => {
+              resolve(!err && abs ? abs : `/home/${connectedUsername || target.sshUser}`);
+            });
+          });
+          const homeDir = defaultHome || `/home/${connectedUsername || target.sshUser}`;
+          const targetDir =
+            requestedPath === '~'
+              ? homeDir
+              : requestedPath.startsWith('~/')
+              ? `${homeDir}/${requestedPath.slice(2)}`
+              : requestedPath;
+          let realPath = await new Promise((resolve) => {
+            sftp.realpath(targetDir, (err, abs) => {
+              if (err || !abs) {
+                resolve(homeDir);
+              } else {
+                resolve(abs);
+              }
+            });
+          });
+          let list = await new Promise((resolve, reject) => {
+            sftp.readdir(realPath, (err, items) => {
+              if (err) return reject(err);
+              resolve(items || []);
+            });
+          }).catch(async () => {
+            realPath = homeDir;
+            return new Promise((resolve, reject) => {
+              sftp.readdir(homeDir, (err2, items2) => {
+                if (err2) return reject(err2);
+                resolve(items2 || []);
+              });
+            });
+          });
+          const entries = list.map((item) => {
+            const longname = String(item.longname || '');
+            const permStr = longname.split(/\s+/)[0] || '';
+            const ownerStr = longname.split(/\s+/)[2] || target.sshUser;
+            const modeNum = Number(item.attrs?.mode || 0);
+            const isDir = (modeNum & 0o170000) === 0o040000 || permStr.startsWith('d');
+            const isLink = (modeNum & 0o170000) === 0o120000 || permStr.startsWith('l');
+            const modeOctal = (modeNum & 0o777).toString(8).padStart(3, '0');
+            const mtimeSec = Number(item.attrs?.mtime || 0);
+            return {
+              name: item.filename,
+              path: realPath === '/' ? `/${item.filename}` : `${realPath}/${item.filename}`,
+              type: isDir ? 'dir' : isLink ? 'symlink' : 'file',
+              sizeBytes: isDir ? 0 : Number(item.attrs?.size || 0),
+              permissions: `${permStr || (isDir ? 'drwxr-xr-x' : '-rw-r--r--')} (${modeOctal})`,
+              modeOctal,
+              owner: ownerStr,
+              modifiedAt: mtimeSec
+                ? new Date(mtimeSec * 1000).toISOString()
+                : new Date().toISOString(),
+            };
+          });
+          entries.sort((a, b) => {
+            if (a.type === 'dir' && b.type !== 'dir') return -1;
+            if (a.type !== 'dir' && b.type === 'dir') return 1;
+            return a.name.localeCompare(b.name);
+          });
+          const parentPath =
+            realPath === '/' ? '/' : path.posix.dirname(realPath);
+          return { currentPath: realPath, parentPath, entries };
+        });
+      } catch {
+        payload = null;
+      }
+    }
+
+    if (!payload) {
+      const pyRes = await execRemoteVmPython({
+        projectId,
+        vmName,
+        zone,
+        sshUser: target.sshUser,
+        needIap: target.needIap,
+        pythonCode: pyListScript,
+        args: [requestedPath],
+      });
+      engineUsed = pyRes.engineUsed;
+      const lines = pyRes.stdout.trim().split('\n');
+      const lastJsonLine = lines[lines.length - 1] || '{}';
+      payload = JSON.parse(lastJsonLine);
+    }
+
+    const iapFlag =
+      engineUsed === 'GCLOUD_IAP_TUNNEL' || target.needIap
+        ? ' --tunnel-through-iap'
+        : '';
+
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      zone,
+      username: target.sshUser,
+      hostIp: target.hostIp || 'IAP-Tunnel',
+      engineUsed,
+      currentPath: payload.currentPath || `/home/${target.sshUser}`,
+      parentPath: payload.parentPath || '/home',
+      entries: payload.entries || [],
+      cliUploadExample: `gcloud compute scp ./local-file.txt ${target.sshUser}@${vmName}:${
+        payload.currentPath || `/home/${target.sshUser}`
+      }/ --zone=${zone} --project=${projectId}${iapFlag}`,
+      cliDownloadExample: `gcloud compute scp ${target.sshUser}@${vmName}:${
+        payload.currentPath || `/home/${target.sshUser}`
+      }/<file> ./ --zone=${zone} --project=${projectId}${iapFlag}`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.stderr ||
+        err.message ||
+        'Failed to list remote VM directory over SCP/SFTP.',
+    });
+  }
+});
+
+// 2) GET /api/project/:projectId/vms/:vmName/scp/download -> Preview text file in UI or download raw attachment
+app.get('/api/project/:projectId/vms/:vmName/scp/download', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const zone = String(req.query.zone || 'us-central1-f').trim();
+  const remotePath = String(req.query.path || '').trim();
+  const mode = String(req.query.mode || 'preview').trim(); // 'preview' | 'raw'
+  const rawUsername = req.query.username || '';
+
+  if (!remotePath) {
+    return res.status(400).json({ error: 'Missing remote file path.' });
+  }
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const target = await resolveVmScpTarget({
+      projectId,
+      vmName,
+      zone,
+      rawUsername,
+      token,
+    });
+
+    const maxBytes = mode === 'raw' ? 25 * 1024 * 1024 : 512 * 1024;
+    let fileBuffer = null;
+    let engineUsed = 'SSH2_SFTP_DIRECT';
+
+    if (target.tcp22Open && target.privateKey) {
+      try {
+        fileBuffer = await withSftpSession(target, (sftp) => {
+          return new Promise((resolve, reject) => {
+            sftp.stat(remotePath, (statErr, stats) => {
+              if (statErr) return reject(statErr);
+              if (stats.size > maxBytes) {
+                return reject(
+                  new Error(
+                    `File is ${(stats.size / (1024 * 1024)).toFixed(
+                      2
+                    )} MB (exceeds ${
+                      mode === 'raw' ? '25 MB' : '512 KB preview'
+                    } limit).`
+                  )
+                );
+              }
+              const chunks = [];
+              const rstream = sftp.createReadStream(remotePath);
+              rstream.on('data', (c) => chunks.push(c));
+              rstream.on('error', (e) => reject(e));
+              rstream.on('end', () => resolve(Buffer.concat(chunks)));
+            });
+          });
+        });
+      } catch {
+        fileBuffer = null;
+      }
+    }
+
+    if (!fileBuffer) {
+      const pyReadScript = `
+import os, sys, base64, json
+p = sys.argv[1]
+max_b = int(sys.argv[2])
+st = os.stat(p)
+if st.st_size > max_b:
+    print(json.dumps({'error': f'File size ({st.st_size} bytes) exceeds limit ({max_b} bytes).'}))
+    sys.exit(0)
+with open(p, 'rb') as f:
+    b = f.read()
+print(json.dumps({'b64': base64.b64encode(b).decode('ascii'), 'size': len(b)}))
+`;
+      const pyRes = await execRemoteVmPython({
+        projectId,
+        vmName,
+        zone,
+        sshUser: target.sshUser,
+        needIap: target.needIap,
+        pythonCode: pyReadScript,
+        args: [remotePath, String(maxBytes)],
+        timeoutMs: 30000,
+      });
+      engineUsed = pyRes.engineUsed;
+      const lines = pyRes.stdout.trim().split('\n');
+      const parsed = JSON.parse(lines[lines.length - 1] || '{}');
+      if (parsed.error) {
+        return res.status(400).json({ error: parsed.error });
+      }
+      fileBuffer = Buffer.from(parsed.b64 || '', 'base64');
+    }
+
+    const fileName = path.posix.basename(remotePath) || 'download.bin';
+    if (mode === 'raw') {
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${fileName.replace(/"/g, '')}"`
+      );
+      res.setHeader('Content-Length', String(fileBuffer.length));
+      return res.send(fileBuffer);
+    }
+
+    // Check if binary (contains null byte in first 4096 bytes)
+    const sample = fileBuffer.subarray(0, Math.min(4096, fileBuffer.length));
+    const isBinary = sample.includes(0);
+
+    return res.json({
+      ok: true,
+      path: remotePath,
+      fileName,
+      sizeBytes: fileBuffer.length,
+      isBinary,
+      engineUsed,
+      content: isBinary
+        ? '[Binary file — click "Download to Laptop" to save locally]'
+        : fileBuffer.toString('utf8'),
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.stderr ||
+        err.message ||
+        'Failed to download remote file via SCP/SFTP.',
+    });
+  }
+});
+
+// 3) POST /api/project/:projectId/vms/:vmName/scp/upload -> Upload one or more files to VM via SFTP or gcloud compute scp
+app.post('/api/project/:projectId/vms/:vmName/scp/upload', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    zone = 'us-central1-f',
+    username = '',
+    targetDir = '~',
+    files = [],
+  } = req.body || {};
+
+  if (!Array.isArray(files) || files.length === 0) {
+    return res.status(400).json({ error: 'No files provided for SCP upload.' });
+  }
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const target = await resolveVmScpTarget({
+      projectId,
+      vmName,
+      zone,
+      rawUsername: username,
+      token,
+    });
+
+    const sanitizedFiles = files.map((f) => {
+      const cleanName = path.posix
+        .basename(String(f.name || 'uploaded-file.txt').trim())
+        .replace(/[^\w.\-+@]/g, '_');
+      const buf = f.contentBase64
+        ? Buffer.from(f.contentBase64, 'base64')
+        : Buffer.from(String(f.contentText || ''), 'utf8');
+      return { name: cleanName, buffer: buf, sizeBytes: buf.length };
+    });
+
+    let engineUsed = 'SSH2_SFTP_DIRECT';
+    let uploadedPaths = [];
+
+    if (target.tcp22Open && target.privateKey) {
+      try {
+        uploadedPaths = await withSftpSession(target, async (sftp) => {
+          const homeDir = `/home/${target.sshUser}`;
+          const resolvedDir =
+            targetDir === '~'
+              ? homeDir
+              : targetDir.startsWith('~/')
+              ? `${homeDir}/${targetDir.slice(2)}`
+              : targetDir;
+          const out = [];
+          for (const f of sanitizedFiles) {
+            const destPath =
+              resolvedDir === '/' ? `/${f.name}` : `${resolvedDir}/${f.name}`;
+            await new Promise((resolve, reject) => {
+              const wstream = sftp.createWriteStream(destPath);
+              wstream.on('error', reject);
+              wstream.on('close', resolve);
+              wstream.end(f.buffer);
+            });
+            out.push({
+              name: f.name,
+              path: destPath,
+              sizeBytes: f.sizeBytes,
+            });
+          }
+          return out;
+        });
+      } catch {
+        uploadedPaths = [];
+      }
+    }
+
+    if (uploadedPaths.length === 0) {
+      // Fallback: write to local tmp dir and transfer via real `gcloud compute scp`!
+      const tmpUploadDir = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'cloudpulse-scp-up-')
+      );
+      try {
+        const localFilePaths = [];
+        for (const f of sanitizedFiles) {
+          const lp = path.join(tmpUploadDir, f.name);
+          fs.writeFileSync(lp, f.buffer);
+          localFilePaths.push(lp);
+        }
+        const remoteDestDir =
+          targetDir === '~' ? `/home/${target.sshUser}` : targetDir;
+
+        const runScp = async (useIapTunnel) => {
+          const cli = [
+            'gcloud compute scp',
+            ...localFilePaths.map((p) => JSON.stringify(p)),
+            `${target.sshUser}@${vmName}:${JSON.stringify(remoteDestDir + '/')}`,
+            `--zone=${zone}`,
+            `--project=${projectId}`,
+            useIapTunnel ? '--tunnel-through-iap' : '',
+            '--quiet',
+            '--scp-flag="-o StrictHostKeyChecking=no"',
+          ]
+            .filter(Boolean)
+            .join(' ');
+          return execAsync(cli, { timeout: 45000 });
+        };
+
+        try {
+          await runScp(target.needIap);
+          engineUsed = target.needIap
+            ? 'GCLOUD_SCP_IAP_TUNNEL'
+            : 'GCLOUD_SCP_DIRECT';
+        } catch {
+          await runScp(true);
+          engineUsed = 'GCLOUD_SCP_IAP_TUNNEL';
+        }
+
+        uploadedPaths = sanitizedFiles.map((f) => ({
+          name: f.name,
+          path:
+            remoteDestDir === '/'
+              ? `/${f.name}`
+              : `${remoteDestDir}/${f.name}`,
+          sizeBytes: f.sizeBytes,
+        }));
+      } finally {
+        try {
+          fs.rmSync(tmpUploadDir, { recursive: true, force: true });
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    return res.json({
+      ok: true,
+      engineUsed,
+      uploadedCount: uploadedPaths.length,
+      uploadedFiles: uploadedPaths,
+      message: `Uploaded ${uploadedPaths.length} file(s) to ${target.sshUser}@${vmName}:${targetDir} via ${engineUsed}.`,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.stderr || err.message || 'Failed to upload file(s) via SCP/SFTP.',
+    });
+  }
+});
+
+// 4) POST /api/project/:projectId/vms/:vmName/scp/action -> MKDIR | WRITE_FILE | RENAME | CHMOD | DELETE
+app.post('/api/project/:projectId/vms/:vmName/scp/action', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    zone = 'us-central1-f',
+    username = '',
+    action = '',
+    targetPath = '',
+    newPath = '',
+    content = '',
+    modeOctal = '644',
+  } = req.body || {};
+
+  if (!action || !targetPath) {
+    return res
+      .status(400)
+      .json({ error: 'Missing SCP file action or targetPath.' });
+  }
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const target = await resolveVmScpTarget({
+      projectId,
+      vmName,
+      zone,
+      rawUsername: username,
+      token,
+    });
+
+    const pyActionScript = `
+import os, sys, shutil, json
+act = sys.argv[1]
+p = os.path.expanduser(sys.argv[2])
+arg3 = sys.argv[3] if len(sys.argv) > 3 else ''
+
+if act == 'MKDIR':
+    os.makedirs(p, exist_ok=True)
+    print(json.dumps({'ok': True, 'message': f'Created directory {p}'}))
+elif act == 'WRITE_FILE':
+    import base64
+    data = base64.b64decode(arg3.encode('ascii'))
+    os.makedirs(os.path.dirname(os.path.abspath(p)), exist_ok=True)
+    with open(p, 'wb') as f:
+        f.write(data)
+    print(json.dumps({'ok': True, 'message': f'Saved {len(data)} bytes to {p}'}))
+elif act == 'RENAME':
+    np = os.path.expanduser(arg3)
+    os.rename(p, np)
+    print(json.dumps({'ok': True, 'message': f'Renamed {p} -> {np}'}))
+elif act == 'CHMOD':
+    os.chmod(p, int(arg3, 8))
+    print(json.dumps({'ok': True, 'message': f'Updated permissions on {p} to {arg3}'}))
+elif act == 'DELETE':
+    if os.path.isdir(p) and not os.path.islink(p):
+        shutil.rmtree(p)
+    else:
+        os.remove(p)
+    print(json.dumps({'ok': True, 'message': f'Deleted {p}'}))
+else:
+    print(json.dumps({'error': f'Unknown action {act}'}))
+`;
+
+    const thirdArg =
+      action === 'WRITE_FILE'
+        ? Buffer.from(String(content || ''), 'utf8').toString('base64')
+        : action === 'RENAME'
+        ? String(newPath || '')
+        : action === 'CHMOD'
+        ? String(modeOctal || '644')
+        : '';
+
+    let engineUsed = 'SSH2_SFTP_DIRECT';
+    let message = '';
+
+    if (target.tcp22Open && target.privateKey && action === 'WRITE_FILE') {
+      try {
+        await withSftpSession(target, (sftp) => {
+          return new Promise((resolve, reject) => {
+            const buf = Buffer.from(String(content || ''), 'utf8');
+            const wstream = sftp.createWriteStream(targetPath);
+            wstream.on('error', reject);
+            wstream.on('close', () => {
+              message = `Saved ${buf.length} bytes to ${targetPath} via SSH2 SFTP.`;
+              resolve();
+            });
+            wstream.end(buf);
+          });
+        });
+      } catch {
+        message = '';
+      }
+    }
+
+    if (!message) {
+      const pyRes = await execRemoteVmPython({
+        projectId,
+        vmName,
+        zone,
+        sshUser: target.sshUser,
+        needIap: target.needIap,
+        pythonCode: pyActionScript,
+        args: [action, targetPath, thirdArg],
+      });
+      engineUsed = pyRes.engineUsed;
+      const lines = pyRes.stdout.trim().split('\n');
+      const parsed = JSON.parse(lines[lines.length - 1] || '{}');
+      if (parsed.error) {
+        return res.status(400).json({ error: parsed.error });
+      }
+      message = parsed.message || `Completed ${action} on ${targetPath}`;
+    }
+
+    return res.json({
+      ok: true,
+      action,
+      targetPath,
+      engineUsed,
+      message,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error:
+        err.stderr || err.message || `Failed to execute SCP action ${action}.`,
     });
   }
 });
