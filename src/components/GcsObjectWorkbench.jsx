@@ -812,8 +812,8 @@ export default function GcsObjectWorkbench({
           `Uploaded ${uploadedCount} file(s) to gs://${selectedBucket.name}/${currentFolderPrefix}`
         );
       }
-      await fetchObjects(selectedBucket.name);
-      await fetchBuckets();
+      await fetchObjects(selectedBucket.name, { silent: true });
+      fetchBuckets({ silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -849,9 +849,9 @@ export default function GcsObjectWorkbench({
         );
       }
       setShowComposerBar(false);
-      await fetchObjects(selectedBucket.name);
-      await fetchBuckets();
-      await handleInspectObject({ name: cleanPath });
+      await fetchObjects(selectedBucket.name, { silent: true });
+      fetchBuckets({ silent: true });
+      await handleInspectObject({ name: cleanPath }, { silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -887,8 +887,8 @@ export default function GcsObjectWorkbench({
         onShowToast(res.data?.message || `Saved object to ${destName}!`);
       }
       setShowRenameBar(false);
-      await fetchObjects(selectedBucket.name);
-      await handleInspectObject({ name: destName });
+      await fetchObjects(selectedBucket.name, { silent: true });
+      await handleInspectObject({ name: destName }, { silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -931,8 +931,18 @@ export default function GcsObjectWorkbench({
             `Updated metadata on gs://${selectedBucket.name}/${inspectedObject.objectName}`
         );
       }
-      await handleInspectObject({ name: inspectedObject.objectName });
-      await fetchObjects(selectedBucket.name);
+      setInspectedObject((prev) =>
+        prev
+          ? {
+              ...prev,
+              metadata: {
+                ...(prev.metadata || {}),
+                ...(res.data?.metadata || {}),
+              },
+            }
+          : prev
+      );
+      fetchObjects(selectedBucket.name, { silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -956,8 +966,9 @@ export default function GcsObjectWorkbench({
   };
 
   // Toggle Public Access & Generate Live Public HTTPS URI (https://storage.googleapis.com/...)
-  const handleTogglePublicAccess = async (makePublic = true) => {
+  const handleTogglePublicAccess = async (makePublic = true, overrideScope = null) => {
     if (!selectedBucket || !inspectedObject) return;
+    const scopeToUse = overrideScope || publicScopeMode;
     setBusyKey(`pub-${inspectedObject.objectName}`);
     try {
       const res = await axios.post(
@@ -969,7 +980,7 @@ export default function GcsObjectWorkbench({
         {
           objectName: inspectedObject.objectName,
           makePublic,
-          preferredScope: publicScopeMode,
+          preferredScope: scopeToUse,
         }
       );
       if (res.data?.publicHttpsUrl && makePublic) {
@@ -977,6 +988,20 @@ export default function GcsObjectWorkbench({
           ?.writeText(res.data.publicHttpsUrl)
           .catch(() => null);
       }
+      // Update inspectedObject in place so the studio never reloads or flashes
+      setInspectedObject((prev) =>
+        prev
+          ? {
+              ...prev,
+              isPublic: Boolean(res.data?.isPublic),
+              publicAccessScope: res.data?.publicAccessScope || (makePublic ? scopeToUse : 'PRIVATE'),
+              publicHttpsUrl: res.data?.publicHttpsUrl || prev.publicHttpsUrl,
+              authenticatedHttpsUrl:
+                res.data?.authenticatedHttpsUrl || prev.authenticatedHttpsUrl,
+              gsUri: res.data?.gsUri || prev.gsUri,
+            }
+          : prev
+      );
       if (onShowToast) {
         onShowToast(
           res.data?.message ||
@@ -985,8 +1010,7 @@ export default function GcsObjectWorkbench({
               : `Revoked public access on gs://${selectedBucket.name}/${inspectedObject.objectName}`)
         );
       }
-      await handleInspectObject({ name: inspectedObject.objectName });
-      await fetchBuckets();
+      fetchBuckets({ silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -2430,20 +2454,6 @@ export default function GcsObjectWorkbench({
                           onChange={(e) => {
                             const nextMode = e.target.value;
                             setPublicScopeMode(nextMode);
-                            if (onShowToast) {
-                              const labelMap = {
-                                AUTO: 'Auto Mode (Tries Single-Object ACL first, falls back to Bucket IAM)',
-                                OBJECT_ACL:
-                                  'Single Object Only Mode (Fine-Grained Object ACL: allUsers READER)',
-                                BUCKET_IAM:
-                                  'Uniform Bucket IAM Mode (Bucket-wide roles/storage.objectViewer)',
-                              };
-                              onShowToast(
-                                `Selected Public Access Mode: ${
-                                  labelMap[nextMode] || nextMode
-                                }`
-                              );
-                            }
                           }}
                           className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-[10px] font-bold cursor-pointer"
                           title="Choose how public access is granted in GCS"

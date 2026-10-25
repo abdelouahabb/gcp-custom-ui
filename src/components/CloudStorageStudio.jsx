@@ -130,28 +130,34 @@ export default function CloudStorageStudio({
   const [teleportCopyObjects, setTeleportCopyObjects] = useState(true);
   const [copiedCmd, setCopiedCmd] = useState(null);
 
-  const fetchBuckets = useCallback(async () => {
-    if (!projectId) return;
-    setLoadingBuckets(true);
-    try {
-      const res = await axios.get(
-        `/api/project/${encodeURIComponent(projectId)}/storage/buckets`
-      );
-      const list = res.data?.buckets || [];
-      setBuckets(list);
-      if (list.length > 0 && !list.some((b) => b.name === selectedBucketName)) {
-        setSelectedBucketName(list[0].name);
-      }
-    } catch (err) {
-      if (onShowError) {
-        onShowError(
-          err.response?.data?.error || 'Failed to load Cloud Storage buckets.'
+  const fetchBuckets = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!projectId) return;
+      if (!silent) setLoadingBuckets(true);
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(projectId)}/storage/buckets`
         );
+        const list = res.data?.buckets || [];
+        setBuckets(list);
+        if (
+          list.length > 0 &&
+          !list.some((b) => b.name === selectedBucketName)
+        ) {
+          setSelectedBucketName(list[0].name);
+        }
+      } catch (err) {
+        if (onShowError) {
+          onShowError(
+            err.response?.data?.error || 'Failed to load Cloud Storage buckets.'
+          );
+        }
+      } finally {
+        if (!silent) setLoadingBuckets(false);
       }
-    } finally {
-      setLoadingBuckets(false);
-    }
-  }, [projectId, selectedBucketName, onShowError]);
+    },
+    [projectId, selectedBucketName, onShowError]
+  );
 
   useEffect(() => {
     fetchBuckets();
@@ -163,12 +169,12 @@ export default function CloudStorageStudio({
   );
 
   const fetchObjects = useCallback(
-    async (bucketName = selectedBucket?.name) => {
+    async (bucketName = selectedBucket?.name, { silent = false } = {}) => {
       if (!projectId || !bucketName) {
         setObjects([]);
         return;
       }
-      setLoadingObjects(true);
+      if (!silent) setLoadingObjects(true);
       try {
         const res = await axios.get(
           `/api/project/${encodeURIComponent(
@@ -188,7 +194,7 @@ export default function CloudStorageStudio({
           );
         }
       } finally {
-        setLoadingObjects(false);
+        if (!silent) setLoadingObjects(false);
       }
     },
     [projectId, selectedBucket?.name, showAllVersions, objectPrefixFilter, onShowError]
@@ -429,9 +435,9 @@ export default function CloudStorageStudio({
   };
 
   // Inspect an Object's Content & Metadata
-  const handleInspectObject = async (obj) => {
+  const handleInspectObject = async (obj, { silent = false } = {}) => {
     if (!selectedBucket) return;
-    setLoadingInspect(true);
+    if (!silent) setLoadingInspect(true);
     try {
       const res = await axios.get(
         `/api/project/${encodeURIComponent(
@@ -449,7 +455,7 @@ export default function CloudStorageStudio({
         );
       }
     } finally {
-      setLoadingInspect(false);
+      if (!silent) setLoadingInspect(false);
     }
   };
 
@@ -475,9 +481,21 @@ export default function CloudStorageStudio({
             `Saved new generation of gs://${selectedBucket.name}/${inspectedObject.objectName}!`
         );
       }
-      await fetchObjects(selectedBucket.name);
-      await fetchBuckets();
-      await handleInspectObject({ name: inspectedObject.objectName });
+      // Update inspectedObject in place so the editor never unmounts or flashes
+      setInspectedObject((prev) =>
+        prev
+          ? {
+              ...prev,
+              textPreview: editedTextContent,
+              metadata: {
+                ...(prev.metadata || {}),
+                ...(res.data?.object || {}),
+              },
+            }
+          : prev
+      );
+      fetchObjects(selectedBucket.name, { silent: true });
+      fetchBuckets({ silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -595,7 +613,18 @@ export default function CloudStorageStudio({
             `Rewrote ${obj.name} storage class to ${targetClass}!`
         );
       }
-      await fetchObjects(selectedBucket.name);
+      setInspectedObject((prev) =>
+        prev && prev.objectName === obj.name
+          ? {
+              ...prev,
+              metadata: {
+                ...(prev.metadata || {}),
+                storageClass: targetClass,
+              },
+            }
+          : prev
+      );
+      fetchObjects(selectedBucket.name, { silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -629,8 +658,8 @@ export default function CloudStorageStudio({
       if (inspectedObject?.objectName === obj.name) {
         setInspectedObject(null);
       }
-      await fetchObjects(selectedBucket.name);
-      await fetchBuckets();
+      await fetchObjects(selectedBucket.name, { silent: true });
+      fetchBuckets({ silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(

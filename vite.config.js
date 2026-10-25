@@ -119,6 +119,9 @@ export default defineConfig(({ mode }) => {
     server: {
       port: frontendPort,
       host: frontendHost,
+      watch: {
+        ignored: ['**/dist/**', '**/.git/**'],
+      },
       proxy: {
         '/api': {
           target: proxyTarget,
