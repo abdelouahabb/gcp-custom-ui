@@ -1486,6 +1486,31 @@ const DOC_SECTIONS = [
     billingImpact:
       'Eliminates cross-zone VPC peering data-transfer taxes, $0.10/run network reachability fees, and idle GPU VM burn.',
   },
+  {
+    id: 'cloud-scheduler-to-cloud-run-v2-jobs-converter-and-creator',
+    wave: 'WAVE 16 SERVERLESS BATCH',
+    title:
+      '43. Cloud Run v2 Batch Jobs Creator & Cloud Scheduler → Cloud Run Jobs Converter (24h Timeout · Parallel Task Sharding · Native :run Trigger)',
+    badge: 'Cloud Run v2 Jobs + Cloud Scheduler v1 + volumes[].gcs',
+    badgeColor:
+      'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30',
+    icon: Zap,
+    targetTab: 'CLOUD_RUN',
+    problemSolved:
+      'Triggering batch, ETL, or cron jobs via Cloud Scheduler HTTP webhooks is capped at a 30-minute HTTP deadline (1,800s), requires running an exposed web server on port 8080, and cannot shard work across parallel tasks.',
+    howItWorks: [
+      'Standalone Cloud Run v2 Batch Job Creator (+ Create Cloud Run Job & Provision Modal): Create native Cloud Run v2 Jobs (run.googleapis.com/v2/.../jobs) with 1–100 parallel task shards (CLOUD_RUN_TASK_INDEX), up to 24 hours (86,400s) execution timeout, persistent volumes[].gcs FUSE disks, and optional 1x nvidia-l4 GPUs.',
+      'Multi-Region Cloud Scheduler Anti-Pattern Scanner & 1-Click Converter: Scans Cloud Scheduler jobs across 9 GCP regions, matches .run.app targets to their backing Cloud Run Service container image, converts them into Cloud Run v2 Jobs, and rewires Cloud Scheduler to call the official OAuth :run API.',
+      '1-Click Execute Now (:run) & Live Execution Telemetry: Trigger any Cloud Run v2 Job immediately and inspect live task completion counts (succeededCount/taskCount) and execution logs.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/cloudrun/scheduler-and-jobs (Cloud Scheduler v1 + Cloud Run v2 Jobs & Executions)',
+      'POST /api/project/:id/cloudrun/convert-scheduler-to-job (Cloud Run v2 Jobs + Storage v1 + Cloud Scheduler v1 :run rewirer)',
+      'POST /api/project/:id/cloudrun/jobs/:region/:jobName/run & POST /api/project/:id/provision (cloudRunWorkloadKind: "JOB")',
+    ],
+    billingImpact:
+      'Bills 0¢ the millisecond batch tasks exit(0) (100ms billing granularity), eliminates duplicate retry storms from 30m HTTP timeouts, and replaces 24/7 cron VMs.',
+  },
 ];
 
 export default function InteractiveDocsGuide({

@@ -2120,6 +2120,20 @@ spec:
 
           <button
             type="button"
+            onClick={() => {
+              setShowSchedulerToJobsStudio(true);
+              if (!schedulerJobsState.data && !schedulerJobsState.loading) {
+                handleFetchSchedulerAndJobs(false);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>+ Create Cloud Run Job</span>
+          </button>
+
+          <button
+            type="button"
             onClick={onOpenProvisionCloudRun}
             className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] px-3.5 py-2 text-xs font-bold transition-colors shadow-sm cursor-pointer"
           >
@@ -2307,10 +2321,73 @@ spec:
             )}
           </div>
 
-          {/* 2. Interactive Cloud Run v2 Job Builder & Scheduler Rewirer */}
+          {/* 2. Interactive Cloud Run v2 Job Creator & Scheduler Rewirer */}
           <div className="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/30 space-y-3">
-            <div className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300">
-              2. Configure &amp; Deploy Cloud Run v2 Batch Job (<code>run.googleapis.com/v2/projects/{projectId}/locations/{jobConvertForm.region}/jobs</code>)
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300">
+                2. Create New Cloud Run v2 Batch Job or Convert Scheduler Cron (<code>run.googleapis.com/v2/projects/{projectId}/locations/{jobConvertForm.region}/jobs</code>)
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono text-zinc-500">
+                  Quick Job Presets:
+                </span>
+                {[
+                  {
+                    label: 'Sharded Python ETL (4 Shards · 1h)',
+                    spec: {
+                      jobName: `sharded-etl-job-${Math.floor(Date.now() / 1000) % 1000}`,
+                      taskCount: 4,
+                      taskTimeoutSec: 3600,
+                      cpu: '1',
+                      memory: '1Gi',
+                      attachPersistentDisk: true,
+                      enableCloudRunGpu: false,
+                      schedule: '0 * * * *',
+                    },
+                  },
+                  {
+                    label: 'Nightly GCS Disk Compactor (24h Timeout)',
+                    spec: {
+                      jobName: `gcs-disk-compactor-${Math.floor(Date.now() / 1000) % 1000}`,
+                      taskCount: 1,
+                      taskTimeoutSec: 86400,
+                      cpu: '2',
+                      memory: '4Gi',
+                      attachPersistentDisk: true,
+                      enableCloudRunGpu: false,
+                      schedule: '0 2 * * *',
+                    },
+                  },
+                  {
+                    label: 'Serverless Batch AI GPU (1x nvidia-l4)',
+                    spec: {
+                      jobName: `batch-gpu-inference-${Math.floor(Date.now() / 1000) % 1000}`,
+                      region: 'us-east4',
+                      taskCount: 2,
+                      taskTimeoutSec: 14400,
+                      cpu: '4',
+                      memory: '16Gi',
+                      attachPersistentDisk: true,
+                      enableCloudRunGpu: true,
+                      schedule: '0 */6 * * *',
+                    },
+                  },
+                ].map((tpl) => (
+                  <button
+                    key={tpl.label}
+                    type="button"
+                    onClick={() =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        ...tpl.spec,
+                      }))
+                    }
+                    className="px-2 py-0.5 rounded bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-[10px] font-mono font-bold cursor-pointer"
+                  >
+                    + {tpl.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">

@@ -390,6 +390,14 @@ export default function ResourceProvisionModal({
   };
 
   // Cloud Run specific + 3-Way Container Source (Artifact Registry | GitHub Repo | Public URI)
+  const [runWorkloadKind, setRunWorkloadKind] = useState('SERVICE'); // 'SERVICE' | 'JOB'
+  const [runJobTaskCount, setRunJobTaskCount] = useState(4);
+  const [runJobMaxRetries, setRunJobMaxRetries] = useState(3);
+  const [runJobTimeoutSec, setRunJobTimeoutSec] = useState(3600);
+  const [runJobExecuteNow, setRunJobExecuteNow] = useState(true);
+  const [runJobAttachScheduler, setRunJobAttachScheduler] = useState(true);
+  const [runJobSchedule, setRunJobSchedule] = useState('0 * * * *');
+  const [runJobCommandScript, setRunJobCommandScript] = useState('');
   const [runSourceMode, setRunSourceMode] = useState('PUBLIC_URI'); // ARTIFACT_REGISTRY | GITHUB_REPO | PUBLIC_URI
   const [arImages, setArImages] = useState([]);
   const [runGhRepoUrl, setRunGhRepoUrl] = useState(
@@ -1108,6 +1116,11 @@ export default function ResourceProvisionModal({
           ? 'gcloud beta run deploy'
           : 'gcloud run deploy';
       const iapFlag = runEnableIap ? ' --iap' : '';
+      if (runWorkloadKind === 'JOB') {
+        return `gcloud run jobs create ${clean} --project=${projectId} --region=${region}${saFlag} --image=${containerImage} --tasks=${runJobTaskCount} --max-retries=${runJobMaxRetries} --task-timeout=${runJobTimeoutSec}s --cpu=${runCpu} --memory=${runMemory}${gpuFlags}${vpcFlags}${volFlags}${
+          runJobExecuteNow ? ' --execute-now' : ''
+        }`;
+      }
       return `${cmdPrefix} ${clean} --project=${projectId} --region=${region}${saFlag} --image=${containerImage} --port=${runPort} --cpu=${runCpu} --memory=${runMemory}${gpuFlags}${vpcFlags}${volFlags}${iapFlag} --min-instances=${runMinInstances} --max-instances=${runMaxInstances} --concurrency=${runConcurrency} --timeout=${runTimeout}s --ingress=${ingressFlag} --execution-environment=${
         runExecEnv === 'EXECUTION_ENVIRONMENT_GEN2' ? 'gen2' : 'gen1'
       } ${billingFlag} ${
@@ -1683,6 +1696,14 @@ export default function ResourceProvisionModal({
                 ? bqDataClassification
                 : gcsDataClassification,
             containerImage,
+            cloudRunWorkloadKind: runWorkloadKind,
+            jobTaskCount: Number(runJobTaskCount || 1),
+            jobMaxRetries: Number(runJobMaxRetries ?? 3),
+            jobTimeoutSec: Number(runJobTimeoutSec || 3600),
+            jobExecuteNow: Boolean(runJobExecuteNow),
+            jobAttachScheduler: Boolean(runJobAttachScheduler),
+            jobSchedule: runJobSchedule,
+            jobCommandScript: runJobCommandScript,
             containerPort: runPort,
             cpu: runCpu,
             memory: runMemory,
@@ -4046,6 +4067,177 @@ export default function ResourceProvisionModal({
 
           {serviceType === 'CLOUD_RUN' && (
             <div className="space-y-3.5 border-t border-zinc-200 dark:border-zinc-800 pt-3">
+              {/* Cloud Run Workload Kind Selector: SERVICE vs BATCH JOB */}
+              <div className="p-3 rounded-[10px] border border-indigo-500/35 bg-indigo-500/5 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-[11px] font-extrabold font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                    Cloud Run v2 Workload Kind (HTTP Service vs. Parallel Batch Job)
+                  </label>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    {runWorkloadKind === 'JOB'
+                      ? 'run.googleapis.com/v2/.../jobs · Up to 24h Timeout'
+                      : 'run.googleapis.com/v2/.../services · Scale 0→1000'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    {
+                      id: 'SERVICE',
+                      label: '1. Cloud Run v2 Service (HTTP / gRPC / WebSockets)',
+                      sub: 'Exposes HTTPS .run.app URL · Auto-scales 0→1000 on requests (max 60m request timeout)',
+                    },
+                    {
+                      id: 'JOB',
+                      label: '2. Cloud Run v2 Batch Job (Parallel Shards + Cron :run)',
+                      sub: 'Zero open ports · Runs to Exit(0) · Up to 24h (86,400s) timeout · 1–100 CLOUD_RUN_TASK_INDEX shards',
+                    },
+                  ].map((wk) => {
+                    const active = runWorkloadKind === wk.id;
+                    return (
+                      <button
+                        key={wk.id}
+                        type="button"
+                        onClick={() => {
+                          setRunWorkloadKind(wk.id);
+                          if (wk.id === 'JOB') {
+                            setName((prev) =>
+                              prev.includes('-srv-')
+                                ? prev.replace('-srv-', '-job-')
+                                : prev
+                            );
+                          } else {
+                            setName((prev) =>
+                              prev.includes('-job-')
+                                ? prev.replace('-job-', '-srv-')
+                                : prev
+                            );
+                          }
+                        }}
+                        className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
+                          active
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                            : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold">{wk.label}</div>
+                        <div
+                          className={`text-[10px] mt-0.5 ${
+                            active ? 'text-indigo-100' : 'text-zinc-500'
+                          }`}
+                        >
+                          {wk.sub}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {runWorkloadKind === 'JOB' && (
+                  <div className="pt-2 border-t border-indigo-500/20 space-y-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                          Parallel Task Shards
+                        </label>
+                        <select
+                          value={runJobTaskCount}
+                          onChange={(e) =>
+                            setRunJobTaskCount(Number(e.target.value))
+                          }
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          <option value={1}>1 Shard</option>
+                          <option value={2}>2 Shards</option>
+                          <option value={4}>4 Shards</option>
+                          <option value={8}>8 Shards</option>
+                          <option value={16}>16 Shards</option>
+                          <option value={50}>50 Shards</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                          Max Batch Timeout
+                        </label>
+                        <select
+                          value={runJobTimeoutSec}
+                          onChange={(e) =>
+                            setRunJobTimeoutSec(Number(e.target.value))
+                          }
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          <option value={1800}>30m (1,800s)</option>
+                          <option value={3600}>1 Hour (3,600s)</option>
+                          <option value={14400}>4 Hours (14,400s)</option>
+                          <option value={43200}>12 Hours (43,200s)</option>
+                          <option value={86400}>24 Hours (86,400s Max)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                          Max Task Retries
+                        </label>
+                        <select
+                          value={runJobMaxRetries}
+                          onChange={(e) =>
+                            setRunJobMaxRetries(Number(e.target.value))
+                          }
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        >
+                          <option value={0}>0 Retries</option>
+                          <option value={1}>1 Retry</option>
+                          <option value={3}>3 Retries</option>
+                          <option value={5}>5 Retries</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                          Scheduler Cron (:run)
+                        </label>
+                        <input
+                          type="text"
+                          value={runJobSchedule}
+                          onChange={(e) => setRunJobSchedule(e.target.value)}
+                          placeholder="0 * * * *"
+                          className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2 py-1.5 text-xs font-mono text-zinc-950 dark:text-zinc-100"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-zinc-700 dark:text-zinc-300">
+                      <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(runJobExecuteNow)}
+                          onChange={(e) => setRunJobExecuteNow(e.target.checked)}
+                          className="rounded border-indigo-400 text-indigo-600"
+                        />
+                        <span>
+                          Execute First Run Immediately (<code>:run</code>)
+                        </span>
+                      </label>
+
+                      <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(runJobAttachScheduler)}
+                          onChange={(e) =>
+                            setRunJobAttachScheduler(e.target.checked)
+                          }
+                          className="rounded border-indigo-400 text-indigo-600"
+                        />
+                        <span>
+                          Attach Cloud Scheduler Trigger (<code>{runJobSchedule}</code> → <code>:run</code> API)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 3-Way Container Source Selector: Artifact Registry | GitHub Repo | Public URI */}
               <div className="p-3 rounded-[10px] border border-blue-500/30 bg-blue-500/5 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">

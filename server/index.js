@@ -4769,6 +4769,178 @@ app.post('/api/project/:projectId/provision', async (req, res) => {
         ...(gpuCount > 0 ? { 'nvidia.com/gpu': String(gpuCount) } : {}),
       };
 
+      // Support creating a native Cloud Run v2 Batch Job (run.googleapis.com/v2/.../jobs) directly from the Provision Modal
+      if (config.cloudRunWorkloadKind === 'JOB' || config.isCloudRunJob === true) {
+        const jobTaskCount = Math.max(1, Math.min(100, Number(config.jobTaskCount || 1)));
+        const jobMaxRetries = Math.max(0, Math.min(10, Number(config.jobMaxRetries ?? 3)));
+        const jobTimeoutSec = Math.max(
+          60,
+          Math.min(86400, Number(config.jobTimeoutSec || timeoutSeconds || 3600))
+        );
+        const jobExecuteNow = config.jobExecuteNow !== false;
+        const jobAttachScheduler = Boolean(config.jobAttachScheduler);
+        const jobSchedule = String(config.jobSchedule || '0 * * * *');
+        const usePyJobRunner =
+          containerImage.includes('python:') ||
+          containerImage.includes('cloudrun/container/hello');
+        const effectiveJobImage = usePyJobRunner
+          ? 'mirror.gcr.io/library/python:3.12-slim'
+          : containerImage;
+        const customJobCmd = String(config.jobCommandScript || '').trim();
+        const pyJobCode =
+          customJobCmd ||
+          `import os, time; print(f"[CloudPulse Cloud Run v2 Job] Executing ${cleanName} shard {os.environ.get('CLOUD_RUN_TASK_INDEX','0')}/{os.environ.get('CLOUD_RUN_TASK_COUNT','1')} in ${region}"); time.sleep(1); print("[CloudPulse Cloud Run v2 Job] Shard completed exit(0)")`;
+
+        const buildJobPayload = (withGpu) => ({
+          labels: {
+            'managed-by': 'cloudpulse-2026',
+            'workload-kind': 'cloud-run-v2-job',
+          },
+          template: {
+            taskCount: jobTaskCount,
+            template: {
+              ...(runtimeServiceAccount
+                ? { serviceAccount: runtimeServiceAccount }
+                : {}),
+              maxRetries: jobMaxRetries,
+              timeout: `${jobTimeoutSec}s`,
+              executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
+              ...(vpcAccess ? { vpcAccess } : {}),
+              ...(volumes.length > 0 ? { volumes } : {}),
+              ...(withGpu && gpuCount > 0
+                ? {
+                    nodeSelector: {
+                      'run.googleapis.com/accelerator': gpuType || 'nvidia-l4',
+                    },
+                    gpuZonalRedundancyDisabled: !gpuZonalRedundancy,
+                  }
+                : {}),
+              containers: [
+                {
+                  image: effectiveJobImage,
+                  ...(usePyJobRunner
+                    ? { command: ['python3', '-c', pyJobCode] }
+                    : {}),
+                  resources: {
+                    limits: {
+                      cpu,
+                      memory: limits.memory,
+                      ...(withGpu && gpuCount > 0
+                        ? { 'nvidia.com/gpu': '1' }
+                        : {}),
+                    },
+                  },
+                  ...(volumeMounts.length > 0 ? { volumeMounts } : {}),
+                  ...(envList.length > 0 ? { env: envList } : {}),
+                },
+              ],
+            },
+          },
+        });
+
+        const createOrUpdateJob = async (payload) => {
+          try {
+            return await gcpFetch(
+              `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(
+                region
+              )}/jobs?jobId=${encodeURIComponent(cleanName)}`,
+              token,
+              projectId,
+              {
+                method: 'POST',
+                data: payload,
+                timeout: 20000,
+              }
+            );
+          } catch (err) {
+            const msg = String(err.response?.data?.error?.message || err.message || '');
+            if (err.response?.status === 409 || msg.toLowerCase().includes('already exists')) {
+              return await gcpFetch(
+                `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+                  projectId
+                )}/locations/${encodeURIComponent(
+                  region
+                )}/jobs/${encodeURIComponent(cleanName)}`,
+                token,
+                projectId,
+                {
+                  method: 'PATCH',
+                  data: payload,
+                  timeout: 20000,
+                }
+              );
+            }
+            throw err;
+          }
+        };
+
+        let jobOp;
+        try {
+          jobOp = await createOrUpdateJob(buildJobPayload(gpuCount > 0));
+        } catch (gpuErr) {
+          const errStr = String(gpuErr.response?.data?.error?.message || gpuErr.message || '');
+          if (gpuCount > 0 && /quota|accelerator|nvidia|gpu/i.test(errStr)) {
+            jobOp = await createOrUpdateJob(buildJobPayload(false));
+          } else {
+            throw gpuErr;
+          }
+        }
+
+        await new Promise((r) => setTimeout(r, 2000));
+
+        if (jobExecuteNow) {
+          await gcpFetch(
+            `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+              projectId
+            )}/locations/${encodeURIComponent(
+              region
+            )}/jobs/${encodeURIComponent(cleanName)}:run`,
+            token,
+            projectId,
+            { method: 'POST', data: {}, timeout: 12000 }
+          ).catch(() => null);
+        }
+
+        if (jobAttachScheduler) {
+          const schedName = `projects/${projectId}/locations/${region}/jobs/${cleanName}-cron`;
+          await gcpFetch(
+            `https://cloudscheduler.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/locations/${encodeURIComponent(region)}/jobs`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              data: {
+                name: schedName,
+                description: `CloudPulse 2026 Scheduled Trigger for Cloud Run v2 Job ${cleanName}`,
+                schedule: jobSchedule,
+                timeZone: 'Etc/UTC',
+                httpTarget: {
+                  uri: `https://${region}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${projectId}/jobs/${cleanName}:run`,
+                  httpMethod: 'POST',
+                },
+              },
+              timeout: 10000,
+            }
+          ).catch(() => null);
+        }
+
+        return res.json({
+          status: 'PROVISIONED',
+          serviceType: 'CLOUD_RUN',
+          cloudRunWorkloadKind: 'JOB',
+          resourceName: cleanName,
+          region,
+          operationName: jobOp?.name || null,
+          message: `Provisioned Cloud Run v2 Batch Job "${cleanName}" in ${region} (${jobTaskCount} shard(s), ${jobTimeoutSec}s max timeout, ${cpu} vCPU / ${limits.memory}${
+            storageSummary ? `, ${storageSummary}` : ''
+          })${jobExecuteNow ? ' and triggered initial :run execution!' : '!'}`,
+        });
+      }
+
       const enableDirectIap = Boolean(config.iapEnabled);
       const serviceBody = {
         ingress,

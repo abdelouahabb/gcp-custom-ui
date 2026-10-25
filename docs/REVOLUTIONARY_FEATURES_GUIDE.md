@@ -653,6 +653,15 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
 - **How It Works (`GET /api/project/:id/why-gcp-wins/live-audit` & `POST /api/project/:id/why-gcp-wins/execute-action`)**:
   - Spreads all 10 Google Cloud architectural differentiators directly into the studio where engineers manage that resource: Global Single-VPC Subnet Spanner (`01`), Cloud Run Gen2 NVIDIA L4 Scale-to-`$0.00` (`02`), Global Anycast IPv4 Allocator (`03`), `$0.00` Mathematical VPC Reachability Prover (`04`), BigQuery 7-Day `FOR SYSTEM_TIME AS OF` Time-Travel & Zero-Copy Clone (`05`), Borg/Andromeda Zero-Reboot Live Host Migration (`06`), 90-Day IAM Least-Privilege Surgeon (`07`), 15-Minute Dual-Region Turbo Replication (`08`), Automatic Sustained-Use Discounts (`09`), and Zero-Key Workload Identity Federation (`10`).
 
+### 60. Cloud Run v2 Batch Jobs Studio & Cloud Scheduler → Cloud Run Jobs Converter (`src/components/CloudRunFleetManager.jsx`, `src/components/ResourceProvisionModal.jsx` & `server/index.js`)
+- **Where to find it**: Click **`+ Create Cloud Run Job`** or **`Cloud Scheduler → Cloud Run Jobs (24h Batch + Sharding)`** in the **`Cloud Run Studio`** header, click **`→ Cloud Run Job`** on any Cloud Run Service card, or choose **`2. Cloud Run v2 Batch Job`** inside the Global **`+ Provision Resource`** modal (`CLOUD_RUN`).
+- **Why We Built This**:
+  - Using Cloud Scheduler to hit an HTTP endpoint on a Cloud Run Service or webhook is limited by a **30-minute HTTP attemptDeadline** (`1,800s`), requires exposing an HTTP web server on `$PORT` (`8080`), and runs sequentially on 1 instance.
+- **How It Works (`GET /api/project/:id/cloudrun/scheduler-and-jobs`, `POST /api/project/:id/cloudrun/convert-scheduler-to-job`, `POST /api/project/:id/cloudrun/jobs/:region/:jobName/run` & `POST /api/project/:id/provision`)**:
+  1. **Multi-Region Cloud Scheduler & Cloud Run Jobs Scanner**: Discovers all Cloud Scheduler jobs and Cloud Run v2 Jobs across 9 GCP regions, matches `.run.app` webhook URLs back to their backing Cloud Run Service (`containerImage`, `cpu`, `memory`, `persistentDiskBuckets`), and flags fragile HTTP cron webhooks.
+  2. **Standalone Cloud Run v2 Job Creation & 1-Click Scheduler Conversion**: Creates or converts workloads into native **Cloud Run v2 Jobs** (`run.googleapis.com/v2/projects/:id/locations/:region/jobs`) with **up to 24 hours (`86,400s`) timeout**, **1–100 parallel task shards (`CLOUD_RUN_TASK_INDEX`)**, **persistent `volumes[].gcs` FUSE disk mounts**, and **optional `1x nvidia-l4` GPUs** (with automatic GPU quota fallback).
+  3. **Automatic Cloud Scheduler `:run` Rewiring & 1-Click Execution**: Automatically rewires or provisions the Cloud Scheduler job to trigger `POST https://<region>-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/<project>/jobs/<jobName>:run` with OAuth authentication, and lets you trigger **`Execute Now (:run)`** directly from the fleet table.
+
 
 
 
