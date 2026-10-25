@@ -637,6 +637,23 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
      - **DevSecOps & DevOps Engineer (`POST /api/project/:id/enterprise-personas/devsecops-entropy-gitops`)**: Computes mathematical Shannon entropy ($H(X) = -\sum P(x)\log_2 P(x)$ bits/char) across live Cloud Run env vars and IAM principals, and generates declarative Terraform 1.5+ `import {}` blocks for live VPC firewalls, GCS buckets, and Service Accounts.
   10. **Embedded Contextual Studio Helpers (`PersonaContextualHelper.jsx`)**: Every engineering studio across CloudPulse embeds its matching persona helper bar with live telemetry pills, 1-click actions, and instant jump to the 10-Persona Launch Tribunal.
 
+### 58. GCE VM → Cloud Run Gen2 Modernization Engine: `mfit` + `m2c` on Steroids, Persistent `volumes[].gcs` FUSE Disk, 2 TB+ Andromeda Rsync & GPU/TPU/Region Guardrails (`src/components/VmFleetAndSsh.jsx`, `src/components/CloudRunFleetManager.jsx`, `src/components/CloudStorageStudio.jsx` & `server/index.js`)
+- **Where to find it**: Click **`Migrate VM → Cloud Run`** on any VM row inside **`VM Fleet & SSH`** (or inside **`Resource Control Center`** / **`Cloud Run Studio`** header).
+- **Why We Built This**:
+  - Migrating a stateful Compute Engine VM to serverless Cloud Run normally requires manual SSH inspection, Dockerfile authoring, storage refactoring, cron job rewriting, and navigating complex hardware/regional limits (such as 2 TB persistent disks, SQLite/PostgreSQL byte locks, or A100/H100/TPU machine types in non-GPU regions).
+- **How It Works (`POST /api/project/:id/vms/:vmName/extract-workload` & `POST /api/project/:id/vms/:vmName/migrate-to-cloudrun`)**:
+  1. **Live `mfit` 6-Dimension Readiness Scorecard (`0–100%`) & Bloat Exclusion**: Inspects the VM over ephemeral SSH (`ss -tulpn`, `ss -uapn`, `crontab -l`, `systemctl`, `du -sb`, `df -B1`, `.env` key scan), automatically strips `.env`, `.git`, `node_modules`, and `*.log` from public uploads, and scores Cloud Run readiness.
+  2. **Polyglot `m2c` Runtime Plugin & 4-Tab Artifact Generator**: Automatically classifies the workload (`DOCKER_CONTAINER_NATIVE`, `NODEJS_EXPRESS_NEXT`, `PYTHON_FASTAPI_FLASK`, `JAVA_SPRING_TOMCAT`, `NGINX_STATIC_WEB`) and writes `Dockerfile`, `migration-plan.yaml`, `service.knative.yaml`, and `skaffold.yaml` to disk.
+  3. **Persistent Cloud Storage FUSE Disk Mount (`volumes[].gcs`) & 2 TB+ Direct Andromeda Rsync**: Auto-provisions a co-located regional bucket (`gs://<projectId>-vmdisk-<vmName>`), binds `roles/storage.objectAdmin` to the Cloud Run runtime Service Account, uploads extracted VM files (or executes `gcloud storage rsync -r` directly from the VM over Google's 20–100 Gbps internal Andromeda network for 100 GB – 2 TB+ disks), and mounts it at `/mnt/gce-disk` on Cloud Run Gen2.
+  4. **High-End GPU (`A100` / `H100`) & Cloud TPU (`v5e` / `v6e`) → `nvidia-l4` Conversion & 7-Region Compatibility Guardrails**: Detects accelerator families, warns when down-converting to Cloud Run's `1x nvidia-l4` (24 GB VRAM, min `4 vCPU / 16Gi RAM`), validates against the 7 Cloud Run GPU regions (`us-central1`, `us-east4`, `europe-west1`, `europe-west4`, `asia-east1`, `asia-northeast1`, `asia-southeast1`), and co-locates the persistent disk bucket in the target GPU region.
+  5. **2-Container Sidecar Pod, Cron → Cloud Scheduler Trigger & Zero-Downtime Canary HTTP Probe**: Supports deploying a localhost sidecar worker (`127.0.0.1:9090`), converting VM cron schedules into Cloud Scheduler HTTP jobs, and verifying HTTP 200 response + latency on the new `.run.app` URL before stopping the source VM.
+
+### 59. Studio-Embedded 10 Google Cloud Architectural Advantages (`src/components/StudioGcpAdvantageBar.jsx` & `server/index.js`)
+- **Where to find it**: Embedded directly at the top of **`VPC & Firewalls`**, **`Cloud Run`**, **`BigQuery & BigLake`**, **`VM Fleet & SSH`**, **`IAM & Zero-Trust`**, **`Cloud Storage`**, and **`GKE / FinOps`** studios.
+- **How It Works (`GET /api/project/:id/why-gcp-wins/live-audit` & `POST /api/project/:id/why-gcp-wins/execute-action`)**:
+  - Spreads all 10 Google Cloud architectural differentiators directly into the studio where engineers manage that resource: Global Single-VPC Subnet Spanner (`01`), Cloud Run Gen2 NVIDIA L4 Scale-to-`$0.00` (`02`), Global Anycast IPv4 Allocator (`03`), `$0.00` Mathematical VPC Reachability Prover (`04`), BigQuery 7-Day `FOR SYSTEM_TIME AS OF` Time-Travel & Zero-Copy Clone (`05`), Borg/Andromeda Zero-Reboot Live Host Migration (`06`), 90-Day IAM Least-Privilege Surgeon (`07`), 15-Minute Dual-Region Turbo Replication (`08`), Automatic Sustained-Use Discounts (`09`), and Zero-Key Workload Identity Federation (`10`).
+
+
 
 
 

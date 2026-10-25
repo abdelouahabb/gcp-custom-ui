@@ -4333,6 +4333,7 @@ function CloudPulseCockpit() {
                   <CloudStorageStudio
                     projectId={selectedProjectId}
                     onOpenProvision={handleOpenProvision}
+                    onSelectTab={(tab) => setActiveTab(tab)}
                     onRunInShell={handleRunInShell}
                     onRefreshGlobal={() =>
                       fetchProjectOverview(selectedProjectId)
@@ -4714,6 +4715,7 @@ function CloudPulseCockpit() {
                       setSovereignSubTab('SECRETS_KMS_WAF');
                       setActiveTab('SOVEREIGN_STUDIO');
                     }}
+                    onSelectTab={(tab) => setActiveTab(tab)}
                     onRefreshOverview={() =>
                       fetchProjectOverview(selectedProjectId)
                     }

@@ -73,6 +73,7 @@ export default function CloudRunFleetManager({
   initialServices = [],
   onOpenProvisionCloudRun,
   onOpenSecretManagerStudio,
+  onSelectTab,
   onRefreshOverview,
   onRunInShell,
   onShowToast,
@@ -1732,6 +1733,18 @@ spec:
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {onSelectTab && (
+            <button
+              type="button"
+              onClick={() => onSelectTab('VM_SSH')}
+              title="Open GCE VM -> Cloud Run Gen2 Modernization Engine (mfit 6-Dimension Readiness Scorecard + m2c Runtime Analyzer + Persistent volumes[].gcs FUSE Disk Mount)"
+              className="inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/35 transition-colors cursor-pointer"
+            >
+              <HardDrive className="w-3.5 h-3.5" />
+              <span>Migrate GCE VM + Disk → Cloud Run (mfit + m2c)</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowComposeStudio((v) => !v)}
@@ -4121,20 +4134,52 @@ services:
                       {/* 2026 Storage Volume Mount Badge */}
                       {srv.storageVolumeType &&
                         srv.storageVolumeType !== 'NONE' && (
-                          <span
-                            title={`Mounted Volume (${srv.storageVolumeType}) at ${srv.storageMountPath}`}
-                            className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30"
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onSelectTab &&
+                              srv.storageVolumeType === 'GCS_BUCKET' &&
+                              onSelectTab('CLOUD_STORAGE')
+                            }
+                            title={`Mounted Volume (${srv.storageVolumeType}) at ${srv.storageMountPath}. Click to inspect persistent disk bucket in Cloud Storage Studio.`}
+                            className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 cursor-pointer"
                           >
                             <HardDrive className="w-3 h-3" />
                             <span>
                               {srv.storageVolumeType === 'GCS_BUCKET'
-                                ? `gs://${srv.storageGcsBucket} → ${srv.storageMountPath}`
+                                ? `Persistent Disk: gs://${srv.storageGcsBucket} → ${srv.storageMountPath}`
                                 : srv.storageVolumeType === 'IN_MEMORY'
                                 ? `RAM (${srv.storageMemorySizeLimit || '1Gi'}) → ${srv.storageMountPath}`
                                 : `NFS ${srv.storageNfsServer}:${srv.storageNfsPath} → ${srv.storageMountPath}`}
                             </span>
-                          </span>
+                          </button>
                         )}
+
+                      {/* Migrated from GCE VM Badge */}
+                      {srv.migratedFromVm && (
+                        <button
+                          type="button"
+                          onClick={() => onSelectTab && onSelectTab('VM_SSH')}
+                          title={`Migrated from Compute Engine VM "${srv.migratedFromVm}" (${srv.sourceVmZone || 'GCE'}) via CloudPulse mfit + m2c Modernization Engine`}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 cursor-pointer"
+                        >
+                          <Cpu className="w-3 h-3" />
+                          <span>
+                            Migrated VM: {srv.migratedFromVm}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Multi-Container Sidecar Pod Badge */}
+                      {(srv.multiContainerCount || 1) > 1 && (
+                        <span
+                          title={`Multi-Container Sidecar Pod (${srv.multiContainerCount} containers sharing 127.0.0.1 and volume mounts)`}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+                        >
+                          <Layers className="w-3 h-3" />
+                          <span>{srv.multiContainerCount}-Container Sidecar Pod</span>
+                        </span>
+                      )}
 
                       {/* Runtime Service Account Badge */}
                       {srv.serviceAccount && (

@@ -596,6 +596,11 @@ function formatCloudRunService(s, projectId, extra = {}) {
     storageNfsPath,
     volumes,
     volumeMounts,
+    migratedFromVm:
+      envVars.find((e) => e.name === 'MIGRATED_FROM_GCE_VM')?.value || null,
+    sourceVmZone:
+      envVars.find((e) => e.name === 'SOURCE_VM_ZONE')?.value || null,
+    multiContainerCount: (s.template?.containers || []).length || 1,
     envVars,
     secretEnvRefs,
     plaintextSecretCount,
@@ -3258,6 +3263,26 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
       null
     );
 
+    const gpuRegionsList = [
+      'us-central1',
+      'us-east4',
+      'europe-west1',
+      'europe-west4',
+      'asia-east1',
+      'asia-northeast1',
+      'asia-southeast1',
+    ];
+    const effectiveRegion =
+      enableCloudRunGpu && !gpuRegionsList.includes(String(region).toLowerCase())
+        ? String(region).startsWith('us-east')
+          ? 'us-east4'
+          : String(region).startsWith('us-')
+          ? 'us-central1'
+          : String(region).startsWith('europe-')
+          ? 'europe-west4'
+          : 'asia-southeast1'
+        : String(region || 'us-east1');
+
     const cleanMountPath =
       String(diskMountPath || '/mnt/gce-disk').startsWith('/')
         ? String(diskMountPath || '/mnt/gce-disk').replace(/\/+$/, '') || '/mnt/gce-disk'
@@ -3280,17 +3305,41 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
         .replace(/^-+|-+$/g, '')
         .slice(0, 62);
 
-      // 1. Ensure the regional GCS disk bucket exists
+      // 1. Ensure the regional GCS disk bucket exists AND is co-located in `effectiveRegion`
       let bucketExists = false;
       try {
-        await gcpFetch(
+        const existingBkt = await gcpFetch(
           `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
             resolvedDiskBucket
           )}`,
           token,
           projectId
         );
-        bucketExists = true;
+        if (
+          existingBkt?.location &&
+          existingBkt.location.toLowerCase() !== effectiveRegion.toLowerCase()
+        ) {
+          // Existing bucket is in a different region; co-locate a dedicated regional bucket for $0 egress
+          resolvedDiskBucket = `${resolvedDiskBucket.slice(0, 48)}-${effectiveRegion}`
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 62);
+          try {
+            await gcpFetch(
+              `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                resolvedDiskBucket
+              )}`,
+              token,
+              projectId
+            );
+            bucketExists = true;
+          } catch {
+            bucketExists = false;
+          }
+        } else {
+          bucketExists = true;
+        }
       } catch {
         bucketExists = false;
       }
@@ -3307,7 +3356,7 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
             headers: { 'Content-Type': 'application/json' },
             body: {
               name: resolvedDiskBucket,
-              location: String(region || 'us-east1').toUpperCase(),
+              location: String(effectiveRegion || 'us-east1').toUpperCase(),
               storageClass: 'STANDARD',
               iamConfiguration: {
                 uniformBucketLevelAccess: { enabled: true },
@@ -3635,42 +3684,67 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
     };
 
     let op;
-    try {
-      op = await gcpFetch(
-        `https://run.googleapis.com/v2/projects/${encodeURIComponent(
-          projectId
-        )}/locations/${encodeURIComponent(
-          region
-        )}/services?serviceId=${encodeURIComponent(cleanServiceName)}`,
-        token,
-        projectId,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: serviceBody,
-          timeout: 15000,
-        }
-      );
-    } catch (postErr) {
-      const msg = String(postErr.message || '');
-      if (msg.includes('409') || msg.toLowerCase().includes('already exists')) {
-        op = await gcpFetch(
+    let gpuQuotaFallbackNote = null;
+    const deployServiceWithBody = async (bodyPayload) => {
+      try {
+        return await gcpFetch(
           `https://run.googleapis.com/v2/projects/${encodeURIComponent(
             projectId
           )}/locations/${encodeURIComponent(
-            region
-          )}/services/${encodeURIComponent(cleanServiceName)}`,
+            effectiveRegion
+          )}/services?serviceId=${encodeURIComponent(cleanServiceName)}`,
           token,
           projectId,
           {
-            method: 'PATCH',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: serviceBody,
+            body: bodyPayload,
             timeout: 15000,
           }
         );
-      } else {
+      } catch (postErr) {
+        const msg = String(postErr.message || '');
+        if (msg.includes('409') || msg.toLowerCase().includes('already exists')) {
+          return await gcpFetch(
+            `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+              projectId
+            )}/locations/${encodeURIComponent(
+              effectiveRegion
+            )}/services/${encodeURIComponent(cleanServiceName)}`,
+            token,
+            projectId,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: bodyPayload,
+              timeout: 15000,
+            }
+          );
+        }
         throw postErr;
+      }
+    };
+
+    try {
+      op = await deployServiceWithBody(serviceBody);
+    } catch (gpuOrDeployErr) {
+      const errMsg = String(gpuOrDeployErr.message || '');
+      if (
+        enableCloudRunGpu &&
+        /gpu|accelerator|quota|l4/i.test(errMsg)
+      ) {
+        // Project has 0 NVIDIA L4 GPU quota in region; gracefully deploy Gen2 revision without GPU block
+        const fallbackBody = JSON.parse(JSON.stringify(serviceBody));
+        delete fallbackBody.template.nodeSelector;
+        delete fallbackBody.template.gpuZonalRedundancyDisabled;
+        if (fallbackBody.template.containers?.[0]?.resources?.limits) {
+          delete fallbackBody.template.containers[0].resources.limits['nvidia.com/gpu'];
+          fallbackBody.template.containers[0].resources.cpuIdle = true;
+        }
+        op = await deployServiceWithBody(fallbackBody);
+        gpuQuotaFallbackNote = `Deployed in ${effectiveRegion} with Gen2 CPU/RAM (${effectiveCpu} vCPU / ${effectiveMemory}) while NVIDIA L4 GPU quota is pending approval.`;
+      } else {
+        throw gpuOrDeployErr;
       }
     }
 
@@ -3680,7 +3754,7 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
         `https://run.googleapis.com/v2/projects/${encodeURIComponent(
           projectId
         )}/locations/${encodeURIComponent(
-          region
+          effectiveRegion
         )}/services/${encodeURIComponent(cleanServiceName)}:setIamPolicy`,
         token,
         projectId,
@@ -3707,7 +3781,7 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
           `https://run.googleapis.com/v2/projects/${encodeURIComponent(
             projectId
           )}/locations/${encodeURIComponent(
-            region
+            effectiveRegion
           )}/services/${encodeURIComponent(cleanServiceName)}`,
           token,
           projectId
@@ -3804,10 +3878,10 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
     return res.json({
       ok: true,
       serviceName: cleanServiceName,
-      region,
+      region: effectiveRegion,
       uri:
         liveServiceUri ||
-        `https://console.cloud.google.com/run/detail/${region}/${cleanServiceName}/metrics?project=${projectId}`,
+        `https://console.cloud.google.com/run/detail/${effectiveRegion}/${cleanServiceName}/metrics?project=${projectId}`,
       vmStopped,
       mountedDiskBucket: isGcsFuseDiskMode ? resolvedDiskBucket : null,
       diskMountPath: isGcsFuseDiskMode ? cleanMountPath : '/workspace',
@@ -3815,16 +3889,19 @@ app.post('/api/project/:projectId/vms/:vmName/migrate-to-cloudrun', async (req, 
       multiContainerSidecarDeployed: Boolean(enableMultiContainerSidecar),
       cloudSchedulerJobName,
       canaryVerification,
+      gpuQuotaFallbackNote,
       hydrationMode: isGcsFuseDiskMode
         ? 'MOUNT_GCS_FUSE_DISK'
         : useHydratedFiles
         ? 'HYDRATE_VM_FILES'
         : 'CUSTOM_IMAGE',
       message: isGcsFuseDiskMode
-        ? `Synced ${syncedDiskFilesCount} file(s) from VM "${vmName}" into gs://${resolvedDiskBucket} and attached it as a persistent Read/Write Volume Mount (${cleanMountPath}) on Cloud Run Gen2 service "${cleanServiceName}" (${region}, Scale-to-$0.00)!`
+        ? `Synced ${syncedDiskFilesCount} file(s) from VM "${vmName}" into gs://${resolvedDiskBucket} and attached it as a persistent Read/Write Volume Mount (${cleanMountPath}) on Cloud Run Gen2 service "${cleanServiceName}" (${effectiveRegion}, Scale-to-$0.00)!${
+            gpuQuotaFallbackNote ? ` (${gpuQuotaFallbackNote})` : ''
+          }`
         : useHydratedFiles
-        ? `Migrated real files extracted from VM "${vmName}" into Cloud Run Gen2 service "${cleanServiceName}" (${region}, minInstances=0 Scale-to-$0.00)!`
-        : `Deployed container image "${effectiveImage}" from VM "${vmName}" to Cloud Run Gen2 service "${cleanServiceName}" (${region})!`,
+        ? `Migrated real files extracted from VM "${vmName}" into Cloud Run Gen2 service "${cleanServiceName}" (${effectiveRegion}, minInstances=0 Scale-to-$0.00)!`
+        : `Deployed container image "${effectiveImage}" from VM "${vmName}" to Cloud Run Gen2 service "${cleanServiceName}" (${effectiveRegion})!`,
     });
   } catch (err) {
     return res.status(500).json({

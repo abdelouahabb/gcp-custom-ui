@@ -1438,6 +1438,54 @@ const DOC_SECTIONS = [
     billingImpact:
       'Cuts GPU cluster waste by up to 75% via fractional vGPU time-slicing, eliminates duplicate database storage costs via zero-copy HTAP clones, and protects backends during 100x traffic surges.',
   },
+  {
+    id: 'gce-vm-to-cloudrun-mfit-m2c-modernization-engine',
+    wave: 'WAVE 16 MODERNIZATION ENGINE',
+    title:
+      '41. GCE VM → Cloud Run Gen2 Modernization Engine (mfit + m2c on Steroids, Persistent volumes[].gcs FUSE Disk & 2TB / GPU / TPU / Region Guardrails)',
+    badge: 'VM Fleet & SSH -> Migrate VM → Cloud Run',
+    badgeColor:
+      'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
+    icon: HardDrive,
+    targetTab: 'VM_SSH',
+    problemSolved:
+      'Migrating a stateful Compute Engine VM to serverless Cloud Run normally requires manual SSH inspection, Dockerfile authoring, storage refactoring, cron job rewriting, and navigating hardware/regional limits (such as 2 TB persistent disks, SQLite/PostgreSQL byte locks, or A100/H100/TPU machine types in non-GPU regions).',
+    howItWorks: [
+      'Stage 1 — Live mfit 6-Dimension Readiness Scorecard (0–100%) & Polyglot m2c Analyzer: Inspects the VM over ephemeral SSH (ss -tulpn, ss -uapn, crontab -l, systemctl, du -sb, df -B1, .env key scan), strips .env/.git/node_modules, selects the matching m2c Runtime Plugin (Docker, Node.js, Python, Java, or Static), and generates Dockerfile, migration-plan.yaml, service.knative.yaml, and skaffold.yaml.',
+      'Stage 2 — Persistent Cloud Storage FUSE Disk Mount (volumes[].gcs) & 2 TB+ Andromeda Rsync: Auto-creates a regional bucket (gs://<project>-vmdisk-<vm>), binds roles/storage.objectAdmin to the Cloud Run runtime Service Account, syncs extracted files (or triggers Direct 20+ Gbps VM -> GCS Andromeda Rsync for 100 GB – 2 TB+ disks), and mounts it at /mnt/gce-disk on Cloud Run Gen2.',
+      'GPU / TPU Accelerator Conversion, 7-Region Co-Location, 2-Container Sidecar & Canary Verification: Down-converts A100/H100 or XLA-TPU workloads to Cloud Run 1x nvidia-l4 (24 GB VRAM, min 4 vCPU / 16Gi RAM), validates against the 7 GPU regions (auto-switching us-east1 -> us-east4 with co-located disk bucket), supports 2-Container Sidecar Pods + Cron-to-Cloud-Scheduler conversion, and runs a live HTTP 200 Canary probe before stopping the source VM.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/vms/:vmName/extract-workload (Compute v1 + SSH mfit/m2c probe + artifact generator)',
+      'POST /api/project/:id/vms/:vmName/migrate-to-cloudrun (Storage v1 bucket + IAM + upload + Cloud Run v2 volumes[].gcs + Cloud Scheduler v1 + Canary HTTP probe)',
+    ],
+    billingImpact:
+      'Eliminates 24/7 idle VM compute billing ($0.00/mo when idle on Cloud Run) and replaces $204.80/mo 2 TB provisioned GCE Persistent Disks with $0.020/GB/mo pay-per-byte Cloud Storage FUSE volumes.',
+  },
+  {
+    id: 'studio-embedded-10-gcp-architectural-advantages',
+    wave: 'WAVE 16 STUDIO ADVANTAGES',
+    title:
+      '42. Studio-Embedded 10 Google Cloud Architectural Advantages (Contextual Live Execution Across 7 Studios)',
+    badge: 'VPC / Cloud Run / BigQuery / VM / IAM / Storage / GKE',
+    badgeColor:
+      'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
+    icon: Rocket,
+    targetTab: 'VPC_NETWORK',
+    problemSolved:
+      'Instead of isolating Google Cloud’s 10 architectural advantages in a standalone marketing tab, engineers need those capabilities embedded directly inside the operational studio where they manage VPCs, Cloud Run, BigQuery, VMs, IAM, Storage, and GKE.',
+    howItWorks: [
+      'VPC & Network Studio: (01) Global Single-VPC Subnet Spanner across 43 regions with 0 peering, (03) Single Global Anycast IPv4 Allocator, and (04) $0.00 Mathematical VPC Reachability Prover.',
+      'Cloud Run, VM, BigQuery & Storage Studios: (02) Cloud Run Gen2 NVIDIA L4 GPU Scale-to-$0.00 Configurator, (05) BigQuery 7-Day FOR SYSTEM_TIME AS OF Time-Travel & $0 Zero-Copy Clone, (06) Borg/Andromeda Zero-Reboot Live Host Migration, and (08) 15-Minute Dual-Region Turbo Replication & Autoclass.',
+      'IAM & FinOps Studios: (07) 90-Day Cloud Audit IAM Least-Privilege Surgeon, (09) Automatic Sustained-Use Discounts (up to 30% off with 0 lock-in), and (10) Zero-Key Workload Identity Federation (OIDC).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/why-gcp-wins/live-audit',
+      'POST /api/project/:id/why-gcp-wins/execute-action (ADD_GLOBAL_VPC_SUBNET, RESERVE_GLOBAL_ANYCAST_IP, PROVE_REACHABILITY, RUN_BQ_TIME_TRAVEL_QUERY, ENFORCE_VM_LIVE_MIGRATION, GENERATE_OIDC_FEDERATION_BUNDLE, ENABLE_STORAGE_AUTOCLASS_TURBO)',
+    ],
+    billingImpact:
+      'Eliminates cross-zone VPC peering data-transfer taxes, $0.10/run network reachability fees, and idle GPU VM burn.',
+  },
 ];
 
 export default function InteractiveDocsGuide({
