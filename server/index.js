@@ -2351,30 +2351,45 @@ app.post('/api/project/:projectId/vms/:vmName/ssh', async (req, res) => {
     }
 
     // Execute real gcloud compute ssh command via parameterized execFile (no local shell interpolation)
-    const { stdout, stderr } = await new Promise((resolve, reject) => {
-      execFile(
-        'gcloud',
-        [
-          'compute',
-          'ssh',
-          vmName,
-          `--zone=${zone}`,
-          `--project=${projectId}`,
-          `--command=export DEBIAN_FRONTEND=noninteractive; ${cmd}`,
-          '--quiet',
-          '--ssh-flag=-o ConnectTimeout=10 -o StrictHostKeyChecking=no',
-        ],
-        { env: ATTRIBUTION_ENV, timeout: 60000, maxBuffer: 10 * 1024 * 1024 },
-        (err, out, errOut) => {
-          if (err) {
-            err.stdout = out;
-            err.stderr = errOut;
-            return reject(err);
+    // Automatically falls back to Cloud IAP TCP Forwarding (--tunnel-through-iap) when direct TCP:22 is blocked by VPC firewall
+    const runOneShotSsh = (useIapTunnel) =>
+      new Promise((resolve, reject) => {
+        execFile(
+          'gcloud',
+          [
+            'compute',
+            'ssh',
+            vmName,
+            `--zone=${zone}`,
+            `--project=${projectId}`,
+            ...(useIapTunnel ? ['--tunnel-through-iap'] : []),
+            `--command=export DEBIAN_FRONTEND=noninteractive; ${cmd}`,
+            '--quiet',
+            '--ssh-flag=-o ConnectTimeout=8 -o StrictHostKeyChecking=no',
+          ],
+          { env: ATTRIBUTION_ENV, timeout: 60000, maxBuffer: 10 * 1024 * 1024 },
+          (err, out, errOut) => {
+            if (err) {
+              err.stdout = out;
+              err.stderr = errOut;
+              return reject(err);
+            }
+            resolve({ stdout: out, stderr: errOut, usedIap: useIapTunnel });
           }
-          resolve({ stdout: out, stderr: errOut });
-        }
-      );
-    });
+        );
+      });
+
+    let sshResult;
+    try {
+      sshResult = await runOneShotSsh(Boolean(req.body?.useIap));
+    } catch (directErr) {
+      if (!req.body?.useIap) {
+        sshResult = await runOneShotSsh(true);
+      } else {
+        throw directErr;
+      }
+    }
+    const { stdout, stderr } = sshResult;
     const combinedOut = [stdout, stderr]
       .map((s) => (s || '').trim())
       .filter(Boolean)
@@ -62408,11 +62423,12 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
   const zone = (params.get('zone') || 'us-east1-b')
     .trim()
     .replace(/[^a-zA-Z0-9._-]/g, '');
-  const host = (params.get('host') || '')
+  let host = (params.get('host') || '')
     .trim()
     .replace(/[^a-zA-Z0-9._:-]/g, '');
   const requestedEngine = (params.get('engine') || 'auto').trim().toLowerCase();
   const useIap = params.get('iap') === 'true';
+  let autoIapFallback = false;
   let cols = Math.max(40, Math.min(300, Number(params.get('cols') || 100)));
   let rows = Math.max(12, Math.min(120, Number(params.get('rows') || 28)));
 
@@ -62455,8 +62471,97 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
     }
   };
 
+  // Pre-flight helper:
+  // 1) Syncs the VM's live ephemeral External IP (`natIP`) from Compute Engine REST API after Stop/Start cycles
+  // 2) Probes TCP port 22 for 2.2s so if VPC firewall restricts SSH to Cloud IAP (35.235.240.0/20), we route directly via `--tunnel-through-iap`
+  const probeTcpPort22 = (targetIp, timeoutMs = 2200) =>
+    new Promise((resolve) => {
+      if (!targetIp || targetIp === 'None' || targetIp.startsWith('10.')) {
+        return resolve(false);
+      }
+      const sock = new net.Socket();
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        try {
+          sock.destroy();
+        } catch {
+          // ignore
+        }
+        resolve(ok);
+      };
+      sock.setTimeout(timeoutMs);
+      sock.once('connect', () => finish(true));
+      sock.once('timeout', () => finish(false));
+      sock.once('error', () => finish(false));
+      try {
+        sock.connect(22, targetIp);
+      } catch {
+        finish(false);
+      }
+    });
+
+  const syncLiveVmStateAndProbe = async () => {
+    if (!projectId || !vmName || vmName === '__CLOUD_SHELL__') {
+      return { tcp22Open: false };
+    }
+    try {
+      const { token } = await getLocalOrMetadataAccessToken();
+      if (token) {
+        const inst = await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(
+            vmName
+          )}`,
+          token,
+          projectId,
+          { timeout: 3500 }
+        );
+        const liveNatIp =
+          inst?.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP || '';
+        const liveInternalIp = inst?.networkInterfaces?.[0]?.networkIP || '';
+        const liveStatus = inst?.status || 'RUNNING';
+
+        if (liveStatus !== 'RUNNING') {
+          wsSend({
+            type: 'output',
+            data: `\x1b[38;5;214m [Compute Engine Status] VM "${vmName}" is currently ${liveStatus}. Waiting/connecting once guest OS reaches RUNNING...\x1b[0m\r\n`,
+          });
+        }
+
+        if (liveNatIp && liveNatIp !== host) {
+          const prevHost = host;
+          host = liveNatIp;
+          if (prevHost && prevHost !== liveInternalIp) {
+            wsSend({
+              type: 'output',
+              data: `\x1b[38;5;45m [Ephemeral IP Auto-Sync] VM "${vmName}" acquired updated External IP ${liveNatIp} (was ${prevHost}) after restart.\x1b[0m\r\n`,
+            });
+          }
+        } else if (!liveNatIp && host && host !== liveInternalIp) {
+          host = 'None';
+        }
+      }
+    } catch {
+      // Proceed with existing host param if metadata fetch fails
+    }
+
+    if (useIap || !host || host === 'None' || host.startsWith('10.')) {
+      autoIapFallback = true;
+      return { tcp22Open: false };
+    }
+
+    const tcp22Open = await probeTcpPort22(host, 2200);
+    if (!tcp22Open) {
+      autoIapFallback = true;
+    }
+    return { tcp22Open };
+  };
+
   // Engine B: Real Linux Kernel PTY wrapping `gcloud compute ssh` (or local bash for __CLOUD_SHELL__)
-  const startGcloudPtyBridge = (reasonBanner = '') => {
+  const startGcloudPtyBridge = (reasonBanner = '', forceIap = false) => {
     if (sessionClosed) return;
     if (reasonBanner) {
       wsSend({
@@ -62467,6 +62572,9 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
 
     const isLocalCloudShell = vmName === '__CLOUD_SHELL__';
     let spawnArgs = [];
+    const needIap = Boolean(
+      useIap || forceIap || autoIapFallback || !host || host === 'None' || host.startsWith('10.')
+    );
 
     if (isLocalCloudShell) {
       wsSend({
@@ -62477,7 +62585,6 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
       });
       spawnArgs = ['-c', PYTHON_PTY_BRIDGE_SCRIPT, 'bash', '--login'];
     } else {
-      const needIap = useIap || !host || host === 'None';
       wsSend({
         type: 'status',
         status: 'CONNECTING',
@@ -62530,8 +62637,10 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
         wsSend({
           type: 'status',
           status: 'CONNECTED',
-          engine: useIap || !host || host === 'None' ? 'GCLOUD_IAP_PTY' : 'GCLOUD_SSH_PTY',
-          message: `Interactive PTY session active on ${sshUsername}@${vmName} (${zone})`,
+          engine: needIap ? 'GCLOUD_IAP_PTY' : 'GCLOUD_SSH_PTY',
+          message: `Interactive PTY session active on ${sshUsername}@${vmName} (${zone})${
+            needIap ? ' [Cloud IAP Tunnel]' : ''
+          }`,
         });
       }
       wsSend({ type: 'output', data: chunk.toString('utf8') });
@@ -62542,6 +62651,14 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
     });
 
     ptyProc.on('close', (code) => {
+      // If direct gcloud compute ssh failed with SSH exit code 255 and we haven't tried IAP yet, auto-retry with --tunnel-through-iap!
+      if (!isLocalCloudShell && !needIap && !sessionClosed && code === 255) {
+        autoIapFallback = true;
+        return startGcloudPtyBridge(
+          'Direct TCP port 22 timed out (exit 255) — auto-healing SSH session via Cloud IAP TCP Tunnel (--tunnel-through-iap)...',
+          true
+        );
+      }
       wsSend({
         type: 'output',
         data: `\r\n\x1b[38;5;244m[SSH PTY session exited with code ${code ?? 0}]\x1b[0m\r\n`,
@@ -62549,7 +62666,7 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
       wsSend({
         type: 'status',
         status: 'DISCONNECTED',
-        engine: 'GCLOUD_SSH_PTY',
+        engine: needIap ? 'GCLOUD_IAP_PTY' : 'GCLOUD_SSH_PTY',
         message: `Session closed (exit code ${code ?? 0})`,
       });
     });
@@ -62583,7 +62700,7 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
   };
 
   // Engine A: Native Node.js `ssh2` library over TCP Port 22
-  const startNativeSsh2Client = (customAuth = {}) => {
+  const startNativeSsh2Client = async (customAuth = {}) => {
     const gceKeyPath = path.join(os.homedir(), '.ssh', 'google_compute_engine');
     const idRsaPath = path.join(os.homedir(), '.ssh', 'id_rsa');
     let privateKeyContent = customAuth.privateKey || null;
@@ -62596,9 +62713,23 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
       }
     }
 
+    if (!customAuth.password && !customAuth.privateKey) {
+      const { tcp22Open } = await syncLiveVmStateAndProbe();
+      if (sessionClosed) return;
+      if (!tcp22Open || !host || host === 'None' || useIap || autoIapFallback) {
+        return startGcloudPtyBridge(
+          !host || host === 'None' || useIap
+            ? 'VM has no public IPv4 or IAP tunnel requested — routing via gcloud compute ssh PTY (--tunnel-through-iap)...'
+            : `[Zero-Trust IAP Auto-Route] Direct TCP ${host}:22 is filtered by VPC firewall (IAP 35.235.240.0/20 active) — routing via Cloud IAP TCP Tunnel (--tunnel-through-iap)...`,
+          true
+        );
+      }
+    }
+
     if (!host || host === 'None' || useIap) {
       return startGcloudPtyBridge(
-        'VM has no public IPv4 or IAP tunnel requested — routing via gcloud compute ssh PTY...'
+        'VM has no public IPv4 or IAP tunnel requested — routing via gcloud compute ssh PTY...',
+        true
       );
     }
 
@@ -62697,8 +62828,17 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
         } catch {
           // ignore
         }
+        const isNetworkFiltered = /timed out|timeout|econnrefused|ehostunreach|enetunreach/i.test(
+          err.message || ''
+        );
+        if (isNetworkFiltered) {
+          autoIapFallback = true;
+        }
         return startGcloudPtyBridge(
-          `Direct SSH2 handshake (${err.message}) — syncing GCE metadata SSH keys via gcloud compute ssh PTY...`
+          `Direct SSH2 handshake (${err.message}) — syncing GCE metadata SSH keys via gcloud compute ssh PTY${
+            isNetworkFiltered ? ' (--tunnel-through-iap)' : ''
+          }...`,
+          isNetworkFiltered
         );
       }
       wsSend({
@@ -62729,13 +62869,14 @@ sshWss.on('connection', (ws, request, parsedUrl) => {
         ...(customAuth.password
           ? { password: customAuth.password }
           : { privateKey: privateKeyContent }),
-        readyTimeout: 8000,
+        readyTimeout: 6000,
         keepaliveInterval: 15000,
       });
     } catch (connectErr) {
       if (requestedEngine === 'auto') {
         startGcloudPtyBridge(
-          `Direct SSH2 init (${connectErr.message}) — routing via gcloud compute ssh PTY...`
+          `Direct SSH2 init (${connectErr.message}) — routing via gcloud compute ssh PTY...`,
+          true
         );
       } else {
         wsSend({
@@ -62955,8 +63096,18 @@ ${baseSshCli}\${REV_FLAG} || {
     requestedEngine.startsWith('cloudrun_')
   ) {
     startCloudRunSshPtyBridge();
-  } else if (vmName === '__CLOUD_SHELL__' || requestedEngine === 'gcloud_pty') {
+  } else if (vmName === '__CLOUD_SHELL__') {
     startGcloudPtyBridge();
+  } else if (requestedEngine === 'gcloud_pty') {
+    syncLiveVmStateAndProbe().finally(() => {
+      if (!sessionClosed) {
+        startGcloudPtyBridge(
+          autoIapFallback && !useIap
+            ? `[Zero-Trust IAP Auto-Route] Direct TCP ${host}:22 is filtered by VPC firewall — routing gcloud compute ssh via Cloud IAP TCP Tunnel (--tunnel-through-iap)...`
+            : ''
+        );
+      }
+    });
   } else {
     startNativeSsh2Client();
   }

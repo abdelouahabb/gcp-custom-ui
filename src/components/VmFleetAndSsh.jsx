@@ -261,7 +261,12 @@ export default function VmFleetAndSsh({
         durationMs: 42,
       },
     ]);
-  }, [activeSshVm?.name, projectId]);
+  }, [
+    activeSshVm?.name,
+    activeSshVm?.externalIp,
+    activeSshVm?.status,
+    projectId,
+  ]);
 
   const handleQuickDeployVm = async (tpl) => {
     if (quickDeployingLabel) return;
