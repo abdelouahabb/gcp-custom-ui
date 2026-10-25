@@ -130,6 +130,25 @@ export default function CloudStorageStudio({
   const [teleportCopyObjects, setTeleportCopyObjects] = useState(true);
   const [copiedCmd, setCopiedCmd] = useState(null);
 
+  // S3 / MinIO / Ceph RGW Multi-Cloud Importer & Federation State
+  const [s3ProviderType, setS3ProviderType] = useState('MINIO'); // MINIO | CEPH_RGW | AWS_S3 | S3_COMPATIBLE
+  const [s3Endpoint, setS3Endpoint] = useState('http://minio.corp.internal:9000');
+  const [s3Region, setS3Region] = useState('us-east-1');
+  const [s3RemoteBucket, setS3RemoteBucket] = useState('minio-edge-ai-lakehouse');
+  const [s3Prefix, setS3Prefix] = useState('');
+  const [s3TargetPrefix, setS3TargetPrefix] = useState('imported-s3/');
+  const [s3AccessKeyId, setS3AccessKeyId] = useState('');
+  const [s3SecretAccessKey, setS3SecretAccessKey] = useState('');
+  const [s3PathStyle, setS3PathStyle] = useState(true);
+  const [s3UseSandboxDemo, setS3UseSandboxDemo] = useState(false);
+  const [s3RemoteBuckets, setS3RemoteBuckets] = useState([]);
+  const [s3RemoteObjects, setS3RemoteObjects] = useState([]);
+  const [s3SelectedKeys, setS3SelectedKeys] = useState([]);
+  const [s3LoadingList, setS3LoadingList] = useState(false);
+  const [s3Importing, setS3Importing] = useState(false);
+  const [s3ImportedResults, setS3ImportedResults] = useState([]);
+  const [s3TransferSpec, setS3TransferSpec] = useState(null);
+
   const fetchBuckets = useCallback(
     async ({ silent = false } = {}) => {
       if (!projectId) return;
@@ -833,6 +852,169 @@ export default function CloudStorageStudio({
     setTimeout(() => setCopiedCmd(null), 1800);
   };
 
+  // Apply Provider Preset for S3 / MinIO / Ceph Importer
+  const handleSelectS3ProviderPreset = (presetId) => {
+    setS3ProviderType(presetId);
+    setS3TransferSpec(null);
+    if (presetId === 'MINIO') {
+      setS3Endpoint('http://minio.corp.internal:9000');
+      setS3Region('us-east-1');
+      setS3RemoteBucket('minio-edge-ai-lakehouse');
+      setS3TargetPrefix('imported-minio/');
+      setS3PathStyle(true);
+    } else if (presetId === 'CEPH_RGW') {
+      setS3Endpoint('https://ceph-rgw.datacenter.local:7480');
+      setS3Region('default');
+      setS3RemoteBucket('ceph-rgw-financial-ledger');
+      setS3TargetPrefix('imported-ceph/');
+      setS3PathStyle(true);
+    } else if (presetId === 'AWS_S3') {
+      setS3Endpoint('https://s3.us-east-1.amazonaws.com');
+      setS3Region('us-east-1');
+      setS3RemoteBucket('aws-prod-datalake-us-east-1');
+      setS3TargetPrefix('imported-aws-s3/');
+      setS3PathStyle(false);
+    } else {
+      setS3Endpoint('https://account-id.r2.cloudflarestorage.com');
+      setS3Region('auto');
+      setS3RemoteBucket('r2-edge-artifacts');
+      setS3TargetPrefix('imported-s3-compat/');
+      setS3PathStyle(true);
+    }
+  };
+
+  // List Remote Buckets / Objects via Native AWS4-HMAC-SHA256 Signer
+  const handleListS3Compatible = async (forceSandbox = false, overrideProvider = null) => {
+    const activeProvider = overrideProvider || s3ProviderType;
+    setS3LoadingList(true);
+    setS3UseSandboxDemo(Boolean(forceSandbox));
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/storage/s3-compatible/list`,
+        {
+          providerType: activeProvider,
+          endpoint: s3Endpoint,
+          region: s3Region,
+          remoteBucket: s3RemoteBucket,
+          prefix: s3Prefix,
+          accessKeyId: s3AccessKeyId,
+          secretAccessKey: s3SecretAccessKey,
+          pathStyle: s3PathStyle,
+          useSandboxDemo: Boolean(forceSandbox),
+        }
+      );
+      const list = res.data?.objects || [];
+      setS3RemoteObjects(list);
+      setS3RemoteBuckets(res.data?.remoteBuckets || []);
+      if (res.data?.remoteBucket && !s3RemoteBucket) {
+        setS3RemoteBucket(res.data.remoteBucket);
+      }
+      setS3SelectedKeys(list.map((o) => o.key));
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Connected to ${activeProvider} and listed ${list.length} object(s).`
+        );
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            'Failed to list objects from S3/MinIO/Ceph endpoint.'
+        );
+      }
+    } finally {
+      setS3LoadingList(false);
+    }
+  };
+
+  // Stream-Import Selected S3 / MinIO / Ceph Objects into Active GCS Bucket
+  const handleImportS3Compatible = async () => {
+    if (!selectedBucket) {
+      if (onShowError) onShowError('Select or create a destination GCS bucket first.');
+      return;
+    }
+    if (s3SelectedKeys.length === 0) {
+      if (onShowError) onShowError('Select at least one remote object to import.');
+      return;
+    }
+    setS3Importing(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/s3-compatible/import`,
+        {
+          providerType: s3ProviderType,
+          endpoint: s3Endpoint,
+          region: s3Region,
+          remoteBucket: s3RemoteBucket,
+          keys: s3SelectedKeys,
+          targetPrefix: s3TargetPrefix,
+          accessKeyId: s3AccessKeyId,
+          secretAccessKey: s3SecretAccessKey,
+          pathStyle: s3PathStyle,
+          useSandboxDemo: s3UseSandboxDemo,
+        }
+      );
+      setS3ImportedResults(res.data?.importedObjects || []);
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Imported ${res.data?.importedCount || 0} object(s) into gs://${selectedBucket.name}!`
+        );
+      }
+      await fetchObjects(selectedBucket.name, { silent: true });
+      await fetchBuckets({ silent: true });
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            'Failed to import S3/MinIO/Ceph objects into GCS.'
+        );
+      }
+    } finally {
+      setS3Importing(false);
+    }
+  };
+
+  // Generate GCP Storage Transfer Service Spec (awsS3DataSource / awsS3CompatibleDataSource)
+  const handleGenerateS3TransferJob = async () => {
+    if (!selectedBucket) return;
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/storage/buckets/${encodeURIComponent(
+          selectedBucket.name
+        )}/s3-compatible/transfer-job`,
+        {
+          providerType: s3ProviderType,
+          endpoint: s3Endpoint,
+          region: s3Region,
+          remoteBucket: s3RemoteBucket,
+          prefix: s3Prefix,
+          targetPrefix: s3TargetPrefix,
+          accessKeyId: s3AccessKeyId,
+          secretAccessKey: s3SecretAccessKey,
+          pathStyle: s3PathStyle,
+        }
+      );
+      setS3TransferSpec(res.data);
+      if (onShowToast) {
+        onShowToast(res.data?.message || 'Generated Storage Transfer Service spec!');
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || 'Failed to generate transfer spec.'
+        );
+      }
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Top Hero Banner + Sub-Navigation */}
@@ -858,7 +1040,7 @@ export default function CloudStorageStudio({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 shrink-0 sm:w-72">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0 sm:w-[430px]">
             <button
               type="button"
               onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
@@ -866,6 +1048,20 @@ export default function CloudStorageStudio({
             >
               <PlusCircle className="w-3.5 h-3.5 shrink-0" />
               <span>+ Create Bucket</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSubTab('S3_COMPATIBLE_IMPORT');
+                if (s3RemoteObjects.length === 0) {
+                  handleListS3Compatible(true, s3ProviderType);
+                }
+              }}
+              className="w-full h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+              <span>Import S3 / MinIO</span>
             </button>
 
             <button
@@ -952,7 +1148,7 @@ export default function CloudStorageStudio({
         <div className="space-y-2.5 pt-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
-              Studio Workspace Mode (6 Equal-Width Modules):
+              Studio Workspace Mode (7 Equal-Width Modules):
             </span>
             {buckets.length > 0 && (
               <div className="flex items-center gap-2 font-mono text-xs">
@@ -975,7 +1171,7 @@ export default function CloudStorageStudio({
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 font-mono text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2 font-mono text-xs">
             {[
               {
                 id: 'BUCKETS',
@@ -988,23 +1184,28 @@ export default function CloudStorageStudio({
                 label: `Object Workbench (${objects.length})`,
               },
               {
-                id: 'FINOPS_LIFECYCLE',
+                id: 'S3_COMPATIBLE_IMPORT',
                 code: 'M03',
+                label: 'S3 / MinIO / Ceph',
+              },
+              {
+                id: 'FINOPS_LIFECYCLE',
+                code: 'M04',
                 label: 'Lifecycle FinOps',
               },
               {
                 id: 'TELEPORT',
-                code: 'M04',
+                code: 'M05',
                 label: 'Region Teleporter (40)',
               },
               {
                 id: 'DLP_XRAY',
-                code: 'M05',
+                code: 'M06',
                 label: 'DLP Secret & PII X-Ray',
               },
               {
                 id: 'RANSOMWARE_AIRGAP',
-                code: 'M06',
+                code: 'M07',
                 label: 'Ransomware Auditor',
               },
             ].map((t) => {
@@ -1013,7 +1214,15 @@ export default function CloudStorageStudio({
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setActiveSubTab(t.id)}
+                  onClick={() => {
+                    setActiveSubTab(t.id);
+                    if (
+                      t.id === 'S3_COMPATIBLE_IMPORT' &&
+                      s3RemoteObjects.length === 0
+                    ) {
+                      handleListS3Compatible(true, s3ProviderType);
+                    }
+                  }}
                   title={t.label}
                   className={`w-full h-10 px-2.5 rounded-xl font-bold border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
                     active
@@ -1339,6 +1548,532 @@ export default function CloudStorageStudio({
           onShowToast={onShowToast}
           onShowError={onShowError}
         />
+      )}
+
+      {/* ==================================================================== */}
+      {/* SUB-TAB 2B: S3 / MINIO / CEPH BUCKET IMPORTER & MULTI-CLOUD BRIDGE   */}
+      {/* ==================================================================== */}
+      {activeSubTab === 'S3_COMPATIBLE_IMPORT' && (
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-5 font-mono text-xs">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-extrabold">
+                  AWS4-HMAC-SHA256
+                </span>
+                <span className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                  S3 / MinIO / Ceph RADOS Gateway (RGW) Bucket Importer &amp; Multi-Cloud Bridge
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">
+                Connect any Amazon S3, on-prem MinIO Object Store, Ceph RGW, or S3-compatible endpoint using Path-Style or Virtual-Hosted addressing, browse remote objects, and stream-import them directly into{' '}
+                <strong className="text-blue-600 dark:text-blue-400">
+                  gs://{selectedBucket?.name || '(select bucket)'}
+                </strong>
+                .
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
+                  s3UseSandboxDemo
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
+                }`}
+              >
+                {s3UseSandboxDemo
+                  ? 'MODE: DEMO S3 / MINIO / CEPH MANIFEST'
+                  : 'MODE: LIVE AWS4-HMAC-SHA256 CONNECTOR'}
+              </span>
+            </div>
+          </div>
+
+          {/* 4 Equal-Width Provider Presets */}
+          <div className="space-y-2">
+            <div className="text-[10px] font-bold uppercase text-zinc-500">
+              1. Select S3-Compatible Storage Engine Preset (4 Equal-Width Profiles):
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {[
+                {
+                  id: 'MINIO',
+                  code: 'P01',
+                  label: 'MinIO Object Store',
+                  sub: 'Path-Style · Port 9000',
+                },
+                {
+                  id: 'CEPH_RGW',
+                  code: 'P02',
+                  label: 'Ceph RADOS Gateway',
+                  sub: 'Path-Style · RGW 7480',
+                },
+                {
+                  id: 'AWS_S3',
+                  code: 'P03',
+                  label: 'Amazon S3 (AWS)',
+                  sub: 's3.<region>.amazonaws.com',
+                },
+                {
+                  id: 'S3_COMPATIBLE',
+                  code: 'P04',
+                  label: 'Cloudflare R2 / Custom S3',
+                  sub: 'Custom S3 v4 Endpoint',
+                },
+              ].map((p) => {
+                const active = s3ProviderType === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      handleSelectS3ProviderPreset(p.id);
+                      if (s3UseSandboxDemo) {
+                        handleListS3Compatible(true, p.id);
+                      }
+                    }}
+                    className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      active
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-zinc-50 dark:bg-[#16171a] text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-extrabold truncate">{p.label}</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                          active
+                            ? 'bg-black/25 text-white'
+                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
+                        }`}
+                      >
+                        {p.code}
+                      </span>
+                    </div>
+                    <div
+                      className={`text-[10px] mt-1 truncate ${
+                        active ? 'text-blue-100' : 'text-zinc-500'
+                      }`}
+                    >
+                      {p.sub}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Connection & Credentials Grid */}
+          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                  S3 / MinIO / Ceph Endpoint URL
+                </label>
+                <input
+                  type="text"
+                  value={s3Endpoint}
+                  onChange={(e) => setS3Endpoint(e.target.value)}
+                  placeholder="http://minio.local:9000 or https://s3.us-east-1.amazonaws.com"
+                  className="w-full h-9 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                  Signing Region
+                </label>
+                <input
+                  type="text"
+                  value={s3Region}
+                  onChange={(e) => setS3Region(e.target.value)}
+                  placeholder="us-east-1"
+                  className="w-full h-9 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                  Source Bucket Name (Leave blank to list all buckets)
+                </label>
+                <input
+                  type="text"
+                  value={s3RemoteBucket}
+                  onChange={(e) => setS3RemoteBucket(e.target.value)}
+                  placeholder="my-minio-or-s3-bucket"
+                  className="w-full h-9 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                  Addressing Style (MinIO/Ceph = Path-Style)
+                </label>
+                <div className="grid grid-cols-2 gap-1.5 h-9">
+                  <button
+                    type="button"
+                    onClick={() => setS3PathStyle(true)}
+                    className={`w-full h-full rounded-lg font-bold border text-[10px] cursor-pointer ${
+                      s3PathStyle
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800'
+                    }`}
+                  >
+                    Path-Style (MinIO/Ceph)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setS3PathStyle(false)}
+                    className={`w-full h-full rounded-lg font-bold border text-[10px] cursor-pointer ${
+                      !s3PathStyle
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800'
+                    }`}
+                  >
+                    Virtual-Hosted (AWS)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                  Access Key ID (Optional for public buckets)
+                </label>
+                <input
+                  type="text"
+                  value={s3AccessKeyId}
+                  onChange={(e) => setS3AccessKeyId(e.target.value)}
+                  placeholder="AKIA... or minioadmin"
+                  className="w-full h-9 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                  Secret Access Key (Signed via AWS4-HMAC-SHA256)
+                </label>
+                <input
+                  type="password"
+                  value={s3SecretAccessKey}
+                  onChange={(e) => setS3SecretAccessKey(e.target.value)}
+                  placeholder="••••••••••••••••••••"
+                  className="w-full h-9 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                  Source Prefix Filter (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={s3Prefix}
+                  onChange={(e) => setS3Prefix(e.target.value)}
+                  placeholder="e.g. logs/2026/"
+                  className="w-full h-9 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-500 font-bold block mb-1">
+                  Destination Prefix in gs://{selectedBucket?.name}
+                </label>
+                <input
+                  type="text"
+                  value={s3TargetPrefix}
+                  onChange={(e) => setS3TargetPrefix(e.target.value)}
+                  placeholder="imported-minio/"
+                  className="w-full h-9 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 text-xs font-bold"
+                />
+              </div>
+            </div>
+
+            {/* 3 Equal-Width Action Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={s3LoadingList}
+                onClick={() => handleListS3Compatible(false)}
+                className="w-full h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 shrink-0 ${
+                    s3LoadingList && !s3UseSandboxDemo ? 'animate-spin' : ''
+                  }`}
+                />
+                <span className="truncate">
+                  Connect &amp; List Live Endpoint (AWS4-HMAC-SHA256)
+                </span>
+              </button>
+
+              <button
+                type="button"
+                disabled={s3LoadingList}
+                onClick={() => handleListS3Compatible(true)}
+                className="w-full h-9 px-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold cursor-pointer inline-flex items-center justify-center gap-1.5"
+              >
+                <HardDrive className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
+                  Load Sample {s3ProviderType} Cluster (Test Import Now)
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleGenerateS3TransferJob}
+                className="w-full h-9 px-3 rounded-xl bg-white dark:bg-zinc-950 hover:border-blue-500/60 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-800 font-bold cursor-pointer inline-flex items-center justify-center gap-1.5"
+              >
+                <Terminal className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+                <span className="truncate">
+                  Generate GCP Storage Transfer Spec &amp; CLI
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Remote Buckets Quick Switcher (if multiple buckets returned) */}
+          {s3RemoteBuckets.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold uppercase text-zinc-500">
+                Discovered Remote Buckets:
+              </span>
+              {s3RemoteBuckets.map((rb) => (
+                <button
+                  key={rb.name}
+                  type="button"
+                  onClick={() => {
+                    setS3RemoteBucket(rb.name);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer ${
+                    s3RemoteBucket === rb.name
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  s3://{rb.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Remote Object List & 1-Tap Stream Import Bar */}
+          <div className="space-y-3">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Remote Objects in s3://{s3RemoteBucket || '(root)'} ({s3RemoteObjects.length})
+                </span>
+                {s3RemoteObjects.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setS3SelectedKeys(
+                          s3SelectedKeys.length === s3RemoteObjects.length
+                            ? []
+                            : s3RemoteObjects.map((o) => o.key)
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-[10px] font-bold cursor-pointer"
+                    >
+                      {s3SelectedKeys.length === s3RemoteObjects.length
+                        ? 'Deselect All'
+                        : 'Select All'}
+                    </button>
+                    <span className="text-[11px] text-zinc-500">
+                      {s3SelectedKeys.length} selected for import
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={
+                  !selectedBucket ||
+                  s3SelectedKeys.length === 0 ||
+                  s3Importing
+                }
+                onClick={handleImportS3Compatible}
+                className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold cursor-pointer inline-flex items-center gap-2 disabled:opacity-40 shadow-xs"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>
+                  {s3Importing
+                    ? `Streaming ${s3SelectedKeys.length} Object(s) to GCS...`
+                    : `1-Tap Import Selected (${s3SelectedKeys.length}) -> gs://${selectedBucket?.name}/${s3TargetPrefix}`}
+                </span>
+              </button>
+            </div>
+
+            {s3RemoteObjects.length > 0 && (
+              <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden divide-y divide-zinc-200 dark:divide-zinc-800">
+                {s3RemoteObjects.map((obj) => {
+                  const checked = s3SelectedKeys.includes(obj.key);
+                  const destKey = `${String(s3TargetPrefix || '').replace(
+                    /^\/+/,
+                    ''
+                  )}${obj.key}`;
+                  return (
+                    <div
+                      key={obj.key}
+                      onClick={() =>
+                        setS3SelectedKeys((prev) =>
+                          prev.includes(obj.key)
+                            ? prev.filter((k) => k !== obj.key)
+                            : [...prev, obj.key]
+                        )
+                      }
+                      className={`p-3 flex flex-wrap items-center justify-between gap-3 cursor-pointer transition-colors ${
+                        checked
+                          ? 'bg-blue-600/[0.06] dark:bg-blue-500/[0.08]'
+                          : 'bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {}}
+                          className="cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                            s3://{s3RemoteBucket}/{obj.key}
+                          </div>
+                          <div className="text-[10px] text-zinc-500 mt-0.5">
+                            Target: <code className="text-blue-600 dark:text-blue-400">gs://{selectedBucket?.name}/{destKey}</code> · ETag: {obj.etag || 'n/a'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 text-[10px]">
+                        <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 font-bold">
+                          {formatBytes(obj.size)}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500">
+                          {obj.storageClass || 'STANDARD'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Imported Objects Confirmation & Direct Jump to Object Workbench */}
+            {s3ImportedResults.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                    Successfully Imported {s3ImportedResults.length} Object(s) from {s3ProviderType} into gs://{selectedBucket?.name}!
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const first = s3ImportedResults[0];
+                      if (first?.gcsObjectName) {
+                        await handleInspectObject({ name: first.gcsObjectName });
+                      }
+                      setActiveSubTab('OBJECTS');
+                    }}
+                    className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Open Imported Files in Object Workbench →</span>
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {s3ImportedResults.map((it) => (
+                    <button
+                      key={it.gcsObjectName}
+                      type="button"
+                      onClick={async () => {
+                        await handleInspectObject({ name: it.gcsObjectName });
+                        setActiveSubTab('OBJECTS');
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-emerald-500/40 text-[10px] font-bold text-zinc-800 dark:text-zinc-200 hover:border-blue-500 cursor-pointer"
+                    >
+                      gs://{selectedBucket?.name}/{it.gcsObjectName} ({formatBytes(it.bytes)}) →
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Generated Google Cloud Storage Transfer Service Spec & CLI */}
+          {s3TransferSpec && (
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Google Cloud Storage Transfer Service (awsS3CompatibleDataSource) &amp; Rclone Sync CLI
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setS3TransferSpec(null)}
+                  className="text-[10px] text-zinc-500 font-bold cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                      gcloud transfer jobs create (Managed Petabyte Transfer)
+                    </div>
+                    <code className="text-[11px] text-zinc-800 dark:text-zinc-200 truncate block">
+                      {s3TransferSpec.gcloudCli}
+                    </code>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(s3TransferSpec.gcloudCli, 's3-gcloud-cli')
+                    }
+                    className="h-7 px-2.5 rounded bg-zinc-100 dark:bg-zinc-900 text-[10px] font-bold cursor-pointer shrink-0 inline-flex items-center gap-1"
+                  >
+                    {copiedCmd === 's3-gcloud-cli' ? (
+                      <Check className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    <span>Copy CLI</span>
+                  </button>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold text-zinc-500">
+                      rclone sync (MinIO / Ceph / S3 Direct Pipe)
+                    </div>
+                    <code className="text-[11px] text-zinc-800 dark:text-zinc-200 truncate block">
+                      {s3TransferSpec.rcloneCli}
+                    </code>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopy(s3TransferSpec.rcloneCli, 's3-rclone-cli')
+                    }
+                    className="h-7 px-2.5 rounded bg-zinc-100 dark:bg-zinc-900 text-[10px] font-bold cursor-pointer shrink-0 inline-flex items-center gap-1"
+                  >
+                    {copiedCmd === 's3-rclone-cli' ? (
+                      <Check className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    <span>Copy Rclone</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ==================================================================== */}

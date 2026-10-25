@@ -19904,6 +19904,715 @@ app.post(
   }
 );
 
+// ============================================================================
+// 6g. S3-Compatible Multi-Cloud & On-Prem Federation (AWS S3, MinIO, Ceph RGW)
+//     Zero-Dependency Native Node.js AWS4-HMAC-SHA256 Signer + Streaming Bridge
+// ============================================================================
+function encodeS3Rfc3986(str = '') {
+  return encodeURIComponent(String(str)).replace(
+    /[!'()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
+function hmacSha256Buf(key, data) {
+  return crypto.createHmac('sha256', key).update(data, 'utf8').digest();
+}
+
+function buildS3SignedRequest({
+  method = 'GET',
+  endpoint = 'https://s3.us-east-1.amazonaws.com',
+  region = 'us-east-1',
+  bucket = '',
+  objectKey = '',
+  queryParams = {},
+  accessKeyId = '',
+  secretAccessKey = '',
+  sessionToken = '',
+  pathStyle = true,
+}) {
+  const cleanEndpoint = String(endpoint || 'https://s3.us-east-1.amazonaws.com')
+    .trim()
+    .replace(/\/+$/, '');
+  const parsedBase = new URL(
+    /^https?:\/\//i.test(cleanEndpoint)
+      ? cleanEndpoint
+      : `https://${cleanEndpoint}`
+  );
+
+  const cleanBucket = String(bucket || '').trim().replace(/^\/+|\/+$/g, '');
+  const cleanKey = String(objectKey || '').replace(/^\/+/, '');
+  const encodedKeyPath = cleanKey
+    ? cleanKey.split('/').map((seg) => encodeS3Rfc3986(seg)).join('/')
+    : '';
+
+  let targetHost = parsedBase.host;
+  let canonicalUri = parsedBase.pathname.replace(/\/+$/, '') || '';
+
+  if (cleanBucket) {
+    if (pathStyle) {
+      canonicalUri += `/${encodeS3Rfc3986(cleanBucket)}`;
+      if (encodedKeyPath) canonicalUri += `/${encodedKeyPath}`;
+    } else {
+      targetHost = `${cleanBucket}.${parsedBase.host}`;
+      canonicalUri += encodedKeyPath ? `/${encodedKeyPath}` : '/';
+    }
+  } else {
+    canonicalUri = canonicalUri || '/';
+  }
+  if (!canonicalUri.startsWith('/')) canonicalUri = `/${canonicalUri}`;
+
+  const sortedQueryKeys = Object.keys(queryParams).filter(
+    (k) => queryParams[k] !== undefined && queryParams[k] !== null
+  );
+  sortedQueryKeys.sort();
+  const canonicalQueryString = sortedQueryKeys
+    .map(
+      (k) => `${encodeS3Rfc3986(k)}=${encodeS3Rfc3986(String(queryParams[k]))}`
+    )
+    .join('&');
+
+  const fullUrl = `${parsedBase.protocol}//${targetHost}${canonicalUri}${
+    canonicalQueryString ? `?${canonicalQueryString}` : ''
+  }`;
+
+  const trimAccess = String(accessKeyId || '').trim();
+  const trimSecret = String(secretAccessKey || '').trim();
+  if (!trimAccess || !trimSecret) {
+    return { url: fullUrl, headers: { Host: targetHost } };
+  }
+
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const cleanRegion = String(region || 'us-east-1').trim() || 'us-east-1';
+  const payloadHash = crypto.createHash('sha256').update('').digest('hex');
+
+  const headerMap = {
+    host: targetHost,
+    'x-amz-content-sha256': payloadHash,
+    'x-amz-date': amzDate,
+  };
+  if (sessionToken && String(sessionToken).trim()) {
+    headerMap['x-amz-security-token'] = String(sessionToken).trim();
+  }
+
+  const signedHeaderKeys = Object.keys(headerMap).sort();
+  const canonicalHeaders = signedHeaderKeys
+    .map((k) => `${k}:${headerMap[k]}\n`)
+    .join('');
+  const signedHeaders = signedHeaderKeys.join(';');
+
+  const canonicalRequest = [
+    method.toUpperCase(),
+    canonicalUri,
+    canonicalQueryString,
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n');
+
+  const credentialScope = `${dateStamp}/${cleanRegion}/s3/aws4_request`;
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    credentialScope,
+    crypto.createHash('sha256').update(canonicalRequest, 'utf8').digest('hex'),
+  ].join('\n');
+
+  const kDate = hmacSha256Buf(`AWS4${trimSecret}`, dateStamp);
+  const kRegion = hmacSha256Buf(kDate, cleanRegion);
+  const kService = hmacSha256Buf(kRegion, 's3');
+  const kSigning = hmacSha256Buf(kService, 'aws4_request');
+  const signature = crypto
+    .createHmac('sha256', kSigning)
+    .update(stringToSign, 'utf8')
+    .digest('hex');
+
+  const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${trimAccess}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  const outHeaders = {
+    Host: targetHost,
+    'x-amz-date': amzDate,
+    'x-amz-content-sha256': payloadHash,
+    Authorization: authorizationHeader,
+  };
+  if (headerMap['x-amz-security-token']) {
+    outHeaders['x-amz-security-token'] = headerMap['x-amz-security-token'];
+  }
+
+  return { url: fullUrl, headers: outHeaders };
+}
+
+function extractXmlTagValue(xmlBlock = '', tagName = '') {
+  const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`, 'i');
+  const m = String(xmlBlock).match(regex);
+  if (!m) return '';
+  return m[1]
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .trim();
+}
+
+function extractXmlBlocks(xmlText = '', blockTag = 'Contents') {
+  const regex = new RegExp(`<${blockTag}>([\\s\\S]*?)<\\/${blockTag}>`, 'gi');
+  const matches = [];
+  let m;
+  while ((m = regex.exec(String(xmlText))) !== null) {
+    matches.push(m[1]);
+  }
+  return matches;
+}
+
+const SANDBOX_S3_COMPATIBLE_MANIFEST = {
+  MINIO: {
+    bucket: 'minio-edge-ai-lakehouse',
+    endpoint: 'http://minio.corp.internal:9000',
+    region: 'us-east-1',
+    objects: [
+      {
+        key: 'config/minio-cluster-topology.json',
+        size: 486,
+        lastModified: new Date(Date.now() - 3600 * 1000 * 5).toISOString(),
+        etag: '9d2e7a14b88c40f1a23981b77c12a001',
+        storageClass: 'STANDARD',
+        contentType: 'application/json',
+        body: JSON.stringify(
+          {
+            sourceCluster: 'minio-edge-ai-lakehouse',
+            protocol: 'S3-Compatible (Path-Style AWS4-HMAC-SHA256)',
+            erasureCoding: 'EC:4',
+            nodes: 8,
+            migratedToGcpBy: 'CloudPulse S3/MinIO/Ceph Bridge',
+            timestamp: new Date().toISOString(),
+          },
+          null,
+          2
+        ),
+      },
+      {
+        key: 'telemetry/gpu-inference-metrics.csv',
+        size: 342,
+        lastModified: new Date(Date.now() - 3600 * 1000 * 12).toISOString(),
+        etag: '4b8f19c23a01e77261bc091a884d1102',
+        storageClass: 'STANDARD',
+        contentType: 'text/csv; charset=utf-8',
+        body: [
+          'timestamp,cluster_node,model_id,p95_latency_ms,tokens_per_sec,vram_gb',
+          `${new Date().toISOString()},minio-node-01,gemini-2.5-flash,38,410,18.4`,
+          `${new Date().toISOString()},minio-node-02,llama-3.3-70b,92,145,68.2`,
+          `${new Date().toISOString()},minio-node-03,mistral-large,64,215,44.0`,
+        ].join('\n'),
+      },
+      {
+        key: 'pipelines/iceberg-catalog-sync.sql',
+        size: 318,
+        lastModified: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
+        etag: '7c1a90e55d2b38f1190c42a6b11099e3',
+        storageClass: 'STANDARD',
+        contentType: 'application/sql',
+        body: `-- Imported from MinIO Object Store into Google Cloud Storage BigLake
+CREATE OR REPLACE EXTERNAL TABLE \`lakehouse.gpu_inference_metrics\`
+OPTIONS (
+  format = 'CSV',
+  uris = ['gs://YOUR_TARGET_BUCKET/telemetry/gpu-inference-metrics.csv'],
+  skip_leading_rows = 1
+);
+`,
+      },
+    ],
+  },
+  CEPH_RGW: {
+    bucket: 'ceph-rgw-financial-ledger',
+    endpoint: 'https://ceph-rgw.datacenter.local:7480',
+    region: 'default',
+    objects: [
+      {
+        key: 'ceph-rgw/rados-pool-status.json',
+        size: 512,
+        lastModified: new Date(Date.now() - 3600 * 1000 * 3).toISOString(),
+        etag: 'c81e728d9d4c2f636f067f89cc14862c',
+        storageClass: 'STANDARD',
+        contentType: 'application/json',
+        body: JSON.stringify(
+          {
+            storageEngine: 'Ceph Reef RADOS Gateway (RGW)',
+            pool: 'default.rgw.buckets.data',
+            placementGroupCount: 256,
+            replicationFactor: 3,
+            status: 'HEALTH_OK',
+            exportedAt: new Date().toISOString(),
+          },
+          null,
+          2
+        ),
+      },
+      {
+        key: 'ledger/settlement-events.jsonl',
+        size: 420,
+        lastModified: new Date(Date.now() - 3600 * 1000 * 9).toISOString(),
+        etag: 'a87ff679a2f3e71d9181a67b7542122c',
+        storageClass: 'STANDARD',
+        contentType: 'application/x-ndjson',
+        body: [
+          JSON.stringify({
+            txId: 'CEPH-TX-9001',
+            source: 'ceph-rgw-pool-01',
+            amountUsd: 14250.0,
+            settled: true,
+            ts: new Date().toISOString(),
+          }),
+          JSON.stringify({
+            txId: 'CEPH-TX-9002',
+            source: 'ceph-rgw-pool-02',
+            amountUsd: 89300.5,
+            settled: true,
+            ts: new Date().toISOString(),
+          }),
+        ].join('\n'),
+      },
+    ],
+  },
+  AWS_S3: {
+    bucket: 'aws-prod-datalake-us-east-1',
+    endpoint: 'https://s3.us-east-1.amazonaws.com',
+    region: 'us-east-1',
+    objects: [
+      {
+        key: 'aws-s3/cloudtrail-security-digest.json',
+        size: 495,
+        lastModified: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
+        etag: 'e4da3b7fbbce2345d7772b0674a318d5',
+        storageClass: 'STANDARD',
+        contentType: 'application/json',
+        body: JSON.stringify(
+          {
+            awsRegion: 'us-east-1',
+            sourceBucket: 's3://aws-prod-datalake-us-east-1',
+            destinationCloud: 'Google Cloud Storage (Zero-Trust Hardened)',
+            transferProtocol: 'AWS4-HMAC-SHA256 Direct Streaming',
+            exportedAt: new Date().toISOString(),
+          },
+          null,
+          2
+        ),
+      },
+      {
+        key: 'analytics/cross-cloud-finops-comparison.csv',
+        size: 360,
+        lastModified: new Date(Date.now() - 3600 * 1000 * 16).toISOString(),
+        etag: '1679091c5a880faf6fb5e6087eb1b2dc',
+        storageClass: 'STANDARD_IA',
+        contentType: 'text/csv; charset=utf-8',
+        body: [
+          'provider,region,storage_class,monthly_gb,rate_per_gb_usd,egress_to_internet_usd',
+          'AWS_S3,us-east-1,STANDARD,10000,0.023,0.09',
+          'MINIO_ONPREM,dc-west,EC4_STANDARD,10000,0.014,0.00',
+          'CEPH_RGW,dc-eu,RADOS_3X,10000,0.015,0.00',
+          'GCP_GCS,us-central1,STANDARD,10000,0.020,0.08',
+        ].join('\n'),
+      },
+    ],
+  },
+};
+
+// 1) List Remote Buckets or Objects from AWS S3, MinIO, Ceph RGW, or S3-Compatible Endpoint
+app.post('/api/project/:id/storage/s3-compatible/list', async (req, res) => {
+  const {
+    providerType = 'MINIO', // AWS_S3 | MINIO | CEPH_RGW | S3_COMPATIBLE
+    endpoint = 'https://s3.us-east-1.amazonaws.com',
+    region = 'us-east-1',
+    remoteBucket = '',
+    prefix = '',
+    accessKeyId = '',
+    secretAccessKey = '',
+    sessionToken = '',
+    pathStyle = true,
+    useSandboxDemo = false,
+  } = req.body || {};
+
+  if (useSandboxDemo) {
+    const profile =
+      SANDBOX_S3_COMPATIBLE_MANIFEST[providerType] ||
+      SANDBOX_S3_COMPATIBLE_MANIFEST.MINIO;
+    const filteredObjects = profile.objects.filter((o) =>
+      prefix ? o.key.startsWith(prefix) : true
+    );
+    return res.json({
+      ok: true,
+      mode: 'SANDBOX_DEMO',
+      providerType,
+      endpoint: endpoint || profile.endpoint,
+      region: region || profile.region,
+      remoteBucket: remoteBucket || profile.bucket,
+      remoteBuckets: [
+        { name: profile.bucket, creationDate: new Date().toISOString() },
+        { name: 'minio-edge-ai-lakehouse', creationDate: new Date().toISOString() },
+        { name: 'ceph-rgw-financial-ledger', creationDate: new Date().toISOString() },
+        { name: 'aws-prod-datalake-us-east-1', creationDate: new Date().toISOString() },
+      ],
+      objects: filteredObjects,
+      message: `Connected to ${providerType} cluster (${
+        remoteBucket || profile.bucket
+      }) — ${filteredObjects.length} object(s) listed.`,
+    });
+  }
+
+  try {
+    const cleanBucket = String(remoteBucket || '').trim();
+    const queryParams = cleanBucket
+      ? {
+          'list-type': '2',
+          'max-keys': '200',
+          ...(prefix ? { prefix: String(prefix).trim() } : {}),
+        }
+      : {};
+
+    const signed = buildS3SignedRequest({
+      method: 'GET',
+      endpoint,
+      region,
+      bucket: cleanBucket,
+      queryParams,
+      accessKeyId,
+      secretAccessKey,
+      sessionToken,
+      pathStyle: Boolean(pathStyle),
+    });
+
+    const s3Res = await gcpHttp.get(signed.url, {
+      headers: signed.headers,
+      responseType: 'text',
+      timeout: 10000,
+    });
+
+    const xml = String(s3Res.data || '');
+
+    if (!cleanBucket) {
+      const bucketBlocks = extractXmlBlocks(xml, 'Bucket');
+      const remoteBuckets = bucketBlocks.map((b) => ({
+        name: extractXmlTagValue(b, 'Name'),
+        creationDate: extractXmlTagValue(b, 'CreationDate') || null,
+      }));
+      return res.json({
+        ok: true,
+        mode: 'LIVE_S3_XML',
+        providerType,
+        endpoint,
+        region,
+        remoteBucket: remoteBuckets[0]?.name || '',
+        remoteBuckets,
+        objects: [],
+        message: `Listed ${remoteBuckets.length} bucket(s) from ${endpoint}. Select a bucket to list objects.`,
+      });
+    }
+
+    const contentBlocks = extractXmlBlocks(xml, 'Contents');
+    const objects = contentBlocks.map((block) => ({
+      key: extractXmlTagValue(block, 'Key'),
+      size: Number(extractXmlTagValue(block, 'Size') || 0),
+      lastModified: extractXmlTagValue(block, 'LastModified') || null,
+      etag: extractXmlTagValue(block, 'ETag').replace(/"/g, ''),
+      storageClass: extractXmlTagValue(block, 'StorageClass') || 'STANDARD',
+    }));
+
+    return res.json({
+      ok: true,
+      mode: 'LIVE_S3_XML',
+      providerType,
+      endpoint,
+      region,
+      remoteBucket: cleanBucket,
+      remoteBuckets: [{ name: cleanBucket }],
+      objects,
+      message: `Listed ${objects.length} object(s) from ${providerType} bucket s3://${cleanBucket}.`,
+    });
+  } catch (err) {
+    const rawXmlErr =
+      typeof err.response?.data === 'string' ? err.response.data : '';
+    const s3Code = extractXmlTagValue(rawXmlErr, 'Code');
+    const s3Msg = extractXmlTagValue(rawXmlErr, 'Message');
+    return res.status(502).json({
+      error: s3Code
+        ? `S3/MinIO/Ceph Error [${s3Code}]: ${s3Msg || err.message}`
+        : `Failed to reach S3/MinIO/Ceph endpoint (${endpoint}): ${err.message}. Tip: Click "Load Demo MinIO / Ceph / S3 Cluster" to test the importer without an external S3 endpoint.`,
+    });
+  }
+});
+
+// 2) Stream-Import Selected Objects from AWS S3, MinIO, or Ceph RGW Directly into gs://:bucketName
+app.post(
+  '/api/project/:id/storage/buckets/:bucketName/s3-compatible/import',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const {
+      providerType = 'MINIO',
+      endpoint = 'https://s3.us-east-1.amazonaws.com',
+      region = 'us-east-1',
+      remoteBucket = '',
+      keys = [],
+      targetPrefix = '',
+      accessKeyId = '',
+      secretAccessKey = '',
+      sessionToken = '',
+      pathStyle = true,
+      useSandboxDemo = false,
+    } = req.body || {};
+
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'Select at least one remote S3/MinIO/Ceph object to import.' });
+    }
+
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const cleanPrefix = String(targetPrefix || '')
+        .trim()
+        .replace(/^\/+/, '');
+      const normalizedPrefix =
+        cleanPrefix && !cleanPrefix.endsWith('/')
+          ? `${cleanPrefix}/`
+          : cleanPrefix;
+
+      const importedObjects = [];
+      const errors = [];
+
+      const sandboxProfile =
+        SANDBOX_S3_COMPATIBLE_MANIFEST[providerType] ||
+        SANDBOX_S3_COMPATIBLE_MANIFEST.MINIO;
+      const allSandboxObjects = [
+        ...SANDBOX_S3_COMPATIBLE_MANIFEST.MINIO.objects,
+        ...SANDBOX_S3_COMPATIBLE_MANIFEST.CEPH_RGW.objects,
+        ...SANDBOX_S3_COMPATIBLE_MANIFEST.AWS_S3.objects,
+      ];
+
+      for (const key of keys.slice(0, 25)) {
+        try {
+          let payloadBuffer;
+          let contentType = 'application/octet-stream';
+
+          const sandboxMatch = allSandboxObjects.find((o) => o.key === key);
+          if (useSandboxDemo && sandboxMatch) {
+            payloadBuffer = Buffer.from(sandboxMatch.body, 'utf8');
+            contentType = sandboxMatch.contentType || 'text/plain; charset=utf-8';
+          } else {
+            const signedGet = buildS3SignedRequest({
+              method: 'GET',
+              endpoint,
+              region,
+              bucket: remoteBucket || sandboxProfile.bucket,
+              objectKey: key,
+              accessKeyId,
+              secretAccessKey,
+              sessionToken,
+              pathStyle: Boolean(pathStyle),
+            });
+
+            const s3ObjRes = await gcpHttp.get(signedGet.url, {
+              headers: signedGet.headers,
+              responseType: 'arraybuffer',
+              timeout: 15000,
+            });
+            payloadBuffer = Buffer.from(s3ObjRes.data || []);
+            contentType =
+              s3ObjRes.headers?.['content-type'] || 'application/octet-stream';
+          }
+
+          const gcsObjectName = `${normalizedPrefix}${String(key).replace(
+            /^\/+/,
+            ''
+          )}`;
+
+          await gcpHttp.post(
+            `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/o?uploadType=media&name=${encodeURIComponent(gcsObjectName)}`,
+            payloadBuffer,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+                'Content-Type': contentType,
+              },
+              timeout: 15000,
+            }
+          );
+
+          // Stamp provenance metadata on the imported GCS object
+          await gcpHttp
+            .patch(
+              `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                bucketName
+              )}/o/${encodeURIComponent(gcsObjectName)}`,
+              {
+                metadata: {
+                  importedFromProvider: providerType,
+                  sourceEndpoint: String(endpoint || ''),
+                  sourceBucket: String(remoteBucket || sandboxProfile.bucket),
+                  sourceObjectKey: String(key),
+                  importedAt: new Date().toISOString(),
+                },
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'x-goog-user-project': projectId,
+                },
+                timeout: 5000,
+              }
+            )
+            .catch(() => null);
+
+          importedObjects.push({
+            sourceKey: key,
+            gcsObjectName,
+            bytes: payloadBuffer.length,
+          });
+        } catch (itemErr) {
+          errors.push({ key, error: itemErr.message });
+        }
+      }
+
+      recordFlightEvent(projectId, {
+        actionType: 'STORAGE_S3_COMPATIBLE_IMPORT',
+        title: `Imported ${importedObjects.length} object(s) from ${providerType} (${
+          remoteBucket || sandboxProfile.bucket
+        }) into gs://${bucketName}`,
+        targetName: bucketName,
+        region: 'GLOBAL',
+        undoable: false,
+      });
+
+      return res.json({
+        ok: true,
+        providerType,
+        destinationBucket: bucketName,
+        importedCount: importedObjects.length,
+        importedObjects,
+        errors,
+        message: `Imported ${importedObjects.length} object(s) from ${providerType} into gs://${bucketName}!`,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to import S3/MinIO/Ceph objects into Google Cloud Storage.',
+      });
+    }
+  }
+);
+
+// 3) Create or Generate Google Cloud Storage Transfer Service Job (awsS3Data / awsS3CompatibleData for MinIO & Ceph)
+app.post(
+  '/api/project/:id/storage/buckets/:bucketName/s3-compatible/transfer-job',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const {
+      providerType = 'MINIO',
+      endpoint = 'https://s3.us-east-1.amazonaws.com',
+      region = 'us-east-1',
+      remoteBucket = 'my-source-bucket',
+      prefix = '',
+      targetPrefix = '',
+      accessKeyId = '',
+      secretAccessKey = '',
+      pathStyle = true,
+    } = req.body || {};
+
+    const cleanHost = String(endpoint || 's3.us-east-1.amazonaws.com')
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/+$/, '');
+    const isHttps = !/^http:\/\//i.test(String(endpoint || ''));
+
+    const transferSpec =
+      providerType === 'AWS_S3'
+        ? {
+            awsS3DataSource: {
+              bucketName: remoteBucket,
+              ...(prefix ? { path: prefix } : {}),
+              ...(accessKeyId && secretAccessKey
+                ? {
+                    awsAccessKey: {
+                      accessKeyId,
+                      secretAccessKey,
+                    },
+                  }
+                : {}),
+            },
+            gcsDataSink: {
+              bucketName,
+              ...(targetPrefix ? { path: targetPrefix } : {}),
+            },
+          }
+        : {
+            awsS3CompatibleDataSource: {
+              bucketName: remoteBucket,
+              endpoint: cleanHost,
+              ...(prefix ? { path: prefix } : {}),
+              region: region || 'us-east-1',
+              s3Metadata: {
+                authMethod: 'AUTH_METHOD_AWS_SIGNATURE_V4',
+                requestModel: pathStyle
+                  ? 'REQUEST_MODEL_PATH_STYLE'
+                  : 'REQUEST_MODEL_VIRTUAL_HOSTED_STYLE',
+                protocol: isHttps
+                  ? 'NETWORK_PROTOCOL_HTTPS'
+                  : 'NETWORK_PROTOCOL_HTTP',
+                listApi: 'LIST_OBJECTS_V2',
+              },
+            },
+            gcsDataSink: {
+              bucketName,
+              ...(targetPrefix ? { path: targetPrefix } : {}),
+            },
+          };
+
+    const gcloudCli =
+      providerType === 'AWS_S3'
+        ? `gcloud transfer jobs create s3://${remoteBucket}/${prefix} gs://${bucketName}/${targetPrefix} --project=${projectId} --source-creds-file=aws-creds.txt`
+        : `gcloud transfer jobs create s3://${remoteBucket}/${prefix} gs://${bucketName}/${targetPrefix} --project=${projectId} --source-endpoint=${cleanHost} --source-signing-region=${
+            region || 'us-east-1'
+          } --source-auth-method=AWS_SIGNATURE_V4 --source-request-model=${
+            pathStyle ? 'PATH_STYLE' : 'VIRTUAL_HOSTED_STYLE'
+          }`;
+
+    const rcloneCli = `rclone sync :s3:${remoteBucket}/${prefix} :gcs:${bucketName}/${targetPrefix} --s3-provider=${
+      providerType === 'MINIO'
+        ? 'Minio'
+        : providerType === 'CEPH_RGW'
+        ? 'Ceph'
+        : 'AWS'
+    } --s3-endpoint=${endpoint} --s3-region=${region || 'us-east-1'}`;
+
+    return res.json({
+      ok: true,
+      providerType,
+      transferJobPayload: {
+        projectId,
+        description: `CloudPulse ${providerType} (${remoteBucket}) -> gs://${bucketName} Federation Sync`,
+        status: 'ENABLED',
+        transferSpec,
+      },
+      gcloudCli,
+      rcloneCli,
+      message: `Generated Google Cloud Storage Transfer Service spec (${
+        providerType === 'AWS_S3' ? 'awsS3DataSource' : 'awsS3CompatibleDataSource'
+      }) for gs://${bucketName}!`,
+    });
+  }
+);
+
 // 6c. Toggle Object Public Access & Generate Live Public HTTPS URI (https://storage.googleapis.com/...)
 app.post(
   '/api/project/:id/storage/buckets/:bucketName/objects/public-access',
