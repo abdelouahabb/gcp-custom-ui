@@ -6031,13 +6031,19 @@ app.get('/api/project/:projectId/apis', async (req, res) => {
 });
 
 // 10b. POST /api/project/:projectId/apis/toggle -> Emergency Mobile API Kill-Switch (Disable or Enable any GCP Service API)
-app.post('/api/project/:projectId/apis/toggle', async (req, res) => {
-  const { projectId } = req.params;
-  const {
-    serviceName,
-    action = 'DISABLE',
-    disableDependentServices = true,
-  } = req.body || {};
+app.post(
+  ['/api/project/:projectId/apis/toggle', '/api/project/:projectId/apis/enable'],
+  async (req, res) => {
+    const { projectId } = req.params;
+    const isEnableAlias = req.path.endsWith('/apis/enable');
+    const rawServiceName =
+      req.body?.serviceName ||
+      (Array.isArray(req.body?.services) ? req.body.services[0] : '');
+    const {
+      action = isEnableAlias ? 'ENABLE' : 'DISABLE',
+      disableDependentServices = true,
+    } = req.body || {};
+    const serviceName = rawServiceName;
 
   if (!serviceName) {
     return res
@@ -49844,7 +49850,9 @@ function classifyMitreCloudAuditMethod(methodName = '', resourceName = '', sever
 }
 
 // 1. GET /api/project/:projectId/soc/overview -> Full 5-Pillar Live Autonomous SOC Telemetry
-app.get('/api/project/:projectId/soc/overview', async (req, res) => {
+app.get(
+  ['/api/project/:projectId/soc/overview', '/api/project/:projectId/wave16/soc/overview'],
+  async (req, res) => {
   const { projectId } = req.params;
   const lookbackHours = Math.max(1, Math.min(168, Number(req.query.hours || 72)));
   const t0 = Date.now();

@@ -313,7 +313,7 @@ export default function Revolutionary2026Suite({
           .get(`/api/project/${encodeURIComponent(projectId)}/wave8/war-room`)
           .catch(() => ({ data: null })),
         axios
-          .get(`/api/project/${encodeURIComponent(projectId)}/wave16/soc/overview`)
+          .get(`/api/project/${encodeURIComponent(projectId)}/soc/overview`)
           .catch(() => ({ data: null })),
       ]);
       setVms(vmRes.data?.vms || []);
