@@ -126,11 +126,42 @@ function classifyDestructiveAxiosConfig(config) {
 
   // 1. All HTTP DELETE requests
   if (method === 'delete') {
+    // Cloud Run v2 Batch Job delete (/cloudrun/jobs/:region/:jobName)
+    const runJobMatch = rawUrl.match(/\/cloudrun\/jobs\/([^/]+)\/([^/?]+)/);
+    if (runJobMatch) {
+      const region = decodeURIComponent(runJobMatch[1]);
+      const jobName = decodeURIComponent(runJobMatch[2]);
+      return {
+        title: `Permanently Delete Cloud Run v2 Batch Job "${jobName}"`,
+        resourceKind: 'Cloud Run v2 Batch Job (run.googleapis.com/v2)',
+        targetName: jobName,
+        location: region,
+        projectId,
+        method: 'DELETE',
+        endpoint: rawUrl,
+        whatHappensNext: `1. Calls DELETE https://run.googleapis.com/v2/projects/${projectId}/locations/${region}/jobs/${jobName}.\n2. Removes the batch job definition and execution history while keeping any mounted Cloud Storage FUSE bucket (gs://...) and Artifact Registry container image safe.`,
+        impactWarning: `This will permanently delete Cloud Run v2 Batch Job "${jobName}" in ${region} (${projectId}). Any attached Cloud Storage FUSE bucket remains intact.`,
+      };
+    }
+
     // Generic resource delete (/api/project/:id/resource)
     if (rawUrl.endsWith('/resource') && !rawUrl.includes('/data-engineer/resource')) {
       const rType = body.resourceType || body.type || 'Google Cloud Resource';
       const rName = body.name || 'selected-resource';
       const rRegion = body.region || 'global';
+      if (rType === 'Cloud Run Service' || rType === 'CLOUD_RUN') {
+        return {
+          title: `Decommission Cloud Run v2 Service "${rName}" (${rRegion})`,
+          resourceKind: 'Cloud Run v2 Serverless Service',
+          targetName: rName,
+          location: rRegion,
+          projectId,
+          method: 'DELETE',
+          endpoint: rawUrl,
+          whatHappensNext: `1. Calls DELETE https://run.googleapis.com/v2/projects/${projectId}/locations/${rRegion}/services/${rName}.\n2. Drains the HTTPS .run.app ingress endpoint and terminates all revisions in ${rRegion}.\n3. Preserves your container image in Artifact Registry and any attached Cloud Storage FUSE disk bucket unless explicitly marked for cleanup.`,
+          impactWarning: `This will permanently terminate Cloud Run service "${rName}" (${rRegion}) and its HTTPS endpoint in project "${projectId}".`,
+        };
+      }
       return {
         title: `Permanently Delete ${rType}`,
         resourceKind: rType,

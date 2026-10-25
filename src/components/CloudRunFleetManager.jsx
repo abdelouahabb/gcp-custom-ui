@@ -108,8 +108,13 @@ export default function CloudRunFleetManager({
   const [iapStateMap, setIapStateMap] = useState({});
   // Per-service Revision Time-Machine & Crash-Loop Autopsy state: { [serviceId]: { loading, selectedRevision, report, error } }
   const [revisionAutopsyMap, setRevisionAutopsyMap] = useState({});
-  // 2-step delete confirmation
+  // 2-step delete confirmation + smart associated resource cleanup options
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleteCleanupOpts, setDeleteCleanupOpts] = useState({
+    deleteAssociatedScheduler: true,
+    deleteCompanionRunJob: false,
+    deleteAttachedDiskBucket: false,
+  });
   // Dead Container (Artifact Registry) & Cloud Storage Artifact Hunter state
   const [showArtifactHunter, setShowArtifactHunter] = useState(false);
   const [artifactScanState, setArtifactScanState] = useState({
@@ -1294,16 +1299,32 @@ spec:
 
 
   const handleDeleteService = async (srv) => {
+    const attachedBkt =
+      srv.persistentDiskBuckets?.[0] || srv.storageGcsBucket || '';
     setConfirmDeleteId(null);
     setBusyMap((prev) => ({ ...prev, [srv.id]: 'DELETING' }));
     try {
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(projectId)}/resource`,
         {
+          headers: {
+            'x-confirmed-delete': 'true',
+          },
           data: {
+            confirmedByModal: true,
             resourceType: 'Cloud Run Service',
             name: srv.name,
             region: srv.region,
+            deleteAssociatedScheduler: Boolean(
+              deleteCleanupOpts.deleteAssociatedScheduler
+            ),
+            deleteCompanionRunJob: Boolean(
+              deleteCleanupOpts.deleteCompanionRunJob
+            ),
+            deleteAttachedDiskBucket: Boolean(
+              deleteCleanupOpts.deleteAttachedDiskBucket
+            ),
+            attachedDiskBucketName: attachedBkt,
           },
         }
       );
@@ -1323,7 +1344,7 @@ spec:
         delete next[srv.id];
         return next;
       });
-      if (onShowError) {
+      if (!err?.__cancelledByUser && onShowError) {
         onShowError(
           err.response?.data?.error ||
             err.message ||
@@ -5365,38 +5386,218 @@ services:
                       </button>
                     )}
 
-                    {isConfirmingDelete ? (
-                      <div className="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 rounded-lg px-2.5 py-1">
-                        <span className="text-[11px] font-bold text-red-500">
-                          Delete {srv.name}?
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteService(srv)}
-                          className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-2 py-0.5 rounded"
-                        >
-                          Yes, Delete
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-[11px] text-zinc-500 px-1"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(srv.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isConfirmingDelete) {
+                          setConfirmDeleteId(null);
+                        } else {
+                          setDeleteCleanupOpts({
+                            deleteAssociatedScheduler: true,
+                            deleteCompanionRunJob: false,
+                            deleteAttachedDiskBucket: false,
+                          });
+                          setConfirmDeleteId(srv.id);
+                        }
+                      }}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                        isConfirmingDelete
+                          ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                          : 'text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25'
+                      }`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{isConfirmingDelete ? 'Cancel Delete' : 'Delete'}</span>
+                    </button>
                   </div>
                 </div>
+
+                {/* DEDICATED CLOUD RUN SERVICE DECOMMISSION & SMART CLEANUP DRAWER */}
+                {isConfirmingDelete && (() => {
+                  const attachedDiskBkt =
+                    srv.persistentDiskBuckets?.[0] || srv.storageGcsBucket || '';
+                  const recreateCli = `gcloud run deploy ${srv.name} --project=${projectId} --region=${srv.region} --image=${srv.containerImage || 'us-docker.pkg.dev/cloudrun/container/hello'} --cpu=${srv.cpu || '1'} --memory=${srv.memory || '512Mi'} --min-instances=${srv.minInstances || 0} --max-instances=${srv.maxInstances || 10}${
+                    attachedDiskBkt
+                      ? ` --add-volume=name=disk-vol,type=cloud-storage,bucket=${attachedDiskBkt} --add-volume-mount=volume=disk-vol,mount-path=${srv.storageMountPath || '/mnt/gce-disk'}`
+                      : ''
+                  } --allow-unauthenticated`;
+
+                  return (
+                    <div className="p-4 rounded-xl bg-red-500/10 border-2 border-red-500/40 space-y-3 text-xs animate-in fade-in duration-150">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/25 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
+                            <AlertTriangle className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-mono font-extrabold text-red-700 dark:text-red-300 text-xs sm:text-sm">
+                              Decommission Cloud Run Service &ldquo;{srv.name}&rdquo; ({srv.region})?
+                            </div>
+                            <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                              Review blast radius, copy a 1-click recreate command if needed, and choose which associated resources to clean up.
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(recreateCli, `recreate-${srv.id}`)
+                          }
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700 font-mono text-[11px] font-bold cursor-pointer"
+                          title={recreateCli}
+                        >
+                          {copiedId === `recreate-${srv.id}` ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">
+                                Copied Recreate CLI!
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-blue-400" />
+                              <span>Copy 1-Click Recreate CLI Before Deleting</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* 3-Card Blast Radius Summary */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[11px]">
+                        <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-red-500/25 space-y-0.5">
+                          <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                            1. HTTPS Endpoint &amp; Revisions
+                          </div>
+                          <div className="text-zinc-600 dark:text-zinc-300 break-all">
+                            Terminates <code>{srv.uri}</code> and all{' '}
+                            <strong>{(srv.revisions || []).length || 1} revision(s)</strong> in{' '}
+                            <code>{srv.region}</code>.
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-red-500/25 space-y-0.5">
+                          <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                            2. Compute &amp; Container Image
+                          </div>
+                          <div className="text-zinc-600 dark:text-zinc-300 break-all">
+                            Releases <strong>{srv.cpu} vCPU / {srv.memory}</strong> (Min {srv.minInstances} → Max {srv.maxInstances}). Container image{' '}
+                            <code>{srv.containerImage?.split('/').pop()}</code> remains intact in registry.
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-red-500/25 space-y-0.5">
+                          <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                            3. Persistent Storage Safety
+                          </div>
+                          <div className="text-zinc-600 dark:text-zinc-300">
+                            {attachedDiskBkt ? (
+                              <>
+                                Attached FUSE Disk{' '}
+                                <strong className="text-emerald-600 dark:text-emerald-400">
+                                  gs://{attachedDiskBkt}
+                                </strong>{' '}
+                                is <strong>KEPT SAFE</strong> by default unless you check bucket deletion below.
+                              </>
+                            ) : (
+                              'Stateless service (no external persistent GCS FUSE disk attached).'
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Smart Associated Resource Cleanup Checkboxes */}
+                      <div className="p-2.5 rounded-lg bg-white/60 dark:bg-zinc-950/60 border border-red-500/20 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-zinc-800 dark:text-zinc-200">
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(
+                                deleteCleanupOpts.deleteAssociatedScheduler
+                              )}
+                              onChange={(e) =>
+                                setDeleteCleanupOpts((prev) => ({
+                                  ...prev,
+                                  deleteAssociatedScheduler: e.target.checked,
+                                }))
+                              }
+                              className="rounded border-red-400 text-red-600"
+                            />
+                            <span>
+                              Clean up associated Cloud Scheduler trigger (
+                              <code>{srv.name}-cron</code>)
+                            </span>
+                          </label>
+
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(
+                                deleteCleanupOpts.deleteCompanionRunJob
+                              )}
+                              onChange={(e) =>
+                                setDeleteCleanupOpts((prev) => ({
+                                  ...prev,
+                                  deleteCompanionRunJob: e.target.checked,
+                                }))
+                              }
+                              className="rounded border-red-400 text-red-600"
+                            />
+                            <span>
+                              Also delete companion Cloud Run Batch Job (
+                              <code>{srv.name}-batch-job</code>)
+                            </span>
+                          </label>
+
+                          {attachedDiskBkt && (
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer select-none text-red-600 dark:text-red-400 font-bold">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(
+                                  deleteCleanupOpts.deleteAttachedDiskBucket
+                                )}
+                                onChange={(e) =>
+                                  setDeleteCleanupOpts((prev) => ({
+                                    ...prev,
+                                    deleteAttachedDiskBucket: e.target.checked,
+                                  }))
+                                }
+                                className="rounded border-red-500 text-red-600"
+                              />
+                              <span>
+                                Also permanently delete attached Disk Bucket (
+                                <code>gs://{attachedDiskBkt}</code>)
+                              </span>
+                            </label>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="px-3 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-mono font-semibold text-xs cursor-pointer"
+                          >
+                            Keep Service Safe
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteService(srv)}
+                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs shadow-sm cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>
+                              Permanently Delete {srv.name}
+                              {deleteCleanupOpts.deleteAttachedDiskBucket && attachedDiskBkt
+                                ? ` + gs://${attachedDiskBkt}`
+                                : ''}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Spec Summary Pills */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1">

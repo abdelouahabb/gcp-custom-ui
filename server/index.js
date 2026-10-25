@@ -6135,6 +6135,13 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
       resolvedType === 'CLOUD_RUN'
     ) {
       const loc = region || 'us-east1';
+      const {
+        deleteAssociatedScheduler = false,
+        deleteCompanionRunJob = false,
+        deleteAttachedDiskBucket = false,
+        attachedDiskBucketName = '',
+      } = req.body || {};
+
       try {
         await gcpFetch(
           `https://run.googleapis.com/v2/projects/${encodeURIComponent(
@@ -6166,9 +6173,90 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
         throw runDelErr;
       }
       markCloudRunServiceTombstoned(projectId, loc, name);
+
+      const cleanedItems = [];
+      if (deleteAssociatedScheduler) {
+        for (const cand of [`${name}-cron`, `${name}-schedule`, name]) {
+          try {
+            await gcpFetch(
+              `https://cloudscheduler.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(
+                loc
+              )}/jobs/${encodeURIComponent(cand)}`,
+              token,
+              projectId,
+              { method: 'DELETE', timeout: 5000 }
+            );
+            cleanedItems.push(`Cloud Scheduler (${cand})`);
+          } catch {
+            // ignore if no matching scheduler job
+          }
+        }
+      }
+
+      if (deleteCompanionRunJob) {
+        for (const jobCand of [`${name}-cron`, `${name}-batch-job`, `${name}-job`]) {
+          try {
+            await gcpFetch(
+              `https://run.googleapis.com/v2/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(
+                loc
+              )}/jobs/${encodeURIComponent(jobCand)}`,
+              token,
+              projectId,
+              { method: 'DELETE', timeout: 6000 }
+            );
+            cleanedItems.push(`Cloud Run Job (${jobCand})`);
+          } catch {
+            // ignore if no companion job
+          }
+        }
+      }
+
+      if (deleteAttachedDiskBucket && attachedDiskBucketName) {
+        try {
+          const objsData = await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              attachedDiskBucketName
+            )}/o?maxResults=200`,
+            token,
+            projectId,
+            { timeout: 6000 }
+          ).catch(() => ({ items: [] }));
+          for (const obj of objsData?.items || []) {
+            await gcpFetch(
+              `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                attachedDiskBucketName
+              )}/o/${encodeURIComponent(obj.name)}`,
+              token,
+              projectId,
+              { method: 'DELETE', timeout: 5000 }
+            ).catch(() => null);
+          }
+          await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              attachedDiskBucketName
+            )}`,
+            token,
+            projectId,
+            { method: 'DELETE', timeout: 8000 }
+          );
+          cleanedItems.push(`GCS Disk Bucket (gs://${attachedDiskBucketName})`);
+        } catch {
+          // ignore if bucket couldn't be deleted
+        }
+      }
+
       return res.json({
         ok: true,
-        message: `Deleted Cloud Run service ${name} in ${loc}.`,
+        cleanedItems,
+        message: `Deleted Cloud Run service "${name}" in ${loc}${
+          cleanedItems.length > 0
+            ? ` + cleaned up ${cleanedItems.join(', ')}`
+            : ''
+        }.`,
       });
     }
 
