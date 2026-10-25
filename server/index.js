@@ -18954,12 +18954,13 @@ app.get('/api/project/:id/storage/buckets/:bucketName/objects', async (req, res)
   }
 });
 
-// 4. Read Raw Object Content & Metadata Preview
+// 4. Read Raw Object Content & Metadata Preview (or ?download=true for full browser download)
 app.get(
   '/api/project/:id/storage/buckets/:bucketName/objects/content',
   async (req, res) => {
     const { id: projectId, bucketName } = req.params;
     const objectName = req.query.name;
+    const isDownload = req.query.download === 'true';
     if (!objectName) {
       return res.status(400).json({ error: 'Missing ?name= object path.' });
     }
@@ -18967,6 +18968,47 @@ app.get(
       const { token } = await resolveRequestAuth(req);
       if (!token) {
         return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      if (isDownload) {
+        const [metaRes, fullMediaRes] = await Promise.all([
+          gcpHttp.get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/o/${encodeURIComponent(objectName)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+              timeout: 7000,
+            }
+          ),
+          gcpHttp.get(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/o/${encodeURIComponent(objectName)}?alt=media`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+              responseType: 'arraybuffer',
+              timeout: 20000,
+            }
+          ),
+        ]);
+        const meta = metaRes.data || {};
+        const fileName = String(objectName).split('/').pop() || 'object.bin';
+        res.setHeader(
+          'Content-Type',
+          meta.contentType || 'application/octet-stream'
+        );
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${fileName.replace(/"/g, '')}"`
+        );
+        return res.send(Buffer.from(fullMediaRes.data || []));
       }
 
       const [metaRes, mediaRes] = await Promise.all([
@@ -18990,7 +19032,7 @@ app.get(
             headers: {
               Authorization: `Bearer ${token}`,
               'x-goog-user-project': projectId,
-              Range: 'bytes=0-131071', // Up to first 128 KB for instant in-browser inspection
+              Range: 'bytes=0-262143', // Up to first 256 KB for instant in-browser inspection
             },
             responseType: 'arraybuffer',
             timeout: 7000,
@@ -19011,11 +19053,46 @@ app.get(
         contentType.includes('csv') ||
         contentType.includes('sql') ||
         contentType.includes('sh') ||
-        /\.(json|yaml|yml|md|txt|csv|sql|py|js|jsx|ts|tsx|env|log|html|css|xml|tf|sh)$/i.test(
+        contentType.includes('svg') ||
+        /\.(json|jsonl|ndjson|yaml|yml|md|txt|csv|tsv|sql|py|js|jsx|ts|tsx|env|log|html|css|xml|svg|tf|tfvars|sh|ipynb|toml|ini|conf|dockerfile|gitignore|graphql|proto)$/i.test(
           objectName
         );
 
-      const isImage = contentType.startsWith('image/');
+      const isImage =
+        contentType.startsWith('image/') ||
+        /\.(png|jpg|jpeg|gif|webp|svg|ico)$/i.test(objectName);
+
+      // Build a 256-byte Hex + ASCII X-Ray dump and detect binary magic headers
+      const sampleSlice = buf.subarray(0, 256);
+      const hexLines = [];
+      for (let offset = 0; offset < sampleSlice.length; offset += 16) {
+        const chunk = sampleSlice.subarray(offset, offset + 16);
+        const hexPart = Array.from(chunk)
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join(' ')
+          .padEnd(47, ' ');
+        const asciiPart = Array.from(chunk)
+          .map((b) => (b >= 32 && b <= 126 ? String.fromCharCode(b) : '.'))
+          .join('');
+        hexLines.push(
+          `${offset.toString(16).padStart(8, '0')}  ${hexPart}  |${asciiPart}|`
+        );
+      }
+
+      let detectedSignature = isTextLike ? 'UTF-8 Text / Source Code' : 'Binary Stream';
+      if (buf.length >= 4) {
+        const magic4 = buf.subarray(0, 4).toString('ascii');
+        if (magic4 === 'PAR1') detectedSignature = 'Apache Parquet Columnar File (PAR1)';
+        else if (magic4 === 'Obj\x01') detectedSignature = 'Apache Avro Container (Obj1)';
+        else if (magic4 === '%PDF') detectedSignature = 'PDF Document (%PDF)';
+        else if (buf[0] === 0x1f && buf[1] === 0x8b) detectedSignature = 'GZIP Compressed Archive (1F 8B)';
+        else if (buf[0] === 0x50 && buf[1] === 0x4b) detectedSignature = 'ZIP / JAR / Office Archive (PK)';
+        else if (buf[0] === 0x89 && magic4.slice(1) === 'PNG') detectedSignature = 'PNG Lossless Image';
+        else if (buf[0] === 0xff && buf[1] === 0xd8) detectedSignature = 'JPEG Image';
+        else if (magic4 === 'GIF8') detectedSignature = 'GIF Image';
+        else if (magic4 === 'RIFF') detectedSignature = 'RIFF / WebP / WAV Media';
+        else if (buf.subarray(0, 6).toString('ascii') === 'SQLite') detectedSignature = 'SQLite 3 Database';
+      }
 
       res.json({
         ok: true,
@@ -19024,9 +19101,12 @@ app.get(
         metadata: meta,
         isTextLike,
         isImage,
+        detectedSignature,
         textPreview: isTextLike ? buf.toString('utf8') : null,
         base64Data: isImage ? buf.toString('base64') : null,
+        hexPreview: hexLines.join('\n'),
         previewBytes: buf.length,
+        isTruncated: Number(meta.size || 0) > buf.length,
       });
     } catch (err) {
       res.status(500).json({
@@ -19050,6 +19130,8 @@ app.post(
       base64Content = null,
       contentType = 'text/plain; charset=utf-8',
       storageClass = null,
+      cacheControl = null,
+      customMetadata = null,
     } = req.body || {};
 
     if (!objectName || !String(objectName).trim()) {
@@ -19081,6 +19163,30 @@ app.post(
           timeout: 15000,
         }
       );
+
+      // Apply optional custom metadata or cacheControl if supplied
+      if (cacheControl || (customMetadata && Object.keys(customMetadata).length > 0)) {
+        try {
+          await gcpHttp.patch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              bucketName
+            )}/o/${encodeURIComponent(cleanName)}`,
+            {
+              ...(cacheControl ? { cacheControl } : {}),
+              ...(customMetadata ? { metadata: customMetadata } : {}),
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+              timeout: 6000,
+            }
+          );
+        } catch {
+          // ignore optional metadata patch error
+        }
+      }
 
       // If a custom storageClass was requested for this object, rewrite it immediately
       if (storageClass && storageClass !== uploadRes.data?.storageClass) {
@@ -19131,16 +19237,106 @@ app.post(
   }
 );
 
-// 6. Rewrite Object Storage Class (STANDARD <-> NEARLINE <-> COLDLINE <-> ARCHIVE)
+// 6. Rewrite / Copy / Rename Object or Change Storage Class
 app.post(
   '/api/project/:id/storage/buckets/:bucketName/objects/rewrite',
   async (req, res) => {
     const { id: projectId, bucketName } = req.params;
     const {
       objectName,
-      targetStorageClass = 'NEARLINE',
+      targetStorageClass = null,
       destinationBucket = bucketName,
       destinationObjectName = objectName,
+      deleteSource = false,
+    } = req.body || {};
+
+    if (!objectName) {
+      return res.status(400).json({ error: 'Missing objectName.' });
+    }
+    const cleanDestName = String(destinationObjectName || objectName)
+      .trim()
+      .replace(/^\/+/, '');
+    try {
+      const { token } = await resolveRequestAuth(req);
+      if (!token) {
+        return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+      }
+
+      const bodyPayload = {};
+      if (targetStorageClass) {
+        bodyPayload.storageClass = targetStorageClass;
+      }
+
+      const rewriteRes = await gcpHttp.post(
+        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+          bucketName
+        )}/o/${encodeURIComponent(
+          objectName
+        )}/rewriteTo/b/${encodeURIComponent(
+          destinationBucket
+        )}/o/${encodeURIComponent(cleanDestName)}`,
+        bodyPayload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'x-goog-user-project': projectId,
+          },
+          timeout: 10000,
+        }
+      );
+
+      if (
+        deleteSource &&
+        (destinationBucket !== bucketName || cleanDestName !== objectName)
+      ) {
+        await gcpHttp.delete(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+            bucketName
+          )}/o/${encodeURIComponent(objectName)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'x-goog-user-project': projectId,
+            },
+            timeout: 6000,
+          }
+        );
+      }
+
+      res.json({
+        ok: true,
+        resource: rewriteRes.data?.resource,
+        destinationObjectName: cleanDestName,
+        message:
+          deleteSource &&
+          (destinationBucket !== bucketName || cleanDestName !== objectName)
+            ? `Renamed / moved gs://${bucketName}/${objectName} -> gs://${destinationBucket}/${cleanDestName}!`
+            : targetStorageClass
+            ? `Transitioned gs://${destinationBucket}/${cleanDestName} to ${targetStorageClass}!`
+            : `Copied gs://${bucketName}/${objectName} -> gs://${destinationBucket}/${cleanDestName}!`,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error:
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to rewrite / copy / rename object.',
+      });
+    }
+  }
+);
+
+// 6b. Patch Object Metadata, Content-Type & Cache-Control Headers
+app.patch(
+  '/api/project/:id/storage/buckets/:bucketName/objects/metadata',
+  async (req, res) => {
+    const { id: projectId, bucketName } = req.params;
+    const {
+      objectName,
+      contentType,
+      cacheControl,
+      contentDisposition,
+      customMetadata,
     } = req.body || {};
 
     if (!objectName) {
@@ -19152,37 +19348,38 @@ app.post(
         return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
       }
 
-      const rewriteRes = await gcpHttp.post(
+      const patchPayload = {};
+      if (contentType !== undefined) patchPayload.contentType = contentType;
+      if (cacheControl !== undefined) patchPayload.cacheControl = cacheControl;
+      if (contentDisposition !== undefined)
+        patchPayload.contentDisposition = contentDisposition;
+      if (customMetadata !== undefined) patchPayload.metadata = customMetadata;
+
+      const patchRes = await gcpHttp.patch(
         `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
           bucketName
-        )}/o/${encodeURIComponent(
-          objectName
-        )}/rewriteTo/b/${encodeURIComponent(
-          destinationBucket
-        )}/o/${encodeURIComponent(destinationObjectName)}`,
-        {
-          storageClass: targetStorageClass,
-        },
+        )}/o/${encodeURIComponent(objectName)}`,
+        patchPayload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
             'x-goog-user-project': projectId,
           },
-          timeout: 10000,
+          timeout: 7000,
         }
       );
 
       res.json({
         ok: true,
-        resource: rewriteRes.data?.resource,
-        message: `Transitioned gs://${destinationBucket}/${destinationObjectName} to ${targetStorageClass}!`,
+        metadata: patchRes.data,
+        message: `Updated metadata & headers on gs://${bucketName}/${objectName}!`,
       });
     } catch (err) {
       res.status(500).json({
         error:
           err.response?.data?.error?.message ||
           err.message ||
-          'Failed to rewrite object storage class.',
+          `Failed to update metadata on gs://${bucketName}/${objectName}`,
       });
     }
   }

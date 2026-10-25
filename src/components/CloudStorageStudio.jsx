@@ -34,6 +34,7 @@ import {
   LivePricingCatalogControlBar,
 } from './GlobalNetworkWorldMap';
 import EngineerMoonshotsWave3 from './EngineerMoonshotsWave3';
+import GcsObjectWorkbench from './GcsObjectWorkbench';
 
 function formatBytes(bytes = 0) {
   const b = Number(bytes || 0);
@@ -198,6 +199,17 @@ export default function CloudStorageStudio({
       fetchObjects(selectedBucket.name);
     }
   }, [selectedBucket?.name, showAllVersions, fetchObjects]);
+
+  useEffect(() => {
+    if (
+      activeSubTab === 'OBJECTS' &&
+      objects.length > 0 &&
+      !inspectedObject &&
+      !loadingInspect
+    ) {
+      handleInspectObject(objects[0]);
+    }
+  }, [activeSubTab, objects, inspectedObject, loadingInspect]);
 
   // Fleet KPI Totals
   const fleetStats = useMemo(() => {
@@ -465,6 +477,7 @@ export default function CloudStorageStudio({
       }
       await fetchObjects(selectedBucket.name);
       await fetchBuckets();
+      await handleInspectObject({ name: inspectedObject.objectName });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -1251,333 +1264,31 @@ export default function CloudStorageStudio({
       {/* SUB-TAB 2: OBJECT BROWSER, LIVE CODE/JSON EDITOR & FILE UPLOADER     */}
       {/* ==================================================================== */}
       {activeSubTab === 'OBJECTS' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start font-mono">
-          {/* Left 7 Columns: Live Object List + In-Browser Uploader */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                  <FolderOpen className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                  <span>
-                    Objects in{' '}
-                    <code className="text-blue-500">
-                      gs://{selectedBucket?.name || '(Select Bucket)'}
-                    </code>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <input
-                    type="text"
-                    placeholder="Filter prefix (e.g. logs/)"
-                    value={objectPrefixFilter}
-                    onChange={(e) => setObjectPrefixFilter(e.target.value)}
-                    className="bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-[11px]"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => setShowAllVersions((v) => !v)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border cursor-pointer ${
-                      showAllVersions
-                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
-                        : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-500 border-zinc-300 dark:border-zinc-800'
-                    }`}
-                  >
-                    {showAllVersions
-                      ? 'All Versions ON'
-                      : 'Live Objects Only'}
-                  </button>
-
-                  <label className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold cursor-pointer inline-flex items-center gap-1">
-                    <Upload className="w-3 h-3" />
-                    <span>{uploadingFile ? 'Uploading...' : 'Upload File'}</span>
-                    <input
-                      type="file"
-                      onChange={handleBrowserFileUpload}
-                      disabled={uploadingFile || !selectedBucket}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {loadingObjects ? (
-                <div className="p-6 text-center text-xs text-zinc-500 animate-pulse">
-                  Querying storage.googleapis.com/storage/v1/b/{selectedBucket?.name}/o...
-                </div>
-              ) : objects.length === 0 ? (
-                <div className="p-6 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-center space-y-2">
-                  <div className="text-xs font-bold text-zinc-500">
-                    Bucket gs://{selectedBucket?.name} has 0 objects matching filter.
-                  </div>
-                  <div className="text-[11px] text-zinc-400">
-                    Use the **Upload File** button above or the **In-Browser Object Composer** below to create your first object!
-                  </div>
-                </div>
-              ) : (
-                <div className="divide-y divide-zinc-200 dark:divide-zinc-800 max-h-96 overflow-y-auto">
-                  {objects.map((o) => {
-                    const isInspected = inspectedObject?.objectName === o.name;
-                    return (
-                      <div
-                        key={`${o.name}-${o.generation}`}
-                        className={`py-2.5 px-2 flex flex-wrap items-center justify-between gap-2 text-xs transition-colors ${
-                          isInspected
-                            ? 'bg-blue-500/10 rounded-lg'
-                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-950/60'
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
-                            <span>{o.name}</span>
-                            {o.timeDeleted && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
-                                NONCURRENT GEN #{o.generation}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-zinc-500 mt-0.5">
-                            {formatBytes(o.size)} · {o.contentType} ·{' '}
-                            <span className="text-blue-400 font-bold">
-                              {o.storageClass}
-                            </span>{' '}
-                            · Gen {String(o.generation || '').slice(-6)}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <select
-                            value={o.storageClass}
-                            onChange={(e) =>
-                              handleRewriteObjectClass(o, e.target.value)
-                            }
-                            disabled={busyKey === `obj-class-${o.name}`}
-                            className="bg-zinc-100 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded px-1.5 py-0.5 text-[10px] font-bold"
-                            title="Rewrite object storage class in place"
-                          >
-                            {['STANDARD', 'NEARLINE', 'COLDLINE', 'ARCHIVE'].map(
-                              (sc) => (
-                                <option key={sc} value={sc}>
-                                  {sc}
-                                </option>
-                              )
-                            )}
-                          </select>
-
-                          <button
-                            type="button"
-                            onClick={() => handleInspectObject(o)}
-                            className="px-2 py-1 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold cursor-pointer"
-                          >
-                            <Eye className="w-3 h-3 inline mr-1" />
-                            Inspect / Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteObject(o)}
-                            disabled={
-                              busyKey === `obj-del-${o.name}-${o.generation}`
-                            }
-                            className="p-1 rounded bg-red-500/15 text-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
-                            title="Delete object"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* In-Browser Object Composer (Write JSON/Config/Code directly to GCS) */}
-            <form
-              onSubmit={handleCreateTextObject}
-              className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3"
-            >
-              <div className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center justify-between">
-                <span>In-Browser Object Composer (Create / Overwrite in gs://{selectedBucket?.name})</span>
-                <span className="text-[10px] text-zinc-500">uploadType=media</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <input
-                  type="text"
-                  value={newObjectPath}
-                  onChange={(e) => setNewObjectPath(e.target.value)}
-                  placeholder="path/to/object.json"
-                  className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 font-bold"
-                />
-                <select
-                  value={newObjectContentType}
-                  onChange={(e) => setNewObjectContentType(e.target.value)}
-                  className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1.5"
-                >
-                  <option value="application/json">application/json</option>
-                  <option value="text/plain; charset=utf-8">text/plain</option>
-                  <option value="text/markdown; charset=utf-8">text/markdown</option>
-                  <option value="text/csv; charset=utf-8">text/csv</option>
-                  <option value="application/x-yaml">application/x-yaml</option>
-                </select>
-                <select
-                  value={newObjectStorageClass}
-                  onChange={(e) => setNewObjectStorageClass(e.target.value)}
-                  className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 font-bold text-blue-400"
-                >
-                  <option value="STANDARD">STANDARD (Hot)</option>
-                  <option value="NEARLINE">NEARLINE (30d)</option>
-                  <option value="COLDLINE">COLDLINE (90d)</option>
-                  <option value="ARCHIVE">ARCHIVE (365d)</option>
-                </select>
-              </div>
-
-              <textarea
-                rows={5}
-                value={newObjectBody}
-                onChange={(e) => setNewObjectBody(e.target.value)}
-                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs font-mono"
-              />
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={uploadingFile || !selectedBucket}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
-                >
-                  {uploadingFile
-                    ? 'Uploading to GCS...'
-                    : `Write Object to gs://${selectedBucket?.name}/${newObjectPath}`}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Right 5 Columns: Live Object Content X-Ray & In-Place Generation Editor */}
-          <div className="lg:col-span-5 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-extrabold text-blue-400 uppercase">
-                Live Object Content & Metadata X-Ray
-              </div>
-              {inspectedObject && (
-                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300">
-                  Gen #{inspectedObject.metadata?.generation}
-                </span>
-              )}
-            </div>
-
-            {loadingInspect ? (
-              <div className="p-8 text-center text-xs text-zinc-500 animate-pulse">
-                Downloading object bytes from Google Cloud Storage...
-              </div>
-            ) : !inspectedObject ? (
-              <div className="p-8 text-center text-xs text-zinc-500 space-y-2">
-                <Eye className="w-6 h-6 text-zinc-600 mx-auto" />
-                <div>
-                  Click <strong>Inspect / Edit</strong> on any object in{' '}
-                  <code>gs://{selectedBucket?.name}</code> to view its live
-                  content, hashes (MD5/CRC32C), and edit it in place.
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 text-[11px] space-y-1">
-                  <div className="font-bold text-zinc-900 dark:text-white break-all">
-                    gs://{inspectedObject.bucketName}/{inspectedObject.objectName}
-                  </div>
-                  <div className="text-zinc-400">
-                    Type: {inspectedObject.metadata?.contentType} · Size:{' '}
-                    {formatBytes(inspectedObject.metadata?.size)} · Class:{' '}
-                    <strong className="text-blue-400">
-                      {inspectedObject.metadata?.storageClass}
-                    </strong>
-                  </div>
-                  <div className="text-[10px] text-zinc-500">
-                    MD5: {inspectedObject.metadata?.md5Hash || 'n/a'} · CRC32C:{' '}
-                    {inspectedObject.metadata?.crc32c || 'n/a'}
-                  </div>
-                </div>
-
-                {inspectedObject.isImage && inspectedObject.base64Data ? (
-                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center">
-                    <img
-                      src={`data:${inspectedObject.metadata?.contentType};base64,${inspectedObject.base64Data}`}
-                      alt={inspectedObject.objectName}
-                      className="max-h-64 mx-auto rounded-lg"
-                    />
-                  </div>
-                ) : inspectedObject.isTextLike ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-emerald-400 font-bold">
-                        Live Editable Payload:
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleSaveEditedObject}
-                        disabled={
-                          busyKey === `save-obj-${inspectedObject.objectName}`
-                        }
-                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] cursor-pointer flex items-center gap-1"
-                      >
-                        <Save className="w-3 h-3" />
-                        <span>
-                          {busyKey === `save-obj-${inspectedObject.objectName}`
-                            ? 'Saving Gen...'
-                            : 'Save New Generation'}
-                        </span>
-                      </button>
-                    </div>
-                    <textarea
-                      rows={12}
-                      value={editedTextContent}
-                      onChange={(e) => setEditedTextContent(e.target.value)}
-                      className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl p-3 text-xs font-mono text-emerald-700 dark:text-emerald-300"
-                    />
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-400">
-                    Binary object ({inspectedObject.previewBytes} bytes
-                    sampled). Use <code>gcloud storage cp</code> below to
-                    stream locally.
-                  </div>
-                )}
-
-                {/* Ready-to-run CLI & Signed URL Snippets */}
-                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-[10px]">
-                  <div className="text-zinc-400 font-bold">
-                    Zero-Trust Signed URL & CLI Commands:
-                  </div>
-                  <div className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-950 p-2 rounded border border-zinc-200 dark:border-zinc-800">
-                    <code className="text-blue-700 dark:text-blue-300 truncate">
-                      gcloud storage sign-url gs://{inspectedObject.bucketName}/
-                      {inspectedObject.objectName} --duration=1h
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopy(
-                          `gcloud storage sign-url gs://${inspectedObject.bucketName}/${inspectedObject.objectName} --duration=1h`,
-                          'sign-url'
-                        )
-                      }
-                      className="text-zinc-400 hover:text-white shrink-0"
-                    >
-                      {copiedCmd === 'sign-url' ? (
-                        <Check className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <GcsObjectWorkbench
+          projectId={projectId}
+          selectedBucket={selectedBucket}
+          objects={objects}
+          loadingObjects={loadingObjects}
+          objectPrefixFilter={objectPrefixFilter}
+          setObjectPrefixFilter={setObjectPrefixFilter}
+          showAllVersions={showAllVersions}
+          setShowAllVersions={setShowAllVersions}
+          inspectedObject={inspectedObject}
+          setInspectedObject={setInspectedObject}
+          editedTextContent={editedTextContent}
+          setEditedTextContent={setEditedTextContent}
+          loadingInspect={loadingInspect}
+          handleInspectObject={handleInspectObject}
+          handleSaveEditedObject={handleSaveEditedObject}
+          handleDeleteObject={handleDeleteObject}
+          handleRewriteObjectClass={handleRewriteObjectClass}
+          fetchObjects={fetchObjects}
+          fetchBuckets={fetchBuckets}
+          busyKey={busyKey}
+          setBusyKey={setBusyKey}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
       )}
 
       {/* ==================================================================== */}
