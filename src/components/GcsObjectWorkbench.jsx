@@ -379,6 +379,7 @@ export default function GcsObjectWorkbench({
   projectId,
   buckets = [],
   selectedBucket,
+  onSelectBucket,
   objects = [],
   loadingObjects = false,
   objectPrefixFilter = '',
@@ -997,6 +998,8 @@ export default function GcsObjectWorkbench({
       fetchBuckets({ silent: true });
       if (destBucket === selectedBucket.name) {
         await handleInspectObject({ name: destName }, { silent: true });
+      } else if (onSelectBucket && renameDeleteSource) {
+        onSelectBucket(destBucket);
       }
     } catch (err) {
       if (onShowError) {

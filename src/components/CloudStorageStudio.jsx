@@ -273,7 +273,7 @@ export default function CloudStorageStudio({
             `Hardened gs://${bucket.name} (Enforced PAP + Uniform IAM + Versioning + 7d Soft-Delete)!`
         );
       }
-      await fetchBuckets();
+      await fetchBuckets({ silent: true });
       if (onRefreshGlobal) onRefreshGlobal();
     } catch (err) {
       if (onShowError) {
@@ -322,7 +322,7 @@ export default function CloudStorageStudio({
             `Applied 4-Stage FinOps Lifecycle Tiering (30d Nearline → 90d Coldline → 365d Archive) to gs://${bucket.name}!`
         );
       }
-      await fetchBuckets();
+      await fetchBuckets({ silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -352,7 +352,7 @@ export default function CloudStorageStudio({
           `Updated default storage class of gs://${bucket.name} to ${newClass}!`
         );
       }
-      await fetchBuckets();
+      await fetchBuckets({ silent: true });
       if (onRefreshGlobal) onRefreshGlobal();
     } catch (err) {
       if (onShowError) {
@@ -395,7 +395,7 @@ export default function CloudStorageStudio({
           `Enabled Web CORS policy (GET/PUT/POST/DELETE) on gs://${bucket.name}!`
         );
       }
-      await fetchBuckets();
+      await fetchBuckets({ silent: true });
     } catch (err) {
       if (onShowError) {
         onShowError(
@@ -1201,13 +1201,12 @@ export default function CloudStorageStudio({
                       </span>
                     </div>
 
-                    {/* Storage Class Quick Switcher */}
+                    {/* Storage Class Quick Switcher (Equal-Width Grid) */}
                     <div
-                      className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-200/70 dark:border-zinc-800/80 text-[10px]"
+                      className="grid grid-cols-1 sm:grid-cols-12 items-center gap-2 pt-1.5 border-t border-zinc-200/70 dark:border-zinc-800/80 text-[10px]"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <span className="text-zinc-500 font-bold">Class:</span>
+                      <div className="sm:col-span-8 grid grid-cols-4 gap-1.5">
                         {['STANDARD', 'NEARLINE', 'COLDLINE', 'ARCHIVE'].map(
                           (sc) => (
                             <button
@@ -1217,10 +1216,10 @@ export default function CloudStorageStudio({
                               onClick={() =>
                                 handleChangeBucketStorageClass(b, sc)
                               }
-                              className={`px-2 py-0.5 rounded border font-bold cursor-pointer ${
+                              className={`w-full h-7 px-2 rounded-lg border font-bold cursor-pointer inline-flex items-center justify-center truncate ${
                                 b.storageClass === sc
                                   ? 'bg-blue-600 text-white border-blue-500'
-                                  : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-500 border-zinc-300 dark:border-zinc-800 hover:border-blue-500/40'
+                                  : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800 hover:border-blue-500/40'
                               }`}
                             >
                               {sc}
@@ -1235,7 +1234,7 @@ export default function CloudStorageStudio({
                           setSelectedBucketName(b.name);
                           setActiveSubTab('OBJECTS');
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 font-extrabold cursor-pointer hover:bg-blue-500/25"
+                        className="sm:col-span-4 w-full h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-extrabold cursor-pointer inline-flex items-center justify-center truncate"
                       >
                         Browse & Upload Objects →
                       </button>
@@ -1317,6 +1316,7 @@ export default function CloudStorageStudio({
           projectId={projectId}
           buckets={buckets}
           selectedBucket={selectedBucket}
+          onSelectBucket={(bName) => setSelectedBucketName(bName)}
           objects={objects}
           loadingObjects={loadingObjects}
           objectPrefixFilter={objectPrefixFilter}
@@ -1345,7 +1345,7 @@ export default function CloudStorageStudio({
       {/* SUB-TAB 3: STORAGE TEMPERATURE & LIFECYCLE FINOPS TIME-CRYSTAL       */}
       {/* ==================================================================== */}
       {activeSubTab === 'FINOPS_LIFECYCLE' && (
-        <div className="p-5 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-5 font-mono">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-5 font-mono">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="text-xs font-extrabold uppercase text-blue-500 flex items-center gap-1.5">
@@ -1499,7 +1499,7 @@ export default function CloudStorageStudio({
       {/* SUB-TAB 4: 1-TAP CROSS-REGION BUCKET TELEPORTER & CFE% ARBITRAGE     */}
       {/* ==================================================================== */}
       {activeSubTab === 'TELEPORT' && (
-        <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4 font-mono">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4 font-mono">
           <div>
             <div className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
               <Globe className="w-4 h-4" />
