@@ -178,6 +178,44 @@ volumes:
   const [composeResult, setComposeResult] = useState(null);
   const [composeError, setComposeError] = useState(null);
 
+  // Cloud Scheduler -> Cloud Run v2 Jobs Converter & Parallel Batch Studio state
+  const [showSchedulerToJobsStudio, setShowSchedulerToJobsStudio] =
+    useState(false);
+  const [schedulerJobsState, setSchedulerJobsState] = useState({
+    loading: false,
+    data: null,
+    error: null,
+  });
+  const [jobConvertForm, setJobConvertForm] = useState({
+    jobName: 'nightly-etl-run-job',
+    region: 'us-east1',
+    sourceSchedulerJobName: '',
+    sourceSchedulerRegion: '',
+    sourceServiceUrl: '',
+    schedule: '*/15 * * * *',
+    timeZone: 'Etc/UTC',
+    containerImage: 'mirror.gcr.io/library/python:3.12-slim',
+    inlinePythonScript: '',
+    cpu: '1',
+    memory: '512Mi',
+    taskCount: 4,
+    maxRetries: 3,
+    taskTimeoutSec: 3600,
+    attachPersistentDisk: true,
+    diskBucketName: `${projectId}-jobdisk-batch`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .slice(0, 60),
+    diskMountPath: '/mnt/gce-disk',
+    enableCloudRunGpu: false,
+    rewireCloudScheduler: true,
+    executeImmediately: true,
+  });
+  const [convertingToJob, setConvertingToJob] = useState(false);
+  const [jobConversionResult, setJobConversionResult] = useState(null);
+  const [jobConversionError, setJobConversionError] = useState(null);
+  const [runningJobMap, setRunningJobMap] = useState({});
+
   useEffect(() => {
     if (Array.isArray(initialServices) && initialServices.length > 0 && services.length === 0) {
       setServices(initialServices);
@@ -1703,6 +1741,227 @@ spec:
     }
   };
 
+  const handleFetchSchedulerAndJobs = useCallback(
+    async (silent = false) => {
+      if (!projectId) return;
+      if (!silent) {
+        setSchedulerJobsState((prev) => ({
+          ...prev,
+          loading: true,
+          error: null,
+        }));
+      }
+      try {
+        const res = await axios.get(
+          `/api/project/${encodeURIComponent(
+            projectId
+          )}/cloudrun/scheduler-and-jobs`
+        );
+        const data = res.data || {};
+        setSchedulerJobsState({
+          loading: false,
+          data,
+          error: null,
+        });
+        // Auto-populate form from the first fragile scheduler job if not yet customized
+        const firstFragile = (data.schedulerJobs || []).find(
+          (sj) => !sj.isAlreadyCloudRunJobTrigger
+        );
+        if (firstFragile && firstFragile.recommendedJobSpec) {
+          const spec = firstFragile.recommendedJobSpec;
+          setJobConvertForm((prev) =>
+            prev.sourceSchedulerJobName
+              ? prev
+              : {
+                  ...prev,
+                  jobName: spec.jobName || prev.jobName,
+                  region: spec.region || prev.region,
+                  sourceSchedulerJobName: firstFragile.name,
+                  sourceSchedulerRegion: firstFragile.region,
+                  sourceServiceUrl: firstFragile.targetUri || '',
+                  schedule: firstFragile.schedule || prev.schedule,
+                  timeZone: firstFragile.timeZone || prev.timeZone,
+                  containerImage: spec.containerImage || prev.containerImage,
+                  cpu: spec.cpu || prev.cpu,
+                  memory: spec.memory || prev.memory,
+                  diskBucketName: spec.diskBucketName || prev.diskBucketName,
+                }
+          );
+        }
+      } catch (err) {
+        setSchedulerJobsState((prev) => ({
+          ...prev,
+          loading: false,
+          error:
+            err.response?.data?.error ||
+            err.message ||
+            'Failed to scan Cloud Scheduler & Cloud Run v2 Jobs.',
+        }));
+      }
+    },
+    [projectId]
+  );
+
+  const handleToggleSchedulerToJobsStudio = () => {
+    setShowSchedulerToJobsStudio((prev) => {
+      const next = !prev;
+      if (next && !schedulerJobsState.data && !schedulerJobsState.loading) {
+        handleFetchSchedulerAndJobs(false);
+      }
+      return next;
+    });
+  };
+
+  const handleLoadSchedulerIntoJobForm = (sj) => {
+    const spec = sj.recommendedJobSpec || {};
+    setJobConversionResult(null);
+    setJobConversionError(null);
+    setJobConvertForm((prev) => ({
+      ...prev,
+      jobName: spec.jobName || `${sj.name}-job`,
+      region: spec.region || sj.region || 'us-east1',
+      sourceSchedulerJobName: sj.name,
+      sourceSchedulerRegion: sj.region,
+      sourceServiceUrl: sj.targetUri || '',
+      schedule: sj.schedule || '*/15 * * * *',
+      timeZone: sj.timeZone || 'Etc/UTC',
+      containerImage:
+        spec.containerImage || 'mirror.gcr.io/library/python:3.12-slim',
+      cpu: spec.cpu || '1',
+      memory: spec.memory || '512Mi',
+      diskBucketName: spec.diskBucketName || prev.diskBucketName,
+    }));
+  };
+
+  const handleLoadServiceIntoJobForm = (srv) => {
+    if (!srv) return;
+    setShowSchedulerToJobsStudio(true);
+    if (!schedulerJobsState.data && !schedulerJobsState.loading) {
+      handleFetchSchedulerAndJobs(false);
+    }
+    setJobConversionResult(null);
+    setJobConversionError(null);
+    const cleanName = `${String(srv.name || 'service')
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .slice(0, 38)}-batch-job`;
+    setJobConvertForm((prev) => ({
+      ...prev,
+      jobName: cleanName,
+      region: srv.region || 'us-east1',
+      sourceSchedulerJobName: `${srv.name}-cron`,
+      sourceSchedulerRegion: srv.region || 'us-east1',
+      sourceServiceUrl: srv.uri || '',
+      containerImage:
+        srv.containerImage || 'mirror.gcr.io/library/python:3.12-slim',
+      cpu: srv.cpu || '1',
+      memory: srv.memory || '512Mi',
+      attachPersistentDisk:
+        (srv.persistentDiskBuckets || []).length > 0 ||
+        Boolean(srv.storageGcsBucket),
+      diskBucketName:
+        srv.persistentDiskBuckets?.[0] ||
+        srv.storageGcsBucket ||
+        `${projectId}-jobdisk-${srv.name}`
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .slice(0, 60),
+    }));
+  };
+
+  const handleConvertSchedulerToJob = async () => {
+    setConvertingToJob(true);
+    setJobConversionError(null);
+    setJobConversionResult(null);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloudrun/convert-scheduler-to-job`,
+        jobConvertForm
+      );
+      setJobConversionResult(res.data);
+      if (onShowToast && res.data?.message) {
+        onShowToast(res.data.message);
+      }
+      await handleFetchSchedulerAndJobs(true);
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to convert Cloud Scheduler job into Cloud Run v2 Job.';
+      setJobConversionError(errMsg);
+      if (onShowError) onShowError(errMsg);
+    } finally {
+      setConvertingToJob(false);
+    }
+  };
+
+  const handleRunCloudRunJobNow = async (jb) => {
+    const key = `${jb.region}/${jb.name}`;
+    setRunningJobMap((prev) => ({ ...prev, [key]: 'RUNNING' }));
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloudrun/jobs/${encodeURIComponent(jb.region)}/${encodeURIComponent(
+          jb.name
+        )}/run`
+      );
+      if (onShowToast && res.data?.message) {
+        onShowToast(res.data.message);
+      }
+      await handleFetchSchedulerAndJobs(true);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to execute Cloud Run Job ${jb.name}.`
+        );
+      }
+    } finally {
+      setRunningJobMap((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteCloudRunJob = async (jb) => {
+    const key = `${jb.region}/${jb.name}`;
+    setRunningJobMap((prev) => ({ ...prev, [key]: 'DELETING' }));
+    try {
+      const res = await axios.delete(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/cloudrun/jobs/${encodeURIComponent(jb.region)}/${encodeURIComponent(
+          jb.name
+        )}`
+      );
+      if (onShowToast && res.data?.message) {
+        onShowToast(res.data.message);
+      }
+      await handleFetchSchedulerAndJobs(true);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            `Failed to delete Cloud Run Job ${jb.name}.`
+        );
+      }
+    } finally {
+      setRunningJobMap((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
   const selfDeployCmd = `gcloud run deploy cloudpulse-2026 --source . --project=${projectId} --region=us-east1 --allow-unauthenticated`;
 
   return (
@@ -1744,6 +2003,26 @@ spec:
               <span>Migrate GCE VM + Disk → Cloud Run (mfit + m2c)</span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={handleToggleSchedulerToJobsStudio}
+            title="Convert fragile Cloud Scheduler HTTP webhooks (30m timeout cap) or Cloud Run Services into native Cloud Run v2 Jobs (up to 24h timeout, 0 open ports, 1-10,000 parallel shards via CLOUD_RUN_TASK_INDEX, volumes[].gcs FUSE disk & L4 GPU) and rewire Scheduler to :run API"
+            className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-bold border transition-colors cursor-pointer ${
+              showSchedulerToJobsStudio
+                ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/35'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Cloud Scheduler → Cloud Run Jobs (24h Batch + Sharding)</span>
+            {schedulerJobsState.data && (
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-100 dark:bg-zinc-900 text-indigo-600 dark:text-indigo-300 text-[10px] font-mono">
+                {schedulerJobsState.data.schedulerJobsCount || 0} Cron ·{' '}
+                {schedulerJobsState.data.cloudRunJobsCount || 0} Jobs
+              </span>
+            )}
+          </button>
 
           <button
             type="button"
@@ -1849,6 +2128,610 @@ spec:
           </button>
         </div>
       </div>
+
+      {/* CLOUD SCHEDULER -> CLOUD RUN V2 JOBS CONVERTER & PARALLEL BATCH STUDIO */}
+      {showSchedulerToJobsStudio && (
+        <div className="p-4 rounded-xl border border-indigo-500/40 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 space-y-4 shadow-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-mono font-extrabold">
+                  <Zap className="w-3 h-3" />
+                  <span>CLOUD SCHEDULER → CLOUD RUN V2 JOBS CONVERTER</span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-500 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                  <span>Up to 24h (86,400s) Timeout · 0 Open Ports · CLOUD_RUN_TASK_INDEX Sharding · volumes[].gcs FUSE</span>
+                </span>
+              </div>
+              <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white mt-1">
+                Convert Fragile Cloud Scheduler HTTP Webhooks &amp; Services → Native Cloud Run v2 Batch Jobs (`:run` API)
+              </h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Eliminate the <strong>30-minute Cloud Scheduler HTTP timeout ceiling</strong> and exposed port <code>8080</code> web servers: convert any Cloud Scheduler cron job or Cloud Run Service into a native <strong>Cloud Run v2 Job</strong> (<code>run.googleapis.com/v2/.../jobs</code>) with up to <strong>24 hours execution timeout</strong>, <strong>1–100 parallel task shards</strong> (<code>CLOUD_RUN_TASK_INDEX</code>), <strong>persistent GCS FUSE disk mount</strong> (<code>volumes[].gcs</code>), and automatic Cloud Scheduler rewiring to the official OAuth <code>:run</code> API.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleFetchSchedulerAndJobs(false)}
+                disabled={schedulerJobsState.loading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-xs font-mono font-bold cursor-pointer"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${
+                    schedulerJobsState.loading ? 'animate-spin' : ''
+                  }`}
+                />
+                <span>Rescan Scheduler &amp; Jobs</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSchedulerToJobsStudio(false)}
+                className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          {/* 4-Dimension Architectural Upgrade Comparison */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+            {(
+              schedulerJobsState.data?.architecturalComparison || [
+                {
+                  dimension: '1. Max Execution Timeout',
+                  legacySchedulerHttp: '30m Scheduler HTTP Cap / 60m Service Cap',
+                  cloudRunJobV2: 'Up to 24 Hours (86,400s) Native Batch Timeout',
+                },
+                {
+                  dimension: '2. Network & Attack Surface',
+                  legacySchedulerHttp: 'Requires Open HTTP Port ($PORT 8080) & Web URL',
+                  cloudRunJobV2: 'Zero Open Ports · Runs to Exit(0) · IAM OAuth :run API',
+                },
+                {
+                  dimension: '3. Parallelism & Sharding',
+                  legacySchedulerHttp: '1 Sequential HTTP Request per Cron Tick',
+                  cloudRunJobV2: '1 to 10,000 Parallel Shards (CLOUD_RUN_TASK_INDEX)',
+                },
+                {
+                  dimension: '4. Storage & GPU Support',
+                  legacySchedulerHttp: 'Stateless HTTP Handler',
+                  cloudRunJobV2: 'Persistent volumes[].gcs FUSE Disk + 1x nvidia-l4 GPU',
+                },
+              ]
+            ).map((item) => (
+              <div
+                key={item.dimension}
+                className="p-2.5 rounded-lg border border-indigo-500/25 bg-indigo-500/5 space-y-1"
+              >
+                <div className="font-mono font-bold text-indigo-700 dark:text-indigo-300 text-[11px]">
+                  {item.dimension}
+                </div>
+                <div className="text-[10px] font-mono text-red-500 line-through">
+                  Legacy: {item.legacySchedulerHttp}
+                </div>
+                <div className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  Cloud Run Job: {item.cloudRunJobV2}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Discovered Cloud Scheduler Jobs & Quick Service Loader */}
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">
+                1. Discovered Cloud Scheduler Cron Jobs ({schedulerJobsState.data?.schedulerJobsCount || 0}) &amp; Cloud Run Services ({services.length})
+              </div>
+              {services.length > 0 && (
+                <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                  <span className="text-zinc-500">Or Load from Service:</span>
+                  <select
+                    defaultValue=""
+                    onChange={(e) => {
+                      const found = services.find((s) => s.name === e.target.value);
+                      if (found) handleLoadServiceIntoJobForm(found);
+                    }}
+                    className="bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-[11px] font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="">-- Select Cloud Run Service to Convert to Batch Job --</option>
+                    {services.map((s) => (
+                      <option key={s.id || s.name} value={s.name}>
+                        {s.name} ({s.region} · {s.containerImage?.split('/').pop()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {schedulerJobsState.loading ? (
+              <div className="text-xs font-mono text-indigo-500 flex items-center gap-2 py-2">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Scanning Cloud Scheduler locations &amp; Cloud Run v2 Jobs across {projectId}...</span>
+              </div>
+            ) : (schedulerJobsState.data?.schedulerJobs || []).length === 0 ? (
+              <div className="text-xs font-mono text-zinc-500 py-1">
+                No existing Cloud Scheduler jobs detected in {projectId} (or configure a new Schedule + Cloud Run v2 Job below—both the Cloud Run v2 Job and the Cloud Scheduler <code>:run</code> trigger will be provisioned together!).
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {(schedulerJobsState.data?.schedulerJobs || []).map((sj) => (
+                  <div
+                    key={sj.fullName || sj.name}
+                    className={`p-2.5 rounded-lg border text-xs flex flex-col justify-between gap-2 ${
+                      sj.isAlreadyCloudRunJobTrigger
+                        ? 'bg-emerald-500/10 border-emerald-500/35'
+                        : 'bg-amber-500/10 border-amber-500/35'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2 font-mono font-bold">
+                        <span className="text-zinc-900 dark:text-zinc-100">
+                          {sj.name} ({sj.region})
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] ${
+                            sj.isAlreadyCloudRunJobTrigger
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-amber-500 text-zinc-950'
+                          }`}
+                        >
+                          {sj.isAlreadyCloudRunJobTrigger
+                            ? `NATIVE :run TRIGGER (${sj.targetRunJobName})`
+                            : `${sj.targetType} · 30m Cap`}
+                        </span>
+                      </div>
+                      <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 break-all">
+                        Schedule: <strong>{sj.schedule}</strong> ({sj.timeZone}) · Target:{' '}
+                        <code>{sj.targetUri || 'N/A'}</code>
+                      </div>
+                      {sj.antiPatternWarning && (
+                        <div className="text-[10px] text-amber-700 dark:text-amber-300">
+                          {sj.antiPatternWarning}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleLoadSchedulerIntoJobForm(sj)}
+                        className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-[10px] cursor-pointer"
+                      >
+                        Load into Cloud Run v2 Job Converter
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Interactive Cloud Run v2 Job Builder & Scheduler Rewirer */}
+          <div className="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/30 space-y-3">
+            <div className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300">
+              2. Configure &amp; Deploy Cloud Run v2 Batch Job (<code>run.googleapis.com/v2/projects/{projectId}/locations/{jobConvertForm.region}/jobs</code>)
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Cloud Run v2 Job Name
+                </label>
+                <input
+                  type="text"
+                  value={jobConvertForm.jobName}
+                  onChange={(e) =>
+                    setJobConvertForm((prev) => ({
+                      ...prev,
+                      jobName: e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, '-'),
+                    }))
+                  }
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Target Region
+                </label>
+                <select
+                  value={jobConvertForm.region}
+                  onChange={(e) =>
+                    setJobConvertForm((prev) => ({
+                      ...prev,
+                      region: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="us-east1">us-east1 (S. Carolina)</option>
+                  <option value="us-east4">us-east4 (N. Virginia · L4 GPU)</option>
+                  <option value="us-central1">us-central1 (Iowa · L4 GPU)</option>
+                  <option value="us-west1">us-west1 (Oregon)</option>
+                  <option value="europe-west1">europe-west1 (Belgium · L4 GPU)</option>
+                  <option value="europe-west4">europe-west4 (Netherlands · L4 GPU)</option>
+                  <option value="asia-southeast1">asia-southeast1 (Singapore · L4 GPU)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Cron Schedule (Cloud Scheduler)
+                </label>
+                <input
+                  type="text"
+                  value={jobConvertForm.schedule}
+                  onChange={(e) =>
+                    setJobConvertForm((prev) => ({
+                      ...prev,
+                      schedule: e.target.value,
+                    }))
+                  }
+                  placeholder="*/15 * * * *"
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Parallel Shards &amp; Max Timeout
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={jobConvertForm.taskCount}
+                    onChange={(e) =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        taskCount: Number(e.target.value),
+                      }))
+                    }
+                    title="Parallel shards (CLOUD_RUN_TASK_INDEX 0..N-1)"
+                    className="w-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value={1}>1 Task Shard</option>
+                    <option value={2}>2 Shards</option>
+                    <option value={4}>4 Shards</option>
+                    <option value={8}>8 Shards</option>
+                    <option value={16}>16 Shards</option>
+                    <option value={50}>50 Shards</option>
+                  </select>
+                  <select
+                    value={jobConvertForm.taskTimeoutSec}
+                    onChange={(e) =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        taskTimeoutSec: Number(e.target.value),
+                      }))
+                    }
+                    title="Max execution timeout (up to 24 hours / 86,400s)"
+                    className="w-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value={1800}>30m (1,800s)</option>
+                    <option value={3600}>1 Hour (3,600s)</option>
+                    <option value={14400}>4 Hours (14,400s)</option>
+                    <option value={43200}>12 Hours (43,200s)</option>
+                    <option value={86400}>24 Hours (86,400s Max)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Per-Shard vCPU &amp; Memory
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={jobConvertForm.cpu}
+                    onChange={(e) =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        cpu: e.target.value,
+                      }))
+                    }
+                    className="w-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="1">1 vCPU</option>
+                    <option value="2">2 vCPU</option>
+                    <option value="4">4 vCPU</option>
+                    <option value="8">8 vCPU</option>
+                  </select>
+                  <select
+                    value={jobConvertForm.memory}
+                    onChange={(e) =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        memory: e.target.value,
+                      }))
+                    }
+                    className="w-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="512Mi">512Mi</option>
+                    <option value="1Gi">1Gi</option>
+                    <option value="2Gi">2Gi</option>
+                    <option value="4Gi">4Gi</option>
+                    <option value="8Gi">8Gi</option>
+                    <option value="16Gi">16Gi</option>
+                    <option value="32Gi">32Gi</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Container Image URI (Extracted from Service or Batch Runner)
+                </label>
+                <input
+                  type="text"
+                  value={jobConvertForm.containerImage}
+                  onChange={(e) =>
+                    setJobConvertForm((prev) => ({
+                      ...prev,
+                      containerImage: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Persistent GCS FUSE Disk Bucket (<code>volumes[].gcs</code> → <code>{jobConvertForm.diskMountPath}</code>)
+                </label>
+                <input
+                  type="text"
+                  value={jobConvertForm.diskBucketName}
+                  onChange={(e) =>
+                    setJobConvertForm((prev) => ({
+                      ...prev,
+                      diskBucketName: e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, '-'),
+                    }))
+                  }
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-indigo-500/20">
+              <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-zinc-800 dark:text-zinc-200">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(jobConvertForm.attachPersistentDisk)}
+                    onChange={(e) =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        attachPersistentDisk: e.target.checked,
+                      }))
+                    }
+                    className="rounded border-indigo-400 text-indigo-600"
+                  />
+                  <span>
+                    Attach Persistent FUSE Disk (<code>volumes[].gcs</code>)
+                  </span>
+                </label>
+
+                <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(jobConvertForm.enableCloudRunGpu)}
+                    onChange={(e) =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        enableCloudRunGpu: e.target.checked,
+                        cpu: e.target.checked
+                          ? String(Math.max(4, Number(prev.cpu || 4)))
+                          : prev.cpu,
+                        memory: e.target.checked ? '16Gi' : prev.memory,
+                      }))
+                    }
+                    className="rounded border-indigo-400 text-indigo-600"
+                  />
+                  <span>
+                    Attach <code>1x nvidia-l4</code> GPU (Batch AI/ML)
+                  </span>
+                </label>
+
+                <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(jobConvertForm.rewireCloudScheduler)}
+                    onChange={(e) =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        rewireCloudScheduler: e.target.checked,
+                      }))
+                    }
+                    className="rounded border-indigo-400 text-indigo-600"
+                  />
+                  <span>
+                    Auto-Rewire Cloud Scheduler → Native <code>:run</code> API
+                  </span>
+                </label>
+
+                <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(jobConvertForm.executeImmediately)}
+                    onChange={(e) =>
+                      setJobConvertForm((prev) => ({
+                        ...prev,
+                        executeImmediately: e.target.checked,
+                      }))
+                    }
+                    className="rounded border-indigo-400 text-indigo-600"
+                  />
+                  <span>
+                    Execute First Run Immediately (<code>:run</code>)
+                  </span>
+                </label>
+              </div>
+
+              <button
+                type="button"
+                disabled={convertingToJob || !jobConvertForm.jobName}
+                onClick={handleConvertSchedulerToJob}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {convertingToJob ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Zap className="w-3.5 h-3.5" />
+                )}
+                <span>
+                  {convertingToJob
+                    ? `Deploying Cloud Run v2 Job ${jobConvertForm.jobName}...`
+                    : `Convert & Deploy Cloud Run v2 Job (${jobConvertForm.taskCount} Shard${jobConvertForm.taskCount > 1 ? 's' : ''})`}
+                </span>
+              </button>
+            </div>
+
+            {jobConversionError && (
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-500">
+                {jobConversionError}
+              </div>
+            )}
+
+            {jobConversionResult && (
+              <div className="p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-xs space-y-1">
+                <div className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                  <Check className="w-4 h-4" />
+                  <span>{jobConversionResult.message}</span>
+                </div>
+                <div className="font-mono text-[11px] text-zinc-600 dark:text-zinc-300 break-all">
+                  Cloud Scheduler <code>:run</code> Target:{' '}
+                  <code>{jobConversionResult.schedulerTargetRunUri}</code>
+                  {jobConversionResult.gpuQuotaFallbackNote && (
+                    <span className="block text-amber-600 dark:text-amber-300 mt-0.5">
+                      Note: {jobConversionResult.gpuQuotaFallbackNote}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Live Cloud Run v2 Jobs Fleet Table */}
+          <div className="space-y-2">
+            <div className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">
+              3. Deployed Cloud Run v2 Batch Jobs ({schedulerJobsState.data?.cloudRunJobsCount || 0})
+            </div>
+            {(schedulerJobsState.data?.cloudRunJobs || []).length === 0 ? (
+              <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500">
+                No Cloud Run v2 Jobs deployed yet—click &ldquo;Convert &amp; Deploy Cloud Run v2 Job&rdquo; above to create your first parallel batch job!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {(schedulerJobsState.data?.cloudRunJobs || []).map((jb) => {
+                  const key = `${jb.region}/${jb.name}`;
+                  const busyState = runningJobMap[key];
+                  return (
+                    <div
+                      key={jb.id || key}
+                      className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/70 space-y-2 text-xs"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                            {jb.name}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-mono text-[10px] font-bold">
+                            {jb.region} · {jb.taskCount} Shard(s) · Timeout {jb.taskTimeout}
+                          </span>
+                          {(jb.persistentDiskBuckets || []).map((bkt) => (
+                            <span
+                              key={bkt}
+                              className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 font-mono text-[10px] font-bold"
+                            >
+                              Disk: gs://{bkt}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={Boolean(busyState)}
+                            onClick={() => handleRunCloudRunJobNow(jb)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] cursor-pointer disabled:opacity-50"
+                          >
+                            {busyState === 'RUNNING' ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Zap className="w-3 h-3" />
+                            )}
+                            <span>Execute Now (:run)</span>
+                          </button>
+                          {onRunInShell && (
+                            <button
+                              type="button"
+                              onClick={() => onRunInShell(jb.gcloudExecuteCli)}
+                              title={jb.gcloudExecuteCli}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-mono text-[10px] cursor-pointer"
+                            >
+                              <Terminal className="w-3 h-3" />
+                              <span>CLI</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={Boolean(busyState)}
+                            onClick={() => handleDeleteCloudRunJob(jb)}
+                            className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-500 cursor-pointer disabled:opacity-50"
+                            title="Delete Cloud Run v2 Job"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] font-mono text-zinc-500 flex flex-wrap items-center gap-3">
+                        <span>
+                          Resources: <strong>{jb.cpu} vCPU / {jb.memory}</strong>
+                        </span>
+                        <span>
+                          Image: <code>{jb.containerImage}</code>
+                        </span>
+                        <span>
+                          Total Runs: <strong>{jb.executionCount}</strong>
+                        </span>
+                      </div>
+
+                      {(jb.recentExecutions || []).length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-200/70 dark:border-zinc-800">
+                          <span className="text-[10px] font-mono text-zinc-400">
+                            Recent Executions:
+                          </span>
+                          {jb.recentExecutions.slice(0, 3).map((ex) => (
+                            <span
+                              key={ex.name}
+                              className={`px-1.5 py-0.5 rounded font-mono text-[10px] ${
+                                ex.failedCount > 0
+                                  ? 'bg-red-500/15 text-red-500'
+                                  : ex.runningCount > 0
+                                  ? 'bg-blue-500/15 text-blue-500'
+                                  : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              }`}
+                            >
+                              {ex.shortName} ({ex.succeededCount}/{ex.taskCount} OK)
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* GOOGLE CLOUD SDK 590.0.0 GA `gcloud run compose up` MULTI-CONTAINER & SIDECAR STUDIO */}
       {showComposeStudio && (
@@ -4297,6 +5180,16 @@ services:
                       <span>
                         {srv.iapEnabled ? 'Cloud IAP (ON)' : '1-Click Cloud IAP'}
                       </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleLoadServiceIntoJobForm(srv)}
+                      title="Convert this Cloud Run Service into a Cloud Run v2 Batch Job (up to 24h timeout, parallel task sharding via CLOUD_RUN_TASK_INDEX, persistent GCS FUSE disk, and Cloud Scheduler :run trigger)"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20 transition-colors cursor-pointer"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>→ Cloud Run Job</span>
                     </button>
 
                     <button

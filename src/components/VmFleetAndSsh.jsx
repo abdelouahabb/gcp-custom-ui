@@ -1541,10 +1541,10 @@ export default function VmFleetAndSsh({
                                     />
                                     <span>
                                       <strong>
-                                        Auto-Convert VM Cron → Cloud Scheduler HTTP Job (
+                                        Auto-Convert VM Cron → Cloud Run v2 Batch Job + Cloud Scheduler (
                                         <code>*/15 * * * *</code>)
                                       </strong>{' '}
-                                      — Keeps cron tasks alive even when Cloud Run scales to 0
+                                      — Deploys a native Cloud Run v2 Job (up to 24h timeout + shared FUSE disk) triggered via Scheduler <code>:run</code> API
                                     </span>
                                   </label>
                                 </div>
