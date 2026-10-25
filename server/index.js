@@ -2300,38 +2300,62 @@ app.post('/api/project/:projectId/vms/:vmName/power', async (req, res) => {
 
 // 7z. GET & POST /api/project/:projectId/vms/ssh-identity-mode
 // Inspects and toggles Google Cloud Project/VM `enable-oslogin` (Standard Metadata SSH User vs IAM OS Login POSIX User)
-// and discovers available Linux user profiles (`abdelouahab`, `alabdelouahab`, `alabdelouahab_gmail_com`, `ubuntu`, `root`).
+// and dynamically discovers available Linux user profiles from os.userInfo() and the active GCP account.
+function discoverDynamicSshIdentities(rawAccount = '', preferredUser = '') {
+  let localOsUser = 'ubuntu';
+  try {
+    localOsUser = os.userInfo().username || 'ubuntu';
+  } catch {
+    // ignore
+  }
+  let emailStr = String(rawAccount || '').trim();
+  if (!emailStr.includes('@') || /connected.oauth.user/i.test(emailStr)) {
+    try {
+      const { activeAccount } = discoverLocalGcloudAccounts();
+      if (activeAccount && activeAccount.includes('@')) {
+        emailStr = activeAccount.trim();
+      } else {
+        emailStr = '';
+      }
+    } catch {
+      emailStr = '';
+    }
+  }
+  const gcpPrefixUser = emailStr.includes('@')
+    ? emailStr.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '_')
+    : localOsUser;
+  const osLoginPosixUser = emailStr.includes('@')
+    ? emailStr.replace(/[^a-zA-Z0-9_-]/g, '_')
+    : `${gcpPrefixUser}_posix`;
+
+  const candidateUsernames = Array.from(
+    new Set(
+      [
+        preferredUser,
+        localOsUser,
+        osLoginPosixUser,
+        gcpPrefixUser,
+        'ubuntu',
+      ].filter(Boolean)
+    )
+  );
+
+  return {
+    localOsUser,
+    gcpPrefixUser,
+    osLoginPosixUser,
+    candidateUsernames,
+  };
+}
+
 app.get('/api/project/:projectId/vms/ssh-identity-mode', async (req, res) => {
   const { projectId } = req.params;
   try {
     const { token, account } = await resolveRequestAuth(req);
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
 
-    let localOsUser = 'ubuntu';
-    try {
-      localOsUser = os.userInfo().username || 'ubuntu';
-    } catch {
-      // ignore
-    }
-    let emailStr = String(account || '').trim();
-    if (!emailStr.includes('@') || /connected.oauth.user/i.test(emailStr)) {
-      try {
-        const { activeAccount } = discoverLocalGcloudAccounts();
-        if (activeAccount && activeAccount.includes('@')) {
-          emailStr = activeAccount.trim();
-        } else {
-          emailStr = '';
-        }
-      } catch {
-        emailStr = '';
-      }
-    }
-    const gcpPrefixUser = emailStr.includes('@')
-      ? emailStr.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '_')
-      : localOsUser;
-    const osLoginPosixUser = emailStr.includes('@')
-      ? emailStr.replace(/[^a-zA-Z0-9_-]/g, '_')
-      : `${gcpPrefixUser}_gmail_com`;
+    const { localOsUser, gcpPrefixUser, osLoginPosixUser } =
+      discoverDynamicSshIdentities(account);
 
     const projData = await gcpFetch(
       `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
@@ -2409,8 +2433,10 @@ app.post('/api/project/:projectId/vms/ssh-identity-mode', async (req, res) => {
   const { projectId } = req.params;
   const { enableOsLogin = false, enableSerialPort = true } = req.body || {};
   try {
-    const { token } = await resolveRequestAuth(req);
+    const { token, account } = await resolveRequestAuth(req);
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    const { localOsUser, osLoginPosixUser } =
+      discoverDynamicSshIdentities(account);
 
     const projData = await gcpFetch(
       `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
@@ -2464,8 +2490,8 @@ app.post('/api/project/:projectId/vms/ssh-identity-mode', async (req, res) => {
       serialPortEnabled: Boolean(enableSerialPort),
       identityMode: enableOsLogin ? 'OS_LOGIN' : 'METADATA_SSH',
       message: enableOsLogin
-        ? 'Enabled Google Cloud IAM OS Login (enable-oslogin=TRUE). SSH sessions will use your IAM POSIX username (e.g., alabdelouahab_gmail_com).'
-        : 'Enabled Standard Metadata SSH Key Mode (enable-oslogin=FALSE). You can now connect directly as your custom Linux user (e.g., abdelouahab) in both CloudPulse and bash!',
+        ? `Enabled Google Cloud IAM OS Login (enable-oslogin=TRUE). SSH sessions will use your IAM POSIX username (${osLoginPosixUser}).`
+        : `Enabled Standard Metadata SSH Key Mode (enable-oslogin=FALSE). You can now connect directly as your custom Linux user (${localOsUser}) in both CloudPulse and bash!`,
     });
   } catch (err) {
     return res.status(400).json({
@@ -2679,15 +2705,10 @@ async function withSftpSession({ hostIp, sshUser, privateKey }, fn) {
     }
   }
 
-  // 2) Try requested sshUser first, then fallback to candidate metadata/OS-Login users
-  const candidateUsers = Array.from(
-    new Set([
-      sshUser,
-      'abdelouahab',
-      'alabdelouahab_gmail_com',
-      'alabdelouahab',
-      'ubuntu',
-    ].filter(Boolean))
+  // 2) Try requested sshUser first, then fallback to dynamically discovered metadata/OS-Login users
+  const { candidateUsernames: candidateUsers } = discoverDynamicSshIdentities(
+    '',
+    sshUser
   );
 
   let lastErr = null;

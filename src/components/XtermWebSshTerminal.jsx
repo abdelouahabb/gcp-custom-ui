@@ -162,7 +162,7 @@ export default function XtermWebSshTerminal({
   const [copiedCli, setCopiedCli] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [customUsername, setCustomUsername] = useState(
-    () => sanitizeUsername(defaultUsername) || 'abdelouahab'
+    () => sanitizeUsername(defaultUsername) || 'ubuntu'
   );
   const [userManuallyPicked, setUserManuallyPicked] = useState(false);
   const [customPort, setCustomPort] = useState('22');
@@ -218,7 +218,7 @@ export default function XtermWebSshTerminal({
       if (data && !userManuallyPicked) {
         const preferred = data.osLoginEnabled
           ? data.osLoginPosixUser
-          : data.localOsUser || sanitizeUsername(defaultUsername) || 'abdelouahab';
+          : data.localOsUser || sanitizeUsername(defaultUsername) || 'ubuntu';
         if (preferred) {
           setCustomUsername(preferred);
         }
@@ -1366,7 +1366,7 @@ export default function XtermWebSshTerminal({
                   setUserManuallyPicked(true);
                   setCustomUsername(e.target.value);
                 }}
-                placeholder="abdelouahab"
+                placeholder={identityInfo?.localOsUser || defaultUsername || 'ubuntu'}
                 className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
               />
             </div>
@@ -1571,7 +1571,7 @@ export default function XtermWebSshTerminal({
                   type="text"
                   value={scpPathInput}
                   onChange={(e) => setScpPathInput(e.target.value)}
-                  placeholder="/home/abdelouahab"
+                  placeholder={`/home/${customUsername || 'ubuntu'}`}
                   className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-500"
                 />
                 <button
