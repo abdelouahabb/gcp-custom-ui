@@ -655,7 +655,10 @@ export default function VpcNetworksAndFirewalls({
   };
 
   // 1-Tap Lock Down Exposed 0.0.0.0/0 Rule to Google Cloud IAP (35.235.240.0/20)
+  const [pendingIapLockdownFw, setPendingIapLockdownFw] = useState(null);
+
   const handleLockdownToIap = async (fw) => {
+    setPendingIapLockdownFw(null);
     const trackerKey = `fw:${fw.name}`;
     setOperationTrackers((prev) => ({
       ...prev,
@@ -695,7 +698,7 @@ export default function VpcNetworksAndFirewalls({
       );
       if (onShowToast) {
         onShowToast(
-          `Zero-Trust Lockdown complete: "${fw.name}" now only accepts traffic from Google Cloud IAP (35.235.240.0/20)!`
+          `Zero-Trust Lockdown complete: "${fw.name}" now only accepts traffic from Google Cloud IAP (35.235.240.0/20)! (Use --tunnel-through-iap in bash CLI)`
         );
       }
       if (onRefresh) onRefresh();
@@ -708,6 +711,66 @@ export default function VpcNetworksAndFirewalls({
       if (onShowError) {
         onShowError(
           err.response?.data?.error || 'Failed to lock down firewall rule to IAP.'
+        );
+      }
+    }
+  };
+
+  // 1-Tap Restore IAP-Locked Rule (35.235.240.0/20) back to Public Ingress (0.0.0.0/0)
+  const handleRestoreFromIap = async (fw) => {
+    const trackerKey = `fw:${fw.name}`;
+    setOperationTrackers((prev) => ({
+      ...prev,
+      [trackerKey]: {
+        status: 'DISPATCHING',
+        progress: 25,
+        operationName: 'compute.firewalls.patch',
+        stepLabel: `Restoring ${fw.name} sourceRanges from 35.235.240.0/20 → 0.0.0.0/0...`,
+      },
+    }));
+
+    try {
+      const cleanDesc = String(fw.description || '')
+        .replace(/\s*·?\s*\[Locked down to Google Cloud IAP 35\.235\.240\.0\/20\]/g, '')
+        .trim();
+      const res = await axios.patch(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/firewalls/${encodeURIComponent(fw.name)}`,
+        {
+          direction: 'INGRESS',
+          sourceRanges: ['0.0.0.0/0'],
+          description: cleanDesc || 'Restored to 0.0.0.0/0 direct public ingress',
+        }
+      );
+      await pollGcpOperation(
+        trackerKey,
+        res.data?.operationUrl,
+        res.data?.operationName,
+        `Restored ${fw.name} to 0.0.0.0/0 (100%)!`
+      );
+      setLocalFirewalls((prev) =>
+        prev.map((item) =>
+          item.name === fw.name
+            ? { ...item, sourceRanges: ['0.0.0.0/0'] }
+            : item
+        )
+      );
+      if (onShowToast) {
+        onShowToast(
+          `Restored "${fw.name}" to 0.0.0.0/0! Direct bash 'gcloud compute ssh' now works without '--tunnel-through-iap'.`
+        );
+      }
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      setOperationTrackers((prev) => {
+        const next = { ...prev };
+        delete next[trackerKey];
+        return next;
+      });
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || 'Failed to restore firewall rule to 0.0.0.0/0.'
         );
       }
     }
@@ -2103,18 +2166,31 @@ export default function VpcNetworksAndFirewalls({
                         )}
                       </div>
 
-                      {/* Action Buttons Column: Lock to IAP, Enable/Disable Toggle, Edit, Delete */}
+                      {/* Action Buttons Column: Lock to IAP, Restore Public, Enable/Disable Toggle, Edit, Delete */}
                       <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                         {isPublicAllowIngress && (
                           <button
                             type="button"
                             disabled={Boolean(tracker)}
-                            onClick={() => handleLockdownToIap(fw)}
-                            title="Replace 0.0.0.0/0 with Google Cloud IAP Zero-Trust CIDR (35.235.240.0/20)"
+                            onClick={() => setPendingIapLockdownFw(fw)}
+                            title="Replace 0.0.0.0/0 with Google Cloud IAP Zero-Trust CIDR (35.235.240.0/20) — opens impact warning first"
                             className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <Lock className="w-3 h-3" />
                             <span>Lock to IAP</span>
+                          </button>
+                        )}
+
+                        {!isDeny && !isEgress && isIapProtected && !ranges.includes('0.0.0.0/0') && (
+                          <button
+                            type="button"
+                            disabled={Boolean(tracker)}
+                            onClick={() => handleRestoreFromIap(fw)}
+                            title="Restore sourceRanges back to 0.0.0.0/0 so direct gcloud compute ssh / public IP connections work without --tunnel-through-iap"
+                            className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Restore 0.0.0.0/0</span>
                           </button>
                         )}
 
@@ -2239,6 +2315,85 @@ export default function VpcNetworksAndFirewalls({
           )}
         </div>
       </div>
+
+      {/* Zero-Trust IAP Hardening Behavioral Impact Warning Modal */}
+      {pendingIapLockdownFw && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl rounded-2xl border-2 border-amber-500/50 bg-zinc-950 text-zinc-100 shadow-2xl p-5 space-y-4 font-mono">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">
+                    Zero-Trust IAP Hardening · Important CLI &amp; Network Behavior Warning
+                  </div>
+                  <h4 className="text-sm font-extrabold text-white">
+                    Lock &ldquo;{pendingIapLockdownFw.name}&rdquo; to Google Cloud IAP (`35.235.240.0/20`)?
+                  </h4>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingIapLockdownFw(null)}
+                className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2.5 text-xs leading-relaxed">
+              <p className="text-amber-200 font-bold">
+                Before hardening this rule, please review how your future SSH &amp; network connections will behave:
+              </p>
+              <ul className="space-y-2 text-[11px] text-zinc-200 list-disc pl-4">
+                <li>
+                  <strong className="text-white">Direct Bash `gcloud compute ssh` Without Flag Will Time Out:</strong>{' '}
+                  Replacing <code className="text-red-300">0.0.0.0/0</code> with <code className="text-emerald-300">35.235.240.0/20</code> blocks direct internet packets to your VM&apos;s public IP on port 22. Running plain{' '}
+                  <code className="text-amber-300">gcloud compute ssh &lt;vm-name&gt;</code> in your local bash terminal will stall/time out unless you add{' '}
+                  <code className="text-emerald-300 font-bold">--tunnel-through-iap</code>:
+                  <div className="mt-1 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-[10px] text-emerald-300 select-all">
+                    gcloud compute ssh &lt;vm-name&gt; --zone=&lt;zone&gt; --project={projectId} --tunnel-through-iap
+                  </div>
+                </li>
+                <li>
+                  <strong className="text-white">CloudPulse Built-In Xterm.js SSH Auto-Adapts:</strong>{' '}
+                  Inside this app, CloudPulse automatically detects the IAP firewall rule and tunnels via <code className="text-emerald-300">--tunnel-through-iap</code>.
+                </li>
+                {(pendingIapLockdownFw.protocolsFormatted || []).some((p) =>
+                  /\b(80|443|8080|3000|8888)\b/.test(p)
+                ) && (
+                  <li className="text-rose-300 font-bold">
+                    Web Traffic Warning (HTTP/HTTPS Ports Detected): This rule permits web ports ({(pendingIapLockdownFw.protocolsFormatted || []).join(', ')}). Locking it to <code className="text-amber-300">35.235.240.0/20</code> will block public web browsers from opening your VM&apos;s external IP directly!
+                  </li>
+                )}
+              </ul>
+              <p className="text-[11px] text-zinc-400">
+                You can revert this rule back to <code className="text-emerald-300">0.0.0.0/0</code> at any time using the <strong>Restore 0.0.0.0/0</strong> button on the firewall card.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setPendingIapLockdownFw(null)}
+                className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-bold cursor-pointer"
+              >
+                Cancel (Keep 0.0.0.0/0)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLockdownToIap(pendingIapLockdownFw)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>I Understand — Lock to IAP (35.235.240.0/20)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

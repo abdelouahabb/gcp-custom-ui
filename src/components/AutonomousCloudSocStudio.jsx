@@ -2658,23 +2658,53 @@ export default function AutonomousCloudSocStudio({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                handleExecuteSocAction('DEFCON1_LOCKDOWN_EXEC', {
-                  action: 'EXECUTE_DEFCON1_LOCKDOWN',
-                })
-              }
-              disabled={Boolean(actionBusy)}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-extrabold shadow-lg shadow-red-600/30 cursor-pointer disabled:opacity-50"
-            >
-              <Lock className="w-4 h-4" />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  handleExecuteSocAction('RESTORE_DIRECT_SSH', {
+                    action: 'RESTORE_VPC_FIREWALL_TO_PUBLIC',
+                    firewallRuleName: 'default-allow-ssh',
+                  })
+                }
+                disabled={Boolean(actionBusy)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                title="Restore default-allow-ssh back to 0.0.0.0/0 so plain gcloud compute ssh works from bash without --tunnel-through-iap"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Restore Direct SSH (0.0.0.0/0)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleExecuteSocAction('DEFCON1_LOCKDOWN_EXEC', {
+                    action: 'EXECUTE_DEFCON1_LOCKDOWN',
+                  })
+                }
+                disabled={Boolean(actionBusy)}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-extrabold shadow-lg shadow-red-600/30 cursor-pointer disabled:opacity-50"
+              >
+                <Lock className="w-4 h-4" />
+                <span>
+                  {actionBusy === 'DEFCON1_LOCKDOWN_EXEC'
+                    ? 'Executing 5-Stage Defcon-1 Lockdown...'
+                    : 'EXECUTE DEFCON-1 PROJECT LOCKDOWN NOW'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/40 text-xs font-mono space-y-1.5">
+            <div className="flex items-center gap-2 font-extrabold text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
-                {actionBusy === 'DEFCON1_LOCKDOWN_EXEC'
-                  ? 'Executing 5-Stage Defcon-1 Lockdown...'
-                  : 'EXECUTE DEFCON-1 PROJECT LOCKDOWN NOW'}
+                Operational Behavior Warning: How VPC IAP Hardening (`35.235.240.0/20`) Affects Direct Bash SSH
               </span>
-            </button>
+            </div>
+            <p className="text-[11px] text-zinc-200 leading-relaxed">
+              Locking <code className="text-amber-300">default-allow-ssh</code> from <code className="text-red-300">0.0.0.0/0</code> to <code className="text-emerald-300">35.235.240.0/20</code> (Google Cloud IAP) blocks direct public-IP SSH on port 22. After hardening, running plain <code className="text-amber-300">gcloud compute ssh &lt;vm&gt;</code> in your local bash terminal will stall/time out unless you pass <code className="text-emerald-300 font-bold">--tunnel-through-iap</code> (or click <strong>Restore Direct SSH (0.0.0.0/0)</strong> above). Public web rules (<code className="text-cyan-300">default-allow-http</code> / <code className="text-cyan-300">default-allow-https</code>) are automatically preserved.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5 text-xs font-mono">
@@ -4325,19 +4355,46 @@ export default function AutonomousCloudSocStudio({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleRunGuardianReconcile}
-              disabled={guardianReconcileLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
-            >
-              <ShieldCheck className="w-4 h-4" />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  handleExecuteSocAction('RESTORE_DIRECT_SSH_GUARDIAN', {
+                    action: 'RESTORE_VPC_FIREWALL_TO_PUBLIC',
+                    firewallRuleName: 'default-allow-ssh',
+                  })
+                }
+                disabled={Boolean(actionBusy)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-600 dark:text-amber-300 text-xs font-extrabold cursor-pointer disabled:opacity-50"
+                title="Restore default-allow-ssh back to 0.0.0.0/0 so plain gcloud compute ssh works from bash without --tunnel-through-iap"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Restore Direct SSH (0.0.0.0/0)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRunGuardianReconcile}
+                disabled={guardianReconcileLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer disabled:opacity-50"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>
+                  {guardianReconcileLoading
+                    ? 'Executing Full-Project Self-Healing...'
+                    : 'Execute 1-Click Autonomous Self-Healing Reconciler'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-mono flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-start gap-2 text-amber-700 dark:text-amber-200">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <span>
-                {guardianReconcileLoading
-                  ? 'Executing Full-Project Self-Healing...'
-                  : 'Execute 1-Click Autonomous Self-Healing Reconciler'}
+                <strong>CLI SSH Warning (INV-01):</strong> Healing <code className="font-bold">INV-01</code> locks <code className="font-bold">default-allow-ssh</code> to Google Cloud IAP (<code className="font-bold">35.235.240.0/20</code>). Once locked, running <code className="font-bold">gcloud compute ssh</code> in bash requires <code className="font-bold">--tunnel-through-iap</code> (or click <strong>Restore Direct SSH (0.0.0.0/0)</strong> to allow direct public-IP SSH).
               </span>
-            </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs font-mono">

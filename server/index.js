@@ -53258,7 +53258,43 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
         action,
         firewallRuleName,
         receipt,
-        message: `Locked VPC Firewall rule "${firewallRuleName}" from 0.0.0.0/0 to Google Cloud IAP TCP Forwarding range (35.235.240.0/20)!`,
+        message: `Locked VPC Firewall rule "${firewallRuleName}" from 0.0.0.0/0 to Google Cloud IAP TCP Forwarding range (35.235.240.0/20)! Note: Direct bash 'gcloud compute ssh' now requires '--tunnel-through-iap'.`,
+      });
+    }
+
+    // ACTION D-2: RESTORE VPC FIREWALL RULE FROM IAP (`35.235.240.0/20`) BACK TO PUBLIC (`0.0.0.0/0`)
+    if (action === 'RESTORE_VPC_FIREWALL_TO_PUBLIC') {
+      const targetFw = firewallRuleName || 'default-allow-ssh';
+      await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}/global/firewalls/${encodeURIComponent(
+          targetFw
+        )}`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          body: {
+            sourceRanges: ['0.0.0.0/0'],
+            description: `Restored to 0.0.0.0/0 (direct public ingress) via CloudPulse SOC`,
+          },
+          timeout: 12000,
+        }
+      );
+
+      const receipt = appendSocForensicReceipt(projectId, {
+        timestamp: new Date().toISOString(),
+        action: 'RESTORE_VPC_FIREWALL_TO_PUBLIC',
+        target: targetFw,
+        actor: account || 'soc-operator',
+        details: `Restored firewall rule ${targetFw} sourceRanges from 35.235.240.0/20 back to 0.0.0.0/0 so direct gcloud compute ssh works without --tunnel-through-iap.`,
+      });
+
+      return res.json({
+        success: true,
+        action,
+        firewallRuleName: targetFw,
+        receipt,
+        message: `Restored VPC Firewall rule "${targetFw}" to 0.0.0.0/0! Direct 'gcloud compute ssh' from bash now works without '--tunnel-through-iap'.`,
       });
     }
 
@@ -53822,7 +53858,10 @@ app.post('/api/project/:projectId/soc/action', async (req, res) => {
           !fw.disabled &&
           fw.direction === 'INGRESS' &&
           (fw.sourceRanges || []).includes('0.0.0.0/0') &&
-          !String(fw.name || '').startsWith('cloudpulse-soc-')
+          !String(fw.name || '').startsWith('cloudpulse-soc-') &&
+          !['default-allow-http', 'default-allow-https'].includes(
+            String(fw.name || '')
+          )
       );
       let lockedFwCount = 0;
       await Promise.all(
@@ -55227,7 +55266,10 @@ app.post('/api/project/:projectId/soc/guardian-reconcile', async (req, res) => {
         !fw.disabled &&
         fw.direction === 'INGRESS' &&
         (fw.sourceRanges || []).includes('0.0.0.0/0') &&
-        !String(fw.name || '').startsWith('cloudpulse-soc-')
+        !String(fw.name || '').startsWith('cloudpulse-soc-') &&
+        !['default-allow-http', 'default-allow-https'].includes(
+          String(fw.name || '')
+        )
     );
     let healedFws = 0;
     for (const fw of openFws) {
