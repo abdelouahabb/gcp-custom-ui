@@ -988,119 +988,120 @@ export default function VmFleetAndSsh({
                   );
                 })}
               </div>
-              <span className="text-[11px] font-mono text-zinc-500">
-                Showing <strong>{filteredVms.length}</strong> of{' '}
-                <strong>{vms.length}</strong> instances
-              </span>
-            </div>
-
-            {/* Row 2: VM Metadata, Search, Status, Machine Type, Disk/Model & Tag/Label Filters */}
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/70">
-              <div className="relative flex-1 min-w-[220px]">
-                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={vmSearchQuery}
-                  onChange={(e) => setVmSearchQuery(e.target.value)}
-                  placeholder="Filter by VM name, IP, zone, OS, gpu/tpu, tag (http-server), label (env=prod), or metadata key..."
-                  className="w-full h-8 pl-8 pr-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <select
-                  aria-label="Filter by VM Status"
-                  value={vmStatusFilter}
-                  onChange={(e) => setVmStatusFilter(e.target.value)}
-                  className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                >
-                  <option value="ALL">Status: All</option>
-                  <option value="RUNNING">● RUNNING</option>
-                  <option value="STOPPED">■ STOPPED / TERMINATED</option>
-                  <option value="SUSPENDED">❚❚ SUSPENDED</option>
-                </select>
-
-                <select
-                  aria-label="Filter by Machine Type"
-                  value={vmMachineFilter}
-                  onChange={(e) => setVmMachineFilter(e.target.value)}
-                  className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                >
-                  <option value="ALL">Machine: All ({uniqueMachineTypes.length})</option>
-                  {uniqueMachineTypes.map((mt) => (
-                    <option key={mt} value={mt}>
-                      {mt}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  aria-label="Filter by GPU or TPU Accelerator"
-                  value={vmAcceleratorFilter}
-                  onChange={(e) => setVmAcceleratorFilter(e.target.value)}
-                  className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                >
-                  <option value="ALL">GPU / TPU: All ({vms.length})</option>
-                  <option value="CPU_ONLY">
-                    Without GPU / TPU — CPU Only ({cpuOnlyVmCount})
-                  </option>
-                  <option value="ANY_ACCELERATOR">
-                    With GPU or TPU Attached ({acceleratedVmCount})
-                  </option>
-                  <option value="GPU_ONLY">
-                    With NVIDIA GPU ({gpuVmCount})
-                  </option>
-                  <option value="TPU_ONLY">
-                    With Cloud TPU ({tpuVmCount})
-                  </option>
-                  {uniqueAcceleratorTypes.map((accType) => (
-                    <option key={accType} value={`TYPE:${accType}`}>
-                      Accelerator: {accType}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  aria-label="Filter by Disk & Provisioning Model"
-                  value={vmDiskModelFilter}
-                  onChange={(e) => setVmDiskModelFilter(e.target.value)}
-                  className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                >
-                  <option value="ALL">Disk / Tier: All</option>
-                  <option value="PD_STANDARD">pd-standard (HDD / Free-Tier Eligible)</option>
-                  <option value="SSD">pd-balanced / pd-ssd / hyperdisk (SSD)</option>
-                  <option value="STANDARD_MODEL">Standard On-Demand Model</option>
-                  <option value="SPOT">Spot / Preemptible VM</option>
-                </select>
-
-                {uniqueMetadataTokens.length > 0 && (
-                  <select
-                    aria-label="Filter by Network Tag, GCP Label, or Metadata Key"
-                    value={vmMetadataTagFilter}
-                    onChange={(e) => setVmMetadataTagFilter(e.target.value)}
-                    className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer max-w-[220px]"
-                  >
-                    <option value="ALL">
-                      Tags / Labels / Metadata ({uniqueMetadataTokens.length})
-                    </option>
-                    {uniqueMetadataTokens.map((tok) => (
-                      <option key={tok} value={tok}>
-                        {tok}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
+              <div className="flex items-center gap-2 shrink-0">
                 {hasActiveVmFilters && (
                   <button
                     type="button"
                     onClick={resetAllVmFilters}
-                    className="h-8 px-2.5 rounded-lg bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
                   >
                     Reset Filters
                   </button>
                 )}
+                <span className="text-[11px] font-mono text-zinc-500">
+                  Showing <strong>{filteredVms.length}</strong> of{' '}
+                  <strong>{vms.length}</strong> instances
+                </span>
               </div>
+            </div>
+
+            {/* Row 2: Responsive 6-Column VM Metadata, Search, Status, Machine, GPU/TPU, Disk & Tag/Label Filter Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/70">
+              <div className="relative w-full min-w-0">
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={vmSearchQuery}
+                  onChange={(e) => setVmSearchQuery(e.target.value)}
+                  placeholder="Search VM, IP, tag, label..."
+                  className="w-full h-8 pl-8 pr-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-900 dark:text-zinc-100 min-w-0"
+                />
+              </div>
+
+              <select
+                aria-label="Filter by VM Status"
+                value={vmStatusFilter}
+                onChange={(e) => setVmStatusFilter(e.target.value)}
+                className="w-full min-w-0 h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer truncate"
+              >
+                <option value="ALL">Status: All</option>
+                <option value="RUNNING">● RUNNING</option>
+                <option value="STOPPED">■ STOPPED / TERMINATED</option>
+                <option value="SUSPENDED">❚❚ SUSPENDED</option>
+              </select>
+
+              <select
+                aria-label="Filter by Machine Type"
+                value={vmMachineFilter}
+                onChange={(e) => setVmMachineFilter(e.target.value)}
+                className="w-full min-w-0 h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer truncate"
+              >
+                <option value="ALL">
+                  Machine: All ({uniqueMachineTypes.length})
+                </option>
+                {uniqueMachineTypes.map((mt) => (
+                  <option key={mt} value={mt}>
+                    {mt}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                aria-label="Filter by GPU or TPU Accelerator"
+                value={vmAcceleratorFilter}
+                onChange={(e) => setVmAcceleratorFilter(e.target.value)}
+                className="w-full min-w-0 h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer truncate"
+              >
+                <option value="ALL">GPU / TPU: All ({vms.length})</option>
+                <option value="CPU_ONLY">
+                  No GPU/TPU · CPU Only ({cpuOnlyVmCount})
+                </option>
+                <option value="ANY_ACCELERATOR">
+                  With GPU or TPU ({acceleratedVmCount})
+                </option>
+                <option value="GPU_ONLY">
+                  With NVIDIA GPU ({gpuVmCount})
+                </option>
+                <option value="TPU_ONLY">
+                  With Cloud TPU ({tpuVmCount})
+                </option>
+                {uniqueAcceleratorTypes.map((accType) => (
+                  <option key={accType} value={`TYPE:${accType}`}>
+                    Accelerator: {accType}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                aria-label="Filter by Disk & Provisioning Model"
+                value={vmDiskModelFilter}
+                onChange={(e) => setVmDiskModelFilter(e.target.value)}
+                className="w-full min-w-0 h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer truncate"
+              >
+                <option value="ALL">Disk / Tier: All</option>
+                <option value="PD_STANDARD">
+                  pd-standard (HDD · Free Tier)
+                </option>
+                <option value="SSD">pd-balanced / pd-ssd (SSD)</option>
+                <option value="STANDARD_MODEL">On-Demand Provisioning</option>
+                <option value="SPOT">Spot / Preemptible VM</option>
+              </select>
+
+              <select
+                aria-label="Filter by Network Tag, GCP Label, or Metadata Key"
+                value={vmMetadataTagFilter}
+                onChange={(e) => setVmMetadataTagFilter(e.target.value)}
+                className="w-full min-w-0 h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer truncate"
+              >
+                <option value="ALL">
+                  Tags / Metadata ({uniqueMetadataTokens.length})
+                </option>
+                {uniqueMetadataTokens.map((tok) => (
+                  <option key={tok} value={tok}>
+                    {tok}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         )}
