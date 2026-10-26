@@ -399,6 +399,9 @@ export default function GcsObjectWorkbench({
   fetchBuckets,
   busyKey,
   setBusyKey,
+  onOpenBigQuerySql,
+  onNavigateStudio,
+  onSwitchStorageSubTab,
   onShowToast,
   onShowError,
 }) {
@@ -2198,6 +2201,88 @@ export default function GcsObjectWorkbench({
           </div>
         </div>
       </div>
+
+      {/* Connected GCP Pipeline & Security Bridge (Cross-Studio Deep-Links) */}
+      {selectedBucket && (
+        <div className="p-2.5 rounded-xl bg-zinc-50/90 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
+          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+            <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[9.5px] font-extrabold uppercase">
+              Connected Studios
+            </span>
+            <span className="truncate">
+              Active target:{' '}
+              <strong className="text-zinc-900 dark:text-zinc-100">
+                gs://{selectedBucket.name}
+                {inspectedObject?.name ? `/${inspectedObject.name}` : ''}
+              </strong>
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 w-full lg:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                if (!onOpenBigQuerySql) return;
+                const objName = inspectedObject?.name || '*.parquet';
+                const extFormat = objName.toLowerCase().endsWith('.parquet')
+                  ? 'PARQUET'
+                  : objName.toLowerCase().endsWith('.csv')
+                  ? 'CSV'
+                  : 'JSON';
+                const safeTbl = selectedBucket.name
+                  .replace(/[^a-zA-Z0-9_]/g, '_')
+                  .slice(0, 32);
+                const sql = `-- Auto-generated BigQuery External Lakehouse Table for gs://${selectedBucket.name}/${objName}\nCREATE OR REPLACE EXTERNAL TABLE \`${projectId}.analytics.${safeTbl}_ext\`\nOPTIONS (\n  format = '${extFormat}',\n  uris = ['gs://${selectedBucket.name}/${objName}']\n);\n\nSELECT * FROM \`${projectId}.analytics.${safeTbl}_ext\` LIMIT 100;`;
+                onOpenBigQuerySql(sql);
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-extrabold cursor-pointer truncate"
+              title="Open BigQuery Studio with an External Table query for this bucket/object"
+            >
+              Query in BigQuery SQL →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateStudio && onNavigateStudio('BIGLAKE_ICEBERG')
+              }
+              className="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 text-[10px] font-extrabold cursor-pointer truncate"
+              title="Mount this GCS bucket as an Apache Iceberg Open Table in BigLake Studio"
+            >
+              BigLake Iceberg →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onNavigateStudio && onNavigateStudio('DATA_PIPELINES')
+              }
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold cursor-pointer truncate"
+              title="Build a Bronze-Silver-Gold Medallion pipeline from this bucket"
+            >
+              Medallion ELT →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onSwitchStorageSubTab && onSwitchStorageSubTab('DLP_XRAY')
+              }
+              className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold cursor-pointer truncate"
+              title="Scan this bucket in-memory for leaked secrets, API keys, and PII (M06)"
+            >
+              RAM DLP X-Ray (M06) →
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onSwitchStorageSubTab &&
+                onSwitchStorageSubTab('S3_COMPATIBLE_IMPORT')
+              }
+              className="px-2.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold cursor-pointer truncate"
+              title="Import objects from AWS S3, MinIO, or Ceph RADOS Gateway into this bucket (M03)"
+            >
+              S3 / MinIO Import (M03) →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Collapsible New Object & Data Engineering Template Composer */}
       {showComposerBar && (

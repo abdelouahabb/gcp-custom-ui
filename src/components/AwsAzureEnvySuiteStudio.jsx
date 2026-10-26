@@ -4464,7 +4464,37 @@ export default function AwsAzureEnvySuiteStudio({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {onNavigateToGcpTab && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onNavigateToGcpTab('CLOUD_STORAGE', 'OBJECTS', {
+                            bucketName: selectedBucket,
+                          })
+                        }
+                        className="px-2.5 py-2 rounded-xl text-[11px] font-extrabold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                        title="Open full V4 Signed URL Studio, Version Time-Machine & Live Editor in GCS Object Workbench (M02)"
+                      >
+                        GCS Workbench (M02) →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onNavigateToGcpTab(
+                            'CLOUD_STORAGE',
+                            'S3_COMPATIBLE_IMPORT',
+                            { bucketName: selectedBucket }
+                          )
+                        }
+                        className="px-2.5 py-2 rounded-xl text-[11px] font-extrabold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer"
+                        title="Import AWS S3, MinIO, or Ceph RGW buckets into this GCS bucket (M03)"
+                      >
+                        S3 / MinIO Importer (M03) →
+                      </button>
+                    </>
+                  )}
                   <select
                     value={selectedBucket}
                     onChange={(e) => setSelectedBucket(e.target.value)}
@@ -4538,17 +4568,38 @@ export default function AwsAzureEnvySuiteStudio({
                             {obj.contentType}
                           </td>
                           <td className="py-2.5 px-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleGeneratePresignedUrl(obj.name)
-                              }
-                              disabled={actionBusy === `SAS_${obj.name}`}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 border border-sky-500/30 cursor-pointer"
-                            >
-                              <Link2 className="w-3 h-3" />
-                              <span>Generate Share Link</span>
-                            </button>
+                            <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
+                              {onNavigateToGcpTab && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onNavigateToGcpTab(
+                                      'CLOUD_STORAGE',
+                                      'OBJECTS',
+                                      {
+                                        bucketName: selectedBucket,
+                                        objectName: obj.name,
+                                      }
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-extrabold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
+                                  title="Inspect, edit, or run V4 Signed URLs on this object in GCS Workbench (M02)"
+                                >
+                                  <span>Edit in M02 →</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleGeneratePresignedUrl(obj.name)
+                                }
+                                disabled={actionBusy === `SAS_${obj.name}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 border border-sky-500/30 cursor-pointer"
+                              >
+                                <Link2 className="w-3 h-3" />
+                                <span>Generate Share Link</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))

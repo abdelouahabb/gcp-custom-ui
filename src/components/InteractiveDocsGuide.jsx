@@ -1164,10 +1164,10 @@ const DOC_SECTIONS = [
       'Understanding how your public firewall rules, VPC networks, Compute VMs, Cloud Run services, and Storage/BigQuery datasets connect—and which resources are exposed to the public internet (0.0.0.0/0)—requires checking 5 different pages in GCP Console.',
     howItWorks: [
       'Renders a live 4-column architecture map of your active project:',
-      'Layer 1 (Public Internet 0.0.0.0/0 Exposure): Flags world-open ingress firewall rules and public allUsers Cloud Run URLs.',
-      'Layer 2 (VPC Network Backbone): Shows every VPC network, routing mode (REGIONAL vs GLOBAL), and MTU.',
-      'Layer 3 (Compute & Serverless Fleet): Lists all Compute Engine VMs and Cloud Run services with their live status, IPs, and GPUs.',
-      'Layer 4 (Storage & Data Lakehouse): Lists all Cloud Storage buckets and BigQuery datasets.',
+      'Layer 1 (Public Internet 0.0.0.0/0 Exposure): Flags world-open ingress firewall rules and public allUsers Cloud Run URLs—click any firewall node to jump directly to VPC & Firewalls.',
+      'Layer 2 (VPC Network Backbone): Shows every VPC network, routing mode (REGIONAL vs GLOBAL), and MTU—click any VPC to inspect its subnets and routes.',
+      'Layer 3 (Compute & Serverless Fleet): Lists all Compute Engine VMs and Cloud Run services with their live status, IPs, and GPUs—click any VM or Cloud Run service to open its live studio.',
+      'Layer 4 (Storage & Data Lakehouse): Lists all Cloud Storage buckets and BigQuery datasets with 1-click deep-links into the GCS Object Workbench (M02) and S3 / MinIO / Ceph Importer (M03).',
     ],
     apisUsed: [
       'GET /api/project/:id/overview & GET /api/project/:id/vms',
@@ -1581,6 +1581,7 @@ const DOC_SECTIONS = [
       '5 Enterprise Object Operations (Signed URLs, Versioning Time-Machine, Zero-Egress Rewrite, Holds & .tar Bundles): Generate time-limited V4 Signed URLs (15m, 1h, 24h, 7d for GET/PUT), inspect and restore historical object generations (rewriteTo), rename/move/duplicate/cross-bucket copy objects at zero network egress, toggle temporaryHold / eventBasedHold and per-object Storage Classes (STANDARD, NEARLINE, COLDLINE, ARCHIVE), and download multi-object POSIX .tar bundles.',
       'S3 / MinIO / Ceph RADOS Gateway (RGW) Multi-Cloud Importer (Module M03): Built-in zero-dependency Node.js AWS4-HMAC-SHA256 request signer supporting both Path-Style (MinIO :9000, Ceph RGW :7480) and Virtual-Hosted (Amazon S3, Cloudflare R2) endpoints. Browse remote S3/MinIO/Ceph objects live, stream selected objects directly into gs://:bucketName with provenance metadata, or generate Google Cloud Storage Transfer Service (awsS3DataSource / awsS3CompatibleDataSource) and rclone sync specs.',
       'Non-Blocking <16ms Stale-While-Revalidate (SWR) Live Project Telemetry & Equal-Width Enterprise UI: Dual-layer SWR cache (backend overviewSwrCache + frontend localStorage hydration) renders KPIs immediately on load and refreshes silently in the background, paired with equal-width enterprise button grids across Cloud Storage Studio and the 2026 Beyond-Console Innovation Lab.',
+      'Cross-Studio Deep-Link & Pipeline Glue (M02 ↔ M03 ↔ M06/X1 ↔ M07/X4 ↔ BigQuery / BigLake / Medallion / AWS-Azure SAS): Jump directly from imported S3/MinIO/Ceph objects in M03 to live editing in M02, in-memory DLP scanning in M06, or auto-generated CREATE EXTERNAL TABLE queries in BigQuery Studio; jump from any leaked secret in X1/M06 or bucket in X4/M07 straight to M02 Object Workbench & Versioning Time-Machine; or launch BigQuery SQL, BigLake Iceberg, and Medallion ELT directly from the M02 Connected Studios bar.',
     ],
     apisUsed: [
       'GET & POST /api/project/:id/storage/buckets/:b/objects, /objects/content, /objects/metadata, /objects/public-access, /objects/signed-url, /objects/versions, /objects/rewrite & /objects/bundle-download',

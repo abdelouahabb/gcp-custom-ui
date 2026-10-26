@@ -2965,8 +2965,11 @@ function CloudPulseCockpit() {
   const [dataEngineerSubTab, setDataEngineerSubTab] =
     useState('ICEBERG_50_MATRIX');
   const [bigLakeSubTab, setBigLakeSubTab] = useState('METASTORE_CATALOGS');
+  const [storageSubTab, setStorageSubTab] = useState('BUCKETS');
+  const [storageTargetBucket, setStorageTargetBucket] = useState('');
+  const [storageTargetObject, setStorageTargetObject] = useState('');
 
-  const handleNavigateStudioTab = useCallback((tabId, subTab) => {
+  const handleNavigateStudioTab = useCallback((tabId, subTab, extraTarget = null) => {
     if (!tabId) return;
     if (tabId === 'TIME_MACHINE') {
       setSovereignSubTab('MERKLE_DRIFT');
@@ -2986,8 +2989,10 @@ function CloudPulseCockpit() {
         ? 'WAVE10_FRONTIER'
         : tabId === 'VPC_FIREWALL'
         ? 'VPC_NETWORKS'
-        : tabId === 'CLOUD_SOC'
-        ? 'SOVEREIGN_STUDIO'
+        : tabId === 'VM_FLEET'
+        ? 'VM_SSH'
+        : tabId === 'STORAGE'
+        ? 'CLOUD_STORAGE'
         : tabId;
 
     if (subTab && normalizedTab === 'SOVEREIGN_STUDIO') {
@@ -3002,6 +3007,14 @@ function CloudPulseCockpit() {
       setDataEngineerSubTab(subTab);
     } else if (subTab && normalizedTab === 'BIGLAKE_STUDIO') {
       setBigLakeSubTab(subTab);
+    } else if (normalizedTab === 'CLOUD_STORAGE') {
+      if (subTab) setStorageSubTab(subTab);
+      if (extraTarget && typeof extraTarget === 'object') {
+        if (extraTarget.bucketName) setStorageTargetBucket(extraTarget.bucketName);
+        if (typeof extraTarget.objectName === 'string') {
+          setStorageTargetObject(extraTarget.objectName);
+        }
+      }
     }
     setActiveTab(normalizedTab);
   }, []);
@@ -4380,8 +4393,15 @@ function CloudPulseCockpit() {
                   />
                   <CloudStorageStudio
                     projectId={selectedProjectId}
+                    initialSubTab={storageSubTab}
+                    initialBucketName={storageTargetBucket}
+                    initialObjectName={storageTargetObject}
                     onOpenProvision={handleOpenProvision}
-                    onSelectTab={(tab) => setActiveTab(tab)}
+                    onSelectTab={handleNavigateStudioTab}
+                    onOpenBigQuerySql={(sqlText) => {
+                      if (sqlText) setBigQueryInitialSql(sqlText);
+                      setActiveTab('BIGQUERY_STUDIO');
+                    }}
                     onRunInShell={handleRunInShell}
                     onRefreshGlobal={() =>
                       fetchProjectOverview(selectedProjectId)

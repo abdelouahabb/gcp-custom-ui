@@ -74,8 +74,12 @@ const STORAGE_CLASS_RATES_PER_GB = {
 
 export default function CloudStorageStudio({
   projectId,
+  initialSubTab = 'BUCKETS',
+  initialBucketName = '',
+  initialObjectName = '',
   onOpenProvision,
   onSelectTab,
+  onOpenBigQuerySql,
   onRunInShell,
   onRefreshGlobal,
   onShowToast,
@@ -83,10 +87,10 @@ export default function CloudStorageStudio({
 }) {
   const { version: pricingVersion, unitPricing } = useLivePricingCatalog();
 
-  const [activeSubTab, setActiveSubTab] = useState('BUCKETS'); // BUCKETS | OBJECTS | FINOPS_LIFECYCLE | TELEPORT
+  const [activeSubTab, setActiveSubTab] = useState(initialSubTab || 'BUCKETS');
   const [buckets, setBuckets] = useState([]);
   const [loadingBuckets, setLoadingBuckets] = useState(false);
-  const [selectedBucketName, setSelectedBucketName] = useState('');
+  const [selectedBucketName, setSelectedBucketName] = useState(initialBucketName || '');
   const [busyKey, setBusyKey] = useState(null);
 
   // Object Browser & Editor State
@@ -224,6 +228,35 @@ export default function CloudStorageStudio({
       fetchObjects(selectedBucket.name);
     }
   }, [selectedBucket?.name, showAllVersions, fetchObjects]);
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+      if (
+        initialSubTab === 'S3_COMPATIBLE_IMPORT' &&
+        s3RemoteObjects.length === 0
+      ) {
+        handleListS3Compatible(true, s3ProviderType);
+      }
+    }
+  }, [initialSubTab]);
+
+  useEffect(() => {
+    if (initialBucketName) {
+      setSelectedBucketName(initialBucketName);
+    }
+  }, [initialBucketName]);
+
+  useEffect(() => {
+    if (initialObjectName && (initialBucketName || selectedBucket?.name)) {
+      const targetBucket = initialBucketName || selectedBucket?.name;
+      setActiveSubTab('OBJECTS');
+      handleInspectObject(
+        { name: initialObjectName },
+        { bucketNameOverride: targetBucket }
+      );
+    }
+  }, [initialObjectName, initialBucketName]);
 
   useEffect(() => {
     if (
@@ -454,15 +487,19 @@ export default function CloudStorageStudio({
   };
 
   // Inspect an Object's Content & Metadata
-  const handleInspectObject = async (obj, { silent = false } = {}) => {
-    if (!selectedBucket) return;
+  const handleInspectObject = async (
+    obj,
+    { silent = false, bucketNameOverride = null } = {}
+  ) => {
+    const targetBucketName = bucketNameOverride || selectedBucket?.name;
+    if (!targetBucketName || !obj?.name) return;
     if (!silent) setLoadingInspect(true);
     try {
       const res = await axios.get(
         `/api/project/${encodeURIComponent(
           projectId
         )}/storage/buckets/${encodeURIComponent(
-          selectedBucket.name
+          targetBucketName
         )}/objects/content?name=${encodeURIComponent(obj.name)}`
       );
       setInspectedObject(res.data);
@@ -1545,6 +1582,17 @@ export default function CloudStorageStudio({
           fetchBuckets={fetchBuckets}
           busyKey={busyKey}
           setBusyKey={setBusyKey}
+          onOpenBigQuerySql={onOpenBigQuerySql}
+          onNavigateStudio={onSelectTab}
+          onSwitchStorageSubTab={(modId) => {
+            setActiveSubTab(modId);
+            if (
+              modId === 'S3_COMPATIBLE_IMPORT' &&
+              s3RemoteObjects.length === 0
+            ) {
+              handleListS3Compatible(true, s3ProviderType);
+            }
+          }}
           onShowToast={onShowToast}
           onShowError={onShowError}
         />
@@ -1963,27 +2011,59 @@ export default function CloudStorageStudio({
               </div>
             )}
 
-            {/* Imported Objects Confirmation & Direct Jump to Object Workbench */}
+            {/* Imported Objects Confirmation & Direct Jump to Object Workbench, DLP X-Ray & BigQuery */}
             {s3ImportedResults.length > 0 && (
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-extrabold text-emerald-700 dark:text-emerald-300">
                     Successfully Imported {s3ImportedResults.length} Object(s) from {s3ProviderType} into gs://{selectedBucket?.name}!
                   </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const first = s3ImportedResults[0];
-                      if (first?.gcsObjectName) {
-                        await handleInspectObject({ name: first.gcsObjectName });
-                      }
-                      setActiveSubTab('OBJECTS');
-                    }}
-                    className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Open Imported Files in Object Workbench →</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const first = s3ImportedResults[0];
+                        if (first?.gcsObjectName) {
+                          await handleInspectObject({ name: first.gcsObjectName });
+                        }
+                        setActiveSubTab('OBJECTS');
+                      }}
+                      className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Open in Object Workbench (M02) →</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubTab('DLP_XRAY')}
+                      className="h-8 px-3 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                      <span>Scan Imported Files with RAM DLP (M06) →</span>
+                    </button>
+                    {onOpenBigQuerySql && selectedBucket?.name && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const firstKey =
+                            s3ImportedResults[0]?.gcsObjectName ||
+                            `${s3TargetPrefix}*`;
+                          const ext = firstKey.split('.').pop()?.toLowerCase();
+                          const bqFmt =
+                            ext === 'parquet'
+                              ? 'PARQUET'
+                              : ext === 'csv'
+                              ? 'CSV'
+                              : 'NEWLINE_DELIMITED_JSON';
+                          const sql = `-- Federated Query on Imported ${s3ProviderType} Objects in gs://${selectedBucket.name}\nCREATE OR REPLACE EXTERNAL TABLE \`${projectId}.analytics_lakehouse.imported_${s3ProviderType.toLowerCase()}_ext\`\nOPTIONS (\n  format = '${bqFmt}',\n  uris = ['gs://${selectedBucket.name}/${firstKey}']\n);\n\nSELECT * FROM \`${projectId}.analytics_lakehouse.imported_${s3ProviderType.toLowerCase()}_ext\` LIMIT 100;`;
+                          onOpenBigQuerySql(sql);
+                        }}
+                        className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <span>Query Imported Data in BigQuery SQL →</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {s3ImportedResults.map((it) => (
@@ -2402,6 +2482,17 @@ export default function CloudStorageStudio({
           activeTab="X1"
           projectId={projectId}
           overview={{ buckets }}
+          initialBucketName={selectedBucket?.name}
+          onOpenObjectInWorkbench={(bucketName, objName) => {
+            if (bucketName) setSelectedBucketName(bucketName);
+            setActiveSubTab('OBJECTS');
+            if (objName) {
+              handleInspectObject(
+                { name: objName },
+                { bucketNameOverride: bucketName || selectedBucket?.name }
+              );
+            }
+          }}
           onRefreshGlobal={() => {
             fetchBuckets();
             if (onRefreshGlobal) onRefreshGlobal();
@@ -2416,6 +2507,17 @@ export default function CloudStorageStudio({
           activeTab="X4"
           projectId={projectId}
           overview={{ buckets }}
+          initialBucketName={selectedBucket?.name}
+          onOpenObjectInWorkbench={(bucketName, objName) => {
+            if (bucketName) setSelectedBucketName(bucketName);
+            setActiveSubTab('OBJECTS');
+            if (objName) {
+              handleInspectObject(
+                { name: objName },
+                { bucketNameOverride: bucketName || selectedBucket?.name }
+              );
+            }
+          }}
           onRefreshGlobal={() => {
             fetchBuckets();
             if (onRefreshGlobal) onRefreshGlobal();

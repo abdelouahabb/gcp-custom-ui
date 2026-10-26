@@ -148,6 +148,8 @@ export default function EngineerMoonshotsWave3({
   activeTab,
   projectId,
   overview,
+  initialBucketName = '',
+  onOpenObjectInWorkbench,
   onRefreshGlobal,
   onRunInShell,
   onShowToast,
@@ -167,9 +169,15 @@ export default function EngineerMoonshotsWave3({
   // X1 STATE: Cloud Storage DLP, Secret Leak & PII X-Ray Scanner
   // ==========================================================================
   const [buckets, setBuckets] = useState([]);
-  const [selectedDlpBucket, setSelectedDlpBucket] = useState('');
+  const [selectedDlpBucket, setSelectedDlpBucket] = useState(initialBucketName || '');
   const [dlpScanResult, setDlpScanResult] = useState(null);
   const [scanningDlp, setScanningDlp] = useState(false);
+
+  useEffect(() => {
+    if (initialBucketName) {
+      setSelectedDlpBucket(initialBucketName);
+    }
+  }, [initialBucketName]);
 
   const fetchBucketsForMoonshots = useCallback(async () => {
     if (!projectId) return;
@@ -1255,6 +1263,18 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>+ Inject Canary Leak File (Test Live)</span>
               </button>
+
+              {onOpenObjectInWorkbench && selectedDlpBucket && (
+                <button
+                  type="button"
+                  onClick={() => onOpenObjectInWorkbench(selectedDlpBucket, '')}
+                  title={`Open gs://${selectedDlpBucket} in the Cloud Storage Multi-Format Object Workbench (M02)`}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-mono font-bold cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Open Bucket in Object Workbench (M02) →</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1331,20 +1351,38 @@ Provide concise, actionable, production-grade guidance with exact gcloud CLI com
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={busyKey === `redact-${obj.objectName}`}
-                      onClick={() => handleRedactObjectInPlace(obj.objectName)}
-                      title={`Sanitize and overwrite gs://${dlpScanResult.bucket}/${obj.objectName} in-place by replacing all matched credentials & PII tokens with [REDACTED_BY_CLOUDPULSE_DLP]`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>
-                        {busyKey === `redact-${obj.objectName}`
-                          ? 'Redacting in GCS...'
-                          : '1-Tap Redact & Mask in GCS'}
-                      </span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {onOpenObjectInWorkbench && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenObjectInWorkbench(
+                              dlpScanResult.bucket,
+                              obj.objectName
+                            )
+                          }
+                          title={`Open gs://${dlpScanResult.bucket}/${obj.objectName} in the Line-Numbered Object Workbench (M02) to inspect lines, diff versions, or selectively redact`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Open &amp; Edit in Object Workbench (M02) →</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={busyKey === `redact-${obj.objectName}`}
+                        onClick={() => handleRedactObjectInPlace(obj.objectName)}
+                        title={`Sanitize and overwrite gs://${dlpScanResult.bucket}/${obj.objectName} in-place by replacing all matched credentials & PII tokens with [REDACTED_BY_CLOUDPULSE_DLP]`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>
+                          {busyKey === `redact-${obj.objectName}`
+                            ? 'Redacting in GCS...'
+                            : '1-Tap Redact & Mask in GCS'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1777,10 +1815,20 @@ CMD ["server/index.js"]`;
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-extrabold text-emerald-500">
                       {b.survivalScore}%
                     </span>
+                    {onOpenObjectInWorkbench && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenObjectInWorkbench(b.name, '')}
+                        title={`Open gs://${b.name} in the Object Workbench (M02) to inspect noncurrent object versions, restore soft-deleted generations, or toggle temporaryHold / eventBasedHold`}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold cursor-pointer"
+                      >
+                        Version Time-Machine &amp; Holds (M02) →
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={busyKey === `airgap-${b.name}`}

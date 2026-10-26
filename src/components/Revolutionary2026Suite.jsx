@@ -216,6 +216,11 @@ export default function Revolutionary2026Suite({
   const [subTab, setSubTab] = useState(
     initialSubTab || 'TOPOLOGY'
   );
+  useEffect(() => {
+    if (initialSubTab) {
+      setSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
   const [vms, setVms] = useState([]);
   const [auditData, setAuditData] = useState(null);
@@ -1568,7 +1573,11 @@ export default function Revolutionary2026Suite({
                   {publicFirewalls.map((fw) => (
                     <div
                       key={fw.id}
-                      className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono flex items-center justify-between gap-2"
+                      onClick={() =>
+                        onSelectStudioTab && onSelectStudioTab('VPC_NETWORKS')
+                      }
+                      title={`Click to inspect or lock firewall rule "${fw.name}" in VPC & Firewall Studio`}
+                      className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/60 text-[11px] font-mono flex items-center justify-between gap-2 cursor-pointer transition-colors"
                     >
                       <div className="truncate">
                         <span className="text-zinc-900 dark:text-zinc-100 font-bold">
@@ -1587,14 +1596,20 @@ export default function Revolutionary2026Suite({
                         </div>
                       </div>
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
-                        0.0.0.0/0
+                        0.0.0.0/0 →
                       </span>
                     </div>
                   ))}
                 </div>
-                <div className="w-full py-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-[11px] font-mono text-zinc-600 dark:text-zinc-400 text-center">
-                  → Routes into Layer 2 VPCs &amp; Edge
-                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onSelectStudioTab && onSelectStudioTab('VPC_NETWORKS')
+                  }
+                  className="w-full py-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 text-center cursor-pointer transition-colors"
+                >
+                  Open Firewall &amp; IAP Perimeter Studio →
+                </button>
               </div>
 
               {/* Layer 2: VPC Networks & Subnets */}
@@ -1607,12 +1622,16 @@ export default function Revolutionary2026Suite({
                   {vpcs.map((vpc) => (
                     <div
                       key={vpc.id}
-                      className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono space-y-1"
+                      onClick={() =>
+                        onSelectStudioTab && onSelectStudioTab('VPC_NETWORKS')
+                      }
+                      title={`Click to inspect VPC "${vpc.name}" in VPC & Firewall Studio`}
+                      className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/60 text-xs font-mono space-y-1 cursor-pointer transition-colors"
                     >
                       <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
                         <span>vpc/{vpc.name}</span>
                         <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded">
-                          MTU {vpc.mtu}
+                          MTU {vpc.mtu} →
                         </span>
                       </div>
                       <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
@@ -1652,12 +1671,16 @@ export default function Revolutionary2026Suite({
                       {vms.map((vm) => (
                         <div
                           key={vm.id}
-                          className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono"
+                          onClick={() =>
+                            onSelectStudioTab && onSelectStudioTab('VM_SSH')
+                          }
+                          title={`Click to open VM "${vm.name}" in Compute Engine Web-SSH & SCP/SFTP Studio`}
+                          className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/60 text-[11px] font-mono cursor-pointer transition-colors"
                         >
                           <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
                             <span>VM: {vm.name}</span>
                             <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded">
-                              {vm.zone}
+                              {vm.zone} · SSH/SCP →
                             </span>
                           </div>
                           <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
@@ -1668,12 +1691,16 @@ export default function Revolutionary2026Suite({
                       {runServices.map((srv) => (
                         <div
                           key={srv.id}
-                          className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono"
+                          onClick={() =>
+                            onSelectStudioTab && onSelectStudioTab('CLOUD_RUN')
+                          }
+                          title={`Click to manage Cloud Run service "${srv.name}" in Cloud Run Serverless Studio`}
+                          className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/60 text-[11px] font-mono cursor-pointer transition-colors"
                         >
                           <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
                             <span>Run: {srv.name}</span>
                             <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded">
-                              {srv.region}
+                              {srv.region} →
                             </span>
                           </div>
                           <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
@@ -1718,10 +1745,20 @@ export default function Revolutionary2026Suite({
                   {buckets.map((b) => (
                     <div
                       key={b.id}
-                      className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono"
+                      onClick={() =>
+                        onSelectStudioTab &&
+                        onSelectStudioTab('CLOUD_STORAGE', 'OBJECTS', {
+                          bucketName: b.name,
+                        })
+                      }
+                      title={`Click to open gs://${b.name} in the Cloud Storage Multi-Format Object Workbench (M02)`}
+                      className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/60 text-[11px] font-mono cursor-pointer transition-colors"
                     >
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                        gs://{b.name}
+                      <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between gap-2">
+                        <span className="truncate">gs://{b.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shrink-0">
+                          Workbench →
+                        </span>
                       </div>
                       <div className="text-[10px] text-zinc-500 dark:text-zinc-400 flex items-center justify-between mt-0.5">
                         <span>{b.region}</span>
@@ -1732,14 +1769,30 @@ export default function Revolutionary2026Suite({
                     </div>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
-                  title="Open the Live Resource Provisioner to create a compliant Cloud Storage bucket"
-                  className="w-full py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
-                >
-                  + Create GCS Bucket
-                </button>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => onOpenProvision && onOpenProvision('GCS_BUCKET')}
+                    title="Open the Live Resource Provisioner to create a compliant Cloud Storage bucket"
+                    className="py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                  >
+                    + Create Bucket
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectStudioTab &&
+                      onSelectStudioTab(
+                        'CLOUD_STORAGE',
+                        'S3_COMPATIBLE_IMPORT'
+                      )
+                    }
+                    title="Open S3 / MinIO / Ceph RGW Multi-Cloud Bucket Importer (M03)"
+                    className="py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-mono font-semibold text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                  >
+                    Import S3/MinIO
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -2286,6 +2339,14 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
           activeTab={subTab}
           projectId={projectId}
           overview={overview}
+          onOpenObjectInWorkbench={(bucketName, objName) => {
+            if (onSelectStudioTab) {
+              onSelectStudioTab('CLOUD_STORAGE', 'OBJECTS', {
+                bucketName,
+                objectName: objName || '',
+              });
+            }
+          }}
           onRefreshGlobal={() => {
             fetchExtraData();
             if (onRefreshOverview) onRefreshOverview();
