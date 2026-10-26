@@ -171,6 +171,14 @@ with DAG("customer_360_medallion_elt", schedule_interval="@hourly") as dag:
   const [sparkBucket, setSparkBucket] = useState(`${projectId || 'gcp-project'}-iceberg-lake`);
   const [sparkTemplate, setSparkTemplate] = useState('ICEBERG_MEDALLION');
 
+  // 9. Native GCP Lakehouse Workspace (BigFrames + BQ AI.FORECAST + DLT-Killer + BQML/Vertex Registry)
+  const [lakehouseActiveCell, setLakehouseActiveCell] = useState('CELL_1_EXPLORE');
+  const [dltExpectNonNull, setDltExpectNonNull] = useState(true);
+  const [dltExpectUnique, setDltExpectUnique] = useState(true);
+  const [dltExpectPositiveRev, setDltExpectPositiveRev] = useState(true);
+  const [dltQuarantineDlq, setDltQuarantineDlq] = useState(true);
+  const [bqmlModelType, setBqmlModelType] = useState('TIMESFM_FORECAST');
+
   const fetchOverview = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
@@ -943,201 +951,110 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
           </div>
         </div>
 
-        {/* Unified Data & Lakehouse Cross-Studio Ecosystem Bridge Bar */}
-        <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            <Layers className="w-3.5 h-3.5 text-blue-500" />
-            <span>Data &amp; Lakehouse Mesh Bridges:</span>
+        {/* 9 Symmetrical In-Studio Navigation Tabs (3x3 Equal-Sized Bento Grid — Stays Inside Data Engineering Studio) */}
+        <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Data Engineering Cockpit Modules (Select Module Below):</span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() =>
-                onNavigateTab?.('INNOVATION_LAB', 'FIVE_PERSONA_DATA_ENG')
-              }
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
-            >
-              [10-Persona] Column Lineage &amp; DLQ Replay →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onOpenBigQuerySql
-                  ? onOpenBigQuerySql('')
-                  : onNavigateTab?.('BIGQUERY_STUDIO')
-              }
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
-            >
-              BigQuery Capacitor &amp; SQL X-Ray →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onOpenBigLakeStudio
-                  ? onOpenBigLakeStudio('METASTORE_CATALOGS')
-                  : onNavigateTab?.('BIGLAKE_STUDIO', 'METASTORE_CATALOGS')
-              }
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer transition-colors"
-            >
-              BigLake Iceberg &amp; Compaction →
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab?.('WAVE10_FRONTIER')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
-            >
-              Spanner Graph (100-PU) &amp; Zero-ETL →
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab?.('CLOUD_SQL_STUDIO')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 cursor-pointer transition-colors"
-            >
-              Cloud SQL &amp; AlloyDB Columnar →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onNavigateTab?.('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
-              }
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer transition-colors"
-            >
-              [SDK 590.0.1] Orchestration &amp; DB Center →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onNavigateTab?.('INNOVATION_LAB', 'WAVE15_DYSON_MOONSHOT')
-              }
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30 cursor-pointer transition-colors"
-            >
-              Wave 15 Vector &amp; Z-Score SQL →
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab?.('ALIBABA_HUAWEI_PARITY')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer transition-colors"
-            >
-              PolarDB / Hologres HTAP Parity →
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab?.('SRE_WAR_ROOM')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition-colors"
-            >
-              VPC-SC Lakehouse Perimeter →
-            </button>
-            {onOpenTimeMachine && (
-              <button
-                type="button"
-                onClick={onOpenTimeMachine}
-                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition-colors"
-              >
-                SHA-256 Time-Machine
-              </button>
-            )}
-            {onOpenHealthAndDrift && (
-              <button
-                type="button"
-                onClick={onOpenHealthAndDrift}
-                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors"
-              >
-                1-Tap Health &amp; Drift Hub
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 8 Symmetrical Sub-Studio Navigation Cards (2x4 Equal-Sized Bento Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-white dark:bg-[#202124] p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-        {[
-          {
-            id: 'ICEBERG_50_MATRIX',
-            code: '01',
-            label: '50-Playbook Iceberg Lakehouse Matrix',
-            badge: '50 Scenarios',
-          },
-          {
-            id: 'MEDALLION_ELT',
-            code: '02',
-            label: 'Medallion Pipeline Builder',
-            badge: 'Source → Gold',
-          },
-          {
-            id: 'DATAFORM_SQLX',
-            code: '03',
-            label: 'Dataform & dbt Auto-Clean SQLX',
-            badge: 'QUALIFY Dedup',
-          },
-          {
-            id: 'DATAPLEX_MESH',
-            code: '04',
-            label: 'Dataplex Profiling & Data Products',
-            badge: 'SDK 590.0.1',
-          },
-          {
-            id: 'SCHEMA_CONTRACTS',
-            code: '05',
-            label: 'Visual Schema Mapper & Contracts',
-            badge: 'Zero Breakage',
-          },
-          {
-            id: 'SLOT_DOCTOR_DAGS',
-            code: '06',
-            label: 'Slot/Skew Doctor & Serverless DAGs',
-            badge: '-$348/mo',
-          },
-          {
-            id: 'DATA_AGENT_KIT',
-            code: '07',
-            label: 'Data Agent Kit (deployment.yaml & MCP)',
-            badge: 'MCP URIs',
-          },
-          {
-            id: 'SERVERLESS_SPARK',
-            code: '08',
-            label: 'Serverless Spark & BigLake Iceberg',
-            badge: '$0 Idle',
-          },
-        ].map((t) => {
-          const isActive = activeSubTab === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveSubTab(t.id)}
-              title={`${t.code}. ${t.label} (${t.badge})`}
-              className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
-                isActive
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {[
+              {
+                id: 'ICEBERG_50_MATRIX',
+                code: '01',
+                label: '50-Playbook Iceberg Lakehouse Matrix',
+                badge: '50 Scenarios',
+              },
+              {
+                id: 'MEDALLION_ELT',
+                code: '02',
+                label: 'Medallion Pipeline Builder',
+                badge: 'Source → Gold',
+              },
+              {
+                id: 'DATAFORM_SQLX',
+                code: '03',
+                label: 'Dataform & dbt Auto-Clean SQLX',
+                badge: 'QUALIFY Dedup',
+              },
+              {
+                id: 'DATAPLEX_MESH',
+                code: '04',
+                label: 'Dataplex Profiling & Data Products',
+                badge: 'SDK 590.0.1',
+              },
+              {
+                id: 'SCHEMA_CONTRACTS',
+                code: '05',
+                label: 'Visual Schema Mapper & Contracts',
+                badge: 'Zero Breakage',
+              },
+              {
+                id: 'SLOT_DOCTOR_DAGS',
+                code: '06',
+                label: 'Slot/Skew Doctor & Serverless DAGs',
+                badge: '-$348/mo',
+              },
+              {
+                id: 'DATA_AGENT_KIT',
+                code: '07',
+                label: 'Data Agent Kit (deployment.yaml & MCP)',
+                badge: 'MCP URIs',
+              },
+              {
+                id: 'SERVERLESS_SPARK',
+                code: '08',
+                label: 'Serverless Spark & BigLake Iceberg',
+                badge: '$0 Idle',
+              },
+              {
+                id: 'GCP_LAKEHOUSE_WORKSPACE',
+                code: '09',
+                label: 'GCP Native Lakehouse (BigFrames + AI.FORECAST + DLT)',
+                badge: '100% GCP Tech',
+              },
+            ].map((t) => {
+              const isActive = activeSubTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveSubTab(t.id)}
+                  title={`${t.code}. ${t.label} (${t.badge})`}
+                  className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                     isActive
-                      ? 'bg-black/25 text-white'
-                      : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                   }`}
                 >
-                  {t.code}
-                </span>
-                <span className="truncate">{t.label}</span>
-              </div>
-              <span
-                className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
-                  isActive
-                    ? 'bg-white/20 text-white'
-                    : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
-                }`}
-              >
-                {t.badge}
-              </span>
-            </button>
-          );
-        })}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
+                        isActive
+                          ? 'bg-black/25 text-white'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      {t.code}
+                    </span>
+                    <span className="truncate">{t.label}</span>
+                  </div>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
+                    }`}
+                  >
+                    {t.badge}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* TAB 0: 50-PLAYBOOK BORDERLESS ICEBERG LAKEHOUSE MATRIX */}
@@ -2766,6 +2683,514 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 </div>
                 <pre className="p-2.5 rounded-xl bg-zinc-100 dark:bg-black/70 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto">
                   {sparkArtifacts.cliCmd}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* SUB-STUDIO 9: 100% GOOGLE CLOUD NATIVE LAKEHOUSE WORKSPACE          */}
+      {/* (BigFrames + BigQuery AI.FORECAST/AI.GENERATE_TABLE + DLT-Killer    */}
+      {/*  Dataform Assertions + Zero-Infra BQML / Vertex AI Model Registry)  */}
+      {/* =================================================================== */}
+      {activeSubTab === 'GCP_LAKEHOUSE_WORKSPACE' && (
+        <div className="space-y-4">
+          {/* Executive Architecture Banner */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-[10px] font-mono font-extrabold uppercase tracking-wider">
+                  100% Native Google Cloud Lakehouse Workspace
+                </span>
+                <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 text-[10px] font-mono font-bold">
+                  BigFrames (`bigframes.pandas`) · BigQuery `AI.FORECAST` (TimesFM) &amp; `AI.GENERATE_TABLE` (Gemini 2.5 Flash) · Dataform SQLX Assertions · Vertex AI Model Registry
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenBigLakeStudio
+                    ? onOpenBigLakeStudio('DATABRICKS_UNITY_BRIDGE')
+                    : onNavigateTab?.('BIGLAKE_STUDIO', 'DATABRICKS_UNITY_BRIDGE')
+                }
+                className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-500/50 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-semibold cursor-pointer"
+              >
+                Need Cross-Cloud Federation? Open Unity &amp; Glue Bridge →
+              </button>
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              <strong>Why build a Lakehouse with 100% Native Google Cloud tech instead of third-party platforms?</strong>{' '}
+              Instead of paying a second license tax (`DBUs`) and managing warm VM clusters, Google Cloud gives you a{' '}
+              <strong>Zero-Ops, Serverless Multi-Engine Lakehouse</strong> where{' '}
+              <strong>BigQuery SQL</strong>, <strong>BigFrames (`bigframes.pandas`)</strong>,{' '}
+              <strong>Dataproc Serverless Spark 2.2</strong>, <strong>Dataform Declarative Quality Assertions</strong>, and{' '}
+              <strong>Vertex AI Foundation Models (`TimesFM` + `Gemini 2.5 Flash`)</strong> operate directly over the same{' '}
+              <strong>BigLake Managed Apache Iceberg</strong> tables on Cloud Storage (`gs://{sparkBucket}`) with zero data movement.
+            </p>
+
+            {/* 4-Pillar Side-by-Side Architecture Mapping Table */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 font-mono text-xs">
+              {[
+                {
+                  code: 'P01',
+                  legacy: 'Databricks Notebooks & Koalas / Pandas-on-Spark',
+                  gcpNative: 'BigFrames (`bigframes.pandas`)',
+                  advantage:
+                    'Partial ordering mode (`ordering_mode = "partial"`), `.peek(n)` instant sampling, zero client OOMs, and native `.str` / `.dt` pushdown to BigQuery.',
+                },
+                {
+                  code: 'P02',
+                  legacy: 'Delta Live Tables (`@dlt.table` / `@dlt.expect`)',
+                  gcpNative: 'Dataform SQLX Assertions + BigLake Iceberg',
+                  advantage:
+                    '100% Free ($0.00 DBU markup) declarative `nonNull`, `uniqueKey`, and `rowConditions` assertions with incremental `QUALIFY ROW_NUMBER() = 1` merges.',
+                },
+                {
+                  code: 'P03',
+                  legacy: 'Mosaic AI / Custom Batch LLM Inference',
+                  gcpNative: 'BigQuery `AI.FORECAST` & `AI.GENERATE_TABLE`',
+                  advantage:
+                    'Zero-infra SQL TVFs powered by Google `TimesFM` (forecasting) and `gemini-2.5-flash` (structured table generation) using `CONNECTION "DEFAULT"`.',
+                },
+                {
+                  code: 'P04',
+                  legacy: 'Self-Hosted MLflow Tracking Server',
+                  gcpNative: 'BigQuery ML + Vertex AI Model Registry',
+                  advantage:
+                    'Train in-place with `CREATE OR REPLACE MODEL ... OPTIONS(model_registry="VERTEX_AI")`, inspect via `ML.DESCRIBE_DATA` & `ML.EVALUATE`.',
+                },
+              ].map((pillar) => (
+                <div
+                  key={pillar.code}
+                  className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold">
+                      {pillar.code}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 truncate">
+                      Replaces: {pillar.legacy}
+                    </span>
+                  </div>
+                  <div className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs">
+                    {pillar.gcpNative}
+                  </div>
+                  <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed font-sans">
+                    {pillar.advantage}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* MODULE 1: MULTI-ENGINE SERVERLESS LAKEHOUSE NOTEBOOK WORKBENCH */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
+                  Module 1 · Multi-Engine Interactive Lakehouse Notebook (`%%bqsql` + `bigframes.pandas` + `AI.FORECAST` + `AI.GENERATE_TABLE`)
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Select any cell in the 4-stage Lakehouse workflow below to inspect, copy, or execute live against project <code className="font-mono font-bold">{projectId}</code>.
+                </p>
+              </div>
+              <div className="text-[10px] font-mono text-zinc-500">
+                Target Dataset: <strong className="text-zinc-800 dark:text-zinc-200">{projectId}.{cleanTargetDs}</strong> · Bucket: <strong className="text-zinc-800 dark:text-zinc-200">gs://{sparkBucket}</strong>
+              </div>
+            </div>
+
+            {/* Equal-Width 4-Column Cell Selector */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {[
+                {
+                  id: 'CELL_1_EXPLORE',
+                  code: 'C01',
+                  engine: '%%bqsql (Explore)',
+                  title: 'ML.DESCRIBE_DATA & Sample',
+                },
+                {
+                  id: 'CELL_2_BIGFRAMES',
+                  code: 'C02',
+                  engine: 'bigframes.pandas',
+                  title: 'Distributed Cloud DataFrame',
+                },
+                {
+                  id: 'CELL_3_BQ_AI_ML',
+                  code: 'C03',
+                  engine: '%%bqsql (GenAI & TimesFM)',
+                  title: 'AI.FORECAST & AI.GENERATE_TABLE',
+                },
+                {
+                  id: 'CELL_4_VERTEX_MODEL',
+                  code: 'C04',
+                  engine: '%%bqsql (Vertex Registry)',
+                  title: 'BQML + Vertex Model Registry',
+                },
+              ].map((cell) => {
+                const isSelected = lakehouseActiveCell === cell.id;
+                return (
+                  <button
+                    key={cell.id}
+                    type="button"
+                    onClick={() => setLakehouseActiveCell(cell.id)}
+                    className={`w-full h-11 px-3 rounded-xl border text-left font-mono transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                          isSelected
+                            ? 'bg-black/25 text-white'
+                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                      >
+                        {cell.code}
+                      </span>
+                      <span className="text-xs font-bold truncate">{cell.title}</span>
+                    </div>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold shrink-0 ${
+                        isSelected
+                          ? 'bg-white/20 text-white'
+                          : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      {cell.engine}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Active Cell Code & Execution Controls */}
+            {(() => {
+              const targetFqTable = `${projectId}.${cleanTargetDs}.${cleanTargetTable}`;
+              const cellsMap = {
+                CELL_1_EXPLORE: {
+                  badge: 'Cell 01 · Mandatory Data Exploration (`ML.DESCRIBE_DATA` + Sample Preview)',
+                  why: 'Following Google Cloud BigQuery AI/ML best practices, always profile distribution statistics (`ML.DESCRIBE_DATA`) and sample rows (`LIMIT 10`) before training models or invoking foundation TVFs.',
+                  isSql: true,
+                  code: `%%bqsql
+-- Step 1: Ensure target Lakehouse schema exists
+CREATE SCHEMA IF NOT EXISTS \`${projectId}.${cleanTargetDs}\`;
+
+-- Step 2: Mandatory statistical profiling via ML.DESCRIBE_DATA
+SELECT *
+FROM ML.DESCRIBE_DATA(
+  TABLE \`${targetFqTable}\`,
+  STRUCT(5 AS top_k, 4 AS num_quantiles)
+);
+
+-- Step 3: Fast preview sample (LIMIT 10)
+SELECT
+  ${dedupKey},
+  event_type,
+  revenue_usd,
+  ${orderByCol}
+FROM \`${targetFqTable}\`
+LIMIT 10;`,
+                },
+                CELL_2_BIGFRAMES: {
+                  badge: 'Cell 02 · BigQuery DataFrames (`bigframes.pandas`) — Zero Client OOMs',
+                  why: 'Replaces Databricks Koalas / PySpark DataFrames with 100% serverless pushdown to BigQuery. Uses partial ordering mode (`ordering_mode = "partial"`), `.peek(5)` random sampling instead of `.head()`, and native `.str` accessors instead of slow Python UDFs.',
+                  isSql: false,
+                  code: `import bigframes.pandas as bpd
+import bigframes.bigquery.ml as bqml
+
+# 1. Enable partial ordering mode right after import for maximum BigQuery pushdown speed
+bpd.options.bigquery.project = "${projectId}"
+bpd.options.bigquery.ordering_mode = "partial"
+
+# 2. Reference the BigLake Iceberg / BigQuery table without downloading data to client RAM
+df = bpd.read_gbq("${targetFqTable}")
+
+# 3. Use built-in vectorized .str accessors (never Python lambda UDFs!)
+df["event_type_clean"] = df["event_type"].str.strip().str.upper()
+df["revenue_usd_filled"] = df["revenue_usd"].fillna(0.0)
+
+# 4. Verify schema (.dtypes) and preview with .peek(5) instead of .head() or .to_pandas()
+print(df.dtypes)
+display(df.peek(5))`,
+                },
+                CELL_3_BQ_AI_ML: {
+                  badge: 'Cell 03 · Zero-Infra Foundation Models (`AI.FORECAST` TimesFM + `AI.GENERATE_TABLE` Gemini 2.5 Flash)',
+                  why: 'Runs Google Research TimesFM time-series forecasting and Gemini 2.5 Flash structured table generation directly inside BigQuery SQL using Table-Valued Functions (TVFs) in the FROM clause and named `=>` arguments.',
+                  isSql: true,
+                  code: `%%bqsql
+-- 1. Zero-Shot Time-Series Revenue Forecasting powered by Google TimesFM (AI.FORECAST TVF in FROM clause)
+SELECT
+  forecast_timestamp,
+  forecast_value AS predicted_daily_revenue_usd,
+  prediction_interval_lower_bound,
+  prediction_interval_upper_bound
+FROM AI.FORECAST(
+  TABLE \`${targetFqTable}\`,
+  data_col => 'revenue_usd',
+  timestamp_col => '${orderByCol}',
+  horizon => 30,
+  confidence_level => 0.95
+);
+
+-- 2. Structured Generative AI Table Enrichment with Gemini 2.5 Flash (AI.GENERATE_TABLE TVF in FROM clause)
+CREATE OR REPLACE MODEL \`${projectId}.${cleanTargetDs}.gemini_flash_lakehouse\`
+REMOTE WITH CONNECTION \`DEFAULT\`
+OPTIONS (endpoint = 'gemini-2.5-flash');
+
+SELECT
+  ${dedupKey},
+  event_type,
+  revenue_usd,
+  executive_summary,
+  churn_risk_tier,
+  recommended_next_action
+FROM AI.GENERATE_TABLE(
+  MODEL \`${projectId}.${cleanTargetDs}.gemini_flash_lakehouse\`,
+  (
+    SELECT
+      ${dedupKey},
+      event_type,
+      revenue_usd,
+      CONCAT(
+        'Analyze lakehouse event ', CAST(event_type AS STRING),
+        ' with revenue $', CAST(revenue_usd AS STRING),
+        ' and classify churn risk tier and next best action.'
+      ) AS prompt
+    FROM \`${targetFqTable}\`
+    LIMIT 25
+  ),
+  STRUCT(
+    'executive_summary STRING, churn_risk_tier STRING, recommended_next_action STRING' AS output_schema
+  )
+);`,
+                },
+                CELL_4_VERTEX_MODEL: {
+                  badge: 'Cell 04 · Zero-Infra MLflow Replacement (`BigQuery ML` + `Vertex AI Model Registry`)',
+                  why: 'Eliminates hosting a separate Databricks MLflow tracking server. Trains directly on your BigLake/BigQuery table with automatic splitting (`AUTO_SPLIT`) and registers the model natively in Vertex AI Model Registry in a single SQL statement.',
+                  isSql: true,
+                  code: `%%bqsql
+-- 1. Train & automatically register in Vertex AI Model Registry (zero MLflow infra, default AUTO_SPLIT)
+CREATE OR REPLACE MODEL \`${projectId}.${cleanTargetDs}.customer_ltv_boosted_tree\`
+OPTIONS (
+  model_type = 'BOOSTED_TREE_REGRESSOR',
+  input_label_cols = ['revenue_usd'],
+  model_registry = 'VERTEX_AI',
+  vertex_ai_model_id = 'cloudpulse_${cleanTargetTable}_ltv'
+) AS
+SELECT
+  event_type,
+  EXTRACT(DAYOFWEEK FROM ${orderByCol}) AS event_day_of_week,
+  EXTRACT(HOUR FROM ${orderByCol}) AS event_hour_utc,
+  revenue_usd
+FROM \`${targetFqTable}\`
+WHERE revenue_usd IS NOT NULL;
+
+-- 2. Evaluate registered model metrics natively via ML.EVALUATE
+SELECT *
+FROM ML.EVALUATE(MODEL \`${projectId}.${cleanTargetDs}.customer_ltv_boosted_tree\`);`,
+                },
+              };
+
+              const activeCellObj = cellsMap[lakehouseActiveCell] || cellsMap.CELL_1_EXPLORE;
+              const runnableSql = activeCellObj.code.replace(/^%%bqsql\s*\n/, '');
+
+              return (
+                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {activeCellObj.badge}
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5">
+                        {activeCellObj.why}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {activeCellObj.isSql && onOpenBigQuerySql && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenBigQuerySql(runnableSql)}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-mono font-bold cursor-pointer"
+                        >
+                          Run Cell Live in BigQuery Studio →
+                        </button>
+                      )}
+                      {onRunInShell && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRunInShell(
+                              activeCellObj.isSql
+                                ? `bq query --project_id=${projectId} --use_legacy_sql=false ${JSON.stringify(
+                                    runnableSql.split(';')[0] + ';'
+                                  )}`
+                                : `python3 -c ${JSON.stringify(activeCellObj.code)}`
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[11px] font-mono font-bold cursor-pointer"
+                        >
+                          Execute in Cloud Shell
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => copyText(activeCellObj.code, 'LAKEHOUSE_CELL')}
+                        className="px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-[11px] font-mono font-semibold cursor-pointer"
+                      >
+                        {copiedKey === 'LAKEHOUSE_CELL' ? 'Copied!' : 'Copy Cell'}
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="p-3.5 rounded-xl bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto leading-relaxed max-h-96">
+                    {activeCellObj.code}
+                  </pre>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* MODULE 2: DELTA LIVE TABLES (@dlt.expect) -> NATIVE DATAFORM SQLX + BIGLAKE ICEBERG CONVERTER */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
+                  Module 2 · Declarative Pipeline Engine — Replace `@dlt.expect` with $0.00 Google Cloud Dataform SQLX + BigLake Iceberg
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Toggle declarative data quality expectations below to synthesize both the legacy `@dlt.table` specification and its 100% free Google Cloud Dataform SQLX + BigQuery live assertion verification query.
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-extrabold">
+                Dataform Orchestration Fee: $0.00/mo
+              </span>
+            </div>
+
+            {/* 4 Equal-Width Expectation Toggles */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 font-mono text-xs">
+              {[
+                {
+                  id: 'NON_NULL',
+                  label: `nonNull: ["${dedupKey}", "${orderByCol}"]`,
+                  checked: dltExpectNonNull,
+                  onChange: () => setDltExpectNonNull((v) => !v),
+                },
+                {
+                  id: 'UNIQUE_KEY',
+                  label: `uniqueKey: ["${dedupKey}"] (QUALIFY Dedup)`,
+                  checked: dltExpectUnique,
+                  onChange: () => setDltExpectUnique((v) => !v),
+                },
+                {
+                  id: 'POSITIVE_REV',
+                  label: 'rowConditions: ["revenue_usd >= 0"]',
+                  checked: dltExpectPositiveRev,
+                  onChange: () => setDltExpectPositiveRev((v) => !v),
+                },
+                {
+                  id: 'QUARANTINE_DLQ',
+                  label: 'Auto-Route Failing Rows to Quarantine Table',
+                  checked: dltQuarantineDlq,
+                  onChange: () => setDltQuarantineDlq((v) => !v),
+                },
+              ].map((exp) => (
+                <label
+                  key={exp.id}
+                  className="p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={exp.checked}
+                    onChange={exp.onChange}
+                    className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                    {exp.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Left: Legacy DLT Code */}
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono font-bold text-zinc-500">
+                    Legacy Proprietary `@dlt.table` (Requires Paid DLT Compute DBUs)
+                  </span>
+                </div>
+                <pre className="p-3 rounded-lg bg-zinc-100 dark:bg-black/70 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-zinc-600 dark:text-zinc-400 overflow-x-auto leading-relaxed">
+{`import dlt
+from pyspark.sql.functions import col, row_number
+from pyspark.sql.window import Window
+
+@dlt.table(name="${cleanTargetTable}", table_properties={"quality": "silver"})
+${dltExpectNonNull ? `@dlt.expect_or_drop("valid_${dedupKey}", "${dedupKey} IS NOT NULL AND ${orderByCol} IS NOT NULL")\n` : ''}${dltExpectPositiveRev ? `@dlt.expect_or_drop("non_negative_revenue", "revenue_usd >= 0")\n` : ''}def build_${cleanTargetTable}():
+    df = dlt.read_stream("bronze_events")
+    ${
+      dltExpectUnique
+        ? `w = Window.partitionBy("${dedupKey}").orderBy(col("${orderByCol}").desc())
+    return df.withColumn("rn", row_number().over(w)).filter(col("rn") == 1).drop("rn")`
+        : `return df`
+    }`}
+                </pre>
+              </div>
+
+              {/* Right: 100% Native Google Cloud Dataform SQLX + BigLake Iceberg */}
+              <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-mono font-extrabold text-emerald-700 dark:text-emerald-400">
+                    100% Native GCP Dataform SQLX + BigLake Iceberg ($0.00 Orchestration)
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {onOpenBigQuerySql && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenBigQuerySql(
+                            `-- Live BigQuery Data Quality Assertion Verification for ${projectId}.${cleanTargetDs}.${cleanTargetTable}\nSELECT\n  COUNT(*) AS total_rows,\n  COUNTIF(${dedupKey} IS NULL OR ${orderByCol} IS NULL) AS null_key_violations,\n  COUNT(*) - COUNT(DISTINCT ${dedupKey}) AS duplicate_key_violations,\n  COUNTIF(revenue_usd < 0) AS negative_revenue_violations\nFROM \`${projectId}.${cleanTargetDs}.${cleanTargetTable}\`;`
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-mono font-bold cursor-pointer"
+                      >
+                        Verify Assertions in BigQuery →
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <pre className="p-3 rounded-lg bg-zinc-100 dark:bg-black/80 border border-zinc-200 dark:border-zinc-800 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 overflow-x-auto leading-relaxed">
+{`-- definitions/silver/${cleanTargetTable}.sqlx
+config {
+  type: "incremental",
+  schema: "${cleanTargetDs}",
+  name: "${cleanTargetTable}",
+  uniqueKey: ["${dedupKey}"],
+  bigquery: {
+    partitionBy: "DATE(${orderByCol})",
+    clusterBy: ["event_type"]
+  },
+  assertions: {${dltExpectNonNull ? `\n    nonNull: ["${dedupKey}", "${orderByCol}"],` : ''}${dltExpectUnique ? `\n    uniqueKey: ["${dedupKey}"],` : ''}${dltExpectPositiveRev ? `\n    rowConditions: ["revenue_usd >= 0"]` : ''}
+  }
+}
+
+SELECT
+  TRIM(CAST(${dedupKey} AS STRING)) AS ${dedupKey},
+  UPPER(TRIM(CAST(event_type AS STRING))) AS event_type,
+  COALESCE(SAFE_CAST(revenue_usd AS FLOAT64), 0.0) AS revenue_usd,
+  ${orderByCol}
+FROM \${ref("bronze_events")}
+WHERE 1=1${dltExpectNonNull ? `\n  AND ${dedupKey} IS NOT NULL AND ${orderByCol} IS NOT NULL` : ''}${dltExpectPositiveRev ? `\n  AND COALESCE(SAFE_CAST(revenue_usd AS FLOAT64), 0.0) >= 0` : ''}${
+  dltExpectUnique
+    ? `\nQUALIFY ROW_NUMBER() OVER (PARTITION BY ${dedupKey} ORDER BY ${orderByCol} DESC) = 1`
+    : ''
+}${
+  dltQuarantineDlq
+    ? `\n\n-- Companion Quarantine View: definitions/quarantine/${cleanTargetTable}_dlq.sqlx\n-- Captures rows failing expectations for zero-loss replay`
+    : ''
+}`}
                 </pre>
               </div>
             </div>

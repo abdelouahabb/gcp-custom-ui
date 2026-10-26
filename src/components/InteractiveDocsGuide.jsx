@@ -1624,6 +1624,32 @@ const DOC_SECTIONS = [
     billingImpact:
       '$0.00 egress for server-side GCS rewriteTo copies/renames; direct streaming S3/MinIO/Ceph ingress into GCS is $0.00 GCP ingress fee; Per-Object Storage Class tiering cuts cold object storage costs by up to 80% ($0.020 -> $0.0012/GB-mo).',
   },
+  {
+    id: 'databricks-unity-federation-native-gcp-lakehouse-and-enterprise-ux-evolution',
+    wave: 'WAVE 18 DATABRICKS UNITY FEDERATION, NATIVE GCP LAKEHOUSE & STUDIO UX',
+    title:
+      '46. Databricks Unity & AWS Glue Federation, 100% Native GCP Lakehouse Workspace (BigFrames 2.0 + AI.FORECAST + Dataform DLT) & VM Metadata Filter Evolution',
+    badge: 'BigLake Tab 06 + Medallion ELT Tab 09 + VM Metadata Filter Bar + Studio UX',
+    badgeColor:
+      'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
+    icon: Database,
+    targetTab: 'DATA_ENGINEER',
+    problemSolved:
+      'Data teams paying the $0.15-$0.55/DBU Databricks markup need both a zero-copy Iceberg REST federation bridge for existing Databricks Unity Catalog / AWS Glue tables AND a 100% native Google Cloud replacement for PySpark notebooks, Delta Live Tables (@dlt.expect), and MLflow—while platform operators need self-contained studio navigation (no cross-studio exit traps), compact <select> filter toolbars, inline SKU Price Drift attribution, and VM metadata/tag/label filtering with Free-Tier pd-standard HDD defaults.',
+    howItWorks: [
+      'Databricks Unity Catalog & AWS Glue Federation Bridge (BigLake Iceberg Studio -> Tab 06): Discovers and provisions federated Iceberg REST catalogs (GET & POST /api/project/:id/biglake/federated-catalogs) using Secret Manager PAT/OAuth credentials, BigQuery Cloud Resource Connections, and EXTERNAL_CATALOGBigQuery datasets across GCP and AWS S3 (aws-us-east-1 / aws-us-west-2).',
+      '100% Native Google Cloud Lakehouse Workspace ($0.00 DBU Tax · Medallion ELT Studio -> Tab 09): Interactive 4-pillar workbench replacing Databricks end-to-end on Google Cloud: (01) BigFrames 2.0 (bigframes.pandas + bigframes.ml) pushing pandas/scikit-learn syntax down to BigQuery SQL, (02) BigQuery AI.FORECAST (TimesFM 2.0 Zero-Shot Foundation Model), AI.GENERATE_TABLE & VECTOR_SEARCH, (03) Dataform SQLX Declarative Assertions (assertions.nonNull / rowConditions replacing @dlt.expect) + BigQuery Continuous Queries, and (04) BQML + Vertex AI Model Registry replacing MLflow.',
+      'Self-Contained Studio Hero Navigation & Compact <select> Filter Toolbars: Eliminated cross-studio exit-link buttons in hero headers across all studios (moving each studio’s own internal modules into its hero card) and replaced multi-row filter button grids with compact <select> dropdown + Search + Reset toolbars across Iceberg 50-Playbook Matrix, 2026 Lab, gcloud Alpha/Beta, Remote MCP, VPC Firewalls, and Docs.',
+      'Compute Engine VM Metadata Filter Bar, Free-Tier pd-standard Default & Inline Price Drift Attribution: Removed redundant 1-Tap VM Presets, defaulted VM provisioning to Standard Persistent Disk HDD (pd-standard — 30GB Always Free Tier eligible), restored full-width flat Region Filter buttons, added a live VM Metadata & Attribute Filter Bar (Status, Machine Type, Disk/Provisioning Model, and Network Tag / Label / Metadata Key <select> filters), and made the Global Map Price Drift badge display the exact drifted SKU metric inline.',
+    ],
+    apisUsed: [
+      'GET & POST /api/project/:id/biglake/federated-catalogs (BigQuery v2 Datasets + BigQuery Connection v1beta1 + Secret Manager v1 + Storage v1)',
+      'POST /api/project/:id/bigquery/query & POST /api/project/:id/data-engineer/action (BigFrames 2.0, AI.FORECAST TimesFM, Dataform SQLX & Dataplex)',
+      'GET /api/project/:id/vms (Enriched with labels, metadataKeys, tags & serviceAccountEmail) & GET /api/pricing/live-sync',
+    ],
+    billingImpact:
+      'Eliminates the 25%-45% Databricks DBU compute markup ($0.00 DBU tax on BigQuery/BigFrames/Dataform) and prevents accidental paid SSD charges by defaulting new VMs to Free-Tier eligible pd-standard HDD.',
+  },
 ];
 
 export default function InteractiveDocsGuide({
@@ -1682,42 +1708,56 @@ export default function InteractiveDocsGuide({
           </button>
         </div>
 
-        {/* Search & Wave Filter Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2">
-          <div className="md:col-span-6 relative">
+        {/* Compact Search + Wave Dropdown Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="relative flex-1">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search documentation (e.g. 'hibernate', 'terraform', 'zombie', 'teleport', 'billing', 'gpu')..."
-              className="w-full bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-10 pr-4 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-blue-500"
+              className="w-full h-9 bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-10 pr-4 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-blue-500"
             />
           </div>
 
-          <div className="md:col-span-6 flex items-center gap-1.5 flex-wrap">
-            {[
-              { id: 'ALL', label: `All Innovations (${DOC_SECTIONS.length})` },
-              { id: 'WAVE 5', label: 'Wave 5 Cloud Brain & SKU' },
-              { id: 'WAVE 4', label: 'Wave 4 Global Map (40 Regions)' },
-              { id: 'WAVE 3', label: 'Wave 3 Orbital HUD' },
-              { id: 'WAVE 2', label: 'Wave 2 Wishlist' },
-              { id: 'WAVE 1', label: 'Wave 1 FinOps & IaC' },
-              { id: 'EMERGENCY', label: 'Kill-Switches' },
-            ].map((f) => (
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <span className="text-[11px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
+              Wave Filter:
+            </span>
+            <select
+              aria-label="Filter Documentation by Wave"
+              value={selectedWave}
+              onChange={(e) => setSelectedWave(e.target.value)}
+              className="h-9 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+            >
+              {[
+                { id: 'ALL', label: `All Innovations (${DOC_SECTIONS.length})` },
+                { id: 'WAVE 5', label: 'Wave 5 · Cloud Brain & SKU' },
+                { id: 'WAVE 4', label: 'Wave 4 · Global Map (40 Regions)' },
+                { id: 'WAVE 3', label: 'Wave 3 · Orbital HUD' },
+                { id: 'WAVE 2', label: 'Wave 2 · Wishlist' },
+                { id: 'WAVE 1', label: 'Wave 1 · FinOps & IaC' },
+                { id: 'EMERGENCY', label: 'Emergency · Kill-Switches' },
+              ].map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+
+            {(selectedWave !== 'ALL' || searchQuery.trim() !== '') && (
               <button
-                key={f.id}
                 type="button"
-                onClick={() => setSelectedWave(f.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-colors cursor-pointer ${
-                  selectedWave === f.id
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
-                }`}
+                onClick={() => {
+                  setSelectedWave('ALL');
+                  setSearchQuery('');
+                }}
+                className="h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-mono font-bold cursor-pointer"
               >
-                {f.label}
+                Reset
               </button>
-            ))}
+            )}
           </div>
         </div>
       </div>

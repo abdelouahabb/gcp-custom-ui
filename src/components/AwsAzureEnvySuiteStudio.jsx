@@ -2254,61 +2254,6 @@ export default function AwsAzureEnvySuiteStudio({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {onOpenHealthAndDrift && (
-              <button
-                type="button"
-                onClick={onOpenHealthAndDrift}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm cursor-pointer"
-                title="Open 1-Tap Project Health, Drift, FinOps & Control-Plane Synthesis Hub"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Health &amp; Drift Hub</span>
-              </button>
-            )}
-
-            {onNavigateToGcpTab && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToGcpTab('INNOVATION_LAB', 'TERRAFORM')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer"
-                  title="Jump to 2026 Beyond-Console Innovation Lab (22 Labs, Reverse-Terraform & Moonshots)"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>2026 Innovation →</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToGcpTab('CLOUD_SOC')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-rose-600 hover:bg-rose-500 text-white shadow-sm cursor-pointer"
-                  title="Jump to Wave 16 Autonomous 20-Pillar Cloud SOC & SOAR Studio"
-                >
-                  <Radar className="w-3.5 h-3.5" />
-                  <span>Cloud SOC (20-Pillar) →</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToGcpTab('SRE_WAR_ROOM')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm cursor-pointer"
-                  title="Jump to Wave 8 Principal 12-Pillar SRE War-Room & SLO Burn Studio"
-                >
-                  <Flame className="w-3.5 h-3.5" />
-                  <span>SRE War-Room (12-Pillar) →</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onNavigateToGcpTab('SOVEREIGN_STUDIO', 'TIME_MACHINE')
-                  }
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-extrabold bg-purple-600 hover:bg-purple-500 text-white shadow-sm cursor-pointer"
-                  title="Jump to Wave 7 SHA-256 Cloud State Time-Machine & Drift Radar"
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Time-Machine &amp; Drift →</span>
-                </button>
-              </>
-            )}
-
             {onSwitchCloudFamily && (
               <div className="inline-flex items-center p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold">
                 <button
@@ -2316,7 +2261,7 @@ export default function AwsAzureEnvySuiteStudio({
                   onClick={() => onSwitchCloudFamily('AWS_AZURE')}
                   className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     !isChinaSuite
-                      ? 'bg-indigo-600 text-white shadow-sm'
+                      ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
@@ -2327,7 +2272,7 @@ export default function AwsAzureEnvySuiteStudio({
                   onClick={() => onSwitchCloudFamily('ALIBABA_HUAWEI')}
                   className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     isChinaSuite
-                      ? 'bg-orange-600 text-white shadow-sm'
+                      ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >

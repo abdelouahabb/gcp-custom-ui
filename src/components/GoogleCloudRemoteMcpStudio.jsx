@@ -980,7 +980,7 @@ export default function GoogleCloudRemoteMcpStudio({
   return (
     <div className="space-y-5">
       {/* Top Executive Banner */}
-      <div className="rounded-2xl border border-indigo-500/40 bg-gradient-to-r from-indigo-500/10 via-cyan-500/10 to-emerald-500/10 p-5 space-y-4">
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#141518] p-5 shadow-sm space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-[10px] font-mono font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
@@ -1103,34 +1103,30 @@ export default function GoogleCloudRemoteMcpStudio({
             </span>
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap gap-1.5">
-            {Object.entries(CATEGORY_LABELS).map(([catKey, catLabel]) => (
-              <button
-                key={catKey}
-                type="button"
-                onClick={() => setCategoryFilter(catKey)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-colors cursor-pointer ${
-                  categoryFilter === catKey
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-                }`}
-              >
-                {catLabel}
-              </button>
-            ))}
-          </div>
-
-          {/* Search Filter */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by product, endpoint (e.g. bigquery, spanner, iam, trace)..."
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono"
-            />
+          {/* Compact Search + Category Dropdown Toolbar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter by product, endpoint (e.g. bigquery, spanner, iam)..."
+                className="w-full h-8 pl-8 pr-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            <select
+              aria-label="Filter by MCP Product Category"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer shrink-0"
+            >
+              {Object.entries(CATEGORY_LABELS).map(([catKey, catLabel]) => (
+                <option key={catKey} value={catKey}>
+                  {catLabel}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Server List */}

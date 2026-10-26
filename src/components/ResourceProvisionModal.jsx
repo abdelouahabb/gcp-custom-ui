@@ -89,8 +89,8 @@ export default function ResourceProvisionModal({
   const [machineType, setMachineType] = useState('e2-micro');
   const [osImage, setOsImage] = useState('Debian 12 Bookworm');
   const [diskSizeGb, setDiskSizeGb] = useState(20);
-  const [diskType, setDiskType] = useState('pd-balanced');
-  const [spotInstance, setSpotInstance] = useState(true);
+  const [diskType, setDiskType] = useState('pd-standard');
+  const [spotInstance, setSpotInstance] = useState(false);
   const [terminationAction, setTerminationAction] = useState('STOP');
   const [vmGpuType, setVmGpuType] = useState('NONE');
   const [vmGpuCount, setVmGpuCount] = useState(1);
@@ -2644,11 +2644,17 @@ export default function ResourceProvisionModal({
                     onChange={(e) => setDiskType(e.target.value)}
                     className="w-full bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-[8px] px-2.5 py-[8px] text-xs font-mono text-zinc-950 dark:text-zinc-100"
                   >
-                    <option value="pd-balanced">pd-balanced (SSD Balanced)</option>
-                    <option value="pd-ssd">pd-ssd (Extreme Low-Latency SSD)</option>
-                    <option value="pd-standard">pd-standard (HDD Economical)</option>
+                    <option value="pd-standard">
+                      pd-standard (Standard HDD — Included in 30GB Always Free Tier)
+                    </option>
+                    <option value="pd-balanced">
+                      pd-balanced (SSD Balanced — Billed $/GB)
+                    </option>
+                    <option value="pd-ssd">
+                      pd-ssd (Extreme Low-Latency SSD — Billed $/GB)
+                    </option>
                     <option value="hyperdisk-balanced">
-                      hyperdisk-balanced (2026 Gen-4/5)
+                      hyperdisk-balanced (2026 Gen-4/5 — Billed $/GB)
                     </option>
                   </select>
                 </div>

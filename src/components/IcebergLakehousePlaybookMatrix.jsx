@@ -14,6 +14,7 @@ import {
   Play,
   RefreshCw,
   Search,
+  Filter,
   HardDrive,
   GitBranch,
   ArrowRight,
@@ -1191,7 +1192,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
   return (
     <div className="space-y-5">
       {/* Top Banner */}
-      <div className="rounded-2xl border border-indigo-500/40 bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-emerald-500/10 p-5 shadow-sm">
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
@@ -1272,58 +1273,68 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
         )}
       </div>
 
-      {/* Domain Filter Matrix + Search + Equal-Sized Track & Workspace View Controls */}
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3.5 shadow-sm">
-        {/* Row 1: Search Input + Equal-Sized 4-Column Track Filter */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-center">
-          <div className="lg:col-span-5 relative">
+      {/* Compact Single-Row Filter & View Toolbar (Search + Domain Select + Track Select + View Switcher) */}
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-3.5 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
+          {/* 1. Search Input (4 cols) */}
+          <div className="lg:col-span-4 relative">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search all 50 Iceberg playbooks (REST Catalog, Trino, Kafka, Debezium, Spanner, Omni, Vector)..."
-              className="w-full h-10 pl-9 pr-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono"
+              placeholder="Search 50 playbooks (REST Catalog, Trino, Kafka, Omni)..."
+              className="w-full h-9 pl-9 pr-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500"
             />
           </div>
 
-          <div className="lg:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[
-              { id: 'ALL', label: 'ALL TRACKS (50)' },
-              { id: 'GA', label: '[GA · PROD]' },
-              { id: 'BETA', label: '[BETA · PREVIEW]' },
-              { id: 'ALPHA', label: '[ALPHA · LAB]' },
-            ].map((tr) => (
-              <button
-                key={tr.id}
-                type="button"
-                onClick={() => setTrackFilter(tr.id)}
-                className={`w-full h-10 px-2.5 rounded-xl text-[11px] font-mono font-extrabold transition-all cursor-pointer flex items-center justify-center border truncate ${
-                  trackFilter === tr.id
-                    ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
-                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-indigo-500/50'
-                }`}
-              >
-                <span className="truncate">{tr.label}</span>
-              </button>
-            ))}
+          {/* 2. Lakehouse Domain Filter Dropdown (3 cols) */}
+          <div className="lg:col-span-3 flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-zinc-400 shrink-0 hidden sm:block" />
+            <select
+              aria-label="Filter by Lakehouse Domain"
+              value={selectedDomain}
+              onChange={(e) => setSelectedDomain(e.target.value)}
+              className="w-full h-9 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer focus:outline-none focus:border-blue-500"
+            >
+              {LAKEHOUSE_DOMAINS.map((dom) => (
+                <option key={dom.id} value={dom.id}>
+                  [{dom.code}] {dom.shortLabel} ({dom.badge})
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Equal-Sized 3-Column Workspace View Switcher */}
-          <div className="lg:col-span-3 grid grid-cols-3 gap-2">
+          {/* 3. Release Track Filter Dropdown (2 cols) */}
+          <div className="lg:col-span-2">
+            <select
+              aria-label="Filter by Release Track"
+              value={trackFilter}
+              onChange={(e) => setTrackFilter(e.target.value)}
+              className="w-full h-9 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer focus:outline-none focus:border-blue-500"
+            >
+              <option value="ALL">Track: All (50)</option>
+              <option value="GA">Track: [GA · Prod]</option>
+              <option value="BETA">Track: [BETA · Preview]</option>
+              <option value="ALPHA">Track: [ALPHA · Lab]</option>
+            </select>
+          </div>
+
+          {/* 4. Compact Segmented View Mode Switcher (3 cols) */}
+          <div className="lg:col-span-3 grid grid-cols-3 gap-1 p-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
             {[
-              { id: 'SPLIT_WORKBENCH', label: '01 · Workbench' },
-              { id: 'BENTO_MATRIX_GRID', label: '02 · 50-Grid' },
-              { id: 'METADATA_XRAY', label: '03 · v2 X-Ray' },
+              { id: 'SPLIT_WORKBENCH', label: 'Workbench' },
+              { id: 'BENTO_MATRIX_GRID', label: '50-Grid' },
+              { id: 'METADATA_XRAY', label: 'v2 X-Ray' },
             ].map((vm) => (
               <button
                 key={vm.id}
                 type="button"
                 onClick={() => setViewMode(vm.id)}
-                className={`w-full h-10 px-2.5 rounded-xl text-[11px] font-mono font-extrabold transition-all cursor-pointer flex items-center justify-center border truncate ${
+                className={`w-full h-7 px-2 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center truncate ${
                   viewMode === vm.id
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:border-indigo-500/50'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <span className="truncate">{vm.label}</span>
@@ -1332,60 +1343,37 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
           </div>
         </div>
 
-        {/* Row 2: Symmetrical 3x3 Bento Grid for All 8 Domains (50 Playbooks) — Every Button Equally Sized */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-          {LAKEHOUSE_DOMAINS.map((dom) => {
-            const isSelected = selectedDomain === dom.id;
-            return (
-              <button
-                key={dom.id}
-                type="button"
-                onClick={() => setSelectedDomain(dom.id)}
-                title={`${dom.shortLabel} — ${dom.subtitle} (${dom.badge})`}
-                className={`w-full h-12 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2.5 ${
-                  isSelected
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span
-                    className={`w-8 h-7 rounded-lg text-[10px] font-mono font-extrabold flex items-center justify-center shrink-0 ${
-                      isSelected
-                        ? 'bg-black/25 text-white border border-white/20'
-                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400'
-                    }`}
-                  >
-                    {dom.code}
-                  </span>
-                  <div className="min-w-0 text-left">
-                    <div className="truncate text-xs font-extrabold leading-tight">
-                      {dom.shortLabel}
-                    </div>
-                    <div
-                      className={`truncate text-[10px] font-normal leading-tight ${
-                        isSelected
-                          ? 'text-indigo-100'
-                          : 'text-zinc-500 dark:text-zinc-400'
-                      }`}
-                    >
-                      {dom.subtitle}
-                    </div>
-                  </div>
-                </div>
-                <span
-                  className={`px-2 py-1 rounded-lg text-[10px] font-mono font-extrabold shrink-0 ${
-                    isSelected
-                      ? 'bg-white/20 text-white'
-                      : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                  }`}
-                >
-                  {dom.badge}
+        {/* Active Filter Status Pill Row (only shown when a filter/search is active) */}
+        {(selectedDomain !== 'ALL' || trackFilter !== 'ALL' || searchQuery.trim() !== '') && (
+          <div className="mt-2.5 pt-2.5 border-t border-zinc-200/80 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+              <span>
+                Showing <strong className="text-zinc-900 dark:text-zinc-100">{filteredPlaybooks.length}</strong> of 50 playbooks
+              </span>
+              {selectedDomain !== 'ALL' && (
+                <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold">
+                  Domain: {LAKEHOUSE_DOMAINS.find((d) => d.id === selectedDomain)?.shortLabel}
                 </span>
-              </button>
-            );
-          })}
-        </div>
+              )}
+              {trackFilter !== 'ALL' && (
+                <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                  Track: {trackFilter}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedDomain('ALL');
+                setTrackFilter('ALL');
+                setSearchQuery('');
+              }}
+              className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
       </div>
 
       {/* =================================================================== */}
@@ -2009,72 +1997,6 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       : `1-Tap Bootstrap #${activePlaybook.num} [${activePlaybook.track}]`}
                   </span>
                 </button>
-              </div>
-
-              {/* Domain-Aware Companion Studio Cross-Wire Bar */}
-              <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[10px] font-mono font-extrabold uppercase text-zinc-500 dark:text-zinc-400">
-                  Playbook #{activePlaybook.num} Companion Studios:
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {onOpenServerlessSpark && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onOpenServerlessSpark({
-                          bucket: bucketName,
-                          batchId: `cp-${activePlaybook.num}-${activePlaybook.id
-                            .toLowerCase()
-                            .slice(0, 14)
-                            .replace(/_/g, '-')}`,
-                        })
-                      }
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer"
-                    >
-                      Load in Serverless Spark →
-                    </button>
-                  )}
-                  {(onOpenBigLakeStudio || onNavigateTab) && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onOpenBigLakeStudio
-                          ? onOpenBigLakeStudio('COMPACTION_DOCTOR')
-                          : onNavigateTab?.('BIGLAKE_STUDIO', 'COMPACTION_DOCTOR')
-                      }
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer"
-                    >
-                      BigLake Compaction Doctor →
-                    </button>
-                  )}
-                  {onNavigateTab && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => onNavigateTab('WAVE10_FRONTIER')}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer"
-                      >
-                        Spanner HTAP &amp; Graph →
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onNavigateTab('AWS_AZURE_PARITY')}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 cursor-pointer"
-                      >
-                        AWS S3 / Azure Omni →
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onNavigateTab('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
-                        }
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer"
-                      >
-                        [SDK 590.0.1] Lab →
-                      </button>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
 

@@ -503,120 +503,51 @@ export default function GcloudAlphaBetaStudio({
           ))}
         </div>
 
-        {/* Bidirectional Cross-Studio Control Plane Strip */}
-        {(typeof onSelectStudioTab === 'function' ||
-          typeof onOpenHealthAndDrift === 'function') && (
-          <div className="mt-2.5 pt-2.5 border-t border-zinc-200/70 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              Cross-Studio SDK 590.0.1 Bridges:
+        {/* Compact Single-Row Filter Bar (Wave Select + Release Track Select) */}
+        <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-mono font-bold text-zinc-500 dark:text-zinc-400">
+              Filter Capabilities:
             </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {typeof onSelectStudioTab === 'function' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => onSelectStudioTab('CLOUD_SOC')}
-                    className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-[10px] font-mono font-bold cursor-pointer"
-                  >
-                    Cloud SOC (Model Armor &amp; Audit)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectStudioTab('SRE_WAR_ROOM')}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold cursor-pointer"
-                  >
-                    SRE War-Room (Service Health &amp; TraceScopes)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectStudioTab('AWS_AZURE_PARITY')}
-                    className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold cursor-pointer"
-                  >
-                    Multi-Cloud Parity (AWS/Azure/Alibaba/Huawei)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectStudioTab('SOVEREIGN_STUDIO')}
-                    className="px-2.5 py-1 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold cursor-pointer"
-                  >
-                    Sovereign IAM (PAM JIT &amp; 403 Troubleshooter)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectStudioTab('DATA_ENGINEER')}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold cursor-pointer"
-                  >
-                    Data Engineering (Orchestration Pipelines)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectStudioTab('TIME_MACHINE')}
-                    className="px-2.5 py-1 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-mono font-bold cursor-pointer"
-                  >
-                    SHA-256 Time-Machine
-                  </button>
-                </>
-              )}
-              {typeof onOpenHealthAndDrift === 'function' && (
-                <button
-                  type="button"
-                  onClick={() => onOpenHealthAndDrift()}
-                  className="px-2.5 py-1 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-mono font-extrabold cursor-pointer"
-                >
-                  1-Tap Health &amp; Drift Hub
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+            <select
+              aria-label="Filter by SDK Wave"
+              value={waveFilter}
+              onChange={(e) => setWaveFilter(e.target.value)}
+              className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+            >
+              <option value="ALL">Wave: All Waves (12)</option>
+              <option value="WAVE_1">Wave 1: Core Preview (5)</option>
+              <option value="WAVE_2">Wave 2: Next-Gen Labs (6)</option>
+              <option value="WAVE_3">Wave 3: SDK 590.0.1 (1)</option>
+            </select>
 
-        {/* Wave + Release Track Filter Bar */}
-        <div className="mt-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-center">
-          <div className="lg:col-span-5 grid grid-cols-4 gap-1.5">
-            {[
-              { id: 'ALL', label: 'ALL WAVES (12)' },
-              { id: 'WAVE_1', label: 'WAVE 1 (5)' },
-              { id: 'WAVE_2', label: 'WAVE 2 (6)' },
-              { id: 'WAVE_3', label: 'WAVE 3 (590.0.1)' },
-            ].map((w) => (
+            <select
+              aria-label="Filter by Release Track"
+              value={trackFilter}
+              onChange={(e) => setTrackFilter(e.target.value)}
+              className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+            >
+              <option value="ALL">Track: All Tracks</option>
+              <option value="GA">Track: [GA 590.0.1]</option>
+              <option value="BETA">Track: [BETA] Only</option>
+              <option value="ALPHA">Track: [ALPHA] Only</option>
+            </select>
+
+            {(waveFilter !== 'ALL' || trackFilter !== 'ALL') && (
               <button
-                key={w.id}
                 type="button"
-                onClick={() => setWaveFilter(w.id)}
-                className={`w-full h-9 px-2.5 rounded-xl text-[11px] font-mono font-extrabold transition-all cursor-pointer flex items-center justify-center border truncate ${
-                  waveFilter === w.id
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-white/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-indigo-500/50'
-                }`}
+                onClick={() => {
+                  setWaveFilter('ALL');
+                  setTrackFilter('ALL');
+                }}
+                className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
               >
-                <span className="truncate">{w.label}</span>
+                Reset Filter
               </button>
-            ))}
+            )}
           </div>
 
-          <div className="lg:col-span-5 grid grid-cols-4 gap-1.5">
-            {[
-              { id: 'ALL', label: 'ALL TRACKS' },
-              { id: 'GA', label: '[GA 590.0.1]' },
-              { id: 'BETA', label: '[BETA] ONLY' },
-              { id: 'ALPHA', label: '[ALPHA] ONLY' },
-            ].map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setTrackFilter(f.id)}
-                className={`w-full h-9 px-2.5 rounded-xl text-[11px] font-mono font-extrabold transition-all cursor-pointer flex items-center justify-center border truncate ${
-                  trackFilter === f.id
-                    ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
-                    : 'bg-white/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-zinc-500'
-                }`}
-              >
-                <span className="truncate">{f.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="lg:col-span-2 text-[11px] font-mono text-zinc-500 dark:text-zinc-400 lg:text-right truncate">
+          <div className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
             Project:{' '}
             <strong className="text-zinc-900 dark:text-zinc-100">
               {projectId}

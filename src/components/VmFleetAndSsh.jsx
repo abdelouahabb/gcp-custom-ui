@@ -27,6 +27,7 @@ import {
   Layers,
   AlertTriangle,
   FolderOpen,
+  Search,
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
@@ -127,6 +128,11 @@ export default function VmFleetAndSsh({
   const [serialConsoleOutput, setSerialConsoleOutput] = useState('');
   const [serialLoading, setSerialLoading] = useState(false);
   const [selectedRegionFilter, setSelectedRegionFilter] = useState('ALL');
+  const [vmSearchQuery, setVmSearchQuery] = useState('');
+  const [vmStatusFilter, setVmStatusFilter] = useState('ALL');
+  const [vmMachineFilter, setVmMachineFilter] = useState('ALL');
+  const [vmDiskModelFilter, setVmDiskModelFilter] = useState('ALL');
+  const [vmMetadataTagFilter, setVmMetadataTagFilter] = useState('ALL');
   const [quickDeployingLabel, setQuickDeployingLabel] = useState(null);
   const [openResizeVm, setOpenResizeVm] = useState(null);
   const [resizeMachineTarget, setResizeMachineTarget] = useState('e2-medium');
@@ -687,14 +693,107 @@ export default function VmFleetAndSsh({
   const uniqueRegions = Array.from(
     new Set(vms.map((v) => v.region || v.zone.split('-').slice(0, 2).join('-')))
   );
-  const filteredVms =
-    selectedRegionFilter === 'ALL'
-      ? vms
-      : vms.filter(
-          (v) =>
-            (v.region || v.zone.split('-').slice(0, 2).join('-')) ===
-            selectedRegionFilter
-        );
+  const uniqueMachineTypes = Array.from(
+    new Set(vms.map((v) => v.machineType).filter(Boolean))
+  );
+  const uniqueMetadataTokens = Array.from(
+    new Set(
+      vms.flatMap((v) => [
+        ...(v.tags || []).map((t) => `tag:${t}`),
+        ...Object.entries(v.labels || {}).map(([k, val]) => `label:${k}=${val}`),
+        ...(v.metadataKeys || []).map((k) => `meta:${k}`),
+      ])
+    )
+  );
+
+  const hasActiveVmFilters =
+    selectedRegionFilter !== 'ALL' ||
+    vmSearchQuery.trim() !== '' ||
+    vmStatusFilter !== 'ALL' ||
+    vmMachineFilter !== 'ALL' ||
+    vmDiskModelFilter !== 'ALL' ||
+    vmMetadataTagFilter !== 'ALL';
+
+  const resetAllVmFilters = () => {
+    setSelectedRegionFilter('ALL');
+    setVmSearchQuery('');
+    setVmStatusFilter('ALL');
+    setVmMachineFilter('ALL');
+    setVmDiskModelFilter('ALL');
+    setVmMetadataTagFilter('ALL');
+  };
+
+  const filteredVms = vms.filter((v) => {
+    const vmReg = v.region || v.zone.split('-').slice(0, 2).join('-');
+    if (selectedRegionFilter !== 'ALL' && vmReg !== selectedRegionFilter) {
+      return false;
+    }
+    if (vmStatusFilter !== 'ALL') {
+      if (
+        vmStatusFilter === 'STOPPED' &&
+        v.status !== 'TERMINATED' &&
+        v.status !== 'STOPPED'
+      ) {
+        return false;
+      }
+      if (vmStatusFilter !== 'STOPPED' && v.status !== vmStatusFilter) {
+        return false;
+      }
+    }
+    if (vmMachineFilter !== 'ALL' && v.machineType !== vmMachineFilter) {
+      return false;
+    }
+    if (vmDiskModelFilter !== 'ALL') {
+      if (vmDiskModelFilter === 'PD_STANDARD' && v.diskType !== 'pd-standard') {
+        return false;
+      }
+      if (
+        vmDiskModelFilter === 'SSD' &&
+        v.diskType !== 'pd-balanced' &&
+        v.diskType !== 'pd-ssd' &&
+        !String(v.diskType || '').includes('hyperdisk')
+      ) {
+        return false;
+      }
+      if (vmDiskModelFilter === 'SPOT' && !v.spotInstance) {
+        return false;
+      }
+      if (vmDiskModelFilter === 'STANDARD_MODEL' && v.spotInstance) {
+        return false;
+      }
+    }
+    if (vmMetadataTagFilter !== 'ALL') {
+      const tokens = [
+        ...(v.tags || []).map((t) => `tag:${t}`),
+        ...Object.entries(v.labels || {}).map(([k, val]) => `label:${k}=${val}`),
+        ...(v.metadataKeys || []).map((k) => `meta:${k}`),
+      ];
+      if (!tokens.includes(vmMetadataTagFilter)) return false;
+    }
+    if (vmSearchQuery.trim()) {
+      const q = vmSearchQuery.trim().toLowerCase();
+      const hay = [
+        v.name,
+        v.zone,
+        vmReg,
+        v.machineType,
+        v.status,
+        v.internalIp,
+        v.externalIp,
+        v.osImage,
+        v.diskType,
+        v.network,
+        v.serviceAccountEmail || '',
+        ...(v.tags || []),
+        ...Object.entries(v.labels || {}).map(([k, val]) => `${k}=${val}`),
+        ...(v.metadataKeys || []),
+      ]
+        .join(' ')
+        .toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -770,67 +869,138 @@ export default function VmFleetAndSsh({
           </div>
         </div>
 
-        {/* 1-Tap Quick Multi-Region VM Templates & Region Filter Bar */}
-        <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 flex items-center gap-1 mr-1">
-              <Zap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-              <span>1-Tap Multi-Region Presets:</span>
-            </span>
-            {QUICK_VM_TEMPLATES.map((tpl) => {
-              const isDeploying = quickDeployingLabel === tpl.label;
-              return (
+        {/* Full-Width Flat Region Filter Bar + VM Metadata & Attribute Filter Bar */}
+        {vms.length > 0 && (
+          <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2.5">
+            {/* Row 1: Flat Region Filter Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 mr-1">
+                  Region Filter:
+                </span>
                 <button
-                  key={tpl.label}
                   type="button"
-                  disabled={Boolean(quickDeployingLabel)}
-                  onClick={() => handleQuickDeployVm(tpl)}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-mono bg-zinc-50 dark:bg-zinc-900 hover:bg-blue-500/10 text-zinc-800 dark:text-zinc-200 hover:text-blue-500 border border-zinc-200 dark:border-zinc-800 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {isDeploying ? (
-                    <RefreshCw className="w-3 h-3 animate-spin text-zinc-500 dark:text-zinc-400" />
-                  ) : (
-                    <Cpu className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
-                  )}
-                  <span>{isDeploying ? `Provisioning...` : tpl.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {uniqueRegions.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-mono uppercase text-zinc-400">
-                Region Filter:
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedRegionFilter('ALL')}
-                className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
-                  selectedRegionFilter === 'ALL'
-                    ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 font-bold'
-                    : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                }`}
-              >
-                ALL ({vms.length})
-              </button>
-              {uniqueRegions.map((reg) => (
-                <button
-                  key={reg}
-                  type="button"
-                  onClick={() => setSelectedRegionFilter(reg)}
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
-                    selectedRegionFilter === reg
-                      ? 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400 font-bold'
-                      : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                  onClick={() => setSelectedRegionFilter('ALL')}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${
+                    selectedRegionFilter === 'ALL'
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-blue-500/50'
                   }`}
                 >
-                  {reg}
+                  ALL ({vms.length})
                 </button>
-              ))}
+                {uniqueRegions.map((reg) => {
+                  const countInReg = vms.filter(
+                    (v) =>
+                      (v.region || v.zone.split('-').slice(0, 2).join('-')) ===
+                      reg
+                  ).length;
+                  return (
+                    <button
+                      key={reg}
+                      type="button"
+                      onClick={() => setSelectedRegionFilter(reg)}
+                      className={`px-3 py-1 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${
+                        selectedRegionFilter === reg
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                          : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-blue-500/50'
+                      }`}
+                    >
+                      {reg} ({countInReg})
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-[11px] font-mono text-zinc-500">
+                Showing <strong>{filteredVms.length}</strong> of{' '}
+                <strong>{vms.length}</strong> instances
+              </span>
             </div>
-          )}
-        </div>
+
+            {/* Row 2: VM Metadata, Search, Status, Machine Type, Disk/Model & Tag/Label Filters */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/70">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={vmSearchQuery}
+                  onChange={(e) => setVmSearchQuery(e.target.value)}
+                  placeholder="Filter by VM name, IP, zone, OS, tag (http-server), label (env=prod), or metadata key..."
+                  className="w-full h-8 pl-8 pr-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <select
+                  aria-label="Filter by VM Status"
+                  value={vmStatusFilter}
+                  onChange={(e) => setVmStatusFilter(e.target.value)}
+                  className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  <option value="ALL">Status: All</option>
+                  <option value="RUNNING">● RUNNING</option>
+                  <option value="STOPPED">■ STOPPED / TERMINATED</option>
+                  <option value="SUSPENDED">❚❚ SUSPENDED</option>
+                </select>
+
+                <select
+                  aria-label="Filter by Machine Type"
+                  value={vmMachineFilter}
+                  onChange={(e) => setVmMachineFilter(e.target.value)}
+                  className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  <option value="ALL">Machine: All ({uniqueMachineTypes.length})</option>
+                  {uniqueMachineTypes.map((mt) => (
+                    <option key={mt} value={mt}>
+                      {mt}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  aria-label="Filter by Disk & Provisioning Model"
+                  value={vmDiskModelFilter}
+                  onChange={(e) => setVmDiskModelFilter(e.target.value)}
+                  className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  <option value="ALL">Disk / Tier: All</option>
+                  <option value="PD_STANDARD">pd-standard (HDD / Free-Tier Eligible)</option>
+                  <option value="SSD">pd-balanced / pd-ssd / hyperdisk (SSD)</option>
+                  <option value="STANDARD_MODEL">Standard On-Demand Model</option>
+                  <option value="SPOT">Spot / Preemptible VM</option>
+                </select>
+
+                {uniqueMetadataTokens.length > 0 && (
+                  <select
+                    aria-label="Filter by Network Tag, GCP Label, or Metadata Key"
+                    value={vmMetadataTagFilter}
+                    onChange={(e) => setVmMetadataTagFilter(e.target.value)}
+                    className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer max-w-[220px]"
+                  >
+                    <option value="ALL">
+                      Tags / Labels / Metadata ({uniqueMetadataTokens.length})
+                    </option>
+                    {uniqueMetadataTokens.map((tok) => (
+                      <option key={tok} value={tok}>
+                        {tok}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {hasActiveVmFilters && (
+                  <button
+                    type="button"
+                    onClick={resetAllVmFilters}
+                    className="h-8 px-2.5 rounded-lg bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {powerError && (
@@ -851,9 +1021,18 @@ export default function VmFleetAndSsh({
           <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
             {computeApiMessage
               ? `GCP API Status: ${computeApiMessage}`
-              : 'No virtual machines are currently provisioned across any zone in this project. Use the 1-Tap Multi-Region Presets above or open the Compute VM Studio to customize Region, Zone, Machine Family (E2/N2/C3/C4/Arm64/GPU), Disk Type, Spot VM, Shielded VM, and Startup Scripts.'}
+              : 'No virtual machines are currently provisioned across any zone in this project. Click "+ Open Compute VM Studio" to configure Region, Zone, Machine Family (e2-micro Always Free with pd-standard HDD, N2/C3/C4/Arm64/GPU), Spot VM, Shielded VM, and Startup Scripts.'}
           </p>
           <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+            {hasActiveVmFilters && (
+              <button
+                type="button"
+                onClick={resetAllVmFilters}
+                className="inline-flex items-center gap-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-[8px] px-4 py-2.5 text-xs font-mono font-bold transition-colors cursor-pointer"
+              >
+                <span>Reset VM Filters (Show All {vms.length} VMs)</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onOpenProvisionVm}
@@ -867,9 +1046,9 @@ export default function VmFleetAndSsh({
       ) : (
         <div className="space-y-2.5">
           {/* Asymmetric Master-Detail Workspace Split Switcher */}
-          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800/80 text-[11px] font-mono">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono">
             <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-              <Server className="w-3.5 h-3.5 text-emerald-500" />
+              <Server className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span className="font-bold text-zinc-800 dark:text-zinc-200">
                 Master-Detail Workspace Layout:
               </span>
@@ -883,7 +1062,7 @@ export default function VmFleetAndSsh({
                   : 'Equal Split (50% / 50%)'}
               </span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: '4_8', label: '33% VM / 67% SSH (Recommended)' },
                 { id: '5_7', label: '42% / 58%' },
@@ -896,9 +1075,9 @@ export default function VmFleetAndSsh({
                     setSshTerminalExpanded(false);
                     setSplitLayoutMode(opt.id);
                   }}
-                  className={`px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-md font-bold transition-colors cursor-pointer ${
                     !sshTerminalExpanded && splitLayoutMode === opt.id
-                      ? 'bg-emerald-600 text-white shadow-sm'
+                      ? 'bg-blue-600 text-white shadow-sm'
                       : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'
                   }`}
                 >
@@ -908,7 +1087,7 @@ export default function VmFleetAndSsh({
               <button
                 type="button"
                 onClick={() => setSshTerminalExpanded((prev) => !prev)}
-                className={`px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer ${
+                className={`px-2 py-1 rounded-md font-bold transition-colors cursor-pointer ${
                   sshTerminalExpanded
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400'

@@ -612,113 +612,67 @@ WITH (m = 16, ef_construction = 64);`;
           </div>
         </div>
 
-        {/* Cross-Studio OLTP -> Lakehouse CDC & HTAP Ecosystem Bridges */}
-        <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            <Layers className="w-3.5 h-3.5 text-cyan-500" />
-            <span>OLTP ↔ Lakehouse CDC &amp; HTAP Bridges:</span>
+        {/* In-Studio Cloud SQL & AlloyDB Sub-Tabs (4-Column Equal-Width Grid — Stays Inside Cloud SQL Studio) */}
+        <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Cloud SQL &amp; AlloyDB Cockpit Modules (Select Module Below):</span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() =>
-                onNavigateTab?.('DATA_ENGINEER_STUDIO', 'MEDALLION_ELT')
-              }
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 cursor-pointer transition-colors"
-            >
-              Datastream CDC → Medallion Builder →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onOpenBigQuerySql
-                  ? onOpenBigQuerySql(
-                      `-- Federated Cloud SQL / AlloyDB -> BigQuery Zero-ETL Query (${sqlName})\nSELECT * FROM EXTERNAL_QUERY('${projectId}.${sqlRegion}.${sqlName}-conn', 'SELECT id, doc_uri, created_at FROM ${vectorTableName} ORDER BY created_at DESC LIMIT 100');`
-                    )
-                  : onNavigateTab?.('BIGQUERY_STUDIO')
-              }
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 cursor-pointer transition-colors"
-            >
-              Federate in BigQuery (`EXTERNAL_QUERY`) →
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab?.('WAVE10_FRONTIER')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
-            >
-              Spanner 100-PU &amp; ISO GQL Graph →
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab?.('ALIBABA_HUAWEI_PARITY')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 cursor-pointer transition-colors"
-            >
-              PolarDB / GaussDB 1.6s Clone Parity →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onNavigateTab?.('INNOVATION_LAB', 'GCLOUD_ALPHA_BETA')
-              }
-              className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-pointer transition-colors"
-            >
-              [SDK 590.0.1] Database Center →
-            </button>
-            {onOpenHealthAndDrift && (
-              <button
-                type="button"
-                onClick={onOpenHealthAndDrift}
-                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors"
-              >
-                1-Tap Health &amp; Drift Hub
-              </button>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {[
+              {
+                id: 'FLEET_PROVISION',
+                code: '01',
+                label: 'Cloud SQL & AlloyDB Provisioner + Fleet',
+              },
+              {
+                id: 'ARCH_COMPARATOR',
+                code: '02',
+                label: 'Classic Cloud SQL vs. AlloyDB Comparator',
+              },
+              {
+                id: 'VECTOR_INDEX_SURGEON',
+                code: '03',
+                label: 'AI Vector (ScaNN / pgvector) & Slow-Query',
+              },
+              {
+                id: 'IAM_PROXY_VAULT',
+                code: '04',
+                label: 'Zero-Trust IAM Auth Proxy & ORM Vault',
+              },
+            ].map((t) => {
+              const active = activeSubTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveSubTab(t.id)}
+                  title={t.label}
+                  className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                    active
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
+                        active
+                          ? 'bg-black/25 text-white'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      {t.code}
+                    </span>
+                    <span className="truncate">{t.label}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
-      </div>
-
-      {/* Sub-Navigation Pills */}
-      <div className="flex flex-wrap items-center gap-2">
-        {[
-          {
-            id: 'FLEET_PROVISION',
-            label: '1. Cloud SQL (MySQL/PG) & AlloyDB Provisioner + Fleet',
-            icon: Database,
-          },
-          {
-            id: 'ARCH_COMPARATOR',
-            label: '2. Classic Cloud SQL vs. AlloyDB Architecture Comparator',
-            icon: Zap,
-          },
-          {
-            id: 'VECTOR_INDEX_SURGEON',
-            label: '3. AI Vector (ScaNN / pgvector) & Slow-Query Surgeon',
-            icon: Cpu,
-          },
-          {
-            id: 'IAM_PROXY_VAULT',
-            label: '4. Zero-Trust IAM Auth Proxy & ORM Connection Vault',
-            icon: Key,
-          },
-        ].map((t) => {
-          const Icon = t.icon;
-          const active = activeSubTab === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveSubTab(t.id)}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold border transition-all cursor-pointer ${
-                active
-                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                  : 'bg-white dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{t.label}</span>
-            </button>
-          );
-        })}
       </div>
 
       {/* ===================================================================

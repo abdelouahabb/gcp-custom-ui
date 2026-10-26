@@ -628,59 +628,6 @@ export default function AutonomousCloudSocStudio({
               <option value={168}>Lookback: Last 168 Hours (7d)</option>
             </select>
 
-            {onOpenHealthAndDrift && (
-              <button
-                type="button"
-                onClick={onOpenHealthAndDrift}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition-colors cursor-pointer"
-                title="Open 1-Tap Project Health, Drift, FinOps & Control-Plane Synthesis Hub"
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Health &amp; Drift Hub</span>
-              </button>
-            )}
-
-            {onNavigateTab && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('INNOVATION_LAB', 'TERRAFORM')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-blue-500/40 text-blue-300 text-xs font-extrabold transition-colors cursor-pointer"
-                  title="Jump to 2026 Innovation Lab (22 Labs, Reverse-Terraform & Moonshots)"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                  <span>2026 Innovation</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('SRE_WAR_ROOM')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-rose-500/40 text-rose-300 text-xs font-extrabold transition-colors cursor-pointer"
-                  title="Jump to Wave 8 Principal SRE War-Room, Multi-Window SLO Burn & VPC-SC Architect"
-                >
-                  <Flame className="w-3.5 h-3.5 text-rose-400" />
-                  <span>SRE War-Room</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('SOVEREIGN_STUDIO', 'TIME_MACHINE')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-purple-500/40 text-purple-300 text-xs font-extrabold transition-colors cursor-pointer"
-                  title="Jump to Wave 7 Sovereign SHA-256 Time-Machine & Drift Radar"
-                >
-                  <GitBranch className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Time-Machine &amp; Drift</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('AWS_AZURE_PARITY', 'GUARDDUTY_SOAR')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-amber-500/40 text-amber-300 text-xs font-extrabold transition-colors cursor-pointer"
-                  title="Jump to AWS GuardDuty / Microsoft Sentinel SOAR & CloudTrail Lake Bridge"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>GuardDuty / Sentinel SOAR</span>
-                </button>
-              </>
-            )}
-
             <button
               type="button"
               onClick={() => setShowGitOpsBridge((v) => !v)}

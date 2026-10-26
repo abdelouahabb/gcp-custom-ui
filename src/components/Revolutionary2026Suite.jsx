@@ -981,230 +981,63 @@ export default function Revolutionary2026Suite({
         </div>
       </div>
 
-      {/* 2026 Deep-Dive Innovation Studios & Cross-Plane Telemetry Launchpad (Equal-Width 5-Column Executive Grid) */}
-      {(onSelectStudioTab || onOpenHealthAndDrift) && (
-        <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold uppercase tracking-wider">
-                Connected Architecture Bridge
-              </span>
-              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Direct cross-studio navigation (10 Equal-Width Enterprise Launchers):
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
-              {socBridgeData?.summary && (
-                <span className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 font-semibold">
-                  SOC Posture: {socBridgeData.summary.socPostureScore}/100 ({socBridgeData.selfHealingGuardian?.invariantsPassedCount ?? 12}/{socBridgeData.selfHealingGuardian?.totalInvariantsCount ?? 12} Invariants)
-                </span>
-              )}
-              {sreBridgeData && (
-                <span className="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 font-semibold">
-                  SRE Score: {sreBridgeData.srePostureScore ?? 100}/100 · SLO Budget: {sreBridgeData.sloBurn?.errorBudgetRemainingPct ?? 100}%
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-            {[
-              ...(onOpenHealthAndDrift
-                ? [
-                    {
-                      key: 'HEALTH_DRIFT_HUB',
-                      code: 'S01',
-                      label: 'Health & Drift Hub',
-                      onClick: onOpenHealthAndDrift,
-                    },
-                  ]
-                : []),
-              ...(onSelectStudioTab
-                ? [
-                    {
-                      key: 'CLOUD_SOC',
-                      code: 'S02',
-                      label: `20-Pillar Cloud SOC (${socBridgeData?.summary?.socGrade || 'A+'})`,
-                      onClick: () => onSelectStudioTab('CLOUD_SOC'),
-                    },
-                    {
-                      key: 'SRE_WAR_ROOM',
-                      code: 'S03',
-                      label: `12-Pillar SRE War-Room (${sreBridgeData?.sreGrade || 'A+'})`,
-                      onClick: () => onSelectStudioTab('SRE_WAR_ROOM'),
-                    },
-                    {
-                      key: 'TIME_MACHINE',
-                      code: 'S04',
-                      label: 'SHA-256 Time-Machine',
-                      onClick: () =>
-                        onSelectStudioTab('SOVEREIGN_STUDIO', 'TIME_MACHINE'),
-                    },
-                    {
-                      key: 'IAM_SURGEON',
-                      code: 'S05',
-                      label: 'SA Key & Token Kill-Switch',
-                      onClick: () =>
-                        onSelectStudioTab('SOVEREIGN_STUDIO', 'IAM_SURGEON'),
-                    },
-                    {
-                      key: 'WAVE10_FRONTIER',
-                      code: 'S06',
-                      label: 'Spanner Graph ($65/mo)',
-                      onClick: () => onSelectStudioTab('WAVE10_FRONTIER'),
-                    },
-                    {
-                      key: 'BIGLAKE_STUDIO',
-                      code: 'S07',
-                      label: 'BigLake & Apache Iceberg',
-                      onClick: () => onSelectStudioTab('BIGLAKE_STUDIO'),
-                    },
-                    {
-                      key: 'DATA_ENGINEER_STUDIO',
-                      code: 'S08',
-                      label: 'Data Mesh & Serverless Spark',
-                      onClick: () => onSelectStudioTab('DATA_ENGINEER_STUDIO'),
-                    },
-                    {
-                      key: 'AWS_AZURE_PARITY',
-                      code: 'S09',
-                      label: 'AWS & Azure Parity (20)',
-                      onClick: () =>
-                        onSelectStudioTab(
-                          'AWS_AZURE_PARITY',
-                          'RESOURCE_GROUPS'
-                        ),
-                    },
-                    {
-                      key: 'ALIBABA_HUAWEI_PARITY',
-                      code: 'S10',
-                      label: 'Alibaba & Huawei Parity (8)',
-                      onClick: () =>
-                        onSelectStudioTab(
-                          'ALIBABA_HUAWEI_PARITY',
-                          'ALIYUN_PTS_MSE_FLASH_SALE_SURGE'
-                        ),
-                    },
-                  ]
-                : []),
-            ].map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={item.onClick}
-                title={item.label}
-                className="w-full h-10 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1b1c1f] hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[11px] font-mono font-semibold transition-all cursor-pointer flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 shrink-0">
-                    {item.code}
-                  </span>
-                  <span className="truncate">{item.label}</span>
-                </div>
-                <span className="text-zinc-400 dark:text-zinc-500 shrink-0">
-                  →
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Category Filter Bar for 20 Lab Suites (Equal-Sized 7-Column Bento Grid) */}
+      {/* Category Filter Toolbar + Lab Suite Navigation Grid */}
       <div className="space-y-3">
-        <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[11px] font-mono font-bold uppercase text-zinc-400">
-              Lab Domain Filter (7 Equal Domains):
+        <div className="px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
+              Filter by Lab Domain:
             </span>
-            <span className="text-[11px] font-mono text-zinc-500">
-              22 Specialized Cloud Labs
-            </span>
+            <select
+              aria-label="Filter by Lab Domain"
+              value={labCategory}
+              onChange={(e) => {
+                const nextCat = e.target.value;
+                setLabCategory(nextCat);
+                if (nextCat === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
+                if (
+                  nextCat === 'ALPHA_BETA' &&
+                  ![
+                    'FIVE_PERSONA_COUNCIL',
+                    'FIVE_PERSONA_ARCHITECT',
+                    'FIVE_PERSONA_CLOUD_ENG',
+                    'FIVE_PERSONA_DATA_ENG',
+                    'FIVE_PERSONA_NETOPS',
+                    'FIVE_PERSONA_DEVSECOPS',
+                    'WAVE15_DYSON_MOONSHOT',
+                    'WAVE14_QUANTUM_DOCTOR',
+                    'WAVE13_STARLINK_NEURALINK',
+                    'WAVE12_ROADSTER',
+                    'WAVE11_MOONSHOT',
+                    'GCLOUD_ALPHA_BETA',
+                  ].includes(subTab)
+                ) {
+                  setSubTab('FIVE_PERSONA_COUNCIL');
+                }
+              }}
+              className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+            >
+              <option value="ALL">All Domains (22 Specialized Cloud Labs)</option>
+              <option value="ALPHA_BETA">[D01] Waves 11–15, 10-Persona Board &amp; SDK 590.0.1</option>
+              <option value="QUANTUM">[D02] 2026 Quantum Nexus (5 Labs)</option>
+              <option value="FINOPS">[D03] FinOps, Sleep &amp; Egress (4 Labs)</option>
+              <option value="PERF_TOPOLOGY">[D04] Topology &amp; Cold-Start (4 Labs)</option>
+              <option value="SECURITY_DLP">[D05] DLP, Ransomware &amp; IAM (3 Labs)</option>
+              <option value="AI_IAC">[D06] Model Armor &amp; IaC (4 Labs)</option>
+            </select>
+            {labCategory !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setLabCategory('ALL')}
+                className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white hover:bg-zinc-100 dark:bg-zinc-950 dark:hover:bg-zinc-800 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                Reset Filter
+              </button>
+            )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2">
-            {[
-              { id: 'ALL', code: 'ALL', label: 'All 22 Lab Suites' },
-              {
-                id: 'ALPHA_BETA',
-                code: 'D01',
-                label: 'W15, W14, W13, W12 & W11',
-              },
-              {
-                id: 'QUANTUM',
-                code: 'D02',
-                label: '2026 Quantum Nexus (5)',
-              },
-              {
-                id: 'FINOPS',
-                code: 'D03',
-                label: 'FinOps, Sleep & Egress (4)',
-              },
-              {
-                id: 'PERF_TOPOLOGY',
-                code: 'D04',
-                label: 'Topology & Cold-Start (4)',
-              },
-              {
-                id: 'SECURITY_DLP',
-                code: 'D05',
-                label: 'DLP, Ransomware & IAM (3)',
-              },
-              {
-                id: 'AI_IAC',
-                code: 'D06',
-                label: 'Model Armor & IaC (4)',
-              },
-            ].map((cat) => {
-              const active = labCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    setLabCategory(cat.id);
-                    if (cat.id === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
-                    if (
-                      cat.id === 'ALPHA_BETA' &&
-                      ![
-                        'FIVE_PERSONA_COUNCIL',
-                        'FIVE_PERSONA_ARCHITECT',
-                        'FIVE_PERSONA_CLOUD_ENG',
-                        'FIVE_PERSONA_DATA_ENG',
-                        'FIVE_PERSONA_NETOPS',
-                        'FIVE_PERSONA_DEVSECOPS',
-                        'WAVE15_DYSON_MOONSHOT',
-                        'WAVE14_QUANTUM_DOCTOR',
-                        'WAVE13_STARLINK_NEURALINK',
-                        'WAVE12_ROADSTER',
-                        'WAVE11_MOONSHOT',
-                        'GCLOUD_ALPHA_BETA',
-                      ].includes(subTab)
-                    ) {
-                      setSubTab('FIVE_PERSONA_COUNCIL');
-                    }
-                  }}
-                  title={cat.label}
-                  className={`w-full h-10 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-1.5 ${
-                    active
-                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                      : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-                  }`}
-                >
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
-                      active
-                        ? 'bg-black/25 text-white'
-                        : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
-                    }`}
-                  >
-                    {cat.code}
-                  </span>
-                  <span className="truncate">{cat.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <span className="text-[11px] font-mono text-zinc-500">
+            Select an Innovation Lab below:
+          </span>
         </div>
 
         {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards) */}

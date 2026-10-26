@@ -2204,82 +2204,100 @@ export default function GcsObjectWorkbench({
 
       {/* Connected GCP Pipeline & Security Bridge (Cross-Studio Deep-Links) */}
       {selectedBucket && (
-        <div className="p-2.5 rounded-xl bg-zinc-50/90 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
-          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-            <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[9.5px] font-extrabold uppercase">
-              Connected Studios
-            </span>
-            <span className="truncate">
-              Active target:{' '}
-              <strong className="text-zinc-900 dark:text-zinc-100">
-                gs://{selectedBucket.name}
-                {inspectedObject?.name ? `/${inspectedObject.name}` : ''}
-              </strong>
-            </span>
+        <div className="p-2.5 rounded-xl bg-zinc-50/90 dark:bg-[#16171a] border border-zinc-200 dark:border-zinc-800 space-y-2 font-mono text-[11px]">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+              <span className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[9.5px] font-extrabold uppercase">
+                Connected Studios
+              </span>
+              <span className="truncate">
+                Active target:{' '}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  gs://{selectedBucket.name}
+                  {inspectedObject?.name ? `/${inspectedObject.name}` : ''}
+                </strong>
+              </span>
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 w-full lg:w-auto">
-            <button
-              type="button"
-              onClick={() => {
-                if (!onOpenBigQuerySql) return;
-                const objName = inspectedObject?.name || '*.parquet';
-                const extFormat = objName.toLowerCase().endsWith('.parquet')
-                  ? 'PARQUET'
-                  : objName.toLowerCase().endsWith('.csv')
-                  ? 'CSV'
-                  : 'JSON';
-                const safeTbl = selectedBucket.name
-                  .replace(/[^a-zA-Z0-9_]/g, '_')
-                  .slice(0, 32);
-                const sql = `-- Auto-generated BigQuery External Lakehouse Table for gs://${selectedBucket.name}/${objName}\nCREATE OR REPLACE EXTERNAL TABLE \`${projectId}.analytics.${safeTbl}_ext\`\nOPTIONS (\n  format = '${extFormat}',\n  uris = ['gs://${selectedBucket.name}/${objName}']\n);\n\nSELECT * FROM \`${projectId}.analytics.${safeTbl}_ext\` LIMIT 100;`;
-                onOpenBigQuerySql(sql);
-              }}
-              className="px-2.5 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-extrabold cursor-pointer truncate"
-              title="Open BigQuery Studio with an External Table query for this bucket/object"
-            >
-              Query in BigQuery SQL →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onNavigateStudio && onNavigateStudio('BIGLAKE_ICEBERG')
-              }
-              className="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 text-[10px] font-extrabold cursor-pointer truncate"
-              title="Mount this GCS bucket as an Apache Iceberg Open Table in BigLake Studio"
-            >
-              BigLake Iceberg →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onNavigateStudio && onNavigateStudio('DATA_PIPELINES')
-              }
-              className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold cursor-pointer truncate"
-              title="Build a Bronze-Silver-Gold Medallion pipeline from this bucket"
-            >
-              Medallion ELT →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onSwitchStorageSubTab && onSwitchStorageSubTab('DLP_XRAY')
-              }
-              className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold cursor-pointer truncate"
-              title="Scan this bucket in-memory for leaked secrets, API keys, and PII (M06)"
-            >
-              RAM DLP X-Ray (M06) →
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onSwitchStorageSubTab &&
-                onSwitchStorageSubTab('S3_COMPATIBLE_IMPORT')
-              }
-              className="px-2.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold cursor-pointer truncate"
-              title="Import objects from AWS S3, MinIO, or Ceph RADOS Gateway into this bucket (M03)"
-            >
-              S3 / MinIO Import (M03) →
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-1.5 w-full">
+            {[
+              {
+                key: 'QUERY_BQ',
+                code: 'B01',
+                label: 'Query in BigQuery SQL',
+                title:
+                  'Open BigQuery Studio with an External Table query for this bucket/object',
+                onClick: () => {
+                  if (!onOpenBigQuerySql) return;
+                  const objName = inspectedObject?.name || '*.parquet';
+                  const extFormat = objName.toLowerCase().endsWith('.parquet')
+                    ? 'PARQUET'
+                    : objName.toLowerCase().endsWith('.csv')
+                    ? 'CSV'
+                    : 'JSON';
+                  const safeTbl = selectedBucket.name
+                    .replace(/[^a-zA-Z0-9_]/g, '_')
+                    .slice(0, 32);
+                  const sql = `-- Auto-generated BigQuery External Lakehouse Table for gs://${selectedBucket.name}/${objName}\nCREATE OR REPLACE EXTERNAL TABLE \`${projectId}.analytics.${safeTbl}_ext\`\nOPTIONS (\n  format = '${extFormat}',\n  uris = ['gs://${selectedBucket.name}/${objName}']\n);\n\nSELECT * FROM \`${projectId}.analytics.${safeTbl}_ext\` LIMIT 100;`;
+                  onOpenBigQuerySql(sql);
+                },
+              },
+              {
+                key: 'BIGLAKE_ICEBERG',
+                code: 'B02',
+                label: 'BigLake Iceberg',
+                title:
+                  'Mount this GCS bucket as an Apache Iceberg Open Table in BigLake Studio',
+                onClick: () =>
+                  onNavigateStudio && onNavigateStudio('BIGLAKE_ICEBERG'),
+              },
+              {
+                key: 'MEDALLION_ELT',
+                code: 'B03',
+                label: 'Medallion ELT',
+                title:
+                  'Build a Bronze-Silver-Gold Medallion pipeline from this bucket',
+                onClick: () =>
+                  onNavigateStudio && onNavigateStudio('DATA_PIPELINES'),
+              },
+              {
+                key: 'RAM_DLP_XRAY',
+                code: 'B04',
+                label: 'RAM DLP X-Ray (M06)',
+                title:
+                  'Scan this bucket in-memory for leaked secrets, API keys, and PII (M06)',
+                onClick: () =>
+                  onSwitchStorageSubTab && onSwitchStorageSubTab('DLP_XRAY'),
+              },
+              {
+                key: 'S3_MINIO_IMPORT',
+                code: 'B05',
+                label: 'S3 / MinIO Import (M03)',
+                title:
+                  'Import objects from AWS S3, MinIO, or Ceph RADOS Gateway into this bucket (M03)',
+                onClick: () =>
+                  onSwitchStorageSubTab &&
+                  onSwitchStorageSubTab('S3_COMPATIBLE_IMPORT'),
+              },
+            ].map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={item.onClick}
+                title={item.title}
+                className="w-full h-9 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1b1c1f] hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-semibold transition-all cursor-pointer flex items-center justify-between gap-2"
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 shrink-0">
+                    {item.code}
+                  </span>
+                  <span className="truncate">{item.label}</span>
+                </div>
+                <span className="text-zinc-400 dark:text-zinc-500 shrink-0">
+                  →
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       )}

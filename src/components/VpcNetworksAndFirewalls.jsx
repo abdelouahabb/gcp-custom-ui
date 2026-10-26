@@ -1040,18 +1040,6 @@ export default function VpcNetworksAndFirewalls({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {onSelectTab && (
-              <button
-                type="button"
-                onClick={() => onSelectTab('VM_SSH')}
-                className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded-lg px-3 py-2 text-xs font-mono font-bold transition-colors cursor-pointer"
-                title="Jump to VM Fleet & Self-Contained Xterm.js SSH Studio"
-              >
-                <Terminal className="w-3.5 h-3.5" />
-                <span>Open VM Fleet &amp; Xterm.js SSH</span>
-              </button>
-            )}
-
             <button
               type="button"
               disabled={loading}
@@ -1970,45 +1958,60 @@ export default function VpcNetworksAndFirewalls({
 
         {/* Right Column: Full-Fledged Firewall Policy Matrix (ALLOW & DENY, INGRESS & EGRESS) */}
         <div className="xl:col-span-8 space-y-3">
-          {/* Firewall Filter & Search Toolbar */}
+          {/* Compact Firewall Search + Rule Filter Dropdown Toolbar */}
           <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: 'ALL', label: `All (${enrichedFirewalls.length})` },
-                { id: 'ALLOW', label: `✓ ALLOW (${stats.allowCount})` },
-                { id: 'DENY', label: `✕ DENY (${stats.denyCount})` },
-                { id: 'INGRESS', label: `↙ INGRESS (${stats.ingressCount})` },
-                { id: 'EGRESS', label: `↗ EGRESS (${stats.egressCount})` },
-                {
-                  id: 'EXPOSED',
-                  label: `0.0.0.0/0 (${stats.exposedHighRisk.length})`,
-                },
-                { id: 'DISABLED', label: `Paused (${stats.disabledCount})` },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setFilterMode(tab.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer ${
-                    filterMode === tab.id
-                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950'
-                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="relative min-w-[210px]">
+            <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search rule, port (22, 443), CIDR, tag..."
-                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono"
+                placeholder="Search firewall rule, port (22, 443), CIDR, network tag..."
+                className="w-full h-8 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-8 pr-3 text-xs font-mono text-zinc-900 dark:text-zinc-100"
               />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <span className="text-[11px] font-mono font-bold uppercase text-zinc-500">
+                Filter Rules:
+              </span>
+              <select
+                aria-label="Filter Firewall Rules"
+                value={filterMode}
+                onChange={(e) => setFilterMode(e.target.value)}
+                className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+              >
+                {[
+                  { id: 'ALL', label: `All Rules (${enrichedFirewalls.length})` },
+                  { id: 'ALLOW', label: `✓ ALLOW (${stats.allowCount})` },
+                  { id: 'DENY', label: `✕ DENY (${stats.denyCount})` },
+                  { id: 'INGRESS', label: `↙ INGRESS (${stats.ingressCount})` },
+                  { id: 'EGRESS', label: `↗ EGRESS (${stats.egressCount})` },
+                  {
+                    id: 'EXPOSED',
+                    label: `0.0.0.0/0 Sensitive (${stats.exposedHighRisk.length})`,
+                  },
+                  { id: 'DISABLED', label: `Paused / Disabled (${stats.disabledCount})` },
+                ].map((tab) => (
+                  <option key={tab.id} value={tab.id}>
+                    {tab.label}
+                  </option>
+                ))}
+              </select>
+
+              {(filterMode !== 'ALL' || selectedVpcFilter !== 'ALL' || searchQuery.trim() !== '') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterMode('ALL');
+                    setSelectedVpcFilter('ALL');
+                    setSearchQuery('');
+                  }}
+                  className="h-8 px-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-mono font-bold cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 
@@ -2043,6 +2046,7 @@ export default function VpcNetworksAndFirewalls({
                   !isEgress &&
                   !fw.disabled &&
                   ranges.includes('0.0.0.0/0');
+                const isIapProtected = ranges.includes('35.235.240.0/20');
 
                 return (
                   <div

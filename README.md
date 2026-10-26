@@ -503,6 +503,7 @@
 | `/api/project/:id/data-engineer/resource` | `DELETE` | **2026 Data Engineering Studio**: Deletes a Dataform Repository, Dataplex DataScan, Dataplex Data Product, or BigQuery Dataset |
 | `/api/project/:id/bigquery/biglake/overview` | `GET` | **BigLake Metastore & Iceberg Studio**: Lists BigLake Metastore Catalogs (`biglake.googleapis.com/v1`), Connections & Apache Iceberg / Parquet tables |
 | `/api/project/:id/bigquery/biglake/create` | `POST` | **BigLake & Iceberg Studio**: Creates BigLake Metastore Catalogs, Connections, binds GCS IAM & provisions Apache Iceberg tables |
+| `/api/project/:id/biglake/federated-catalogs` | `GET / POST` | **Databricks Unity Catalog & AWS Glue Federation Studio (`BigLake Tab 06`)**: Discovers BigQuery datasets, GCS buckets, Connections & Secret Manager credentials, stores Unity Catalog PAT / AWS IAM Role secrets, provisions federated `EXTERNAL_CATALOG` datasets, and generates 6-step `gcloud` / `bq` / PySpark federation bundles |
 | `/api/project/:id/biglake/metastore/catalogs/:loc/:id` | `DELETE` | **BigLake Metastore**: Deletes a BigLake Metastore Catalog (`biglake.googleapis.com/v1`) |
 | `/api/project/:id/sovereign-iam/credentials` | `GET` | **Sovereign IAM Vault**: Lists Service Accounts, user-managed `.json` keys (`iam.googleapis.com/v1`) & active session OAuth2 token status |
 | `/api/project/:id/sovereign-iam/credentials/action` | `POST` | **Sovereign IAM Kill-Switch**: Executes `CREATE_SA_KEY`, `DISABLE_SA_KEY`, `ENABLE_SA_KEY`, `DELETE_SA_KEY`, `EMERGENCY_REVOKE_ALL_SA_KEYS` & `REVOKE_ACTIVE_OAUTH_TOKEN` |

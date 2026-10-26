@@ -862,55 +862,6 @@ export default function SovereignTimeMachineIamStudio({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {onOpenHealthAndDrift && (
-              <button
-                type="button"
-                onClick={onOpenHealthAndDrift}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
-                title="Open 1-Tap Project Health, Drift, FinOps & Control-Plane Synthesis Hub"
-              >
-                <GitCompare className="w-3.5 h-3.5" />
-                <span>Health &amp; Drift Hub</span>
-              </button>
-            )}
-            {onNavigateTab && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('INNOVATION_LAB', 'TERRAFORM')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
-                  title="Jump to 2026 Beyond-Console Innovation Lab (22 Labs, Reverse-Terraform & Moonshots)"
-                >
-                  <span>2026 Innovation &rarr;</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('SRE_WAR_ROOM')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
-                  title="Jump to Wave 8 Principal SRE War-Room, Multi-Window SLO Burn & VPC-SC Architect"
-                >
-                  <span>SRE War-Room &rarr;</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('CLOUD_SOC')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
-                  title="Jump to Wave 16 Autonomous 20-Pillar Cloud SOC & SOAR Studio"
-                >
-                  <span>Cloud SOC &rarr;</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onNavigateTab('AWS_AZURE_PARITY', 'CFN_ARM_STACKS')
-                  }
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold cursor-pointer transition-colors"
-                  title="Jump to AWS CloudFormation / Azure ARM Drift & IAM Simulator Bridge"
-                >
-                  <span>AWS / Azure Parity &rarr;</span>
-                </button>
-              </>
-            )}
             <button
               type="button"
               onClick={() => {
@@ -931,90 +882,111 @@ export default function SovereignTimeMachineIamStudio({
           </div>
         </div>
 
-        {/* Sub-Navigation Pills */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-          {[
-            {
-              id: 'IAM_SURGEON',
-              section: 'SPLIT',
-              label: '1. Autonomous IAM Least-Privilege Surgeon',
-              badge: iamData
-                ? `${iamData.summary?.criticalCount || 0} Critical`
-                : 'Live IAM v3',
-              tip: 'Scan project IAM bindings for primitive Owner/Editor god-roles, attach 24h auto-expiring JIT IAM Conditions, and manage Service Account keys',
-            },
-            {
-              id: 'IAM_SURGEON_SA_VAULT',
-              targetTab: 'IAM_SURGEON',
-              section: 'SA_VAULT',
-              label: 'Service Account Keys, Tokens & Kill-Switch',
-              badge: iamData
-                ? `${iamData.userManagedKeys?.length || 0} Keys · ${iamData.serviceAccounts?.length || 0} SAs`
-                : 'JSON & OAuth2',
-              tip: 'Direct access to create, download, rotate, or revoke Service Account .json keys, mint 1h OAuth2 tokens, or freeze a compromised Service Account',
-            },
-            {
-              id: 'TIME_MACHINE',
-              label: '2. SHA-256 Cloud State Time-Machine & Drift Radar',
-              badge: tmData
-                ? tmData.inSync
-                  ? 'SYNCED ✓'
-                  : `${tmData.drifts?.length || 0} DRIFTS`
-                : 'Merkle Diff',
-              tip: 'Seal SHA-256 Merkle-signed snapshots of VMs, Cloud Run, Storage, BigQuery, Firewalls & IAM, detect out-of-band console tampering, and heal drift in 1 tap',
-            },
-            {
-              id: 'SECRETS_KMS_WAF',
-              label: '3. Sovereign Secret Manager, KMS & Cloud Armor WAF',
-              badge: vaultData
-                ? `${vaultData.secrets?.length || 0} Secrets`
-                : 'Zero-Trust Vault',
-              tip: 'Provision regionally-pinned GDPR/SEC/HIPAA secrets in Secret Manager, audit Cloud KMS rotation, and synthesize Cloud Armor OWASP Top-10 WAF policies',
-            },
-          ].map((tab) => {
-            const active =
-              tab.id === 'IAM_SURGEON_SA_VAULT'
-                ? activeSubTab === 'IAM_SURGEON' && iamSectionView === 'SA_VAULT'
-                : tab.id === 'IAM_SURGEON'
-                ? activeSubTab === 'IAM_SURGEON' && iamSectionView !== 'SA_VAULT'
-                : activeSubTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                title={tab.tip}
-                onClick={() => {
-                  if (tab.targetTab) {
-                    setActiveSubTab(tab.targetTab);
-                    setIamSectionView(tab.section);
-                  } else {
-                    setActiveSubTab(tab.id);
-                    if (tab.section) setIamSectionView(tab.section);
-                  }
-                }}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold transition-all cursor-pointer border ${
-                  active
-                    ? tab.id === 'IAM_SURGEON_SA_VAULT'
-                      ? 'bg-amber-500 text-zinc-950 border-amber-300 shadow-md'
-                      : 'bg-blue-600 text-white border-blue-400 shadow-md'
-                    : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+        {/* In-Studio Sovereign IAM & Time-Machine Modules (4 Equal-Width Columns) */}
+        <div className="pt-3 mt-4 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Sovereign IAM, Time-Machine &amp; Zero-Trust Vault Modules (01–04)
+            </span>
+            <span className="text-[10px] font-mono text-zinc-500">
+              In-studio module navigation (stays inside Sovereign IAM Studio)
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {[
+              {
+                id: 'IAM_SURGEON',
+                code: '01',
+                section: 'SPLIT',
+                label: 'Autonomous IAM Surgeon',
+                badge: iamData
+                  ? `${iamData.summary?.criticalCount || 0} Critical`
+                  : 'Live IAM v3',
+                tip: 'Scan project IAM bindings for primitive Owner/Editor god-roles, attach 24h auto-expiring JIT IAM Conditions, and manage Service Account keys',
+              },
+              {
+                id: 'IAM_SURGEON_SA_VAULT',
+                code: '02',
+                targetTab: 'IAM_SURGEON',
+                section: 'SA_VAULT',
+                label: 'SA Keys, Tokens & Kill-Switch',
+                badge: iamData
+                  ? `${iamData.userManagedKeys?.length || 0} Keys · ${iamData.serviceAccounts?.length || 0} SAs`
+                  : 'JSON & OAuth2',
+                tip: 'Direct access to create, download, rotate, or revoke Service Account .json keys, mint 1h OAuth2 tokens, or freeze a compromised Service Account',
+              },
+              {
+                id: 'TIME_MACHINE',
+                code: '03',
+                label: 'SHA-256 Time-Machine & Drift',
+                badge: tmData
+                  ? tmData.inSync
+                    ? 'SYNCED ✓'
+                    : `${tmData.drifts?.length || 0} DRIFTS`
+                  : 'Merkle Diff',
+                tip: 'Seal SHA-256 Merkle-signed snapshots of VMs, Cloud Run, Storage, BigQuery, Firewalls & IAM, detect out-of-band console tampering, and heal drift in 1 tap',
+              },
+              {
+                id: 'SECRETS_KMS_WAF',
+                code: '04',
+                label: 'Secret Manager, KMS & WAF',
+                badge: vaultData
+                  ? `${vaultData.secrets?.length || 0} Secrets`
+                  : 'Zero-Trust Vault',
+                tip: 'Provision regionally-pinned GDPR/SEC/HIPAA secrets in Secret Manager, audit Cloud KMS rotation, and synthesize Cloud Armor OWASP Top-10 WAF policies',
+              },
+            ].map((tab) => {
+              const active =
+                tab.id === 'IAM_SURGEON_SA_VAULT'
+                  ? activeSubTab === 'IAM_SURGEON' && iamSectionView === 'SA_VAULT'
+                  : tab.id === 'IAM_SURGEON'
+                  ? activeSubTab === 'IAM_SURGEON' && iamSectionView !== 'SA_VAULT'
+                  : activeSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  title={tab.tip}
+                  onClick={() => {
+                    if (tab.targetTab) {
+                      setActiveSubTab(tab.targetTab);
+                      setIamSectionView(tab.section);
+                    } else {
+                      setActiveSubTab(tab.id);
+                      if (tab.section) setIamSectionView(tab.section);
+                    }
+                  }}
+                  className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                     active
-                      ? tab.id === 'IAM_SURGEON_SA_VAULT'
-                        ? 'bg-black/20 text-zinc-950 font-extrabold'
-                        : 'bg-black/30 text-blue-100'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                   }`}
                 >
-                  {tab.badge}
-                </span>
-              </button>
-            );
-          })}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      {tab.code}
+                    </span>
+                    <span className="truncate">{tab.label}</span>
+                  </div>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono shrink-0 ${
+                      active
+                        ? 'bg-black/25 text-blue-100'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

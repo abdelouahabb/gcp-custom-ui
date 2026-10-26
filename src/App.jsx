@@ -492,6 +492,22 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    if (rawUrl.includes('/biglake/federated-catalogs/create')) {
+      const provider = body.provider === 'glue' ? 'AWS Glue Data Catalog' : 'Databricks Unity Catalog';
+      const catalogName = body.catalogName || 'federated_catalog';
+      const gcpRegion = body.gcpRegion || 'us-east4';
+      return {
+        title: `Provision Cross-Cloud BigLake Federated Catalog (${provider})?`,
+        resourceKind: `BigLake Iceberg Federated Catalog (${provider})`,
+        targetName: catalogName,
+        location: `${gcpRegion} (biglake.googleapis.com + secretmanager.${gcpRegion}.rep.googleapis.com)`,
+        projectId,
+        method: 'POST (CREATE FEDERATED CATALOG)',
+        endpoint: rawUrl,
+        impactWarning: `This will provision a regional Secret Manager secret (if Databricks Unity) and create a BigLake Iceberg Federated Catalog "${catalogName}" in region "${gcpRegion}" for project "${projectId}".`,
+      };
+    }
+
     // Sovereign IAM Service Account Key Deletion / Token Revocation / Account Freeze
     if (
       rawUrl.includes('/sovereign/iam-surgeon/remediate') ||

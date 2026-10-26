@@ -1304,19 +1304,39 @@ export function LivePricingCatalogControlBar({ projectId = '', selectedRegionId 
             </span>
           )}
           {meta.driftAlerts?.length > 0 && (
-            <span
+            <button
+              type="button"
+              onClick={() => setShowEditor((v) => !v)}
+              title={`Live Google Cloud Billing Catalog API detected ${meta.driftAlerts.length} SKU rate change(s) vs static baseline: ${meta.driftAlerts
+                .map(
+                  (d) =>
+                    `${d.metric || d.region}: $${d.baseline} → $${d.live} (${
+                      d.deltaPercent > 0 ? '+' : ''
+                    }${d.deltaPercent}%)`
+                )
+                .join(' · ')}. Click to inspect or override rates.`}
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                padding: '2px 7px',
+                padding: '2px 8px',
                 borderRadius: 6,
                 background: 'rgba(244, 63, 94, 0.16)',
                 color: '#fda4af',
                 border: '1px solid rgba(244, 63, 94, 0.4)',
+                cursor: 'pointer',
               }}
             >
-              {meta.driftAlerts.length} Price Drift{meta.driftAlerts.length > 1 ? 's' : ''} Detected
-            </span>
+              {meta.driftAlerts.length} Price Drift{meta.driftAlerts.length > 1 ? 's' : ''} Detected:{' '}
+              {meta.driftAlerts
+                .slice(0, 2)
+                .map(
+                  (d) =>
+                    `${d.metric || d.region} ($${d.baseline} → $${d.live}, ${
+                      d.deltaPercent > 0 ? '+' : ''
+                    }${d.deltaPercent}%)`
+                )
+                .join(' · ')}
+            </button>
           )}
         </div>
 
