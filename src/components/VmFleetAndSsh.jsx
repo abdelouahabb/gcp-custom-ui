@@ -131,6 +131,7 @@ export default function VmFleetAndSsh({
   const [vmSearchQuery, setVmSearchQuery] = useState('');
   const [vmStatusFilter, setVmStatusFilter] = useState('ALL');
   const [vmMachineFilter, setVmMachineFilter] = useState('ALL');
+  const [vmAcceleratorFilter, setVmAcceleratorFilter] = useState('ALL');
   const [vmDiskModelFilter, setVmDiskModelFilter] = useState('ALL');
   const [vmMetadataTagFilter, setVmMetadataTagFilter] = useState('ALL');
   const [quickDeployingLabel, setQuickDeployingLabel] = useState(null);
@@ -690,6 +691,55 @@ export default function VmFleetAndSsh({
     }
   };
 
+  const getVmAcceleratorProfile = (v) => {
+    const accList = Array.isArray(v.guestAccelerators)
+      ? v.guestAccelerators
+      : [];
+    const mt = String(v.machineType || '').toLowerCase();
+    const hasGpu =
+      accList.some((a) =>
+        /nvidia|gpu|l4|t4|v100|p100|p4|a100|h100|h200|b200/i.test(
+          String(a?.type || '')
+        )
+      ) || /^(g2-|a2-|a3-|a4-)/i.test(mt);
+    const hasTpu =
+      accList.some((a) => /tpu/i.test(String(a?.type || ''))) ||
+      /^(ct3|ct4|ct5|ct6|tpu-)/i.test(mt) ||
+      (v.metadataKeys || []).some((k) => /tpu/i.test(String(k))) ||
+      Object.keys(v.labels || {}).some((k) => /tpu/i.test(String(k)));
+    const types = Array.from(
+      new Set([
+        ...accList.map((a) => String(a?.type || '')).filter(Boolean),
+        ...(mt.startsWith('g2-') && accList.length === 0 ? ['nvidia-l4'] : []),
+        ...(mt.startsWith('a2-') && accList.length === 0
+          ? ['nvidia-tesla-a100']
+          : []),
+        ...(mt.startsWith('a3-') && accList.length === 0
+          ? ['nvidia-h100-80gb']
+          : []),
+        ...(/^(ct3|ct4|ct5|ct6|tpu-)/i.test(mt) && accList.length === 0
+          ? [mt]
+          : []),
+      ])
+    );
+    return {
+      hasGpu,
+      hasTpu,
+      hasAnyAccelerator: hasGpu || hasTpu,
+      types,
+    };
+  };
+
+  const gpuVmCount = vms.filter((v) => getVmAcceleratorProfile(v).hasGpu).length;
+  const tpuVmCount = vms.filter((v) => getVmAcceleratorProfile(v).hasTpu).length;
+  const acceleratedVmCount = vms.filter(
+    (v) => getVmAcceleratorProfile(v).hasAnyAccelerator
+  ).length;
+  const cpuOnlyVmCount = vms.length - acceleratedVmCount;
+  const uniqueAcceleratorTypes = Array.from(
+    new Set(vms.flatMap((v) => getVmAcceleratorProfile(v).types))
+  );
+
   const uniqueRegions = Array.from(
     new Set(vms.map((v) => v.region || v.zone.split('-').slice(0, 2).join('-')))
   );
@@ -711,6 +761,7 @@ export default function VmFleetAndSsh({
     vmSearchQuery.trim() !== '' ||
     vmStatusFilter !== 'ALL' ||
     vmMachineFilter !== 'ALL' ||
+    vmAcceleratorFilter !== 'ALL' ||
     vmDiskModelFilter !== 'ALL' ||
     vmMetadataTagFilter !== 'ALL';
 
@@ -719,6 +770,7 @@ export default function VmFleetAndSsh({
     setVmSearchQuery('');
     setVmStatusFilter('ALL');
     setVmMachineFilter('ALL');
+    setVmAcceleratorFilter('ALL');
     setVmDiskModelFilter('ALL');
     setVmMetadataTagFilter('ALL');
   };
@@ -742,6 +794,27 @@ export default function VmFleetAndSsh({
     }
     if (vmMachineFilter !== 'ALL' && v.machineType !== vmMachineFilter) {
       return false;
+    }
+    if (vmAcceleratorFilter !== 'ALL') {
+      const acc = getVmAcceleratorProfile(v);
+      if (vmAcceleratorFilter === 'CPU_ONLY' && acc.hasAnyAccelerator) {
+        return false;
+      }
+      if (vmAcceleratorFilter === 'ANY_ACCELERATOR' && !acc.hasAnyAccelerator) {
+        return false;
+      }
+      if (vmAcceleratorFilter === 'GPU_ONLY' && !acc.hasGpu) {
+        return false;
+      }
+      if (vmAcceleratorFilter === 'TPU_ONLY' && !acc.hasTpu) {
+        return false;
+      }
+      if (
+        vmAcceleratorFilter.startsWith('TYPE:') &&
+        !acc.types.includes(vmAcceleratorFilter.slice(5))
+      ) {
+        return false;
+      }
     }
     if (vmDiskModelFilter !== 'ALL') {
       if (vmDiskModelFilter === 'PD_STANDARD' && v.diskType !== 'pd-standard') {
@@ -772,6 +845,7 @@ export default function VmFleetAndSsh({
     }
     if (vmSearchQuery.trim()) {
       const q = vmSearchQuery.trim().toLowerCase();
+      const acc = getVmAcceleratorProfile(v);
       const hay = [
         v.name,
         v.zone,
@@ -784,6 +858,9 @@ export default function VmFleetAndSsh({
         v.diskType,
         v.network,
         v.serviceAccountEmail || '',
+        ...acc.types,
+        acc.hasGpu ? 'gpu nvidia' : 'cpu-only',
+        acc.hasTpu ? 'tpu cloud-tpu' : '',
         ...(v.tags || []),
         ...Object.entries(v.labels || {}).map(([k, val]) => `${k}=${val}`),
         ...(v.metadataKeys || []),
@@ -925,7 +1002,7 @@ export default function VmFleetAndSsh({
                   type="text"
                   value={vmSearchQuery}
                   onChange={(e) => setVmSearchQuery(e.target.value)}
-                  placeholder="Filter by VM name, IP, zone, OS, tag (http-server), label (env=prod), or metadata key..."
+                  placeholder="Filter by VM name, IP, zone, OS, gpu/tpu, tag (http-server), label (env=prod), or metadata key..."
                   className="w-full h-8 pl-8 pr-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 />
               </div>
@@ -953,6 +1030,32 @@ export default function VmFleetAndSsh({
                   {uniqueMachineTypes.map((mt) => (
                     <option key={mt} value={mt}>
                       {mt}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  aria-label="Filter by GPU or TPU Accelerator"
+                  value={vmAcceleratorFilter}
+                  onChange={(e) => setVmAcceleratorFilter(e.target.value)}
+                  className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  <option value="ALL">GPU / TPU: All ({vms.length})</option>
+                  <option value="CPU_ONLY">
+                    Without GPU / TPU — CPU Only ({cpuOnlyVmCount})
+                  </option>
+                  <option value="ANY_ACCELERATOR">
+                    With GPU or TPU Attached ({acceleratedVmCount})
+                  </option>
+                  <option value="GPU_ONLY">
+                    With NVIDIA GPU ({gpuVmCount})
+                  </option>
+                  <option value="TPU_ONLY">
+                    With Cloud TPU ({tpuVmCount})
+                  </option>
+                  {uniqueAcceleratorTypes.map((accType) => (
+                    <option key={accType} value={`TYPE:${accType}`}>
+                      Accelerator: {accType}
                     </option>
                   ))}
                 </select>
@@ -1235,12 +1338,33 @@ export default function VmFleetAndSsh({
                           </span>
                         )}
 
-                        {vm.guestAccelerators?.length > 0 && (
-                          <span className="text-[10px] font-mono font-bold bg-blue-500/20 text-blue-500 border border-blue-500/30 px-1.5 py-0.5 rounded">
-                            {vm.guestAccelerators[0].count}x{' '}
-                            {vm.guestAccelerators[0].type}
-                          </span>
-                        )}
+                        {(() => {
+                          const acc = getVmAcceleratorProfile(vm);
+                          if (acc.hasGpu) {
+                            const label =
+                              vm.guestAccelerators?.length > 0
+                                ? `${vm.guestAccelerators[0].count}x ${vm.guestAccelerators[0].type}`
+                                : acc.types[0] || 'NVIDIA GPU';
+                            return (
+                              <span className="text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                                GPU: {label}
+                              </span>
+                            );
+                          }
+                          if (acc.hasTpu) {
+                            const label = acc.types[0] || 'Cloud TPU';
+                            return (
+                              <span className="text-[10px] font-mono font-bold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded">
+                                TPU: {label}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/80 px-1.5 py-0.5 rounded">
+                              CPU-ONLY
+                            </span>
+                          );
+                        })()}
 
                         {/* Deletion Protection Toggle Pill */}
                         <button
