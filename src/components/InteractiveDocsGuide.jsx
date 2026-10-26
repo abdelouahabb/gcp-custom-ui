@@ -31,6 +31,34 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'native-cloud-billing-spend-caps-and-22-scenario-precrime-studio',
+    wave: '2026 FINOPS & EMERGENCY COST-STOP · NATIVE CLOUD BILLING SPEND CAP API, 24/7 PUB/SUB KILL-SWITCH, LEVEL 1.5 GUARD & 22-SCENARIO PRE-CRIME SIMULATOR',
+    title:
+      'Native Cloud Billing Spend Cap & Budget API Studio (GoogleCloudBillingBudgetsV1SpendCap), 24/7 Permanent Server-Side Circuit-Breaker (cloudpulse-budget-killswitch), Level 1.5 Surgical Per-Service Kill-Switch & 22-Scenario Exponential "What Happens If..." Pre-Crime Simulator',
+    badge: 'FINOPS TAB + KILL-SWITCH + 2026 LAB',
+    badgeColor:
+      'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',
+    icon: DollarSign,
+    targetTab: 'FINOPS',
+    problemSolved:
+      'Unlinking a Cloud Billing Account takes down an entire GCP project (VMs, GCS buckets, DNS, databases), while browser-only alerts fail when your laptop is closed. Furthermore, newcomers often get hit by exponential runaway bills (such as a leaked Gemini API key scraped on GitHub, recursive Vertex AI agent loops, uncontrolled Cloud Run GPU autoscaling, or 45 TB cross-continent backup egress) without knowing how Google Cloud’s native Spend Cap API (GoogleCloudBillingBudgetsV1SpendCap) works or why gross list-price usage triggers caps before promotional credits apply.',
+    howItWorks: [
+      'Native Cloud Billing Spend Cap & Budget API Studio (BillingAccountCreditGuardian.jsx): Dynamically queries cloudresourcemanager.googleapis.com/v1/projects/:id and cloudbilling.googleapis.com/v1/services (zero hardcoded service hex IDs) to provision surgical per-service hard spend caps (spendCap.inputState = CONFIGURED) on the 4 eligible services (Gemini API, Vertex AI / Agent Platform, Cloud Run, Cloud Run functions) enforcing Google Cloud’s 4 mandatory preconditions (1 project, 1 service, EXCLUDE_ALL_CREDITS, MONTH).',
+      'Interactive Spend Cap Lifecycle & Atomic 2-Step FAILED_PRECONDITION Solver: Displays live Console/API statuses (Configured, Enforced, Lifted / AWAITING_NEXT_PERIOD, Not configured) with 1-click buttons to Lift Cap mid-month, Re-Arm Cap, or Raise USD Cap via an atomic 2-step PATCH that lifts ENFORCED first before updating amount.specifiedAmount, plus a Gross-vs-Net Credit Guardrail Calculator.',
+      '24/7 Permanent Server-Side Protection in Google Cloud (AutonomousCloudBrain.jsx & Lab2026QuantumNexus.jsx): The 24/7 GCP Spend Cap button starts OFF by default (syncing live state from /spend-cap-catalog on mount), triggers the Pre-Execution Warning Modal before arming, and provisions both a real GoogleCloudBillingBudgetsV1SpendCap (Spend cap: Configured in Google Cloud Console) AND a dedicated Pub/Sub Kill-Switch topic (projects/<id>/topics/cloudpulse-budget-killswitch) that enforces your cap 24/7 on Google’s servers even when your browser is closed.',
+      '3-Tier + Level 1.5 Surgical Per-Service Emergency Cost-Stop Guide (EmergencyApiKillSwitch.jsx): Explains the exact difference between Level 1 (Compute Hibernation), Level 1.5 (Surgical Per-Service Native Spend Cap Guard at $5–$500/mo), Level 2 (Service Usage API Disable + 1-click "+ Cap $15" badges on eligible API cards), and Level 3 (Nuclear Project Billing Unlink).',
+      '22 Categorized "What Happens If..." Pre-Crime Scenarios with Exponential Compounding & Newcomer Prevention Guides (AutonomousCloudBrain.jsx): Replaces "Inject..." with a 100% Read-Only Math Projection across 6 <optgroup> categories (AI/Gemini/GPU Traps including Leaked Gemini API Key at 1.28x/d exponential compounding, Serverless & Event Loops, Cross-Region 45 TB Backup & Cloud NAT Hairpin Egress, BigQuery/SQL/Storage Explosions, and Observability/GKE/Zombie Infra Traps) with a synchronized $ input + range slider max scale (customSliderMaxUsd).',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/billing-guardian/spend-cap-catalog (Dynamic Project Number, Billing Account & Live Cloud Billing Service Catalog Discovery)',
+      'POST /api/project/:id/billing-guardian/budgets/create (Provisions GoogleCloudBillingBudgetsV1SpendCap + projects/:id/topics/cloudpulse-budget-killswitch)',
+      'POST /api/project/:id/billing-guardian/budgets/spend-cap-action (LIFT_CAP | ARM_CAP | DISABLE_CAP | RAISE_AMOUNT_AND_UNPAUSE 2-Step Atomic PATCH)',
+      'POST /api/project/:id/billing-guardian/budgets/delete (DELETE billingbudgets.googleapis.com/v1/:budgetName)',
+    ],
+    billingImpact:
+      '100% $0.00/mo API & Pub/Sub topic provisioning; automatically pauses runaway Gemini API, Vertex AI, Cloud Run, or Cloud Run functions spend on Google’s servers the moment gross monthly usage reaches 100% of your cap.',
+  },
+  {
     id: 'self-contained-xterm-ssh-oslogin-iap-and-vm-modernization',
     wave: '2026 COMPUTE, SSH & SERVERLESS MODERNIZATION · SELF-CONTAINED XTERM.JS VM CONTROL, OS LOGIN SWITCHER, IAP GUARDRAILS & GCE -> CLOUD RUN PIPELINE',
     title:
@@ -1049,7 +1077,7 @@ const DOC_SECTIONS = [
     problemSolved:
       'Cloud consoles only show past billing invoices after the money is already spent, never warn you which day/hour a traffic spike or infinite retry loop will exhaust your budget, and force you to manually stitch together multi-service architectures without knowing which region is cheapest, greenest, and hardware-compatible.',
     howItWorks: [
-      '"Pre-Crime" 30-Day Billing Time-Crystal Simulator: Combines your live project $/hr burn rate with a configurable Monthly Hard Budget Cap ($20–$1,000) and lets you inject anomaly scenarios (35x Viral Traffic Spike, 120x Runaway Retry Loop, 4x NVIDIA L4 GPU Surge, 8 TB Egress Flood). Plots a 30-day SVG trajectory showing the exact Day & Hour of budget exhaustion and how much money is saved when the Autonomous $0-Idle Circuit-Breaker is armed.',
+      '"Pre-Crime" 30-Day Billing Time-Crystal Simulator (22 Categorized "What Happens If..." Scenarios): Combines your live project $/hr burn rate with a synchronized Monthly Hard Budget Cap ($5 to $500,000/mo with auto-scaling slider max) across 22 real-world scenarios in 6 categories (including Leaked Gemini API Key at 1.28x/d exponential compounding, Recursive Vertex AI Agent Loop, Uncontrolled Cloud Run GPU Autoscaling, 45 TB Cross-Region Backup Egress, Cloud NAT Hairpin, and BigQuery SELECT * Dashboard Scans). Includes Newcomer Prevention Guides, plain-English explanations of Steady-State vs. Unguarded Anomaly Bill, and a 24/7 Permanent Server-Side GCP Spend Cap (GoogleCloudBillingBudgetsV1SpendCap + cloudpulse-budget-killswitch Pub/Sub topic) that protects your project 24/7 even when your browser is closed.',
       '"What-If" Resource Blast-Radius & Failure Cascade X-Ray: Click any live VPC, Firewall Rule, Cloud Run Service, Compute VM, GCS Bucket, or BigQuery Dataset to inspect its Blast Severity Score (/100), Upstream Entrypoints, Downstream Failure Cascade, and a 1-click Self-Healing CLI command.',
       'Autonomous Cloud Architecture Compiler: Select a production archetype (Zero-Trust L4 GPU RAG Stack, EU GDPR Sovereign Lakehouse, Ultra-Frugal Spot Mesh, or 98% CFE Green Core). Automatically scans all 40 GCP regions for GPU SKU support, Tier-1 pricing, and highest Carbon-Free Energy % to output an itemized Bill of Materials ($/mo) and a full gcloud + bq deployment script.',
     ],
@@ -1336,11 +1364,14 @@ const DOC_SECTIONS = [
     problemSolved:
       'If an API key is leaked or a runaway loop starts spawning expensive GPUs while you are away from your desk, disabling individual APIs or unlinking the billing account from a mobile browser in the standard GCP Console is slow and difficult.',
     howItWorks: [
+      'Plain-English 3-Tier + Level 1.5 Emergency Cost-Stop Guide: Clearly explains when to use Level 1 (Compute Hibernation), Level 1.5 (Surgical Per-Service Native Spend Cap Guard via GoogleCloudBillingBudgetsV1SpendCap), Level 2 (Service Usage API Disable), or Level 3 (Nuclear Project Billing Unlink).',
+      'Level 1.5 Surgical Per-Service Native Spend Cap Guard: Provisions a live Google Cloud Billing Spend Cap ($5, $15, $25, $50, $100, $250, or $500/mo) on Gemini API, Vertex AI / Agent Platform, Cloud Run, or Cloud Run functions so Google automatically pauses only that service at 100% of gross spend without taking down the rest of your project.',
       'Emergency Project Billing Kill-Switch: Uses a 2-step confirmation to call cloudbilling.googleapis.com and detach the billing account (billingAccountName: "") from the project, immediately stopping all billable spend. Also stores the previous billing account ID so you can re-link it in 1 tap.',
-      'Emergency Mobile API Kill-Switch: Lists all enabled APIs on your project with priority sorting (Compute, Cloud Run, Vertex AI, GKE, BigQuery) and lets you disable or re-enable any API in 1 tap.',
+      'Emergency Mobile API Kill-Switch + 1-Click "+ Cap $15" Badges: Lists all enabled APIs on your project with priority sorting (Compute, Cloud Run, Vertex AI, Gemini API, GKE, BigQuery), lets you disable or re-enable any API in 1 tap, and provides 1-click "+ Cap $15" buttons on Spend-Cap-eligible API cards.',
     ],
     apisUsed: [
       'GET / POST /api/project/:id/billing → cloudbilling.googleapis.com/v1/projects/:id/billingInfo',
+      'GET /api/project/:id/billing-guardian/spend-cap-catalog & POST /api/project/:id/billing-guardian/budgets/create → billingbudgets.googleapis.com/v1',
       'GET / POST /api/project/:id/apis → serviceusage.googleapis.com/v1',
     ],
     billingImpact:
