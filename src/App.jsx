@@ -3740,7 +3740,7 @@ function CloudPulseCockpit() {
         className={
           mobilePreview
             ? 'max-w-[430px] mx-auto my-4 border-[6px] border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 rounded-[40px] shadow-2xl overflow-hidden bg-zinc-50 dark:bg-[#131314] min-h-[860px] flex flex-col relative'
-            : 'max-w-[1600px] mx-auto pb-20 md:pb-10'
+            : 'w-full max-w-none pb-20 md:pb-10'
         }
       >
         {mobilePreview && (
@@ -3759,7 +3759,7 @@ function CloudPulseCockpit() {
         )}
 
         {/* Header Row */}
-        <header className="relative z-40 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#202124]/90 backdrop-blur-md px-4 sm:px-6 py-4">
+        <header className="relative z-40 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-[#202124]/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-4">
           {/* Top Row: CloudPulse 2026 Brand (Left) + Live GCP Project Switcher & Provision Resource CTA (Top Right) */}
           <div className="relative z-50 flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-3 min-w-0">
@@ -4104,7 +4104,7 @@ function CloudPulseCockpit() {
         </header>
 
         {/* Main Content Body */}
-        <main className="p-4 sm:p-6 space-y-6 flex-1">
+        <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 flex-1">
           {toastMessage && (
             <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-3.5 flex items-center justify-between gap-3 text-xs shadow-sm transition-all">
               <div className="flex items-center gap-2">
