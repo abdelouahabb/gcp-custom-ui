@@ -70,7 +70,6 @@ import Revolutionary2026Suite, {
   calculateLiveBurnRate,
 } from './components/Revolutionary2026Suite';
 import CommandPaletteModal from './components/CommandPaletteModal';
-import FuturisticOrbitalHud from './components/FuturisticOrbitalHud';
 import InteractiveDocsGuide from './components/InteractiveDocsGuide';
 import GlobalNetworkWorldMap from './components/GlobalNetworkWorldMap';
 import DataEngineeringStudio from './components/DataEngineeringStudio';
@@ -4180,25 +4179,8 @@ function CloudPulseCockpit() {
             </div>
           )}
 
-          {/* Non-blocking asynchronous page render: Studios, Orbital HUD, and KPI cards mount immediately (<16ms) while live GCP telemetry streams in the background */}
+          {/* Non-blocking asynchronous page render: Studios and KPI cards mount immediately (<16ms) while live GCP telemetry streams in the background */}
           <>
-              {(activeTab === 'OVERVIEW' || activeTab === 'INNOVATION_LAB') && (
-                <FuturisticOrbitalHud
-                  projectId={selectedProjectId}
-                  overview={overview}
-                  liveBurn={liveBurn}
-                  onRefreshOverview={() => {
-                    fetchProjectOverview(selectedProjectId, { force: true });
-                    setVmRefreshTrigger((c) => c + 1);
-                  }}
-                  onDeleteResource={handleDeleteResource}
-                  onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-                  onOpenDocsGuide={() => setActiveTab('DOCS_GUIDE')}
-                  onShowToast={showToast}
-                  onShowError={setErrorBanner}
-                />
-              )}
-
               {activeTab === 'OVERVIEW' && (
                 <div className="space-y-6">
                   <SortableKpiRow
