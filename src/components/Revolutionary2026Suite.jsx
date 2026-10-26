@@ -1522,6 +1522,9 @@ export default function Revolutionary2026Suite({
         <Lab2026QuantumNexus
           projectId={projectId}
           onRefreshGlobal={onRefreshOverview}
+          onOpenFinOps={() =>
+            onSelectStudioTab && onSelectStudioTab('FINOPS')
+          }
           onShowToast={onShowToast}
           onShowError={onShowError}
         />
@@ -2329,6 +2332,9 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
           burn={burn}
           onHibernateSleep={() => handleHibernateToggle('SLEEP')}
           onOpenProvision={onOpenProvision}
+          onOpenFinOps={() =>
+            onSelectStudioTab && onSelectStudioTab('FINOPS')
+          }
           onShowToast={onShowToast}
         />
       )}
@@ -2485,14 +2491,26 @@ gcloud scheduler jobs create http cloudpulse-night-sleep-cron --schedule="0 20 *
 
           {/* Right Equal Col: Vertex AI Context Caching FinOps Calculator (-80% LLM Cost) */}
           <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
-            <div>
-              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                <span>Vertex AI Context Caching FinOps Calculator (-80%)</span>
-              </h3>
-              <p className="text-[11px] text-zinc-500 mt-0.5">
-                Stop re-sending 500k tokens of codebase, system instructions, or PDFs on every prompt. Pin them in Vertex AI Context Cache for a 4x–5x input token discount.
-              </p>
+            <div className="flex items-start justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  <span>Vertex AI Context Caching FinOps Calculator (-80%)</span>
+                </h3>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Stop re-sending 500k tokens of codebase, system instructions, or PDFs on every prompt. Pin them in Vertex AI Context Cache for a 4x–5x input token discount.
+                </p>
+              </div>
+              {onSelectStudioTab && (
+                <button
+                  type="button"
+                  onClick={() => onSelectStudioTab('FINOPS')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-mono font-extrabold cursor-pointer shrink-0"
+                  title="Configure a surgical Native Spend Cap on Gemini API / Vertex AI via billingbudgets.googleapis.com/v1"
+                >
+                  Gemini / Vertex Spend Cap (FinOps) →
+                </button>
+              )}
             </div>
 
             <div className="space-y-3">

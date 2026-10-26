@@ -668,6 +668,7 @@ export default function BillingAccountCreditGuardian({
   onOpenBigQuerySql,
   onOpenProvision,
   onOpenSecretManagerStudio,
+  onOpenEmergencyKillSwitch,
   onRunInShell,
   onShowToast,
   onGrantsSummaryChange,
@@ -847,6 +848,182 @@ export default function BillingAccountCreditGuardian({
   const [alwaysFreeFilter, setAlwaysFreeFilter] = useState('ALL');
   const [enforcerBusy, setEnforcerBusy] = useState(null);
 
+  // Native Cloud Billing Budget Spend Cap & Dual-Defense Studio State (`billingbudgets.googleapis.com/v1`)
+  const [spendCapCatalog, setSpendCapCatalog] = useState(null);
+  const [loadingSpendCapCatalog, setLoadingSpendCapCatalog] = useState(false);
+  const [showSpendCapComposer, setShowSpendCapComposer] = useState(false);
+  const [budgetDefenseMode, setBudgetDefenseMode] = useState('SPEND_CAP'); // 'SPEND_CAP' | 'PUBSUB_ALERT'
+  const [selectedServiceResource, setSelectedServiceResource] = useState('');
+  const [newBudgetAmountUsd, setNewBudgetAmountUsd] = useState(15);
+  const [newBudgetDisplayName, setNewBudgetDisplayName] = useState('');
+  const [newBudgetCreditTreatment, setNewBudgetCreditTreatment] = useState(
+    'EXCLUDE_ALL_CREDITS'
+  );
+  const [newBudgetPubsubTopic, setNewBudgetPubsubTopic] = useState('');
+  const [budgetBusyKey, setBudgetBusyKey] = useState(null);
+  const [editingBudgetAmountMap, setEditingBudgetAmountMap] = useState({});
+
+  const loadSpendCapCatalog = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingSpendCapCatalog(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/spend-cap-catalog`
+      );
+      if (res.data?.ok) {
+        setSpendCapCatalog(res.data);
+        const firstEligible = (res.data.resolvedServices || []).find(
+          (s) => s.spendCapEligible && s.enabledInProject
+        ) || (res.data.resolvedServices || []).find((s) => s.spendCapEligible);
+        if (firstEligible?.name) {
+          setSelectedServiceResource((prev) => prev || firstEligible.name);
+        }
+        if (Array.isArray(res.data.budgets) && res.data.budgets.length > 0) {
+          setLiveBillingInsights((prev) =>
+            prev
+              ? { ...prev, billingBudgets: res.data.budgets }
+              : { billingBudgets: res.data.budgets }
+          );
+        }
+      }
+    } catch {
+      // ignore if offline
+    } finally {
+      setLoadingSpendCapCatalog(false);
+    }
+  }, [projectId]);
+
+  const handleCreateBudgetOrSpendCap = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!projectId) return;
+    const isSpendCap = budgetDefenseMode === 'SPEND_CAP';
+    if (isSpendCap && !selectedServiceResource) {
+      if (onShowToast) {
+        onShowToast(
+          'Select an eligible service from the live Cloud Billing Service Catalog first.'
+        );
+      }
+      return;
+    }
+    setBudgetBusyKey('CREATE_BUDGET');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/budgets/create`,
+        {
+          billingAccountName:
+            billingInfo?.billingAccountName ||
+            spendCapCatalog?.billingAccountName ||
+            '',
+          displayName: newBudgetDisplayName.trim(),
+          amountUsd: Number(newBudgetAmountUsd || 15),
+          currencyCode: billingInfo?.currencyCode || 'USD',
+          enableSpendCap: isSpendCap,
+          serviceResourceName: isSpendCap
+            ? selectedServiceResource
+            : selectedServiceResource || '',
+          projectResourceName: spendCapCatalog?.projectResourceName || '',
+          creditTypesTreatment: isSpendCap
+            ? 'EXCLUDE_ALL_CREDITS'
+            : newBudgetCreditTreatment,
+          thresholdPercents: [50, 80, 100],
+          pubsubTopic: newBudgetPubsubTopic.trim(),
+        }
+      );
+      if (res.data?.ok) {
+        if (onShowToast) {
+          onShowToast(
+            res.data.message || 'Created Cloud Billing Spend Cap Budget.'
+          );
+        }
+        setNewBudgetDisplayName('');
+        setShowSpendCapComposer(false);
+        await loadSpendCapCatalog();
+        await loadBillingGuardian(true);
+      }
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error ||
+            'Failed to create Cloud Billing Spend Cap Budget.'
+        );
+      }
+    } finally {
+      setBudgetBusyKey(null);
+    }
+  };
+
+  const handleSpendCapAction = async (budgetName, action, newAmountUsd) => {
+    if (!projectId || !budgetName) return;
+    const busyId = `${action}:${budgetName}`;
+    setBudgetBusyKey(busyId);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/budgets/spend-cap-action`,
+        {
+          budgetName,
+          action,
+          newAmountUsd,
+          currencyCode: billingInfo?.currencyCode || 'USD',
+        }
+      );
+      if (res.data?.ok) {
+        if (onShowToast) {
+          onShowToast(
+            res.data.message || `Updated Spend Cap state (${action}).`
+          );
+        }
+        await loadSpendCapCatalog();
+        await loadBillingGuardian(true);
+      }
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error ||
+            `Failed to execute Spend Cap action (${action}).`
+        );
+      }
+    } finally {
+      setBudgetBusyKey(null);
+    }
+  };
+
+  const handleDeleteBudget = async (budgetName) => {
+    if (!projectId || !budgetName) return;
+    setBudgetBusyKey(`DELETE:${budgetName}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/budgets/delete`,
+        { budgetName }
+      );
+      if (res.data?.ok) {
+        if (onShowToast) {
+          onShowToast(res.data.message || 'Deleted Cloud Billing Budget.');
+        }
+        await loadSpendCapCatalog();
+        await loadBillingGuardian(true);
+      }
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      if (onShowToast) {
+        onShowToast(
+          err.response?.data?.error || 'Failed to delete Cloud Billing Budget.'
+        );
+      }
+    } finally {
+      setBudgetBusyKey(null);
+    }
+  };
+
   const scanEgressAndLeftovers = useCallback(async () => {
     if (!projectId) return;
     setLoadingEgressRadar(true);
@@ -918,13 +1095,19 @@ export default function BillingAccountCreditGuardian({
 
   useEffect(() => {
     loadBillingGuardian(false);
+    loadSpendCapCatalog();
     scanEgressAndLeftovers();
     scanAlwaysFreeAuditor();
     const intervalId = setInterval(() => {
       loadBillingGuardian(true);
     }, 2 * 60 * 1000);
     return () => clearInterval(intervalId);
-  }, [loadBillingGuardian, scanEgressAndLeftovers, scanAlwaysFreeAuditor]);
+  }, [
+    loadBillingGuardian,
+    loadSpendCapCatalog,
+    scanEgressAndLeftovers,
+    scanAlwaysFreeAuditor,
+  ]);
 
   const handleSyncConsoleCredits = async (overrideRawText) => {
     const rawToParse =
@@ -1665,43 +1848,575 @@ ORDER BY
         </div>
       </div>
 
-      {/* Live Cloud Billing Budgets API Section (`billingbudgets.googleapis.com/v1`) */}
-      {liveCostMetrics.billingBudgets.length > 0 && (
-        <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">
-              Live Cloud Billing Budgets (`billingbudgets.googleapis.com/v1/{billingInfo.billingAccountId}/budgets`)
-            </span>
-            <span className="text-[11px] font-mono text-zinc-500">
-              {liveCostMetrics.billingBudgets.length} configured budget alert(s)
-            </span>
+      {/* Live Cloud Billing Budget API Spend Cap & Dual-Defense Studio (`billingbudgets.googleapis.com/v1`) */}
+      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-3.5 font-mono">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                Native Cloud Billing Spend Cap & Budget API Studio (
+                <code>
+                  billingbudgets.googleapis.com/v1/
+                  {billingInfo?.billingAccountId ||
+                    spendCapCatalog?.billingAccountName?.replace(
+                      /^billingAccounts\//,
+                      ''
+                    ) ||
+                    'account'}
+                  /budgets
+                </code>
+                )
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                GoogleCloudBillingBudgetsV1SpendCap
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-0.5">
+              Surgical per-service hard spend caps (<code>CONFIGURED</code>,{' '}
+              <code>ENFORCED</code>, <code>AWAITING_NEXT_PERIOD</code>) pause only
+              one target service at 100% gross monthly spend (
+              <code>EXCLUDE_ALL_CREDITS</code>) without unlinking your entire
+              project&apos;s Billing Account.
+            </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {liveCostMetrics.billingBudgets.map((b) => (
-              <div
-                key={b.name}
-                className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
+          <div className="flex items-center gap-2 flex-wrap">
+            {onOpenEmergencyKillSwitch && (
+              <button
+                type="button"
+                onClick={onOpenEmergencyKillSwitch}
+                className="px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-extrabold cursor-pointer"
+                title="Jump to DEFCON-1 Project Billing Unlink & Granular API Kill-Switch"
               >
-                <div className="min-w-0">
-                  <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                    {b.displayName} — {fmtCreditUsd(b.amountUsd)} {b.currencyCode}/
-                    {b.calendarPeriod}
-                  </div>
-                  <div className="text-[10px] text-zinc-500 truncate">
-                    {b.creditTypesTreatment} · Thresholds:{' '}
-                    {b.thresholdPercents.map((p) => `${p}%`).join(', ')}
-                  </div>
-                </div>
-                {b.spendCapConfigured && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                    SPEND CAP
-                  </span>
-                )}
-              </div>
-            ))}
+                DEFCON-1 Emergency Kill-Switch →
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => loadSpendCapCatalog()}
+              disabled={loadingSpendCapCatalog}
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+            >
+              {loadingSpendCapCatalog ? 'Syncing Catalog...' : 'Sync Budgets'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSpendCapComposer((prev) => !prev)}
+              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer"
+            >
+              {showSpendCapComposer
+                ? 'Close Spend Cap Composer'
+                : '+ Create Native Spend Cap / Budget'}
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Plain-English Guide to Native Spend Caps vs. Alert Budgets */}
+        <div className="p-3 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs font-sans leading-relaxed text-zinc-700 dark:text-zinc-300">
+          <strong className="text-zinc-900 dark:text-zinc-100">
+            How Native Spend Caps work (and how they differ from standard
+            budgets):
+          </strong>{' '}
+          Traditional Google Cloud budgets only send email or Pub/Sub alerts
+          while your services keep spending money. A{' '}
+          <strong className="text-zinc-900 dark:text-zinc-100">
+            Native Spend Cap Budget (
+            <code className="font-mono text-[11px]">
+              GoogleCloudBillingBudgetsV1SpendCap
+            </code>
+            )
+          </strong>{' '}
+          acts as an automated circuit-breaker for a single service (such as{' '}
+          <strong>Gemini API</strong>, <strong>Vertex AI</strong>,{' '}
+          <strong>Cloud Run</strong>, or <strong>Cloud Run Functions</strong>):
+          when gross monthly usage reaches 100% of your cap, Google Cloud
+          switches the budget to{' '}
+          <code className="font-mono text-[11px] text-red-600 dark:text-red-400">
+            ENFORCED
+          </code>{' '}
+          and pauses only that service for the rest of the month while keeping
+          the rest of your project (VMs, Storage, Databases) online. If a cap
+          trips and you need the service back immediately, click{' '}
+          <strong className="text-amber-600 dark:text-amber-400">
+            Lift Cap (AWAITING_NEXT_PERIOD)
+          </strong>{' '}
+          to resume service for the remainder of the month (it automatically
+          re-arms to{' '}
+          <code className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
+            CONFIGURED
+          </code>{' '}
+          on the 1st of next month). Because Google evaluates Spend Caps against{' '}
+          <strong>gross list-price usage</strong> (
+          <code className="font-mono text-[11px]">EXCLUDE_ALL_CREDITS</code>),
+          set your cap above your expected monthly credit usage so your free
+          trial or promotional credits aren&apos;t paused prematurely.
+        </div>
+
+        {/* Collapsible Native Spend Cap & Pub/Sub Budget Composer */}
+        {showSpendCapComposer && (
+          <form
+            onSubmit={handleCreateBudgetOrSpendCap}
+            className="p-4 rounded-xl bg-white dark:bg-[#1a1b1e] border border-blue-500/40 space-y-3.5 text-xs"
+          >
+            {/* 2 Equal-Width Defense Modes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                {
+                  id: 'SPEND_CAP',
+                  title:
+                    'Mode 1: Native API Spend Cap (spendCap.inputState = CONFIGURED)',
+                  sub: 'Automatically pauses 1 eligible service at 100% gross spend (requires EXCLUDE_ALL_CREDITS + 1 project + 1 service)',
+                },
+                {
+                  id: 'PUBSUB_ALERT',
+                  title:
+                    'Mode 2: Whole-Project Budget + Pub/Sub Kill-Switch Topic',
+                  sub: 'Supports INCLUDE_ALL_CREDITS across all services and publishes 50%/80%/100% JSON alerts to Cloud Pub/Sub',
+                },
+              ].map((m) => {
+                const active = budgetDefenseMode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setBudgetDefenseMode(m.id);
+                      if (m.id === 'SPEND_CAP') {
+                        setNewBudgetCreditTreatment('EXCLUDE_ALL_CREDITS');
+                      }
+                    }}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      active
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                    }`}
+                  >
+                    <div className="font-extrabold text-[11px]">{m.title}</div>
+                    <div
+                      className={`text-[10px] mt-0.5 ${
+                        active ? 'text-blue-100' : 'text-zinc-500'
+                      }`}
+                    >
+                      {m.sub}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Dynamic Live Cloud Billing Service Catalog Selector (`cloudbilling.googleapis.com/v1/services`) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase text-zinc-500">
+                  1. Select Service from Live Cloud Billing Catalog (
+                  {spendCapCatalog?.totalCatalogServicesCount || 0} catalog
+                  services discovered · Project:{' '}
+                  <code>
+                    {spendCapCatalog?.projectResourceName ||
+                      `projects/${projectId}`}
+                  </code>
+                  ):
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                {(spendCapCatalog?.resolvedServices || [])
+                  .filter((s) =>
+                    budgetDefenseMode === 'SPEND_CAP'
+                      ? s.spendCapEligible
+                      : true
+                  )
+                  .map((srv) => {
+                    const active = selectedServiceResource === srv.name;
+                    return (
+                      <button
+                        key={srv.name}
+                        type="button"
+                        onClick={() => setSelectedServiceResource(srv.name)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          active
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-extrabold text-[11px] truncate">
+                            {srv.displayName}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                              active
+                                ? 'bg-black/25 text-white'
+                                : srv.enabledInProject
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
+                            }`}
+                          >
+                            {srv.enabledInProject ? 'API ON' : 'API OFF'}
+                          </span>
+                        </div>
+                        <div
+                          className={`text-[10px] truncate mt-0.5 ${
+                            active ? 'text-blue-100' : 'text-zinc-500'
+                          }`}
+                        >
+                          {srv.name} · {srv.category}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Gross vs. Net Credit Trap Calculator (`EXCLUDE_ALL_CREDITS` Guardrail) */}
+            {budgetDefenseMode === 'SPEND_CAP' && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <div className="space-y-0.5 max-w-2xl">
+                  <div className="font-extrabold text-amber-700 dark:text-amber-300">
+                    Gross vs. Net Credit Guardrail (
+                    <code>creditTypesTreatment = EXCLUDE_ALL_CREDITS</code>)
+                  </div>
+                  <div className="text-zinc-600 dark:text-zinc-400">
+                    Google Cloud Spend Caps evaluate <strong>gross</strong> list
+                    usage before promotional credits settle. Current gross
+                    usage:{' '}
+                    <strong>{fmtCreditUsd(liveCostMetrics.grossUsageUsd)}</strong>{' '}
+                    (Net invoice:{' '}
+                    <strong>{fmtCreditUsd(liveCostMetrics.netSubtotalUsd)}</strong>
+                    ). Recommended gross cap so your active credit pool is not
+                    choked early:{' '}
+                    <strong>
+                      $
+                      {Math.max(
+                        15,
+                        Math.ceil(
+                          (Number(liveCostMetrics.grossUsageUsd || 0) + 20) / 5
+                        ) * 5
+                      )}{' '}
+                      USD/mo
+                    </strong>
+                    .
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewBudgetAmountUsd(
+                      Math.max(
+                        15,
+                        Math.ceil(
+                          (Number(liveCostMetrics.grossUsageUsd || 0) + 20) / 5
+                        ) * 5
+                      )
+                    )
+                  }
+                  className="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold cursor-pointer shrink-0"
+                >
+                  Apply Recommended Gross Cap ($
+                  {Math.max(
+                    15,
+                    Math.ceil(
+                      (Number(liveCostMetrics.grossUsageUsd || 0) + 20) / 5
+                    ) * 5
+                  )}
+                  )
+                </button>
+              </div>
+            )}
+
+            {/* Form Inputs Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                  Monthly Cap Amount ({billingInfo?.currencyCode || 'USD'})
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={newBudgetAmountUsd}
+                  onChange={(e) => setNewBudgetAmountUsd(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                  Budget Display Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={newBudgetDisplayName}
+                  onChange={(e) => setNewBudgetDisplayName(e.target.value)}
+                  placeholder={`${projectId}-${
+                    budgetDefenseMode === 'SPEND_CAP' ? 'spend-cap' : 'budget'
+                  }`}
+                  className="w-full px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                  Credit Treatment
+                </label>
+                <select
+                  value={
+                    budgetDefenseMode === 'SPEND_CAP'
+                      ? 'EXCLUDE_ALL_CREDITS'
+                      : newBudgetCreditTreatment
+                  }
+                  disabled={budgetDefenseMode === 'SPEND_CAP'}
+                  onChange={(e) => setNewBudgetCreditTreatment(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs"
+                >
+                  <option value="EXCLUDE_ALL_CREDITS">
+                    EXCLUDE_ALL_CREDITS (Mandatory for Spend Cap)
+                  </option>
+                  <option value="INCLUDE_ALL_CREDITS">
+                    INCLUDE_ALL_CREDITS (Net After Credits)
+                  </option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-zinc-500 mb-1">
+                  Pub/Sub Kill-Switch Topic (Optional)
+                </label>
+                <select
+                  value={newBudgetPubsubTopic}
+                  onChange={(e) => setNewBudgetPubsubTopic(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs"
+                >
+                  <option value="">None (Email & Console Alerts)</option>
+                  {(spendCapCatalog?.pubsubTopics || []).map((t) => (
+                    <option key={t.name} value={t.name}>
+                      {t.shortName} ({t.name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="text-[10px] text-zinc-500">
+                4 API Preconditions:{' '}
+                <strong className="text-emerald-600 dark:text-emerald-400">
+                  1 Project ({spendCapCatalog?.projectResourceName || `projects/${projectId}`})
+                </strong>{' '}
+                ·{' '}
+                <strong className="text-emerald-600 dark:text-emerald-400">
+                  {selectedServiceResource || '1 Service'}
+                </strong>{' '}
+                ·{' '}
+                <strong className="text-emerald-600 dark:text-emerald-400">
+                  calendarPeriod=MONTH
+                </strong>{' '}
+                ·{' '}
+                <strong className="text-emerald-600 dark:text-emerald-400">
+                  {budgetDefenseMode === 'SPEND_CAP'
+                    ? 'spendCap.inputState=CONFIGURED'
+                    : 'thresholdRules=50%,80%,100%'}
+                </strong>
+              </div>
+              <button
+                type="submit"
+                disabled={budgetBusyKey === 'CREATE_BUDGET'}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer"
+              >
+                {budgetBusyKey === 'CREATE_BUDGET'
+                  ? 'Provisioning in Cloud Billing API...'
+                  : budgetDefenseMode === 'SPEND_CAP'
+                  ? `Arm Native Spend Cap ($${newBudgetAmountUsd}/mo)`
+                  : `Create Cloud Billing Budget ($${newBudgetAmountUsd}/mo)`}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Active Budgets & Spend Cap State Machine Cards */}
+        {liveCostMetrics.billingBudgets.length === 0 ? (
+          <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="text-zinc-500">
+              No Cloud Billing Budgets or Native Spend Caps configured on{' '}
+              <code>
+                {billingInfo?.billingAccountName || 'this Billing Account'}
+              </code>{' '}
+              yet. Click{' '}
+              <strong>&quot;+ Create Native Spend Cap / Budget&quot;</strong>{' '}
+              above to arm a surgical per-service hard cap.
+            </span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+            {liveCostMetrics.billingBudgets.map((b) => {
+              const outputState =
+                b.spendCap?.outputState ||
+                (b.spendCapConfigured ? 'CONFIGURED' : 'NOT_CONFIGURED');
+              const inputState = b.spendCap?.inputState || outputState;
+              const isEnforced = outputState === 'ENFORCED';
+              const isConfigured = outputState === 'CONFIGURED';
+              const isAwaiting =
+                outputState === 'AWAITING_NEXT_PERIOD' ||
+                inputState === 'AWAITING_NEXT_PERIOD';
+              const isReconciling = Boolean(b.spendCap?.reconciling);
+              const matchedCatalogService = (
+                spendCapCatalog?.resolvedServices || []
+              ).find((s) => (b.services || []).includes(s.name));
+              const customEditAmount =
+                editingBudgetAmountMap[b.name] ??
+                Math.max(10, Math.round(Number(b.amountUsd || 10) + 10));
+
+              return (
+                <div
+                  key={b.name}
+                  className={`p-3 rounded-xl border space-y-2.5 text-xs ${
+                    isEnforced
+                      ? 'bg-red-500/5 border-red-500/40'
+                      : isConfigured
+                      ? 'bg-white dark:bg-zinc-900 border-emerald-500/30'
+                      : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                        {b.displayName} — {fmtCreditUsd(b.amountUsd)}{' '}
+                        {b.currencyCode}/{b.calendarPeriod}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 truncate mt-0.5">
+                        {b.creditTypesTreatment} · Thresholds:{' '}
+                        {(b.thresholdPercents || []).map((p) => `${p}%`).join(', ') ||
+                          '50%, 80%, 100%'}
+                        {matchedCatalogService
+                          ? ` · Service: ${matchedCatalogService.displayName} (${matchedCatalogService.name})`
+                          : b.services?.length > 0
+                          ? ` · Service: ${b.services.join(', ')}`
+                          : ' · Scope: All Services'}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                      {isReconciling && (
+                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                          RECONCILING
+                        </span>
+                      )}
+                      {isEnforced ? (
+                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
+                          ENFORCED · PAUSED
+                        </span>
+                      ) : isAwaiting ? (
+                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                          AWAITING_NEXT_PERIOD (LIFTED)
+                        </span>
+                      ) : isConfigured ? (
+                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          SPEND CAP ARMED
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                          ALERT ONLY
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Interactive State Machine & Atomic Lift-Before-Raise Controls */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-zinc-200/70 dark:border-zinc-800">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {(isConfigured || isEnforced) && (
+                        <button
+                          type="button"
+                          onClick={() => handleSpendCapAction(b.name, 'LIFT_CAP')}
+                          disabled={budgetBusyKey === `LIFT_CAP:${b.name}`}
+                          className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold cursor-pointer"
+                          title="PATCH ?updateMask=spendCap.inputState -> AWAITING_NEXT_PERIOD (Lifts cap for rest of month)"
+                        >
+                          {budgetBusyKey === `LIFT_CAP:${b.name}`
+                            ? 'Lifting...'
+                            : 'Lift Cap (AWAITING_NEXT_PERIOD)'}
+                        </button>
+                      )}
+                      {isAwaiting && (
+                        <button
+                          type="button"
+                          onClick={() => handleSpendCapAction(b.name, 'ARM_CAP')}
+                          disabled={budgetBusyKey === `ARM_CAP:${b.name}`}
+                          className="px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold cursor-pointer"
+                          title="PATCH ?updateMask=spendCap.inputState -> CONFIGURED"
+                        >
+                          {budgetBusyKey === `ARM_CAP:${b.name}`
+                            ? 'Arming...'
+                            : 'Re-Arm Cap (CONFIGURED)'}
+                        </button>
+                      )}
+                      <div className="inline-flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={1}
+                          value={customEditAmount}
+                          onChange={(e) =>
+                            setEditingBudgetAmountMap((prev) => ({
+                              ...prev,
+                              [b.name]: e.target.value,
+                            }))
+                          }
+                          className="w-16 px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleSpendCapAction(
+                              b.name,
+                              'RAISE_AMOUNT_AND_UNPAUSE',
+                              customEditAmount
+                            )
+                          }
+                          disabled={
+                            budgetBusyKey ===
+                            `RAISE_AMOUNT_AND_UNPAUSE:${b.name}`
+                          }
+                          className="px-2 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-[10px] font-extrabold cursor-pointer"
+                          title="Executes atomic 2-step PATCH (lifts ENFORCED lock first if needed to prevent FAILED_PRECONDITION, then updates specifiedAmount)"
+                        >
+                          {budgetBusyKey ===
+                          `RAISE_AMOUNT_AND_UNPAUSE:${b.name}`
+                            ? 'Updating...'
+                            : 'Set $ Cap'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetState =
+                            isConfigured || isEnforced
+                              ? 'AWAITING_NEXT_PERIOD'
+                              : 'CONFIGURED';
+                          const cmd = `curl -X PATCH "https://billingbudgets.googleapis.com/v1/${b.name}?updateMask=spendCap.inputState" \\\n  -H "Authorization: Bearer $(gcloud auth print-access-token)" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"${b.name}","spendCap":{"inputState":"${targetState}"}}'`;
+                          navigator.clipboard?.writeText(cmd);
+                          if (onShowToast) {
+                            onShowToast(
+                              'Copied Cloud Billing Budget Spend Cap PATCH curl command!'
+                            );
+                          }
+                        }}
+                        className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        Copy PATCH curl
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBudget(b.name)}
+                        disabled={budgetBusyKey === `DELETE:${b.name}`}
+                        className="px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/25 text-[10px] font-bold cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Dynamic Urgent Warning Banner + "Use-It-Or-Lose-It" Expiring Credit Harvester & Pre-Expiry Auto-Shutdown Guardrail */}
       {summary.nearestExpiryGrant &&

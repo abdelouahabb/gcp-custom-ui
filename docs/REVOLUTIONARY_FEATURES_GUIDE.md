@@ -707,5 +707,14 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
      - **From `X1`/`M06` (RAM DLP Scanner) & `X4`/`M07` (Ransomware Air-Gap)**: Every leaked object card in `X1` includes **`Open & Edit in Object Workbench (M02) →`** for line-level editing, and every bucket row in `X4` includes **`Version Time-Machine & Holds (M02) →`**.
      - **From `AWS & Azure Parity` (`SAS_PRESIGNED`) & `2026 Lab Topology`**: Deep-links directly into `M02 · Object Workbench`, `M03 · S3 / MinIO Importer`, `VPC & Firewalls`, `VM Fleet & SSH`, and `Cloud Run`.
 
+### 63. Native Cloud Billing Budget Spend Cap & Dual-Defense Studio (`src/components/BillingAccountCreditGuardian.jsx` & `server/index.js`)
+- **Where to find it**: Open **`FinOps & Credits`** (`FINOPS` tab) -> **Native Cloud Billing Spend Cap & Budget API Studio (`billingbudgets.googleapis.com/v1`)**, or click **`Gemini / Vertex Spend Cap (FinOps) →`** inside **`2026 Lab -> Model Armor & AI FinOps`**.
+- **Why We Built This**:
+  - Unlinking a Billing Account (`updateBillingInfo`) takes down an entire GCP project (VMs, GCS buckets, DNS, databases). Google Cloud's **Native Spend Cap (`GoogleCloudBillingBudgetsV1SpendCap`)** allows surgical per-service hard cutoffs that pause only a single high-risk service (`Gemini API`, `Vertex AI / Agent Platform`, `Cloud Run`, or `Cloud Run Functions`) when gross monthly spend reaches 100% of your budget—without disrupting the rest of your project.
+- **How It Works (`GET /api/project/:id/billing-guardian/spend-cap-catalog`, `POST .../budgets/create`, `POST .../budgets/spend-cap-action`, `POST .../budgets/delete`)**:
+  1. **Zero-Hardcoding Live Cloud Billing Catalog & Project Number Discovery**: Queries `cloudresourcemanager.googleapis.com/v1/projects/:id`, `cloudbilling.googleapis.com/v1/services`, `serviceusage.googleapis.com/v1/projects/:id/services?filter=state:ENABLED`, and `pubsub.googleapis.com/v1/projects/:id/topics` to dynamically resolve `projects/{projectNumber}` and the exact `services/XXXX-XXXX-XXXX` catalog IDs.
+  2. **4-Precondition Spend Cap Provisioner & Gross-vs-Net Credit Guardrail**: Enforces Google Cloud's 4 mandatory API preconditions for `spendCap.inputState = "CONFIGURED"` (`1 project`, `1 eligible service`, `creditTypesTreatment = "EXCLUDE_ALL_CREDITS"`, `calendarPeriod = "MONTH"`) and calculates a recommended gross monthly cap based on your live `grossUsageUsd` so promotional credits are not prematurely choked.
+  3. **Interactive State Machine (`CONFIGURED`, `ENFORCED`, `AWAITING_NEXT_PERIOD`) & Atomic 2-Step `FAILED_PRECONDITION` Solver**: Lift an enforced spend cap mid-month (`PATCH ?updateMask=spendCap.inputState` -> `AWAITING_NEXT_PERIOD`), re-arm (`CONFIGURED`), or raise the USD cap via an atomic 2-step PATCH that lifts `ENFORCED` first before updating `amount.specifiedAmount`.
+
 
 

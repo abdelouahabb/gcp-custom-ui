@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import axios from 'axios';
 import {
   Sparkles,
   Zap,
@@ -27,61 +28,501 @@ import {
 } from './GlobalNetworkWorldMap';
 
 const ANOMALY_SCENARIOS = [
+  // ==========================================================================
+  // CATEGORY 0: BASELINE
+  // ==========================================================================
   {
     id: 'NORMAL',
-    label: 'Steady-State Baseline (1.0x)',
+    category: '0. Baseline Reference (Normal Operation)',
+    label: 'Steady-State Baseline (1.0x Normal Daily Burn)',
     description:
-      'Current project resource footprint running at normal daily traffic and autoscaling levels.',
+      'What happens if your project continues running at its current normal daily traffic and autoscaling levels with no anomalies.',
+    newcomerTip:
+      'Tip for newcomers: Even at steady state, always set a monthly Spend Cap budget at 120% of your expected bill so surprise spikes cannot catch you off guard.',
+    curveType: 'LINEAR',
     hourlyAdderUsd: 0,
     multiplier: 1.0,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 500,
+    sliderMaxUsd: 1000,
     spikeStartDay: 1,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Run (run.googleapis.com)',
     mitigationCmd: '# Steady state — no emergency mitigation required.',
   },
+
+  // ==========================================================================
+  // CATEGORY 1: AI, GEMINI & GPU BILLING TRAPS (5 Scenarios)
+  // ==========================================================================
   {
-    id: 'VIRAL_TRAFFIC',
-    label: 'Viral HackerNews / ProductHunt Surge (35x HTTP)',
+    id: 'GEMINI_KEY_LEAK',
+    category: '1. AI, Gemini & GPU Billing Traps',
+    label:
+      'Leaked Gemini API Key Scraped on GitHub / Client Bundle (Exponential Token Drain)',
     description:
-      'Sudden 35x traffic spike starting on Day 5: Cloud Run scales to maxInstances and egress bandwidth jumps by 1.8 TB.',
-    hourlyAdderUsd: 0.42,
-    multiplier: 2.8,
-    spikeStartDay: 5,
+      'What happens if an unrestricted AIzaSy... Gemini API key is scraped on Day 2: bots distribute the key across proxy pools calling generativelanguage.googleapis.com (Gemini 2.5 Pro 1M-token context), compounding 1.28x/day up to Tier-2 TPM quota ceilings. Native GCP Spend Cap Eligible (GEMINI_API).',
+    newcomerTip:
+      'How to prevent: Never embed Gemini API keys in frontend JS/mobile apps; restrict keys by HTTP referrer/IP and API target, and set a Native Spend Cap on Gemini API (generativelanguage.googleapis.com).',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 3.2,
+    multiplier: 4.5,
+    dailyCompoundRate: 1.28,
+    maxDailyCeilingUsd: 2400,
+    sliderMaxUsd: 5000,
+    spikeStartDay: 2,
+    targetServiceKey: 'GEMINI_API',
+    targetServiceLabel: 'Gemini API (generativelanguage.googleapis.com)',
     mitigationCmd:
-      'gcloud run services update SERVICE_NAME --max-instances=15 --concurrency=120 --cpu-throttling',
+      'gcloud services api-keys list --filter="restrictions.apiTargets.service:generativelanguage.googleapis.com" && gcloud services disable generativelanguage.googleapis.com --force',
+  },
+  {
+    id: 'VERTEX_AGENT_LOOP',
+    category: '1. AI, Gemini & GPU Billing Traps',
+    label:
+      'Recursive Multi-Agent Loop on Vertex AI / Gemini Enterprise (Exponential Tool Storm)',
+    description:
+      'What happens if autonomous agents enter a recursive sub-agent spawning and Google Search grounding loop against aiplatform.googleapis.com on Day 3, compounding 1.25x/day as agent threads multiply. Native GCP Spend Cap Eligible (VERTEX_AI).',
+    newcomerTip:
+      'How to prevent: Enforce a strict max_steps / recursion depth on agent loops, disable Google Search grounding unless required ($35/1,000 grounded prompts), and arm a Vertex AI Spend Cap.',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 2.6,
+    multiplier: 4.0,
+    dailyCompoundRate: 1.25,
+    maxDailyCeilingUsd: 1800,
+    sliderMaxUsd: 5000,
+    spikeStartDay: 3,
+    targetServiceKey: 'VERTEX_AI',
+    targetServiceLabel:
+      'Vertex AI / Agent Platform (aiplatform.googleapis.com)',
+    mitigationCmd: 'gcloud services disable aiplatform.googleapis.com --force',
+  },
+  {
+    id: 'GPU_LLM_SURGE',
+    category: '1. AI, Gemini & GPU Billing Traps',
+    label:
+      'Uncontrolled Cloud Run GPU Autoscaling (No max-instances · Warm NVIDIA L4 Fleet)',
+    description:
+      'What happens if a Cloud Run NVIDIA L4 GPU service is deployed with min-instances=4, instance-based billing, and default max-instances=100: traffic spikes spin up dozens of GPU instances that stay warm 24/7 starting Day 3. Native GCP Spend Cap Eligible (CLOUD_RUN).',
+    newcomerTip:
+      'How to prevent: Always pass --min-instances=0 --max-instances=2 --cpu-throttling when deploying Cloud Run GPU services so idle GPUs scale down to $0.',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 2.85,
+    multiplier: 4.4,
+    dailyCompoundRate: 1.18,
+    maxDailyCeilingUsd: 1450,
+    sliderMaxUsd: 4000,
+    spikeStartDay: 3,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Run GPU (run.googleapis.com)',
+    mitigationCmd:
+      'gcloud run services update GPU_SERVICE --min-instances=0 --max-instances=1 --cpu-throttling',
+  },
+  {
+    id: 'FORGOTTEN_VERTEX_WORKBENCH_A100',
+    category: '1. AI, Gemini & GPU Billing Traps',
+    label:
+      'Forgotten Idle Vertex AI Workbench / Colab Enterprise Runtime (a2-highgpu-4g 4x A100 24/7)',
+    description:
+      'What happens if a data scientist launches a 4x NVIDIA A100 Vertex AI Workbench notebook or custom training job on Day 2 and closes the browser tab without stopping the underlying VM (~$14.60/hr · $350/day).',
+    newcomerTip:
+      'How to prevent: Enable idle auto-shutdown (e.g., 60 minutes) on all Vertex AI Workbench instances and Colab Enterprise runtimes.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 14.6,
+    multiplier: 2.0,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 1200,
+    sliderMaxUsd: 5000,
+    spikeStartDay: 2,
+    targetServiceKey: 'VERTEX_AI',
+    targetServiceLabel: 'Vertex AI Workbench (aiplatform.googleapis.com)',
+    mitigationCmd:
+      'gcloud workbench instances list && gcloud services disable notebooks.googleapis.com aiplatform.googleapis.com --force',
+  },
+  {
+    id: 'VERTEX_VECTOR_SEARCH_INDEX_SPRAWL',
+    category: '1. AI, Gemini & GPU Billing Traps',
+    label:
+      'Always-On Vertex AI Vector Search / Matching Engine Endpoints (Unpruned Index Shards)',
+    description:
+      'What happens if multiple RAG test indexes remain deployed to dedicated e2-standard-16 Vector Search endpoints 24/7 starting Day 1—even with zero queries, deployed index shards bill hourly per node.',
+    newcomerTip:
+      'How to prevent: Undeploy Vector Search indexes from endpoints when not actively serving production traffic; an undeployed index costs only pennies for GCS storage.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 2.15,
+    multiplier: 2.5,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 600,
+    sliderMaxUsd: 2000,
+    spikeStartDay: 1,
+    targetServiceKey: 'VERTEX_AI',
+    targetServiceLabel: 'Vertex AI Vector Search (aiplatform.googleapis.com)',
+    mitigationCmd:
+      'gcloud ai index-endpoints list --region=us-central1',
+  },
+
+  // ==========================================================================
+  // CATEGORY 2: SERVERLESS & EVENT-DRIVEN RUNAWAY LOOPS (4 Scenarios)
+  // ==========================================================================
+  {
+    id: 'CLOUD_FUNCTIONS_PUBSUB_CASCADE',
+    category: '2. Serverless & Event-Driven Runaway Loops',
+    label:
+      'Cloud Run Functions Pub/Sub or GCS Self-Trigger Cascade (Exponential Event Storm)',
+    description:
+      'What happens if a Cloud Run function triggered by a GCS bucket or Pub/Sub topic writes a thumbnail/log back to the SAME bucket/topic on every execution, compounding 1.24x/day starting Day 3. Native GCP Spend Cap Eligible (CLOUD_FUNCTIONS).',
+    newcomerTip:
+      'How to prevent: Never write output files back into the same GCS trigger bucket (use a separate -processed bucket) and set --max-instances=5 on every function.',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 1.45,
+    multiplier: 3.5,
+    dailyCompoundRate: 1.24,
+    maxDailyCeilingUsd: 1200,
+    sliderMaxUsd: 3000,
+    spikeStartDay: 3,
+    targetServiceKey: 'CLOUD_FUNCTIONS',
+    targetServiceLabel: 'Cloud Run functions (cloudfunctions.googleapis.com)',
+    mitigationCmd:
+      'gcloud services disable cloudfunctions.googleapis.com --force',
   },
   {
     id: 'INFINITE_LOOP',
-    label: 'Runaway Infinite Retry Loop / Webhook Storm (120x)',
+    category: '2. Serverless & Event-Driven Runaway Loops',
+    label:
+      'Runaway Infinite Retry Loop / Webhook Storm (120x Serverless vCPU Pinned 24/7)',
     description:
-      'A misconfigured webhook or pub/sub retry loop pins all serverless instances at 100% vCPU 24/7 starting on Day 4.',
+      'What happens if a misconfigured webhook or frontend useEffect() missing a dependency array hammers your Cloud Run API in an infinite loop starting Day 4. Native GCP Spend Cap Eligible (CLOUD_RUN).',
+    newcomerTip:
+      'How to prevent: Always configure Cloud Armor rate-limiting or API Gateway quotas and set --max-instances=10 on Cloud Run services.',
+    curveType: 'EXPONENTIAL',
     hourlyAdderUsd: 1.35,
     multiplier: 5.5,
+    dailyCompoundRate: 1.15,
+    maxDailyCeilingUsd: 850,
+    sliderMaxUsd: 2500,
     spikeStartDay: 4,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Run (run.googleapis.com)',
     mitigationCmd:
       'gcloud run services update SERVICE_NAME --max-instances=2 && gcloud compute firewall-rules create block-runaway-webhook --action=DENY --rules=tcp:443 --priority=90',
   },
   {
-    id: 'GPU_LLM_SURGE',
-    label: 'Unthrottled LLM GPU Inference Surge (4x NVIDIA L4 24/7)',
+    id: 'VIRAL_TRAFFIC',
+    category: '2. Serverless & Event-Driven Runaway Loops',
+    label:
+      'Viral HackerNews / ProductHunt / Reddit Surge on Cloud Run (35x HTTP Spike)',
     description:
-      'Four warm Cloud Run NVIDIA L4 GPU instances remain pinned with min-instances=4 and instance-based billing starting Day 3.',
-    hourlyAdderUsd: 2.68,
-    multiplier: 4.2,
-    spikeStartDay: 3,
+      'What happens if a sudden 35x traffic spike hits on Day 5: Cloud Run scales to maxInstances and egress bandwidth jumps by 1.8 TB. Native GCP Spend Cap Eligible (CLOUD_RUN).',
+    newcomerTip:
+      'How to prevent: Put Cloud CDN or Cloudflare in front of Cloud Run, set --concurrency=100 so 1 container handles 100 concurrent requests, and enable CPU throttling (--cpu-throttling).',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 0.42,
+    multiplier: 2.8,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 500,
+    sliderMaxUsd: 1000,
+    spikeStartDay: 5,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Run (run.googleapis.com)',
     mitigationCmd:
-      'gcloud run services update GPU_SERVICE --min-instances=0 --max-instances=2 --cpu-throttling',
+      'gcloud run services update SERVICE_NAME --max-instances=15 --concurrency=120 --cpu-throttling',
+  },
+  {
+    id: 'CLOUD_TASKS_DEADLETTER_AMPLIFICATION',
+    category: '2. Serverless & Event-Driven Runaway Loops',
+    label:
+      'Cloud Tasks / Eventarc Failing Job Without Max-Attempts (Retry Amplification Storm)',
+    description:
+      'What happens if a downstream database error causes Cloud Tasks or Eventarc deliveries to return HTTP 500 with unlimited retries: failed tasks accumulate and re-fire millions of times per day starting Day 4.',
+    newcomerTip:
+      'How to prevent: Always configure max_attempts (e.g., 5 retries) and attach a Dead-Letter Topic to every Pub/Sub subscription and Cloud Tasks queue.',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 1.15,
+    multiplier: 3.8,
+    dailyCompoundRate: 1.2,
+    maxDailyCeilingUsd: 780,
+    sliderMaxUsd: 2500,
+    spikeStartDay: 4,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Run & Cloud Tasks (run.googleapis.com)',
+    mitigationCmd:
+      'gcloud tasks queues pause QUEUE_NAME --location=us-central1',
+  },
+
+  // ==========================================================================
+  // CATEGORY 3: EGRESS, INTER-REGION BACKUP & NETWORKING SURPRISES (4 Scenarios)
+  // ==========================================================================
+  {
+    id: 'INTER_REGION_BACKUP_TRANSFER',
+    category: '3. Egress, Cross-Region Backup & Networking Traps',
+    label:
+      'Massive Cross-Region / Inter-Continent Backup & Bucket Sync (45 TB Replication)',
+    description:
+      'What happens if a cron job or disaster-recovery script runs gsutil rsync / gcloud storage cp across continents (e.g., us-central1 to europe-west1 or asia-east1) transferring 45 TB of backups & VM snapshots at $0.08–$0.12/GB starting Day 3.',
+    newcomerTip:
+      'How to prevent: Keep backups in the SAME region (intra-region GCS copy is $0.00/GB!) or use Archive Storage class in the same region instead of copying multi-terabyte backups across continents every night.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 5.8,
+    multiplier: 4.5,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 950,
+    sliderMaxUsd: 4000,
+    spikeStartDay: 3,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel:
+      'Cross-Region Network Egress & Storage Transfer',
+    mitigationCmd:
+      'gcloud transfer jobs list && gcloud compute firewall-rules create pause-cross-region-egress --action=DENY --direction=EGRESS --rules=all --priority=95',
+  },
+  {
+    id: 'CLOUD_NAT_HAIRPIN_EGRESS',
+    category: '3. Egress, Cross-Region Backup & Networking Traps',
+    label:
+      'Cloud NAT Hairpin Traffic to GCS / BigQuery Without Private Google Access ($0.045/GB)',
+    description:
+      'What happens if private VMs or GKE nodes without external IPs read/write terabytes of data to Cloud Storage or BigQuery through a Cloud NAT gateway without enabling Private Google Access on the subnet ($0.045/GB NAT processing fee) starting Day 2.',
+    newcomerTip:
+      'How to prevent: Turn on Private Google Access (--enable-private-ip-google-access) on every VPC subnet—traffic to Google APIs (GCS, BigQuery, Artifact Registry) then bypasses Cloud NAT for $0.00/GB!',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 1.95,
+    multiplier: 3.6,
+    dailyCompoundRate: 1.12,
+    maxDailyCeilingUsd: 620,
+    sliderMaxUsd: 2500,
+    spikeStartDay: 2,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'VPC Subnet & Cloud NAT Gateway',
+    mitigationCmd:
+      'gcloud compute networks subnets update default --region=us-central1 --enable-private-ip-google-access',
+  },
+  {
+    id: 'MULTI_ZONE_GKE_CHATTY_MICROSERVICES',
+    category: '3. Egress, Cross-Region Backup & Networking Traps',
+    label:
+      'Chatty Multi-Zone GKE / Kafka / Redis Mesh ($0.01/GB Inter-Zone Egress Tax)',
+    description:
+      'What happens if high-throughput microservices, Kafka brokers, or Redis caches in us-central1-a constantly exchange payloads with pods in us-central1-b and us-central1-c ($0.01/GB inter-zone data transfer) starting Day 1.',
+    newcomerTip:
+      'How to prevent: Enable Topology-Aware Routing (service.kubernetes.io/topology-mode: Auto) in GKE so pod-to-pod traffic stays within the same availability zone at $0.00/GB.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 1.25,
+    multiplier: 2.9,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 450,
+    sliderMaxUsd: 1500,
+    spikeStartDay: 1,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Inter-Zone VPC & GKE Service Mesh',
+    mitigationCmd:
+      'kubectl annotate service MY_SERVICE service.kubernetes.io/topology-mode=Auto --overwrite',
   },
   {
     id: 'DDOS_EGRESS',
-    label: 'Cross-Continent Egress Scraping / DDoS Flood (8 TB)',
+    category: '3. Egress, Cross-Region Backup & Networking Traps',
+    label:
+      'Cross-Continent Egress Scraping / Uncached Botnet Media Flood (12 TB Public Bucket)',
     description:
-      'Automated botnet scrapes large objects from Cloud Storage & Cloud Run across continents (8 TB @ $0.08/GB).',
-    hourlyAdderUsd: 0.95,
-    multiplier: 3.4,
-    spikeStartDay: 6,
+      'What happens if an automated botnet or hotlinked site scrapes large video/model artifacts from a public Cloud Storage bucket or Cloud Run service across continents (12 TB @ $0.08–$0.12/GB) starting Day 5.',
+    newcomerTip:
+      'How to prevent: Enforce Public Access Prevention on all GCS buckets, never host unthrottled public downloads without Cloud Armor / signed URLs, and enable Requester Pays if sharing datasets.',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 1.65,
+    multiplier: 3.8,
+    dailyCompoundRate: 1.16,
+    maxDailyCeilingUsd: 920,
+    sliderMaxUsd: 3000,
+    spikeStartDay: 5,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Run & Egress Perimeter (run.googleapis.com)',
     mitigationCmd:
-      'gcloud compute firewall-rules create emergency-ddos-shield --action=DENY --direction=INGRESS --rules=tcp:80,tcp:443 --source-ranges=0.0.0.0/0 --priority=80',
+      'gcloud storage buckets update gs://BUCKET_NAME --public-access-prevention && gcloud compute firewall-rules create emergency-ddos-shield --action=DENY --direction=INGRESS --rules=tcp:80,tcp:443 --source-ranges=0.0.0.0/0 --priority=80',
+  },
+
+  // ==========================================================================
+  // CATEGORY 4: DATA WAREHOUSE, DATABASES & STORAGE EXPLOSIONS (4 Scenarios)
+  // ==========================================================================
+  {
+    id: 'BIGQUERY_UNPARTITIONED_SCAN',
+    category: '4. BigQuery, Databases & Storage Explosions',
+    label:
+      'Unpartitioned BigQuery SELECT * in Auto-Refreshing Dashboard (50 TB/day @ $6.25/TB)',
+    description:
+      'What happens if a Looker Studio, Grafana, or BI dashboard without a partition filter (SELECT *) auto-refreshes every 5 minutes against a multi-terabyte BigQuery table ($6.25/TB on-demand) starting Day 4.',
+    newcomerTip:
+      'How to prevent: Require partition filters (--require_partition_filter=true) on large BigQuery tables and set a custom --maximum_bytes_billed project/user quota in BigQuery.',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 6.5,
+    multiplier: 4.2,
+    dailyCompoundRate: 1.1,
+    maxDailyCeilingUsd: 750,
+    sliderMaxUsd: 3500,
+    spikeStartDay: 4,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel:
+      'BigQuery On-Demand Scan + Pub/Sub Kill-Switch Alert',
+    mitigationCmd:
+      'gcloud services disable bigquery.googleapis.com --force',
+  },
+  {
+    id: 'BIGQUERY_AUTOSCALING_SLOTS_PINNED',
+    category: '4. BigQuery, Databases & Storage Explosions',
+    label:
+      'BigQuery Enterprise Autoscaling Slots Pinned by Runaway Cross-Join (1,600 Slots 24/7)',
+    description:
+      'What happens if a BigQuery Capacity reservation with max_slots=1600 is pinned at 100% utilization by badly written SQL cross-joins and dbt materializations running every 15 minutes starting Day 3.',
+    newcomerTip:
+      'How to prevent: Keep baseline slots at 0 and cap max_slots to 100–200 for non-production workloads, or use On-Demand mode with a strict daily byte scan quota.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 8.4,
+    multiplier: 3.5,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 900,
+    sliderMaxUsd: 4000,
+    spikeStartDay: 3,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'BigQuery Reservation API (bigqueryreservation.googleapis.com)',
+    mitigationCmd:
+      'bq ls -j -a --max_results=20 && gcloud services disable bigqueryreservation.googleapis.com',
+  },
+  {
+    id: 'CLOUD_SQL_HA_REPLICA_IOPS_SPRAWL',
+    category: '4. BigQuery, Databases & Storage Explosions',
+    label:
+      'Oversized Cloud SQL Enterprise Plus + Regional HA + 4 Read Replicas + PITR Bloat',
+    description:
+      'What happens if a newcomer clicks defaults on Cloud SQL (Enterprise Plus edition, db-perf-optimized-N-16, Regional High Availability doubling cost, 4 Read Replicas, and auto-expanding SSD storage from heavy WAL logs) starting Day 1.',
+    newcomerTip:
+      'How to prevent: For dev/staging or small apps, choose Cloud SQL Enterprise (not Enterprise Plus), Zonal (Single Zone), db-f1-micro or db-custom-1-3840, and disable auto-storage increase above 50 GB.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 4.9,
+    multiplier: 3.0,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 600,
+    sliderMaxUsd: 3500,
+    spikeStartDay: 1,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud SQL Admin API (sqladmin.googleapis.com)',
+    mitigationCmd:
+      'gcloud sql instances patch INSTANCE_NAME --activation-policy=NEVER',
+  },
+  {
+    id: 'GCS_AUTOCLASS_ARCHIVE_EARLY_DELETE',
+    category: '4. BigQuery, Databases & Storage Explosions',
+    label:
+      'Cloud Storage Archive/Coldline Early-Deletion Penalty + Millions of Class-A List Ops',
+    description:
+      'What happens if temporary build artifacts or checkpoints are written into a Coldline (90-day min) or Archive (365-day min) bucket and deleted the next day—triggering full 90/365-day early deletion charges plus Class-A operation fees starting Day 3.',
+    newcomerTip:
+      'How to prevent: Never use Coldline or Archive for frequently overwritten or short-lived files; use Standard storage with an Object Lifecycle Management rule.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 1.85,
+    multiplier: 3.1,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 480,
+    sliderMaxUsd: 1500,
+    spikeStartDay: 3,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Storage Lifecycle & Operations',
+    mitigationCmd:
+      'gcloud storage buckets update gs://BUCKET_NAME --default-storage-class=STANDARD',
+  },
+
+  // ==========================================================================
+  // CATEGORY 5: OBSERVABILITY, KUBERNETES & ZOMBIE INFRA TRAPS (4 Scenarios)
+  // ==========================================================================
+  {
+    id: 'LOGGING_DEBUG_INGESTION_EXPLOSION',
+    category: '5. Observability, GKE & Zombie Infrastructure Traps',
+    label:
+      'Cloud Logging & Trace Verbose DEBUG JSON Ingestion Flood ($0.50/GiB · 6 TB/mo)',
+    description:
+      'What happens if verbose DEBUG/TRACE logging or VPC Flow Logs at 100% sampling are left enabled during high traffic, ingesting terabytes of JSON payloads into Cloud Logging ($0.50/GiB past 50 GiB free tier) starting Day 4.',
+    newcomerTip:
+      'How to prevent: Add an exclusion filter on the _Default Cloud Logging sink (NOT severity < ERROR) so debug and info logs are dropped before ingestion billing.',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 2.35,
+    multiplier: 3.9,
+    dailyCompoundRate: 1.14,
+    maxDailyCeilingUsd: 680,
+    sliderMaxUsd: 2500,
+    spikeStartDay: 4,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Logging _Default Sink (logging.googleapis.com)',
+    mitigationCmd:
+      'gcloud logging sinks update _Default --log-filter="NOT severity<ERROR"',
+  },
+  {
+    id: 'PROMETHEUS_HIGH_CARDINALITY_METRICS',
+    category: '5. Observability, GKE & Zombie Infrastructure Traps',
+    label:
+      'Managed Prometheus (GMP) High-Cardinality Metric Explosion (request_id / user_id Labels)',
+    description:
+      'What happens if a developer adds an unbounded label like user_id, session_id, or request_id to a Prometheus metric scraped every 15s—creating millions of unique time-series billed per sample ingested starting Day 3.',
+    newcomerTip:
+      'How to prevent: Never put high-cardinality IDs (user IDs, emails, UUIDs, URLs) into Prometheus metric labels; drop offending labels in OperatorConfig metricRelabelings.',
+    curveType: 'EXPONENTIAL',
+    hourlyAdderUsd: 2.1,
+    multiplier: 3.7,
+    dailyCompoundRate: 1.18,
+    maxDailyCeilingUsd: 790,
+    sliderMaxUsd: 3000,
+    spikeStartDay: 3,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Cloud Monitoring & Managed Prometheus (monitoring.googleapis.com)',
+    mitigationCmd:
+      'gcloud services disable monitoring.googleapis.com --force',
+  },
+  {
+    id: 'GKE_AUTOPILOT_DAEMONSET_POD_BLOAT',
+    category: '5. Observability, GKE & Zombie Infrastructure Traps',
+    label:
+      'GKE Autopilot Oversized Pod Requests + DaemonSet Multiplicative Scaling (80 Nodes)',
+    description:
+      'What happens if GKE Autopilot pods request 4 vCPU / 16 GiB RAM while only using 0.1 vCPU, and 3 heavy logging/security DaemonSets run on every scaled-out node starting Day 2.',
+    newcomerTip:
+      'How to prevent: In GKE Autopilot you pay for pod resource requests (not actual usage)—always right-size CPU/memory requests using Vertical Pod Autoscaler (VPA) recommendations.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 3.4,
+    multiplier: 3.2,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 650,
+    sliderMaxUsd: 2500,
+    spikeStartDay: 2,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Google Kubernetes Engine (container.googleapis.com)',
+    mitigationCmd:
+      'gcloud container clusters resize CLUSTER_NAME --num-nodes=1 --region=us-central1 --quiet',
+  },
+  {
+    id: 'ORPHANED_SNAPSHOTS_STATIC_IPS_LB',
+    category: '5. Observability, GKE & Zombie Infrastructure Traps',
+    label:
+      'Zombie Infra Sprawl: Unattached Hyperdisk Extreme Volumes + Idle LBs + Unused Static IPs',
+    description:
+      'What happens if VMs and GKE services are deleted without cleaning up their persistent Hyperdisk Extreme volumes (billed for provisioned IOPS 24/7 even when unattached!), forwarding rules ($18/mo each), and unattached static IPv4 addresses ($7.30/mo each).',
+    newcomerTip:
+      'How to prevent: Native Spend Caps do NOT stop persistent disks or load balancers—use CloudPulse Orphaned Disk & Zombie IP Cleaner to delete unattached disks and release unused IPs.',
+    curveType: 'LINEAR',
+    hourlyAdderUsd: 1.75,
+    multiplier: 2.6,
+    dailyCompoundRate: 1.0,
+    maxDailyCeilingUsd: 400,
+    sliderMaxUsd: 1500,
+    spikeStartDay: 1,
+    targetServiceKey: 'CLOUD_RUN',
+    targetServiceLabel: 'Persistent Disks, Load Balancers & Static IPs',
+    mitigationCmd:
+      'gcloud compute disks list --filter="-users:*" && gcloud compute addresses list --filter="status=RESERVED"',
   },
 ];
+
+const ANOMALY_SCENARIO_GROUPS = Array.from(
+  ANOMALY_SCENARIOS.reduce((map, item) => {
+    const cat = item.category || 'General Scenarios';
+    if (!map.has(cat)) map.set(cat, []);
+    map.get(cat).push(item);
+    return map;
+  }, new Map()).entries()
+);
 
 const DREAM_STACK_ARCHETYPES = [
   {
@@ -221,6 +662,7 @@ export default function AutonomousCloudBrain({
   burn,
   onHibernateSleep,
   onOpenProvision,
+  onOpenFinOps,
   onShowToast,
 }) {
   const { version: pricingVersion, unitPricing } = useLivePricingCatalog();
@@ -229,9 +671,138 @@ export default function AutonomousCloudBrain({
   // 1. PRE-CRIME 30-DAY BILLING & QUOTA TIME-CRYSTAL STATE
   // ==========================================================================
   const [monthlyBudgetCap, setMonthlyBudgetCap] = useState(150);
-  const [scenarioId, setScenarioId] = useState('VIRAL_TRAFFIC');
-  const [autoBreakerArmed, setAutoBreakerArmed] = useState(true);
+  const [customSliderMaxUsd, setCustomSliderMaxUsd] = useState(5000);
+  const [scenarioId, setScenarioId] = useState('GEMINI_KEY_LEAK');
+  const [autoBreakerArmed, setAutoBreakerArmed] = useState(false);
+  const [activeServerSpendCapBudget, setActiveServerSpendCapBudget] =
+    useState(null);
+  const [syncingLiveBudget, setSyncingLiveBudget] = useState(false);
   const [copiedCmd, setCopiedCmd] = useState(null);
+
+  // On mount, check if a permanent 24/7 GCP Spend Cap or Pub/Sub Kill-Switch budget is ALREADY armed in Google Cloud Billing
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    axios
+      .get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/spend-cap-catalog`
+      )
+      .then((res) => {
+        if (cancelled || !res.data?.ok) return;
+        const serverBudgets = Array.isArray(res.data.budgets)
+          ? res.data.budgets
+          : [];
+        const existingArmed = serverBudgets.find(
+          (b) =>
+            b.spendCapConfigured ||
+            Boolean(b.notificationsRule?.pubsubTopic)
+        );
+        if (existingArmed) {
+          setActiveServerSpendCapBudget(existingArmed);
+          setAutoBreakerArmed(true);
+          if (existingArmed.amountUsd > 0) {
+            setMonthlyBudgetCap(existingArmed.amountUsd);
+          }
+        }
+      })
+      .catch(() => {
+        // ignore if offline
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  const handleToggleAndSyncLiveCircuitBreaker = async () => {
+    // If already armed on Google Cloud's servers, lifting it calls the real GCP Budget API (`AWAITING_NEXT_PERIOD`)
+    if (autoBreakerArmed) {
+      if (activeServerSpendCapBudget?.name) {
+        setSyncingLiveBudget(true);
+        try {
+          const res = await axios.post(
+            `/api/project/${encodeURIComponent(
+              projectId
+            )}/billing-guardian/budgets/spend-cap-action`,
+            {
+              budgetName: activeServerSpendCapBudget.name,
+              action: 'LIFT_CAP',
+            }
+          );
+          setAutoBreakerArmed(false);
+          setActiveServerSpendCapBudget(null);
+          if (onShowToast) {
+            onShowToast(
+              res.data?.message ||
+                'Lifted 24/7 GCP Spend Cap in Google Cloud Billing (AWAITING_NEXT_PERIOD).'
+            );
+          }
+        } catch (err) {
+          if (err?.__cancelledByUser || err?.response?.status === 499) return;
+          setAutoBreakerArmed(false);
+        } finally {
+          setSyncingLiveBudget(false);
+        }
+        return;
+      }
+      setAutoBreakerArmed(false);
+      if (onShowToast) {
+        onShowToast('Disarmed Pre-Crime Circuit-Breaker.');
+      }
+      return;
+    }
+
+    if (!projectId) return;
+    setSyncingLiveBudget(true);
+    const matchedScenario =
+      ANOMALY_SCENARIOS.find((s) => s.id === scenarioId) ||
+      ANOMALY_SCENARIOS[0];
+    const targetServiceKey = matchedScenario.targetServiceKey || 'CLOUD_RUN';
+    try {
+      // Provisions a PERMANENT 24/7 Server-Side Spend Cap (`spendCap.inputState = "CONFIGURED"`)
+      // + Pub/Sub Kill-Switch Topic (`projects/<id>/topics/cloudpulse-budget-killswitch`) on Google Cloud Billing!
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/budgets/create`,
+        {
+          displayName: `${projectId}-24x7-spend-cap-${monthlyBudgetCap}usd`,
+          amountUsd: Number(monthlyBudgetCap || 150),
+          enableSpendCap: true,
+          targetServiceKey,
+          autoCreatePubsubKillswitchTopic: true,
+          creditTypesTreatment: 'EXCLUDE_ALL_CREDITS',
+          thresholdPercents: [50, 80, 100],
+        }
+      );
+      setAutoBreakerArmed(true);
+      if (res.data?.budget) {
+        setActiveServerSpendCapBudget(res.data.budget);
+      }
+      if (onShowToast) {
+        onShowToast(
+          res.data?.message ||
+            `Armed permanent 24/7 GCP Spend Cap ($${monthlyBudgetCap}/mo · spendCap=CONFIGURED) in Google Cloud Console!`
+        );
+      }
+    } catch (err) {
+      // If the user clicked "Cancel" in the Pre-Execution Warning Modal, keep autoBreakerArmed = false!
+      if (err?.__cancelledByUser || err?.response?.status === 499) {
+        setAutoBreakerArmed(false);
+        return;
+      }
+      setAutoBreakerArmed(false);
+      if (onShowToast) {
+        onShowToast(
+          err?.response?.data?.error ||
+            'Could not provision Spend Cap in Google Cloud Billing (verify Billing Account permissions in FinOps & Credits).'
+        );
+      }
+    } finally {
+      setSyncingLiveBudget(false);
+    }
+  };
 
   const activeScenario = useMemo(
     () =>
@@ -265,21 +836,34 @@ export default function AutonomousCloudBrain({
     const baseHourly =
       Math.max(Number(burn?.hourly || 0.045), 0.015) * cpuFactor * cudFactor;
     const baseDaily = baseHourly * 24;
-    const surgeDaily =
+    const initialSurgeDaily =
       (baseHourly * activeScenario.multiplier +
         activeScenario.hourlyAdderUsd * scenarioRateFactor * cudFactor) *
       24;
+    const compoundRate = Number(activeScenario.dailyCompoundRate || 1.0);
+    const maxDailyCeiling = Number(activeScenario.maxDailyCeilingUsd || 2400);
 
     const days = [];
     let cumBaseline = 0;
     let cumProjected = 0;
+    let unguardedMonthEnd = 0;
+    let peakSurgeDaily = initialSurgeDaily;
     let breachDay = null;
     let breachHour = null;
 
     for (let d = 1; d <= 30; d += 1) {
       cumBaseline += baseDaily;
-      const dailyRate =
-        d >= activeScenario.spikeStartDay ? surgeDaily : baseDaily;
+      let dailyRate = baseDaily;
+      if (d >= activeScenario.spikeStartDay) {
+        const daysIntoSurge = d - activeScenario.spikeStartDay;
+        const compounded =
+          initialSurgeDaily * Math.pow(compoundRate, daysIntoSurge);
+        dailyRate = Math.min(maxDailyCeiling, compounded);
+        if (dailyRate > peakSurgeDaily) {
+          peakSurgeDaily = dailyRate;
+        }
+      }
+      unguardedMonthEnd += dailyRate;
       const prevProjected = cumProjected;
 
       // If Auto-Circuit-Breaker is armed and we cross the budget cap, clamp spend to parked disk-only rate!
@@ -305,16 +889,16 @@ export default function AutonomousCloudBrain({
         day: d,
         baseline: Number(cumBaseline.toFixed(2)),
         projected: Number(cumProjected.toFixed(2)),
+        unguardedCumulative: Number(unguardedMonthEnd.toFixed(2)),
       });
     }
 
-    const unguardedMonthEnd =
-      baseDaily * (activeScenario.spikeStartDay - 1) +
-      surgeDaily * (30 - activeScenario.spikeStartDay + 1);
-
     return {
       baseDaily: Number(baseDaily.toFixed(2)),
-      surgeDaily: Number(surgeDaily.toFixed(2)),
+      surgeDaily: Number(initialSurgeDaily.toFixed(2)),
+      peakSurgeDaily: Number(peakSurgeDaily.toFixed(2)),
+      isExponential: activeScenario.curveType === 'EXPONENTIAL',
+      compoundRate,
       baselineMonthEnd: Number((baseDaily * 30).toFixed(2)),
       projectedMonthEnd: Number(cumProjected.toFixed(2)),
       unguardedMonthEnd: Number(unguardedMonthEnd.toFixed(2)),
@@ -678,20 +1262,34 @@ export default function AutonomousCloudBrain({
           <div className="flex items-center gap-2 flex-wrap shrink-0">
             <button
               type="button"
-              onClick={() => setAutoBreakerArmed((p) => !p)}
+              onClick={handleToggleAndSyncLiveCircuitBreaker}
+              disabled={syncingLiveBudget}
               className={`h-9 px-3.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                 autoBreakerArmed
                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
                   : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800'
               }`}
+              title="Provisions a permanent 24/7 Google Cloud Spend Cap (spendCap.inputState=CONFIGURED) + Pub/Sub Kill-Switch topic (cloudpulse-budget-killswitch) in Cloud Billing that works even when your browser is closed"
             >
               <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
               <span>
-                {autoBreakerArmed
-                  ? 'Auto-Circuit-Breaker: ARMED'
-                  : 'Auto-Circuit-Breaker: OFF'}
+                {syncingLiveBudget
+                  ? 'Syncing 24/7 Cap to GCP...'
+                  : autoBreakerArmed
+                  ? `24/7 GCP Spend Cap: ARMED ($${monthlyBudgetCap}/mo in Cloud Billing)`
+                  : '24/7 GCP Spend Cap: OFF (Click to Arm in GCP)'}
               </span>
             </button>
+
+            {onOpenFinOps && (
+              <button
+                type="button"
+                onClick={onOpenFinOps}
+                className="h-9 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-extrabold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+              >
+                <span>Native Spend Caps (FinOps) →</span>
+              </button>
+            )}
 
             {onHibernateSleep && (
               <button
@@ -709,53 +1307,180 @@ export default function AutonomousCloudBrain({
         {/* Scenario Selector & Monthly Budget Cap Slider */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 text-xs font-mono">
           <div className="lg:col-span-7 space-y-1.5">
-            <label className="block text-[10px] uppercase text-zinc-400 font-bold">
-              Inject What-If Traffic / Attack / Billing Anomaly Scenario:
-            </label>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <label className="block text-[10px] uppercase text-zinc-400 font-bold">
+                What Happens If... (Select Cost Scenario to Forecast):
+              </label>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                100% Read-Only Math Projection · Zero Traffic Sent
+              </span>
+            </div>
             <select
               value={scenarioId}
-              onChange={(e) => setScenarioId(e.target.value)}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                setScenarioId(nextId);
+                const nextScen = ANOMALY_SCENARIOS.find((s) => s.id === nextId);
+                if (nextScen?.sliderMaxUsd) {
+                  setCustomSliderMaxUsd(
+                    Math.max(monthlyBudgetCap, nextScen.sliderMaxUsd)
+                  );
+                }
+              }}
               className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
             >
-              {ANOMALY_SCENARIOS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
+              {ANOMALY_SCENARIO_GROUPS.map(([catLabel, items]) => (
+                <optgroup key={catLabel} label={catLabel}>
+                  {items.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
               {activeScenario.description}
             </p>
+            {activeScenario.newcomerTip && (
+              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                <strong>Newcomer Prevention Guide:</strong>{' '}
+                {activeScenario.newcomerTip}
+              </div>
+            )}
+            {activeScenario.targetServiceLabel && (
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                Protected GCP Spend Cap Target:{' '}
+                <span className="text-zinc-800 dark:text-zinc-200">
+                  {activeScenario.targetServiceLabel}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-5 space-y-1.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] uppercase text-zinc-400 font-bold">
                 Monthly Hard Budget Cap:
               </span>
-              <span className="text-sm font-extrabold text-red-500">
-                ${monthlyBudgetCap} USD / month
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-red-500">$</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={500000}
+                  step={5}
+                  value={monthlyBudgetCap}
+                  onChange={(e) => {
+                    const nextVal = Math.max(5, Number(e.target.value) || 5);
+                    setMonthlyBudgetCap(nextVal);
+                    setCustomSliderMaxUsd(Math.max(25, nextVal));
+                  }}
+                  className="w-24 px-2 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-red-500/40 text-xs font-mono font-extrabold text-red-500 text-right"
+                />
+                <span className="text-[10px] font-bold text-zinc-400">
+                  USD/mo
+                </span>
+              </div>
             </div>
             <input
               type="range"
-              min={20}
-              max={1000}
-              step={10}
-              value={monthlyBudgetCap}
+              min={5}
+              max={customSliderMaxUsd}
+              step={Math.max(1, Math.round(customSliderMaxUsd / 200))}
+              value={Math.min(monthlyBudgetCap, customSliderMaxUsd)}
               onChange={(e) => setMonthlyBudgetCap(Number(e.target.value))}
               className="w-full accent-red-500 cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-zinc-400">
-              <span>$20 (Hobby)</span>
-              <span>$150 (Startup)</span>
-              <span>$500 (Growth)</span>
-              <span>$1,000</span>
+            <div className="flex items-center justify-between gap-1 text-[10px] text-zinc-400 flex-wrap">
+              {[
+                { label: '$25 (Hobby)', val: 25 },
+                { label: '$150 (Startup)', val: 150 },
+                { label: '$500 (Growth)', val: 500 },
+                {
+                  label: `$${customSliderMaxUsd.toLocaleString()} (Max Scale)`,
+                  val: customSliderMaxUsd,
+                },
+              ].map((preset, idx) => (
+                <button
+                  key={`${idx}-${preset.val}`}
+                  type="button"
+                  onClick={() => {
+                    setMonthlyBudgetCap(preset.val);
+                    if (preset.val > customSliderMaxUsd) {
+                      setCustomSliderMaxUsd(preset.val);
+                    }
+                  }}
+                  className={`px-1.5 py-0.5 rounded border transition-all cursor-pointer ${
+                    monthlyBudgetCap === preset.val
+                      ? 'bg-red-500/15 text-red-500 border-red-500/40 font-bold'
+                      : 'border-transparent hover:border-zinc-300 dark:hover:border-zinc-700'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
         {/* 4 KPI Cards + 30-Day Interactive SVG Burn Curve */}
+        {/* Plain-English Feature & Metric Guide Paragraph */}
+        <div className="p-3.5 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300 space-y-2">
+          <div>
+            <strong className="text-zinc-900 dark:text-zinc-100">
+              How to read this Pre-Crime Billing Simulator:
+            </strong>{' '}
+            This tool takes your project&apos;s live hourly spend and simulates what
+            happens over a 30-day month if an unexpected incident hits (such as a
+            runaway retry loop, viral traffic surge, GPU spike, or DDoS egress
+            flood). Below,{' '}
+            <strong className="text-zinc-900 dark:text-zinc-100">
+              Steady-State 30d Bill
+            </strong>{' '}
+            shows your normal monthly cost if nothing goes wrong;{' '}
+            <strong className="text-red-600 dark:text-red-400">
+              Unguarded Anomaly Bill (If Unstopped)
+            </strong>{' '}
+            shows how high your 30-day bill would climb if the anomaly kept burning
+            all month with <em>no</em> budget cap or circuit-breaker;{' '}
+            <strong className="text-amber-600 dark:text-amber-400">
+              Budget Exhaustion ETA
+            </strong>{' '}
+            pinpoints the exact day and hour the surge crosses your{' '}
+            <strong>${monthlyBudgetCap}/mo</strong> cap; and{' '}
+            <strong className="text-emerald-600 dark:text-emerald-400">
+              Saved by Circuit-Breaker
+            </strong>{' '}
+            shows the exact dollar amount you save when the circuit-breaker trips at{' '}
+            <strong>${monthlyBudgetCap}</strong> and freezes compute spend instead
+            of letting the anomaly run unchecked.
+          </div>
+          <div className="pt-1.5 border-t border-blue-500/20 text-[11px] text-zinc-600 dark:text-zinc-400">
+            <strong className="text-emerald-700 dark:text-emerald-300">
+              24/7 Permanent Protection in Google Cloud (No Browser Required):
+            </strong>{' '}
+            When you click{' '}
+            <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+              24/7 GCP Spend Cap: OFF (Click to Arm in GCP)
+            </span>{' '}
+            and confirm the safety prompt, CloudPulse provisions a permanent
+            server-side{' '}
+            <span className="font-mono font-bold">
+              GoogleCloudBillingBudgetsV1SpendCap (inputState: CONFIGURED)
+            </span>{' '}
+            on <span className="font-mono">billingbudgets.googleapis.com/v1</span>{' '}
+            plus a dedicated Cloud Pub/Sub Kill-Switch topic (
+            <span className="font-mono">
+              projects/{projectId || '<project>'}/topics/cloudpulse-budget-killswitch
+            </span>
+            ). In <strong>Google Cloud Console → Billing → Budgets &amp; alerts</strong>,
+            it appears with <strong>Spend cap: Configured</strong> and enforces your{' '}
+            <strong>${monthlyBudgetCap}/mo</strong> hard limit 24/7 on Google&apos;s
+            servers even when your laptop is off.
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono">
           <div className="p-3 rounded-xl bg-white/85 dark:bg-zinc-950/85 border border-zinc-200 dark:border-zinc-800">
             <div className="text-[10px] text-zinc-400 uppercase">
@@ -770,14 +1495,26 @@ export default function AutonomousCloudBrain({
           </div>
 
           <div className="p-3 rounded-xl bg-white/85 dark:bg-zinc-950/85 border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] text-zinc-400 uppercase">
-              Unguarded Anomaly Bill
+            <div className="flex items-center justify-between gap-1">
+              <div className="text-[10px] text-zinc-400 uppercase">
+                Unguarded Anomaly Bill (If Unstopped)
+              </div>
+              {timeCrystalForecast.isExponential && (
+                <span className="px-1.5 py-0.2 rounded bg-red-500/15 text-red-500 border border-red-500/30 text-[9px] font-bold">
+                  {timeCrystalForecast.compoundRate}x/d EXP
+                </span>
+              )}
             </div>
             <div className="text-base font-extrabold text-red-500 mt-0.5">
-              ${timeCrystalForecast.unguardedMonthEnd.toFixed(2)}
+              ${timeCrystalForecast.unguardedMonthEnd.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
             <div className="text-[10px] text-red-400">
-              ${timeCrystalForecast.surgeDaily}/day during surge
+              {timeCrystalForecast.isExponential
+                ? `$${timeCrystalForecast.surgeDaily}/d → $${timeCrystalForecast.peakSurgeDaily}/d peak`
+                : `$${timeCrystalForecast.surgeDaily}/day during surge`}
             </div>
           </div>
 

@@ -668,6 +668,115 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
+    // Cloud Billing Budget & Native Spend Cap Creation (/billing-guardian/budgets/create)
+    if (rawUrl.includes('/billing-guardian/budgets/create')) {
+      const capUsd = Number(body.amountUsd || 15);
+      const isSpendCap = Boolean(body.enableSpendCap);
+      const svcRef = body.serviceResourceName || 'All Project Services';
+      return {
+        title: isSpendCap
+          ? `Arm Native Spend Cap ($${capUsd}/mo) on ${svcRef}?`
+          : `Arm Auto-Circuit-Breaker & Cloud Billing Budget ($${capUsd}/mo)?`,
+        headerBadge: isSpendCap
+          ? 'GoogleCloudBillingBudgetsV1SpendCap Gatekeeper'
+          : 'CloudPulse 2026 Pre-Crime Circuit-Breaker Gatekeeper',
+        targetLabel: isSpendCap
+          ? 'Target GCP Service for Hard Spend Cap'
+          : 'Target Project for Monthly Hard Budget Cap',
+        resourceKind: 'Cloud Billing Budget API (billingbudgets.googleapis.com/v1)',
+        targetName: `${body.displayName || `${projectId}-${capUsd}usd`} ($${capUsd} ${body.currencyCode || 'USD'}/MONTH · ${body.creditTypesTreatment || 'EXCLUDE_ALL_CREDITS'})`,
+        location: 'Global Billing Account',
+        projectId,
+        method: isSpendCap ? 'ARM SPEND CAP (CONFIGURED)' : 'CREATE BUDGET & ARM BREAKER',
+        endpoint: rawUrl,
+        confirmLabel: isSpendCap
+          ? `Confirm & Arm $${capUsd}/mo Spend Cap`
+          : `Confirm & Arm $${capUsd}/mo Circuit-Breaker`,
+        cancelToast:
+          'Action cancelled — Circuit-Breaker / Spend Cap was not enabled.',
+        impactWarning: isSpendCap
+          ? `HARD SPEND CAP WARNING: Setting spendCap.inputState = "CONFIGURED" ($${capUsd}/mo · EXCLUDE_ALL_CREDITS) instructs Google Cloud Billing to automatically pause usage of "${svcRef}" in "${projectId}" for the rest of the calendar month once gross estimated usage reaches 100% of $${capUsd} USD. (Note: Because EXCLUDE_ALL_CREDITS is required by Google, gross usage is measured before promotional credits settle.)`
+          : `CIRCUIT-BREAKER & BILLING BUDGET WARNING: Confirming this action provisions a live $${capUsd}/mo Cloud Billing Budget on billingbudgets.googleapis.com/v1 (50%, 80%, 100% thresholds) and arms the Pre-Crime Auto-Circuit-Breaker so compute spend is clamped if your project crosses $${capUsd}/mo.`,
+      };
+    }
+
+    // Cloud Billing Spend Cap State Transitions (/billing-guardian/budgets/spend-cap-action)
+    if (rawUrl.includes('/billing-guardian/budgets/spend-cap-action')) {
+      const act = String(body.action || '').toUpperCase();
+      const bName = body.budgetName || 'billingAccounts/.../budgets/...';
+      const shortId = String(bName).split('/').pop() || bName;
+      return {
+        title:
+          act === 'LIFT_CAP'
+            ? `Lift Spend Cap (${shortId}) -> AWAITING_NEXT_PERIOD?`
+            : act === 'RAISE_AMOUNT_AND_UNPAUSE'
+            ? `Update Budget Cap ($${body.newAmountUsd || 25}/mo) on ${shortId}?`
+            : `Re-Arm Native Spend Cap (${shortId}) -> CONFIGURED?`,
+        headerBadge: 'Cloud Billing Spend Cap State Machine Gatekeeper',
+        resourceKind: 'Cloud Billing Budget (billingbudgets.googleapis.com/v1)',
+        targetName: bName,
+        location: 'Global Billing Account',
+        projectId,
+        method: `PATCH (${act})`,
+        endpoint: rawUrl,
+        confirmLabel:
+          act === 'LIFT_CAP'
+            ? 'Confirm & Lift Spend Cap for This Month'
+            : act === 'RAISE_AMOUNT_AND_UNPAUSE'
+            ? `Confirm & Set Cap to $${body.newAmountUsd || 25}/mo`
+            : 'Confirm & Re-Arm Spend Cap',
+        cancelToast: 'Action cancelled — Spend Cap state was not changed.',
+        impactWarning:
+          act === 'LIFT_CAP'
+            ? `Lifting this Spend Cap sets spendCap.inputState = "AWAITING_NEXT_PERIOD". Any paused service will resume immediately and can incur billable charges for the remainder of the current calendar month (it automatically re-arms to CONFIGURED on the 1st of next month).`
+            : act === 'RAISE_AMOUNT_AND_UNPAUSE'
+            ? `This executes an atomic PATCH (lifting ENFORCED first if needed to prevent FAILED_PRECONDITION) and updates the monthly cap to $${body.newAmountUsd || 25} USD/mo.`
+            : `Re-arming sets spendCap.inputState = "CONFIGURED", pausing the target service if gross monthly spend reaches 100% of the cap.`,
+      };
+    }
+
+    // Cloud Billing Budget Deletion (/billing-guardian/budgets/delete)
+    if (rawUrl.includes('/billing-guardian/budgets/delete')) {
+      const bName = body.budgetName || 'billingAccounts/.../budgets/...';
+      return {
+        title: `Delete Cloud Billing Budget "${String(bName).split('/').pop()}"?`,
+        resourceKind: 'Cloud Billing Budget (billingbudgets.googleapis.com/v1)',
+        targetName: bName,
+        location: 'Global Billing Account',
+        projectId,
+        method: 'DELETE BUDGET',
+        endpoint: rawUrl,
+        confirmLabel: 'Confirm & Delete Budget',
+        cancelToast: 'Action cancelled — Cloud Billing Budget kept intact.',
+        impactWarning: `Deleting "${bName}" permanently removes its 50%/80%/100% threshold alerts and any attached Native Spend Cap enforcement.`,
+      };
+    }
+
+    // 2026 Quantum Nexus Circuit-Breaker Policy Update
+    if (
+      rawUrl.includes('/quantum-nexus/action') &&
+      String(body.action || '').toUpperCase() === 'UPDATE_FINOPS_CIRCUIT_BREAKER'
+    ) {
+      const capUsd = Number(
+        body.payload?.maxMonthlyBudgetUsd ?? body.maxMonthlyBudgetUsd ?? 50
+      );
+      const actMode =
+        body.payload?.autoAction || body.autoAction || 'PARK_NIGHT_MODE';
+      return {
+        title: `Arm Autonomous FinOps Circuit-Breaker ($${capUsd}/mo)?`,
+        headerBadge: '2026 Quantum Nexus Circuit-Breaker Gatekeeper',
+        resourceKind: 'Cloud Billing Budget + Autonomous Tripwire',
+        targetName: `${projectId} ($${capUsd}/mo · Action: ${actMode})`,
+        location: 'Global Project & Billing',
+        projectId,
+        method: 'ARM CIRCUIT-BREAKER',
+        endpoint: rawUrl,
+        confirmLabel: `Confirm & Arm $${capUsd}/mo Circuit-Breaker`,
+        cancelToast: 'Action cancelled — Circuit-Breaker was not armed.',
+        impactWarning: `Confirming this action arms the Autonomous FinOps Circuit-Breaker at $${capUsd}/mo (tripwire action: ${actMode}) and provisions a corresponding Cloud Billing Budget via billingbudgets.googleapis.com/v1.`,
+      };
+    }
+
     // Service Usage API Disable (/apis/toggle with action: DISABLE)
     if (
       rawUrl.includes('/apis/toggle') &&
@@ -4280,6 +4389,7 @@ function CloudPulseCockpit() {
                       projectId={selectedProjectId}
                       enabledApis={overview?.enabledApis || []}
                       onRefresh={() => fetchProjectOverview(selectedProjectId)}
+                      onOpenFinOps={() => setActiveTab('FINOPS')}
                       onShowToast={showToast}
                       onShowError={setErrorBanner}
                     />
@@ -4992,6 +5102,14 @@ function CloudPulseCockpit() {
                     onOpenSecretManagerStudio={() => {
                       setSovereignSubTab('SECRETS_KMS_WAF');
                       setActiveTab('SOVEREIGN_STUDIO');
+                    }}
+                    onOpenEmergencyKillSwitch={() => {
+                      setActiveTab('OVERVIEW');
+                      setTimeout(() => {
+                        document
+                          .getElementById('emergency-api-killswitch-section')
+                          ?.scrollIntoView({ behavior: 'smooth' });
+                      }, 150);
                     }}
                     onRunInShell={handleRunInShell}
                     onShowToast={showToast}

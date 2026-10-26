@@ -27,6 +27,7 @@ export default function Lab2026QuantumNexus({
   projectId,
   initialMode = 'CAUSAL_GRAPH',
   onRefreshGlobal,
+  onOpenFinOps,
   onShowToast,
   onShowError,
 }) {
@@ -703,26 +704,49 @@ export default function Lab2026QuantumNexus({
                 <h5 className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                   Automated Hard-Cap Budget Circuit-Breaker Policy
                 </h5>
-                <p className="text-xs text-zinc-500">
-                  Automatically parks non-critical VMs and scales warm Cloud Run instances to 0 the instant your project burn crosses your threshold.
+                <p className="text-xs text-zinc-500 max-w-2xl leading-relaxed mt-0.5">
+                  Set both a <strong>Monthly Hard Cap ($/mo)</strong> and a{' '}
+                  <strong>Max Hourly Burn Spike ($/hr)</strong> below. Clicking{' '}
+                  <strong>Arm Circuit-Breaker &amp; Sync Budget API</strong>{' '}
+                  provisions a live Cloud Billing Budget on{' '}
+                  <code className="font-mono">billingbudgets.googleapis.com/v1</code>{' '}
+                  and arms your chosen tripwire action (such as parking idle VMs
+                  and scaling warm Cloud Run instances to zero) the moment spend
+                  exceeds your threshold.
                 </p>
               </div>
-              <button
-                type="button"
-                disabled={busyAction === 'UPDATE_FINOPS_CIRCUIT_BREAKER'}
-                onClick={() =>
-                  executeNexusAction('UPDATE_FINOPS_CIRCUIT_BREAKER', {
-                    enabled: true,
-                    maxMonthlyBudgetUsd: Number(budgetCapUsd),
-                    maxHourlySpikeUsd: Number(hourlySpikeUsd),
-                    autoAction,
-                  })
-                }
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Arm Autonomous Circuit-Breaker</span>
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {onOpenFinOps && (
+                  <button
+                    type="button"
+                    onClick={onOpenFinOps}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-extrabold cursor-pointer"
+                    title="Open Native Per-Service Spend Cap Studio (billingbudgets.googleapis.com/v1)"
+                  >
+                    <span>Per-Service Spend Caps (FinOps) →</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={busyAction === 'UPDATE_FINOPS_CIRCUIT_BREAKER'}
+                  onClick={() =>
+                    executeNexusAction('UPDATE_FINOPS_CIRCUIT_BREAKER', {
+                      enabled: true,
+                      maxMonthlyBudgetUsd: Number(budgetCapUsd),
+                      maxHourlySpikeUsd: Number(hourlySpikeUsd),
+                      autoAction,
+                    })
+                  }
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>
+                    {busyAction === 'UPDATE_FINOPS_CIRCUIT_BREAKER'
+                      ? 'Syncing to Cloud Billing API...'
+                      : 'Arm Circuit-Breaker & Sync Budget API'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">

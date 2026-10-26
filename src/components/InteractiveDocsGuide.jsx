@@ -478,9 +478,11 @@ const DOC_SECTIONS = [
       '1-Click "$0.00 Free-Tier Micro-Charge Killer" Enforcers (POST /api/project/:id/finops/always-free-enforcer): (1) Attaches live Artifact Registry cleanupPolicies (keepCount=2 + delete untagged >7d) to stay under 0.5 GB, (2) installs a noisy HTTP 200 /healthz & kube-probe exclusion filter on the _Default Cloud Logging sink to protect the 50 GiB/mo free tier, and (3) auto-disables redundant ENABLED Secret Manager versions so active versions stay within the 6 Free Versions/mo quota.',
       '1-Click "Lock to Always Free Tier ($0.00/mo)" Guardrail in Provision Modal: Automatically configures Compute VMs (e2-micro + us-central1-a + 30 GB pd-standard), Cloud Storage (us-central1 Regional STANDARD), Cloud Run (cpuIdle: true, minInstances: 0, 1 vCPU, 512Mi, no GPU), and BigQuery (US multi-region) to stay 100% inside the monthly Always Free allowance.',
       'Product-Specific Free Trials Strip: Highlights separate 30-to-90 day trials (AlloyDB 30d, Cloud Spanner 90d, Cloud SQL 30d, Looker 30d) that do not consume your $300 Welcome Credit.',
+      'Native Cloud Billing Spend Cap & Budget API Studio (billingbudgets.googleapis.com/v1 — GoogleCloudBillingBudgetsV1SpendCap): Dynamically discovers your projectNumber and live Cloud Billing Service Catalog (cloudbilling.googleapis.com/v1/services) to provision surgical per-service hard spend caps (spendCap.inputState = CONFIGURED, creditTypesTreatment = EXCLUDE_ALL_CREDITS, 1 project + 1 service), lift enforced caps mid-month (AWAITING_NEXT_PERIOD), or execute the atomic 2-step Lift-Before-Raise PATCH to prevent HTTP 400 FAILED_PRECONDITION.',
     ],
     apisUsed: [
       'GET /api/project/:id/finops/always-free-auditor & POST /api/project/:id/finops/always-free-enforcer',
+      'GET /api/project/:id/billing-guardian/spend-cap-catalog, POST /api/project/:id/billing-guardian/budgets/create, /budgets/spend-cap-action & /budgets/delete (billingbudgets.googleapis.com/v1)',
       'POST /api/project/:id/provision (with 1-Click Always Free Guardrail presets)',
     ],
     billingImpact:

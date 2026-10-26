@@ -74,6 +74,7 @@ export default function EmergencyApiKillSwitch({
   projectId,
   enabledApis = [],
   onRefresh,
+  onOpenFinOps,
   onShowToast,
   onShowError,
 }) {
@@ -85,6 +86,11 @@ export default function EmergencyApiKillSwitch({
   const [togglingBilling, setTogglingBilling] = useState(false);
   const [selectedRestoreBillingAccount, setSelectedRestoreBillingAccount] =
     useState('');
+
+  // 1.5) Native Cloud Billing Spend Cap Circuit-Breaker State (`billingbudgets.googleapis.com/v1`)
+  const [spendCapCatalog, setSpendCapCatalog] = useState(null);
+  const [busySpendCapKey, setBusySpendCapKey] = useState(null);
+  const [quickCapAmountUsd, setQuickCapAmountUsd] = useState(15);
 
   // 2) Individual Service API Kill-Switch State
   const [localApis, setLocalApis] = useState(enabledApis);
@@ -166,16 +172,118 @@ export default function EmergencyApiKillSwitch({
     [projectId]
   );
 
-  // Load live Billing Account status, Quota Radar & Enabled APIs on mount or project change
+  const fetchSpendCapCatalog = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/spend-cap-catalog`
+      );
+      if (res.data?.ok) {
+        setSpendCapCatalog(res.data);
+      }
+    } catch {
+      // ignore if offline
+    }
+  }, [projectId]);
+
+  const handleQuickArmServiceSpendCap = async (srvObj, customUsd) => {
+    if (!projectId || !srvObj?.name) return;
+    const capUsd = Number(customUsd || quickCapAmountUsd || 15);
+    setBusySpendCapKey(`ARM:${srvObj.name}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/budgets/create`,
+        {
+          billingAccountName:
+            billingStatus?.billingAccountName ||
+            spendCapCatalog?.billingAccountName ||
+            '',
+          displayName: `${projectId}-${srvObj.key.toLowerCase()}-cap-${capUsd}usd`,
+          amountUsd: capUsd,
+          currencyCode: billingStatus?.currencyCode || 'USD',
+          enableSpendCap: true,
+          serviceResourceName: srvObj.name,
+          projectResourceName: spendCapCatalog?.projectResourceName || '',
+          creditTypesTreatment: 'EXCLUDE_ALL_CREDITS',
+          thresholdPercents: [50, 80, 100],
+        }
+      );
+      if (res.data?.ok) {
+        if (onShowToast) {
+          onShowToast(
+            res.data.message ||
+              `Armed $${capUsd}/mo Native Spend Cap on ${srvObj.displayName}!`
+          );
+        }
+        await fetchSpendCapCatalog();
+      }
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to arm Spend Cap on ${srvObj.displayName}.`
+        );
+      }
+    } finally {
+      setBusySpendCapKey(null);
+    }
+  };
+
+  const handleQuickToggleBudgetSpendCap = async (budgetName, action) => {
+    if (!projectId || !budgetName) return;
+    setBusySpendCapKey(`${action}:${budgetName}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/billing-guardian/budgets/spend-cap-action`,
+        {
+          budgetName,
+          action,
+        }
+      );
+      if (res.data?.ok) {
+        if (onShowToast) {
+          onShowToast(res.data.message || `Updated Spend Cap (${action}).`);
+        }
+        await fetchSpendCapCatalog();
+      }
+    } catch (err) {
+      if (err?.__cancelledByUser || err?.response?.status === 499) return;
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to update Spend Cap (${action}).`
+        );
+      }
+    } finally {
+      setBusySpendCapKey(null);
+    }
+  };
+
+  // Load live Billing Account status, Spend Cap Catalog, Quota Radar & Enabled APIs on mount or project change
   useEffect(() => {
     if (projectId) {
       fetchBillingStatus();
+      fetchSpendCapCatalog();
       fetchQuotaRadar();
       if (!enabledApis || enabledApis.length === 0) {
         fetchLiveApis(false);
       }
     }
-  }, [projectId, enabledApis, fetchBillingStatus, fetchQuotaRadar, fetchLiveApis]);
+  }, [
+    projectId,
+    enabledApis,
+    fetchBillingStatus,
+    fetchSpendCapCatalog,
+    fetchQuotaRadar,
+    fetchLiveApis,
+  ]);
 
   const handleBillingKillSwitch = async (action) => {
     setTogglingBilling(true);
@@ -334,6 +442,33 @@ export default function EmergencyApiKillSwitch({
 
   return (
     <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-5">
+      {/* Plain-English 3-Tier Emergency Cost-Stop Guide */}
+      <div className="p-3.5 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+        <strong className="text-zinc-900 dark:text-zinc-100">
+          Which Cost-Stop Defense should I use?
+        </strong>{' '}
+        This panel gives you three graduated ways to stop runaway cloud bills:{' '}
+        <strong className="text-red-600 dark:text-red-400">
+          (1) DEFCON-1 Project Billing Kill-Switch
+        </strong>{' '}
+        is the nuclear emergency button—it detaches your Cloud Billing Account
+        from the entire project so 100% of billable spend stops immediately
+        (best if an admin key is compromised).{' '}
+        <strong className="text-emerald-600 dark:text-emerald-400">
+          (2) Surgical Per-Service Native Spend Caps
+        </strong>{' '}
+        let you set a monthly dollar ceiling on individual services like{' '}
+        <strong>Gemini API</strong>, <strong>Vertex AI</strong>,{' '}
+        <strong>Cloud Run</strong>, or <strong>Cloud Functions</strong> so
+        Google Cloud automatically pauses only that service if it hits 100% of
+        your cap while the rest of your project stays online.{' '}
+        <strong className="text-zinc-900 dark:text-zinc-100">
+          (3) Granular Service API Kill-Switch
+        </strong>{' '}
+        lets you manually disable or re-enable any individual Google Cloud API
+        right now via <code className="font-mono">serviceusage.googleapis.com</code>.
+      </div>
+
       {/* ===================================================================== */}
       {/* LEVEL 1: ULTIMATE PROJECT KILL-SWITCH (CLOUD BILLING CIRCUIT BREAKER) */}
       {/* ===================================================================== */}
@@ -541,6 +676,150 @@ export default function EmergencyApiKillSwitch({
       </div>
 
       {/* ===================================================================== */}
+      {/* LEVEL 1.5: SURGICAL PER-SERVICE NATIVE SPEND CAP GUARD (`spendCap`)   */}
+      {/* ===================================================================== */}
+      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 space-y-2.5 font-mono text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                Surgical Alternative to Unlinking Billing: Native Per-Service Spend Caps (
+                <code>GoogleCloudBillingBudgetsV1SpendCap</code>)
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                PAUSE 1 SERVICE AT 100% GROSS CAP
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-0.5">
+              Instead of detaching your entire project&apos;s Billing Account
+              above, arm a monthly USD hard cap on individual high-risk APIs (
+              <code>EXCLUDE_ALL_CREDITS</code>) so Google Cloud pauses only that
+              API if it bleeds money.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex items-center gap-1 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2 py-1">
+              <span className="text-[10px] text-zinc-500">Cap $:</span>
+              <input
+                type="number"
+                min={1}
+                value={quickCapAmountUsd}
+                onChange={(e) => setQuickCapAmountUsd(e.target.value)}
+                className="w-14 text-xs font-extrabold bg-transparent focus:outline-none"
+              />
+              <span className="text-[10px] text-zinc-500">/mo</span>
+            </div>
+            {onOpenFinOps && (
+              <button
+                type="button"
+                onClick={onOpenFinOps}
+                className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold cursor-pointer"
+              >
+                Open Full Spend Cap Studio (FinOps) →
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {(spendCapCatalog?.resolvedServices || [])
+            .filter((s) => s.spendCapEligible)
+            .map((srv) => {
+              const existingBudget = (spendCapCatalog?.budgets || []).find(
+                (b) => (b.services || []).includes(srv.name)
+              );
+              const outState =
+                existingBudget?.spendCap?.outputState ||
+                (existingBudget?.spendCapConfigured
+                  ? 'CONFIGURED'
+                  : 'NOT_CONFIGURED');
+              return (
+                <div
+                  key={srv.name}
+                  className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-2"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                        {srv.displayName}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                          outState === 'ENFORCED'
+                            ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                            : outState === 'CONFIGURED'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            : outState === 'AWAITING_NEXT_PERIOD'
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
+                        }`}
+                      >
+                        {existingBudget
+                          ? `${outState} ($${existingBudget.amountUsd}/mo)`
+                          : 'NO CAP'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-zinc-500 truncate mt-0.5">
+                      {srv.apiHost} · {srv.name}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                    {existingBudget ? (
+                      outState === 'CONFIGURED' || outState === 'ENFORCED' ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleQuickToggleBudgetSpendCap(
+                              existingBudget.name,
+                              'LIFT_CAP'
+                            )
+                          }
+                          disabled={
+                            busySpendCapKey === `LIFT_CAP:${existingBudget.name}`
+                          }
+                          className="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold cursor-pointer"
+                        >
+                          Lift Cap (AWAITING_NEXT_PERIOD)
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleQuickToggleBudgetSpendCap(
+                              existingBudget.name,
+                              'ARM_CAP'
+                            )
+                          }
+                          disabled={
+                            busySpendCapKey === `ARM_CAP:${existingBudget.name}`
+                          }
+                          className="px-2 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold cursor-pointer"
+                        >
+                          Re-Arm Cap (CONFIGURED)
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleQuickArmServiceSpendCap(srv, quickCapAmountUsd)
+                        }
+                        disabled={busySpendCapKey === `ARM:${srv.name}`}
+                        className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold cursor-pointer"
+                      >
+                        {busySpendCapKey === `ARM:${srv.name}`
+                          ? 'Arming...'
+                          : `+ Arm $${quickCapAmountUsd}/mo Spend Cap`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* ===================================================================== */}
       {/* LEVEL 2: INDIVIDUAL SERVICE API KILL-SWITCH & MANAGER                 */}
       {/* ===================================================================== */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4 pt-1">
@@ -618,6 +897,14 @@ export default function EmergencyApiKillSwitch({
               const isDisabling = busyState === 'DISABLE';
               const isConfirming = confirmDisableApi === api.name;
               const isHighImpact = HIGH_IMPACT_SET.has(api.name);
+              const matchedCatalogSrv = (
+                spendCapCatalog?.resolvedServices || []
+              ).find((s) => s.apiHost === api.name && s.spendCapEligible);
+              const matchedSpendCapBudget = matchedCatalogSrv
+                ? (spendCapCatalog?.budgets || []).find((b) =>
+                    (b.services || []).includes(matchedCatalogSrv.name)
+                  )
+                : null;
 
               return (
                 <div
@@ -702,17 +989,45 @@ export default function EmergencyApiKillSwitch({
                       </div>
                     ) : (
                       <>
-                        <span className="text-[10px] font-mono text-zinc-400">
-                          {isHighImpact ? 'Core Billable API' : 'Active Service'}
+                        <span className="text-[10px] font-mono text-zinc-400 truncate">
+                          {matchedSpendCapBudget
+                            ? `Spend Cap: $${matchedSpendCapBudget.amountUsd}/mo (${
+                                matchedSpendCapBudget.spendCap?.outputState ||
+                                'CONFIGURED'
+                              })`
+                            : isHighImpact
+                            ? 'Core Billable API'
+                            : 'Active Service'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDisableApi(api.name)}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2.5 py-1 rounded-md transition-colors"
-                        >
-                          <Power className="w-3 h-3" />
-                          <span>Emergency Disable</span>
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {matchedCatalogSrv && !matchedSpendCapBudget && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleQuickArmServiceSpendCap(
+                                  matchedCatalogSrv,
+                                  quickCapAmountUsd
+                                )
+                              }
+                              disabled={
+                                busySpendCapKey ===
+                                `ARM:${matchedCatalogSrv.name}`
+                              }
+                              className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-2 py-1 rounded-md transition-colors cursor-pointer"
+                              title={`Arm a $${quickCapAmountUsd}/mo Native Spend Cap on ${matchedCatalogSrv.displayName} without disabling the API now`}
+                            >
+                              <span>+ Cap ${quickCapAmountUsd}</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDisableApi(api.name)}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+                          >
+                            <Power className="w-3 h-3" />
+                            <span>Emergency Disable</span>
+                          </button>
+                        </div>
                       </>
                     )}
                   </div>

@@ -31855,10 +31855,138 @@ app.post('/api/project/:projectId/quantum-nexus/action', async (req, res) => {
         ...payload,
         lastUpdatedAt: new Date().toISOString(),
       };
+
+      // Also provision a permanent 24/7 server-side Cloud Billing Spend Cap + Pub/Sub Topic on GCP
+      let liveBudgetSynced = null;
+      let livePubsubTopic = null;
+      let liveBudgetNote = '';
+      try {
+        const token = await resolveRequestToken(req);
+        if (token) {
+          const [bInfoRes, projMetaRes, catalogServices] = await Promise.all([
+            fetch(
+              `https://cloudbilling.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/billingInfo`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            )
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+            fetch(
+              `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            )
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+            fetchLiveCloudBillingServiceCatalog(token, projectId),
+          ]);
+          const billingAccountName = bInfoRes?.billingAccountName || '';
+          const projectRef = projMetaRes?.projectNumber
+            ? `projects/${projMetaRes.projectNumber}`
+            : `projects/${projectId}`;
+          const targetUnits = String(
+            Math.max(
+              1,
+              Math.round(
+                Number(state.finopsCircuitBreaker.maxMonthlyBudgetUsd || 50)
+              )
+            )
+          );
+
+          // Ensure permanent 24/7 Pub/Sub Kill-Switch topic exists on GCP
+          const topicPath = `projects/${projectId}/topics/cloudpulse-budget-killswitch`;
+          const topicRes = await fetch(
+            `https://pubsub.googleapis.com/v1/${topicPath}`,
+            {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'x-goog-user-project': projectId,
+              },
+              body: JSON.stringify({}),
+            }
+          ).catch(() => null);
+          if (topicRes && (topicRes.ok || topicRes.status === 409)) {
+            livePubsubTopic = topicPath;
+          }
+
+          // Resolve Cloud Run service from live catalog for native Spend Cap enforcement
+          const cloudRunCatalogSrv = (catalogServices || []).find((cs) =>
+            /^cloud run$/i.test(String(cs.displayName || '').trim())
+          );
+
+          if (billingAccountName) {
+            const createRes = await fetch(
+              `https://billingbudgets.googleapis.com/v1/${billingAccountName}/budgets`,
+              {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                  'x-goog-user-project': projectId,
+                },
+                body: JSON.stringify({
+                  displayName: `${projectId}-24x7-spend-cap-${targetUnits}usd`,
+                  budgetFilter: {
+                    projects: [projectRef],
+                    ...(cloudRunCatalogSrv?.name
+                      ? { services: [cloudRunCatalogSrv.name] }
+                      : {}),
+                    creditTypesTreatment: 'EXCLUDE_ALL_CREDITS',
+                    calendarPeriod: 'MONTH',
+                  },
+                  amount: {
+                    specifiedAmount: {
+                      currencyCode: 'USD',
+                      units: targetUnits,
+                    },
+                  },
+                  thresholdRules: [
+                    { thresholdPercent: 0.5, spendBasis: 'CURRENT_SPEND' },
+                    { thresholdPercent: 0.8, spendBasis: 'CURRENT_SPEND' },
+                    { thresholdPercent: 1.0, spendBasis: 'CURRENT_SPEND' },
+                  ],
+                  ...(cloudRunCatalogSrv?.name
+                    ? {
+                        spendCap: {
+                          inputState: 'CONFIGURED',
+                        },
+                      }
+                    : {}),
+                  ...(livePubsubTopic
+                    ? {
+                        notificationsRule: {
+                          pubsubTopic: livePubsubTopic,
+                          schemaVersion: '1.0',
+                        },
+                      }
+                    : {}),
+                }),
+              }
+            );
+            if (createRes.ok) {
+              const created = await createRes.json().catch(() => null);
+              liveBudgetSynced = created?.name || null;
+              liveBudgetNote = ` + armed permanent 24/7 GCP Spend Cap (${
+                created?.displayName || liveBudgetSynced
+              })`;
+              liveBillingInsightsCache.delete(projectId);
+            }
+          }
+        }
+      } catch {
+        // non-fatal if billingbudgets API is not enabled on the billing account
+      }
+
       return res.json({
         ok: true,
         circuitBreaker: state.finopsCircuitBreaker,
-        message: `Autonomous FinOps Circuit-Breaker armed at $${state.finopsCircuitBreaker.maxMonthlyBudgetUsd}/mo (${state.finopsCircuitBreaker.autoAction}).`,
+        liveBudgetSynced,
+        livePubsubTopic,
+        message: `Armed 24/7 Autonomous FinOps Circuit-Breaker at $${state.finopsCircuitBreaker.maxMonthlyBudgetUsd}/mo (${state.finopsCircuitBreaker.autoAction})${liveBudgetNote}.`,
       });
     }
 
@@ -34227,6 +34355,73 @@ async function queryGenerateInsights(token, projectId, parents, prompt) {
   }
 }
 
+function normalizeBillingBudgetItem(b, fallbackAccountName = '') {
+  const rawName = String(b?.name || '');
+  const accountFromPath = rawName.includes('/budgets/')
+    ? rawName.split('/budgets/')[0]
+    : fallbackAccountName;
+  const budgetId = rawName.includes('/budgets/')
+    ? rawName.split('/budgets/')[1]
+    : rawName;
+  const units = Number(b?.amount?.specifiedAmount?.units || 0);
+  const nanos = Number(b?.amount?.specifiedAmount?.nanos || 0) / 1e9;
+  const amountUsd = Math.round((units + nanos) * 100) / 100;
+  const inputState = b?.spendCap?.inputState || 'NOT_CONFIGURED';
+  const outputState =
+    b?.spendCap?.outputState ||
+    (inputState !== 'NOT_CONFIGURED' ? inputState : 'NOT_CONFIGURED');
+  const reconciling = Boolean(b?.spendCap?.reconciling);
+  const notifRule = b?.notificationsRule || b?.allUpdatesRule || {};
+  return {
+    name: rawName,
+    budgetId,
+    billingAccountName: accountFromPath || fallbackAccountName,
+    displayName: b?.displayName || budgetId || rawName,
+    amountUsd,
+    lastPeriodAmount: Boolean(b?.amount?.lastPeriodAmount),
+    currencyCode: b?.amount?.specifiedAmount?.currencyCode || 'USD',
+    creditTypesTreatment:
+      b?.budgetFilter?.creditTypesTreatment || 'INCLUDE_ALL_CREDITS',
+    calendarPeriod: b?.budgetFilter?.calendarPeriod || 'MONTH',
+    projects: Array.isArray(b?.budgetFilter?.projects)
+      ? b.budgetFilter.projects
+      : [],
+    services: Array.isArray(b?.budgetFilter?.services)
+      ? b.budgetFilter.services
+      : [],
+    thresholdPercents: (b?.thresholdRules || []).map((r) =>
+      Math.round(Number(r.thresholdPercent || 0) * 100)
+    ),
+    thresholdRules: Array.isArray(b?.thresholdRules) ? b.thresholdRules : [],
+    notificationsRule: {
+      pubsubTopic: notifRule.pubsubTopic || '',
+      schemaVersion: notifRule.schemaVersion || '1.0',
+      monitoringNotificationChannels: Array.isArray(
+        notifRule.monitoringNotificationChannels
+      )
+        ? notifRule.monitoringNotificationChannels
+        : [],
+      disableDefaultIamRecipients: Boolean(
+        notifRule.disableDefaultIamRecipients
+      ),
+    },
+    spendCap: {
+      inputState,
+      outputState,
+      reconciling,
+    },
+    spendCapConfigured:
+      outputState === 'CONFIGURED' ||
+      outputState === 'ENFORCED' ||
+      inputState === 'CONFIGURED',
+    spendCapEnforced: outputState === 'ENFORCED',
+    spendCapAwaitingNextPeriod:
+      outputState === 'AWAITING_NEXT_PERIOD' ||
+      inputState === 'AWAITING_NEXT_PERIOD',
+    etag: b?.etag || '',
+  };
+}
+
 async function fetchBillingBudgetsForAccounts(token, projectId, accountNames = []) {
   const budgets = [];
   await Promise.all(
@@ -34246,22 +34441,7 @@ async function fetchBillingBudgetsForAccounts(token, projectId, accountNames = [
         const data = await res.json();
         if (Array.isArray(data?.budgets)) {
           for (const b of data.budgets) {
-            budgets.push({
-              name: b.name,
-              billingAccountName: accountName,
-              displayName: b.displayName || b.name,
-              amountUsd: Number(b.amount?.specifiedAmount?.units || 0),
-              currencyCode: b.amount?.specifiedAmount?.currencyCode || 'USD',
-              creditTypesTreatment:
-                b.budgetFilter?.creditTypesTreatment || 'INCLUDE_ALL_CREDITS',
-              calendarPeriod: b.budgetFilter?.calendarPeriod || 'MONTH',
-              projects: b.budgetFilter?.projects || [],
-              services: b.budgetFilter?.services || [],
-              thresholdPercents: (b.thresholdRules || []).map((r) =>
-                Math.round(Number(r.thresholdPercent || 0) * 100)
-              ),
-              spendCapConfigured: b.spendCap?.outputState === 'CONFIGURED',
-            });
+            budgets.push(normalizeBillingBudgetItem(b, accountName));
           }
         }
       } catch {
@@ -34885,6 +35065,799 @@ app.post(
       return res.status(500).json({
         ok: false,
         error: err.message || 'Failed to save synced Console credits.',
+      });
+    }
+  }
+);
+
+// ============================================================================
+// CLOUD BILLING BUDGET API SPEND CAP & DUAL-DEFENSE STUDIO
+// (`billingbudgets.googleapis.com/v1` — GoogleCloudBillingBudgetsV1SpendCap)
+// Reference: https://docs.cloud.google.com/billing/docs/how-to/budget-api-spend-cap
+// ============================================================================
+let cachedCloudBillingServicesCatalog = {
+  fetchedAt: 0,
+  services: [],
+};
+
+async function fetchLiveCloudBillingServiceCatalog(token, projectId) {
+  const now = Date.now();
+  if (
+    cachedCloudBillingServicesCatalog.services.length > 0 &&
+    now - cachedCloudBillingServicesCatalog.fetchedAt < 30 * 60 * 1000
+  ) {
+    return cachedCloudBillingServicesCatalog.services;
+  }
+  try {
+    const res = await fetch(
+      'https://cloudbilling.googleapis.com/v1/services?pageSize=5000',
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-goog-user-project': projectId,
+        },
+      }
+    );
+    if (!res.ok) return cachedCloudBillingServicesCatalog.services;
+    const data = await res.json();
+    if (Array.isArray(data?.services)) {
+      cachedCloudBillingServicesCatalog = {
+        fetchedAt: now,
+        services: data.services.map((s) => ({
+          name: s.name, // e.g. "services/xxxx-xxxx-xxxx"
+          serviceId: s.serviceId || String(s.name || '').replace(/^services\//, ''),
+          displayName: s.displayName || s.name,
+        })),
+      };
+    }
+  } catch {
+    // ignore catalog fetch errors
+  }
+  return cachedCloudBillingServicesCatalog.services;
+}
+
+// Dynamic discovery of Project Number, Linked Billing Account, Live Cloud Billing Service Catalog & Pub/Sub Topics
+app.get(
+  '/api/project/:projectId/billing-guardian/spend-cap-catalog',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        ok: false,
+        error: 'No active Google Cloud access token found.',
+      });
+    }
+
+    try {
+      const [projMetaRes, billingInfoRes, catalogServices, enabledApisRes, pubsubTopicsRes] =
+        await Promise.all([
+          fetch(
+            `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          )
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+          fetch(
+            `https://cloudbilling.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/billingInfo`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+            }
+          )
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+          fetchLiveCloudBillingServiceCatalog(token, projectId),
+          fetch(
+            `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/services?filter=state:ENABLED&pageSize=200`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+            }
+          )
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+          fetch(
+            `https://pubsub.googleapis.com/v1/projects/${encodeURIComponent(
+              projectId
+            )}/topics?pageSize=100`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'x-goog-user-project': projectId,
+              },
+            }
+          )
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+        ]);
+
+      const projectNumber = projMetaRes?.projectNumber
+        ? String(projMetaRes.projectNumber)
+        : '';
+      const projectDisplayName = projMetaRes?.name || projectId;
+      const billingAccountName = billingInfoRes?.billingAccountName || '';
+
+      const enabledServiceApis = new Set(
+        (enabledApisRes?.services || []).map((s) =>
+          String(s?.config?.name || '').toLowerCase()
+        )
+      );
+
+      // Dynamically match spend-cap-eligible & high-spend services from the live Cloud Billing Service Catalog
+      const targetRules = [
+        {
+          key: 'GEMINI_API',
+          apiHost: 'generativelanguage.googleapis.com',
+          spendCapEligible: true,
+          category: 'GenAI / LLM API',
+          matchDisplay: (dn) =>
+            /^gemini api$/i.test(dn) ||
+            /generative language/i.test(dn),
+        },
+        {
+          key: 'VERTEX_AI',
+          apiHost: 'aiplatform.googleapis.com',
+          spendCapEligible: true,
+          category: 'Vertex AI / Agent Platform',
+          matchDisplay: (dn) =>
+            /^vertex ai$/i.test(dn) ||
+            /^agent platform$/i.test(dn),
+        },
+        {
+          key: 'CLOUD_RUN',
+          apiHost: 'run.googleapis.com',
+          spendCapEligible: true,
+          category: 'Serverless Containers',
+          matchDisplay: (dn) => /^cloud run$/i.test(dn),
+        },
+        {
+          key: 'CLOUD_FUNCTIONS',
+          apiHost: 'cloudfunctions.googleapis.com',
+          spendCapEligible: true,
+          category: 'Serverless Functions',
+          matchDisplay: (dn) =>
+            /^cloud run functions$/i.test(dn) ||
+            /^cloud functions$/i.test(dn),
+        },
+        {
+          key: 'COMPUTE_ENGINE',
+          apiHost: 'compute.googleapis.com',
+          spendCapEligible: false,
+          category: 'VMs & GPUs (Pub/Sub Kill-Switch)',
+          matchDisplay: (dn) => /^compute engine$/i.test(dn),
+        },
+        {
+          key: 'BIGQUERY',
+          apiHost: 'bigquery.googleapis.com',
+          spendCapEligible: false,
+          category: 'Data Warehouse (Pub/Sub Kill-Switch)',
+          matchDisplay: (dn) => /^bigquery$/i.test(dn),
+        },
+        {
+          key: 'CLOUD_STORAGE',
+          apiHost: 'storage.googleapis.com',
+          spendCapEligible: false,
+          category: 'Object Storage (Pub/Sub Kill-Switch)',
+          matchDisplay: (dn) => /^cloud storage$/i.test(dn),
+        },
+      ];
+
+      const resolvedServices = [];
+      for (const rule of targetRules) {
+        const matched = catalogServices.find((cs) =>
+          rule.matchDisplay(String(cs.displayName || '').trim())
+        );
+        if (matched) {
+          resolvedServices.push({
+            key: rule.key,
+            name: matched.name, // "services/xxxx-xxxx-xxxx" resolved live from cloudbilling.googleapis.com/v1/services
+            serviceId: matched.serviceId,
+            displayName: matched.displayName,
+            apiHost: rule.apiHost,
+            category: rule.category,
+            spendCapEligible: rule.spendCapEligible,
+            enabledInProject: enabledServiceApis.has(rule.apiHost),
+          });
+        }
+      }
+
+      const pubsubTopics = (pubsubTopicsRes?.topics || []).map((t) => ({
+        name: t.name,
+        shortName: String(t.name || '').split('/').pop() || t.name,
+      }));
+
+      const budgets = billingAccountName
+        ? await fetchBillingBudgetsForAccounts(token, projectId, [
+            billingAccountName,
+          ])
+        : [];
+
+      return res.json({
+        ok: true,
+        projectId,
+        projectNumber,
+        projectResourceName: projectNumber
+          ? `projects/${projectNumber}`
+          : `projects/${projectId}`,
+        projectDisplayName,
+        billingAccountName,
+        resolvedServices,
+        totalCatalogServicesCount: catalogServices.length,
+        pubsubTopics,
+        budgets,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        ok: false,
+        error:
+          err.message ||
+          'Failed to query Cloud Billing Service Catalog & Spend Cap state.',
+      });
+    }
+  }
+);
+
+// Create a Cloud Billing Budget (Supports Native Spend Cap `GoogleCloudBillingBudgetsV1SpendCap` OR Pub/Sub Kill-Switch)
+app.post(
+  '/api/project/:projectId/billing-guardian/budgets/create',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      billingAccountName: rawBillingAccountName,
+      displayName,
+      amountUsd,
+      currencyCode = 'USD',
+      enableSpendCap = true,
+      serviceResourceName: rawServiceResourceName = '',
+      targetServiceKey = '',
+      projectResourceName = '',
+      creditTypesTreatment = 'EXCLUDE_ALL_CREDITS',
+      thresholdPercents = [50, 80, 100],
+      pubsubTopic: rawPubsubTopic = '',
+      autoCreatePubsubKillswitchTopic = false,
+    } = req.body || {};
+
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        ok: false,
+        error: 'No active Google Cloud access token found.',
+      });
+    }
+
+    try {
+      // Ensure billingbudgets.googleapis.com (and pubsub.googleapis.com if requested) are enabled on the project
+      await Promise.all([
+        fetch(
+          `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/services/billingbudgets.googleapis.com:enable`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        ).catch(() => null),
+        autoCreatePubsubKillswitchTopic
+          ? fetch(
+              `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/services/pubsub.googleapis.com:enable`,
+              {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            ).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
+      // Resolve billingAccountName dynamically if not passed
+      let billingAccountName = String(rawBillingAccountName || '').trim();
+      if (!billingAccountName) {
+        const bInfoRes = await fetch(
+          `https://cloudbilling.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/billingInfo`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'x-goog-user-project': projectId,
+            },
+          }
+        );
+        if (bInfoRes.ok) {
+          const bInfo = await bInfoRes.json();
+          billingAccountName = bInfo?.billingAccountName || '';
+        }
+      }
+      if (!billingAccountName) {
+        const acctsRes = await fetch(
+          'https://cloudbilling.googleapis.com/v1/billingAccounts',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'x-goog-user-project': projectId,
+            },
+          }
+        ).catch(() => null);
+        if (acctsRes?.ok) {
+          const acctsData = await acctsRes.json().catch(() => ({}));
+          const openAcct =
+            (acctsData?.billingAccounts || []).find((a) => a.open) ||
+            (acctsData?.billingAccounts || [])[0];
+          if (openAcct?.name) {
+            billingAccountName = openAcct.name;
+          }
+        }
+      }
+      if (!billingAccountName) {
+        return res.status(400).json({
+          ok: false,
+          error:
+            'No active Billing Account is linked to this project. Link an open Billing Account first.',
+        });
+      }
+      if (!billingAccountName.startsWith('billingAccounts/')) {
+        billingAccountName = `billingAccounts/${billingAccountName}`;
+      }
+
+      // Resolve project number dynamically via Cloud Resource Manager
+      let targetProjectRef = String(projectResourceName || '').trim();
+      if (!targetProjectRef) {
+        const pRes = await fetch(
+          `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          if (pData?.projectNumber) {
+            targetProjectRef = `projects/${pData.projectNumber}`;
+          }
+        }
+      }
+      if (!targetProjectRef) {
+        targetProjectRef = `projects/${projectId}`;
+      }
+
+      // Dynamically resolve serviceResourceName from the live Cloud Billing Service Catalog if targetServiceKey or enableSpendCap is used
+      let serviceResourceName = String(rawServiceResourceName || '').trim();
+      let resolvedServiceDisplayName = '';
+      if (!serviceResourceName && (enableSpendCap || targetServiceKey)) {
+        const catalogServices = await fetchLiveCloudBillingServiceCatalog(
+          token,
+          projectId
+        );
+        const keyUpper = String(targetServiceKey || 'CLOUD_RUN').toUpperCase();
+        const matchFn =
+          keyUpper === 'VERTEX_AI'
+            ? (dn) => /^vertex ai$/i.test(dn) || /^agent platform$/i.test(dn)
+            : keyUpper === 'GEMINI_API'
+            ? (dn) =>
+                /^gemini api$/i.test(dn) || /generative language/i.test(dn)
+            : keyUpper === 'CLOUD_FUNCTIONS'
+            ? (dn) =>
+                /^cloud run functions$/i.test(dn) ||
+                /^cloud functions$/i.test(dn)
+            : (dn) => /^cloud run$/i.test(dn);
+        const matchedSrv = (catalogServices || []).find((cs) =>
+          matchFn(String(cs.displayName || '').trim())
+        );
+        if (matchedSrv?.name) {
+          serviceResourceName = matchedSrv.name;
+          resolvedServiceDisplayName = matchedSrv.displayName || matchedSrv.name;
+        }
+      }
+
+      // Optionally create/verify permanent 24/7 Pub/Sub Kill-Switch Topic on Google Cloud
+      let pubsubTopic = String(rawPubsubTopic || '').trim();
+      if (!pubsubTopic && autoCreatePubsubKillswitchTopic) {
+        const candidateTopic = `projects/${projectId}/topics/cloudpulse-budget-killswitch`;
+        const topicPutRes = await fetch(
+          `https://pubsub.googleapis.com/v1/${candidateTopic}`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'x-goog-user-project': projectId,
+            },
+            body: JSON.stringify({}),
+          }
+        ).catch(() => null);
+        if (topicPutRes && (topicPutRes.ok || topicPutRes.status === 409)) {
+          pubsubTopic = candidateTopic;
+        }
+      }
+
+      const numericAmount = Math.max(1, Math.round(Number(amountUsd || 10)));
+      const cleanThresholds = (
+        Array.isArray(thresholdPercents) && thresholdPercents.length > 0
+          ? thresholdPercents
+          : [50, 80, 100]
+      )
+        .map((p) => Number(p))
+        .filter((p) => Number.isFinite(p) && p > 0)
+        .map((p) => ({
+          thresholdPercent: p > 1 ? p / 100 : p,
+          spendBasis: 'CURRENT_SPEND',
+        }));
+
+      // Enforce Google Cloud Billing Budget API Preconditions for `spendCap`
+      // Ref: https://docs.cloud.google.com/billing/docs/how-to/budget-api-spend-cap
+      if (enableSpendCap && !serviceResourceName) {
+        return res.status(400).json({
+          ok: false,
+          error:
+            'Google Cloud Spend Cap budgets require targeting one service (`budgetFilter.services = ["services/..."]`). Select an eligible service or switch to Whole-Project Alert / PubSub mode.',
+        });
+      }
+
+      const budgetPayload = {
+        displayName:
+          String(displayName || '').trim() ||
+          `${projectId}-${
+            enableSpendCap ? '24x7-spend-cap' : 'budget-guard'
+          }-${numericAmount}usd`,
+        budgetFilter: {
+          projects: [targetProjectRef],
+          ...(serviceResourceName
+            ? {
+                services: [
+                  serviceResourceName.startsWith('services/')
+                    ? serviceResourceName
+                    : `services/${serviceResourceName}`,
+                ],
+              }
+            : {}),
+          // Spend Cap strictly requires EXCLUDE_ALL_CREDITS and calendarPeriod = MONTH
+          creditTypesTreatment: enableSpendCap
+            ? 'EXCLUDE_ALL_CREDITS'
+            : creditTypesTreatment || 'INCLUDE_ALL_CREDITS',
+          calendarPeriod: 'MONTH',
+        },
+        amount: {
+          specifiedAmount: {
+            currencyCode: String(currencyCode || 'USD').toUpperCase(),
+            units: String(numericAmount),
+          },
+        },
+        thresholdRules: cleanThresholds,
+        ...(enableSpendCap
+          ? {
+              spendCap: {
+                inputState: 'CONFIGURED',
+              },
+            }
+          : {}),
+        ...(pubsubTopic
+          ? {
+              notificationsRule: {
+                pubsubTopic: String(pubsubTopic).trim(),
+                schemaVersion: '1.0',
+              },
+            }
+          : {}),
+      };
+
+      const createRes = await fetch(
+        `https://billingbudgets.googleapis.com/v1/${billingAccountName}/budgets`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'x-goog-user-project': projectId,
+          },
+          body: JSON.stringify(budgetPayload),
+        }
+      );
+
+      const createBody = await createRes.json().catch(() => ({}));
+      if (!createRes.ok) {
+        return res.status(createRes.status).json({
+          ok: false,
+          error:
+            createBody?.error?.message ||
+            `Billing Budgets API returned HTTP ${createRes.status}.`,
+          apiError: createBody?.error || null,
+          submittedPayload: budgetPayload,
+        });
+      }
+
+      liveBillingInsightsCache.delete(projectId);
+      const createdBudget = normalizeBillingBudgetItem(
+        createBody,
+        billingAccountName
+      );
+
+      return res.json({
+        ok: true,
+        budget: createdBudget,
+        pubsubTopic,
+        resolvedServiceDisplayName,
+        submittedPayload: budgetPayload,
+        message: enableSpendCap
+          ? `Armed 24/7 GCP Spend Cap (${createdBudget.displayName} · $${numericAmount}/mo · spendCap=CONFIGURED${
+              pubsubTopic ? ` + Pub/Sub ${pubsubTopic.split('/').pop()}` : ''
+            })`
+          : `Created 24/7 Cloud Billing Budget (${createdBudget.displayName} · $${numericAmount}/mo${
+              pubsubTopic ? ` + Pub/Sub ${pubsubTopic.split('/').pop()}` : ''
+            })`,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        ok: false,
+        error: err.message || 'Failed to create Cloud Billing Budget.',
+      });
+    }
+  }
+);
+
+// Mutate `spendCap.inputState` or Perform Atomic 2-Step "Lift-Before-Raise" (`FAILED_PRECONDITION` Solver)
+app.post(
+  '/api/project/:projectId/billing-guardian/budgets/spend-cap-action',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const {
+      budgetName,
+      action, // 'LIFT_CAP' | 'ARM_CAP' | 'DISABLE_CAP' | 'RAISE_AMOUNT_AND_UNPAUSE'
+      newAmountUsd,
+      currencyCode = 'USD',
+    } = req.body || {};
+
+    if (!budgetName || !String(budgetName).includes('/budgets/')) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Valid budget resource name (`billingAccounts/{id}/budgets/{id}`) is required.',
+      });
+    }
+
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        ok: false,
+        error: 'No active Google Cloud access token found.',
+      });
+    }
+
+    try {
+      const cleanBudgetName = String(budgetName).replace(/^\/+/, '');
+      const stepsExecuted = [];
+
+      if (action === 'RAISE_AMOUNT_AND_UNPAUSE') {
+        const numericAmount = Math.max(1, Math.round(Number(newAmountUsd || 25)));
+        // Check current budget state first: if outputState === 'ENFORCED', Google Cloud Billing API
+        // throws FAILED_PRECONDITION if we patch `amount` before setting `spendCap.inputState = AWAITING_NEXT_PERIOD`.
+        const getRes = await fetch(
+          `https://billingbudgets.googleapis.com/v1/${cleanBudgetName}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'x-goog-user-project': projectId,
+            },
+          }
+        );
+        const currentBudget = getRes.ok ? await getRes.json() : null;
+        const wasEnforced =
+          currentBudget?.spendCap?.outputState === 'ENFORCED';
+
+        if (wasEnforced) {
+          const liftRes = await fetch(
+            `https://billingbudgets.googleapis.com/v1/${cleanBudgetName}?updateMask=spendCap.inputState`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'x-goog-user-project': projectId,
+              },
+              body: JSON.stringify({
+                name: cleanBudgetName,
+                spendCap: { inputState: 'AWAITING_NEXT_PERIOD' },
+              }),
+            }
+          );
+          if (liftRes.ok) {
+            stepsExecuted.push(
+              'Step 1: Lifted ENFORCED lock (`spendCap.inputState = AWAITING_NEXT_PERIOD`) to avoid FAILED_PRECONDITION'
+            );
+          }
+        }
+
+        const hasSpendCap =
+          currentBudget?.spendCap?.outputState &&
+          currentBudget?.spendCap?.outputState !== 'NOT_CONFIGURED';
+        const updateMask = hasSpendCap
+          ? 'amount.specifiedAmount,spendCap.inputState'
+          : 'amount.specifiedAmount';
+        const patchPayload = {
+          name: cleanBudgetName,
+          amount: {
+            specifiedAmount: {
+              currencyCode:
+                currentBudget?.amount?.specifiedAmount?.currencyCode ||
+                String(currencyCode || 'USD').toUpperCase(),
+              units: String(numericAmount),
+            },
+          },
+          ...(hasSpendCap
+            ? {
+                spendCap: {
+                  inputState: 'CONFIGURED',
+                },
+              }
+            : {}),
+        };
+
+        const patchRes = await fetch(
+          `https://billingbudgets.googleapis.com/v1/${cleanBudgetName}?updateMask=${encodeURIComponent(
+            updateMask
+          )}`,
+          {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'x-goog-user-project': projectId,
+            },
+            body: JSON.stringify(patchPayload),
+          }
+        );
+        const patchBody = await patchRes.json().catch(() => ({}));
+        if (!patchRes.ok) {
+          return res.status(patchRes.status).json({
+            ok: false,
+            error:
+              patchBody?.error?.message ||
+              `Failed to update budget amount (HTTP ${patchRes.status}).`,
+            apiError: patchBody?.error || null,
+          });
+        }
+        stepsExecuted.push(
+          `Step ${stepsExecuted.length + 1}: Updated monthly cap to $${numericAmount} USD (${updateMask})`
+        );
+        liveBillingInsightsCache.delete(projectId);
+        return res.json({
+          ok: true,
+          budget: normalizeBillingBudgetItem(patchBody),
+          stepsExecuted,
+          message: `Updated budget cap to $${numericAmount}/mo${
+            wasEnforced ? ' after lifting ENFORCED lock' : ''
+          }.`,
+        });
+      }
+
+      // Direct spendCap.inputState transition: LIFT_CAP -> AWAITING_NEXT_PERIOD, ARM_CAP -> CONFIGURED, DISABLE_CAP -> NOT_CONFIGURED
+      const targetInputState =
+        action === 'LIFT_CAP'
+          ? 'AWAITING_NEXT_PERIOD'
+          : action === 'DISABLE_CAP'
+          ? 'NOT_CONFIGURED'
+          : 'CONFIGURED';
+
+      const patchRes = await fetch(
+        `https://billingbudgets.googleapis.com/v1/${cleanBudgetName}?updateMask=spendCap.inputState`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'x-goog-user-project': projectId,
+          },
+          body: JSON.stringify({
+            name: cleanBudgetName,
+            spendCap: {
+              inputState: targetInputState,
+            },
+          }),
+        }
+      );
+      const patchBody = await patchRes.json().catch(() => ({}));
+      if (!patchRes.ok) {
+        return res.status(patchRes.status).json({
+          ok: false,
+          error:
+            patchBody?.error?.message ||
+            `Failed to transition spendCap.inputState to ${targetInputState} (HTTP ${patchRes.status}).`,
+          apiError: patchBody?.error || null,
+        });
+      }
+
+      liveBillingInsightsCache.delete(projectId);
+      const updated = normalizeBillingBudgetItem(patchBody);
+      return res.json({
+        ok: true,
+        budget: updated,
+        targetInputState,
+        message:
+          targetInputState === 'AWAITING_NEXT_PERIOD'
+            ? `Lifted Spend Cap (${updated.displayName}) -> AWAITING_NEXT_PERIOD. Service usage resumes for this month and re-arms on the 1st of next month.`
+            : targetInputState === 'CONFIGURED'
+            ? `Armed Spend Cap (${updated.displayName}) -> CONFIGURED.`
+            : `Disabled hard Spend Cap on ${updated.displayName} (converted to alert-only budget).`,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        ok: false,
+        error: err.message || 'Failed to execute Spend Cap state transition.',
+      });
+    }
+  }
+);
+
+// Delete a Cloud Billing Budget (`DELETE https://billingbudgets.googleapis.com/v1/{budgetName}`)
+app.post(
+  '/api/project/:projectId/billing-guardian/budgets/delete',
+  async (req, res) => {
+    const { projectId } = req.params;
+    const { budgetName } = req.body || {};
+    if (!budgetName || !String(budgetName).includes('/budgets/')) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Valid budget resource name (`billingAccounts/{id}/budgets/{id}`) is required.',
+      });
+    }
+    const token = await resolveRequestToken(req);
+    if (!token) {
+      return res.status(401).json({
+        ok: false,
+        error: 'No active Google Cloud access token found.',
+      });
+    }
+    try {
+      const cleanBudgetName = String(budgetName).replace(/^\/+/, '');
+      const delRes = await fetch(
+        `https://billingbudgets.googleapis.com/v1/${cleanBudgetName}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'x-goog-user-project': projectId,
+          },
+        }
+      );
+      if (!delRes.ok) {
+        const errBody = await delRes.json().catch(() => ({}));
+        return res.status(delRes.status).json({
+          ok: false,
+          error:
+            errBody?.error?.message ||
+            `Failed to delete budget (HTTP ${delRes.status}).`,
+        });
+      }
+      liveBillingInsightsCache.delete(projectId);
+      return res.json({
+        ok: true,
+        deletedBudgetName: cleanBudgetName,
+        message: `Deleted Cloud Billing Budget (${cleanBudgetName.split('/').pop()}).`,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        ok: false,
+        error: err.message || 'Failed to delete Cloud Billing Budget.',
       });
     }
   }
