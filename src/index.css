@@ -52,14 +52,6 @@
   background: #185abc;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 /* Light-Mode (html:not(.dark)) Safety-Net Layer — Ensures zero residual dark panels in White Mode */
 html:not(.dark) .bg-zinc-950,
 html:not(.dark) .bg-slate-950,

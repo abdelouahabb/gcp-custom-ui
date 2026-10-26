@@ -4070,7 +4070,7 @@ function CloudPulseCockpit() {
           </div>
 
           {/* Underline Navigation Tabs (Single-Row Compact Horizontal Bar) */}
-          <nav className="flex items-center justify-between gap-2 lg:gap-2.5 mt-3.5 pb-2 border-b border-zinc-200 dark:border-zinc-800 -mb-2 overflow-x-auto no-scrollbar">
+          <nav className="flex items-center justify-between gap-2 lg:gap-2.5 mt-3.5 pb-2 border-b border-zinc-200 dark:border-zinc-800 -mb-2 overflow-x-auto">
             {navTabs.map((tab, idx) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
