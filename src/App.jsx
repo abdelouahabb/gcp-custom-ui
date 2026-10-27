@@ -2540,14 +2540,14 @@ function classifyDestructiveAxiosConfig(config) {
       const buildFirewallSpec = () => {
         if (isSshRule && fwAction === 'DENY') {
           return {
-            title: `Block Public Internet SSH (:22) & RDP (:3389) on VPC "${fwNetwork}" (Priority-${fwPriority})?`,
-            badge: `Zero-Trust VPC Perimeter Shield · Priority-${fwPriority} Override`,
+            title: `Block Public Internet SSH (:22) on VPC "${fwNetwork}" (Priority-${fwPriority})?`,
+            badge: `Zero-Trust VPC SSH Shield · Priority-${fwPriority} Override`,
             kind: `VPC Firewall DENY Rule (${fwPortsSummary} · Priority ${fwPriority})`,
             target: `${resName} (${fwDirection} DENY ${fwPortsSummary} from ${fwSourceRanges} on VPC "${fwNetwork}")`,
-            confirm: `Block Public SSH/RDP on VPC "${fwNetwork}" ($0.00/mo)`,
-            what: `1. Drops Public SSH & RDP Brute-Force at the Andromeda Edge (Priority ${fwPriority}): Creates a high-priority INGRESS DENY rule ("${resName}") on VPC "${fwNetwork}" that evaluates before Google Cloud's permissive default-allow-ssh / default-allow-rdp rules (Priority 65534), dropping unsolicited ${fwSourceRanges} packets on ${fwPortsSummary} before they reach any VM.\n2. Flips World Map Verdict to LOCKED & Preserves Safe Cloud IAP Tunneling: Immediately turns the map's "SSH :22" & "RDP :3389" badges from EXPOSED (Red) to LOCKED (Green) and blocks red brute-force arcs at the VPC shield ring—while still allowing you to connect safely via Identity-Aware Proxy (--tunnel-through-iap, 35.235.240.0/20).\n3. Enables Firewall Hit Logging & 1-Click Rollback: Activates VPC Firewall Rule Logging so blocked connection attempts are recorded in Cloud Logging, and saves a reversible receipt so you can delete or toggle this rule anytime from the VPC Studio.`,
+            confirm: `Block Public SSH :22 on VPC "${fwNetwork}" ($0.00/mo)`,
+            what: `1. Drops Public SSH (:22) Brute-Force at the Andromeda Edge (Priority ${fwPriority}): Creates a high-priority INGRESS DENY rule ("${resName}") on VPC "${fwNetwork}" that evaluates before Google Cloud's permissive default-allow-ssh rule (Priority 65534), dropping unsolicited ${fwSourceRanges} packets on TCP port 22 before they reach any VM.\n2. Flips World Map "SSH :22" Verdict to LOCKED & Preserves Cloud IAP Tunneling: Immediately turns the map's "SSH :22" badge from EXPOSED (Red) to LOCKED (Green) and blocks red brute-force arcs at the VPC shield ring—while still allowing you to connect safely via Identity-Aware Proxy (--tunnel-through-iap, 35.235.240.0/20).\n3. Enables Firewall Hit Logging & 1-Click Rollback: Activates VPC Firewall Rule Logging so blocked SSH attempts are recorded in Cloud Logging, and saves a reversible receipt so you can delete or toggle this rule anytime.`,
             cost: `ZERO COST ($0.00/MO): Google Cloud VPC Firewall rules and Andromeda virtual switch packet filtering are 100% free ($0.00/mo).`,
-            impact: `Direct public internet SSH (port 22) and RDP (port 3389) from ${fwSourceRanges} into VPC "${fwNetwork}" will be blocked immediately. HTTPS (:443) web traffic, internal VPC traffic, and Cloud IAP tunnels are unaffected.`,
+            impact: `Direct public internet SSH (TCP port 22) from ${fwSourceRanges} into VPC "${fwNetwork}" will be blocked immediately. HTTPS (:443) web traffic, internal VPC traffic, and Cloud IAP tunnels are unaffected.`,
           };
         }
         if (isSshRule && fwAction === 'ALLOW') {

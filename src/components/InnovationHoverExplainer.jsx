@@ -1459,12 +1459,12 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_DEPLOY_SHIELD: {
-    badge: '1-CLICK LIVE VPC FIREWALL MUTATION',
-    title: 'Deploy Priority-100 Zero-Trust SSH/RDP Perimeter Rule (:22 & :3389)',
+    badge: '1-CLICK LIVE SSH :22 FIREWALL RULE',
+    title: 'Deploy Priority-100 Zero-Trust SSH (:22) Perimeter Rule',
     whatItDoes:
-      'Calls the Google Compute Engine Firewalls API to provision a real Priority-100 INGRESS DENY rule (or Priority-90 ALLOW override) on TCP ports 22 (SSH) and 3389 (RDP) from 0.0.0.0/0.',
+      'Calls the Google Compute Engine Firewalls API to provision a real Priority-100 INGRESS DENY rule (or Priority-90 ALLOW override) on TCP port 22 (SSH) from 0.0.0.0/0.',
     enterpriseValue:
-      'Overrides permissive default-allow-ssh (Priority 65534) rules in seconds without deleting default rules, immediately turning red exposed SSH probes into blocked perimeter shields while preserving Cloud IAP (35.235.240.0/20).',
+      'Overrides permissive default-allow-ssh (Priority 65534) rules in seconds without deleting default rules, immediately turning red exposed SSH (:22) probes into blocked perimeter shields while preserving Cloud IAP (35.235.240.0/20).',
     gcpApis: 'POST https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
     safetyMode: 'LIVE_MUTATION',
   },

@@ -3296,7 +3296,7 @@ export default function GlobalNetworkWorldMap({
     spawnSimulatedPacket,
   ]);
 
-  // 1-Tap Deploy Priority-100 Zero-Trust SSH/RDP Shield (or Toggle Allow) directly from the World Map
+  // 1-Tap Deploy Priority-100 Zero-Trust SSH (:22) Shield (or Toggle Allow) directly from the World Map
   const handleDeployMapShield = async () => {
     if (deployingShield) return;
     setDeployingShield(true);
@@ -3317,13 +3317,13 @@ export default function GlobalNetworkWorldMap({
             action: nextAction,
             direction: 'INGRESS',
             priority: nextPriority,
-            rules: [{ IPProtocol: 'tcp', ports: ['22', '3389'] }],
+            rules: [{ IPProtocol: 'tcp', ports: ['22'] }],
             sourceRanges: '0.0.0.0/0',
             enableLogging: true,
             description:
               nextAction === 'DENY'
-                ? 'Priority-100 Global Cyber-Shield deployed from Orbital World Map to block public SSH/RDP brute-force.'
-                : 'Priority-90 SSH/RDP Ingress rule deployed from Orbital World Map.',
+                ? 'Priority-100 SSH (:22) Cyber-Shield deployed from Orbital World Map to block public SSH brute-force.'
+                : 'Priority-90 SSH (:22) Ingress rule deployed from Orbital World Map.',
           },
         }
       );
@@ -3333,7 +3333,7 @@ export default function GlobalNetworkWorldMap({
     } catch (err) {
       if (onShowError) {
         onShowError(
-          err.response?.data?.error || 'Failed to deploy SSH firewall rule.'
+          err.response?.data?.error || 'Failed to deploy SSH :22 firewall rule.'
         );
       }
     } finally {
