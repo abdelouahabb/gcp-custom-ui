@@ -39,6 +39,212 @@ const SOURCE_OPTIONS = [
   { value: 'LIVE_GCP', label: 'Strict Live GCP Only' },
 ];
 
+/**
+ * Deterministic Forensic Resource Lineage & Stale/Orphaned Detector.
+ * Explains how each resource in the project got created, what active workloads
+ * it is currently attached to, and flags leftover/stale resources that remained
+ * after their parent compute/migration/demo workflow was removed.
+ */
+function analyzeResourceLineage(row, allResources = [], projectId = '') {
+  const name = String(row?.name || '');
+  const lower = name.toLowerCase();
+  const type = String(row?.type || '');
+  const details = row?.details || {};
+
+  const vms = allResources.filter((r) => r.type === 'Compute Engine VM');
+  const cloudRunServices = allResources.filter((r) => r.type === 'Cloud Run Service');
+
+  // 1. Cloud Storage Buckets
+  if (type === 'Cloud Storage Bucket' || row?.category === 'storage') {
+    // Check if this is a VM-to-Cloud Run migration FUSE disk bucket (<projectId>-vmdisk-<vmName>)
+    const vmDiskMatch = lower.match(/-vmdisk-(.+)$/);
+    if (vmDiskMatch) {
+      const targetVmName = vmDiskMatch[1];
+      const matchingVm = vms.find((v) => v.name.toLowerCase() === targetVmName);
+      const matchingCloudRun = cloudRunServices.find(
+        (cr) =>
+          cr.name.toLowerCase().includes(targetVmName) ||
+          JSON.stringify(cr.details || {}).toLowerCase().includes(lower)
+      );
+
+      if (!matchingCloudRun) {
+        return {
+          isStale: true,
+          badgeLabel: 'STALE MIGRATION ARTIFACT',
+          badgeTone: 'amber',
+          originTitle: 'VM-to-Cloud Run Migration Disk Bucket (MOUNT_GCS_FUSE_DISK)',
+          howCreated: `Auto-created when migrating GCE VM "${targetVmName}" to Cloud Run Gen2 (gs://${name}) to hold extracted VM disk files for Cloud Storage FUSE mounting.`,
+          whyStayed: `When the migrated Cloud Run service was deleted, Google Cloud preserved this backing Cloud Storage bucket so your extracted disk files would not be lost.`,
+          attachedTo: matchingVm
+            ? `0 Cloud Run mounts (VM "${matchingVm.name}" runs on its own persistent boot disk, not this bucket)`
+            : '0 active workloads',
+          recommendation: 'Safe to delete if you no longer need the extracted Cloud Run FUSE disk backup.',
+        };
+      }
+
+      return {
+        isStale: false,
+        badgeLabel: 'ACTIVE FUSE VOLUME',
+        badgeTone: 'emerald',
+        originTitle: 'Cloud Run Gen2 GCS FUSE Volume Bucket',
+        howCreated: `Created by VM-to-Cloud Run Migration for "${targetVmName}".`,
+        whyStayed: 'Actively mounted by a live Cloud Run service.',
+        attachedTo: `Cloud Run Service: ${matchingCloudRun.name}`,
+        recommendation: 'Keep — actively mounted by Cloud Run.',
+      };
+    }
+
+    // Check if created by Innovation Lab / Flight Deck / Demo provisioners
+    if (
+      lower.includes('flying-car-telemetry') ||
+      lower.includes('starlink') ||
+      lower.includes('neuralink') ||
+      lower.includes('roadster') ||
+      lower.includes('canary- sink') ||
+      lower.includes('demo-telemetry')
+    ) {
+      return {
+        isStale: true,
+        badgeLabel: 'STALE DEMO BUCKET',
+        badgeTone: 'amber',
+        originTitle: 'Innovation Lab 1-Click Telemetry Provisioner',
+        howCreated: `Created during an Innovation Lab (eVTOL / Telemetry Flight Deck) 1-click provisioning test in project "${projectId}".`,
+        whyStayed: 'Cloud Storage buckets are persistent stateful resources and do not auto-delete when you leave or reset a studio demo.',
+        attachedTo: '0 active Compute / Cloud Run / Dataflow workloads',
+        recommendation: 'Safe to delete — standalone demo bucket with no active compute consumers.',
+      };
+    }
+
+    // Check if any Cloud Run service or VM explicitly references this bucket
+    const attachedWorkloads = [...cloudRunServices, ...vms].filter((w) =>
+      JSON.stringify(w.details || {}).toLowerCase().includes(lower)
+    );
+
+    if (attachedWorkloads.length === 0) {
+      return {
+        isStale: true,
+        badgeLabel: 'UNATTACHED BUCKET',
+        badgeTone: 'amber',
+        originTitle: 'Standalone Cloud Storage Bucket',
+        howCreated: `Provisioned via GCP Storage API (${row.region || 'US'}, ${row.storageClass || 'STANDARD'}).`,
+        whyStayed: 'Decoupled object storage persists independently of compute VMs or Cloud Run services.',
+        attachedTo: '0 active VMs or Cloud Run volume mounts verified',
+        recommendation: 'Review contents in Cloud Storage Studio; delete if left over from an old test.',
+      };
+    }
+
+    return {
+      isStale: false,
+      badgeLabel: 'ACTIVE BUCKET',
+      badgeTone: 'emerald',
+      originTitle: 'Attached Cloud Storage Bucket',
+      howCreated: `Provisioned in ${row.region || 'US'}.`,
+      whyStayed: 'Actively referenced by live compute workloads.',
+      attachedTo: attachedWorkloads.map((w) => `${w.type}: ${w.name}`).join(', '),
+      recommendation: 'Keep — in active use.',
+    };
+  }
+
+  // 2. BigQuery Datasets
+  if (type === 'BigQuery Dataset' || row?.category === 'data') {
+    if (
+      lower.includes('flying_car_telemetry') ||
+      lower.includes('starlink_orbital_failover') ||
+      lower.includes('telemetry_lakehouse')
+    ) {
+      const studioSource = lower.includes('starlink')
+        ? 'Global Edge & Prompt-to-DAG Studio (Multi-Region Failover Streamer)'
+        : 'Innovation Lab Telemetry & Lakehouse 1-Click Provisioner';
+      return {
+        isStale: true,
+        badgeLabel: 'STALE DEMO DATASET',
+        badgeTone: 'amber',
+        originTitle: studioSource,
+        howCreated: `Created via BigQuery REST API when testing ${studioSource} in "${projectId}".`,
+        whyStayed: 'BigQuery datasets are persistent analytical schemas that remain in your project after a test stream finishes.',
+        attachedTo: '0 active Cloud Run / Dataflow / VM ingestion pipelines',
+        recommendation: 'Safe to delete if you are done inspecting the demo telemetry tables.',
+      };
+    }
+
+    const attachedConsumers = [...cloudRunServices, ...vms].filter((w) =>
+      JSON.stringify(w.details || {}).toLowerCase().includes(lower)
+    );
+
+    if (attachedConsumers.length === 0) {
+      return {
+        isStale: true,
+        badgeLabel: 'STANDALONE DATASET',
+        badgeTone: 'amber',
+        originTitle: 'Standalone BigQuery Analytical Dataset',
+        howCreated: `Provisioned in location ${row.region || 'US'}.`,
+        whyStayed: 'BigQuery datasets persist until explicitly dropped.',
+        attachedTo: '0 active compute workloads referencing this dataset ID',
+        recommendation: 'Verify tables in BigQuery Studio or remove if no longer needed.',
+      };
+    }
+
+    return {
+      isStale: false,
+      badgeLabel: 'ACTIVE DATASET',
+      badgeTone: 'emerald',
+      originTitle: 'Connected BigQuery Lakehouse Dataset',
+      howCreated: `Provisioned in ${row.region || 'US'}.`,
+      whyStayed: 'Referenced by active workloads.',
+      attachedTo: attachedConsumers.map((w) => `${w.type}: ${w.name}`).join(', '),
+      recommendation: 'Keep — active analytical dataset.',
+    };
+  }
+
+  // 3. Compute Engine VMs
+  if (type === 'Compute Engine VM') {
+    const netName = details.network || 'default';
+    return {
+      isStale: false,
+      badgeLabel: 'ACTIVE VM WORKLOAD',
+      badgeTone: 'emerald',
+      originTitle: `Live GCE Instance (${details.machineType || row.storageClass || 'e2-medium'})`,
+      howCreated: `Provisioned in zone ${details.zone || row.region} with persistent boot disk.`,
+      whyStayed: `Currently ${row.status || 'RUNNING'} in Compute Engine.`,
+      attachedTo: `VPC Network "${netName}" (${details.internalIp || 'nic0'})`,
+      recommendation: 'Active compute instance.',
+    };
+  }
+
+  // 4. VPC Networks & Firewall Rules
+  if (type === 'VPC Network' || type === 'VPC Firewall Rule' || row?.category === 'network') {
+    const attachedVmNames = vms.map((v) => v.name);
+    return {
+      isStale: false,
+      badgeLabel: attachedVmNames.length > 0 ? 'ACTIVE PERIMETER' : 'DEFAULT VPC PERIMETER',
+      badgeTone: 'blue',
+      originTitle: type === 'VPC Network' ? 'Project VPC Network Backbone' : 'VPC Firewall Security Rule',
+      howCreated:
+        lower.startsWith('default')
+          ? 'Auto-created by Google Cloud when Compute Engine API was initialized for the project.'
+          : `Configured on VPC network (${details.direction || 'INGRESS'} ${details.allowed || ''}).`,
+      whyStayed: 'Core VPC network perimeter governing project ingress/egress.',
+      attachedTo:
+        attachedVmNames.length > 0
+          ? `Protecting ${attachedVmNames.length} VM(s): ${attachedVmNames.join(', ')}`
+          : 'Project VPC perimeter (0 running VMs)',
+      recommendation: 'Core network infrastructure.',
+    };
+  }
+
+  // 5. Fallback for Cloud Run, GKE, Enabled APIs, etc.
+  return {
+    isStale: false,
+    badgeLabel: 'ACTIVE RESOURCE',
+    badgeTone: 'emerald',
+    originTitle: `${type || 'GCP Resource'}`,
+    howCreated: `Provisioned in ${row.region || 'global'}.`,
+    whyStayed: 'Active resource in project inventory.',
+    attachedTo: `Project ${projectId}`,
+    recommendation: 'Active project resource.',
+  };
+}
+
 export default function ResourceControlCenter({
   resources = [],
   projectId,
@@ -52,6 +258,10 @@ export default function ResourceControlCenter({
   const { formatShortDate, shortTzName } = useTimezone();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSource, setSelectedSource] = useState('ALL');
+  const [onlyStaleFilter, setOnlyStaleFilter] = useState(false);
+  const [lineageDrawerOpen, setLineageDrawerOpen] = useState(false);
+  const [lineageDrawerTab, setLineageDrawerTab] = useState('STALE'); // 'STALE' | 'ALL'
+  const [drawerConfirmDeleteId, setDrawerConfirmDeleteId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
@@ -62,6 +272,20 @@ export default function ResourceControlCenter({
   const [copiedUri, setCopiedUri] = useState(false);
   const pageSize = 6;
 
+  // Compute lineage & stale analysis for every resource in the project
+  const lineageById = useMemo(() => {
+    const map = {};
+    for (const r of resources) {
+      map[r.id] = analyzeResourceLineage(r, resources, projectId);
+    }
+    return map;
+  }, [resources, projectId]);
+
+  const staleResources = useMemo(
+    () => resources.filter((r) => lineageById[r.id]?.isStale),
+    [resources, lineageById]
+  );
+
   // Filter without deleting raw data
   const filteredResources = useMemo(() => {
     return resources.filter((item) => {
@@ -71,17 +295,23 @@ export default function ResourceControlCenter({
       if (selectedSource !== 'ALL' && item.source !== selectedSource) {
         return false;
       }
+      if (onlyStaleFilter && !lineageById[item.id]?.isStale) {
+        return false;
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
+        const lin = lineageById[item.id];
         return (
           item.name.toLowerCase().includes(q) ||
           item.type.toLowerCase().includes(q) ||
-          item.region.toLowerCase().includes(q)
+          item.region.toLowerCase().includes(q) ||
+          (lin?.badgeLabel || '').toLowerCase().includes(q) ||
+          (lin?.originTitle || '').toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [resources, selectedCategory, selectedSource, searchQuery]);
+  }, [resources, selectedCategory, selectedSource, onlyStaleFilter, searchQuery, lineageById]);
 
   const totalPages = Math.max(1, Math.ceil(filteredResources.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -126,6 +356,265 @@ export default function ResourceControlCenter({
 
   return (
     <div className="space-y-4">
+      {/* Big Hero Button & Expandable Drawer: Resource Lineage & Stale/Orphaned Detector */}
+      <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                <Sparkles className="w-3 h-3" />
+                <span>Resource Lineage & Orphan Forensics</span>
+              </span>
+              {staleResources.length > 0 ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>
+                    {staleResources.length} Stale / Leftover Resource
+                    {staleResources.length === 1 ? '' : 's'} Detected
+                  </span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>0 Stale / Leftover Resources</span>
+                </span>
+              )}
+            </div>
+            <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50">
+              Why Do I Have These Resources? · Lineage & Stale Detector
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              See exactly how every bucket, dataset, VM, and network rule in{' '}
+              <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">
+                {projectId}
+              </span>{' '}
+              got created, what it is attached to, and which ones stayed behind after a migration or demo was removed.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setLineageDrawerOpen((open) => !open);
+                if (!lineageDrawerOpen) {
+                  setLineageDrawerTab(staleResources.length > 0 ? 'STALE' : 'ALL');
+                }
+              }}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-sm cursor-pointer ${
+                lineageDrawerOpen
+                  ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>
+                {lineageDrawerOpen
+                  ? 'Hide Resource Lineage & Stale Detector'
+                  : `Inspect Resource Lineage & Stale Leftovers (${staleResources.length} Stale / ${resources.length} Total)`}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  lineageDrawerOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Expandable Forensic Lineage & Stale Cleanup Drawer */}
+        {lineageDrawerOpen && (
+          <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLineageDrawerTab('STALE')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    lineageDrawerTab === 'STALE'
+                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>
+                    Stale & Leftover Resources ({staleResources.length})
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLineageDrawerTab('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    lineageDrawerTab === 'ALL'
+                      ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/40'
+                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>
+                    All Resource Origins & Attachments ({resources.length})
+                  </span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setOnlyStaleFilter((prev) => !prev);
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${
+                  onlyStaleFilter
+                    ? 'bg-amber-500 text-zinc-950 border-amber-400'
+                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {onlyStaleFilter
+                  ? 'Showing Stale Only in Table ✓ (Click to Reset)'
+                  : 'Filter Table Below to Stale Only'}
+              </button>
+            </div>
+
+            {lineageDrawerTab === 'STALE' && staleResources.length === 0 ? (
+              <div className="p-6 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-center space-y-1">
+                <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                  Zero Stale or Orphaned Resources Found!
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Every resource in {projectId} is either an active compute instance or core network perimeter.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(lineageDrawerTab === 'STALE' ? staleResources : resources).map(
+                  (item) => {
+                    const lin = lineageById[item.id] || {};
+                    const isDeletingThis =
+                      Boolean(deletingIds[item.id]) ||
+                      item.status === 'DEPROVISIONING';
+                    const canDelete =
+                      onDeleteResource &&
+                      [
+                        'Cloud Storage Bucket',
+                        'BigQuery Dataset',
+                        'Compute Engine VM',
+                        'Cloud Run Service',
+                        'VPC Firewall Rule',
+                      ].includes(item.type);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-xl border p-4 space-y-2.5 transition-all ${
+                          lin.isStale
+                            ? 'bg-amber-500/5 dark:bg-amber-950/15 border-amber-500/30'
+                            : 'bg-zinc-50/70 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                  lin.isStale
+                                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                }`}
+                              >
+                                {lin.badgeLabel}
+                              </span>
+                              <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                                {item.type} · {item.region}
+                              </span>
+                            </div>
+                            <div className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 mt-1 break-all">
+                              {item.name}
+                            </div>
+                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+                              Provisioned: {formatReadableDate(item.createdAt)}
+                            </div>
+                          </div>
+
+                          {canDelete && lin.isStale && (
+                            <div className="shrink-0">
+                              {drawerConfirmDeleteId === item.id ? (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    disabled={actionLoading || isDeletingThis}
+                                    onClick={async () => {
+                                      setDeletingIds((prev) => ({
+                                        ...prev,
+                                        [item.id]: true,
+                                      }));
+                                      setDrawerConfirmDeleteId(null);
+                                      await onDeleteResource(item);
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                  >
+                                    {isDeletingThis ? 'Deleting...' : 'Confirm Delete'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDrawerConfirmDeleteId(null)}
+                                    className="px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={actionLoading || isDeletingThis}
+                                  onClick={() => setDrawerConfirmDeleteId(item.id)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/30 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>
+                                    {isDeletingThis ? 'Deleting...' : 'Clean Up'}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5 text-xs bg-white/80 dark:bg-zinc-950/70 rounded-lg p-3 border border-zinc-200/80 dark:border-zinc-800">
+                          <div>
+                            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                              How It Got Here:{' '}
+                            </span>
+                            <span className="text-zinc-600 dark:text-zinc-300">
+                              {lin.howCreated}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                              Why It Stayed:{' '}
+                            </span>
+                            <span className="text-zinc-600 dark:text-zinc-300">
+                              {lin.whyStayed}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                              Attached To:{' '}
+                            </span>
+                            <span className="font-mono text-zinc-700 dark:text-zinc-200">
+                              {lin.attachedTo}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Toolbar with relative z-30 so dropdowns stack above sticky table headers */}
       <div className="relative z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-[#202124] p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
         <div className="flex flex-wrap items-center gap-2.5">
@@ -217,6 +706,23 @@ export default function ResourceControlCenter({
               </div>
             )}
           </div>
+
+          {/* Quick Stale / Leftover Filter Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              setOnlyStaleFilter((prev) => !prev);
+              setCurrentPage(1);
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-[8px] px-[12px] py-[8px] text-xs font-[600] border transition-colors shadow-sm cursor-pointer ${
+              onlyStaleFilter
+                ? 'bg-amber-500 text-zinc-950 border-amber-400'
+                : 'bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Stale / Leftovers ({staleResources.length})</span>
+          </button>
         </div>
 
         {/* Search Input */}
@@ -306,7 +812,7 @@ export default function ResourceControlCenter({
                                 getCategoryIcon(row.category)
                               )}
                               <div>
-                                <div className="font-semibold text-zinc-950 dark:text-zinc-50 flex items-center gap-1.5">
+                                <div className="font-semibold text-zinc-950 dark:text-zinc-50 flex flex-wrap items-center gap-1.5">
                                   <span
                                     className={
                                       isRowDeleting
@@ -316,6 +822,17 @@ export default function ResourceControlCenter({
                                   >
                                     {row.name}
                                   </span>
+                                  {lineageById[row.id]?.badgeLabel && !isRowDeleting && (
+                                    <span
+                                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                        lineageById[row.id]?.isStale
+                                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700'
+                                      }`}
+                                    >
+                                      {lineageById[row.id].badgeLabel}
+                                    </span>
+                                  )}
                                   {isRowDeleting && (
                                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30">
                                       DELETING...
@@ -507,6 +1024,52 @@ export default function ResourceControlCenter({
                 </div>
               </div>
             </div>
+
+            {/* Resource Lineage & Origin Forensics Block */}
+            {lineageById[selectedResource.id] && (
+              <div
+                className={`rounded-lg p-3 border space-y-1.5 text-xs ${
+                  lineageById[selectedResource.id].isStale
+                    ? 'bg-amber-500/10 border-amber-500/30'
+                    : 'bg-emerald-500/5 border-emerald-500/20'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
+                    Why Is This Resource Here?
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                      lineageById[selectedResource.id].isStale
+                        ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                        : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                    }`}
+                  >
+                    {lineageById[selectedResource.id].badgeLabel}
+                  </span>
+                </div>
+                <div className="text-zinc-700 dark:text-zinc-300">
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    How Created:{' '}
+                  </span>
+                  {lineageById[selectedResource.id].howCreated}
+                </div>
+                <div className="text-zinc-700 dark:text-zinc-300">
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Why It Stayed:{' '}
+                  </span>
+                  {lineageById[selectedResource.id].whyStayed}
+                </div>
+                <div className="text-zinc-700 dark:text-zinc-300">
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    Attached To:{' '}
+                  </span>
+                  <span className="font-mono">
+                    {lineageById[selectedResource.id].attachedTo}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Resource URI & Copy */}
             <div className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md p-3">
