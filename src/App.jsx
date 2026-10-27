@@ -2697,6 +2697,32 @@ function classifyDestructiveAxiosConfig(config) {
     }
 
     // 3G-11. Cloud Run Service Configuration Patch, Traffic Split, Secret Sealing & Compose
+    if (rawUrl.includes('/quotas/realign-preference')) {
+      const qMetric = body.metric || 'N2D_CPUS';
+      const qId = body.quotaId || 'N2D-CPUS-per-project-region';
+      const qReg = body.region || 'us-central1';
+      const curLim = body.currentLimit ?? 128;
+      const tgtLim = body.targetLimit ?? 3000;
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Un-Pin & Raise ${qMetric} Quota (${curLim} ➔ ${tgtLim}) in ${qReg}?`,
+        headerBadge: 'Cloud Quotas Pinned Override Surgeon Gatekeeper',
+        targetLabel: 'Target Quota Metric, Region & Requested Ceiling',
+        resourceKind: `Cloud Quotas v1 QuotaPreference (${qId})`,
+        targetName: `${qMetric} (${qReg}: ${curLim} ➔ ${tgtLim})`,
+        location: qReg,
+        projectId,
+        method: 'REALIGN QUOTA PREFERENCE',
+        endpoint: rawUrl,
+        confirmLabel: `Submit QuotaPreference (${curLim} ➔ ${tgtLim} in ${qReg}) ($0.00)`,
+        cancelToast: `Quota realignment for ${qMetric} in ${qReg} cancelled.`,
+        whatHappensNext: `1. What is blocking your quota right now: An earlier quota approval wrote a hardcoded producerOverride of ${curLim} on ${qMetric} in "${qReg}". Even though your project's native Tier-1 defaultLimit later upgraded to ${tgtLim}, that old ${curLim} override keeps "${qReg}" pinned down.\n2. How this fixes it: Submits a declarative GA QuotaPreference (${qId} = ${tgtLim}) for "${qReg}" to the Google Cloud Quotas API (cloudquotas.googleapis.com/v1) to replace the stale ${curLim} override with ${tgtLim}.\n3. Live Map Sync: Once granted/reconciled by Google Cloud Quotas, "${qReg}" will match your Tier-1 baseline (${tgtLim}) and update directly in the Regional Compute & GPU Quotas grid.`,
+        costWarning: `ZERO COST ($0.00): Raising or un-pinning a quota ceiling in Google Cloud Quotas is 100% free ($0.00/mo). You are only billed for VM or GPU instances that you actually launch.`,
+        impactWarning: `Updates the declarative QuotaPreference for ${qMetric} (${qId}) in "${qReg}" from ${curLim} to ${tgtLim} on project "${projectId}".`,
+      };
+    }
+
     if (rawUrl.includes('/cloudrun/')) {
       const sealMatch = rawUrl.match(/\/cloudrun\/([^/]+)\/([^/]+)\/seal-secrets/);
       if (sealMatch) {

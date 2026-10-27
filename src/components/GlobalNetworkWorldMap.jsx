@@ -3791,6 +3791,47 @@ export default function GlobalNetworkWorldMap({
     }
   };
 
+  // 1-Tap Cloud Quotas v1 QuotaPreference Re-Aligner (Un-pins stale producerOverrides like N2D_CPUS=128 -> 3000)
+  const [realigningQuotaKey, setRealigningQuotaKey] = useState(null);
+  const handleRealignQuotaPreference = async ({
+    metric = 'N2D_CPUS',
+    quotaId = 'N2D-CPUS-per-project-region',
+    region = 'us-central1',
+    currentLimit = 128,
+    targetLimit = 3000,
+  }) => {
+    if (!projectId) return;
+    const key = `${metric}-${region}`;
+    setRealigningQuotaKey(key);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/quotas/realign-preference`,
+        {
+          metric,
+          quotaId,
+          region,
+          currentLimit,
+          targetLimit,
+        }
+      );
+      const msg =
+        res.data?.message ||
+        `Submitted Cloud Quotas QuotaPreference (${metric}: ${currentLimit} → ${targetLimit} in ${region})`;
+      showMapBanner(msg);
+      if (onShowToast) onShowToast(msg);
+      fetchLiveGeoTelemetry(true);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to submit QuotaPreference for ${metric} in ${region}.`
+        );
+      }
+    } finally {
+      setRealigningQuotaKey(null);
+    }
+  };
+
   // Deduplicated subsea fiber backbone links between GCP regions
   const backboneLinks = useMemo(() => {
     const links = [];
@@ -4149,172 +4190,372 @@ export default function GlobalNetworkWorldMap({
 
         {/* TAB 03: LIVE REGIONAL COMPUTE, GPU & TPU QUOTAS & HEADROOM */}
         {activeGeoTab === 'REGIONAL_QUOTAS' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-96 overflow-y-auto">
-            {(liveGeoTelemetry?.regionalQuotas || []).map((rq) => {
-              const isSelected = selectedRegionId === rq.regionName;
-              const l4Lim = rq.l4GpusLimit ?? 0;
-              const l4SpotLim = rq.spotL4GpusLimit ?? 0;
-              const a100Lim = rq.a100GpusLimit ?? 0;
-              const a100SpotLim = rq.spotA100GpusLimit ?? 0;
-              const t4Lim = rq.t4GpusLimit ?? 0;
-              const v100Lim = rq.v100GpusLimit ?? 0;
-              const tpuLim = rq.tpuV5ePodSliceLimit ?? 0;
-              const totalOnDemandGpusLim =
-                rq.totalOnDemandGpusLimit ?? l4Lim + a100Lim + t4Lim + v100Lim;
-              const totalSpotGpusLim =
-                rq.totalSpotGpusLimit ?? l4SpotLim + a100SpotLim;
+          <div className="space-y-3">
+            {/* Pinned Quota Override Surgeon & Best AMD + GPU Region Recommender */}
+            {(() => {
+              const audit = liveGeoTelemetry?.quotaOverrideAudit;
+              const pinnedList = (audit?.pinnedOverrides || []).filter(
+                (po) => po.status === 'PINNED_BELOW_DEFAULT'
+              );
+              const mismatches = audit?.regionalMismatches || [];
+              const bestRegions = (audit?.bestAmdGpuRegions || []).filter(
+                (r) => !r.hasPinnedThrottle
+              );
+
+              if (
+                pinnedList.length === 0 &&
+                mismatches.length === 0 &&
+                bestRegions.length === 0
+              ) {
+                return null;
+              }
+
               return (
-                <div
-                  key={rq.regionName}
-                  onClick={() => selectRegionInPlace(rq.regionName, 2.8)}
-                  className={`p-3 rounded-xl border text-xs font-mono space-y-1.5 cursor-pointer transition-all ${
-                    isSelected
-                      ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
-                      : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-zinc-900 dark:text-white">
-                      {rq.regionName}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {isSelected && (
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
-                          SELECTED
-                        </span>
-                      )}
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
-                          totalOnDemandGpusLim > 0
-                            ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30'
-                            : 'bg-zinc-500/10 text-zinc-500'
-                        }`}
-                      >
-                        GPUs: {rq.totalOnDemandGpusUsed ?? 0}/{totalOnDemandGpusLim}
+                <div className="p-3 rounded-xl bg-amber-500/[0.08] dark:bg-amber-500/[0.10] border border-amber-500/35 space-y-2.5 text-xs font-mono">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[9.5px] font-extrabold uppercase tracking-wider">
+                        {pinnedList.length > 0
+                          ? `${pinnedList.length} Pinned Override Bottleneck${
+                              pinnedList.length > 1 ? 's' : ''
+                            } Detected`
+                          : 'Regional AMD & GPU Quota X-Ray'}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9.5px] font-bold">
-                        {rq.status}
+                      <span className="font-extrabold text-zinc-900 dark:text-white text-[11px]">
+                        Service Usage v1beta1 (`defaultLimit` vs `producerOverride`) &amp; Best AMD + GPU Region Match
                       </span>
                     </div>
-                  </div>
-                  <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400 space-y-0.5">
-                    <div>
-                      vCPUs: <strong>{rq.cpusUsed}</strong> / {rq.cpusLimit}
-                      {rq.preemptibleCpusLimit > 0 && (
-                        <span className="text-zinc-400">
-                          {' '}
-                          (Spot: {rq.preemptibleCpusUsed ?? 0}/{rq.preemptibleCpusLimit})
+                    {bestRegions.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                          ★ Unthrottled Full AMD+GPU Regions:
                         </span>
-                      )}
-                    </div>
-                    <div>
-                      Disks: <strong>{rq.disksGbUsed}</strong> / {rq.disksGbLimit} GB
-                      {rq.ssdGbLimit > 0 && (
-                        <span className="text-zinc-400">
-                          {' '}
-                          · SSD: {rq.ssdGbUsed ?? 0}/{rq.ssdGbLimit} GB
-                        </span>
-                      )}
-                    </div>
-
-                    {/* GPU & TPU Accelerator Regional Quota Breakdown */}
-                    <div className="mt-1.5 pt-1.5 border-t border-zinc-200 dark:border-zinc-800 space-y-1">
-                      <div className="flex items-center justify-between text-[9.5px] font-extrabold text-violet-600 dark:text-violet-400">
-                        <span>
-                          NVIDIA GPUs (On-Demand / Spot)
-                        </span>
-                        <span>
-                          {rq.totalOnDemandGpusUsed ?? 0}/{totalOnDemandGpusLim} OD ·{' '}
-                          {rq.totalSpotGpusUsed ?? 0}/{totalSpotGpusLim} Spot
-                        </span>
+                        {bestRegions.slice(0, 3).map((br) => (
+                          <button
+                            key={br.regionName}
+                            type="button"
+                            onClick={() => selectRegionInPlace(br.regionName, 2.8)}
+                            className="px-2 py-0.5 rounded bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-extrabold cursor-pointer"
+                          >
+                            {br.regionName} (N2D:{br.n2dCpusLimit} · C2D:{br.c2dCpusLimit} · L4:{br.l4GpusLimit} · A100:{br.a100GpusLimit})
+                          </button>
+                        ))}
                       </div>
-                      <div className="grid grid-cols-2 gap-1 text-[9.5px]">
-                        <div className="px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-zinc-700 dark:text-zinc-300">
-                          <span className="text-zinc-400">L4:</span>{' '}
-                          <strong>
-                            {rq.l4GpusUsed ?? 0}/{l4Lim}
-                          </strong>
-                          {l4SpotLim > 0 && (
-                            <span className="text-zinc-400"> (S:{l4SpotLim})</span>
-                          )}
-                        </div>
-                        <div className="px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-zinc-700 dark:text-zinc-300">
-                          <span className="text-zinc-400">A100:</span>{' '}
-                          <strong>
-                            {rq.a100GpusUsed ?? 0}/{a100Lim}
-                          </strong>
-                          {a100SpotLim > 0 && (
-                            <span className="text-zinc-400"> (S:{a100SpotLim})</span>
-                          )}
-                        </div>
-                        <div className="px-1.5 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300">
-                          <span className="text-zinc-400">T4:</span>{' '}
-                          <strong>
-                            {rq.t4GpusUsed ?? 0}/{t4Lim}
-                          </strong>
-                          {(rq.spotT4GpusLimit ?? 0) > 0 && (
-                            <span className="text-zinc-400">
-                              {' '}
-                              (S:{rq.spotT4GpusLimit})
-                            </span>
-                          )}
-                        </div>
-                        <div className="px-1.5 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300">
-                          <span className="text-zinc-400">V100:</span>{' '}
-                          <strong>
-                            {rq.v100GpusUsed ?? 0}/{v100Lim}
-                          </strong>
-                          {(rq.spotV100GpusLimit ?? 0) > 0 && (
-                            <span className="text-zinc-400">
-                              {' '}
-                              (S:{rq.spotV100GpusLimit})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {(tpuLim > 0 || (rq.a2CpusLimit ?? 0) > 0) && (
-                        <div className="flex items-center justify-between text-[9px] text-zinc-500 pt-0.5">
-                          {tpuLim > 0 && (
-                            <span>
-                              TPU v5e PodSlice:{' '}
-                              <strong className="text-emerald-600 dark:text-emerald-400">
-                                {rq.tpuV5ePodSliceUsed ?? 0}/{tpuLim}
-                              </strong>
-                            </span>
-                          )}
-                          {(rq.a2CpusLimit ?? 0) > 0 && (
-                            <span>
-                              A2 GPU Host vCPUs:{' '}
-                              <strong>
-                                {rq.a2CpusUsed ?? 0}/{rq.a2CpusLimit}
-                              </strong>
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <span>
-                        Static IPs: <strong>{rq.ipsUsed}</strong> / {rq.ipsLimit}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          focusOnRegion(rq.regionName, 3.2, {
-                            scrollToMap: true,
-                          });
-                        }}
-                        className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[9.5px] font-bold cursor-pointer"
-                      >
-                        Focus on Map →
-                      </button>
-                    </div>
+                    )}
                   </div>
+
+                  {pinnedList.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {pinnedList.map((po) => {
+                        const isBusy =
+                          realigningQuotaKey === `${po.metric}-${po.region}`;
+                        return (
+                          <div
+                            key={po.id}
+                            className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/80 border border-rose-500/40 flex flex-col justify-between gap-2"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-extrabold text-rose-600 dark:text-rose-400 text-[11px]">
+                                  {po.metric} in {po.region.toUpperCase()}: Pinned at{' '}
+                                  <span className="underline">{po.effectiveLimit}</span>{' '}
+                                  (Native Default is {po.defaultLimit})
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 text-[9px] font-bold">
+                                  {po.overrideSource}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                {po.explanation}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                              <span className="text-[9.5px] text-zinc-500 truncate">
+                                QuotaId: <code>{po.quotaId}</code>
+                              </span>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() =>
+                                  handleRealignQuotaPreference({
+                                    metric: po.metric,
+                                    quotaId: po.quotaId,
+                                    region: po.region,
+                                    currentLimit: po.effectiveLimit,
+                                    targetLimit: po.defaultLimit,
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                              >
+                                {isBusy
+                                  ? 'Submitting QuotaPreference...'
+                                  : `Un-Pin & Restore ${po.effectiveLimit} → ${po.defaultLimit} ($0)`}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {mismatches.length > 0 && (
+                    <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-amber-500/20 text-[10px] text-zinc-700 dark:text-zinc-300">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-amber-700 dark:text-amber-300">
+                          Regional AMD Asymmetries:
+                        </span>
+                        {mismatches.map((mm) => (
+                          <span
+                            key={mm.id}
+                            className="px-2 py-0.5 rounded bg-white/70 dark:bg-zinc-900 border border-amber-500/30"
+                          >
+                            {mm.summary}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
-            })}
+            })()}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-96 overflow-y-auto">
+              {(liveGeoTelemetry?.regionalQuotas || []).map((rq) => {
+                const isSelected = selectedRegionId === rq.regionName;
+                const l4Lim = rq.l4GpusLimit ?? 0;
+                const l4SpotLim = rq.spotL4GpusLimit ?? 0;
+                const a100Lim = rq.a100GpusLimit ?? 0;
+                const a100SpotLim = rq.spotA100GpusLimit ?? 0;
+                const t4Lim = rq.t4GpusLimit ?? 0;
+                const v100Lim = rq.v100GpusLimit ?? 0;
+                const tpuLim = rq.tpuV5ePodSliceLimit ?? 0;
+                const totalOnDemandGpusLim =
+                  rq.totalOnDemandGpusLimit ?? l4Lim + a100Lim + t4Lim + v100Lim;
+                const totalSpotGpusLim =
+                  rq.totalSpotGpusLimit ?? l4SpotLim + a100SpotLim;
+                const hasPinnedN2d =
+                  (rq.n2dDefaultLimit ?? 0) > (rq.n2dCpusLimit ?? 0) &&
+                  (rq.n2dCpusLimit ?? 0) > 0;
+                return (
+                  <div
+                    key={rq.regionName}
+                    onClick={() => selectRegionInPlace(rq.regionName, 2.8)}
+                    className={`p-3 rounded-xl border text-xs font-mono space-y-1.5 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm'
+                        : hasPinnedN2d
+                        ? 'bg-rose-500/[0.06] dark:bg-rose-950/20 border-rose-500/50 hover:border-rose-500'
+                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-zinc-900 dark:text-white">
+                        {rq.regionName}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {isSelected && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-extrabold">
+                            SELECTED
+                          </span>
+                        )}
+                        {hasPinnedN2d && (
+                          <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[8.5px] font-extrabold">
+                            PINNED N2D
+                          </span>
+                        )}
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                            totalOnDemandGpusLim > 0
+                              ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30'
+                              : 'bg-zinc-500/10 text-zinc-500'
+                          }`}
+                        >
+                          GPUs: {rq.totalOnDemandGpusUsed ?? 0}/{totalOnDemandGpusLim}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9.5px] font-bold">
+                          {rq.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400 space-y-0.5">
+                      <div>
+                        vCPUs: <strong>{rq.cpusUsed}</strong> / {rq.cpusLimit}
+                        {rq.preemptibleCpusLimit > 0 && (
+                          <span className="text-zinc-400">
+                            {' '}
+                            (Spot: {rq.preemptibleCpusUsed ?? 0}/{rq.preemptibleCpusLimit})
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        Disks: <strong>{rq.disksGbUsed}</strong> / {rq.disksGbLimit} GB
+                        {rq.ssdGbLimit > 0 && (
+                          <span className="text-zinc-400">
+                            {' '}
+                            · SSD: {rq.ssdGbUsed ?? 0}/{rq.ssdGbLimit} GB
+                          </span>
+                        )}
+                      </div>
+
+                      {/* GPU & TPU Accelerator Regional Quota Breakdown */}
+                      <div className="mt-1.5 pt-1.5 border-t border-zinc-200 dark:border-zinc-800 space-y-1">
+                        <div className="flex items-center justify-between text-[9.5px] font-extrabold text-violet-600 dark:text-violet-400">
+                          <span>
+                            NVIDIA GPUs (On-Demand / Spot)
+                          </span>
+                          <span>
+                            {rq.totalOnDemandGpusUsed ?? 0}/{totalOnDemandGpusLim} OD ·{' '}
+                            {rq.totalSpotGpusUsed ?? 0}/{totalSpotGpusLim} Spot
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 text-[9.5px]">
+                          <div className="px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-zinc-700 dark:text-zinc-300">
+                            <span className="text-zinc-400">L4:</span>{' '}
+                            <strong>
+                              {rq.l4GpusUsed ?? 0}/{l4Lim}
+                            </strong>
+                            {l4SpotLim > 0 && (
+                              <span className="text-zinc-400"> (S:{l4SpotLim})</span>
+                            )}
+                          </div>
+                          <div className="px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-zinc-700 dark:text-zinc-300">
+                            <span className="text-zinc-400">A100:</span>{' '}
+                            <strong>
+                              {rq.a100GpusUsed ?? 0}/{a100Lim}
+                            </strong>
+                            {a100SpotLim > 0 && (
+                              <span className="text-zinc-400"> (S:{a100SpotLim})</span>
+                            )}
+                          </div>
+                          <div className="px-1.5 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300">
+                            <span className="text-zinc-400">T4:</span>{' '}
+                            <strong>
+                              {rq.t4GpusUsed ?? 0}/{t4Lim}
+                            </strong>
+                            {(rq.spotT4GpusLimit ?? 0) > 0 && (
+                              <span className="text-zinc-400">
+                                {' '}
+                                (S:{rq.spotT4GpusLimit})
+                              </span>
+                            )}
+                          </div>
+                          <div className="px-1.5 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300">
+                            <span className="text-zinc-400">V100:</span>{' '}
+                            <strong>
+                              {rq.v100GpusUsed ?? 0}/{v100Lim}
+                            </strong>
+                            {(rq.spotV100GpusLimit ?? 0) > 0 && (
+                              <span className="text-zinc-400">
+                                {' '}
+                                (S:{rq.spotV100GpusLimit})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {(tpuLim > 0 || (rq.a2CpusLimit ?? 0) > 0) && (
+                          <div className="flex items-center justify-between text-[9px] text-zinc-500 pt-0.5">
+                            {tpuLim > 0 && (
+                              <span>
+                                TPU v5e PodSlice:{' '}
+                                <strong className="text-emerald-600 dark:text-emerald-400">
+                                  {rq.tpuV5ePodSliceUsed ?? 0}/{tpuLim}
+                                </strong>
+                              </span>
+                            )}
+                            {(rq.a2CpusLimit ?? 0) > 0 && (
+                              <span>
+                                A2 GPU Host vCPUs:{' '}
+                                <strong>
+                                  {rq.a2CpusUsed ?? 0}/{rq.a2CpusLimit}
+                                </strong>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {((rq.n2dCpusLimit ?? 0) > 0 ||
+                          (rq.c2dCpusLimit ?? 0) > 0 ||
+                          (rq.t2dCpusLimit ?? 0) > 0) && (
+                          <div className="space-y-1 pt-1 border-t border-zinc-200/70 dark:border-zinc-800/70">
+                            <div className="flex items-center justify-between flex-wrap gap-1 text-[9px] text-amber-700 dark:text-amber-300">
+                              <span className="font-bold">AMD EPYC vCPUs:</span>
+                              <span>
+                                N2D:{' '}
+                                <strong
+                                  className={
+                                    hasPinnedN2d
+                                      ? 'text-rose-500 underline'
+                                      : ''
+                                  }
+                                >
+                                  {rq.n2dCpusUsed ?? 0}/{rq.n2dCpusLimit ?? 0}
+                                </strong>{' '}
+                                · C2D:{' '}
+                                <strong
+                                  className={
+                                    rq.c2dCpusLimit >= 1000
+                                      ? 'text-emerald-500'
+                                      : ''
+                                  }
+                                >
+                                  {rq.c2dCpusUsed ?? 0}/{rq.c2dCpusLimit ?? 0}
+                                </strong>{' '}
+                                · T2D:{' '}
+                                <strong
+                                  className={
+                                    rq.t2dCpusLimit >= 300
+                                      ? 'text-emerald-500 underline'
+                                      : ''
+                                  }
+                                >
+                                  {rq.t2dCpusUsed ?? 0}/{rq.t2dCpusLimit ?? 0}
+                                </strong>
+                              </span>
+                            </div>
+                            {hasPinnedN2d && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRealignQuotaPreference({
+                                    metric: 'N2D_CPUS',
+                                    quotaId: 'N2D-CPUS-per-project-region',
+                                    region: rq.regionName,
+                                    currentLimit: rq.n2dCpusLimit,
+                                    targetLimit: rq.n2dDefaultLimit || 3000,
+                                  });
+                                }}
+                                className="w-full px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-extrabold cursor-pointer text-center"
+                              >
+                                Un-Pin N2D Override ({rq.n2dCpusLimit} →{' '}
+                                {rq.n2dDefaultLimit || 3000} Default)
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span>
+                          Static IPs: <strong>{rq.ipsUsed}</strong> / {rq.ipsLimit}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            focusOnRegion(rq.regionName, 3.2, {
+                              scrollToMap: true,
+                            });
+                          }}
+                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[9.5px] font-bold cursor-pointer"
+                        >
+                          Focus on Map →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -7205,6 +7446,22 @@ export default function GlobalNetworkWorldMap({
                               </span>
                             )}
                           </div>
+                          {((liveQuota.n2dCpusLimit ?? 0) > 0 ||
+                            (liveQuota.c2dCpusLimit ?? 0) > 0 ||
+                            (liveQuota.t2dCpusLimit ?? 0) > 0) && (
+                            <div className="flex items-center flex-wrap gap-1.5 mt-1 pt-1 border-t border-violet-500/20 text-[9.5px] text-amber-800 dark:text-amber-300">
+                              <span className="font-bold">AMD EPYC vCPUs:</span>
+                              <span>
+                                N2D: <strong>{liveQuota.n2dCpusUsed ?? 0}/{liveQuota.n2dCpusLimit ?? 0}</strong>
+                              </span>
+                              <span>
+                                · C2D: <strong>{liveQuota.c2dCpusUsed ?? 0}/{liveQuota.c2dCpusLimit ?? 0}</strong>
+                              </span>
+                              <span>
+                                · T2D: <strong>{liveQuota.t2dCpusUsed ?? 0}/{liveQuota.t2dCpusLimit ?? 0}</strong>
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
