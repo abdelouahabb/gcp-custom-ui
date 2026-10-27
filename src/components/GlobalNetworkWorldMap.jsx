@@ -4091,28 +4091,28 @@ export default function GlobalNetworkWorldMap({
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {/* Left/Center 8 Columns: Full Interactive SVG World Map */}
         <div className="xl:col-span-8 bg-white dark:bg-[#05070e] border border-blue-500/30 rounded-2xl overflow-hidden shadow-2xl relative">
-          {/* Unified Row 1 inside Map Header: PLAY/PAUSE + Speed + Counters + Refresh Rate + Max Packets */}
-          <div className="px-3.5 py-2 bg-white dark:bg-zinc-950/95 border-b border-zinc-200 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-            {/* Left: PLAY/PAUSE + Clear + Speed (Directly Attached to the Map!) */}
-            <div className="flex items-center gap-2 flex-wrap">
+          {/* Structured Instrument Deck Row 1: Playback Dock | Live Telemetry & GPS Dock | Zoom & Cadence Dock */}
+          <div className="px-3 py-1.5 bg-zinc-50/90 dark:bg-[#090d16] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-x-auto no-scrollbar">
+            {/* Left Dock: Unified Segmented Transport & Speed Controller */}
+            <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5 gap-0.5 shrink-0 shadow-xs">
               <button
                 type="button"
                 data-feature-id="GLOBAL_MAP_PLAY_PAUSE"
                 onClick={() => setIsRunning(!isRunning)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-extrabold border transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md text-[10.5px] font-mono font-extrabold transition-colors cursor-pointer ${
                   isRunning
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-600 dark:text-emerald-300'
-                    : 'bg-amber-500/20 border-amber-500/50 text-amber-600 dark:text-amber-300'
+                    ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
+                    : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
                 }`}
               >
                 {isRunning ? (
                   <>
-                    <Pause className="w-3.5 h-3.5" />
-                    <span>LIVE ({tickIntervalMs}ms)</span>
+                    <Pause className="w-3 h-3" />
+                    <span>LIVE</span>
                   </>
                 ) : (
                   <>
-                    <Play className="w-3.5 h-3.5" />
+                    <Play className="w-3 h-3" />
                     <span>PAUSED</span>
                   </>
                 )}
@@ -4122,123 +4122,169 @@ export default function GlobalNetworkWorldMap({
                 type="button"
                 data-feature-id="GLOBAL_MAP_CLEAR"
                 onClick={handleResetSimulation}
-                className="px-2 py-1 rounded-lg text-[10.5px] font-mono border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer"
+                className="h-6 px-2 rounded-md text-[10px] font-mono font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 Clear
               </button>
 
-              <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden text-[10.5px] font-mono">
-                {[1, 2, 4].map((spd) => (
+              <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800 mx-0.5" />
+
+              {[1, 2, 4].map((spd) => (
+                <button
+                  key={spd}
+                  type="button"
+                  data-feature-id="GLOBAL_MAP_SPEED"
+                  onClick={() => setSimSpeed(spd)}
+                  className={`h-6 px-2 rounded-md text-[10px] font-bold transition-colors cursor-pointer ${
+                    simSpeed === spd
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  {spd}x
+                </button>
+              ))}
+            </div>
+
+            {/* Center Dock: Structured Telemetry Counter & Live GPS Strip */}
+            <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-2.5 h-7 gap-3 shrink-0 shadow-xs">
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>ALLOW: {counters.allowedPackets}</span>
+              </span>
+              <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
+              <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span>BLOCK: {counters.deniedPackets}</span>
+              </span>
+              <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
+              <span className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <span>FIBER: {counters.backbonePackets}</span>
+              </span>
+              {cursorGps && (
+                <>
+                  <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-300 font-bold">
+                    <Move className="w-2.5 h-2.5 text-zinc-400" />
+                    <span>{formatLatLon(cursorGps.lat, cursorGps.lon)}</span>
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Right Dock: Unified Zoom & Cadence Instrument Group */}
+            <div className="inline-flex items-center gap-1.5 shrink-0">
+              <div className="inline-flex items-center h-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleZoomStep(-0.6)}
+                  title="Zoom Out"
+                  className="h-6 px-1.5 rounded text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  <ZoomOut className="w-3 h-3" />
+                </button>
+                <span className="px-1.5 text-[10px] font-extrabold text-blue-600 dark:text-blue-400">
+                  {zoom.toFixed(1)}x
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleZoomStep(0.6)}
+                  title="Zoom In"
+                  className="h-6 px-1.5 rounded text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  <ZoomIn className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetMapCamera}
+                  title="Reset Camera to Full World View (1x)"
+                  className="h-6 px-1.5 text-[9.5px] font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white border-l border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                >
+                  1x
+                </button>
+              </div>
+
+              <div className="inline-flex items-center h-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-1 gap-1 text-[10px]">
+                <select
+                  value={tickIntervalMs}
+                  onChange={(e) => setTickIntervalMs(Number(e.target.value))}
+                  title="UI Render Refresh Rate"
+                  className="bg-transparent h-6 px-1 font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer outline-none"
+                >
+                  <option value={100} className="bg-zinc-900 text-zinc-200">10 FPS (100ms)</option>
+                  <option value={250} className="bg-zinc-900 text-zinc-200">4 FPS (250ms)</option>
+                  <option value={500} className="bg-zinc-900 text-zinc-200">2 FPS (500ms)</option>
+                  <option value={1000} className="bg-zinc-900 text-zinc-200">1 FPS (1s)</option>
+                </select>
+                <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+                <select
+                  value={maxConcurrentPackets}
+                  onChange={(e) => {
+                    const cap = Number(e.target.value);
+                    setMaxConcurrentPackets(cap);
+                    setInFlightPackets((prev) => prev.slice(-cap));
+                  }}
+                  title="Max Concurrent Packets"
+                  className="bg-transparent h-6 px-1 font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer outline-none"
+                >
+                  <option value={4} className="bg-zinc-900 text-zinc-200">Max 4 Pkts</option>
+                  <option value={8} className="bg-zinc-900 text-zinc-200">Max 8 Pkts</option>
+                  <option value={12} className="bg-zinc-900 text-zinc-200">Max 12 Pkts</option>
+                  <option value={20} className="bg-zinc-900 text-zinc-200">Max 20 Pkts</option>
+                </select>
+                <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+                <select
+                  value={gcpSyncIntervalSec}
+                  onChange={(e) => setGcpSyncIntervalSec(Number(e.target.value))}
+                  title="GCP API Auto-Sync Interval"
+                  className="bg-transparent h-6 px-1 font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer outline-none"
+                >
+                  <option value={0} className="bg-zinc-900 text-zinc-200">Sync: Manual</option>
+                  <option value={30} className="bg-zinc-900 text-zinc-200">Sync: 30s</option>
+                  <option value={60} className="bg-zinc-900 text-zinc-200">Sync: 60s</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Structured Instrument Deck Row 2: Single-Line Camera Switchboard | Lens Switchboard | Layer Switchboard */}
+          <div className="px-3 py-1.5 bg-white dark:bg-[#060911] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10px] font-mono overflow-x-auto no-scrollbar">
+            {/* Left Switchboard: Segmented Continent Presets + Compact 40-Region Selector */}
+            <div className="inline-flex items-center gap-1.5 shrink-0">
+              <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 p-0.5 gap-0.5">
+                {[
+                  { id: 'WORLD', label: 'World' },
+                  {
+                    id: 'MY_LOCATION',
+                    label: `Origin (${liveClientOriginNode.city})`,
+                    highlight: true,
+                  },
+                  { id: 'AMERICAS', label: 'NA' },
+                  { id: 'SOUTH_AMERICA', label: 'SA' },
+                  { id: 'EUROPE', label: 'EU' },
+                  { id: 'MIDDLE_EAST', label: 'MEA' },
+                  { id: 'ASIA_PACIFIC', label: 'APAC' },
+                ].map((c) => (
                   <button
-                    key={spd}
+                    key={c.id}
                     type="button"
-                    data-feature-id="GLOBAL_MAP_SPEED"
-                    onClick={() => setSimSpeed(spd)}
-                    className={`px-2 py-1 font-bold cursor-pointer ${
-                      simSpeed === spd
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-500'
-                    }`}
+                    onClick={() => focusOnContinent(c.id)}
+                    className={
+                      c.highlight
+                        ? 'h-6 px-2 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-extrabold transition-colors cursor-pointer'
+                        : 'h-6 px-1.5 rounded-md hover:bg-zinc-200/70 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold transition-colors cursor-pointer'
+                    }
                   >
-                    {spd}x
+                    {c.label}
                   </button>
                 ))}
               </div>
 
-              <span className="text-zinc-300 dark:text-zinc-700">|</span>
-
-              <span className="flex items-center gap-1 text-emerald-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span>ALLOW: {counters.allowedPackets}</span>
-              </span>
-              <span className="flex items-center gap-1 text-red-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-red-500" />
-                <span>BLOCK: {counters.deniedPackets}</span>
-              </span>
-              <span className="flex items-center gap-1 text-blue-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-blue-400" />
-                <span>FIBER: {counters.backbonePackets}</span>
-              </span>
-            </div>
-
-            {/* Right: Compact FPS / Packet Cap / Auto-Sync Controls */}
-            <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-              <select
-                value={tickIntervalMs}
-                onChange={(e) => setTickIntervalMs(Number(e.target.value))}
-                title="UI Render Refresh Rate"
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-1.5 py-0.5 font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-              >
-                <option value={100}>100ms (10 FPS)</option>
-                <option value={250}>250ms (4 FPS)</option>
-                <option value={500}>500ms (2 FPS)</option>
-                <option value={1000}>1000ms (1 FPS)</option>
-              </select>
-
-              <select
-                value={maxConcurrentPackets}
-                onChange={(e) => {
-                  const cap = Number(e.target.value);
-                  setMaxConcurrentPackets(cap);
-                  setInFlightPackets((prev) => prev.slice(-cap));
-                }}
-                title="Max Concurrent Packets"
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-1.5 py-0.5 font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-              >
-                <option value={4}>Max 4 Pkts</option>
-                <option value={8}>Max 8 Pkts</option>
-                <option value={12}>Max 12 Pkts</option>
-                <option value={20}>Max 20 Pkts</option>
-              </select>
-
-              <select
-                value={gcpSyncIntervalSec}
-                onChange={(e) => setGcpSyncIntervalSec(Number(e.target.value))}
-                title="GCP API Auto-Sync Interval"
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-1.5 py-0.5 font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-              >
-                <option value={0}>Sync: Manual</option>
-                <option value={30}>Sync: 30s</option>
-                <option value={60}>Sync: 60s</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Unified Row 2 inside Map Header: Continent Presets + Region Select + Lenses + Zoom Controls */}
-          <div className="px-3.5 py-2 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/90 flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono">
-            {/* Left: Quick Continent & Region Camera Jump */}
-            <div className="flex items-center gap-1 flex-wrap">
-              {[
-                { id: 'WORLD', label: 'World' },
-                {
-                  id: 'MY_LOCATION',
-                  label: `My Origin (${liveClientOriginNode.city})`,
-                  highlight: true,
-                },
-                { id: 'AMERICAS', label: 'N.America' },
-                { id: 'SOUTH_AMERICA', label: 'S.America' },
-                { id: 'EUROPE', label: 'Europe' },
-                { id: 'MIDDLE_EAST', label: 'MEA' },
-                { id: 'ASIA_PACIFIC', label: 'APAC' },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => focusOnContinent(c.id)}
-                  className={
-                    c.highlight
-                      ? 'px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-500/50 font-extrabold transition-colors cursor-pointer'
-                      : 'px-1.5 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 hover:bg-blue-500/20 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer'
-                  }
-                >
-                  {c.label}
-                </button>
-              ))}
-
               <select
                 value={selectedRegionId}
                 onChange={(e) => focusOnRegion(e.target.value, 3.4)}
-                className="bg-zinc-50 dark:bg-zinc-900 border border-blue-500/40 text-blue-700 dark:text-blue-300 rounded px-1.5 py-0.5 text-[10.5px] font-bold cursor-pointer"
+                className="h-7 max-w-[195px] bg-zinc-50 dark:bg-zinc-900/90 border border-blue-500/40 text-blue-700 dark:text-blue-300 rounded-lg px-2 text-[10px] font-bold cursor-pointer truncate"
                 title="Select any of the 40 GCP Regions to zoom directly to it"
               >
                 {[
@@ -4256,8 +4302,7 @@ export default function GlobalNetworkWorldMap({
                         const cnt = regionWorkloadsMap[r.id]?.totalCount || 0;
                         return (
                           <option key={r.id} value={r.id}>
-                            {r.name} — {r.city}
-                            {cnt > 0 ? ` · [${cnt} live]` : ''}
+                            {r.name} ({r.city}){cnt > 0 ? ` [${cnt}]` : ''}
                           </option>
                         );
                       }
@@ -4267,8 +4312,11 @@ export default function GlobalNetworkWorldMap({
               </select>
             </div>
 
-            {/* Right: Map Lenses + Fiber Mesh + Zones + Hybrid VPN + Fiber Laser + Zoom */}
-            <div className="flex items-center gap-1 flex-wrap">
+            {/* Center Switchboard: Segmented Map Lens Selector */}
+            <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 p-0.5 gap-0.5 shrink-0">
+              <span className="px-1.5 text-[9px] uppercase tracking-wider text-zinc-400 font-bold">
+                Lens
+              </span>
               {[
                 {
                   id: 'TRAFFIC',
@@ -4296,10 +4344,10 @@ export default function GlobalNetworkWorldMap({
                     type="button"
                     data-feature-id={lens.featureId}
                     onClick={() => setMapLens(lens.id)}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-1 h-6 px-2 rounded-md transition-colors cursor-pointer ${
                       mapLens === lens.id
-                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 font-bold'
-                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                        ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-bold'
+                        : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
                     }`}
                   >
                     <LensIcon className="w-3 h-3 shrink-0" />
@@ -4307,15 +4355,21 @@ export default function GlobalNetworkWorldMap({
                   </button>
                 );
               })}
+            </div>
 
+            {/* Right Switchboard: Segmented Topology Layer Toggles */}
+            <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 p-0.5 gap-0.5 shrink-0">
+              <span className="px-1.5 text-[9px] uppercase tracking-wider text-zinc-400 font-bold">
+                Layers
+              </span>
               <button
                 type="button"
                 data-feature-id="GLOBAL_MAP_FIBER_MESH"
                 onClick={() => setShowSubseaBackbone(!showSubseaBackbone)}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer ${
+                className={`inline-flex items-center gap-1 h-6 px-2 rounded-md cursor-pointer transition-colors ${
                   showSubseaBackbone
-                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300 font-bold'
-                    : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
+                    ? 'bg-blue-500/20 border border-blue-500/40 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <Radio className="w-3 h-3 shrink-0" />
@@ -4326,10 +4380,10 @@ export default function GlobalNetworkWorldMap({
                 type="button"
                 data-feature-id="GLOBAL_MAP_ZONES_TOGGLE"
                 onClick={() => setShowZoneRings((prev) => !prev)}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer ${
+                className={`inline-flex items-center gap-1 h-6 px-2 rounded-md cursor-pointer transition-colors ${
                   showZoneRings
-                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300 font-bold'
-                    : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
+                    ? 'bg-blue-500/20 border border-blue-500/40 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <Layers className="w-3 h-3 shrink-0" />
@@ -4340,10 +4394,10 @@ export default function GlobalNetworkWorldMap({
                 type="button"
                 data-feature-id="GLOBAL_MAP_HYBRID_TUNNEL"
                 onClick={() => setShowHybridTunnel(!showHybridTunnel)}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer ${
+                className={`inline-flex items-center gap-1 h-6 px-2 rounded-md cursor-pointer transition-colors ${
                   showHybridTunnel
-                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300 font-bold'
-                    : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
+                    ? 'bg-blue-500/20 border border-blue-500/40 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <Lock className="w-3 h-3 shrink-0" />
@@ -4354,81 +4408,60 @@ export default function GlobalNetworkWorldMap({
                 type="button"
                 data-feature-id="GLOBAL_MAP_FIBER_LASER"
                 onClick={() => setRouteAnalyzerEnabled(!routeAnalyzerEnabled)}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer font-bold ${
+                className={`inline-flex items-center gap-1 h-6 px-2 rounded-md cursor-pointer font-bold transition-colors ${
                   routeAnalyzerEnabled
-                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300'
-                    : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400'
+                    ? 'bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <Crosshair className="w-3 h-3 shrink-0" />
                 <span>RTT Laser</span>
               </button>
+            </div>
+          </div>
 
-              <div className="inline-flex items-center rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => handleZoomStep(-0.6)}
-                  title="Zoom Out"
-                  className="p-1 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"
-                >
-                  <ZoomOut className="w-3 h-3" />
-                </button>
-                <span className="px-1.5 text-[10px] font-extrabold text-blue-400">
-                  {zoom.toFixed(1)}x
+          {/* Conditional Row 3: Single-Line Point-to-Point Subsea Fiber Laser Bar (Never Wraps into Orphan Lines) */}
+          {routeAnalyzerEnabled && (
+            <div className="px-3 py-1.5 bg-amber-500/5 dark:bg-amber-950/20 border-b border-amber-500/25 flex items-center justify-between gap-2 text-[10px] font-mono overflow-x-auto no-scrollbar">
+              <div className="inline-flex items-center gap-1.5 shrink-0">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 font-extrabold uppercase tracking-wider text-[9px]">
+                  <Crosshair className="w-2.5 h-2.5" />
+                  Subsea Laser
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleZoomStep(0.6)}
-                  title="Zoom In"
-                  className="p-1 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"
+                <select
+                  value={routeSourceRegionId}
+                  onChange={(e) => setRouteSourceRegionId(e.target.value)}
+                  className="h-6 max-w-[215px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
                 >
-                  <ZoomIn className="w-3 h-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetMapCamera}
-                  title="Reset Camera to Full World View (1x)"
-                  className="px-1.5 py-0.5 text-[9.5px] text-zinc-400 hover:text-white border-l border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                  {GCP_GLOBAL_REGIONS.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      A: {r.name} ({r.city})
+                    </option>
+                  ))}
+                </select>
+                <span className="text-amber-400 font-bold">⇄</span>
+                <select
+                  value={routeDestRegionId}
+                  onChange={(e) => setRouteDestRegionId(e.target.value)}
+                  className="h-6 max-w-[215px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
                 >
-                  1x
-                </button>
+                  {GCP_GLOBAL_REGIONS.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      B: {r.name} ({r.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="inline-flex items-center rounded-md bg-amber-500/15 border border-amber-500/35 px-2.5 h-6 gap-2.5 text-amber-700 dark:text-amber-300 font-bold shrink-0">
+                <span>{routeTelemetry.fiberKm.toLocaleString()} km Fiber</span>
+                <span className="h-3 w-px bg-amber-500/30" />
+                <span>{routeTelemetry.rttMs}ms RTT</span>
+                <span className="h-3 w-px bg-amber-500/30" />
+                <span>${routeTelemetry.ratePerGb}/GB Egress</span>
               </div>
             </div>
-
-            {routeAnalyzerEnabled && (
-              <div className="w-full pt-1.5 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between gap-2 flex-wrap text-[10px]">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-amber-400 font-bold">Point-to-Point Subsea Fiber Laser:</span>
-                  <select
-                    value={routeSourceRegionId}
-                    onChange={(e) => setRouteSourceRegionId(e.target.value)}
-                    className="bg-zinc-50 dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded px-1.5 py-0.5"
-                  >
-                    {GCP_GLOBAL_REGIONS.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        Origin A: {r.name} ({r.city})
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-amber-400">⇄</span>
-                  <select
-                    value={routeDestRegionId}
-                    onChange={(e) => setRouteDestRegionId(e.target.value)}
-                    className="bg-zinc-50 dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded px-1.5 py-0.5"
-                  >
-                    {GCP_GLOBAL_REGIONS.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        Target B: {r.name} ({r.city})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 font-bold">
-                  {routeTelemetry.fiberKm.toLocaleString()} km optical fiber · {routeTelemetry.rttMs}ms RTT · ${routeTelemetry.ratePerGb}/GB Inter-Region Egress
-                </span>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Interactive Zoomable & Pannable SVG World Map (1200 x 560) — Scroll & Shortcuts Locked to Map */}
           <div
@@ -4454,55 +4487,35 @@ export default function GlobalNetworkWorldMap({
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
-            {/* Unified Top Map Overlay Bar (Never Collides Between Left GPS Readout & Right Action Buttons) */}
-            <div className="absolute top-2.5 left-3 right-3 z-10 pointer-events-none flex flex-wrap items-center justify-between gap-2">
-              <div
-                className={`pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono transition-colors ${
-                  isPointerInsideMap
-                    ? 'bg-blue-500/10 dark:bg-blue-950/85 border-blue-500/60 text-blue-800 dark:text-blue-200 shadow-lg shadow-blue-950/50'
-                    : 'bg-white/90 dark:bg-zinc-950/80 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
-                }`}
-              >
-                <Move className="w-3 h-3 text-zinc-500 dark:text-zinc-400 shrink-0" />
-                <span className="truncate">
-                  Zoom {zoom.toFixed(1)}x · Wheel/Drag · Click Empty Map to Unselect
-                </span>
-                {cursorGps && (
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold shrink-0">
-                    {formatLatLon(cursorGps.lat, cursorGps.lon)}
-                  </span>
+            {/* Contextual Map Action Overlay (Only Appears When Zoomed In or Region Pinned — Never Clutters Default View) */}
+            {(isRegionPinnedOnMap || zoom > 1.1) && (
+              <div className="absolute top-2.5 right-3 z-10 pointer-events-auto flex items-center gap-1.5">
+                {isRegionPinnedOnMap && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReleaseMapSelection();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                  >
+                    Unselect {selectedRegion.name}
+                  </button>
+                )}
+                {zoom > 1.1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleResetMapCamera();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                  >
+                    Reset View (1.0x)
+                  </button>
                 )}
               </div>
-
-              {(isRegionPinnedOnMap || zoom > 1.1) && (
-                <div className="pointer-events-auto flex items-center gap-1.5 shrink-0">
-                  {isRegionPinnedOnMap && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleReleaseMapSelection();
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
-                    >
-                      Unselect {selectedRegion.name}
-                    </button>
-                  )}
-                  {zoom > 1.1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleResetMapCamera();
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
-                    >
-                      Reset View (1.0x)
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Chaos Outage Active Alert Pill */}
             {(severedRegions.length > 0 || severedZones.length > 0) && (
