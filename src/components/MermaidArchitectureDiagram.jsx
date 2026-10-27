@@ -204,21 +204,75 @@ export default function MermaidArchitectureDiagram({
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [nodeOffsets, setNodeOffsets] = useState({}); // { [nodeId]: { dx, dy } }
+  const [draggingNodeId, setDraggingNodeId] = useState(null);
+  const dragOriginRef = useRef(null);
   const svgRef = useRef(null);
 
   const parsed = useMemo(() => parseMermaidFlowchart(code), [code]);
 
+  // Convert client mouse coordinates into SVG viewBox coordinates
+  const clientToSvgPoint = (clientX, clientY) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: clientX, y: clientY };
+    const rect = svg.getBoundingClientRect();
+    const vb = svg.viewBox?.baseVal;
+    const vbW = vb?.width || 1200;
+    const vbH = vb?.height || 450;
+    const scaleX = vbW / Math.max(rect.width, 1);
+    const scaleY = vbH / Math.max(rect.height, 1);
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  };
+
+  const handleNodeMouseDown = (e, nodeId) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    const pt = clientToSvgPoint(e.clientX, e.clientY);
+    const cur = nodeOffsets[nodeId] || { dx: 0, dy: 0 };
+    dragOriginRef.current = {
+      nodeId,
+      startSvgX: pt.x,
+      startSvgY: pt.y,
+      origDx: cur.dx,
+      origDy: cur.dy,
+    };
+    setDraggingNodeId(nodeId);
+  };
+
+  const handleSvgMouseMove = (e) => {
+    if (!dragOriginRef.current) return;
+    const pt = clientToSvgPoint(e.clientX, e.clientY);
+    const { nodeId, startSvgX, startSvgY, origDx, origDy } = dragOriginRef.current;
+    const nextDx = Math.round(origDx + (pt.x - startSvgX));
+    const nextDy = Math.round(origDy + (pt.y - startSvgY));
+    setNodeOffsets((prev) => ({
+      ...prev,
+      [nodeId]: { dx: nextDx, dy: nextDy },
+    }));
+  };
+
+  const handleSvgMouseUp = () => {
+    if (dragOriginRef.current) {
+      dragOriginRef.current = null;
+      setDraggingNodeId(null);
+    }
+  };
+
   // Compute deterministic coordinates for every layer and node in the full-width SVG canvas
+  // plus apply any interactive user drag offsets (`nodeOffsets`)
   const layout = useMemo(() => {
     const layers = parsed.layers || [];
     const maxCols = Math.max(1, ...layers.map((l) => l.nodes.length));
     const nodeW = 340;
     const nodeH = 68;
-    const colGap = 52;
+    const colGap = 156;
     const layerPadX = 36;
     const layerPadTop = 48;
-    const layerPadBottom = 26;
-    const layerGapY = 54;
+    const layerPadBottom = 28;
+    const layerGapY = 82;
 
     const canvasW = Math.max(
       1200,
@@ -237,8 +291,9 @@ export default function MermaidArchitectureDiagram({
       const style = LAYER_STYLES[layerIdx % LAYER_STYLES.length];
 
       const positionedNodes = layer.nodes.map((n, idx) => {
-        const x = startX + idx * (nodeW + colGap);
-        const y = currentY + layerPadTop;
+        const drag = nodeOffsets[n.id] || { dx: 0, dy: 0 };
+        const x = startX + idx * (nodeW + colGap) + drag.dx;
+        const y = currentY + layerPadTop + drag.dy;
         const coord = {
           ...n,
           x,
@@ -267,10 +322,10 @@ export default function MermaidArchitectureDiagram({
       currentY += layerH + layerGapY;
     });
 
-    const canvasH = Math.max(300, currentY - layerGapY + 24);
+    const canvasH = Math.max(320, currentY - layerGapY + 28);
 
-    // Compute smooth SVG cubic bezier paths for every edge
-    const positionedEdges = (parsed.edges || [])
+    // Compute smooth SVG cubic bezier paths for every edge with de-collided label coordinates
+    const rawEdges = (parsed.edges || [])
       .map((edge) => {
         const src = nodeCoords.get(edge.from);
         const dst = nodeCoords.get(edge.to);
@@ -281,52 +336,92 @@ export default function MermaidArchitectureDiagram({
         let x2 = dst.cx;
         let y2 = dst.y;
         let pathD = '';
+        let midX = (x1 + x2) / 2;
+        let midY = (y1 + y2) / 2;
 
-        if (src.layerIdx === dst.layerIdx) {
-          // Same horizontal layer: connect right edge to left edge (or vice versa)
+        if (src.layerIdx === dst.layerIdx && Math.abs(src.cy - dst.cy) < 40) {
+          // Same horizontal layer: connect right edge to left edge with a gentle arc so label never collides
           const leftToRight = src.x <= dst.x;
           x1 = leftToRight ? src.x + src.w : src.x;
           y1 = src.cy;
           x2 = leftToRight ? dst.x : dst.x + dst.w;
           y2 = dst.cy;
-          const dx = Math.abs(x2 - x1) * 0.45;
+          const dx = Math.max(30, Math.abs(x2 - x1) * 0.45);
           pathD = `M ${x1} ${y1} C ${leftToRight ? x1 + dx : x1 - dx} ${y1}, ${
             leftToRight ? x2 - dx : x2 + dx
           } ${y2}, ${x2} ${y2}`;
-        } else if (src.y < dst.y) {
-          // Top-to-bottom connection
+          midX = (x1 + x2) / 2;
+          midY = (y1 + y2) / 2;
+        } else if (src.cy <= dst.cy) {
+          // Top-to-bottom connection: spread x1 slightly toward destination so multiple outgoing edges fan out cleanly
+          const spreadX = Math.max(-48, Math.min(48, (dst.cx - src.cx) * 0.14));
+          x1 = src.cx + spreadX;
           y1 = src.y + src.h;
+          x2 = dst.cx;
           y2 = dst.y - 4;
-          const dy = Math.max(24, (y2 - y1) * 0.5);
+          const dy = Math.max(28, (y2 - y1) * 0.5);
           pathD = `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`;
+          // Position label closer to destination branch (t=0.58) so fanned-out edges are already separated horizontally
+          midX = x1 * 0.36 + x2 * 0.64;
+          midY = (y1 + y2) / 2;
         } else {
           // Bottom-to-top connection
           y1 = src.y;
           y2 = dst.y + dst.h + 4;
-          const dy = Math.max(24, Math.abs(y1 - y2) * 0.5);
+          const dy = Math.max(28, Math.abs(y1 - y2) * 0.5);
           pathD = `M ${x1} ${y1} C ${x1} ${y1 - dy}, ${x2} ${y2 + dy}, ${x2} ${y2}`;
+          midX = (x1 + x2) / 2;
+          midY = (y1 + y2) / 2;
         }
 
+        const labelW = edge.label ? edge.label.length * 6.4 + 18 : 0;
         return {
           ...edge,
           x1,
           y1,
           x2,
           y2,
-          midX: (x1 + x2) / 2,
-          midY: (y1 + y2) / 2,
+          midX,
+          midY,
+          labelW,
           pathD,
         };
       })
       .filter(Boolean);
 
+    // De-collide any sibling edge labels whose bounding boxes overlap
+    for (let i = 0; i < rawEdges.length; i++) {
+      for (let j = i + 1; j < rawEdges.length; j++) {
+        const a = rawEdges[i];
+        const b = rawEdges[j];
+        if (!a.label || !b.label) continue;
+        const minSepX = (a.labelW + b.labelW) / 2 + 12;
+        const minSepY = 22;
+        if (
+          Math.abs(a.midY - b.midY) < minSepY &&
+          Math.abs(a.midX - b.midX) < minSepX
+        ) {
+          // Stagger vertically and nudge horizontally so neither label covers the other
+          a.midY -= 12;
+          b.midY += 12;
+          if (a.midX <= b.midX) {
+            a.midX -= 14;
+            b.midX += 14;
+          } else {
+            a.midX += 14;
+            b.midX -= 14;
+          }
+        }
+      }
+    }
+
     return {
       canvasW,
       canvasH,
       layers: positionedLayers,
-      edges: positionedEdges,
+      edges: rawEdges,
     };
-  }, [parsed]);
+  }, [parsed, nodeOffsets]);
 
   const handleCopyCode = () => {
     navigator.clipboard?.writeText(code || '');
@@ -441,14 +536,18 @@ export default function MermaidArchitectureDiagram({
               >
                 <ZoomIn className="w-3 h-3" />
               </button>
-              {zoom !== 1 && (
+              {(zoom !== 1 || Object.keys(nodeOffsets).length > 0) && (
                 <button
                   type="button"
-                  onClick={() => setZoom(1)}
-                  title="Reset Zoom to 100%"
-                  className="p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
+                  onClick={() => {
+                    setZoom(1);
+                    setNodeOffsets({});
+                  }}
+                  title="Reset Zoom & Node Positions"
+                  className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
+                  <span>Reset Layout</span>
                 </button>
               )}
             </div>
@@ -487,7 +586,7 @@ export default function MermaidArchitectureDiagram({
         </div>
       </div>
 
-      {/* Rendered Browser SVG Visualization (Full Width) */}
+      {/* Rendered Browser SVG Visualization (Full Width & Draggable Nodes) */}
       {viewMode !== 'CODE' && (
         <div className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 overflow-x-auto p-3">
           <div
@@ -501,10 +600,14 @@ export default function MermaidArchitectureDiagram({
               viewBox={`0 0 ${layout.canvasW} ${layout.canvasH}`}
               preserveAspectRatio="xMidYMid meet"
               width="100%"
+              onMouseMove={handleSvgMouseMove}
+              onMouseUp={handleSvgMouseUp}
+              onMouseLeave={handleSvgMouseUp}
               style={{
                 width: '100%',
                 height: 'auto',
                 minHeight: `${Math.round(layout.canvasH * 0.85 * zoom)}px`,
+                cursor: draggingNodeId ? 'grabbing' : 'default',
               }}
               className="block w-full select-none"
             >
@@ -606,7 +709,7 @@ export default function MermaidArchitectureDiagram({
                 </g>
               ))}
 
-              {/* 2. Directed Bezier Edges + Animated Flow Particles */}
+              {/* 2. Directed Bezier Edge Curves + Animated Flow Particles */}
               {layout.edges.map((edge) => {
                 const isHighlighted =
                   hoveredNodeId &&
@@ -629,7 +732,6 @@ export default function MermaidArchitectureDiagram({
                           : 'url(#mermaid-arrow-default)'
                       }
                     />
-                    {/* Animated packet dot moving along the edge */}
                     <circle
                       r={isHighlighted ? '3.5' : '2.5'}
                       fill={isHighlighted ? '#34d399' : '#93c5fd'}
@@ -640,37 +742,15 @@ export default function MermaidArchitectureDiagram({
                         path={edge.pathD}
                       />
                     </circle>
-                    {edge.label && (
-                      <g>
-                        <rect
-                          x={edge.midX - (edge.label.length * 3.4 + 8)}
-                          y={edge.midY - 9}
-                          width={edge.label.length * 6.8 + 16}
-                          height="18"
-                          rx="4"
-                          fill="#18181b"
-                          stroke="#3f3f46"
-                        />
-                        <text
-                          x={edge.midX}
-                          y={edge.midY + 3}
-                          textAnchor="middle"
-                          fill="#e4e4e7"
-                          fontSize="9.5"
-                          fontFamily="ui-monospace, monospace"
-                        >
-                          {edge.label}
-                        </text>
-                      </g>
-                    )}
                   </g>
                 );
               })}
 
-              {/* 3. Interactive Architecture Nodes */}
+              {/* 3. Interactive & Draggable Architecture Nodes */}
               {layout.layers.flatMap((layer) =>
                 layer.nodes.map((node) => {
                   const isHovered = hoveredNodeId === node.id;
+                  const isDraggingThis = draggingNodeId === node.id;
                   const isConnected =
                     hoveredNodeId &&
                     layout.edges.some(
@@ -695,11 +775,12 @@ export default function MermaidArchitectureDiagram({
                   return (
                     <g
                       key={node.id}
+                      onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                       onMouseEnter={() => setHoveredNodeId(node.id)}
                       onMouseLeave={() => setHoveredNodeId(null)}
                       style={{
-                        cursor: 'pointer',
-                        transition: 'opacity 150ms ease',
+                        cursor: isDraggingThis ? 'grabbing' : 'grab',
+                        transition: isDraggingThis ? 'none' : 'opacity 150ms ease',
                       }}
                       opacity={isDimmed ? 0.35 : 1}
                     >
@@ -709,15 +790,15 @@ export default function MermaidArchitectureDiagram({
                         width={node.w}
                         height={node.h}
                         rx="10"
-                        fill={isHovered ? '#1e293b' : '#18181b'}
+                        fill={isHovered || isDraggingThis ? '#1e293b' : '#18181b'}
                         stroke={
-                          isHovered
+                          isHovered || isDraggingThis
                             ? '#34d399'
                             : isConnected
                             ? '#60a5fa'
                             : node.accentColor
                         }
-                        strokeWidth={isHovered || isConnected ? '2.2' : '1.4'}
+                        strokeWidth={isHovered || isConnected || isDraggingThis ? '2.2' : '1.4'}
                       />
                       {/* Top-left Node ID pill */}
                       <rect
@@ -741,6 +822,21 @@ export default function MermaidArchitectureDiagram({
                       >
                         {node.id}
                       </text>
+
+                      {/* Drag Hint on Hover */}
+                      {(isHovered || isDraggingThis) && (
+                        <text
+                          x={node.x + node.w - 12}
+                          y={node.y + 19}
+                          textAnchor="end"
+                          fill="#34d399"
+                          fontSize="8.5"
+                          fontFamily="ui-monospace, monospace"
+                          fontWeight="700"
+                        >
+                          {isDraggingThis ? 'DRAGGING…' : '⇄ DRAG'}
+                        </text>
+                      )}
 
                       {/* Node Label Line 1 & 2 */}
                       <text
@@ -768,11 +864,51 @@ export default function MermaidArchitectureDiagram({
                   );
                 })
               )}
+
+              {/* 4. Top-Layer Edge Label Pills (Rendered above nodes so labels are never hidden behind boxes) */}
+              {layout.edges.map((edge) => {
+                if (!edge.label) return null;
+                const isHighlighted =
+                  hoveredNodeId &&
+                  (edge.from === hoveredNodeId || edge.to === hoveredNodeId);
+                const isDimmed = hoveredNodeId && !isHighlighted;
+                const pillW = edge.label.length * 6.2 + 16;
+                return (
+                  <g
+                    key={`lbl-${edge.id}`}
+                    opacity={isDimmed ? 0.25 : 1}
+                    style={{ pointerEvents: 'none', transition: 'opacity 150ms ease' }}
+                  >
+                    <rect
+                      x={edge.midX - pillW / 2}
+                      y={edge.midY - 9.5}
+                      width={pillW}
+                      height="19"
+                      rx="4.5"
+                      fill="#09090b"
+                      fillOpacity="0.96"
+                      stroke={isHighlighted ? '#34d399' : '#3f3f46'}
+                      strokeWidth={isHighlighted ? '1.3' : '1'}
+                    />
+                    <text
+                      x={edge.midX}
+                      y={edge.midY + 3.2}
+                      textAnchor="middle"
+                      fill={isHighlighted ? '#a7f3d0' : '#e4e4e7'}
+                      fontSize="9.5"
+                      fontFamily="ui-monospace, monospace"
+                      fontWeight={isHighlighted ? '700' : '500'}
+                    >
+                      {edge.label}
+                    </text>
+                  </g>
+                );
+              })}
             </svg>
           </div>
           <div className="px-2 pt-1.5 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-400">
             <span>
-              Hover any node to highlight its upstream &amp; downstream dependency paths.
+              Drag any node to reposition it · Hover any node to highlight upstream &amp; downstream paths.
             </span>
             <span>
               Rendered natively in browser SVG · Zero external runtime bloat
