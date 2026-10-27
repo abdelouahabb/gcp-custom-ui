@@ -121,6 +121,20 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'open-startup-10x-mentor-studio',
+        category: 'Startup 10X (Google for Startups Mentor)',
+        title: 'Open Dedicated Startup 10X Menu — Google for Startups Scale & Bottleneck Radar',
+        subtitle: 'Expose & fix Cloud Run Cold-Start & Legacy VPC Connector lags, Cloud SQL 200-instance Connection Storms, Launch-Day HTTP 429 Quota Walls, $2k–$350k Credit Vampires, SOC2 Deal-Blockers & GenAI -80% Context Caching',
+        keywords: 'startup 10x google for startups mentor cold start vpc connector cloud sql connection storm quota wall 429 credit runway vampires soc2 context cache',
+        badge: 'STARTUP 10X MENU',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
+        icon: Rocket,
+        run: () => {
+          onSelectTab('STARTUP_10X');
+          onClose();
+        }
+      },
+      {
         id: 'open-appengine-exterminator-neutralizer',
         category: '2026 Innovation Lab (Star)',
         title: 'Open App Engine Service Exterminator, default $0.00/mo Neutralizer & 1-Click Cloud Run Migrator',

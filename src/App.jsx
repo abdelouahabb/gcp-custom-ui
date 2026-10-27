@@ -91,6 +91,7 @@ import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio'
 import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
 import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
 import GlobalInnovationHoverExplainer from './components/InnovationHoverExplainer';
+import Startup10xMentorStudio from './components/Startup10xMentorStudio';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -3588,8 +3589,16 @@ function CloudPulseCockpit() {
       group: 'COMMAND',
       label: '2026 Innovation',
       isStar: true,
-      tip: '22 Beyond-Console Enterprise Tools: Pre-Crime 30-Day Billing Forecaster, Dream Stack Compiler, 2026 Quantum Nexus (Resilience Suite), Night-Mode Sleep, Reverse-Terraform, Storage RAM DLP, Cold-Start Surgeon & AES-256-GCM Gemini 3.8 Vault',
+      tip: '24 Beyond-Console Enterprise Tools: Pre-Crime 30-Day Billing Forecaster, Dream Stack Compiler, Wave 16 Moonshot, 2026 Quantum Nexus (Resilience Suite), Night-Mode Sleep, Reverse-Terraform, Storage RAM DLP, Cold-Start Surgeon & AES-256-GCM Gemini 3.8 Vault',
       icon: Sparkles,
+    },
+    {
+      id: 'STARTUP_10X',
+      group: 'COMMAND',
+      label: 'Startup 10X',
+      isStar: true,
+      tip: 'Google for Startups Mentor Edition — Dedicated Startup 10X Scale & Bottleneck Radar: Expose and remediate Cloud Run Cold-Start & Legacy VPC Connector lags, Cloud SQL 200-instance Connection Storms, Launch-Day HTTP 429 Quota Walls, $2k–$350k Credit Vampires, SOC2 Deal-Blockers & GenAI -80% Context Caching',
+      icon: Rocket,
     },
     {
       id: 'MCP_HUB',
@@ -4105,11 +4114,13 @@ function CloudPulseCockpit() {
                     <button
                       type="button"
                       data-feature-id="STARTUP_10X"
-                      onClick={() =>
-                        handleNavigateStudioTab('INNOVATION_LAB', 'STARTUP_10X')
-                      }
-                      title="Google for Startups Mentor Edition — Startup 10X Scale & Bottleneck Radar (Cold-Starts, DB Connection Storms, Launch-Day HTTP 429 Quotas & Credit Runway)"
-                      className="inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border border-blue-500/40 bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-700 dark:text-blue-300 transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
+                      onClick={() => setActiveTab('STARTUP_10X')}
+                      title="Open Dedicated Startup 10X Menu — Google for Startups Scale & Bottleneck Radar (Cold-Starts, DB Connection Storms, Launch-Day HTTP 429 Quotas & Credit Runway)"
+                      className={`inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer ${
+                        activeTab === 'STARTUP_10X'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-blue-500/40 bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-700 dark:text-blue-300'
+                      }`}
                     >
                       <Rocket className="w-3.5 h-3.5 shrink-0" />
                       <span>Startup 10X</span>
@@ -4397,10 +4408,11 @@ function CloudPulseCockpit() {
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
                       {[
                         {
-                          domain: 'I. Innovation & Global Edge',
+                          domain: 'I. Innovation, Startups & Global Edge',
                           color: 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30',
                           items: [
-                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '18 Categorized Beyond-Console Labs' },
+                            { id: 'STARTUP_10X', label: 'Startup 10X', meta: 'Google for Startups Scale & Credit Radar' },
+                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '24 Categorized Beyond-Console Labs' },
                             { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
                             { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
                             { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
@@ -4591,6 +4603,29 @@ function CloudPulseCockpit() {
                   onShowToast={showToast}
                   onShowError={setErrorBanner}
                 />
+              )}
+
+              {activeTab === 'STARTUP_10X' && (
+                <div className="space-y-4">
+                  <PersonaContextualHelper
+                    persona="ARCHITECT"
+                    projectId={selectedProjectId}
+                    studioContextLabel="Startup 10X Mentor Studio · Scale Readiness, Credit Runway & Launch-Day Guardrails"
+                    defaultExpanded={false}
+                    onOpenFullBoard={(p) =>
+                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
+                    }
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <Startup10xMentorStudio
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                </div>
               )}
 
               {activeTab === 'MCP_HUB' && (
