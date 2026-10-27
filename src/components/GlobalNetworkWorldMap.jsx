@@ -4469,7 +4469,7 @@ export default function GlobalNetworkWorldMap({
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
-                <Crosshair className="w-3 h-3 shrink-0" />
+                <Navigation className="w-3 h-3 shrink-0" />
                 <span>RTT Laser</span>
               </button>
             </div>
@@ -4477,16 +4477,34 @@ export default function GlobalNetworkWorldMap({
 
           {/* Structured Instrument Deck Row 3: Subsea Laser Selectors (Left) | ALLOW/BLOCK/FIBER Telemetry Dock (Center) | Fiber RTT Readout (Right) */}
           <div className="px-3 py-1.5 bg-amber-500/5 dark:bg-[#080b14] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10px] font-mono overflow-hidden">
-            {/* Left Dock: Point-to-Point Subsea Fiber Laser Selectors */}
+            {/* Left Dock: Point-to-Point Subsea Fiber Laser Toggle + Selectors */}
             <div className="inline-flex items-center gap-1.5 shrink-0">
-              <span className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 font-extrabold uppercase tracking-wider text-[9px]">
-                <Crosshair className="w-2.5 h-2.5" />
-                Subsea Laser
-              </span>
+              <button
+                type="button"
+                data-feature-id="GLOBAL_MAP_FIBER_LASER"
+                onClick={() => setRouteAnalyzerEnabled((prev) => !prev)}
+                title="Click to toggle the Point-to-Point Subsea Fiber Laser trajectory on the World Map"
+                className={`inline-flex items-center gap-1 h-6 px-2 rounded-md border font-extrabold uppercase tracking-wider text-[9px] cursor-pointer transition-colors ${
+                  routeAnalyzerEnabled
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-700 dark:text-amber-300'
+                    : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-400'
+                }`}
+              >
+                <Navigation className="w-2.5 h-2.5 shrink-0" />
+                <span>Subsea Laser: {routeAnalyzerEnabled ? 'ON' : 'OFF'}</span>
+              </button>
               <select
                 value={routeSourceRegionId}
-                onChange={(e) => setRouteSourceRegionId(e.target.value)}
-                className="h-6 w-[170px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
+                onChange={(e) => {
+                  setRouteSourceRegionId(e.target.value);
+                  if (!routeAnalyzerEnabled) setRouteAnalyzerEnabled(true);
+                }}
+                data-feature-id="GLOBAL_MAP_FIBER_LASER"
+                className={`h-6 w-[162px] bg-white dark:bg-zinc-900 border rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate transition-opacity ${
+                  routeAnalyzerEnabled
+                    ? 'border-amber-500/40 text-amber-800 dark:text-amber-200'
+                    : 'border-zinc-300 dark:border-zinc-800 text-zinc-400 opacity-60'
+                }`}
               >
                 {GCP_GLOBAL_REGIONS.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -4494,11 +4512,31 @@ export default function GlobalNetworkWorldMap({
                   </option>
                 ))}
               </select>
-              <span className="text-amber-400 font-bold">⇄</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const prevSrc = routeSourceRegionId;
+                  setRouteSourceRegionId(routeDestRegionId);
+                  setRouteDestRegionId(prevSrc);
+                  if (!routeAnalyzerEnabled) setRouteAnalyzerEnabled(true);
+                }}
+                title="Swap Origin Region A and Target Region B"
+                className="h-6 px-1.5 rounded bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/30 text-amber-400 font-bold cursor-pointer transition-colors"
+              >
+                ⇄
+              </button>
               <select
                 value={routeDestRegionId}
-                onChange={(e) => setRouteDestRegionId(e.target.value)}
-                className="h-6 w-[170px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
+                onChange={(e) => {
+                  setRouteDestRegionId(e.target.value);
+                  if (!routeAnalyzerEnabled) setRouteAnalyzerEnabled(true);
+                }}
+                data-feature-id="GLOBAL_MAP_FIBER_LASER"
+                className={`h-6 w-[162px] bg-white dark:bg-zinc-900 border rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate transition-opacity ${
+                  routeAnalyzerEnabled
+                    ? 'border-amber-500/40 text-amber-800 dark:text-amber-200'
+                    : 'border-zinc-300 dark:border-zinc-800 text-zinc-400 opacity-60'
+                }`}
               >
                 {GCP_GLOBAL_REGIONS.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -4527,7 +4565,14 @@ export default function GlobalNetworkWorldMap({
             </div>
 
             {/* Right Dock: Subsea Optical Fiber Distance, RTT & Egress Rate */}
-            <div className="inline-flex items-center rounded-md bg-amber-500/15 border border-amber-500/35 px-2.5 h-6 gap-2.5 text-amber-700 dark:text-amber-300 font-bold shrink-0">
+            <div
+              data-feature-id="GLOBAL_MAP_FIBER_LASER"
+              className={`inline-flex items-center rounded-md border px-2.5 h-6 gap-2.5 font-bold shrink-0 transition-opacity ${
+                routeAnalyzerEnabled
+                  ? 'bg-amber-500/15 border-amber-500/35 text-amber-700 dark:text-amber-300'
+                  : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-400 opacity-60'
+              }`}
+            >
               <span>{routeTelemetry.fiberKm.toLocaleString()} km Fiber</span>
               <span className="h-3 w-px bg-amber-500/30" />
               <span>{routeTelemetry.rttMs}ms RTT</span>
@@ -4899,17 +4944,73 @@ export default function GlobalNetworkWorldMap({
                 </text>
               </g>
 
-              {/* Point-to-Point Subsea Fiber RTT & Cross-Region Egress Telemetry Beam (Clean Arc — Metrics Shown in Toolbar) */}
+              {/* Point-to-Point Subsea Fiber RTT & Cross-Region Egress Telemetry Beam */}
               {routeAnalyzerEnabled &&
                 routeTelemetry.src.id !== routeTelemetry.dst.id && (
-                  <path
-                    d={routeTelemetry.arc.d}
-                    fill="none"
-                    stroke="#f59e0b"
-                    strokeWidth={2 * invScale}
-                    strokeDasharray="6 3"
-                    strokeOpacity="0.7"
-                  />
+                  <g className="pointer-events-none">
+                    <path
+                      d={routeTelemetry.arc.d}
+                      fill="none"
+                      stroke="#f59e0b"
+                      strokeWidth={4.5 * invScale}
+                      strokeOpacity="0.18"
+                    />
+                    <path
+                      d={routeTelemetry.arc.d}
+                      fill="none"
+                      stroke="#f59e0b"
+                      strokeWidth={2 * invScale}
+                      strokeDasharray="6 3"
+                      strokeOpacity="0.88"
+                    />
+                    <g
+                      transform={`translate(${routeTelemetry.src.x}, ${routeTelemetry.src.y}) scale(${invScale})`}
+                    >
+                      <circle
+                        r={8}
+                        fill="none"
+                        stroke="#f59e0b"
+                        strokeWidth="1.3"
+                        strokeDasharray="2 2"
+                      />
+                    </g>
+                    <g
+                      transform={`translate(${routeTelemetry.dst.x}, ${routeTelemetry.dst.y}) scale(${invScale})`}
+                    >
+                      <circle
+                        r={8}
+                        fill="none"
+                        stroke="#f59e0b"
+                        strokeWidth="1.3"
+                        strokeDasharray="2 2"
+                      />
+                    </g>
+                    <g
+                      transform={`translate(${routeTelemetry.mid.x}, ${routeTelemetry.mid.y}) scale(${invScale})`}
+                    >
+                      <rect
+                        x={-54}
+                        y={-7}
+                        width={108}
+                        height={13}
+                        rx={3.5}
+                        fill="#090d16"
+                        fillOpacity="0.92"
+                        stroke="#f59e0b"
+                        strokeWidth="0.9"
+                      />
+                      <text
+                        y={1.8}
+                        textAnchor="middle"
+                        fill="#fde68a"
+                        fontSize="6"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        {`${routeTelemetry.fiberKm.toLocaleString()}km · ${routeTelemetry.rttMs}ms · $${routeTelemetry.ratePerGb}/GB`}
+                      </text>
+                    </g>
+                  </g>
                 )}
 
               {/* Global Client / Proxy / Threat Origin Nodes (Only shown while packet simulation is running) */}
