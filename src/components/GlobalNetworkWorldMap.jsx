@@ -4450,9 +4450,9 @@ export default function GlobalNetworkWorldMap({
             </div>
           </div>
 
-          {/* Structured Instrument Deck Row 3: Subsea Laser Selectors (Left) | ALLOW/BLOCK/FIBER/GPS Telemetry Dock (Center) | Fiber RTT Readout (Right) */}
+          {/* Structured Instrument Deck Row 3: Subsea Laser Selectors (Left) | ALLOW/BLOCK/FIBER Telemetry Dock (Center) | Fiber RTT Readout (Right) */}
           <div className="px-3 py-1.5 bg-amber-500/5 dark:bg-[#080b14] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10px] font-mono overflow-x-auto no-scrollbar">
-            {/* Left Dock: Point-to-Point Subsea Fiber Laser Selectors */}
+            {/* Left Dock: Point-to-Point Subsea Fiber Laser Selectors (Full City Names Without Truncation) */}
             <div className="inline-flex items-center gap-1.5 shrink-0">
               <span className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 font-extrabold uppercase tracking-wider text-[9px]">
                 <Crosshair className="w-2.5 h-2.5" />
@@ -4461,7 +4461,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={routeSourceRegionId}
                 onChange={(e) => setRouteSourceRegionId(e.target.value)}
-                className="h-6 max-w-[165px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
+                className="h-6 bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-2 text-[10px] font-semibold cursor-pointer"
               >
                 {GCP_GLOBAL_REGIONS.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -4473,7 +4473,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={routeDestRegionId}
                 onChange={(e) => setRouteDestRegionId(e.target.value)}
-                className="h-6 max-w-[165px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
+                className="h-6 bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-2 text-[10px] font-semibold cursor-pointer"
               >
                 {GCP_GLOBAL_REGIONS.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -4483,35 +4483,26 @@ export default function GlobalNetworkWorldMap({
               </select>
             </div>
 
-            {/* Center Dock: ALLOW / BLOCK / FIBER / Live GPS Coordinate Strip (Moved Here per Layout Diagram) */}
-            <div className="inline-flex items-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-2.5 h-6 gap-2.5 shrink-0 shadow-xs">
-              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+            {/* Center Dock: Live Packet Verdict & Subsea Backbone Counter Strip */}
+            <div className="inline-flex items-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-3 h-6 gap-3 shrink-0 shadow-xs">
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                 <span>ALLOW: {counters.allowedPackets}</span>
               </span>
               <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
-              <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-bold">
+              <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400 font-bold">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 <span>BLOCK: {counters.deniedPackets}</span>
               </span>
               <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
-              <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold">
+              <span className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                 <span>FIBER: {counters.backbonePackets}</span>
               </span>
-              {cursorGps && (
-                <>
-                  <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
-                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-300 font-bold">
-                    <Move className="w-2.5 h-2.5 text-zinc-400" />
-                    <span>{formatLatLon(cursorGps.lat, cursorGps.lon)}</span>
-                  </span>
-                </>
-              )}
             </div>
 
             {/* Right Dock: Subsea Optical Fiber Distance, RTT & Egress Rate */}
-            <div className="inline-flex items-center rounded-md bg-amber-500/15 border border-amber-500/35 px-2.5 h-6 gap-2 text-amber-700 dark:text-amber-300 font-bold shrink-0">
+            <div className="inline-flex items-center rounded-md bg-amber-500/15 border border-amber-500/35 px-2.5 h-6 gap-2.5 text-amber-700 dark:text-amber-300 font-bold shrink-0">
               <span>{routeTelemetry.fiberKm.toLocaleString()} km Fiber</span>
               <span className="h-3 w-px bg-amber-500/30" />
               <span>{routeTelemetry.rttMs}ms RTT</span>
