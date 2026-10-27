@@ -341,7 +341,7 @@ export default function Startup10xMentorStudio({
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                01. Cloud Run Cold-Start &amp; Legacy Serverless VPC Connector Bottleneck Surgeon
+                Cloud Run Cold-Start &amp; Legacy Serverless VPC Connector Bottleneck Surgeon
               </h3>
               <p className="text-xs text-zinc-500">
                 Why startups see 3s–8s p99 latency spikes: missing{' '}
@@ -483,7 +483,7 @@ export default function Startup10xMentorStudio({
         <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              02. Cloud SQL Connection Storm Simulator &amp; Serverless Pool Exhaustion Guard
+              Cloud SQL Connection Storm Simulator &amp; Serverless Pool Exhaustion Guard
             </h3>
             <p className="text-xs text-zinc-500">
               The #1 launch-day crash for startups: Cloud Run autoscales from 2 to {simPeakInstances} containers during a traffic spike, each opening {simPoolSizePerInstance} DB connections ({totalRequestedDbConns} total) against a Cloud SQL instance capped at <code className="font-mono">max_connections={simDbMaxConnections}</code>.
@@ -588,7 +588,7 @@ gcloud sql instances patch primary-postgres \\
         <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              03. The "10X Launch-Day Quota Wall" Radar (Preventing HTTP 429 RESOURCE_EXHAUSTED)
+              The "10X Launch-Day Quota Wall" Radar (Preventing HTTP 429 RESOURCE_EXHAUSTED)
             </h3>
             <p className="text-xs text-zinc-500">
               Having $100,000 in Google for Startups credits does <strong>not</strong> automatically raise your project’s default GPU quota (often <code className="font-mono">0</code>) or single-region Vertex AI RPM limits. Use <strong>Dynamic Shared Quota (DSQ)</strong> + <strong>Cloud Quotas Adjuster</strong> before launch day.
@@ -651,7 +651,7 @@ gcloud beta quotas preferences create \\
         <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              04. Google for Startups Credit Vampire Detector &amp; 1-Click Runway Extender
+              Google for Startups Credit Vampire Detector &amp; 1-Click Runway Extender
             </h3>
             <p className="text-xs text-zinc-500">
               Eliminate silent monthly credit drainers across your live Cloud Storage buckets and BigQuery datasets in project{' '}
@@ -759,7 +759,7 @@ gcloud beta quotas preferences create \\
         <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              05. Enterprise B2B SOC2 Deal-Blocker Audit (Close Fortune 500 Deals Faster)
+              Enterprise B2B SOC2 Deal-Blocker Audit (Close Fortune 500 Deals Faster)
             </h3>
             <p className="text-xs text-zinc-500">
               When your startup lands its first enterprise customer security questionnaire, these 3 GCP findings are the most common deal-breakers.
@@ -807,7 +807,7 @@ gcloud beta quotas preferences create \\
         <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              06. GenAI Token Inflation, -80% Context Caching &amp; Cross-Region TTFT Lag Calculator
+              GenAI Token Inflation, -80% Context Caching &amp; Cross-Region TTFT Lag Calculator
             </h3>
             <p className="text-xs text-zinc-500">
               Stop resending 25,000+ system prompt / RAG context tokens at full price on every chat turn. Enable <strong>Vertex AI Context Caching</strong> and co-locate Cloud Run with your Vertex AI endpoint.

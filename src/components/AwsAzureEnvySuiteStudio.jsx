@@ -2362,16 +2362,15 @@ export default function AwsAzureEnvySuiteStudio({
 
         {/* Sub-Studio Uniform 4-Column Bento Grid (5x4 = 20 in AWS/Azure mode, 2x4 = 8 in Alibaba/Huawei mode) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-          {visibleSubTabs.map((tab, idx) => {
+          {visibleSubTabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeSubTab === tab.id;
-            const stepNum = String(idx + 1).padStart(2, '0');
             const cleanTitle = tab.label.replace(/^\d+\.\s*/, '');
             return (
               <button
                 key={tab.id}
                 type="button"
-                title={`${stepNum}. ${cleanTitle} (${tab.badge})`}
+                title={`${cleanTitle} (${tab.badge})`}
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`w-full h-11 flex items-center justify-between gap-2 px-3 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
                   active
@@ -2382,17 +2381,6 @@ export default function AwsAzureEnvySuiteStudio({
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={`w-5 h-5 shrink-0 inline-flex items-center justify-center rounded-md text-[10px] font-mono font-extrabold ${
-                      active
-                        ? 'bg-white/20 text-white'
-                        : isChinaSuite
-                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
-                    }`}
-                  >
-                    {stepNum}
-                  </span>
                   <Icon className="w-3.5 h-3.5 shrink-0 opacity-90" />
                   <span className="truncate text-left">{cleanTitle}</span>
                 </div>

@@ -287,7 +287,7 @@ export default function Wave16EnterpriseMoonshotStudio({
       {activeTab === 'FINOPS_AUTO_SURGEON' && (
         <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
           <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-            01. Live FinOps Anomaly Auto-Fixer ({finopsCandidates.length} Candidates)
+            Live FinOps Anomaly Auto-Fixer ({finopsCandidates.length} Candidates)
           </h3>
           {finopsCandidates.length === 0 ? (
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-700 dark:text-emerald-300">
@@ -454,7 +454,7 @@ export default function Wave16EnterpriseMoonshotStudio({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                    02. Multi-Region Disaster Recovery (DR) GameDay &amp; RTO/RPO Prover ({evaluatedAssets.length} Live Project Assets)
+                    Multi-Region Disaster Recovery (DR) GameDay &amp; RTO/RPO Prover ({evaluatedAssets.length} Live Project Assets)
                   </h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
                     Select any GCP region below to simulate a regional blackout and inspect which of your project&apos;s buckets, datasets, and services survive vs. go offline.
@@ -695,7 +695,7 @@ export default function Wave16EnterpriseMoonshotStudio({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
                   <div className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-[10.5px] uppercase">
-                    1. Why Are Your Buckets &amp; Services Listed Here?
+                    Why Are Your Buckets &amp; Services Listed Here?
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     Every row below (<code className="font-mono">gs://...</code>, <code className="font-mono">bq://...</code>, <code className="font-mono">run://...</code>) is a <strong>real resource discovered in project {projectId}</strong> via Google Cloud REST APIs. During a regional outage, your app fails if even one single-region bucket or database it depends on goes offline.
@@ -704,7 +704,7 @@ export default function Wave16EnterpriseMoonshotStudio({
 
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
                   <div className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-[10.5px] uppercase">
-                    2. Single-Region (e.g. us-east1) vs. Multi-Region (US)
+                    Single-Region (e.g. us-east1) vs. Multi-Region (US)
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     A bucket or service pinned to a <strong>Single Region</strong> (like <code className="font-mono">us-east1</code>) has <strong>zero cross-region replication</strong>: if <code className="font-mono">us-east1</code> goes dark, it returns <code className="font-mono">HTTP 503</code> (<code className="font-mono">RPO=900s, RTO=180s</code>). <strong>Multi-Region (<code className="font-mono">US</code>/<code className="font-mono">EU</code>)</strong> assets automatically serve traffic from surviving regions (<code className="font-mono">RPO=0s, RTO=2s</code>).
@@ -713,7 +713,7 @@ export default function Wave16EnterpriseMoonshotStudio({
 
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
                   <div className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-[10.5px] uppercase">
-                    3. How to Test &amp; Protect Any Resource Below
+                    How to Test &amp; Protect Any Resource Below
                   </div>
                   <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     Click <strong>Test Outage in &lt;Region&gt;</strong> on any single-region resource to simulate its region going dark, or click <strong>1-Click Protect &amp; Mirror (RPO → 0s)</strong> to enable Object Versioning (<code className="font-mono">storage.buckets.patch</code>) and bind it to the Multi-Region DR Vault.
@@ -909,7 +909,7 @@ export default function Wave16EnterpriseMoonshotStudio({
       {activeTab === 'IAM_LEAST_PRIVILEGE' && (
         <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
           <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-            03. Live IAM Least-Privilege Role Synthesizer ({overPrivilegedGrants.length} Broad Grants)
+            Live IAM Least-Privilege Role Synthesizer ({overPrivilegedGrants.length} Broad Grants)
           </h3>
           {overPrivilegedGrants.length === 0 ? (
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-700 dark:text-emerald-300">
@@ -977,7 +977,7 @@ export default function Wave16EnterpriseMoonshotStudio({
         <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              04. Live BigQuery SQL Dry-Run Cost Surgeon
+              Live BigQuery SQL Dry-Run Cost Surgeon
             </h3>
             <button
               type="button"

@@ -666,7 +666,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                   6-VECTOR REAL-TIME FLIGHT TELEMETRY
                 </div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                  1. Live Aerodynamic &amp; Zero-Trust Hull Vectors
+                  Live Aerodynamic &amp; Zero-Trust Hull Vectors
                 </h3>
               </div>
               <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold">
@@ -722,7 +722,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                   CLOSED-LOOP SELF-HEALING FLIGHT MANEUVERS
                 </div>
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                  2. Autonomous 1-Tap Remediation Queue ({projectId})
+                  Autonomous 1-Tap Remediation Queue ({projectId})
                 </h3>
               </div>
               <span className="text-[11px] font-mono text-zinc-500">

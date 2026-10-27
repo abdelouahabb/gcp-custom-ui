@@ -1110,15 +1110,6 @@ OPTIONS (
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
-                      isActive
-                        ? 'bg-black/25 text-white'
-                        : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
-                    }`}
-                  >
-                    {String(idx + 1).padStart(2, '0')}
-                  </span>
                   <span className="truncate">{tab.label}</span>
                 </div>
                 <span
@@ -1291,7 +1282,7 @@ OPTIONS (
               <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/5 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold font-mono text-red-500">
-                    1. Legacy External Table (Old Way)
+                    Legacy External Table (Old Way)
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/20 text-red-500 font-bold">
                     AVOID IN PROD
@@ -1308,7 +1299,7 @@ OPTIONS (
               <div className="p-4 rounded-xl border border-blue-500/40 bg-blue-500/10 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold font-mono text-blue-600 dark:text-blue-400">
-                    2. BigLake + Apache Iceberg (Open Lakehouse)
+                    BigLake + Apache Iceberg (Open Lakehouse)
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold">
                     MULTI-ENGINE WINNER
@@ -1325,7 +1316,7 @@ OPTIONS (
               <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
-                    3. Native BigQuery Table (`Capacitor`)
+                    Native BigQuery Table (`Capacitor`)
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold">
                     PURE SQL WAREHOUSE
@@ -1931,7 +1922,7 @@ OPTIONS (
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-emerald-400">
-                  1. BigLake Row Access Policy &amp; Column Data Masking DDL
+                  BigLake Row Access Policy &amp; Column Data Masking DDL
                 </span>
                 <button
                   type="button"
@@ -1951,7 +1942,7 @@ OPTIONS (
             <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold font-mono text-blue-400">
-                  2. BigLake Omni Cross-Cloud Connection &amp; Iceberg Table (`{omniRegion}`)
+                  BigLake Omni Cross-Cloud Connection &amp; Iceberg Table (`{omniRegion}`)
                 </span>
                 <button
                   type="button"
@@ -2033,7 +2024,7 @@ OPTIONS (
             <div className="lg:col-span-5 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3.5 text-xs font-mono">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold uppercase text-blue-600 dark:text-blue-400">
-                  Module 1 · Cross-Cloud Federated Catalog Wizard
+                  Cross-Cloud Federated Catalog Wizard
                 </span>
                 <div className="inline-flex rounded-lg border border-zinc-300 dark:border-zinc-700 overflow-hidden">
                   <button
@@ -2318,7 +2309,7 @@ OPTIONS (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h4 className="text-xs font-extrabold uppercase text-amber-600 dark:text-amber-400">
-                  Module 2 · Databricks &ldquo;Double-Tax&rdquo; (DBUs + GCE VMs) vs. 100% Native Google Cloud TCO Calculator
+                  Databricks &ldquo;Double-Tax&rdquo; (DBUs + GCE VMs) vs. 100% Native Google Cloud TCO Calculator
                 </h4>
                 <p className="text-[11px] text-zinc-500 mt-0.5 font-sans">
                   On Databricks, you pay a software DBU surcharge ($0.15–$0.70/DBU) on top of underlying GCE VMs—even when interactive clusters sit idle between notebook cells. Compare against BigQuery ($0 idle) + Dataproc Serverless Spark 2.2 ($0.00 DBU tax, &lt;5s startup, scales to $0).
@@ -2455,7 +2446,7 @@ OPTIONS (
             <div className="lg:col-span-5 p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-xs font-extrabold font-mono uppercase text-blue-600 dark:text-blue-400">
-                  Module 3 · Paste Databricks Code (`dbutils` / `DeltaTable`)
+                  Paste Databricks Code (`dbutils` / `DeltaTable`)
                 </span>
                 <div className="flex items-center gap-1">
                   {[
@@ -2535,7 +2526,7 @@ df.write.format("delta").mode("overwrite").save("dbfs:/mnt/gold/clickstream_agg"
               <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                    1. Transpiled Native Dataproc Serverless Spark 2.2 + BigLake Iceberg ($0 DBU Tax)
+                    Transpiled Native Dataproc Serverless Spark 2.2 + BigLake Iceberg ($0 DBU Tax)
                   </span>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -2570,7 +2561,7 @@ df.write.format("delta").mode("overwrite").save("dbfs:/mnt/gold/clickstream_agg"
               <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-extrabold font-mono text-blue-600 dark:text-blue-400">
-                    2. Transpiled BigQuery Federated Unity SQL &amp; Native BigLake Iceberg DDL
+                    Transpiled BigQuery Federated Unity SQL &amp; Native BigLake Iceberg DDL
                   </span>
                   <div className="flex items-center gap-1.5">
                     <button

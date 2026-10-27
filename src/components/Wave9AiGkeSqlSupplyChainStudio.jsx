@@ -517,14 +517,14 @@ options:
             {
               id: 'CLOUD_BUILD_GITHUB',
               label:
-                '1. GitHub → Cloud Build → Artifact Registry → Cloud Run / GKE',
+                'GitHub → Cloud Build → Artifact Registry → Cloud Run / GKE',
               badge: `${cbData?.summary?.totalBuilds || 0} Builds`,
               tip: 'Build container images directly from a GitHub repository via Google Cloud Build and push to Artifact Registry + deploy to Cloud Run or GKE',
             },
             {
               id: 'SUPPLY_CHAIN_AR',
               label:
-                '2. Artifact Registry Repositories & 1-Click Orphan Digest Sweeper',
+                'Artifact Registry Repositories & 1-Click Orphan Digest Sweeper',
               badge: `${arData?.summary?.totalImagesCount || 0} Digests (${
                 arData?.summary?.orphanDigestCount || 0
               } Orphans)`,

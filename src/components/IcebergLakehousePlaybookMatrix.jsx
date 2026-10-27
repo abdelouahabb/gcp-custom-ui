@@ -2008,22 +2008,22 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                   {
                     id: 'MIGRATE_VS_FEDERATE',
                     code: 'S1',
-                    label: '#30 Migrate vs. Federate',
+                    label: 'Migrate vs. Federate',
                   },
                   {
                     id: 'BQ_VS_TRINO',
                     code: 'S2',
-                    label: '#13 BigQuery vs. Trino',
+                    label: 'BigQuery vs. Trino',
                   },
                   {
                     id: 'HMS_100_MIGRATOR',
                     code: 'S3',
-                    label: '#2/#5 100+ HMS to Iceberg',
+                    label: '100+ HMS to Iceberg',
                   },
                   {
                     id: 'COMPACTION_AUTOCLASS',
                     code: 'S4',
-                    label: '#23/#25 Compaction & Autoclass',
+                    label: 'Compaction & Autoclass',
                   },
                 ].map((sim) => {
                   const active = simulatorTab === sim.id;
@@ -2032,21 +2032,12 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                       key={sim.id}
                       type="button"
                       onClick={() => setSimulatorTab(sim.id)}
-                      className={`w-full h-10 px-3 rounded-xl text-[11px] font-mono font-bold cursor-pointer border flex items-center justify-between gap-2 transition-all ${
+                      className={`w-full h-10 px-3 rounded-xl text-[11px] font-mono font-bold cursor-pointer border flex items-center justify-center gap-2 transition-all ${
                         active
                           ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                           : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                       }`}
                     >
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
-                          active
-                            ? 'bg-black/25 text-white'
-                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
-                        }`}
-                      >
-                        {sim.code}
-                      </span>
                       <span className="truncate">{sim.label}</span>
                     </button>
                   );

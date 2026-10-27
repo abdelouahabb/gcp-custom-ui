@@ -1092,7 +1092,7 @@ export default function GoogleCloudRemoteMcpStudio({
           <div className="flex items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                1. Official Google Cloud Remote MCP Endpoints
+                Official Google Cloud Remote MCP Endpoints
               </h3>
               <p className="text-[11px] text-zinc-500">
                 Click any server to run live JSON-RPC <code className="font-mono">tools/list</code>
@@ -1190,7 +1190,7 @@ export default function GoogleCloudRemoteMcpStudio({
                 LIVE JSON-RPC 2.0 WORKBENCH · {serverToolsData?.endpointUrl || 'https://bigquery.googleapis.com/mcp'}
               </div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                2. Interactive MCP Tool Schema Inspector &amp; Live <code className="font-mono">tools/call</code> Executor
+                Interactive MCP Tool Schema Inspector &amp; Live <code className="font-mono">tools/call</code> Executor
               </h3>
             </div>
             <div className="flex items-center gap-2 text-xs font-mono">
@@ -1479,7 +1479,7 @@ export default function GoogleCloudRemoteMcpStudio({
               CROSS-SERVICE REMOTE MCP ORCHESTRATION
             </div>
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-              3. Autonomous Multi-Server MCP Triage &amp; Intelligence Chains
+              Autonomous Multi-Server MCP Triage &amp; Intelligence Chains
             </h3>
             <p className="text-xs text-zinc-500">
               Executes coordinated JSON-RPC 2.0 <code className="font-mono">tools/call</code>{' '}
@@ -1583,7 +1583,7 @@ export default function GoogleCloudRemoteMcpStudio({
               ZERO-HALLUCINATION AGENTIC SRE · VERTEX AI GEMINI + 5 REMOTE MCP SERVERS
             </div>
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-              4. Gemini 3.8 Flash Live MCP Review &amp; Tool-Calling Architect
+              Gemini 3.8 Flash Live MCP Review &amp; Tool-Calling Architect
             </h3>
             <p className="text-xs text-zinc-500">
               Autonomously invokes <code className="font-mono">cloudbilling</code>,{' '}
@@ -1675,7 +1675,7 @@ export default function GoogleCloudRemoteMcpStudio({
                 1-CLICK DEVELOPER IDE EXPORT
               </div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                5. Export Official GCP Remote MCP Config
+                Export Official GCP Remote MCP Config
               </h3>
             </div>
             <div className="flex gap-1">
