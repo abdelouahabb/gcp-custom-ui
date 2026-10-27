@@ -428,7 +428,7 @@ const DOC_SECTIONS = [
     badge: 'DATA ENGINEERING + BIGLAKE TAB',
     badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
     icon: Layers,
-    targetTab: 'DATA_ENGINEERING',
+    targetTab: 'DATA_ENGINEER_STUDIO',
     problemSolved:
       'Modern Lakehouse architects and data engineers need concrete, copy-ready blueprints and live provisioning across all 50 enterprise Apache Iceberg scenarios—spanning Open Iceberg REST Catalogs, 100+ Hive Metastore (HMS) & Delta Lake migrations, BigQuery + Spark 3.5 + Trino multi-engine concurrency, Streaming CDC (Kafka / Beam / Debezium), Multi-Petabyte GCS Prefix Hashing & Autoclass, Borderless Multi-Cloud (S3 / ADLS / CCI), Row/Column Security + WORM Vaults, Spanner/AlloyDB/Bigtable HTAP, and GenAI Semantic SQL (`AI.IF` / `VECTOR_SEARCH`).',
     howItWorks: [
@@ -1337,48 +1337,52 @@ const DOC_SECTIONS = [
     id: 'wave4-global-world-map',
     wave: 'WAVE 4 · 40-REGION ORBITAL MAP',
     title:
-      'Global Cloud Map · All 40 Official Regions, 121 Zones, Tactical Spotlight & Chaos Failover',
+      'Global Cloud Map · All 40 Official Regions, 121 Zones, 3-Pillar Command Dock, Plain-English Jargon Decoder & Live Telemetry',
     badge: 'GLOBAL MAP TAB',
     badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Globe,
     targetTab: 'GLOBAL_MAP',
     problemSolved:
-      'Standard cloud consoles list regions and firewall rules as static text tables, making it impossible to see all 40 Google Cloud regions and 121 zones geographically, test regional/zonal failover, measure subsea fiber RTT latency, or inspect live packet filtering without UI lag or overlapping badges when zoomed in.',
+      'Standard cloud consoles list regions and firewall rules as static text tables, making it impossible to see all 40 Google Cloud regions and 121 zones geographically, decode cryptic networking abbreviations (★ WINNER, SHADOWED, P-65535, CFE %, RTT), test regional/zonal failover, measure live TLS 1.3 socket latency, or replay real Cloud Audit & VPC Firewall logs on an interactive world map.',
     howItWorks: [
-      'All 40 Official GCP Regions & 121 Orbiting Availability Zones: Complete geographic catalog across North America (11), South America (2), Europe (12), Middle East (3), Africa (1), Asia (9), and Oceania (2) with interactive continent presets and full directory matrix.',
-      'Tactical Spotlight Focus & Inverse-Zoom Scaling: When zoomed in (up to 6.0x with cursor-locked wheel zoom and WASD/Arrow panning that never scrolls the outer web page), only the selected/hovered region expands its orbiting Availability Zone satellite ring (-a/-b/-c/-f) with intra-region fiber spokes, while unselected neighbors fade into 18% opacity Ghost Mode so labels never collide.',
-      'Chaos Outage & Automatic Traffic Failover Simulator: Sever any region or individual Availability Zone in 1 click to watch live packets automatically reroute (⇄FAILOVER) to healthy backup zones or peer regions.',
-      'Point-to-Point Subsea Fiber RTT Laser, Multi-Lens Switcher (Traffic / Carbon CFE% / Spot Price), DVR Time-Machine Scrubber (20 snapshots), Performance Cadence Guardrails (100ms–1000ms), and Coordinate-Locked Drop-Pod Provisioning.',
+      'All 40 Official GCP Regions, 121 Orbiting Availability Zones & Plain-English Jargon Decoder: Complete geographic catalog across North America (11), South America (2), Europe (12), Middle East (3), Africa (1), Asia (9), and Oceania (2) with a built-in Jargon Decoder Bar (★ WINNER, SHADOWED, P-65535, CFE %, TLS 1.3, RTT) and hover explanations on every badge.',
+      'Streamlined 3-Pillar Command Dock with Lucide Icons: Consolidates map operations into 3 focused modes: (1) Firewall X-Ray & Packet Matrix (priority evaluation, shadow detection & 1-click jump to VPC Firewalls), (2) Failover, Chaos & Teleport (live Cloud Run cross-region migration with Greenest/Cheapest/Nearest smart recommendations + 1-Tap 3-Tier Stack Deploy), and (3) Audit & Log Replay (streams real cloudaudit.googleapis.com & compute.googleapis.com/firewall logs onto the globe with toggleable Inspect Event / Close Inspection detail cards).',
+      'Tactical Spotlight Focus & Inverse-Zoom Scaling: When zoomed in (up to 6.0x with cursor-locked wheel zoom and WASD/Arrow panning), only the selected/hovered region expands its orbiting Availability Zone satellite ring (-a/-b/-c/-f) with intra-region fiber spokes, while unselected neighbors fade into 18% opacity Ghost Mode.',
+      'Point-to-Point Subsea Fiber RTT Laser, Multi-Lens Switcher (Traffic / Carbon CFE% / Spot Price), and Live TLS 1.3 Regional Endpoint Latency Probing.',
     ],
     apisUsed: [
+      'GET /api/project/:id/global-map/live-telemetry (Live TLS 1.3 regional socket RTT + Cloud Audit & VPC Firewall logs)',
       'Live evaluation over GET /api/project/:id/overview (vpcs, firewalls, resources)',
-      'POST /api/project/:id/provision (Coordinate-Locked Drop-Pod VM/Cloud Run & Priority-100 Cyber-Shield)',
+      'POST /api/project/:id/provision & POST /api/project/:id/stack-deploy',
     ],
     billingImpact:
-      '100% client-side visual simulation ($0 cost) with configurable tick rate (default 4 FPS / 250ms) and auto-pause on hidden tab to ensure zero CPU hang.',
+      '100% $0.00/mo read-only telemetry and visual simulation with configurable tick rate (default 4 FPS / 250ms) and auto-pause on hidden tab.',
   },
   {
     id: 'core-enterprise-firewall',
     wave: 'WAVE 1 · ZERO-TRUST SECURITY',
-    title: 'Enterprise VPC Firewall Command Center (ALLOW/DENY, INGRESS/EGRESS & Packet Tester)',
-    badge: 'VPC & FIREWALLS TAB',
+    title:
+      'Enterprise VPC Networks & Zero-Trust Firewall Command Center (Create/Edit/Delete, 1-Click Logs: ON/OFF, Sensitive Filter & Packet Tester)',
+    badge: 'VPC & FIREWALLS TAB (TOP OF PAGE)',
     badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: ShieldAlert,
     targetTab: 'VPC_NETWORKS',
     problemSolved:
-      'Managing production VPC security requires full control over both ALLOW and DENY actions, INGRESS and EGRESS directions, priority ordering (0–65535), multi-protocol port matrices, in-place rule editing (PATCH), and instant IAP lockdown.',
+      'Managing production VPC security requires immediate visibility at the top of the VPC & Firewalls tab with full control over ALLOW/DENY actions, INGRESS/EGRESS directions, priority ordering (0–65535), in-place rule creation/editing/deletion, 1-click VPC Firewall Logging toggles (with clear Cloud Logging storage ingestion warnings), strict filtering for CRITICAL/HIGH sensitive 0.0.0.0/0 exposures, and rich hover explanation cards.',
     howItWorks: [
-      'Full ALLOW & DENY + INGRESS & EGRESS Studio: Create or edit firewall rules in-place with multi-protocol rows (tcp, udp, icmp, sctp, esp, all), custom priorities (0–65535), target network tags, and firewall audit logging.',
-      '1-Tap Lock to IAP (35.235.240.0/20) & 1-Tap Pause/Enable: Automatically flags rules exposing SSH (22), RDP (3389), or DB ports to 0.0.0.0/0 and locks them down to Google Cloud IAP in 1 click, or pauses/enables any rule via PATCH.',
-      'Interactive Packet Priority Match Simulator: Test any hypothetical packet against your priority-sorted rules + Google Cloud implied fallback rules (65535) to see which exact rule wins.',
+      'Full ALLOW & DENY + INGRESS & EGRESS Studio (+ New Firewall Rule / Edit / Delete): Create, edit in-place (PATCH), or delete firewall rules at the top of the VPC & Firewalls tab with 4 quick templates (SSH via IAP 35.235.240.0/20, Public HTTPS/HTTP, Block Suspicious CIDR, Block Egress Port), multi-protocol rows (tcp, udp, icmp, sctp, esp, all), custom priorities (0–65535), and target network tags.',
+      '1-Click Live Firewall Audit Logging Toggle (● Logs: ON / ○ Logs: OFF) & Storage Ingestion Warning: Toggle logConfig.enable (INCLUDE_ALL_METADATA) on any firewall rule in 1 click via PATCH /api/project/:id/firewalls/:name. Hovering explains both its forensic value and its Cloud Logging _Default bucket storage impact (every matched connection writes a JSON record consuming your 50 GiB/mo Free Tier and billing $0.50/GiB beyond 50 GiB/mo + 30-day retention).',
+      'Strict 0.0.0.0/0 Sensitive Filter & "Inspect N Flagged Rules" Button: Clicking the 0.0.0.0/0 Sensitive KPI card, filter dropdown, or "Inspect N Flagged Rules" strictly isolates CRITICAL and HIGH risk rules (SSH:22, RDP:3389, MySQL:3306, PostgreSQL:5432, Redis:6379, MongoDB:27017, All-Ports open to 0.0.0.0/0) while excluding standard MODERATE HTTP/HTTPS rules, and smoothly scrolls to the Live VPC Firewall Rules list.',
+      '1-Tap Lock to IAP (35.235.240.0/20), 1-Tap Restore 0.0.0.0/0, 1-Tap Pause/Enable & Interactive Packet Priority Match Simulator ("Packet Tester") with full 4-section Google Cloud Console hover explanation cards on every option.',
     ],
     apisUsed: [
-      'POST /api/project/:id/provision (serviceType: VPC_FIREWALL)',
-      'PATCH /api/project/:id/firewalls/:firewallName',
+      'GET /api/project/:id/vpc-firewalls (Dedicated live VPC networks + firewall rules endpoint)',
+      'POST /api/project/:id/provision (serviceType: VPC_FIREWALL) & DELETE /api/project/:id/resource',
+      'PATCH /api/project/:id/firewalls/:firewallName (sourceRanges, disabled, enableLogging, priority, allowed/denied)',
       'GET /api/project/:id/operation-status (Live GCP Global Operation progress bar)',
     ],
     billingImpact:
-      'VPC Firewall rules are free on Google Cloud ($0/mo). Locking down open ports prevents unauthorized compute abuse.',
+      'VPC Firewall rules are $0.00/mo on Google Cloud. Enabling Firewall Rules Logging (Logs: ON) ingests connection records into Cloud Logging (first 50 GiB/mo free per project, then $0.50/GiB ingested).',
   },
   {
     id: 'core-emergency-killswitch',
@@ -1558,7 +1562,7 @@ const DOC_SECTIONS = [
     badgeColor:
       'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
     icon: Rocket,
-    targetTab: 'VPC_NETWORK',
+    targetTab: 'VPC_NETWORKS',
     problemSolved:
       'Instead of isolating Google Cloud’s 10 architectural advantages in a standalone marketing tab, engineers need those capabilities embedded directly inside the operational studio where they manage VPCs, Cloud Run, BigQuery, VMs, IAM, Storage, and GKE.',
     howItWorks: [
@@ -1607,7 +1611,7 @@ const DOC_SECTIONS = [
     badgeColor:
       'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
     icon: Terminal,
-    targetTab: 'VM_FLEET',
+    targetTab: 'VM_SSH',
     problemSolved:
       'Restarting a VM changes its ephemeral IP, IAP firewall hardening blocks raw port 22 without --tunnel-through-iap, OS Login changes Linux usernames (<local_user> vs <user>_gmail_com), and transferring/editing remote VM files via CLI flags is slow.',
     howItWorks: [
@@ -1660,7 +1664,7 @@ const DOC_SECTIONS = [
     badgeColor:
       'bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30',
     icon: Database,
-    targetTab: 'DATA_ENGINEER',
+    targetTab: 'DATA_ENGINEER_STUDIO',
     problemSolved:
       'Data teams paying the $0.15-$0.55/DBU Databricks markup need both a zero-copy Iceberg REST federation bridge for existing Databricks Unity Catalog / AWS Glue tables AND a 100% native Google Cloud replacement for PySpark notebooks, Delta Live Tables (@dlt.expect), and MLflow—while platform operators need self-contained studio navigation (no cross-studio exit traps), compact <select> filter toolbars, inline SKU Price Drift attribution, and VM metadata/tag/label filtering with Free-Tier pd-standard HDD defaults.',
     howItWorks: [
@@ -1677,6 +1681,32 @@ const DOC_SECTIONS = [
     ],
     billingImpact:
       'Eliminates the 25%-45% Databricks DBU compute markup ($0.00 DBU tax on BigQuery/BigFrames/Dataform) and prevents accidental paid SSD charges by defaulting new VMs to Free-Tier eligible pd-standard HDD.',
+  },
+  {
+    id: 'global-map-3-pillar-command-dock-and-live-vpc-firewall-center',
+    wave: 'WAVE 19 GLOBAL MAP 3-PILLAR COMMAND DOCK & ENTERPRISE VPC FIREWALL STUDIO',
+    title:
+      '47. Global Map 3-Pillar Command Dock + Plain-English Jargon Decoder & Restored Top-of-Page Live VPC Firewall Rules Center (1-Click Logs: ON/OFF + Storage Ingestion Guardrail)',
+    badge: 'Global Map + VPC & Firewalls Tab (Top of Page)',
+    badgeColor:
+      'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
+    icon: ShieldCheck,
+    targetTab: 'VPC_NETWORKS',
+    problemSolved:
+      'The Global Map previously mixed 5 overlapping sub-modes and unexplained abbreviations (★ WINNER, SHADOWED, P-65535, CFE %) while closing an inspected Audit/Firewall event prevented re-inspecting it. Meanwhile, on the VPC & Firewalls tab, the Live VPC Firewall Rules CRUD studio needed to be prominently positioned at the very top of the page with 1-click live Firewall Logging toggles (Logs: ON / Logs: OFF), explicit Cloud Logging _Default storage ingestion warnings, strict CRITICAL/HIGH filtering on "0.0.0.0/0 Sensitive" & "Inspect N Flagged Rules", and hover explanation cards on every option.',
+    howItWorks: [
+      'Global Map 3-Pillar Command Dock with Lucide Icons & Plain-English Jargon Decoder (GlobalNetworkWorldMap.jsx): Streamlines map operations into (1) Firewall X-Ray & Packet Matrix, (2) Failover, Chaos & Teleport (with Greenest/Cheapest/Nearest smart recommendations), and (3) Audit & Log Replay (with a fixed toggleable Inspect Event / Close Inspection card and stopPropagation on the Close button so events can be re-inspected anytime).',
+      'Top-of-Page Enterprise VPC Networks & Zero-Trust Firewall Center (VpcNetworksAndFirewalls.jsx + GET /api/project/:id/vpc-firewalls): Displays Live VPC Firewall Rules (ALLOW/DENY, INGRESS/EGRESS, Create/Edit/Delete, 4 Quick Templates, and Interactive Packet Priority Match Simulator) at the top of the VPC & Firewalls tab.',
+      '1-Click Live Firewall Audit Logging Toggle (● Logs: ON / ○ Logs: OFF) & Cloud Logging Storage Ingestion Warning: Clicking the Logs badge on any firewall rule patches logConfig.enable (INCLUDE_ALL_METADATA) live via PATCH /api/project/:id/firewalls/:name, while the hover explainer warns that every matched TCP/UDP/ICMP connection writes a JSON log entry into the Cloud Logging _Default bucket (consuming the 50 GiB/mo Free Tier and billing $0.50/GiB beyond 50 GiB/mo).',
+      'Strict 0.0.0.0/0 Sensitive Filter & Comprehensive Hover Explainers (InnovationHoverExplainer.jsx): Clicking "0.0.0.0/0 Sensitive" or "Inspect N Flagged Rules" strictly filters for CRITICAL and HIGH risk exposures (SSH:22, RDP:3389, DB ports, All-Ports open to 0.0.0.0/0), clears stale search/VPC filters, and smoothly scrolls to #live-vpc-firewall-rules-section.',
+    ],
+    apisUsed: [
+      'GET /api/project/:id/vpc-firewalls & GET /api/project/:id/global-map/live-telemetry',
+      'PATCH /api/project/:id/firewalls/:firewallName (enableLogging, sourceRanges, disabled, priority, allowed/denied)',
+      'POST /api/project/:id/provision (serviceType: VPC_FIREWALL) & DELETE /api/project/:id/resource',
+    ],
+    billingImpact:
+      'VPC Firewall rules and Global Map TLS 1.3 telemetry probes cost $0.00/mo; hover explainers explicitly warn before enabling Firewall Rules Logging on high-traffic rules so you stay within the 50 GiB/mo Cloud Logging Free Tier.',
   },
 ];
 
