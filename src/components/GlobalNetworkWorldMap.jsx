@@ -7262,6 +7262,8 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 {
                   id: 'FIREWALL_XRAY',
                   featureId: 'GLOBAL_MAP_10X_FIREWALL_XRAY',
+                  icon: Shield,
+                  iconTone: 'text-emerald-500',
                   label: `1. Live Firewall X-Ray (0→65535 · ${customPacketXRay.steps.length} Rules)`,
                   badge: customPacketXRay.verdict,
                   badgeColor:
@@ -7272,6 +7274,8 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 {
                   id: 'FAILOVER_TELEPORTER',
                   featureId: 'GLOBAL_MAP_10X_FAILOVER_TELEPORT',
+                  icon: Zap,
+                  iconTone: 'text-amber-500',
                   label: `2. Multi-Region Outage Failover & 1-Tap Teleport`,
                   badge:
                     severedRegions.length > 0
@@ -7285,6 +7289,8 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 {
                   id: 'AUDIT_TIME_MACHINE',
                   featureId: 'GLOBAL_MAP_10X_TIME_MACHINE',
+                  icon: Activity,
+                  iconTone: 'text-sky-500',
                   label: `3. Cloud Audit & Log Time-Machine (${liveTimeMachineEvents.length} Events)`,
                   badge:
                     timeMachineCursor > 0
@@ -7297,19 +7303,31 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                 },
               ].map((tab) => {
                 const isActive = active10xDockTab === tab.id;
+                const TabIcon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     type="button"
                     data-feature-id={tab.featureId}
                     onClick={() => setActive10xDockTab(tab.id)}
-                    className={`flex items-center justify-between gap-1.5 h-8 px-2.5 rounded-lg text-[10.5px] font-extrabold transition-all cursor-pointer min-w-0 ${
+                    className={`flex items-center justify-between gap-1.5 h-8.5 px-2.5 rounded-lg text-[10.5px] font-extrabold transition-all cursor-pointer min-w-0 ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-xs'
                         : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                     }`}
                   >
-                    <span className="truncate">{tab.label}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className={`inline-flex items-center justify-center w-5 h-5 rounded-md shrink-0 ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-zinc-100 dark:bg-zinc-800/90 ' + tab.iconTone
+                        }`}
+                      >
+                        <TabIcon className="w-3.5 h-3.5 shrink-0" />
+                      </span>
+                      <span className="truncate">{tab.label}</span>
+                    </div>
                     <span
                       className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
                         isActive ? 'bg-white/20 text-white' : tab.badgeColor
@@ -8790,8 +8808,9 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     }
                     className="p-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-left cursor-pointer"
                   >
-                    <div className="font-extrabold text-emerald-600 dark:text-emerald-300 truncate">
-                      Greenest Valid
+                    <div className="font-extrabold text-emerald-600 dark:text-emerald-300 truncate flex items-center gap-1">
+                      <Leaf className="w-3 h-3 shrink-0" />
+                      <span className="truncate">Greenest Valid</span>
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-200 font-bold truncate">
                       {
@@ -8825,8 +8844,9 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     }
                     className="p-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-left cursor-pointer"
                   >
-                    <div className="font-extrabold text-blue-600 dark:text-blue-300 truncate">
-                      Cheapest + Green
+                    <div className="font-extrabold text-blue-600 dark:text-blue-300 truncate flex items-center gap-1">
+                      <Zap className="w-3 h-3 shrink-0" />
+                      <span className="truncate">Cheapest + Green</span>
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-200 font-bold truncate">
                       {
@@ -8862,8 +8882,9 @@ ${JSON.stringify(bundle.rawPayload, null, 2)}
                     }
                     className="p-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-left cursor-pointer"
                   >
-                    <div className="font-extrabold text-blue-600 dark:text-blue-300 truncate">
-                      Local Continent
+                    <div className="font-extrabold text-blue-600 dark:text-blue-300 truncate flex items-center gap-1">
+                      <Globe className="w-3 h-3 shrink-0" />
+                      <span className="truncate">Local Continent</span>
                     </div>
                     <div className="text-zinc-700 dark:text-zinc-200 font-bold truncate">
                       {
