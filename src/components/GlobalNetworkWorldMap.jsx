@@ -7050,46 +7050,67 @@ export default function GlobalNetworkWorldMap({
                     )}
                   </div>
 
-                  {/* Step-by-Step Priority 0 -> 65535 Rule Evaluation Pills */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
-                    {customPacketXRay.steps.map((step) => {
-                      const isWinner = step.status === 'WINNING_MATCH';
-                      const isShadowed = step.status === 'SHADOWED_MATCH';
-                      return (
-                        <div
-                          key={`${step.name}-${step.priority}`}
-                          title={step.reason}
-                          className={`px-2 py-1 rounded-lg border text-[9.5px] flex items-center gap-1.5 ${
-                            isWinner
-                              ? step.action === 'ALLOW'
-                                ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-200 font-extrabold shadow-xs'
-                                : 'bg-red-500/15 border-red-500 text-red-700 dark:text-red-200 font-extrabold shadow-xs'
-                              : isShadowed
-                              ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-bold'
-                              : 'bg-zinc-50 dark:bg-zinc-950/70 border-zinc-200 dark:border-zinc-800/80 text-zinc-400'
-                          }`}
-                        >
-                          <span className="px-1 py-0.2 rounded bg-black/15 dark:bg-white/10 font-extrabold">
-                            P-{step.priority}
-                          </span>
-                          <span>{step.name}</span>
-                          <span className="opacity-75">
-                            ({step.action} {step.portsSummary})
-                          </span>
-                          <span className="uppercase text-[8.5px] px-1 rounded bg-black/10 dark:bg-white/10">
-                            {isWinner
-                              ? '★ WINNER'
-                              : isShadowed
-                              ? 'SHADOWED'
-                              : step.status === 'SKIPPED_CIDR'
-                              ? 'CIDR SKIP'
-                              : step.status === 'SKIPPED_PORT'
-                              ? 'PORT SKIP'
-                              : 'DISABLED'}
-                          </span>
-                        </div>
-                      );
-                    })}
+                  {/* Step-by-Step Priority 0 -> 65535 Rule Evaluation Vertical Scrollable List */}
+                  <div className="pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1">
+                    <div className="flex items-center justify-between text-[9px] font-extrabold uppercase tracking-wider text-zinc-400 px-1">
+                      <span>
+                        Evaluated VPC Firewall Rules ({customPacketXRay.steps.length} total · ordered by Priority 0 ➔ 65535)
+                      </span>
+                      <span>Scroll to inspect all rules ↕</span>
+                    </div>
+                    <div className="max-h-44 overflow-y-auto flex flex-col gap-1.5 pr-1">
+                      {customPacketXRay.steps.map((step, idx) => {
+                        const isWinner = step.status === 'WINNING_MATCH';
+                        const isShadowed = step.status === 'SHADOWED_MATCH';
+                        return (
+                          <div
+                            key={`${step.name}-${step.priority}-${idx}`}
+                            title={step.reason}
+                            className={`w-full px-2.5 py-1.5 rounded-lg border text-[10px] flex items-center justify-between gap-2 ${
+                              isWinner
+                                ? step.action === 'ALLOW'
+                                  ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-200 font-extrabold shadow-xs'
+                                  : 'bg-red-500/15 border-red-500 text-red-700 dark:text-red-200 font-extrabold shadow-xs'
+                                : isShadowed
+                                ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-bold'
+                                : 'bg-zinc-50 dark:bg-zinc-950/70 border-zinc-200 dark:border-zinc-800/80 text-zinc-500 dark:text-zinc-400'
+                            }`}
+                          >
+                            <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                              <span className="shrink-0 w-5 text-right font-mono text-[9px] opacity-60">
+                                #{idx + 1}
+                              </span>
+                              <span className="shrink-0 px-1.5 py-0.5 rounded bg-black/15 dark:bg-white/10 font-mono font-extrabold text-[9.5px]">
+                                P-{step.priority}
+                              </span>
+                              <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                                {step.name}
+                              </span>
+                              <span className="opacity-80 font-mono text-[9.5px]">
+                                [{step.action} · {step.portsSummary} · CIDR:{' '}
+                                {(step.sourceRanges || []).join(', ')}]
+                              </span>
+                            </div>
+                            <div className="shrink-0 flex items-center gap-2">
+                              <span className="hidden md:inline text-[9px] opacity-75 truncate max-w-64">
+                                {step.reason}
+                              </span>
+                              <span className="shrink-0 uppercase text-[8.5px] font-extrabold px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10">
+                                {isWinner
+                                  ? '★ WINNER'
+                                  : isShadowed
+                                  ? 'SHADOWED'
+                                  : step.status === 'SKIPPED_CIDR'
+                                  ? 'CIDR SKIP'
+                                  : step.status === 'SKIPPED_PORT'
+                                  ? 'PORT SKIP'
+                                  : 'DISABLED'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -7325,41 +7346,74 @@ export default function GlobalNetworkWorldMap({
                   </div>
                 </div>
 
-                {/* Clickable Real Event Pills (Live Flowing Packets + Cloud Audit Logs + TLS Sockets) */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
-                  {liveTimeMachineEvents.slice(0, 8).map((ev, idx) => {
-                    const active = timeMachineCursor === idx + 1;
-                    const isLiveHead = timeMachineCursor === 0 && idx === 0;
-                    return (
-                      <button
-                        key={ev.id}
-                        type="button"
-                        onClick={() => {
-                          setTimeMachineCursor(idx + 1);
-                          setSelectedRegionId(ev.regionId);
-                          setIsRegionPinnedOnMap(true);
-                        }}
-                        className={`px-2 py-1 rounded-lg border text-[9.5px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                          active
-                            ? 'bg-sky-500/20 border-sky-400 text-sky-600 dark:text-sky-200 shadow-xs'
-                            : isLiveHead
-                            ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-zinc-50 dark:bg-zinc-950/70 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-sky-500/40'
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            ev.verdict === 'ALLOW'
-                              ? 'bg-emerald-400'
-                              : 'bg-red-500'
+                {/* Vertical Scrollable List of All Live Events (Flowing Packets + Cloud Audit Logs + TLS Sockets) */}
+                <div className="pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1">
+                  <div className="flex items-center justify-between text-[9px] font-extrabold uppercase tracking-wider text-zinc-400 px-1">
+                    <span>
+                      Chronological Event Stream ({liveTimeMachineEvents.length}{' '}
+                      captured · click any row to pin & replay on map)
+                    </span>
+                    <span>Scroll to view all ({liveTimeMachineEvents.length}) ↕</span>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto flex flex-col gap-1.5 pr-1">
+                    {liveTimeMachineEvents.map((ev, idx) => {
+                      const active = timeMachineCursor === idx + 1;
+                      const isLiveHead = timeMachineCursor === 0 && idx === 0;
+                      return (
+                        <button
+                          key={ev.id}
+                          type="button"
+                          onClick={() => {
+                            setTimeMachineCursor(idx + 1);
+                            setSelectedRegionId(ev.regionId);
+                            setIsRegionPinnedOnMap(true);
+                          }}
+                          className={`w-full px-2.5 py-1.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                            active
+                              ? 'bg-sky-500/20 border-sky-400 text-sky-600 dark:text-sky-200 shadow-xs'
+                              : isLiveHead
+                              ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-zinc-50 dark:bg-zinc-950/70 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-sky-500/40'
                           }`}
-                        />
-                        <span className="text-zinc-400">[{ev.timestamp}]</span>
-                        <span>{ev.regionId}</span>
-                        <span className="opacity-70">· {ev.summary}</span>
-                      </button>
-                    );
-                  })}
+                        >
+                          <div className="min-w-0 flex items-center gap-2 overflow-hidden">
+                            <span className="shrink-0 w-6 text-right font-mono text-[9px] text-zinc-400">
+                              #{idx + 1}
+                            </span>
+                            <span
+                              className={`shrink-0 px-1.5 py-0.5 rounded text-[8.5px] font-extrabold ${
+                                ev.verdict === 'ALLOW'
+                                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
+                                  : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
+                              }`}
+                            >
+                              {ev.verdict === 'ALLOW' ? '● ALLOW' : '✕ DENY'}
+                            </span>
+                            <span className="shrink-0 font-mono text-[9.5px] text-zinc-400">
+                              [{ev.timestamp}]
+                            </span>
+                            <span className="shrink-0 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono text-[9px]">
+                              {ev.category}
+                            </span>
+                            <span className="shrink-0 font-extrabold text-zinc-900 dark:text-zinc-100">
+                              {ev.sourceIp || 'edge'} ➔ {ev.regionId}
+                              {ev.regionCity ? ` (${ev.regionCity})` : ''}
+                            </span>
+                            <span className="truncate opacity-80 font-normal">
+                              · {ev.summary}
+                            </span>
+                          </div>
+                          <span className="shrink-0 text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/5 text-zinc-400">
+                            {active
+                              ? '⏪ REPLAYING'
+                              : isLiveHead
+                              ? '● LATEST'
+                              : 'Inspect ➔'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
