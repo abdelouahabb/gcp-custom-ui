@@ -606,11 +606,12 @@ export default function Wave13StarlinkNeuralinkStudio({
             <button
               key={t.id}
               type="button"
+              data-feature-id={t.id}
               onClick={() => setActiveTab(t.id)}
               className={`h-20 p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                 active
-                  ? 'bg-cyan-600 text-white border-cyan-500 shadow-md'
-                  : 'bg-white dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-cyan-500/50'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                  : 'bg-white dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
               }`}
             >
               <div className="flex items-center justify-between gap-2">

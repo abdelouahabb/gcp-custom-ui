@@ -1036,7 +1036,7 @@ export default function Revolutionary2026Suite({
             )}
           </div>
           <span className="text-[11px] font-mono text-zinc-500">
-            Select an Engineering Tool below:
+            Select an Engineering Tool below (hover any button for full architecture &amp; API guide):
           </span>
         </div>
 
@@ -1244,6 +1244,7 @@ export default function Revolutionary2026Suite({
                 <button
                   key={t.id}
                   type="button"
+                  data-feature-id={t.id}
                   onClick={() => setSubTab(t.id)}
                   title={t.tip}
                   className={`w-full h-11 px-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${

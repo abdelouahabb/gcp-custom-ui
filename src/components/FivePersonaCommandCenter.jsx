@@ -720,6 +720,7 @@ export default function FivePersonaCommandCenter({
               <button
                 key={p.id}
                 type="button"
+                data-feature-id={p.id}
                 onClick={() => {
                   setActivePersona(p.id);
                   setTimeout(() => {

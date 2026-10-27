@@ -628,11 +628,12 @@ export default function Wave12RoadsterFlightDeckStudio({
               <button
                 key={t.id}
                 type="button"
+                data-feature-id={t.id}
                 onClick={() => setActiveTab(t.id)}
                 className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
                   active
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-white/90 dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-indigo-500/50'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-white/90 dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
                 }`}
               >
                 <span

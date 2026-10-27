@@ -90,6 +90,7 @@ import AwsAzureEnvySuiteStudio from './components/AwsAzureEnvySuiteStudio';
 import GoogleCloudRemoteMcpStudio from './components/GoogleCloudRemoteMcpStudio';
 import AutonomousCloudSocStudio from './components/AutonomousCloudSocStudio';
 import StudioGcpAdvantageBar from './components/StudioGcpAdvantageBar';
+import GlobalInnovationHoverExplainer from './components/InnovationHoverExplainer';
 
 /**
  * Classifies any outgoing Axios request to determine if it performs a permanent
@@ -3999,6 +4000,7 @@ function CloudPulseCockpit() {
               {/* ⌘K Global Command & Voice Action Bar */}
               <button
                 type="button"
+                data-feature-id="CMD_PALETTE"
                 onClick={() => setCommandPaletteOpen(true)}
                 title="Open ⌘K Natural Language & Voice-to-Cloud Command Palette (Shortcut: Ctrl+K or Cmd+K)"
                 className="inline-flex items-center gap-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
@@ -4014,6 +4016,7 @@ function CloudPulseCockpit() {
                   <>
                     <button
                       type="button"
+                      data-feature-id="CFE_POSTURE"
                       onClick={() => setActiveTab('GLOBAL_MAP')}
                       title="Live Grid Carbon-Free Energy (CFE%) & Zero-Trust Posture Grade — Click to open 40-Region Global Map"
                       className="hidden xl:inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
@@ -4027,6 +4030,7 @@ function CloudPulseCockpit() {
 
                     <button
                       type="button"
+                      data-feature-id="STACK_COMPOSER"
                       onClick={() =>
                         setActiveOrbitalDrawer((cur) =>
                           cur === 'STACK_COMPOSER' ? null : 'STACK_COMPOSER'
@@ -4045,6 +4049,7 @@ function CloudPulseCockpit() {
 
                     <button
                       type="button"
+                      data-feature-id="FLIGHT_RECORDER"
                       onClick={() =>
                         setActiveOrbitalDrawer((cur) =>
                           cur === 'FLIGHT_RECORDER' ? null : 'FLIGHT_RECORDER'
@@ -4063,6 +4068,7 @@ function CloudPulseCockpit() {
 
                     <button
                       type="button"
+                      data-feature-id="AUTOPILOT_GUARD"
                       onClick={() =>
                         setActiveOrbitalDrawer((cur) =>
                           cur === 'AUTOPILOT_GUARD' ? null : 'AUTOPILOT_GUARD'
@@ -4090,6 +4096,7 @@ function CloudPulseCockpit() {
               {/* 1-Tap Project Health, Drift & FinOps Scanner Button */}
               <button
                 type="button"
+                data-feature-id="HEALTH_DRIFT"
                 onClick={() => handleOpenCopilotWithPrompt('')}
                 title="Run 1-Tap Project Health, Zombie Waste, Firewall Perimeter & Live Pricing Drift Scan"
                 className="inline-flex items-center gap-1.5 bg-white dark:bg-[#202124] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-[8px] px-2.5 py-1.5 text-[11px] font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap shrink-0"
@@ -4166,6 +4173,7 @@ function CloudPulseCockpit() {
                   )}
                   <button
                     type="button"
+                    data-feature-id={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     title={tab.tip}
                     className={`inline-flex items-center gap-1 text-[11.5px] whitespace-nowrap transition-all cursor-pointer shrink-0 pb-1.5 font-semibold border-b-2 ${
@@ -4423,6 +4431,7 @@ function CloudPulseCockpit() {
                               <button
                                 key={item.id}
                                 type="button"
+                                data-feature-id={item.id}
                                 onClick={() => setActiveTab(item.id)}
                                 className="w-full text-left p-2 rounded-lg bg-white/90 dark:bg-zinc-950/90 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 transition-all flex items-center justify-between gap-2 cursor-pointer group"
                               >
@@ -5475,7 +5484,7 @@ function CloudPulseCockpit() {
         }}
       />
 
-      <GlobalInstantTooltipHud />
+      <GlobalInnovationHoverExplainer />
     </div>
   );
 }
@@ -5825,171 +5834,6 @@ function MandatoryDeleteConfirmationModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * GlobalInstantTooltipHud:
- * Guarantees 100% of buttons, links, selects, and inputs across all 18 CloudPulse 2026
- * modules display an instant (<20ms), high-contrast 2026 Cyber HUD tooltip on hover/focus,
- * and automatically synthesizes contextual engineer tooltips for any button that lacks
- * an explicit `title` attribute.
- */
-function synthesizeButtonTooltip(el) {
-  const existing =
-    el.getAttribute('data-hud-tip') ||
-    el.getAttribute('data-tooltip') ||
-    el.getAttribute('title') ||
-    el.getAttribute('aria-label');
-  if (existing && existing.trim()) return existing.trim();
-
-  const tag = (el.tagName || '').toLowerCase();
-  if (tag === 'input') {
-    const ph = el.getAttribute('placeholder');
-    if (ph) return ph.trim();
-    return '';
-  }
-
-  const rawText = (el.innerText || el.textContent || '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!rawText || rawText.length > 140) return '';
-
-  const lower = rawText.toLowerCase();
-  if (lower.includes('copy')) {
-    return `Copy "${rawText}" to your system clipboard`;
-  }
-  if (lower.includes('delete') || lower.includes('destroy') || lower.includes('remove')) {
-    return `Execute live GCP deletion / teardown action: ${rawText}`;
-  }
-  if (lower.includes('deploy') || lower.includes('provision') || lower.includes('create') || lower.includes('launch')) {
-    return `Provision or deploy live Google Cloud resource: ${rawText}`;
-  }
-  if (lower.includes('scan') || lower.includes('audit') || lower.includes('x-ray')) {
-    return `Run live security, compliance & telemetry inspection: ${rawText}`;
-  }
-  if (lower.includes('ssh') || lower.includes('shell') || lower.includes('terminal')) {
-    return `Open interactive Cloud Shell / Web-SSH session: ${rawText}`;
-  }
-  if (lower.includes('refresh') || lower.includes('sync') || lower.includes('reload')) {
-    return `Sync latest live telemetry from Google Cloud APIs: ${rawText}`;
-  }
-  if (tag === 'select') {
-    return `Select configuration option (${rawText.slice(0, 60)})`;
-  }
-  return `Click to execute action: ${rawText}`;
-}
-
-function GlobalInstantTooltipHud() {
-  const [tipState, setTipState] = useState(null);
-
-  useEffect(() => {
-    let activeEl = null;
-
-    const restoreNativeTitle = (el) => {
-      if (!el) return;
-      const saved = el.getAttribute('data-hud-tip');
-      if (saved && !el.getAttribute('title')) {
-        el.setAttribute('title', saved);
-      }
-    };
-
-    const handleMouseOver = (e) => {
-      const target = e.target?.closest?.(
-        'button, a, select, input[title], [data-tooltip], [title]'
-      );
-      if (!target) {
-        if (activeEl) {
-          restoreNativeTitle(activeEl);
-          activeEl = null;
-        }
-        setTipState(null);
-        return;
-      }
-
-      const tipText = synthesizeButtonTooltip(target);
-      if (!tipText) {
-        setTipState(null);
-        return;
-      }
-
-      // Cache in data-hud-tip & suppress native delayed browser tooltip while hovered so they don't double-render
-      if (target.getAttribute('title')) {
-        target.setAttribute('data-hud-tip', target.getAttribute('title'));
-        target.removeAttribute('title');
-      } else if (!target.getAttribute('data-hud-tip')) {
-        target.setAttribute('data-hud-tip', tipText);
-      }
-
-      if (activeEl && activeEl !== target) {
-        restoreNativeTitle(activeEl);
-      }
-      activeEl = target;
-
-      const rect = target.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) return;
-
-      const showBelow = rect.top < 76;
-      const centerX = Math.min(
-        window.innerWidth - 190,
-        Math.max(190, rect.left + rect.width / 2)
-      );
-      const anchorY = showBelow ? rect.bottom + 8 : rect.top - 8;
-
-      setTipState({
-        text: tipText,
-        x: centerX,
-        y: anchorY,
-        showBelow,
-      });
-    };
-
-    const handleClear = () => {
-      if (activeEl) {
-        restoreNativeTitle(activeEl);
-        activeEl = null;
-      }
-      setTipState(null);
-    };
-
-    window.addEventListener('mouseover', handleMouseOver, { passive: true });
-    window.addEventListener('mousedown', handleClear, { passive: true });
-    window.addEventListener('scroll', handleClear, {
-      passive: true,
-      capture: true,
-    });
-    window.addEventListener('keydown', handleClear, { passive: true });
-
-    return () => {
-      if (activeEl) restoreNativeTitle(activeEl);
-      window.removeEventListener('mouseover', handleMouseOver);
-      window.removeEventListener('mousedown', handleClear);
-      window.removeEventListener('scroll', handleClear, { capture: true });
-      window.removeEventListener('keydown', handleClear);
-    };
-  }, []);
-
-  if (!tipState) return null;
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        left: `${tipState.x}px`,
-        top: `${tipState.y}px`,
-        transform: tipState.showBelow
-          ? 'translate(-50%, 0)'
-          : 'translate(-50%, -100%)',
-        zIndex: 99999,
-        pointerEvents: 'none',
-      }}
-      className="max-w-[360px] px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-950/95 text-zinc-900 dark:text-zinc-100 border border-emerald-500/40 shadow-xl shadow-black/50 backdrop-blur-md text-[11px] font-mono leading-snug transition-opacity duration-75"
-    >
-      <div className="flex items-start gap-1.5">
-        <span className="text-emerald-400 font-extrabold shrink-0">ℹ</span>
-        <span>{tipState.text}</span>
       </div>
     </div>
   );

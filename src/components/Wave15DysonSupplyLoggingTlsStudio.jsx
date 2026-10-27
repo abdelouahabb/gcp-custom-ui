@@ -540,11 +540,12 @@ export default function Wave15DysonSupplyLoggingTlsStudio({
             <button
               key={t.id}
               type="button"
+              data-feature-id={t.id}
               onClick={() => setActiveTab(t.id)}
               className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
                 active
-                  ? 'bg-cyan-600 text-white border-cyan-500 shadow-lg shadow-cyan-500/20'
-                  : 'bg-white dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-cyan-500/40'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                  : 'bg-white dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/40'
               }`}
             >
               <div className="flex items-center justify-between w-full">

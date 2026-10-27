@@ -230,6 +230,7 @@ export default function Lab2026QuantumNexus({
               <button
                 key={m.id}
                 type="button"
+                data-feature-id={m.id}
                 onClick={() => setActiveMode(m.id)}
                 className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                   active

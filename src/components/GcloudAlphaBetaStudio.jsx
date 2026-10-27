@@ -569,11 +569,12 @@ export default function GcloudAlphaBetaStudio({
             <button
               key={tab.id}
               type="button"
+              data-feature-id={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
               className={`w-full h-24 text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                 isActive
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-md'
-                  : 'bg-white dark:bg-[#18181b] text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-white dark:bg-[#202124] text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
               }`}
             >
               <div className="flex items-center justify-between gap-1.5">
