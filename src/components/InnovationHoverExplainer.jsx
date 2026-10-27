@@ -1798,6 +1798,156 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'compute.v1/firewalls (direction: "EGRESS", destinationRanges)',
     safetyMode: 'READ_ONLY',
   },
+  VPC_FW_TOGGLE_LOGGING: {
+    badge: 'FIREWALL RULES LOGGING · LOGCONFIG (PATCH)',
+    title: 'Toggle Firewall Rule Hit Logging (`Logs: ON` / `Logs: OFF`)',
+    whatItDoes:
+      'Enables or disables Google Cloud Firewall Rules Logging (`logConfig: { enable: true/false, metadata: "INCLUDE_ALL_METADATA" }`) on this firewall rule via a live PATCH request.',
+    enterpriseValue:
+      'When `Logs: ON` is enabled, every TCP/UDP/ICMP connection allowed or denied by this rule is recorded in Cloud Logging (`compute.googleapis.com/firewall`) with source IP, destination VM, port, and geo-location—critical for security forensics, brute-force detection, and compliance auditing. Turning `Logs: OFF` on noisy health-check rules reduces Cloud Logging ingestion costs.',
+    gcpApis: 'PATCH compute.v1/projects/{project}/global/firewalls/{rule} (logConfig.enable)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  VPC_STUDIO_LOGGING_TOGGLE: {
+    badge: 'FIREWALL HIT TELEMETRY · LOGS ON/OFF',
+    title: 'Firewall Rules Logging (`logConfig.enable` + `INCLUDE_ALL_METADATA`)',
+    whatItDoes:
+      'Controls whether Google Cloud writes a real-time connection log entry to Cloud Logging (`logName: ".../logs/compute.googleapis.com%2Ffirewall"`) every time a packet matches this rule.',
+    enterpriseValue:
+      'Essential for security incident response and the Global Network Map Time-Machine: enabling `Logs: ON` on DENY guardrails and sensitive SSH/RDP/DB rules proves who attempted to connect and which rule blocked or allowed them.',
+    gcpApis: 'compute.v1/firewalls (logConfig: { enable: true, metadata: "INCLUDE_ALL_METADATA" })',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_STUDIO_ENFORCEMENT_TOGGLE: {
+    badge: 'RULE ENFORCEMENT STATE · ENABLED / DISABLED',
+    title: 'Firewall Rule Enforcement State (`● ENABLED` vs. `○ DISABLED`)',
+    whatItDoes:
+      'Controls whether Google Cloud’s Andromeda virtual network switch actively enforces this firewall rule (`disabled: false`) or keeps it saved in a paused state (`disabled: true`).',
+    enterpriseValue:
+      'Allows you to stage new firewall rules in a disabled state for peer review before activating them, or temporarily pause a rule without deleting its CIDR and port matrix.',
+    gcpApis: 'compute.v1/firewalls (disabled: boolean)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_STUDIO_PRIORITY_PRESET: {
+    badge: 'PRIORITY PRECEDENCE (0 -> 65535)',
+    title: 'Firewall Evaluation Priority Number (Lower Number = Higher Precedence)',
+    whatItDoes:
+      'Sets the rule evaluation order from `0` (highest precedence, evaluated first) to `65535` (lowest precedence, evaluated last).',
+    enterpriseValue:
+      'In Google Cloud VPCs, the first matching rule wins! A Priority-90 IAP ALLOW rule beats a Priority-100 Public DENY rule, and both beat Google’s default Priority-65534 rules.',
+    gcpApis: 'compute.v1/firewalls (priority: 0..65535)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_STUDIO_ADD_PROTOCOL: {
+    badge: 'MULTI-PROTOCOL & PORT MATRIX',
+    title: 'Add Protocol & Port Specification Row (`tcp`, `udp`, `icmp`, `sctp`, `esp`, `all`)',
+    whatItDoes:
+      'Adds another IP protocol and port range specification (e.g., `tcp: 80,443,8000-8090` + `udp: 443,53`) to the `allowed[]` or `denied[]` array of this firewall rule.',
+    enterpriseValue:
+      'Lets a single atomic firewall rule govern both TCP and UDP (such as HTTP/3 QUIC on UDP 443 alongside HTTPS on TCP 443).',
+    gcpApis: 'compute.v1/firewalls (allowed[] / denied[] IPProtocol & ports)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_STUDIO_CIDR_PRESET: {
+    badge: '1-TAP CIDR RANGE PRESET',
+    title: 'Quick-Fill Official Google Cloud & Zero-Trust CIDR Ranges',
+    whatItDoes:
+      'Populates the Source/Destination CIDR field with official Google Cloud IP blocks: Cloud IAP (`35.235.240.0/20`), GCLB Health Check Probers (`130.211.0.0/22, 35.191.0.0/16`), Internal RFC1918 VPC (`10.128.0.0/9`), or Public Internet (`0.0.0.0/0`).',
+    enterpriseValue:
+      'Prevents CIDR typos when configuring Identity-Aware Proxy tunnels or Google Load Balancer health checks.',
+    gcpApis: 'compute.v1/firewalls (sourceRanges / destinationRanges)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_STUDIO_SUBMIT: {
+    badge: 'DEPLOY LIVE FIREWALL RULE TO GCP',
+    title: 'Provision or Update Firewall Rule on Google Cloud VPC',
+    whatItDoes:
+      'Submits the configured firewall specification to Google Compute Engine (`POST /global/firewalls` for new rules or `PATCH /global/firewalls/{rule}` when editing) and tracks the global operation to 100%.',
+    enterpriseValue:
+      'Pushes your firewall policy live across Google’s Andromeda SDN fabric in seconds.',
+    gcpApis: 'POST / PATCH https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  VPC_FW_BADGE_VERDICT: {
+    badge: 'FIREWALL ACTION VERDICT',
+    title: 'Rule Verdict on Packet Match (`ALLOW` vs. `DENY`)',
+    whatItDoes:
+      'Indicates whether this rule permits (`ALLOW`) or drops (`DENY`) packets that match its direction, CIDR range, protocol/port, and target tag criteria.',
+    enterpriseValue:
+      'The lowest-priority-number rule that matches a packet determines the final verdict; all higher-numbered rules below it are shadowed/skipped.',
+    gcpApis: 'compute.v1/firewalls (allowed[] vs denied[])',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_FW_BADGE_DIRECTION: {
+    badge: 'PACKET FLOW DIRECTION',
+    title: 'Traffic Direction (`INGRESS` Inbound vs. `EGRESS` Outbound)',
+    whatItDoes:
+      '`INGRESS` rules inspect incoming packets arriving at VM network interfaces from external or internal sources. `EGRESS` rules inspect outgoing packets leaving VMs toward destination CIDRs.',
+    enterpriseValue:
+      'Combining strict INGRESS Zero-Trust rules with EGRESS anti-exfiltration blocks creates a complete defense-in-depth perimeter.',
+    gcpApis: 'compute.v1/firewalls (direction: INGRESS | EGRESS)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_FW_BADGE_PRIORITY: {
+    badge: 'EVALUATION PRECEDENCE (0 -> 65535)',
+    title: 'Firewall Rule Priority (`0` Highest → `65535` Lowest)',
+    whatItDoes:
+      'Shows the numeric priority of this rule. Google Cloud evaluates firewall rules from `0` up to `65535` and stops at the very first rule that matches the packet.',
+    enterpriseValue:
+      'Explains why a Priority-100 `DENY` rule overrides a Priority-65534 `default-allow-ssh` rule without requiring you to delete the default rule.',
+    gcpApis: 'compute.v1/firewalls (priority)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_FW_BADGE_POSTURE: {
+    badge: 'AUTOMATED CIS SECURITY POSTURE',
+    title: 'Live Zero-Trust & CIS Benchmark Risk Classification',
+    whatItDoes:
+      'Classifies each firewall rule’s security posture by inspecting whether `0.0.0.0/0` is allowed on sensitive ports (SSH 22, RDP 3389, databases) or whether it is locked to Cloud IAP (`35.235.240.0/20`) / internal RFC1918 subnets.',
+    enterpriseValue:
+      'Surfaces high-risk public exposures immediately so you can remediate them with 1-click IAP lockdown.',
+    gcpApis: 'CloudPulse CIS GCP Firewall Risk Analyzer',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_FW_IMPLIED_FALLBACK: {
+    badge: 'GOOGLE CLOUD IMPLIED PRIORITY-65535 RULES',
+    title: 'Google Cloud Implied Fallback Rules (`default-allow-egress` & `default-deny-ingress`)',
+    whatItDoes:
+      'Every Google Cloud VPC network automatically includes two hidden Priority-65535 fallback rules: `default-deny-ingress` (blocks all unmatched inbound traffic) and `default-allow-egress` (permits all unmatched outbound traffic).',
+    enterpriseValue:
+      'If no explicit rule in your table matches a packet, it falls through to Priority 65535. These implied rules cannot be deleted, only overridden by rules with priority `0–65534`.',
+    gcpApis: 'Google Cloud Andromeda VPC Implied Firewall Specification (P-65535)',
+    safetyMode: 'READ_ONLY',
+  },
+  VPC_SIM_TEST_IAP: {
+    badge: 'SYNTHETIC PROBE · CLOUD IAP TUNNEL',
+    title: 'Simulate Identity-Aware Proxy (IAP) SSH Packet (`35.235.240.12 -> :22`)',
+    whatItDoes:
+      'Sets the Packet Tester Source IP to `35.235.240.12` (inside Google’s `35.235.240.0/20` IAP TCP forwarding range) on TCP port 22 to verify that `--tunnel-through-iap` SSH connections are ALLOWED.',
+    enterpriseValue:
+      'Confirms you will not lock yourself out of Xterm.js / IAP SSH before blocking public port 22.',
+    gcpApis: 'Priority 0 -> 65535 Packet Match Simulator',
+    safetyMode: 'SIMULATION',
+  },
+  VPC_SIM_TEST_PUBLIC: {
+    badge: 'SYNTHETIC PROBE · PUBLIC INTERNET SSH',
+    title: 'Simulate Public Internet SSH Brute-Force Packet (`198.51.100.1 -> :22`)',
+    whatItDoes:
+      'Sets the Packet Tester Source IP to an external public internet address (`198.51.100.1`) on TCP port 22 to verify whether public SSH is exposed (`ALLOW`) or protected (`DENY`).',
+    enterpriseValue:
+      'Proves that your Priority-100 DENY guardrail or IAP lockdown successfully blocks external attackers on port 22.',
+    gcpApis: 'Priority 0 -> 65535 Packet Match Simulator',
+    safetyMode: 'SIMULATION',
+  },
+  VPC_SIM_LAUNCH_MAP: {
+    badge: 'WORLD MAP PACKET TRAJECTORY & X-RAY',
+    title: 'Launch Simulated Packet on the Global Network World Map',
+    whatItDoes:
+      'Transitions to the Global Network World Map, animates this exact packet across your VPC region, and opens the full Priority 0→65535 Firewall X-Ray trace.',
+    enterpriseValue:
+      'Connects tabular firewall simulation directly to spatial 40-region network visualization.',
+    gcpApis: 'Global Network World Map + Firewall X-Ray Engine',
+    safetyMode: 'SIMULATION',
+  },
 };
 
 /**

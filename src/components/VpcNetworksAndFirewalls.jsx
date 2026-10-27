@@ -797,6 +797,74 @@ export default function VpcNetworksAndFirewalls({
     }
   };
 
+  // 1-Tap Toggle Firewall Rules Logging (`Logs: ON` / `Logs: OFF` -> `logConfig.enable`) on a live Firewall Rule
+  const handleToggleRuleLogging = async (fw) => {
+    const nextLogging = !fw.logConfig?.enable;
+    const trackerKey = `fw:${fw.name}`;
+    setOperationTrackers((prev) => ({
+      ...prev,
+      [trackerKey]: {
+        status: 'DISPATCHING',
+        progress: 25,
+        operationName: 'compute.firewalls.patch',
+        stepLabel: `${
+          nextLogging ? 'Enabling' : 'Disabling'
+        } Firewall Rules Logging (logConfig) on ${fw.name}...`,
+      },
+    }));
+
+    try {
+      const res = await axios.patch(
+        `/api/project/${encodeURIComponent(
+          projectId
+        )}/firewalls/${encodeURIComponent(fw.name)}`,
+        {
+          enableLogging: nextLogging,
+          logMetadata: 'INCLUDE_ALL_METADATA',
+        }
+      );
+      await pollGcpOperation(
+        trackerKey,
+        res.data?.operationUrl,
+        res.data?.operationName,
+        `Firewall Logging ${nextLogging ? 'ON' : 'OFF'} for ${fw.name} (100%)`
+      );
+      setLocalFirewalls((prev) =>
+        prev.map((item) =>
+          item.name === fw.name
+            ? {
+                ...item,
+                logConfig: {
+                  enable: nextLogging,
+                  ...(nextLogging ? { metadata: 'INCLUDE_ALL_METADATA' } : {}),
+                },
+              }
+            : item
+        )
+      );
+      if (onShowToast) {
+        onShowToast(
+          `Firewall Rules Logging turned ${
+            nextLogging ? 'ON (INCLUDE_ALL_METADATA)' : 'OFF'
+          } for "${fw.name}" on Google Cloud.`
+        );
+      }
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      setOperationTrackers((prev) => {
+        const next = { ...prev };
+        delete next[trackerKey];
+        return next;
+      });
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            'Failed to toggle Firewall Rules Logging (logConfig).'
+        );
+      }
+    }
+  };
+
   // 1-Tap Lock Down Exposed 0.0.0.0/0 Rule to Google Cloud IAP (35.235.240.0/20)
   const [pendingIapLockdownFw, setPendingIapLockdownFw] = useState(null);
 
@@ -1579,6 +1647,7 @@ export default function VpcNetworksAndFirewalls({
                       <button
                         key={p}
                         type="button"
+                        data-feature-id="VPC_STUDIO_PRIORITY_PRESET"
                         onClick={() => setRulePriority(p)}
                         className="text-[9px] font-mono px-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-blue-500 cursor-pointer"
                       >
@@ -1591,6 +1660,7 @@ export default function VpcNetworksAndFirewalls({
                   type="number"
                   min={0}
                   max={65535}
+                  data-feature-id="VPC_STUDIO_PRIORITY_PRESET"
                   value={rulePriority}
                   onChange={(e) => setRulePriority(Number(e.target.value))}
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono"
@@ -1604,6 +1674,7 @@ export default function VpcNetworksAndFirewalls({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    data-feature-id="VPC_STUDIO_ENFORCEMENT_TOGGLE"
                     onClick={() => setRuleDisabled(!ruleDisabled)}
                     className={`flex-1 py-2 px-2.5 rounded-lg border text-xs font-mono font-bold cursor-pointer ${
                       !ruleDisabled
@@ -1615,6 +1686,7 @@ export default function VpcNetworksAndFirewalls({
                   </button>
                   <button
                     type="button"
+                    data-feature-id="VPC_STUDIO_LOGGING_TOGGLE"
                     onClick={() => setRuleEnableLogging(!ruleEnableLogging)}
                     className={`py-2 px-2.5 rounded-lg border text-xs font-mono font-bold cursor-pointer ${
                       ruleEnableLogging
@@ -1710,6 +1782,7 @@ export default function VpcNetworksAndFirewalls({
                 </span>
                 <button
                   type="button"
+                  data-feature-id="VPC_STUDIO_ADD_PROTOCOL"
                   onClick={() =>
                     setRuleProtocolRows((prev) => [
                       ...prev,
@@ -1831,6 +1904,7 @@ export default function VpcNetworksAndFirewalls({
                     <button
                       key={p.label}
                       type="button"
+                      data-feature-id="VPC_STUDIO_CIDR_PRESET"
                       onClick={() =>
                         ruleDirection === 'EGRESS'
                           ? setRuleDestinationRanges(p.cidr)
@@ -1884,6 +1958,7 @@ export default function VpcNetworksAndFirewalls({
               </button>
               <button
                 type="submit"
+                data-feature-id="VPC_STUDIO_SUBMIT"
                 disabled={submittingStudio}
                 className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-mono font-extrabold text-white shadow-sm cursor-pointer disabled:opacity-50 ${
                   ruleAction === 'DENY'
@@ -2058,6 +2133,7 @@ export default function VpcNetworksAndFirewalls({
             <div className="flex flex-wrap gap-1.5 shrink-0">
               <button
                 type="button"
+                data-feature-id="VPC_SIM_TEST_IAP"
                 onClick={() => {
                   setSimIp('35.235.240.12');
                   setSimPort(22);
@@ -2069,6 +2145,7 @@ export default function VpcNetworksAndFirewalls({
               </button>
               <button
                 type="button"
+                data-feature-id="VPC_SIM_TEST_PUBLIC"
                 onClick={() => {
                   setSimIp('198.51.100.1');
                   setSimPort(22);
@@ -2081,6 +2158,7 @@ export default function VpcNetworksAndFirewalls({
               {onTestOnGlobalMap && (
                 <button
                   type="button"
+                  data-feature-id="VPC_SIM_LAUNCH_MAP"
                   onClick={() =>
                     onTestOnGlobalMap({
                       ruleName: simulationResult.matchedRule,
@@ -2424,7 +2502,8 @@ export default function VpcNetworksAndFirewalls({
                           )}
                           {/* ALLOW vs DENY Badge */}
                           <span
-                            className={`inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
+                            data-feature-id="VPC_FW_BADGE_VERDICT"
+                            className={`inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border cursor-help ${
                               isDeny
                                 ? 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30'
                                 : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
@@ -2440,7 +2519,8 @@ export default function VpcNetworksAndFirewalls({
 
                           {/* Direction Badge */}
                           <span
-                            className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                            data-feature-id="VPC_FW_BADGE_DIRECTION"
+                            className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded cursor-help ${
                               isEgress
                                 ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
                                 : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
@@ -2466,7 +2546,10 @@ export default function VpcNetworksAndFirewalls({
                           </span>
 
                           {/* Priority Pill */}
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold">
+                          <span
+                            data-feature-id="VPC_FW_BADGE_PRIORITY"
+                            className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold cursor-help"
+                          >
                             Priority: {fw.priority ?? 1000}
                           </span>
 
@@ -2477,7 +2560,8 @@ export default function VpcNetworksAndFirewalls({
 
                           {/* Security Posture Pill */}
                           <span
-                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                            data-feature-id="VPC_FW_BADGE_POSTURE"
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded cursor-help ${
                               fw.risk.level === 'CRITICAL' ||
                               fw.risk.level === 'HIGH'
                                 ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30'
@@ -2487,11 +2571,22 @@ export default function VpcNetworksAndFirewalls({
                             {fw.risk.label}
                           </span>
 
-                          {fw.logConfig?.enable && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500">
-                              Logs: ON
+                          {/* Interactive 1-Click Logs: ON / Logs: OFF Toggle Badge */}
+                          <button
+                            type="button"
+                            data-feature-id="VPC_FW_TOGGLE_LOGGING"
+                            disabled={Boolean(tracker)}
+                            onClick={() => handleToggleRuleLogging(fw)}
+                            className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded border transition-colors cursor-pointer disabled:opacity-50 ${
+                              fw.logConfig?.enable
+                                ? 'bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-300 border-blue-500/35'
+                                : 'bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800'
+                            }`}
+                          >
+                            <span>
+                              {fw.logConfig?.enable ? '● Logs: ON' : '○ Logs: OFF'}
                             </span>
-                          )}
+                          </button>
                         </div>
 
                         {/* Protocols, Ranges, and Target Tags */}
@@ -2697,7 +2792,10 @@ export default function VpcNetworksAndFirewalls({
               })}
 
               {/* Google Cloud Implied Default Firewall Rules Reference Footer */}
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/40 border border-dashed border-zinc-300 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
+              <div
+                data-feature-id="VPC_FW_IMPLIED_FALLBACK"
+                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/40 border border-dashed border-zinc-300 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-zinc-500 cursor-help"
+              >
                 <div className="flex items-center gap-2">
                   <Shield className="w-3.5 h-3.5 text-zinc-400" />
                   <span>
