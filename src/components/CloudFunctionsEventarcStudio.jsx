@@ -1061,8 +1061,8 @@ main:
           </div>
         )}
 
-        {/* Sub-Tab Switcher */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-zinc-200/60 dark:border-zinc-800">
+        {/* Sub-Tab Switcher (Uniform 4-Column Equal-Width Bento Grid) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-800">
           {[
             {
               id: 'TRIGGER_WIZARD',
@@ -1078,20 +1078,21 @@ main:
             },
             {
               id: 'CHOREOGRAPHER',
-              label: `4. Messaging & Workflows Matrix (Eventarc vs Pub/Sub vs Tasks vs Workflows · ${workflowsList.length})`,
+              label: `4. Messaging & Workflows Matrix (${workflowsList.length} Workflows)`,
             },
           ].map((tab) => (
             <button
               key={tab.id}
               type="button"
+              title={tab.label}
               onClick={() => setActiveSubTab(tab.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
                 activeSubTab === tab.id
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-white/70 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
               }`}
             >
-              {tab.label}
+              <span className="truncate">{tab.label}</span>
             </button>
           ))}
         </div>

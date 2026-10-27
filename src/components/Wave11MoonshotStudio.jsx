@@ -26,31 +26,36 @@ import {
 const SUB_TABS = [
   {
     id: 'CLOUD_DEPLOY',
-    label: '1. Cloud Deploy & Canary Pipelines',
+    step: '01',
+    label: 'Cloud Deploy & Canary Pipelines',
     badge: 'clouddeploy.googleapis.com',
     icon: Rocket,
   },
   {
     id: 'FIRESTORE_NOSQL',
-    label: '2. Cloud Firestore NoSQL Explorer',
+    step: '02',
+    label: 'Cloud Firestore NoSQL Explorer',
     badge: 'firestore.googleapis.com',
     icon: Database,
   },
   {
     id: 'FINOPS_QUOTAS',
-    label: '3. Active Assist Recommender & Quotas',
+    step: '03',
+    label: 'Active Assist & Quota Optimizer',
     badge: 'recommender.googleapis.com',
     icon: DollarSign,
   },
   {
     id: 'MULTI_PROJECT_AUDIT',
-    label: '4. Multi-Project Matrix & Stress Audit',
+    step: '04',
+    label: 'Multi-Project Matrix & Audit',
     badge: '18-Studio Live Probe',
     icon: Activity,
   },
   {
     id: 'SELF_HOST_REPORT',
-    label: '5. 1-Click Cloud Run Package & Exec Report',
+    step: '05',
+    label: 'Cloud Run Package & Exec Report',
     badge: 'Dockerfile + Executive HTML',
     icon: FileText,
   },
@@ -565,8 +570,8 @@ export default function Wave11MoonshotStudio({
           </div>
         </div>
 
-        {/* Sub-Navigation Pills */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+        {/* 5-Tab Equal-Sized Bento Sub-Navigation Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
           {SUB_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
@@ -575,24 +580,38 @@ export default function Wave11MoonshotStudio({
                 key={tab.id}
                 type="button"
                 data-feature-id={tab.id}
+                title={`${tab.step}. ${tab.label} (${tab.badge})`}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+                className={`w-full p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                    : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/70 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800'
+                    : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span>{tab.label}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded ${
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
                     isActive
-                      ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-950'
-                      : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
                   }`}
                 >
-                  {tab.badge}
+                  {tab.step}
                 </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-mono font-extrabold truncate flex items-center gap-1.5">
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                  </div>
+                  <div
+                    className={`text-[10px] font-mono mt-0.5 truncate ${
+                      isActive
+                        ? 'text-blue-100'
+                        : 'text-zinc-500 dark:text-zinc-400'
+                    }`}
+                  >
+                    {tab.badge}
+                  </div>
+                </div>
               </button>
             );
           })}

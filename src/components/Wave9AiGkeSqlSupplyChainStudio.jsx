@@ -512,7 +512,7 @@ options:
         </div>
 
         {/* Sub-Tabs */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800">
           {[
             {
               id: 'CLOUD_BUILD_GITHUB',
@@ -538,18 +538,18 @@ options:
                 type="button"
                 title={tab.tip}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-xs font-bold transition-all cursor-pointer border ${
+                className={`w-full h-11 px-3.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                   active
-                    ? 'bg-blue-600 text-white border-blue-400 shadow-md'
-                    : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                 }`}
               >
-                <span>{tab.label}</span>
+                <span className="truncate">{tab.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0 ${
                     active
-                      ? 'bg-black/30 text-blue-100'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                   }`}
                 >
                   {tab.badge}
