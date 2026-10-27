@@ -2027,6 +2027,7 @@ export default function GlobalNetworkWorldMap({
   vpcs = [],
   onOpenProvision,
   onRunInShell,
+  onOpenLogsExplorer,
   onSelectTab,
   onRefresh,
   onShowToast,
@@ -3173,20 +3174,118 @@ export default function GlobalNetworkWorldMap({
   }, [inspectedTimeMachineEvent, timeMachineCursor, liveTimeMachineEvents]);
   const liveLatestEvent = liveTimeMachineEvents[0] || null;
 
-  const handleInspectEvent = useCallback(
-    (ev, idx = 0) => {
-      if (!ev) return;
-      setInspectedTimeMachineEvent(ev);
-      setTimeMachineCursor(idx + 1);
-      setSelectedRegionId(ev.regionId);
-      setIsRegionPinnedOnMap(true);
-      setActive10xDockTab('AUDIT_TIME_MACHINE');
+  const [showForensicDeepDiveModal, setShowForensicDeepDiveModal] =
+    useState(false);
+
+  const buildForensicEventBundle = useCallback(
+    (ev) => {
+      if (!ev) return null;
+      const evalTrace = tracePacketFirewallXRay(
+        {
+          sourceIp: ev.sourceIp || '198.51.100.1',
+          protocol: ev.protocol || 'tcp',
+          port: Number(ev.port || 443),
+        },
+        firewalls
+      );
+      const lqlFilter =
+        ev.sourceType === 'AUDIT_LOG'
+          ? `logName:"cloudaudit.googleapis.com" OR resource.labels.location="${ev.regionId}"`
+          : `resource.labels.location="${ev.regionId}" OR jsonPayload.connection.dest_port=${ev.port || 443}`;
+      const gcloudCommand = `gcloud logging read '${lqlFilter}' --project=${projectId} --limit=15 --format=json`;
+      const rawPayload = {
+        insertId: ev.id,
+        timestamp: ev.timestamp,
+        logName: `projects/${projectId}/logs/${
+          ev.sourceType === 'AUDIT_LOG'
+            ? 'cloudaudit.googleapis.com%2Factivity'
+            : ev.sourceType === 'TLS_SOCKET'
+            ? 'networkmanagement.googleapis.com%2Ftls_socket_probe'
+            : 'compute.googleapis.com%2Ffirewall'
+        }`,
+        resource: {
+          type:
+            ev.sourceType === 'AUDIT_LOG'
+              ? 'gce_network_region'
+              : 'gce_subnetwork',
+          labels: {
+            project_id: projectId,
+            location: ev.regionId,
+            zone: ev.targetZone || `${ev.regionId}-a`,
+          },
+        },
+        jsonPayload: {
+          disposition: ev.verdict === 'ALLOW' ? 'ALLOWED' : 'DENIED',
+          category: ev.category,
+          summary: ev.summary,
+          connection: {
+            src_ip: ev.sourceIp || liveClientOriginNode.ip,
+            src_label: ev.sourceLabel || liveClientOriginNode.city,
+            dest_region: ev.regionId,
+            dest_city: ev.regionCity,
+            protocol: (ev.protocol || 'tcp').toUpperCase(),
+            dest_port: Number(ev.port || 443),
+          },
+          rule_details: {
+            reference: `network:default/firewall:${
+              ev.ruleName || evalTrace.winningRule?.name || 'default'
+            }`,
+            priority: ev.priority ?? evalTrace.winningRule?.priority ?? 1000,
+            action: ev.verdict,
+          },
+          latency_rtt_ms: ev.latencyMs || 16,
+        },
+      };
+
+      return {
+        ...ev,
+        lqlFilter,
+        nlQuery: `show logs in ${ev.regionId} for ${ev.category} (${ev.verdict})`,
+        gcloudCommand,
+        rawPayload,
+        firewallTrace: evalTrace,
+      };
     },
-    []
+    [firewalls, projectId, liveClientOriginNode]
+  );
+
+  const inspectedForensicBundle = useMemo(
+    () => buildForensicEventBundle(timeMachineActiveEvent),
+    [buildForensicEventBundle, timeMachineActiveEvent]
+  );
+
+  const handleInspectEvent = useCallback((ev, idx = 0) => {
+    if (!ev) return;
+    setInspectedTimeMachineEvent(ev);
+    setTimeMachineCursor(idx + 1);
+    setSelectedRegionId(ev.regionId);
+    setIsRegionPinnedOnMap(true);
+    setActive10xDockTab('AUDIT_TIME_MACHINE');
+    setShowForensicDeepDiveModal(true);
+  }, []);
+
+  const handleOpenEventInLogsExplorer = useCallback(
+    (ev) => {
+      const bundle = buildForensicEventBundle(ev || timeMachineActiveEvent);
+      if (!bundle) return;
+      setShowForensicDeepDiveModal(false);
+      if (onOpenLogsExplorer) {
+        onOpenLogsExplorer(bundle);
+      } else if (onSelectTab) {
+        onSelectTab('LOGS_SHELL');
+      }
+    },
+    [
+      buildForensicEventBundle,
+      timeMachineActiveEvent,
+      onOpenLogsExplorer,
+      onSelectTab,
+    ]
   );
 
   const handleResumeLiveStream = useCallback(() => {
     setInspectedTimeMachineEvent(null);
+    setShowForensicDeepDiveModal(false);
     setTimeMachineCursor(0);
     setLogsPaused(false);
     setFrozenPacketLog(packetLog);
@@ -7524,6 +7623,24 @@ export default function GlobalNetworkWorldMap({
                         <button
                           type="button"
                           onClick={() =>
+                            handleOpenEventInLogsExplorer(
+                              timeMachineActiveEvent
+                            )
+                          }
+                          className="h-6 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[9.5px] cursor-pointer shadow-xs"
+                        >
+                          🚀 Open in Cloud Logs Explorer ↗
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowForensicDeepDiveModal(true)}
+                          className="h-6 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                        >
+                          📄 Full Raw JSON &amp; Rule Trace
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
                             focusOnRegion(timeMachineActiveEvent.regionId, 3.4, {
                               scrollToMap: true,
                             })
@@ -8567,73 +8684,337 @@ export default function GlobalNetworkWorldMap({
             </div>
 
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80 max-h-64 overflow-y-auto text-[11px] font-mono pr-1">
-              {effectivePacketLogForDisplay.length === 0 ? (
+              {liveTimeMachineEvents.length === 0 ? (
                 <div className="py-6 text-center text-zinc-400">
-                  Waiting for packets to traverse the global mesh...
+                  Loading live Cloud Audit logs and regional TLS 1.3 socket
+                  telemetry...
                 </div>
               ) : (
-                effectivePacketLogForDisplay.map((pkt, idx) => (
-                  <div
-                    key={pkt.id || idx}
-                    onClick={() => {
-                      const matchedEv =
-                        liveTimeMachineEvents.find(
-                          (e) => e.id === `tm-pkt-${pkt.id}`
-                        ) || liveTimeMachineEvents[0];
-                      if (matchedEv) {
-                        handleInspectEvent(matchedEv, idx);
-                      }
-                    }}
-                    className="py-2 px-1.5 rounded-lg hover:bg-sky-500/10 cursor-pointer flex items-start justify-between gap-2 transition-colors"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
-                            pkt.kind === 'BACKBONE'
-                              ? 'bg-blue-500/20 text-blue-500'
-                              : pkt.verdict === 'ALLOW'
-                              ? 'bg-emerald-500/20 text-emerald-500'
-                              : 'bg-red-500/20 text-red-500'
-                          }`}
-                        >
-                          {pkt.kind === 'BACKBONE'
-                            ? '⇄ FIBER MESH'
-                            : pkt.verdict === 'ALLOW'
-                            ? '✓ ALLOWED'
-                            : '✕ BLOCKED'}
-                        </span>
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                          {pkt.protocol.toUpperCase()}:{pkt.port || 'ICMP'}
-                        </span>
-                        <span className="text-zinc-400">→</span>
-                        <span className="text-blue-600 dark:text-blue-400 font-bold">
-                          {pkt.targetZone}
-                        </span>
+                liveTimeMachineEvents.map((ev, idx) => {
+                  const isActiveInspected =
+                    inspectedTimeMachineEvent?.id === ev.id;
+                  return (
+                    <div
+                      key={ev.id || idx}
+                      onClick={() => handleInspectEvent(ev, idx)}
+                      className={`py-2 px-2 rounded-lg cursor-pointer flex items-start justify-between gap-2 transition-colors ${
+                        isActiveInspected
+                          ? 'bg-sky-500/20 border border-sky-400/50'
+                          : 'hover:bg-sky-500/10'
+                      }`}
+                    >
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                              ev.verdict === 'ALLOW'
+                                ? 'bg-emerald-500/20 text-emerald-500'
+                                : 'bg-red-500/20 text-red-500'
+                            }`}
+                          >
+                            {ev.verdict === 'ALLOW' ? '✓ ALLOWED' : '✕ BLOCKED'}
+                          </span>
+                          <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                            {(ev.protocol || 'tcp').toUpperCase()}:
+                            {ev.port || 443}
+                          </span>
+                          <span className="text-zinc-400">→</span>
+                          <span className="text-blue-600 dark:text-blue-400 font-bold">
+                            {ev.regionId}
+                          </span>
+                          <span className="text-[9.5px] text-zinc-400">
+                            [{ev.timestamp}]
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-zinc-500 truncate">
+                          {ev.sourceIp || 'edge'} ·{' '}
+                          <strong className="text-zinc-700 dark:text-zinc-300">
+                            {ev.category}
+                          </strong>{' '}
+                          · {ev.summary}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-zinc-500">
-                        From {pkt.sourceIp} ({pkt.sourceLabel}) · Rule:{' '}
-                        <strong className="text-zinc-700 dark:text-zinc-300">
-                          {pkt.ruleName}
-                        </strong>{' '}
-                        (p:{pkt.priority})
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[10px] text-zinc-400">
+                          {ev.latencyMs || 16}ms
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleInspectEvent(ev, idx);
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-300 text-[9px] font-extrabold cursor-pointer"
+                          >
+                            🔍 Inspect
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEventInLogsExplorer(ev);
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 text-[9px] font-extrabold cursor-pointer"
+                          >
+                            Logs ↗
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-[10px] text-zinc-400">
-                        {pkt.latencyMs}ms
-                      </span>
-                      <span className="text-[9px] text-sky-500 font-bold">
-                        Inspect ➔
-                      </span>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Center-Screen Forensic Log & Packet Deep-Dive Modal (Opens immediately on Inspect) */}
+      {showForensicDeepDiveModal && inspectedForensicBundle && (
+        <div
+          onClick={() => setShowForensicDeepDiveModal(false)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-4xl max-h-[88vh] overflow-y-auto bg-white dark:bg-zinc-900 border-2 border-sky-500/50 rounded-2xl shadow-2xl p-5 space-y-4 font-mono text-xs"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-md bg-sky-600 text-white font-extrabold text-[11px]">
+                    🔍 CLOUD LOGGING &amp; PACKET FORENSIC DEEP-DIVE
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                      inspectedForensicBundle.verdict === 'ALLOW'
+                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
+                        : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40'
+                    }`}
+                  >
+                    {inspectedForensicBundle.verdict === 'ALLOW'
+                      ? '● VERDICT: ALLOWED'
+                      : '✕ VERDICT: DENIED'}
+                  </span>
+                  <span className="text-zinc-500">
+                    [{inspectedForensicBundle.timestamp}] · ID:{' '}
+                    <code>{inspectedForensicBundle.id}</code>
+                  </span>
+                </div>
+                <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 mt-1.5">
+                  {inspectedForensicBundle.sourceIp || 'edge'} (
+                  {inspectedForensicBundle.sourceLabel ||
+                    liveClientOriginNode.city}
+                  ) ➔ {inspectedForensicBundle.regionId} (
+                  {inspectedForensicBundle.regionCity || 'GCP'}) ·{' '}
+                  {(inspectedForensicBundle.protocol || 'tcp').toUpperCase()}:
+                  {inspectedForensicBundle.port || 443}
+                </h3>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  {inspectedForensicBundle.category} —{' '}
+                  {inspectedForensicBundle.summary}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleOpenEventInLogsExplorer(inspectedForensicBundle)
+                  }
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] cursor-pointer shadow-sm"
+                >
+                  🚀 Open in Cloud Logs Explorer &amp; Shell Studio ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForensicDeepDiveModal(false);
+                    focusOnRegion(inspectedForensicBundle.regionId, 3.4, {
+                      scrollToMap: true,
+                    });
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] cursor-pointer"
+                >
+                  🎯 Zoom Map to {inspectedForensicBundle.regionId}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForensicDeepDiveModal(false)}
+                  className="px-2.5 py-1.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-extrabold text-[11px] cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
+
+            {/* 4-Column Forensic Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-[11px]">
+              <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[9.5px] uppercase text-zinc-400 font-bold">
+                  1. Source Endpoint
+                </div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                  {inspectedForensicBundle.sourceIp || 'edge'}
+                </div>
+                <div className="text-[10px] text-zinc-500">
+                  {inspectedForensicBundle.sourceLabel ||
+                    liveClientOriginNode.city}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[9.5px] uppercase text-zinc-400 font-bold">
+                  2. Destination &amp; Port
+                </div>
+                <div className="font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+                  {inspectedForensicBundle.regionId} (
+                  {inspectedForensicBundle.regionCity || 'GCP'})
+                </div>
+                <div className="text-[10px] text-zinc-500">
+                  Zone:{' '}
+                  {inspectedForensicBundle.targetZone ||
+                    `${inspectedForensicBundle.regionId}-a`}{' '}
+                  · {(inspectedForensicBundle.protocol || 'tcp').toUpperCase()}:
+                  {inspectedForensicBundle.port || 443}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[9.5px] uppercase text-zinc-400 font-bold">
+                  3. Matched Firewall / Socket
+                </div>
+                <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5 truncate">
+                  {inspectedForensicBundle.ruleName ||
+                    inspectedForensicBundle.category}
+                </div>
+                <div className="text-[10px] text-zinc-500">
+                  Priority: P-{inspectedForensicBundle.priority ?? 1000}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <div className="text-[9.5px] uppercase text-zinc-400 font-bold">
+                  4. Measured Network RTT
+                </div>
+                <div className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {inspectedForensicBundle.latencyMs || 16}ms RTT
+                </div>
+                <div className="text-[10px] text-zinc-500">
+                  Source Type: {inspectedForensicBundle.sourceType || 'LIVE'}
+                </div>
+              </div>
+            </div>
+
+            {/* Compiled Cloud Logging LQL & gcloud CLI Command */}
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2 text-[11px]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-extrabold uppercase text-[10px] text-zinc-500">
+                  Compiled Cloud Logging Query (LQL) &amp; gcloud CLI
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(
+                      inspectedForensicBundle.gcloudCommand
+                    );
+                    if (onShowToast) {
+                      onShowToast('Copied gcloud logging read command!');
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold text-[10px] cursor-pointer"
+                >
+                  Copy gcloud Command
+                </button>
+              </div>
+              <div className="p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-blue-600 dark:text-blue-300 break-all">
+                {inspectedForensicBundle.gcloudCommand}
+              </div>
+            </div>
+
+            {/* Two-Column Deep-Dive: Structured Cloud Logging JSON Payload + VPC Firewall Rule Evaluation */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold uppercase text-[10px] text-zinc-500">
+                    Structured Cloud Logging Entry (jsonPayload)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(
+                        JSON.stringify(
+                          inspectedForensicBundle.rawPayload,
+                          null,
+                          2
+                        )
+                      );
+                      if (onShowToast) {
+                        onShowToast('Copied structured JSON log entry!');
+                      }
+                    }}
+                    className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-[10px] cursor-pointer"
+                  >
+                    Copy JSON
+                  </button>
+                </div>
+                <pre className="p-2.5 rounded-lg bg-zinc-900 text-emerald-300 text-[10px] max-h-60 overflow-y-auto whitespace-pre-wrap">
+                  {JSON.stringify(inspectedForensicBundle.rawPayload, null, 2)}
+                </pre>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="font-extrabold uppercase text-[10px] text-zinc-500">
+                  VPC Firewall Priority 0 ➔ 65535 Evaluation for This Event (
+                  {inspectedForensicBundle.firewallTrace?.steps?.length || 0}{' '}
+                  rules)
+                </div>
+                <div className="max-h-60 overflow-y-auto flex flex-col gap-1.5 pr-1">
+                  {(inspectedForensicBundle.firewallTrace?.steps || []).map(
+                    (step, sIdx) => {
+                      const isWinner = step.status === 'WINNING_MATCH';
+                      const isShadowed = step.status === 'SHADOWED_MATCH';
+                      return (
+                        <div
+                          key={`${step.name}-${sIdx}`}
+                          className={`p-2 rounded-lg border text-[10px] flex items-center justify-between gap-2 ${
+                            isWinner
+                              ? step.action === 'ALLOW'
+                                ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-200 font-extrabold'
+                                : 'bg-red-500/15 border-red-500 text-red-700 dark:text-red-200 font-extrabold'
+                              : isShadowed
+                              ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-bold'
+                              : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          <div className="min-w-0 truncate">
+                            <span className="font-extrabold mr-1.5">
+                              P-{step.priority}
+                            </span>
+                            <span className="text-zinc-900 dark:text-zinc-100 font-bold">
+                              {step.name}
+                            </span>{' '}
+                            <span className="opacity-75">
+                              ({step.action} {step.portsSummary})
+                            </span>
+                          </div>
+                          <span className="shrink-0 px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[8.5px] font-extrabold uppercase">
+                            {isWinner
+                              ? '★ WINNER'
+                              : isShadowed
+                              ? 'SHADOWED'
+                              : step.status === 'SKIPPED_CIDR'
+                              ? 'CIDR SKIP'
+                              : 'PORT SKIP'}
+                          </span>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3. Complete Interactive Directory of All 40 Google Cloud Regions & 121 Zones */}
       <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-4">

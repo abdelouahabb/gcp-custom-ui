@@ -3667,10 +3667,25 @@ function CloudPulseCockpit() {
     setCopilotOpen(true);
   };
 
+  const [logExplorerSeedSpec, setLogExplorerSeedSpec] = useState(null);
+
   const handleRunInShell = (cmd) => {
     setShellSeedCommand(cmd);
     setActiveTab('LOGS_SHELL');
     showToast(`Loaded command into Mobile Cloud Shell: ${cmd}`);
+  };
+
+  const handleOpenInLogsExplorer = (spec) => {
+    setLogExplorerSeedSpec({ ...spec, triggeredAt: Date.now() });
+    if (spec?.gcloudCommand) {
+      setShellSeedCommand(spec.gcloudCommand);
+    }
+    setActiveTab('LOGS_SHELL');
+    showToast(
+      `Opened Cloud Logs Explorer & Shell for ${spec?.regionId || 'event'} (${
+        spec?.summary || spec?.category || 'Forensic Trace'
+      })`
+    );
   };
 
   const handleOpenProvision = (serviceType = 'GCS_BUCKET', locationSpec = null) => {
@@ -4739,6 +4754,7 @@ function CloudPulseCockpit() {
                     vpcs={overview?.vpcs || []}
                     onOpenProvision={handleOpenProvision}
                     onRunInShell={handleRunInShell}
+                    onOpenLogsExplorer={handleOpenInLogsExplorer}
                     onSelectTab={(tabId) => setActiveTab(tabId)}
                     onRefresh={() => fetchProjectOverview(selectedProjectId)}
                     onShowToast={showToast}
@@ -5514,6 +5530,7 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     account={contextData.account}
                     initialCommand={shellSeedCommand}
+                    initialLogExplorerSpec={logExplorerSeedSpec}
                     onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
                     onAskCopilot={handleOpenCopilotWithPrompt}
                   />

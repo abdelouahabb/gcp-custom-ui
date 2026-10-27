@@ -70,14 +70,20 @@ export default function LogStreamerAndShell({
   projectId,
   account = 'Authenticated Google Cloud Session',
   initialCommand = '',
+  initialLogExplorerSpec = null,
   onRefreshLogs,
   onAskCopilot,
 }) {
   const { activeTimeZone, utcOffsetLabel, formatDateTime } = useTimezone();
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [expandedLogId, setExpandedLogId] = useState(null);
+  const [activeMapForensicSpec, setActiveMapForensicSpec] = useState(
+    initialLogExplorerSpec
+  );
   const [shellInput, setShellInput] = useState(
-    initialCommand || `gcloud storage buckets list --project=${projectId}`
+    initialLogExplorerSpec?.gcloudCommand ||
+      initialCommand ||
+      `gcloud storage buckets list --project=${projectId}`
   );
   const [shellRunning, setShellRunning] = useState(false);
   const [shellHistory, setShellHistory] = useState([
@@ -257,6 +263,24 @@ export default function LogStreamerAndShell({
   useEffect(() => {
     fetchChronoLogs();
   }, [projectId]);
+
+  useEffect(() => {
+    if (!initialLogExplorerSpec) return;
+    setActiveMapForensicSpec(initialLogExplorerSpec);
+    if (initialLogExplorerSpec.lqlFilter) {
+      setCustomLqlInput(initialLogExplorerSpec.lqlFilter);
+    }
+    if (initialLogExplorerSpec.nlQuery) {
+      setNlQueryInput(initialLogExplorerSpec.nlQuery);
+    }
+    if (initialLogExplorerSpec.gcloudCommand) {
+      setShellInput(initialLogExplorerSpec.gcloudCommand);
+    }
+    fetchChronoLogs({
+      lqlFilter: initialLogExplorerSpec.lqlFilter || '',
+      naturalLanguage: initialLogExplorerSpec.nlQuery || '',
+    });
+  }, [initialLogExplorerSpec]);
 
   useEffect(() => {
     fetchAuditTimeline();
@@ -715,6 +739,91 @@ export default function LogStreamerAndShell({
 
   return (
     <div className="space-y-6">
+      {/* Pinned Forensic Event Deep-Dive Card when navigated from Global Network World Map */}
+      {activeMapForensicSpec && (
+        <div className="bg-sky-500/[0.08] dark:bg-sky-950/35 border-2 border-sky-500/50 rounded-2xl p-4 shadow-sm space-y-3 text-xs font-mono">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-md bg-sky-500 text-white font-extrabold text-[11px]">
+                🔍 GLOBAL MAP FORENSIC TRACE LOADED
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                  activeMapForensicSpec.verdict === 'ALLOW'
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
+                    : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
+                }`}
+              >
+                {activeMapForensicSpec.verdict === 'ALLOW'
+                  ? '● VERDICT: ALLOW'
+                  : '✕ VERDICT: DENY'}
+              </span>
+              <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                [{activeMapForensicSpec.timestamp}]{' '}
+                {activeMapForensicSpec.sourceIp || 'edge'} ➔{' '}
+                {activeMapForensicSpec.regionId} (
+                {activeMapForensicSpec.regionCity || 'GCP'}) ·{' '}
+                {(activeMapForensicSpec.protocol || 'tcp').toUpperCase()}:
+                {activeMapForensicSpec.port || 443}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {activeMapForensicSpec.gcloudCommand && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    executeShellCommand(activeMapForensicSpec.gcloudCommand)
+                  }
+                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] cursor-pointer"
+                >
+                  ▶ Run Live gcloud logging read in Cloud Shell
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setActiveMapForensicSpec(null)}
+                className="px-2 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] cursor-pointer"
+              >
+                ✕ Dismiss
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="p-2.5 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-400 font-bold">
+                Compiled Cloud Logging LQL Filter
+              </div>
+              <div className="font-bold text-blue-600 dark:text-blue-400 mt-1 break-all">
+                {activeMapForensicSpec.lqlFilter}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-400 font-bold">
+                Matched Rule / Socket / Audit Summary
+              </div>
+              <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                {activeMapForensicSpec.category} ·{' '}
+                {activeMapForensicSpec.summary}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[10px] uppercase text-zinc-400 font-bold">
+                Structured Forensic JSON Payload
+              </div>
+              <pre className="text-[9.5px] text-zinc-700 dark:text-zinc-300 mt-1 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                {JSON.stringify(
+                  activeMapForensicSpec.rawPayload || activeMapForensicSpec,
+                  null,
+                  2
+                )}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===================================================================
           MOONSHOT 2026: NEURAL CHRONO-LOG & TRACE STUDIO
           Replaces legacy 2016 Cloud Logging JSON tree digging with:
