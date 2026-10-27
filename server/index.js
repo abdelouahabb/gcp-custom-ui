@@ -60772,24 +60772,46 @@ app.get(
         };
       });
 
-      const mermaidC4Diagram = `flowchart TB
-  subgraph Internet["Global Edge & Identity Perimeter"]
-    Client["Enterprise Clients & OIDC Workloads"]
-    Armor["Cloud Armor WAF + Model Armor [GA 590.0.1]"]
-  end
-  subgraph Compute["Serverless & Container Compute (${projectId})"]
-    Run["Cloud Run v2 Fleet (${runServices.length} Services)"]
-    Spark["Dataproc Serverless Spark 3.5 ($0 Idle)"]
-  end
-  subgraph Data["Borderless Lakehouse & HTAP Data Mesh"]
-    BQ["BigQuery Capacitor (${bqDatasets.length} Datasets)"]
-    GCS["BigLake Iceberg Buckets (${gcsBuckets.length} gs://)"]
-    SQL["Cloud SQL / AlloyDB / Spanner (${sqlInstances.length} Instances)"]
-  end
-  Client --> Armor --> Run
-  Run --> BQ
-  Run --> SQL
-  Spark --> GCS --> BQ`;
+      const mermaidC4Lines = [
+        `flowchart TB`,
+        `  subgraph Internet["Global Edge, VPC Perimeter & Identity (${projectId})"]`,
+        `    Client["External HTTPS / SSH Clients"]`,
+        `    IAM["Workload & VM IAM Service Account (OAuth 2.0 Metadata 169.254.169.254)"]`,
+        `  end`,
+        `  subgraph Compute["Active Compute Fleet (${projectId})"]`,
+      ];
+      if (runServices.length > 0) {
+        mermaidC4Lines.push(`    Run["Cloud Run v2 Fleet (${runServices.length} Services)"]`);
+      }
+      mermaidC4Lines.push(`    VMs["Compute Engine & Serverless Workloads"]`);
+      mermaidC4Lines.push(`  end`);
+      mermaidC4Lines.push(`  subgraph Data["Active Storage & Lakehouse (${projectId})"]`);
+      if (gcsBuckets.length > 0) {
+        mermaidC4Lines.push(`    GCS["Cloud Storage (${gcsBuckets.length} gs:// Buckets)"]`);
+      }
+      if (bqDatasets.length > 0) {
+        mermaidC4Lines.push(`    BQ["BigQuery Lakehouse (${bqDatasets.length} Datasets)"]`);
+      }
+      if (sqlInstances.length > 0) {
+        mermaidC4Lines.push(`    SQL["Cloud SQL / AlloyDB (${sqlInstances.length} Instances)"]`);
+      }
+      mermaidC4Lines.push(`  end`);
+      mermaidC4Lines.push(`  Client -->|VPC Firewall Rules| VMs`);
+      mermaidC4Lines.push(`  VMs -->|Attached Default Compute SA| IAM`);
+      if (runServices.length > 0) {
+        mermaidC4Lines.push(`  Client -->|HTTPS Ingress| Run`);
+        mermaidC4Lines.push(`  Run -->|Workload Identity SA| IAM`);
+      }
+      if (gcsBuckets.length > 0) {
+        mermaidC4Lines.push(`  IAM -->|HTTPS API / devstorage Scope| GCS`);
+      }
+      if (bqDatasets.length > 0) {
+        mermaidC4Lines.push(`  IAM -->|BigQuery API OAuth Scope| BQ`);
+      }
+      if (sqlInstances.length > 0 && runServices.length > 0) {
+        mermaidC4Lines.push(`  Run -->|Cloud SQL Auth Proxy| SQL`);
+      }
+      const mermaidC4Diagram = mermaidC4Lines.join('\n');
 
       // ======================================================================
       // PERSONA 2: CLOUD ENGINEER (ClickOps-to-GitOps, Preflight & Undo Saga)
