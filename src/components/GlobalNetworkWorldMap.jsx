@@ -2952,12 +2952,56 @@ export default function GlobalNetworkWorldMap({
     firewalls,
   ]);
 
-  // Unified Real Cloud Logging / Audit & Socket Probe Timeline for the Time-Machine Scrubber
+  // Unified Real Cloud Logging / Audit, Live Flowing Packet Verdict & Socket Probe Timeline for the Time-Machine Scrubber
   const liveTimeMachineEvents = useMemo(() => {
     const events = [];
     const logs = liveGeoTelemetry?.liveNetworkLogEvents || [];
     const probes = liveGeoTelemetry?.regionalSocketProbes || [];
 
+    // 1. Live Packet Evaluations completing across the World Map in real time (updates every ~1s)
+    (packetLog || []).slice(0, 6).forEach((pkt, idx) => {
+      const matchedReg =
+        GCP_GLOBAL_REGIONS.find((r) => r.id === pkt.targetRegionId) ||
+        selectedRegion ||
+        GCP_GLOBAL_REGIONS[4];
+      const arc =
+        pkt.arcD && pkt.cx !== undefined
+          ? { d: pkt.arcD, cx: pkt.cx, cy: pkt.cy }
+          : buildArcPath(
+              pkt.x1 ?? liveClientOriginNode.x,
+              pkt.y1 ?? liveClientOriginNode.y,
+              pkt.x2 ?? matchedReg.x,
+              pkt.y2 ?? matchedReg.y
+            );
+      events.push({
+        id: `tm-pkt-${pkt.id || idx}`,
+        timestamp: pkt.completedAt || new Date().toLocaleTimeString(),
+        category:
+          pkt.kind === 'BACKBONE'
+            ? 'Subsea Fiber Backbone'
+            : `VPC Firewall (${pkt.ruleName || 'default'})`,
+        summary:
+          pkt.kind === 'BACKBONE'
+            ? `${pkt.sourceLabel} ⇄ ${matchedReg.id} (${pkt.latencyMs}ms)`
+            : `${(pkt.protocol || 'tcp').toUpperCase()}:${pkt.port || 443} · ${
+                pkt.verdict
+              } by ${pkt.ruleName || 'implicit-deny'} (${pkt.latencyMs}ms)`,
+        regionId: matchedReg.id,
+        regionCity: matchedReg.city,
+        verdict: pkt.verdict === 'DENY' ? 'DENY' : 'ALLOW',
+        sourceIp: pkt.sourceIp || liveClientOriginNode.ip,
+        port: pkt.port || 443,
+        x1: pkt.x1 ?? liveClientOriginNode.x,
+        y1: pkt.y1 ?? liveClientOriginNode.y,
+        x2: pkt.x2 ?? matchedReg.x,
+        y2: pkt.y2 ?? matchedReg.y,
+        cx: arc.cx,
+        cy: arc.cy,
+        arcD: arc.d,
+      });
+    });
+
+    // 2. Real Cloud Logging / Cloud Audit Entries (logging.v2/entries:list)
     logs.forEach((ev, idx) => {
       const matchedReg =
         GCP_GLOBAL_REGIONS.find((r) => ev.region?.startsWith(r.id)) ||
@@ -2991,6 +3035,7 @@ export default function GlobalNetworkWorldMap({
       });
     });
 
+    // 3. Live Regional TCP/TLS 1.3 Socket Handshakes
     probes.forEach((p, idx) => {
       const matchedReg =
         GCP_GLOBAL_REGIONS.find((r) => r.id === p.regionId) ||
@@ -3024,7 +3069,19 @@ export default function GlobalNetworkWorldMap({
     });
 
     return events;
-  }, [liveGeoTelemetry, liveClientOriginNode, selectedRegion]);
+  }, [packetLog, liveGeoTelemetry, liveClientOriginNode, selectedRegion]);
+
+  // Background 15s live socket & Cloud Audit refresh when viewing the Time-Machine in Live Stream mode
+  useEffect(() => {
+    if (active10xDockTab !== 'AUDIT_TIME_MACHINE' || timeMachineCursor > 0) {
+      return undefined;
+    }
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      fetchLiveGeoTelemetry(false);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [active10xDockTab, timeMachineCursor, fetchLiveGeoTelemetry]);
 
   const timeMachineActiveEvent = useMemo(() => {
     if (timeMachineCursor <= 0 || liveTimeMachineEvents.length === 0) {
@@ -3036,6 +3093,7 @@ export default function GlobalNetworkWorldMap({
       ] || null
     );
   }, [timeMachineCursor, liveTimeMachineEvents]);
+  const liveLatestEvent = liveTimeMachineEvents[0] || null;
 
   const packetIdRef = useRef(1);
 
@@ -7173,7 +7231,7 @@ export default function GlobalNetworkWorldMap({
                     <span
                       className={`shrink-0 px-2 py-0.5 rounded font-extrabold text-[10px] ${
                         timeMachineCursor === 0
-                          ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40'
+                          ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 animate-pulse'
                           : 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
                       }`}
                     >
@@ -7193,11 +7251,21 @@ export default function GlobalNetworkWorldMap({
                         → {timeMachineActiveEvent.regionId} (
                         {timeMachineActiveEvent.summary})
                       </span>
+                    ) : liveLatestEvent ? (
+                      <span
+                        title={`[${liveLatestEvent.timestamp}] ${liveLatestEvent.category} → ${liveLatestEvent.regionId} (${liveLatestEvent.summary})`}
+                        className="truncate font-bold text-zinc-800 dark:text-zinc-200"
+                      >
+                        [{liveLatestEvent.timestamp}]{' '}
+                        <span className="text-emerald-500">
+                          {liveLatestEvent.category}
+                        </span>{' '}
+                        → {liveLatestEvent.regionId} ({liveLatestEvent.summary})
+                      </span>
                     ) : (
                       <span className="truncate text-zinc-500">
-                        Scrub the slider or click any real Cloud Logging / TLS
-                        1.3 Socket event below to replay its trajectory on the
-                        World Map:
+                        Streaming live VPC firewall evaluations, Cloud Audit
+                        logs, and TLS 1.3 socket handshakes...
                       </span>
                     )}
                   </div>
@@ -7257,10 +7325,11 @@ export default function GlobalNetworkWorldMap({
                   </div>
                 </div>
 
-                {/* Clickable Real Event Pills */}
+                {/* Clickable Real Event Pills (Live Flowing Packets + Cloud Audit Logs + TLS Sockets) */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                   {liveTimeMachineEvents.slice(0, 8).map((ev, idx) => {
                     const active = timeMachineCursor === idx + 1;
+                    const isLiveHead = timeMachineCursor === 0 && idx === 0;
                     return (
                       <button
                         key={ev.id}
@@ -7273,6 +7342,8 @@ export default function GlobalNetworkWorldMap({
                         className={`px-2 py-1 rounded-lg border text-[9.5px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
                           active
                             ? 'bg-sky-500/20 border-sky-400 text-sky-600 dark:text-sky-200 shadow-xs'
+                            : isLiveHead
+                            ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
                             : 'bg-zinc-50 dark:bg-zinc-950/70 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-sky-500/40'
                         }`}
                       >
@@ -7283,6 +7354,7 @@ export default function GlobalNetworkWorldMap({
                               : 'bg-red-500'
                           }`}
                         />
+                        <span className="text-zinc-400">[{ev.timestamp}]</span>
                         <span>{ev.regionId}</span>
                         <span className="opacity-70">· {ev.summary}</span>
                       </button>
