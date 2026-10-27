@@ -8059,13 +8059,7 @@ export default function GlobalNetworkWorldMap({
                         <button
                           key={ev.id}
                           type="button"
-                          onClick={() => {
-                            if (active) {
-                              handleResumeLiveStream();
-                            } else {
-                              handleInspectEvent(ev, idx);
-                            }
-                          }}
+                          onClick={() => handleInspectEvent(ev, idx)}
                           className={`w-full px-2.5 py-1.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
                             active
                               ? 'bg-sky-500/20 border-sky-400 text-sky-700 dark:text-sky-200 shadow-xs ring-1 ring-sky-400/50'
@@ -8101,21 +8095,43 @@ export default function GlobalNetworkWorldMap({
                               · {ev.summary}
                             </span>
                           </div>
-                          <span
-                            className={`shrink-0 text-[9px] font-mono uppercase px-2 py-0.5 rounded font-extrabold ${
-                              active
-                                ? 'bg-sky-500 text-white'
+                          <div className="shrink-0 flex items-center gap-1">
+                            <span
+                              className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded font-extrabold ${
+                                active
+                                  ? 'bg-sky-500 text-white'
+                                  : isLiveHead
+                                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                                  : 'bg-black/5 dark:bg-white/5 text-sky-600 dark:text-sky-400'
+                              }`}
+                            >
+                              {active
+                                ? '🔍 Open Modal ➔'
                                 : isLiveHead
-                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
-                                : 'bg-black/5 dark:bg-white/5 text-sky-600 dark:text-sky-400'
-                            }`}
-                          >
-                            {active
-                              ? '🔍 INSPECTING (Click to Close)'
-                              : isLiveHead
-                              ? '● LATEST (Click to Inspect)'
-                              : '🔍 Inspect Event ➔'}
-                          </span>
+                                ? '● LATEST (Inspect ➔)'
+                                : '🔍 Inspect Event ➔'}
+                            </span>
+                            {active && (
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                title="Clear selection and resume live stream"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleResumeLiveStream();
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.stopPropagation();
+                                    handleResumeLiveStream();
+                                  }
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 hover:text-red-500 text-zinc-700 dark:text-zinc-300 text-[9px] font-extrabold"
+                              >
+                                ✕
+                              </span>
+                            )}
+                          </div>
                         </button>
                       );
                     })}
@@ -9003,7 +9019,7 @@ export default function GlobalNetworkWorldMap({
       {/* Center-Screen Forensic Log & Packet Deep-Dive Modal (Opens immediately on Inspect) */}
       {showForensicDeepDiveModal && inspectedForensicBundle && (
         <div
-          onClick={() => setShowForensicDeepDiveModal(false)}
+          onClick={handleResumeLiveStream}
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <div
@@ -9072,6 +9088,13 @@ export default function GlobalNetworkWorldMap({
                 <button
                   type="button"
                   onClick={() => setShowForensicDeepDiveModal(false)}
+                  className="px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-700 dark:text-sky-300 font-extrabold text-[11px] cursor-pointer"
+                >
+                  📌 Minimize to Dock
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResumeLiveStream}
                   className="px-2.5 py-1.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-extrabold text-[11px] cursor-pointer"
                 >
                   ✕ Close
