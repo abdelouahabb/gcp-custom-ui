@@ -300,7 +300,7 @@ export default function FivePersonaCommandCenter({
         onShowError?.(
           err.response?.data?.error ||
             err.message ||
-            'Failed to convene 10-Persona Launch Tribunal.'
+            'Failed to convene 10-Persona Launch Council.'
         );
       } finally {
         setTribunalLoading(false);
@@ -400,7 +400,7 @@ export default function FivePersonaCommandCenter({
       onShowError?.(
         err.response?.data?.error ||
           err.message ||
-          'Failed to run Multi-Project Fleet Tribunal.'
+          'Failed to run Multi-Project Fleet Council.'
       );
     } finally {
       setFleetLoading(false);
@@ -596,7 +596,7 @@ export default function FivePersonaCommandCenter({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `CloudPulse-10-Persona-Tribunal-${projectId}-${region}.md`;
+    a.download = `CloudPulse-10-Persona-Council-${projectId}-${region}.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

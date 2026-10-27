@@ -1080,7 +1080,7 @@ function classifyDestructiveAxiosConfig(config) {
           String(body.action || '').toUpperCase()
         )) ||
       (rawUrl.includes('/aws-azure-parity/action') &&
-        [
+        ([
           'UPSERT_RESOURCE_GROUP',
           'ASSIGN_RG_IAM_ROLE',
           'LIST_BUCKET_OBJECTS',
@@ -1093,7 +1093,10 @@ function classifyDestructiveAxiosConfig(config) {
           'TEST_AI_GATEWAY_PROMPT',
           'RUN_BEDROCK_FOUNDRY_EVAL',
           'TRIGGER_DATAV_NOC_DRILL',
-        ].includes(String(body.action || '').toUpperCase())) ||
+        ].includes(String(body.action || '').toUpperCase()) ||
+          (String(body.action || '').toUpperCase() ===
+            'DELETE_RESOURCE_GROUP' &&
+            !body.deleteGcpResources))) ||
       (rawUrl.includes('/alpha-beta/action') &&
         [
           'INSPECT_BETA_RUN_INSTANCES',
@@ -3930,7 +3933,7 @@ function CloudPulseCockpit() {
                 {projectMenuOpen && (
                   <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] shadow-2xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-[80] max-h-80 overflow-y-auto">
                     <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800">
-                      Real GCP Projects ({contextData.projects?.length || 1})
+                      GCP Projects ({contextData.projects?.length || 1})
                     </div>
                     {(contextData.projects || []).map((proj) => (
                       <button

@@ -7824,21 +7824,10 @@ async function fetchProjectBillingStatus(projectId, token) {
     ]);
 
     if (infoRes.status === 'rejected') {
-      const errMsg =
-        infoRes.reason?.response?.data?.error?.message ||
-        infoRes.reason?.message ||
-        '';
-      if (
-        errMsg.includes('Cloud Billing API has not been used') ||
-        errMsg.includes('cloudbilling.googleapis.com')
-      ) {
-        await ensureCloudBillingApiEnabled(projectId, token);
-        billingInfo = await gcpFetch(infoUrl, token, projectId, {
-          timeout: 8000,
-        });
-      } else {
-        throw infoRes.reason;
-      }
+      // Fall back to querying without x-goog-user-project quota header (never auto-enable APIs on a read-only GET)
+      billingInfo = await gcpFetch(infoUrl, token, null, {
+        timeout: 8000,
+      });
     } else {
       billingInfo = infoRes.value;
     }
@@ -40512,6 +40501,68 @@ app.post(
             } catch {
               // ignore
             }
+          } else if (
+            (rType === 'VM' || rType === 'COMPUTE_VM') &&
+            rLoc &&
+            rName
+          ) {
+            try {
+              const vmUrl = `https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${encodeURIComponent(
+                rLoc
+              )}/instances/${encodeURIComponent(rName)}`;
+              const curVm = await gcpApiRequest({
+                method: 'GET',
+                url: vmUrl,
+                token,
+                quotaProject: projectId,
+              });
+              if (curVm?.labelFingerprint) {
+                await gcpApiRequest({
+                  method: 'POST',
+                  url: `${vmUrl}/setLabels`,
+                  token,
+                  quotaProject: projectId,
+                  data: {
+                    labels: {
+                      ...(curVm?.labels || {}),
+                      resource_group: rawSlug,
+                    },
+                    labelFingerprint: curVm.labelFingerprint,
+                  },
+                });
+                patchedLabels.push(`VM:${rName}`);
+              }
+            } catch {
+              // ignore
+            }
+          } else if (rType === 'PUBSUB_TOPIC' && rName) {
+            try {
+              const topicUrl = `https://pubsub.googleapis.com/v1/projects/${projectId}/topics/${encodeURIComponent(
+                rName
+              )}`;
+              const curTopic = await gcpApiRequest({
+                method: 'GET',
+                url: topicUrl,
+                token,
+                quotaProject: projectId,
+              });
+              await gcpApiRequest({
+                method: 'PATCH',
+                url: `${topicUrl}?updateMask=labels`,
+                token,
+                quotaProject: projectId,
+                data: {
+                  name: curTopic?.name || `projects/${projectId}/topics/${rName}`,
+                  labels: {
+                    ...(curTopic?.labels || {}),
+                    resource_group: rawSlug,
+                  },
+                },
+              });
+              patchedLabels.push(`PubSub:${rName}`);
+            } catch {
+              // ignore
+            }
           }
         }
 
@@ -40545,7 +40596,7 @@ app.post(
 
         for (const memberId of memberIds) {
           const [rType, rLoc, rName] = String(memberId).split(':');
-          if (rType === 'COMPUTE_VM' && rLoc && rName) {
+          if ((rType === 'VM' || rType === 'COMPUTE_VM') && rLoc && rName) {
             try {
               await gcpApiRequest({
                 method: 'POST',
@@ -40637,7 +40688,11 @@ app.post(
                   quotaProject: projectId,
                 });
                 deletedItems.push(`Cloud Run ${rName}`);
-              } else if (rType === 'COMPUTE_VM' && rLoc && rName) {
+              } else if (
+                (rType === 'VM' || rType === 'COMPUTE_VM') &&
+                rLoc &&
+                rName
+              ) {
                 await gcpApiRequest({
                   method: 'DELETE',
                   url: `https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${encodeURIComponent(
@@ -40667,7 +40722,10 @@ app.post(
                   quotaProject: projectId,
                 });
                 deletedItems.push(`BigQuery Dataset ${rName}`);
-              } else if (rType === 'SECRET_MANAGER' && rName) {
+              } else if (
+                (rType === 'SECRET' || rType === 'SECRET_MANAGER') &&
+                rName
+              ) {
                 await gcpApiRequest({
                   method: 'DELETE',
                   url: `https://secretmanager.googleapis.com/v1/projects/${projectId}/secrets/${encodeURIComponent(
@@ -40677,6 +40735,16 @@ app.post(
                   quotaProject: projectId,
                 });
                 deletedItems.push(`Secret ${rName}`);
+              } else if (rType === 'PUBSUB_TOPIC' && rName) {
+                await gcpApiRequest({
+                  method: 'DELETE',
+                  url: `https://pubsub.googleapis.com/v1/projects/${projectId}/topics/${encodeURIComponent(
+                    rName
+                  )}`,
+                  token,
+                  quotaProject: projectId,
+                });
+                deletedItems.push(`Pub/Sub Topic ${rName}`);
               }
             } catch (e) {
               errors.push(
@@ -62541,7 +62609,7 @@ app.post(
               body: {
                 sourceRanges: ['35.235.240.0/20'],
                 description:
-                  'Hardened to Google Cloud IAP TCP forwarding (35.235.240.0/20) by CloudPulse 10-Persona Tribunal',
+                  'Hardened to Google Cloud IAP TCP forwarding (35.235.240.0/20) by CloudPulse 10-Persona Council',
               },
               timeout: 8000,
             }
@@ -63545,7 +63613,7 @@ app.all(
 - **Identity & Zero-Trust**: ${serviceAccounts.length} Service Account(s) · ${iamBindings.length} IAM Role Binding(s) · ${wifPools.length} OIDC WIF Pool(s)
 - **FinOps Hygiene**: ${unattachedDisks.length} Unattached Disk(s) · ${unusedIps.length} Idle Static IP(s)
 
-## 2. 10-Persona Launch Tribunal Roll-Call
+## 2. 10-Persona Launch Council Roll-Call
 ${votes
   .map(
     (v) =>
@@ -63804,7 +63872,7 @@ ${votes
         error:
           err.response?.data?.error?.message ||
           err.message ||
-          'Failed to run 10-Persona Autonomous Launch Tribunal.',
+          'Failed to run 10-Persona Autonomous Launch Council.',
       });
     }
   }
@@ -64059,7 +64127,7 @@ app.get('/api/enterprise-personas/fleet-tribunal', async (req, res) => {
       error:
         err.response?.data?.error?.message ||
         err.message ||
-        'Failed to run Multi-Project Fleet Tribunal.',
+        'Failed to run Multi-Project Fleet Council.',
     });
   }
 });
