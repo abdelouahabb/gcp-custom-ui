@@ -2504,6 +2504,7 @@ export default function GlobalNetworkWorldMap({
 
   const [isPointerInsideMap, setIsPointerInsideMap] = useState(false);
   const [cursorGps, setCursorGps] = useState(null);
+  const [hoveredOptionExplain, setHoveredOptionExplain] = useState(null);
   const isPointerInsideMapRef = useRef(false);
 
   // Native non-passive wheel listener on the SVG map container so rolling the mouse wheel
@@ -3280,6 +3281,11 @@ export default function GlobalNetworkWorldMap({
               label: `Live Regional TCP/TLS Latency (${
                 liveGeoTelemetry?.regionalSocketProbes?.length || 8
               } Regions)`,
+              truthTag: '100% REAL LIVE SOCKET HANDSHAKE',
+              apiSource:
+                'Node.js dns.promises.lookup + net.createConnection(:443) + tls.connect (TLS 1.3)',
+              hoverExplain:
+                '100% REAL DATA: Executes live concurrent DNS, TCP (:443), and TLS 1.3 socket handshakes from the backend directly against 8 real Google Cloud regional frontends (*-aiplatform.googleapis.com) using microsecond performance timers.',
             },
             {
               id: 'ASSET_SOVEREIGNTY',
@@ -3287,6 +3293,11 @@ export default function GlobalNetworkWorldMap({
               label: `Project Asset Residency & Multi-Region Quorum (${
                 liveGeoTelemetry?.geoAssets?.length || 0
               })`,
+              truthTag: '100% REAL LIVE GCP REST API',
+              apiSource:
+                'storage.v1/b + bigquery.v2/datasets + run.v2/services + compute.v1/aggregated/instances',
+              hoverExplain:
+                '100% REAL DATA: Queries your live GCP project buckets, BigQuery datasets, Cloud Run services, and Compute Engine VMs to verify whether each resource has Multi-Region Quorum (RPO=0s) or is a Single-Region SPOF, plus EU GDPR vs US data residency.',
             },
             {
               id: 'REGIONAL_QUOTAS',
@@ -3294,6 +3305,10 @@ export default function GlobalNetworkWorldMap({
               label: `Live Regional Compute Quotas (${
                 liveGeoTelemetry?.regionalQuotas?.length || 0
               } Regions)`,
+              truthTag: '100% REAL LIVE GCP REST API',
+              apiSource: 'GET https://compute.googleapis.com/compute/v1/projects/{projectId}/regions',
+              hoverExplain:
+                '100% REAL DATA: Pulls live regional quota usage and limits (CPUS, DISKS_TOTAL_GB, IN_USE_ADDRESSES) directly from the Google Compute Engine Regions API across all enabled regions in your project.',
             },
             {
               id: 'VPC_SUBNETS',
@@ -3301,11 +3316,21 @@ export default function GlobalNetworkWorldMap({
               label: `Regional VPC Subnets & CIDR Map (${
                 liveGeoTelemetry?.liveSubnets?.length || 0
               } Subnets)`,
+              truthTag: '100% REAL LIVE GCP REST API',
+              apiSource:
+                'GET https://compute.googleapis.com/compute/v1/projects/{projectId}/aggregated/subnetworks',
+              hoverExplain:
+                '100% REAL DATA: Lists every live regional VPC subnetwork in your project, including its RFC1918 IPv4 CIDR range, gateway IP, and whether Private Google Access (PGA) is enabled.',
             },
             {
               id: 'STACK_SYNTHESIZER',
               icon: Sparkles,
               label: `1-Tap 3-Tier Stack Synthesizer & CFE (${orbitalMapMetrics.avgCfe}% Clean)`,
+              truthTag: '100% REAL GCP PROVISIONER + EPA/GOOGLE CFE DATA',
+              apiSource:
+                'POST /api/project/:projectId/global-map/synthesize-stack (GCS + BigQuery + Cloud Run v2)',
+              hoverExplain:
+                '100% REAL PROVISIONING: Deploys a real Cloud Storage Bucket, BigQuery Dataset, and Scale-to-Zero Cloud Run v2 service directly into your selected map region, ranked by Google Cloud published regional Carbon-Free Energy (CFE%) scores.',
             },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -3314,6 +3339,16 @@ export default function GlobalNetworkWorldMap({
               <button
                 key={tab.id}
                 type="button"
+                title={`${tab.truthTag} — ${tab.hoverExplain} (Source: ${tab.apiSource})`}
+                onMouseEnter={() =>
+                  setHoveredOptionExplain({
+                    title: tab.label,
+                    truthTag: tab.truthTag,
+                    apiSource: tab.apiSource,
+                    desc: tab.hoverExplain,
+                  })
+                }
+                onMouseLeave={() => setHoveredOptionExplain(null)}
                 onClick={() => setActiveGeoTab(tab.id)}
                 className={`w-full h-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-extrabold border transition-all cursor-pointer flex items-center justify-start gap-2 text-left leading-snug ${
                   active
@@ -3335,6 +3370,28 @@ export default function GlobalNetworkWorldMap({
             );
           })}
         </div>
+
+        {/* Live Hover Explanation Banner for Top 5 Geo-Control Pillars */}
+        {hoveredOptionExplain && (
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/35 text-xs font-mono space-y-1 transition-all">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold uppercase">
+                  {hoveredOptionExplain.truthTag}
+                </span>
+                <span className="font-extrabold text-zinc-900 dark:text-white">
+                  {hoveredOptionExplain.title}
+                </span>
+              </div>
+              <span className="text-[10.5px] text-emerald-700 dark:text-emerald-300 font-bold">
+                Source: {hoveredOptionExplain.apiSource}
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {hoveredOptionExplain.desc}
+            </p>
+          </div>
+        )}
 
         {/* TAB 01: LIVE REGIONAL TCP/TLS SOCKET LATENCY MATRIX */}
         {activeGeoTab === 'LATENCY_PROBES' && (
@@ -3783,6 +3840,16 @@ export default function GlobalNetworkWorldMap({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
+              title="Start or pause the synthetic firewall rule packet tester loop on the SVG map"
+              onMouseEnter={() =>
+                setHoveredOptionExplain({
+                  title: isRunning ? 'Pause Packet Tester Loop' : 'Resume Packet Tester Loop',
+                  truthTag: 'SYNTHETIC PROBES vs. 100% REAL VPC FIREWALLS',
+                  apiSource: `compute.v1/projects/${projectId}/global/firewalls (${firewalls.length} live rules)`,
+                  desc: 'Starts or pauses animated test packets on the map. Each packet is a synthetic probe (TCP :22, :3389, :443, ICMP) evaluated in real time against your live GCP VPC firewall rules.',
+                })
+              }
+              onMouseLeave={() => setHoveredOptionExplain(null)}
               onClick={() => setIsRunning(!isRunning)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${
                 isRunning
@@ -3807,6 +3874,15 @@ export default function GlobalNetworkWorldMap({
               type="button"
               onClick={handleResetSimulation}
               title="Clear in-flight packets and reset telemetry counters"
+              onMouseEnter={() =>
+                setHoveredOptionExplain({
+                  title: 'Clear In-Flight Packets & Reset Counters',
+                  truthTag: 'UI CANVAS CONTROL',
+                  apiSource: 'Local SVG Canvas State',
+                  desc: 'Clears all currently animated packet arcs and resets the Allowed / Blocked / Backbone session counters to zero.',
+                })
+              }
+              onMouseLeave={() => setHoveredOptionExplain(null)}
               className="px-2.5 py-1.5 rounded-lg text-xs font-mono border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer"
             >
               Clear
@@ -3817,6 +3893,16 @@ export default function GlobalNetworkWorldMap({
                 <button
                   key={spd}
                   type="button"
+                  title={`Set packet animation speed multiplier to ${spd}x`}
+                  onMouseEnter={() =>
+                    setHoveredOptionExplain({
+                      title: `Animation Velocity Multiplier (${spd}x)`,
+                      truthTag: 'UI CANVAS CONTROL',
+                      apiSource: 'SVG Bezier Arc Velocity',
+                      desc: `Multiplies packet flight speed across the world map by ${spd}x so you can inspect firewall rule interceptions faster or slower.`,
+                    })
+                  }
+                  onMouseLeave={() => setHoveredOptionExplain(null)}
                   onClick={() => setSimSpeed(spd)}
                   className={`px-2.5 py-1.5 font-bold cursor-pointer ${
                     simSpeed === spd
@@ -3831,6 +3917,16 @@ export default function GlobalNetworkWorldMap({
 
             <button
               type="button"
+              title="Toggle Google Cloud subsea & terrestrial Andromeda fiber backbone links between all 40 GCP regions"
+              onMouseEnter={() =>
+                setHoveredOptionExplain({
+                  title: 'Google Subsea & Terrestrial Fiber Backbone Mesh',
+                  truthTag: 'REAL GCP REGION TOPOLOGY (40 REGIONS)',
+                  apiSource: 'Google Cloud Global Backbone Peer Topology',
+                  desc: 'Displays or hides the private inter-region Google Cloud fiber routes connecting all 40 regions (Grace Hopper, Dunant, Curie, Firmina, Equiano, Echo, Apricot subsea cables).',
+                })
+              }
+              onMouseLeave={() => setHoveredOptionExplain(null)}
               onClick={() => setShowSubseaBackbone(!showSubseaBackbone)}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono border cursor-pointer ${
                 showSubseaBackbone
@@ -3844,6 +3940,16 @@ export default function GlobalNetworkWorldMap({
 
             <button
               type="button"
+              title="Toggle orbiting Availability Zone rings (-a, -b, -c, -f) around the selected region"
+              onMouseEnter={() =>
+                setHoveredOptionExplain({
+                  title: 'Availability Zone Orbit Rings (-a, -b, -c, -f)',
+                  truthTag: 'REAL GCP ZONE TOPOLOGY (121 ZONES)',
+                  apiSource: `compute.v1/projects/${projectId}/zones`,
+                  desc: 'Expands or collapses the individual availability zones around the selected region so you can inspect zonal VM placement and multi-zone high availability.',
+                })
+              }
+              onMouseLeave={() => setHoveredOptionExplain(null)}
               onClick={() => setShowZoneRings(!showZoneRings)}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono border cursor-pointer ${
                 showZoneRings
@@ -3858,6 +3964,7 @@ export default function GlobalNetworkWorldMap({
             {onSelectTab && (
               <button
                 type="button"
+                title="Jump to the Pre-Crime Bill & Dream Stack Architect"
                 onClick={() => onSelectTab('INNOVATION_LAB')}
                 className="px-3 py-1.5 rounded-lg text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-700 text-white shadow-sm cursor-pointer flex items-center gap-1.5"
               >
@@ -3944,6 +4051,10 @@ export default function GlobalNetworkWorldMap({
               badge: '443 · ICMP · Fiber',
               title: 'Global Live Traffic & VPC Mesh',
               desc: 'HTTPS :443, ICMP Ping, Inter-Region Fiber & Background Scans',
+              truthTag: 'SYNTHETIC PACKET PROBES vs. 100% REAL VPC FIREWALLS',
+              apiSource: `compute.v1/projects/${projectId}/global/firewalls (${firewalls.length} live rules) + logging.v2/entries:list`,
+              hoverExplain:
+                'Fires a balanced mix of HTTPS (:443), ICMP Ping, SSH (:22), and inter-region Andromeda fiber probes into your active GCP regions, evaluating every probe in real time against your live VPC firewall rules.',
             },
             {
               id: 'SSH_BRUTEFORCE',
@@ -3951,6 +4062,10 @@ export default function GlobalNetworkWorldMap({
               badge: 'Port :22 & :3389',
               title: 'Global SSH/RDP Brute-Force Wave',
               desc: 'Tests whether your VPC Firewall blocks public :22 & :3389',
+              truthTag: 'SYNTHETIC THREAT PROBE vs. 100% REAL VPC FIREWALLS',
+              apiSource: `compute.v1/projects/${projectId}/global/firewalls (Priority 0–65535 evaluation)`,
+              hoverExplain:
+                'Fires synthetic public scanner probes (e.g., 185.220.101.44 -> TCP :22 SSH & TCP :3389 RDP) against your real VPC firewall rules. If default-allow-ssh (0.0.0.0/0) is active, it flags the exposure and lets you deploy a Priority-100 DENY shield in 1 click.',
             },
             {
               id: 'IAP_ZERO_TRUST',
@@ -3958,6 +4073,10 @@ export default function GlobalNetworkWorldMap({
               badge: '35.235.240.0/20',
               title: 'IAP Zero-Trust Tunnel Verification',
               desc: 'Compares Google IAP (35.235.240.0/20) vs Public Internet SSH',
+              truthTag: 'SYNTHETIC IAP PROBE vs. 100% REAL VPC FIREWALLS',
+              apiSource: `Google IAP CIDR (35.235.240.0/20) vs compute.v1/firewalls`,
+              hoverExplain:
+                'Tests whether your VPC firewall rules allow Google Identity-Aware Proxy TCP forwarding (35.235.240.0/20 -> :22) while blocking direct public internet SSH (0.0.0.0/0 -> :22).',
             },
             {
               id: 'GLOBAL_LOAD_TEST',
@@ -3965,6 +4084,10 @@ export default function GlobalNetworkWorldMap({
               badge: 'GCLB :443 / :80',
               title: 'Multi-Region Edge Surge (:443)',
               desc: 'High-volume GCLB & global user HTTPS routing into active regions',
+              truthTag: 'SYNTHETIC GCLB EDGE PROBE vs. 100% REAL VPC FIREWALLS',
+              apiSource: `Google Front End (130.211.0.0/22, 35.191.0.0/16) vs compute.v1/firewalls`,
+              hoverExplain:
+                'Tests high-volume HTTPS (:443) and HTTP (:80) ingress from global points of presence and Google Cloud Load Balancer health-check ranges into your active project regions.',
             },
           ].map((mode) => {
             const ModeIcon = mode.icon;
@@ -3973,6 +4096,16 @@ export default function GlobalNetworkWorldMap({
               <button
                 key={mode.id}
                 type="button"
+                title={`${mode.truthTag} — ${mode.hoverExplain}`}
+                onMouseEnter={() =>
+                  setHoveredOptionExplain({
+                    title: mode.title,
+                    truthTag: mode.truthTag,
+                    apiSource: mode.apiSource,
+                    desc: mode.hoverExplain,
+                  })
+                }
+                onMouseLeave={() => setHoveredOptionExplain(null)}
                 onClick={() => handleSelectSimMode(mode.id)}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                   active
@@ -4017,6 +4150,28 @@ export default function GlobalNetworkWorldMap({
           })}
         </div>
 
+        {/* Live Hover Explanation Banner inside the Topology Canvas & Scenario Switcher */}
+        {hoveredOptionExplain && (
+          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/35 text-xs font-mono space-y-1 transition-all">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-extrabold uppercase">
+                  {hoveredOptionExplain.truthTag}
+                </span>
+                <span className="font-extrabold text-zinc-900 dark:text-white">
+                  {hoveredOptionExplain.title}
+                </span>
+              </div>
+              <span className="text-[10.5px] text-blue-600 dark:text-blue-300 font-bold">
+                Source: {hoveredOptionExplain.apiSource}
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {hoveredOptionExplain.desc}
+            </p>
+          </div>
+        )}
+
         {/* Live Scenario Verdict & Firewall Rule Audit Strip (Updates Immediately on Mode Switch) */}
         {(() => {
           const sshPublicEval = evaluatePacketAgainstFirewalls(
@@ -4045,152 +4200,206 @@ export default function GlobalNetworkWorldMap({
           );
 
           return (
-            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs font-mono">
-              <div className="space-y-1.5 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold uppercase">
-                    ACTIVE SCENARIO X-RAY · {simMode}
-                  </span>
-                  <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
-                    {simMode === 'SSH_BRUTEFORCE'
-                      ? 'Testing Public Threat Scanners (185.220.101.44) vs TCP :22 (SSH) & TCP :3389 (RDP)'
-                      : simMode === 'IAP_ZERO_TRUST'
-                      ? 'Comparing Google Cloud IAP Tunnel (35.235.240.0/20 → :22) vs Public Internet SSH'
-                      : simMode === 'GLOBAL_LOAD_TEST'
-                      ? `Evaluating Multi-Region GCLB Edge Surge (:443 & :80) Across ${activeRegionIds.length} Active Regions`
-                      : 'Evaluating Multi-Protocol Mesh (:443 HTTPS, ICMP Ping, :22 SSH & Andromeda Subsea Fiber)'}
-                  </span>
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-3 text-xs font-mono">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold uppercase">
+                      ACTIVE SCENARIO X-RAY · {simMode}
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-extrabold">
+                      SYNTHETIC PROBES EVALUATED AGAINST {firewalls.length} REAL VPC FIREWALL RULES
+                    </span>
+                    <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                      {simMode === 'SSH_BRUTEFORCE'
+                        ? 'Testing Public Threat Scanners (185.220.101.44) vs TCP :22 (SSH) & TCP :3389 (RDP)'
+                        : simMode === 'IAP_ZERO_TRUST'
+                        ? 'Comparing Google Cloud IAP Tunnel (35.235.240.0/20 → :22) vs Public Internet SSH'
+                        : simMode === 'GLOBAL_LOAD_TEST'
+                        ? `Evaluating Multi-Region GCLB Edge Surge (:443 & :80) Across ${activeRegionIds.length} Active Regions`
+                        : 'Evaluating Multi-Protocol Mesh (:443 HTTPS, ICMP Ping, :22 SSH & Andromeda Subsea Fiber)'}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    {simMode === 'SSH_BRUTEFORCE' && (
+                      <>
+                        <span
+                          className={`px-2 py-0.5 rounded font-bold ${
+                            sshPublicEval.verdict === 'ALLOW'
+                              ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                              : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          }`}
+                        >
+                          Public SSH (:22): {sshPublicEval.verdict} (
+                          {sshPublicEval.verdict === 'ALLOW'
+                            ? 'EXPOSED TO 0.0.0.0/0'
+                            : 'BLOCKED'}
+                          {' · '}
+                          {sshPublicEval.ruleName} p{sshPublicEval.priority})
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded font-bold ${
+                            rdpPublicEval.verdict === 'ALLOW'
+                              ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                              : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          }`}
+                        >
+                          Public RDP (:3389): {rdpPublicEval.verdict} (
+                          {rdpPublicEval.verdict === 'ALLOW'
+                            ? 'EXPOSED TO 0.0.0.0/0'
+                            : 'BLOCKED'}
+                          {' · '}
+                          {rdpPublicEval.ruleName} p{rdpPublicEval.priority})
+                        </span>
+                      </>
+                    )}
+
+                    {simMode === 'IAP_ZERO_TRUST' && (
+                      <>
+                        <span
+                          className={`px-2 py-0.5 rounded font-bold ${
+                            iapSshEval.verdict === 'ALLOW'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                          }`}
+                        >
+                          Google IAP (35.235.240.18:22): {iapSshEval.verdict} (
+                          {iapSshEval.ruleName} p{iapSshEval.priority})
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded font-bold ${
+                            sshPublicEval.verdict === 'DENY'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                              : 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                          }`}
+                        >
+                          Public Internet (:22): {sshPublicEval.verdict} (
+                          {sshPublicEval.verdict === 'DENY'
+                            ? 'ZERO-TRUST ENFORCED ✓'
+                            : 'STILL OPEN TO 0.0.0.0/0'}
+                          {' · '}
+                          {sshPublicEval.ruleName})
+                        </span>
+                      </>
+                    )}
+
+                    {simMode === 'GLOBAL_LOAD_TEST' && (
+                      <>
+                        <span
+                          className={`px-2 py-0.5 rounded font-bold ${
+                            httpsEdgeEval.verdict === 'ALLOW'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          HTTPS (:443): {httpsEdgeEval.verdict} ({httpsEdgeEval.ruleName} p
+                          {httpsEdgeEval.priority})
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded font-bold ${
+                            httpEdgeEval.verdict === 'ALLOW'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          HTTP (:80): {httpEdgeEval.verdict} ({httpEdgeEval.ruleName} p
+                          {httpEdgeEval.priority})
+                        </span>
+                      </>
+                    )}
+
+                    {simMode === 'LIVE_MIX' && (
+                      <>
+                        <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                          HTTPS (:443): {httpsEdgeEval.verdict} ({httpsEdgeEval.ruleName})
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                          ICMP Ping: {icmpEval.verdict} ({icmpEval.ruleName})
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
+                          SSH (:22): {sshPublicEval.verdict} ({sshPublicEval.ruleName})
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                  {simMode === 'SSH_BRUTEFORCE' && (
-                    <>
-                      <span
-                        className={`px-2 py-0.5 rounded font-bold ${
-                          sshPublicEval.verdict === 'ALLOW'
-                            ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
-                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                        }`}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    title="Immediately launch 6 synthetic probes across the map and evaluate them against your real VPC firewall rules"
+                    onClick={() => handleSelectSimMode(simMode)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold cursor-pointer shadow-xs"
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Fire 6-Packet Wave Now</span>
+                  </button>
+                  {(simMode === 'SSH_BRUTEFORCE' || simMode === 'IAP_ZERO_TRUST') &&
+                    sshPublicEval.verdict === 'ALLOW' && (
+                      <button
+                        type="button"
+                        disabled={deployingShield}
+                        title="Calls POST /api/project/:projectId/provision to create a real Priority-100 VPC Firewall rule blocking public TCP :22 & :3389"
+                        onClick={handleDeployMapShield}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-extrabold cursor-pointer disabled:opacity-50"
                       >
-                        Public SSH (:22): {sshPublicEval.verdict} (
-                        {sshPublicEval.verdict === 'ALLOW'
-                          ? 'EXPOSED TO 0.0.0.0/0'
-                          : 'BLOCKED'}
-                        {' · '}
-                        {sshPublicEval.ruleName} p{sshPublicEval.priority})
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded font-bold ${
-                          rdpPublicEval.verdict === 'ALLOW'
-                            ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
-                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                        }`}
-                      >
-                        Public RDP (:3389): {rdpPublicEval.verdict} (
-                        {rdpPublicEval.verdict === 'ALLOW'
-                          ? 'EXPOSED TO 0.0.0.0/0'
-                          : 'BLOCKED'}
-                        {' · '}
-                        {rdpPublicEval.ruleName} p{rdpPublicEval.priority})
-                      </span>
-                    </>
-                  )}
-
-                  {simMode === 'IAP_ZERO_TRUST' && (
-                    <>
-                      <span
-                        className={`px-2 py-0.5 rounded font-bold ${
-                          iapSshEval.verdict === 'ALLOW'
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                        }`}
-                      >
-                        Google IAP (35.235.240.18:22): {iapSshEval.verdict} (
-                        {iapSshEval.ruleName} p{iapSshEval.priority})
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded font-bold ${
-                          sshPublicEval.verdict === 'DENY'
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                            : 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
-                        }`}
-                      >
-                        Public Internet (:22): {sshPublicEval.verdict} (
-                        {sshPublicEval.verdict === 'DENY'
-                          ? 'ZERO-TRUST ENFORCED ✓'
-                          : 'STILL OPEN TO 0.0.0.0/0'}
-                        {' · '}
-                        {sshPublicEval.ruleName})
-                      </span>
-                    </>
-                  )}
-
-                  {simMode === 'GLOBAL_LOAD_TEST' && (
-                    <>
-                      <span
-                        className={`px-2 py-0.5 rounded font-bold ${
-                          httpsEdgeEval.verdict === 'ALLOW'
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                        }`}
-                      >
-                        HTTPS (:443): {httpsEdgeEval.verdict} ({httpsEdgeEval.ruleName} p
-                        {httpsEdgeEval.priority})
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded font-bold ${
-                          httpEdgeEval.verdict === 'ALLOW'
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                        }`}
-                      >
-                        HTTP (:80): {httpEdgeEval.verdict} ({httpEdgeEval.ruleName} p
-                        {httpEdgeEval.priority})
-                      </span>
-                    </>
-                  )}
-
-                  {simMode === 'LIVE_MIX' && (
-                    <>
-                      <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
-                        HTTPS (:443): {httpsEdgeEval.verdict} ({httpsEdgeEval.ruleName})
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
-                        ICMP Ping: {icmpEval.verdict} ({icmpEval.ruleName})
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
-                        SSH (:22): {sshPublicEval.verdict} ({sshPublicEval.ruleName})
-                      </span>
-                    </>
-                  )}
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>
+                          {deployingShield
+                            ? 'Deploying Shield...'
+                            : 'Deploy Priority-100 SSH Block Shield'}
+                        </span>
+                      </button>
+                    )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleSelectSimMode(simMode)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold cursor-pointer shadow-xs"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>Fire 6-Packet Wave Now</span>
-                </button>
-                {(simMode === 'SSH_BRUTEFORCE' || simMode === 'IAP_ZERO_TRUST') &&
-                  sshPublicEval.verdict === 'ALLOW' && (
-                    <button
-                      type="button"
-                      disabled={deployingShield}
-                      onClick={handleDeployMapShield}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-extrabold cursor-pointer disabled:opacity-50"
-                    >
-                      <Shield className="w-3.5 h-3.5" />
-                      <span>
-                        {deployingShield
-                          ? 'Deploying Shield...'
-                          : 'Deploy Priority-100 SSH Block Shield'}
-                      </span>
-                    </button>
-                  )}
+              {/* 100% Real Cloud Logging Network/Request/Audit Stream alongside the Synthetic Firewall Tester */}
+              <div className="pt-2.5 border-t border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded bg-emerald-600 text-white font-extrabold uppercase">
+                      100% REAL CLOUD LOGGING STREAM (`logging.v2/entries:list`)
+                    </span>
+                    <span className="text-zinc-600 dark:text-zinc-300 font-bold">
+                      Latest real `compute.googleapis.com/firewall`, `vpc_flows`, `run.googleapis.com/requests` &amp; `cloudaudit` events from `{projectId}`:
+                    </span>
+                  </div>
+                  <span className="text-zinc-500">
+                    {(liveGeoTelemetry?.liveNetworkLogEvents || []).length} live log entries fetched
+                  </span>
+                </div>
+
+                {(liveGeoTelemetry?.liveNetworkLogEvents || []).length === 0 ? (
+                  <div className="text-[10.5px] text-zinc-500 dark:text-zinc-400">
+                    No recent `firewall` / `vpc_flows` entries found in Cloud Logging (VPC Flow Logs &amp; Firewall Rule Logging are disabled by default on GCP subnets/rules to save logging ingestion cost — the animated map packets above use synthetic probes against your real `compute.v1/firewalls` rules so you can test them for $0.00).
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {(liveGeoTelemetry?.liveNetworkLogEvents || [])
+                      .slice(0, 3)
+                      .map((ev) => (
+                        <div
+                          key={ev.id}
+                          className="p-2 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-[10.5px]"
+                          title={`Real Cloud Logging Entry (${ev.logType}) at ${ev.timestamp} — Resource: ${ev.resourceType} (${ev.region})`}
+                        >
+                          <div className="min-w-0">
+                            <div className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                              {ev.summary}
+                            </div>
+                            <div className="text-[10px] text-zinc-500 truncate">
+                              {ev.logType} · {ev.region} · Caller: {ev.remoteIp}
+                            </div>
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9.5px] font-bold shrink-0">
+                            {ev.disposition}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -4382,15 +4591,46 @@ export default function GlobalNetworkWorldMap({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-zinc-400 font-bold">Map Lens:</span>
               {[
-                { id: 'TRAFFIC', icon: Activity, label: 'Live Network & Firewall' },
-                { id: 'CARBON_GRID', icon: Leaf, label: 'Carbon-Free Grid (CFE %)' },
-                { id: 'SPOT_ARBITRAGE', icon: Cpu, label: 'Spot VM Price Heatmap' },
+                {
+                  id: 'TRAFFIC',
+                  icon: Activity,
+                  label: 'Live Network & Firewall',
+                  truthTag: 'REAL VPC FIREWALL RULES + SYNTHETIC PROBES',
+                  apiSource: `compute.v1/projects/${projectId}/global/firewalls (${firewalls.length} rules)`,
+                  desc: 'Displays active regions, live workload counts, and animated packet probes evaluated against your real VPC firewall rules.',
+                },
+                {
+                  id: 'CARBON_GRID',
+                  icon: Leaf,
+                  label: 'Carbon-Free Grid (CFE %)',
+                  truthTag: 'PUBLISHED GOOGLE CLOUD REGIONAL CFE DATA',
+                  apiSource: 'Google Cloud Carbon-Free Energy (CFE%) & Grid gCO2/kWh Dataset',
+                  desc: 'Colors all 40 GCP regions by their annual Carbon-Free Energy percentage (e.g., montreal 100% CFE, finland 98% CFE, iowa 96% CFE) and grid carbon intensity (gCO2eq/kWh).',
+                },
+                {
+                  id: 'SPOT_ARBITRAGE',
+                  icon: Cpu,
+                  label: 'Spot VM Price Heatmap',
+                  truthTag: 'GCP CLOUD BILLING SKU CATALOG RATES',
+                  apiSource: 'Cloud Billing Catalog v1 (Preemptible / Spot e2-standard-4 Regional Rates)',
+                  desc: 'Overlays regional Spot VM hourly pricing and discount percentages across all 40 regions to identify FinOps batch/AI compute savings.',
+                },
               ].map((lens) => {
                 const LensIcon = lens.icon;
                 return (
                   <button
                     key={lens.id}
                     type="button"
+                    title={`${lens.truthTag} — ${lens.desc}`}
+                    onMouseEnter={() =>
+                      setHoveredOptionExplain({
+                        title: `Map Lens: ${lens.label}`,
+                        truthTag: lens.truthTag,
+                        apiSource: lens.apiSource,
+                        desc: lens.desc,
+                      })
+                    }
+                    onMouseLeave={() => setHoveredOptionExplain(null)}
                     onClick={() => setMapLens(lens.id)}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
                       mapLens === lens.id
@@ -4406,6 +4646,16 @@ export default function GlobalNetworkWorldMap({
 
               <button
                 type="button"
+                title="Visualize encrypted Cloud VPN / Identity-Aware Proxy (IAP 35.235.240.0/20) tunnel from your live client origin to the selected GCP region"
+                onMouseEnter={() =>
+                  setHoveredOptionExplain({
+                    title: 'Hybrid Cloud VPN & IAP Zero-Trust Tunnel Overlay',
+                    truthTag: 'LIVE CLIENT ORIGIN -> SELECTED GCP REGION',
+                    apiSource: 'Client IP Geo-Origin + Google IAP (35.235.240.0/20) Tunnel Path',
+                    desc: 'Draws a direct encrypted tunnel arc from your detected client origin to the selected GCP region and checks whether TCP :22 is restricted to Google IAP.',
+                  })
+                }
+                onMouseLeave={() => setHoveredOptionExplain(null)}
                 onClick={() => setShowHybridTunnel(!showHybridTunnel)}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
                   showHybridTunnel
@@ -4422,6 +4672,16 @@ export default function GlobalNetworkWorldMap({
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
+                title="Measure great-circle fiber distance, refractive-index optical RTT (ms), and GCP inter-region egress rate ($/GB) between any two regions"
+                onMouseEnter={() =>
+                  setHoveredOptionExplain({
+                    title: 'Point-to-Point Subsea Fiber RTT & Egress Laser',
+                    truthTag: 'HAVERSINE FIBER PHYSICS + GCP EGRESS SKU RATES',
+                    apiSource: 'Refractive Index in Silica Fiber (c/1.468) + GCP Inter-Region Egress Pricing',
+                    desc: 'Calculates great-circle fiber distance, speed-of-light-in-fiber round-trip latency (ms), and exact GCP cross-region egress cost ($/GB) between Region A and Region B.',
+                  })
+                }
+                onMouseLeave={() => setHoveredOptionExplain(null)}
                 onClick={() => setRouteAnalyzerEnabled(!routeAnalyzerEnabled)}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border cursor-pointer font-bold ${
                   routeAnalyzerEnabled

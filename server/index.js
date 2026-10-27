@@ -65669,6 +65669,7 @@ app.get(
         datasetsRes,
         runRes,
         vmsRes,
+        cloudLogsRes,
       ] = await Promise.all([
         resolveLiveClientOrigin(req),
         Promise.all(REGIONAL_PROBE_TARGETS.map(probeRegionalEndpoint)),
@@ -65719,6 +65720,22 @@ app.get(
           token,
           projectId,
           { timeout: 4500 }
+        ).catch(() => null),
+        gcpFetch(
+          `https://logging.googleapis.com/v2/entries:list`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            timeout: 4500,
+            data: {
+              resourceNames: [`projects/${projectId}`],
+              orderBy: 'timestamp desc',
+              pageSize: 12,
+              filter:
+                'logName:("compute.googleapis.com%2Ffirewall" OR "compute.googleapis.com%2Fvpc_flows" OR "run.googleapis.com%2Frequests" OR "cloudaudit.googleapis.com%2Factivity")',
+            },
+          }
         ).catch(() => null),
       ]);
 
@@ -65890,6 +65907,48 @@ app.get(
         })),
       ];
 
+      const rawLogEntries = Array.isArray(cloudLogsRes?.entries)
+        ? cloudLogsRes.entries
+        : [];
+      const liveNetworkLogEvents = rawLogEntries.slice(0, 10).map((entry, idx) => {
+        const logNameShort = String(entry.logName || '')
+          .split('/logs/')
+          .pop()
+          ?.replace(/%2F/g, '/') || 'cloudaudit/activity';
+        const resourceType = entry.resource?.type || 'gcp_resource';
+        const regionLabel =
+          entry.resource?.labels?.location ||
+          entry.resource?.labels?.zone ||
+          entry.resource?.labels?.region ||
+          'global';
+        const protoMethod = entry.protoPayload?.methodName || '';
+        const httpStatus = entry.httpRequest?.status || null;
+        const remoteIp =
+          entry.httpRequest?.remoteIp ||
+          entry.jsonPayload?.connection?.src_ip ||
+          entry.protoPayload?.requestMetadata?.callerIp ||
+          'GCP-Internal';
+        const disposition =
+          entry.jsonPayload?.disposition ||
+          (httpStatus && httpStatus >= 400 ? 'DENIED_OR_ERR' : 'LOGGED_LIVE');
+
+        return {
+          id: entry.insertId || `log-${idx}`,
+          timestamp: entry.timestamp || new Date().toISOString(),
+          logType: logNameShort,
+          resourceType,
+          region: regionLabel,
+          remoteIp,
+          summary:
+            protoMethod ||
+            entry.httpRequest?.requestUrl ||
+            entry.jsonPayload?.rule_details?.reference ||
+            `${resourceType} (${logNameShort})`,
+          disposition,
+          severity: entry.severity || 'INFO',
+        };
+      });
+
       return res.json({
         status: 'OK',
         projectId,
@@ -65900,6 +65959,7 @@ app.get(
         regionalQuotas,
         liveSubnets: liveSubnets.slice(0, 60),
         geoAssets,
+        liveNetworkLogEvents,
         summary: {
           probedRegionsCount: sortedProbes.length,
           fastestRegionId: fastestRegion?.regionId || 'us-central1',
@@ -65908,6 +65968,7 @@ app.get(
           liveSubnetsCount: liveSubnets.length,
           quotaRegionsCount: regionalQuotas.length,
           geoAssetsCount: geoAssets.length,
+          liveNetworkLogEventsCount: liveNetworkLogEvents.length,
           multiRegionProtectedCount: geoAssets.filter((a) =>
             a.resiliencyVerdict.includes('MULTI_REGION')
           ).length,
