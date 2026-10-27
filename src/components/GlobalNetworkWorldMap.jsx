@@ -4245,56 +4245,66 @@ export default function GlobalNetworkWorldMap({
                   </div>
 
                   {pinnedList.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {pinnedList.map((po) => {
-                        const isBusy =
-                          realigningQuotaKey === `${po.metric}-${po.region}`;
-                        return (
-                          <div
-                            key={po.id}
-                            className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/80 border border-rose-500/40 flex flex-col justify-between gap-2"
-                          >
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-extrabold text-rose-600 dark:text-rose-400 text-[11px]">
-                                  {po.metric} in {po.region.toUpperCase()}: Pinned at{' '}
-                                  <span className="underline">{po.effectiveLimit}</span>{' '}
-                                  (Native Default is {po.defaultLimit})
-                                </span>
-                                <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 text-[9px] font-bold">
-                                  {po.overrideSource}
-                                </span>
+                    <div className="space-y-2">
+                      <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-[10px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                        <strong className="text-blue-600 dark:text-blue-400">
+                          UNDER THE HOOD · HOW QUOTA RESTORE WORKS (OFFICIAL CLOUD QUOTAS API — NO MAGIC BYPASS):
+                        </strong>{' '}
+                        Because a <code>producerOverride</code> was written by Google Cloud (<code>compute.googleapis.com</code>) when your earlier quota increase was approved, it cannot be force-deleted by client code. Clicking{' '}
+                        <strong>Request Quota Restore</strong> submits an official GA{' '}
+                        <code>QuotaPreference</code> (<code>POST https://cloudquotas.googleapis.com/v1/.../quotaPreferences</code>) with your email and technical justification to Google Cloud&apos;s automated quota evaluator—which either auto-approves via Google&apos;s quota bot within a few minutes or places it in <code>reconciling: true</code> (official Google Cloud review) and emails you confirmation.
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {pinnedList.map((po) => {
+                          const isBusy =
+                            realigningQuotaKey === `${po.metric}-${po.region}`;
+                          return (
+                            <div
+                              key={po.id}
+                              className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/80 border border-rose-500/40 flex flex-col justify-between gap-2"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-extrabold text-rose-600 dark:text-rose-400 text-[11px]">
+                                    {po.metric} in {po.region.toUpperCase()}: Pinned at{' '}
+                                    <span className="underline">{po.effectiveLimit}</span>{' '}
+                                    (Native Default is {po.defaultLimit})
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 text-[9px] font-bold">
+                                    {po.overrideSource}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                  {po.explanation}
+                                </p>
                               </div>
-                              <p className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                                {po.explanation}
-                              </p>
+                              <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
+                                <span className="text-[9.5px] text-zinc-500 truncate">
+                                  QuotaId: <code>{po.quotaId}</code>
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() =>
+                                    handleRealignQuotaPreference({
+                                      metric: po.metric,
+                                      quotaId: po.quotaId,
+                                      region: po.region,
+                                      currentLimit: po.effectiveLimit,
+                                      targetLimit: po.defaultLimit,
+                                    })
+                                  }
+                                  className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
+                                >
+                                  {isBusy
+                                    ? 'Submitting QuotaPreference...'
+                                    : `Request Quota Restore ${po.effectiveLimit} → ${po.defaultLimit} (Cloud Quotas API)`}
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
-                              <span className="text-[9.5px] text-zinc-500 truncate">
-                                QuotaId: <code>{po.quotaId}</code>
-                              </span>
-                              <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() =>
-                                  handleRealignQuotaPreference({
-                                    metric: po.metric,
-                                    quotaId: po.quotaId,
-                                    region: po.region,
-                                    currentLimit: po.effectiveLimit,
-                                    targetLimit: po.defaultLimit,
-                                  })
-                                }
-                                className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shrink-0"
-                              >
-                                {isBusy
-                                  ? 'Submitting QuotaPreference...'
-                                  : `Un-Pin & Restore ${po.effectiveLimit} → ${po.defaultLimit} ($0)`}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -4526,8 +4536,8 @@ export default function GlobalNetworkWorldMap({
                                 }}
                                 className="w-full px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-extrabold cursor-pointer text-center"
                               >
-                                Un-Pin N2D Override ({rq.n2dCpusLimit} →{' '}
-                                {rq.n2dDefaultLimit || 3000} Default)
+                                Request N2D Quota Restore ({rq.n2dCpusLimit} →{' '}
+                                {rq.n2dDefaultLimit || 3000} via Cloud Quotas API)
                               </button>
                             )}
                           </div>

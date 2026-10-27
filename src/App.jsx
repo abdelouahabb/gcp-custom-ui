@@ -2706,20 +2706,20 @@ function classifyDestructiveAxiosConfig(config) {
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Un-Pin & Raise ${qMetric} Quota (${curLim} ➔ ${tgtLim}) in ${qReg}?`,
-        headerBadge: 'Cloud Quotas Pinned Override Surgeon Gatekeeper',
+        title: `Submit Official Cloud Quotas Request for ${qMetric} (${curLim} ➔ ${tgtLim}) in ${qReg}?`,
+        headerBadge: 'Cloud Quotas v1 Official QuotaPreference Gatekeeper',
         targetLabel: 'Target Quota Metric, Region & Requested Ceiling',
         resourceKind: `Cloud Quotas v1 QuotaPreference (${qId})`,
         targetName: `${qMetric} (${qReg}: ${curLim} ➔ ${tgtLim})`,
         location: qReg,
         projectId,
-        method: 'REALIGN QUOTA PREFERENCE',
+        method: 'SUBMIT QUOTA PREFERENCE',
         endpoint: rawUrl,
-        confirmLabel: `Submit QuotaPreference (${curLim} ➔ ${tgtLim} in ${qReg}) ($0.00)`,
-        cancelToast: `Quota realignment for ${qMetric} in ${qReg} cancelled.`,
-        whatHappensNext: `1. What is blocking your quota right now: An earlier quota approval wrote a hardcoded producerOverride of ${curLim} on ${qMetric} in "${qReg}". Even though your project's native Tier-1 defaultLimit later upgraded to ${tgtLim}, that old ${curLim} override keeps "${qReg}" pinned down.\n2. How this fixes it: Submits a declarative GA QuotaPreference (${qId} = ${tgtLim}) for "${qReg}" to the Google Cloud Quotas API (cloudquotas.googleapis.com/v1) to replace the stale ${curLim} override with ${tgtLim}.\n3. Live Map Sync: Once granted/reconciled by Google Cloud Quotas, "${qReg}" will match your Tier-1 baseline (${tgtLim}) and update directly in the Regional Compute & GPU Quotas grid.`,
-        costWarning: `ZERO COST ($0.00): Raising or un-pinning a quota ceiling in Google Cloud Quotas is 100% free ($0.00/mo). You are only billed for VM or GPU instances that you actually launch.`,
-        impactWarning: `Updates the declarative QuotaPreference for ${qMetric} (${qId}) in "${qReg}" from ${curLim} to ${tgtLim} on project "${projectId}".`,
+        confirmLabel: `Submit Official QuotaPreference (${curLim} ➔ ${tgtLim} in ${qReg}) ($0.00)`,
+        cancelToast: `Quota request for ${qMetric} in ${qReg} cancelled.`,
+        whatHappensNext: `1. Why "${qReg}" is pinned at ${curLim}: An earlier quota approval wrote a Google-owned producerOverride of ${curLim} on ${qMetric}. Even though your project's native Tier-1 defaultLimit later upgraded to ${tgtLim}, producerOverrides cannot be force-deleted by client code and take precedence over defaultLimit.\n2. How this works under the hood (Official Approval Flow — No Bypass): Submits a declarative GA QuotaPreference (${qId} = ${tgtLim}) with your account email and technical justification to POST https://cloudquotas.googleapis.com/v1/projects/${projectId}/locations/global/quotaPreferences.\n3. Google Cloud Automated Bot vs Review: Google Cloud's automated quota evaluator checks the request against your project's defaultLimit (${tgtLim}) and billing history—either auto-approving it within a few minutes or placing it in reconciling: true (official Google Cloud quota review) and emailing your account confirmation.`,
+        costWarning: `ZERO COST ($0.00): Submitting a QuotaPreference in Google Cloud Quotas is 100% free ($0.00/mo). You are only billed for VM or GPU instances that you actually launch.`,
+        impactWarning: `Submits an official Cloud Quotas v1 QuotaPreference for ${qMetric} (${qId}: ${curLim} ➔ ${tgtLim}) in "${qReg}" on project "${projectId}".`,
       };
     }
 
