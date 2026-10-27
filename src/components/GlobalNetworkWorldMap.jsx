@@ -1997,10 +1997,27 @@ export default function GlobalNetworkWorldMap({
     }
   };
 
+  const [mapProbeBanner, setMapProbeBanner] = useState(null);
+  const mapBannerTimerRef = useRef(null);
+
+  const showMapBanner = useCallback((msg) => {
+    if (mapBannerTimerRef.current) {
+      clearTimeout(mapBannerTimerRef.current);
+    }
+    setMapProbeBanner(msg);
+    mapBannerTimerRef.current = setTimeout(() => {
+      setMapProbeBanner(null);
+      mapBannerTimerRef.current = null;
+    }, 8000);
+  }, []);
+
   const fetchLiveGeoTelemetry = useCallback(
     async (showToastMsg = false, focusRegObj = null) => {
       if (!projectId) return;
       setGeoLoading(true);
+      if (showToastMsg) {
+        showMapBanner('Probing live GCP regional TCP/TLS 1.3 endpoints & Cloud Logging...');
+      }
       try {
         const tz =
           Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -2020,15 +2037,15 @@ export default function GlobalNetworkWorldMap({
         );
         setLiveGeoTelemetry(res.data);
         if (showToastMsg && res.data?.fastestRegion) {
-          onShowToast?.(
-            `Probed ${
-              res.data?.regionalSocketProbes?.length || 10
-            } live GCP regional endpoints: Fastest is ${
-              res.data.fastestRegion.regionId
-            } (${res.data.fastestRegion.tcpMs}ms TCP / ${
-              res.data.fastestRegion.totalRttMs
-            }ms TLS RTT)`
-          );
+          const summaryMsg = `Probed ${
+            res.data?.regionalSocketProbes?.length || 10
+          } live GCP regional endpoints: Fastest is ${
+            res.data.fastestRegion.regionId
+          } (${res.data.fastestRegion.tcpMs}ms TCP / ${
+            res.data.fastestRegion.totalRttMs
+          }ms TLS RTT)`;
+          showMapBanner(summaryMsg);
+          onShowToast?.(summaryMsg);
         }
       } catch (err) {
         if (showToastMsg) {
@@ -2042,7 +2059,7 @@ export default function GlobalNetworkWorldMap({
         setGeoLoading(false);
       }
     },
-    [projectId, onShowToast, onShowError]
+    [projectId, onShowToast, onShowError, showMapBanner]
   );
 
   useEffect(() => {
@@ -3243,6 +3260,7 @@ export default function GlobalNetworkWorldMap({
           },
         }
       );
+      if (res.data?.message) showMapBanner(res.data.message);
       if (onShowToast) onShowToast(res.data.message);
       if (onRefresh) onRefresh();
     } catch (err) {
@@ -4179,15 +4197,22 @@ export default function GlobalNetworkWorldMap({
             <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5 gap-1 shrink-0 shadow-xs">
               <button
                 type="button"
+                disabled={geoLoading}
                 data-feature-id="GLOBAL_MAP_FIRE_WAVE"
                 onClick={() => {
                   fetchLiveGeoTelemetry(true);
                   handleSelectSimMode(simMode);
                 }}
-                className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer transition-colors"
+                className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-60 transition-colors"
               >
-                <Zap className="w-3 h-3 shrink-0" />
-                <span>Re-Probe &amp; Replay Wave</span>
+                {geoLoading ? (
+                  <RefreshCw className="w-3 h-3 shrink-0 animate-spin" />
+                ) : (
+                  <Zap className="w-3 h-3 shrink-0" />
+                )}
+                <span>
+                  {geoLoading ? 'Probing Sockets...' : 'Re-Probe & Replay Wave'}
+                </span>
               </button>
               <button
                 type="button"
@@ -4535,6 +4560,28 @@ export default function GlobalNetworkWorldMap({
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
+            {/* Live On-Canvas Probe & Action Status HUD (Immediately Visible While Viewing the Map) */}
+            {mapProbeBanner && (
+              <div className="absolute top-2.5 left-3 z-20 pointer-events-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/90 border border-emerald-500/60 text-emerald-200 text-[10.5px] font-mono font-bold shadow-lg backdrop-blur-md">
+                {geoLoading ? (
+                  <RefreshCw className="w-3.5 h-3.5 text-emerald-400 animate-spin shrink-0" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                )}
+                <span>{mapProbeBanner}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMapProbeBanner(null);
+                  }}
+                  className="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[9.5px] cursor-pointer"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
             {/* Contextual Map Action Overlay (Only Appears When Zoomed In or Region Pinned — Never Clutters Default View) */}
             {(isRegionPinnedOnMap || zoom > 1.1) && (
               <div className="absolute top-2.5 right-3 z-10 pointer-events-auto flex items-center gap-1.5">

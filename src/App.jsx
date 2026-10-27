@@ -4266,20 +4266,36 @@ function CloudPulseCockpit() {
         {/* Main Content Body */}
         <main className="px-4 sm:px-6 lg:px-8 py-5 space-y-5 flex-1">
           {toastMessage && (
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-3.5 flex items-center justify-between gap-3 text-xs shadow-sm transition-all">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-zinc-600 dark:text-zinc-300 shrink-0" />
-                <span>{toastMessage}</span>
+            <>
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-3.5 flex items-center justify-between gap-3 text-xs shadow-sm transition-all">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-zinc-600 dark:text-zinc-300 shrink-0" />
+                  <span>{toastMessage}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setToastMessage(null)}
+                  title="Dismiss notification banner"
+                  className="text-xs underline opacity-75 hover:opacity-100"
+                >
+                  Dismiss
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setToastMessage(null)}
-                title="Dismiss notification banner"
-                className="text-xs underline opacity-75 hover:opacity-100"
-              >
-                Dismiss
-              </button>
-            </div>
+              <div className="fixed bottom-5 right-5 z-[95] max-w-md bg-zinc-950/95 border border-emerald-500/60 text-emerald-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl backdrop-blur-md">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{toastMessage}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setToastMessage(null)}
+                  title="Dismiss notification"
+                  className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 text-[10px] font-bold cursor-pointer shrink-0"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </>
           )}
 
           {errorBanner && (
