@@ -1038,6 +1038,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 <button
                   key={t.id}
                   type="button"
+                  data-feature-id={t.id}
                   onClick={() => setActiveSubTab(t.id)}
                   title={`${t.code}. ${t.label} (${t.badge})`}
                   className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${

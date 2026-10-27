@@ -1025,6 +1025,99 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'Vertex AI Gemini 3.8 Flash · Live Project Telemetry Context',
     safetyMode: 'READ_ONLY',
   },
+  // ============================================================================
+  // 5. DATA ENGINEERING STUDIO 9 SUB-MODULES (DataEngineeringStudio.jsx)
+  // ============================================================================
+  ICEBERG_50_MATRIX: {
+    badge: 'DATA ENGINEERING · MODULE 01',
+    title: '50-Playbook Apache Iceberg & Lakehouse Architecture Matrix',
+    whatItDoes:
+      'Provides 50 production-tested BigLake, Apache Iceberg, and BigQuery Lakehouse playbooks with executable SQL, compaction policies, and cross-cloud Omni federated queries.',
+    enterpriseValue:
+      'Gives data platform teams ready-to-run DDL and architectural blueprints for open table formats on Cloud Storage.',
+    gcpApis: 'biglake.googleapis.com · bigquery.googleapis.com · storage.googleapis.com',
+    safetyMode: 'READ_ONLY',
+  },
+  MEDALLION_ELT: {
+    badge: 'DATA ENGINEERING · MODULE 02',
+    title: '3-Tier Medallion Lakehouse Pipeline Builder (Bronze -> Silver -> Gold)',
+    whatItDoes:
+      'Provisions synchronized Bronze (raw), Silver (cleaned/deduplicated), and Gold (executive marts) BigQuery datasets with automated PII SHA-256 hashing and QUALIFY ROW_NUMBER() deduplication.',
+    enterpriseValue:
+      'Standardizes enterprise ELT pipelines with built-in data quality quarantine (_dlq) and 7-day time-travel recovery.',
+    gcpApis: 'bigquery.googleapis.com/bigquery/v2/projects/{project}/datasets & queries',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  DATAFORM_SQLX: {
+    badge: 'DATA ENGINEERING · MODULE 03',
+    title: 'Dataform SQLX & dbt Auto-Clean Transformation Workbench',
+    whatItDoes:
+      'Initializes managed Google Cloud Dataform repositories and workspaces, compiles SQLX / dbt models with incremental partition pruning, and executes live BigQuery deduplication SQL.',
+    enterpriseValue:
+      'Brings software engineering rigor (Git version control, schema assertions, and CI/CD) to SQL data transformations.',
+    gcpApis: 'dataform.googleapis.com/v1beta1 · bigquery.googleapis.com',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  DATAPLEX_MESH: {
+    badge: 'DATA ENGINEERING · MODULE 04',
+    title: 'Dataplex Universal Catalog, Auto-Profiling Scans & Data Products',
+    whatItDoes:
+      'Launches automated Dataplex Data Profiling and Data Quality scans against BigQuery tables and publishes governed Data Mesh Products with freshness SLAs.',
+    enterpriseValue:
+      'Automates enterprise data governance, column-level quality scoring, and semantic catalog discovery across your lakehouse.',
+    gcpApis: 'dataplex.googleapis.com/v1 (dataScans, dataProducts, entries)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SCHEMA_CONTRACTS: {
+    badge: 'DATA ENGINEERING · MODULE 05',
+    title: 'Visual Source-to-Target Schema Mapper & Zero-Breakage Data Contracts',
+    whatItDoes:
+      'Maps source fields to target BigQuery/Iceberg schemas with type-safe casting (SAFE_CAST), PII masking policies, and breaking-change impact analysis.',
+    enterpriseValue:
+      'Prevents upstream schema drift from breaking downstream executive BI dashboards or ML feature pipelines.',
+    gcpApis: 'BigQuery Schema Contract & Column Lineage Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  SLOT_DOCTOR_DAGS: {
+    badge: 'DATA ENGINEERING · MODULE 06',
+    title: 'BigQuery Slot/Skew Doctor & Composer-Lite Serverless ELT Workflows',
+    whatItDoes:
+      'Analyzes live BigQuery job execution plans for shuffle spill and SELECT * anti-patterns, and deploys serverless Cloud Workflows ELT DAGs ($0/mo Free Tier vs. ~$348/mo Cloud Composer).',
+    enterpriseValue:
+      'Cuts BigQuery query scan costs by up to 65% and eliminates idle Apache Airflow cluster overhead for lightweight schedules.',
+    gcpApis: 'bigquery.jobs.list · workflows.googleapis.com/v1',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  DATA_AGENT_KIT: {
+    badge: 'DATA ENGINEERING · MODULE 07',
+    title: 'Google Cloud Data Agent Kit (DAK) — deployment.yaml & Canonical MCP URIs',
+    whatItDoes:
+      'Generates declarative deployment.yaml and orchestration-pipeline.yaml bundles with mandatory datacloud:antigravity attribution labels and discovers canonical bq://, gcs://, and lakehouse:// MCP URIs.',
+    enterpriseValue:
+      'Unifies declarative data infrastructure provisioning with AI agent MCP resource discovery.',
+    gcpApis: 'gcloud beta orchestration-pipelines · gcloud dataplex entries search',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SERVERLESS_SPARK: {
+    badge: 'DATA ENGINEERING · MODULE 08',
+    title: 'Dataproc Serverless Spark 2.2 & Event Log Root-Cause Analyzer',
+    whatItDoes:
+      'Configures autoscaling PySpark batches on Dataproc Serverless ($0 idle cost) and diagnoses Spark driver/executor OOMs, data skew, and shuffle spills from GCS event logs.',
+    enterpriseValue:
+      'Runs distributed PySpark and Iceberg compaction workloads without managing standing Hadoop/Spark clusters.',
+    gcpApis: 'dataproc.googleapis.com/v1/projects/{project}/locations/{region}/batches',
+    safetyMode: 'READ_ONLY',
+  },
+  GCP_LAKEHOUSE_WORKSPACE: {
+    badge: 'DATA ENGINEERING · MODULE 09',
+    title: 'GCP Native Lakehouse — BigFrames Python, BQML AI.FORECAST & Continuous SQL',
+    whatItDoes:
+      'Generates 100% Google-native lakehouse code using BigQuery DataFrames (BigFrames pandas/sklearn API), TimesFM AI.FORECAST time-series SQL, and BigQuery Continuous Queries.',
+    enterpriseValue:
+      'Executes distributed Python DataFrames and generative AI forecasting directly inside BigQuery’s serverless compute engine.',
+    gcpApis: 'bigframes · bigquery.googleapis.com (ML.FORECAST / AI.FORECAST)',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**

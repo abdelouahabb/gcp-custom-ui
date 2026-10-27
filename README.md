@@ -10,6 +10,11 @@
 
 **CloudPulse 2026** is a high-speed, mobile-first Progressive Web App (PWA) and desktop command center for managing live **Google Cloud Platform (GCP)** infrastructure directly via official Google Cloud REST APIs (`run.googleapis.com/v2`, `compute.googleapis.com/v1`, `storage.googleapis.com`, `bigquery.googleapis.com`, `iam.googleapis.com/v1`, `serviceusage.googleapis.com/v1`, `cloudbilling.googleapis.com/v1`, and `generativelanguage.googleapis.com/v1beta`).
 
+- **Authentic Google Cloud Console Aesthetic & Enterprise Hover Explainer (`InnovationHoverExplainer.jsx`)**:
+  - **Google Cloud Console Color Palette**: Uses official Google Cloud Console surfaces (`#f8f9fa` / `#ffffff` in Daylight Mode and `#171717` / `#202124` in Dark Mode), crisp borders (`#dadce0` / `#3c4043`), and Google Blue (`#1a73e8` / `#8ab4f8`) accents instead of rainbow gradients.
+  - **Hybrid Signature Name — Plain-English Enterprise Subtitle**: Preserves every signature innovation name (e.g., *Pre-Crime Bill & Dream Stack*, *Wave 15 Dyson Moonshot*, *Wave 14 Quantum Doctor*, *Wave 12 Roadster Flight Deck*) paired with a clear enterprise subtitle (*Billing Forecaster & Stack Compiler*, *BigQuery SQL, SLSA & Log RCA*, *PITR, Drift Fix & PQC Vault*).
+  - **4-Section Google Cloud Console Hover Explainer Card**: Hovering over any studio, sub-tab, or action button opens a structured enterprise explainer card breaking down: **(1) Domain Badge + Safety Mode (`Read-Only Telemetry` vs. `Live GCP Action`)**, **(2) Full Un-Truncated Feature Title**, **(3) What It Does (Plain English)**, and **(4) Enterprise Value & Under-the-Hood GCP APIs / CLI**.
+
 ---
 
 ## ✦ Revolutionary "Beyond-Google-Cloud-Console" 2026 Suite

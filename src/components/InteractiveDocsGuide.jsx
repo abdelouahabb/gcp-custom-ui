@@ -31,6 +31,30 @@ import {
 
 const DOC_SECTIONS = [
   {
+    id: 'google-cloud-console-hover-explainer-and-enterprise-palette',
+    wave: '2026 ENTERPRISE UX · 4-SECTION GOOGLE CLOUD CONSOLE HOVER EXPLAINER CARD, HYBRID SIGNATURE NAMING & AUTHENTIC GCP PALETTE',
+    title:
+      '4-Section Google Cloud Console Enterprise Hover Explainer Card (GlobalInnovationHoverExplainer), Hybrid Signature Name — Enterprise Subtitle System & Authentic Google Cloud Console Color Palette',
+    badge: 'GLOBAL HOVER EXPLAINER + GCP THEME',
+    badgeColor:
+      'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    icon: Info,
+    targetTab: 'INNOVATION_LAB',
+    problemSolved:
+      'Traditional single-line tooltips merely expand a truncated button label without explaining what a cloud innovation actually does, why enterprise engineering/FinOps/security teams rely on it, whether clicking it is Read-Only or executes a Live GCP Mutation, or which official Google Cloud REST APIs and MCP servers run under the hood.',
+    howItWorks: [
+      '4-Section Structured Hover Explainer Card (src/components/InnovationHoverExplainer.jsx): Hovering over any of the 20 main studio tabs, 22 Innovation Lab studios, Waves 11–15 Moonshot sub-tabs, 10 Persona War-Rooms, 12 SDK 590.0.1 workbenches, 9 Data Engineering modules, or operational action buttons displays a structured Google Cloud Console card with: (1) Domain Badge + Safety Mode Pill (Read-Only Telemetry vs. Live GCP Action), (2) Full Un-Truncated Feature Title, (3) What It Does (Plain English), and (4) Enterprise Value & Use Case + Under the Hood GCP APIs & CLI.',
+      'Hybrid Signature Name — Plain-English Enterprise Subtitle Convention: Preserves every signature CloudPulse innovation title (Pre-Crime Bill & Dream Stack, Wave 15 Dyson Moonshot, Wave 14 Quantum Doctor, Wave 13 Starlink & Neuralink, Wave 12 Roadster Flight Deck, 10-Persona War-Room) paired with a crystal-clear enterprise subtitle.',
+      'Authentic Google Cloud Console Color Palette: Standardized across all 42 studios and the 48-Server Remote MCP Hub onto official Google Cloud Console surfaces (#f8f9fa / #ffffff in Light Mode, #171717 / #202124 in Dark Mode), crisp neutral borders (#dadce0 / #3c4043), and Google Blue (#1a73e8 / #8ab4f8) active indicators.',
+    ],
+    apisUsed: [
+      'GlobalInnovationHoverExplainer (data-feature-id + intelligent action pattern resolver)',
+      '48 Official https://*.googleapis.com/mcp Endpoints & Google Cloud REST v1/v2 APIs',
+    ],
+    billingImpact:
+      '100% client-side zero-latency UI explainer with explicit Read-Only Telemetry vs. Live GCP Action safety badges on every button.',
+  },
+  {
     id: 'native-cloud-billing-spend-caps-and-22-scenario-precrime-studio',
     wave: '2026 FINOPS & EMERGENCY COST-STOP · NATIVE CLOUD BILLING SPEND CAP API, 24/7 PUB/SUB KILL-SWITCH, LEVEL 1.5 GUARD & 22-SCENARIO "PRE-CRIME" BILLING ANOMALY FORECASTER',
     title:

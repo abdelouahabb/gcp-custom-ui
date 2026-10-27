@@ -2,7 +2,9 @@
 
 This guide explains **what every revolutionary feature in CloudPulse 2026 does**, **why it exists** (compared to the corporate Google Cloud Console), **which official Google Cloud REST APIs it calls under the hood**, and **how it impacts your billing and safety**.
 
->  **In-App Interactive Guide**: You can also open the **`Docs & Guide `** tab directly inside the CloudPulse 2026 UI (or click **` How It Works`** in the top 2030 Orbital HUD) to search these guides interactively and launch any feature in 1 click.
+>  **In-App Interactive Guide & 4-Section Hover Explainer (`InnovationHoverExplainer.jsx`)**:
+>  - You can open the **`Docs`** tab directly inside the CloudPulse 2026 UI to search these guides interactively and launch any feature in 1 click.
+>  - Hovering over any studio tab, Innovation Lab pill, Persona War-Room, or action button displays the **4-Section Google Cloud Console Enterprise Hover Explainer Card** (*Domain Badge & Safety Mode*, *Full Un-Truncated Title*, *What It Does in Plain English*, and *Enterprise Value + Exact Google Cloud REST APIs / CLI*).
 
 ---
 
