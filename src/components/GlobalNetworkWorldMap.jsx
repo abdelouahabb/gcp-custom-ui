@@ -4022,124 +4022,93 @@ export default function GlobalNetworkWorldMap({
             liveGeoTelemetry?.liveNetworkLogEvents?.[0]?.summary || '';
 
           return (
-            <div className="px-2.5 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#090d16] border border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-x-auto no-scrollbar">
-              {/* Left + Center: Live Telemetry Badge + Segmented Protocol Verdict Matrix */}
-              <div className="inline-flex items-center gap-2 shrink-0">
-                <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-extrabold uppercase tracking-wide shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>LIVE SOCKETS · {firewalls.length} FIREWALLS</span>
+            <div className="px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#090d16] border border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-x-auto no-scrollbar">
+              {/* Left: Live Telemetry Badge */}
+              <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-extrabold uppercase tracking-wide shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>LIVE SOCKETS · {firewalls.length} FIREWALLS</span>
+              </span>
+
+              {/* Center + Right: Full-Width Segmented Protocol Verdict & Cloud Logging Matrix */}
+              <div className="inline-flex items-center h-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-3 gap-3 shrink-0">
+                <span
+                  title={`Matched Rule: ${httpsEdgeEval.ruleName}`}
+                  className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
+                >
+                  <span className="text-zinc-400">HTTPS :443</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {httpsEdgeEval.verdict}
+                  </span>
                 </span>
 
-                <div className="inline-flex items-center h-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-2.5 gap-2.5 shrink-0">
-                  <span
-                    title={`Matched Rule: ${httpsEdgeEval.ruleName}`}
-                    className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
-                  >
-                    <span className="text-zinc-400">HTTPS :443</span>
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      {httpsEdgeEval.verdict}
-                    </span>
-                  </span>
+                <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
 
-                  <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
-
-                  <span
-                    title={`Matched Rule: ${icmpEval.ruleName}`}
-                    className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
-                  >
-                    <span className="text-zinc-400">ICMP</span>
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      {icmpEval.verdict}
-                    </span>
-                  </span>
-
-                  <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
-
-                  <span
-                    title={`Matched Rule: ${sshPublicEval.ruleName}`}
-                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-bold ${
-                      sshPublicEval.verdict === 'ALLOW'
-                        ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
-                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                    }`}
-                  >
-                    <span>SSH :22</span>
-                    <span>
-                      {sshPublicEval.verdict === 'ALLOW' ? 'EXPOSED' : 'LOCKED'}
-                    </span>
-                  </span>
-
-                  <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
-
-                  <span
-                    title="Google Cloud IAP TCP Forwarding Range (35.235.240.0/20)"
-                    className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
-                  >
-                    <span className="text-zinc-400">IAP Tunnel</span>
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      {iapSshEval.verdict}
-                    </span>
-                  </span>
-
-                  {rdpPublicEval.verdict === 'ALLOW' && (
-                    <>
-                      <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
-                      <span
-                        title={`Matched Rule: ${rdpPublicEval.ruleName}`}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 font-bold"
-                      >
-                        <span>RDP :3389</span>
-                        <span>EXPOSED</span>
-                      </span>
-                    </>
-                  )}
-
-                  {liveLogCount > 0 && (
-                    <>
-                      <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
-                      <span
-                        title={`Latest Cloud Logging Event: ${latestLogSummary}`}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold max-w-[230px] truncate"
-                      >
-                        <span>Logs: {liveLogCount}</span>
-                        {latestLogSummary && (
-                          <span className="text-blue-400/90 truncate">
-                            · {latestLogSummary}
-                          </span>
-                        )}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Right: Action Buttons Docked Flush on the Same Single Line */}
-              <div className="inline-flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  data-feature-id="GLOBAL_MAP_FIRE_WAVE"
-                  onClick={() => {
-                    fetchLiveGeoTelemetry(true);
-                    handleSelectSimMode(simMode);
-                  }}
-                  className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer shadow-xs transition-colors"
+                <span
+                  title={`Matched Rule: ${icmpEval.ruleName}`}
+                  className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
                 >
-                  <Zap className="w-3 h-3 shrink-0" />
-                  <span>Re-Probe &amp; Replay Wave</span>
-                </button>
-                {sshPublicEval.verdict === 'ALLOW' && (
-                  <button
-                    type="button"
-                    disabled={deployingShield}
-                    data-feature-id="GLOBAL_MAP_DEPLOY_SHIELD"
-                    onClick={handleDeployMapShield}
-                    className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 transition-colors"
-                  >
-                    <Shield className="w-3 h-3 shrink-0" />
-                    <span>
-                      {deployingShield ? 'Deploying...' : 'Block Public SSH (Priority-100)'}
+                  <span className="text-zinc-400">ICMP</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {icmpEval.verdict}
+                  </span>
+                </span>
+
+                <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+
+                <span
+                  title={`Matched Rule: ${sshPublicEval.ruleName}`}
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-bold ${
+                    sshPublicEval.verdict === 'ALLOW'
+                      ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                      : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                  }`}
+                >
+                  <span>SSH :22</span>
+                  <span>
+                    {sshPublicEval.verdict === 'ALLOW' ? 'EXPOSED' : 'LOCKED'}
+                  </span>
+                </span>
+
+                <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+
+                <span
+                  title="Google Cloud IAP TCP Forwarding Range (35.235.240.0/20)"
+                  className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
+                >
+                  <span className="text-zinc-400">IAP Tunnel</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {iapSshEval.verdict}
+                  </span>
+                </span>
+
+                {rdpPublicEval.verdict === 'ALLOW' && (
+                  <>
+                    <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+                    <span
+                      title={`Matched Rule: ${rdpPublicEval.ruleName}`}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 font-bold"
+                    >
+                      <span>RDP :3389</span>
+                      <span>EXPOSED</span>
                     </span>
-                  </button>
+                  </>
+                )}
+
+                {liveLogCount > 0 && (
+                  <>
+                    <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+                    <span
+                      title={`Latest Cloud Logging Event: ${latestLogSummary}`}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold"
+                    >
+                      <span>Logs: {liveLogCount}</span>
+                      {latestLogSummary && (
+                        <span className="text-blue-400/90">
+                          · {latestLogSummary}
+                        </span>
+                      )}
+                    </span>
+                  </>
                 )}
               </div>
             </div>
@@ -4151,7 +4120,7 @@ export default function GlobalNetworkWorldMap({
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {/* Left/Center 8 Columns: Full Interactive SVG World Map */}
         <div className="xl:col-span-8 bg-white dark:bg-[#05070e] border border-blue-500/30 rounded-2xl overflow-hidden shadow-2xl relative">
-          {/* Structured Instrument Deck Row 1: Playback Dock | Live Telemetry & GPS Dock | Zoom & Cadence Dock */}
+          {/* Structured Instrument Deck Row 1: Playback & Speed Dock | Live Probe & Shield Actions | Zoom & Cadence Dock */}
           <div className="px-3 py-1.5 bg-zinc-50/90 dark:bg-[#090d16] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-x-auto no-scrollbar">
             {/* Left Dock: Unified Segmented Transport & Speed Controller */}
             <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5 gap-0.5 shrink-0 shadow-xs">
@@ -4206,31 +4175,32 @@ export default function GlobalNetworkWorldMap({
               ))}
             </div>
 
-            {/* Center Dock: Structured Telemetry Counter & Live GPS Strip */}
-            <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-2.5 h-7 gap-3 shrink-0 shadow-xs">
-              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                <span>ALLOW: {counters.allowedPackets}</span>
-              </span>
-              <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
-              <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400 font-bold">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                <span>BLOCK: {counters.deniedPackets}</span>
-              </span>
-              <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
-              <span className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span>FIBER: {counters.backbonePackets}</span>
-              </span>
-              {cursorGps && (
-                <>
-                  <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
-                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-300 font-bold">
-                    <Move className="w-2.5 h-2.5 text-zinc-400" />
-                    <span>{formatLatLon(cursorGps.lat, cursorGps.lon)}</span>
-                  </span>
-                </>
-              )}
+            {/* Center Dock: Re-Probe & Priority-100 Firewall Shield Actions */}
+            <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5 gap-1 shrink-0 shadow-xs">
+              <button
+                type="button"
+                data-feature-id="GLOBAL_MAP_FIRE_WAVE"
+                onClick={() => {
+                  fetchLiveGeoTelemetry(true);
+                  handleSelectSimMode(simMode);
+                }}
+                className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer transition-colors"
+              >
+                <Zap className="w-3 h-3 shrink-0" />
+                <span>Re-Probe &amp; Replay Wave</span>
+              </button>
+              <button
+                type="button"
+                disabled={deployingShield}
+                data-feature-id="GLOBAL_MAP_DEPLOY_SHIELD"
+                onClick={handleDeployMapShield}
+                className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-red-600/90 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 transition-colors"
+              >
+                <Shield className="w-3 h-3 shrink-0" />
+                <span>
+                  {deployingShield ? 'Deploying...' : 'Block Public SSH (Priority-100)'}
+                </span>
+              </button>
             </div>
 
             {/* Right Dock: Unified Zoom & Cadence Instrument Group */}
@@ -4480,48 +4450,75 @@ export default function GlobalNetworkWorldMap({
             </div>
           </div>
 
-          {/* Conditional Row 3: Single-Line Point-to-Point Subsea Fiber Laser Bar (Never Wraps into Orphan Lines) */}
-          {routeAnalyzerEnabled && (
-            <div className="px-3 py-1.5 bg-amber-500/5 dark:bg-amber-950/20 border-b border-amber-500/25 flex items-center justify-between gap-2 text-[10px] font-mono overflow-x-auto no-scrollbar">
-              <div className="inline-flex items-center gap-1.5 shrink-0">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 font-extrabold uppercase tracking-wider text-[9px]">
-                  <Crosshair className="w-2.5 h-2.5" />
-                  Subsea Laser
-                </span>
-                <select
-                  value={routeSourceRegionId}
-                  onChange={(e) => setRouteSourceRegionId(e.target.value)}
-                  className="h-6 max-w-[215px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
-                >
-                  {GCP_GLOBAL_REGIONS.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      A: {r.name} ({r.city})
-                    </option>
-                  ))}
-                </select>
-                <span className="text-amber-400 font-bold">⇄</span>
-                <select
-                  value={routeDestRegionId}
-                  onChange={(e) => setRouteDestRegionId(e.target.value)}
-                  className="h-6 max-w-[215px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
-                >
-                  {GCP_GLOBAL_REGIONS.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      B: {r.name} ({r.city})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="inline-flex items-center rounded-md bg-amber-500/15 border border-amber-500/35 px-2.5 h-6 gap-2.5 text-amber-700 dark:text-amber-300 font-bold shrink-0">
-                <span>{routeTelemetry.fiberKm.toLocaleString()} km Fiber</span>
-                <span className="h-3 w-px bg-amber-500/30" />
-                <span>{routeTelemetry.rttMs}ms RTT</span>
-                <span className="h-3 w-px bg-amber-500/30" />
-                <span>${routeTelemetry.ratePerGb}/GB Egress</span>
-              </div>
+          {/* Structured Instrument Deck Row 3: Subsea Laser Selectors (Left) | ALLOW/BLOCK/FIBER/GPS Telemetry Dock (Center) | Fiber RTT Readout (Right) */}
+          <div className="px-3 py-1.5 bg-amber-500/5 dark:bg-[#080b14] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10px] font-mono overflow-x-auto no-scrollbar">
+            {/* Left Dock: Point-to-Point Subsea Fiber Laser Selectors */}
+            <div className="inline-flex items-center gap-1.5 shrink-0">
+              <span className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 font-extrabold uppercase tracking-wider text-[9px]">
+                <Crosshair className="w-2.5 h-2.5" />
+                Subsea Laser
+              </span>
+              <select
+                value={routeSourceRegionId}
+                onChange={(e) => setRouteSourceRegionId(e.target.value)}
+                className="h-6 max-w-[165px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
+              >
+                {GCP_GLOBAL_REGIONS.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    A: {r.name} ({r.city})
+                  </option>
+                ))}
+              </select>
+              <span className="text-amber-400 font-bold">⇄</span>
+              <select
+                value={routeDestRegionId}
+                onChange={(e) => setRouteDestRegionId(e.target.value)}
+                className="h-6 max-w-[165px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
+              >
+                {GCP_GLOBAL_REGIONS.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    B: {r.name} ({r.city})
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
+
+            {/* Center Dock: ALLOW / BLOCK / FIBER / Live GPS Coordinate Strip (Moved Here per Layout Diagram) */}
+            <div className="inline-flex items-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-2.5 h-6 gap-2.5 shrink-0 shadow-xs">
+              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>ALLOW: {counters.allowedPackets}</span>
+              </span>
+              <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
+              <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span>BLOCK: {counters.deniedPackets}</span>
+              </span>
+              <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
+              <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <span>FIBER: {counters.backbonePackets}</span>
+              </span>
+              {cursorGps && (
+                <>
+                  <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-300 font-bold">
+                    <Move className="w-2.5 h-2.5 text-zinc-400" />
+                    <span>{formatLatLon(cursorGps.lat, cursorGps.lon)}</span>
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Right Dock: Subsea Optical Fiber Distance, RTT & Egress Rate */}
+            <div className="inline-flex items-center rounded-md bg-amber-500/15 border border-amber-500/35 px-2.5 h-6 gap-2 text-amber-700 dark:text-amber-300 font-bold shrink-0">
+              <span>{routeTelemetry.fiberKm.toLocaleString()} km Fiber</span>
+              <span className="h-3 w-px bg-amber-500/30" />
+              <span>{routeTelemetry.rttMs}ms RTT</span>
+              <span className="h-3 w-px bg-amber-500/30" />
+              <span>${routeTelemetry.ratePerGb}/GB Egress</span>
+            </div>
+          </div>
 
           {/* Interactive Zoomable & Pannable SVG World Map (1200 x 560) — Scroll & Shortcuts Locked to Map */}
           <div
