@@ -1254,6 +1254,220 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'POST https://bigquery.googleapis.com/bigquery/v2/projects/{project}/jobs (dryRun=true)',
     safetyMode: 'READ_ONLY',
   },
+
+  // ============================================================================
+  // 8. GLOBAL NETWORK WORLD MAP — LIVE TELEMETRY PILLARS, SCENARIO MODES & LENSES
+  // ============================================================================
+  GLOBAL_MAP_LATENCY_PROBES: {
+    badge: '100% REAL LIVE SOCKET HANDSHAKE',
+    title: 'Live Regional TCP/TLS 1.3 Socket Latency Prober (8 GCP Regions)',
+    whatItDoes:
+      'Executes real concurrent DNS lookup, TCP (:443), and TLS 1.3 socket handshakes from the backend against 8 live Google Cloud regional endpoints (*-aiplatform.googleapis.com) using microsecond timers.',
+    enterpriseValue:
+      'Measures your true network round-trip time (RTT) to North America, Europe, Asia, South America, and Middle East GCP regions without deploying test VMs.',
+    gcpApis: 'Node.js dns.promises.lookup · net.createConnection(:443) · tls.connect (TLS 1.3)',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_ASSET_SOVEREIGNTY: {
+    badge: '100% REAL LIVE GCP REST API',
+    title: 'Project Asset Residency & Multi-Region Quorum Audit',
+    whatItDoes:
+      'Queries your live Cloud Storage buckets, BigQuery datasets, Cloud Run services, and Compute Engine VMs to verify Multi-Region Quorum (RPO=0s) vs Single-Region SPOFs and GDPR/US residency.',
+    enterpriseValue:
+      'Proves data sovereignty compliance (EU GDPR vs US) and catches single-region disaster recovery blind spots before an outage.',
+    gcpApis: 'storage.v1/b · bigquery.v2/datasets · run.v2/services · compute.v1/aggregated/instances',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_REGIONAL_QUOTAS: {
+    badge: '100% REAL LIVE GCP REST API',
+    title: 'Live Regional Compute Quotas & Capacity Headroom',
+    whatItDoes:
+      'Fetches live regional quota usage and limits (CPUS, DISKS_TOTAL_GB, IN_USE_ADDRESSES) directly from the Google Compute Engine Regions API across all project regions.',
+    enterpriseValue:
+      'Prevents regional quota exhaustion failures during autoscaling spikes or multi-region disaster recovery failovers.',
+    gcpApis: 'GET https://compute.googleapis.com/compute/v1/projects/{project}/regions',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_VPC_SUBNETS: {
+    badge: '100% REAL LIVE GCP REST API',
+    title: 'Regional VPC Subnetworks & RFC1918 CIDR Map',
+    whatItDoes:
+      'Lists every live regional VPC subnetwork in your project, including its IPv4 CIDR range, gateway IP, and Private Google Access (PGA) status.',
+    enterpriseValue:
+      'Gives NetOps architects an instant global inventory of subnet IP allocations and Private Google Access posture.',
+    gcpApis: 'GET https://compute.googleapis.com/compute/v1/projects/{project}/aggregated/subnetworks',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_STACK_SYNTHESIZER: {
+    badge: '100% REAL GCP PROVISIONER + CFE%',
+    title: '1-Tap Green-Region 3-Tier Stack Synthesizer & Carbon Grid',
+    whatItDoes:
+      'Provisions a real Cloud Storage Bucket, BigQuery Dataset, and Scale-to-Zero Cloud Run v2 service directly into your selected map region, ranked by published Google Cloud Carbon-Free Energy (CFE%).',
+    enterpriseValue:
+      'Deploys a pre-wired 3-tier serverless stack in the lowest-carbon, lowest-latency GCP region in a single click.',
+    gcpApis: 'POST /api/project/{project}/global-map/synthesize-stack (GCS + BigQuery + Cloud Run v2)',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  GLOBAL_MAP_MODE_LIVE_MIX: {
+    badge: 'SYNTHETIC PROBE vs. REAL VPC FIREWALLS',
+    title: 'Global Live Traffic & VPC Mesh (Multi-Protocol Firewall Tester)',
+    whatItDoes:
+      'Launches synthetic HTTPS (:443), ICMP Ping, SSH (:22), and inter-region Andromeda fiber probes across the map and evaluates every packet in real time against your live compute.v1/firewalls rules.',
+    enterpriseValue:
+      'Since GCP VPC Flow Logs are disabled by default to save $0.50/GB logging costs, this tests your real VPC firewall rule priorities (0–65535) against live protocol mixes for $0.00.',
+    gcpApis: 'GET compute.v1/projects/{project}/global/firewalls + POST logging.v2/entries:list',
+    safetyMode: 'SIMULATION',
+  },
+  GLOBAL_MAP_MODE_SSH_BRUTEFORCE: {
+    badge: 'SYNTHETIC THREAT PROBE vs. REAL FIREWALLS',
+    title: 'Global SSH (:22) & RDP (:3389) Brute-Force Wave Tester',
+    whatItDoes:
+      'Fires synthetic public internet threat probes (e.g., 185.220.101.44 -> TCP :22 & :3389) against your live VPC firewall rules to verify whether public SSH/RDP is blocked or exposed via 0.0.0.0/0.',
+    enterpriseValue:
+      'Immediately reveals if default-allow-ssh or default-allow-rdp is exposing your VMs to the public internet and offers a 1-click Priority-100 DENY shield.',
+    gcpApis: 'GET compute.v1/projects/{project}/global/firewalls (Priority 0–65535 Evaluator)',
+    safetyMode: 'SIMULATION',
+  },
+  GLOBAL_MAP_MODE_IAP_ZERO_TRUST: {
+    badge: 'SYNTHETIC IAP PROBE vs. REAL FIREWALLS',
+    title: 'Identity-Aware Proxy (IAP 35.235.240.0/20) Zero-Trust Tunnel Verifier',
+    whatItDoes:
+      'Compares synthetic SSH probes coming from Google Cloud’s official Identity-Aware Proxy range (35.235.240.0/20 -> :22) against public internet SSH probes (0.0.0.0/0 -> :22) using your real firewall rules.',
+    enterpriseValue:
+      'Verifies BeyondCorp Zero-Trust posture: allowing authenticated Google IAP TCP forwarding while blocking direct public SSH access.',
+    gcpApis: 'Google IAP CIDR (35.235.240.0/20) vs compute.v1/projects/{project}/global/firewalls',
+    safetyMode: 'SIMULATION',
+  },
+  GLOBAL_MAP_MODE_GLOBAL_LOAD_TEST: {
+    badge: 'SYNTHETIC GCLB PROBE vs. REAL FIREWALLS',
+    title: 'Multi-Region Google Cloud Load Balancer (GCLB :443 / :80) Edge Surge',
+    whatItDoes:
+      'Simulates high-volume global HTTPS (:443) and HTTP (:80) edge traffic from Google Front Ends (130.211.0.0/22, 35.191.0.0/16) into your active regions, evaluated against your real VPC firewall rules.',
+    enterpriseValue:
+      'Confirms that your web/API ingress firewall rules permit Google Cloud Load Balancer health checks and HTTPS traffic across all active regions.',
+    gcpApis: 'GCLB Ranges (130.211.0.0/22, 35.191.0.0/16) vs compute.v1/firewalls',
+    safetyMode: 'SIMULATION',
+  },
+  GLOBAL_MAP_PLAY_PAUSE: {
+    badge: 'CANVAS PACKET TESTER LOOP',
+    title: 'Start / Pause Animated Firewall Rule Packet Prober',
+    whatItDoes:
+      'Starts or pauses the animated packet wave on the 40-region SVG world map. Automatically pauses when the browser tab is hidden to save CPU and battery.',
+    enterpriseValue:
+      'Lets you freeze any in-flight packet wave to inspect individual firewall rule matches or run continuous visual stress tests.',
+    gcpApis: 'Real-Time Client-Side VPC Firewall Rule Evaluator (compute.v1/firewalls)',
+    safetyMode: 'SIMULATION',
+  },
+  GLOBAL_MAP_CLEAR: {
+    badge: 'RESET CANVAS COUNTERS',
+    title: 'Clear In-Flight Packets & Reset Session Counters',
+    whatItDoes:
+      'Clears all animated packet arcs on the map and resets the Allowed, Blocked by Firewall, and VPC Backbone session counters to zero.',
+    enterpriseValue:
+      'Gives you a clean slate before running a new firewall rule test or recording a demo.',
+    gcpApis: 'Local SVG Canvas & Telemetry Counter State',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_SPEED: {
+    badge: 'PACKET VELOCITY MULTIPLIER',
+    title: 'Packet Flight Speed Multiplier (1x / 2x / 4x)',
+    whatItDoes:
+      'Adjusts the flight velocity of animated packet probes across the world map between 1x (normal), 2x (fast), and 4x (high-speed stress test).',
+    enterpriseValue:
+      'Lets engineers slow down packet trajectories to inspect perimeter interceptions or speed up high-volume firewall evaluations.',
+    gcpApis: 'Quadratic Bezier SVG Trajectory Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_FIBER_MESH: {
+    badge: '40-REGION SUBSEA & TERRESTRIAL FIBER',
+    title: 'Google Cloud Global Subsea & Terrestrial Fiber Backbone Mesh',
+    whatItDoes:
+      'Shows or hides the private Google Cloud inter-region fiber links connecting all 40 GCP regions (Grace Hopper, Dunant, Curie, Firmina, Equiano, Echo, and Apricot subsea cables).',
+    enterpriseValue:
+      'Visualizes how Google’s private Andromeda software-defined backbone routes inter-region VPC traffic off the public internet.',
+    gcpApis: 'Google Cloud 40-Region Backbone Topology Graph',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_ZONES_TOGGLE: {
+    badge: '121 AVAILABILITY ZONES (-a/-b/-c)',
+    title: 'Expand / Collapse Orbiting Availability Zone Nodes',
+    whatItDoes:
+      'Toggles the orbiting zonal satellite rings (e.g., us-central1-a, -b, -c, -f) around the selected region on the map.',
+    enterpriseValue:
+      'Helps architects inspect zonal Compute Engine VM placement and verify multi-zone high availability.',
+    gcpApis: 'GET https://compute.googleapis.com/compute/v1/projects/{project}/zones',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_LENS_TRAFFIC: {
+    badge: 'MAP LENS · FIREWALL & TRAFFIC',
+    title: 'Live Network & VPC Firewall Evaluation Lens',
+    whatItDoes:
+      'Colors map regions and packet trajectories by live VPC firewall rule verdicts (Emerald = ALLOWED, Red = BLOCKED BY FIREWALL, Blue = VPC BACKBONE).',
+    enterpriseValue:
+      'Provides immediate visual confirmation of which ports and source CIDRs are permitted or blocked at your VPC perimeter.',
+    gcpApis: 'compute.v1/projects/{project}/global/firewalls + logging.v2/entries:list',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_LENS_CARBON: {
+    badge: 'MAP LENS · GREENOPS CFE%',
+    title: 'Google Cloud Carbon-Free Energy (CFE %) & gCO2/kWh Grid Lens',
+    whatItDoes:
+      'Colors all 40 GCP regions by their published annual Carbon-Free Energy percentage (e.g., northamerica-northeast1 100% CFE, europe-north1 98% CFE, us-central1 96% CFE) and grid carbon intensity.',
+    enterpriseValue:
+      'Enables ESG and GreenOps teams to place batch, AI training, and serverless workloads in near-zero-carbon regions.',
+    gcpApis: 'Google Cloud Published Regional Carbon-Free Energy (CFE%) Dataset',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_LENS_SPOT: {
+    badge: 'MAP LENS · FINOPS SPOT VM HEATMAP',
+    title: 'Regional Spot VM Hourly Price & Arbitrage Heatmap Lens',
+    whatItDoes:
+      'Overlays live regional Spot/Preemptible VM pricing and discount percentages across all 40 GCP regions.',
+    enterpriseValue:
+      'Identifies the lowest-cost regions for fault-tolerant GKE node pools, Batch jobs, and AI inference workloads (up to 60–91% off on-demand).',
+    gcpApis: 'Cloud Billing SKU Catalog v1 · Regional Compute Pricing Engine',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_HYBRID_TUNNEL: {
+    badge: 'BEYONDCORP IAP & CLOUD VPN OVERLAY',
+    title: 'Hybrid Cloud VPN & Identity-Aware Proxy (IAP) Encrypted Tunnel Overlay',
+    whatItDoes:
+      'Draws an encrypted hybrid tunnel arc from your detected client origin directly to your selected GCP region and verifies IAP (35.235.240.0/20) firewall reachability.',
+    enterpriseValue:
+      'Visualizes zero-trust administrative access paths from your engineering location into private GCP VPC subnets.',
+    gcpApis: 'Client Geo-Origin Probe + Google IAP (35.235.240.0/20) Firewall Rule Check',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_FIBER_LASER: {
+    badge: 'OPTICAL FIBER PHYSICS + EGRESS SKU',
+    title: 'Point-to-Point Subsea Fiber RTT & Cross-Region Egress Laser',
+    whatItDoes:
+      'Calculates the exact Haversine distance (km), speed-of-light-in-silica-fiber round-trip latency (ms), and GCP inter-region egress rate ($/GB) between any two regions.',
+    enterpriseValue:
+      'Helps distributed systems engineers estimate replication lag and cross-region data transfer costs before designing multi-region architectures.',
+    gcpApis: 'Silica Fiber Refractive Index Physics (c/1.468) + GCP Inter-Region Egress SKU Rates',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_FIRE_WAVE: {
+    badge: 'INSTANT 6-PACKET BURST PROBE',
+    title: 'Fire 6-Packet Firewall Stress-Test Wave Now',
+    whatItDoes:
+      'Immediately launches a 6-packet burst for the active scenario mode across the world map and logs each packet’s matched VPC firewall rule and priority.',
+    enterpriseValue:
+      'Tests firewall changes immediately after deploying or deleting a VPC firewall rule without waiting for background ticks.',
+    gcpApis: 'evaluatePacketAgainstFirewalls() vs compute.v1/projects/{project}/global/firewalls',
+    safetyMode: 'SIMULATION',
+  },
+  GLOBAL_MAP_DEPLOY_SHIELD: {
+    badge: '1-CLICK LIVE VPC FIREWALL MUTATION',
+    title: 'Deploy Priority-100 Zero-Trust SSH/RDP Block Shield',
+    whatItDoes:
+      'Calls the Google Compute Engine Firewalls API to provision a real Priority-100 INGRESS DENY rule blocking public 0.0.0.0/0 traffic on TCP ports 22 (SSH) and 3389 (RDP).',
+    enterpriseValue:
+      'Overrides permissive default-allow-ssh (Priority 65534) rules in seconds without deleting default rules, immediately turning red exposed SSH probes into blocked perimeter shields.',
+    gcpApis: 'POST https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
+    safetyMode: 'LIVE_MUTATION',
+  },
 };
 
 /**
@@ -1589,6 +1803,7 @@ export default function GlobalInnovationHoverExplainer() {
 
   const { info, left, top, placeAbove, cardWidth } = hoverState;
   const isMutation = info.safetyMode === 'LIVE_MUTATION';
+  const isSimulation = info.safetyMode === 'SIMULATION';
 
   return (
     <div
@@ -1613,7 +1828,9 @@ export default function GlobalInnovationHoverExplainer() {
           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
             isMutation
               ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700'
+              : isSimulation
+              ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+              : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
           }`}
         >
           {isMutation ? (
@@ -1621,10 +1838,15 @@ export default function GlobalInnovationHoverExplainer() {
               <ShieldCheck className="w-3 h-3 shrink-0" />
               <span>Live GCP Action</span>
             </>
+          ) : isSimulation ? (
+            <>
+              <Info className="w-3 h-3 shrink-0" />
+              <span>Synthetic Probe vs. Real Rules</span>
+            </>
           ) : (
             <>
               <CheckCircle2 className="w-3 h-3 shrink-0" />
-              <span>Read-Only Telemetry</span>
+              <span>100% Live Telemetry</span>
             </>
           )}
         </span>
