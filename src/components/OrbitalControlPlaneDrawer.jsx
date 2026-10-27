@@ -16,8 +16,89 @@ import {
   Layers,
   Globe,
 } from 'lucide-react';
-import { GCP_REGION_CARBON_DATA } from './EngineerWishlistWave2';
 import { useTimezone } from '../context/TimezoneContext';
+
+// Official Google Cloud Regional Carbon-Free Energy (CFE%) & Grid Carbon Intensity (gCO2eq/kWh)
+export const GCP_REGION_CARBON_DATA = {
+  'northamerica-northeast1': {
+    label: 'Montréal (Hydro-Québec)',
+    cfePercent: 98,
+    gco2PerKwh: 18,
+    tier: 'ULTRA_GREEN',
+  },
+  'europe-north1': {
+    label: 'Finland (Hamina Wind/Hydro)',
+    cfePercent: 96,
+    gco2PerKwh: 29,
+    tier: 'ULTRA_GREEN',
+  },
+  'us-west1': {
+    label: 'Oregon (The Dalles Hydro)',
+    cfePercent: 90,
+    gco2PerKwh: 68,
+    tier: 'ULTRA_GREEN',
+  },
+  'europe-west1': {
+    label: 'Belgium (St. Ghislain)',
+    cfePercent: 83,
+    gco2PerKwh: 112,
+    tier: 'GREEN',
+  },
+  'europe-west9': {
+    label: 'Paris (France Nuclear/Renewables)',
+    cfePercent: 91,
+    gco2PerKwh: 54,
+    tier: 'ULTRA_GREEN',
+  },
+  'us-central1': {
+    label: 'Iowa (Council Bluffs Wind)',
+    cfePercent: 79,
+    gco2PerKwh: 145,
+    tier: 'GREEN',
+  },
+  'southamerica-east1': {
+    label: 'São Paulo (Brazil Hydro)',
+    cfePercent: 89,
+    gco2PerKwh: 74,
+    tier: 'ULTRA_GREEN',
+  },
+  'europe-west3': {
+    label: 'Frankfurt (Germany)',
+    cfePercent: 66,
+    gco2PerKwh: 265,
+    tier: 'MODERATE',
+  },
+  'us-east1': {
+    label: 'South Carolina (Moncks Corner)',
+    cfePercent: 52,
+    gco2PerKwh: 380,
+    tier: 'MODERATE',
+  },
+  'us-east4': {
+    label: 'Northern Virginia (Ashburn)',
+    cfePercent: 54,
+    gco2PerKwh: 355,
+    tier: 'MODERATE',
+  },
+  'asia-northeast1': {
+    label: 'Tokyo (Japan)',
+    cfePercent: 42,
+    gco2PerKwh: 450,
+    tier: 'HIGH_CARBON',
+  },
+  'asia-southeast1': {
+    label: 'Singapore (Jurong West)',
+    cfePercent: 34,
+    gco2PerKwh: 495,
+    tier: 'HIGH_CARBON',
+  },
+  'me-central1': {
+    label: 'Doha (Qatar)',
+    cfePercent: 31,
+    gco2PerKwh: 520,
+    tier: 'HIGH_CARBON',
+  },
+};
 
 export const STACK_BLUEPRINTS = [
   {

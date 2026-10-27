@@ -6,32 +6,34 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
 
 ---
 
-##  Wave 3: 2030 Orbital Telemetry UI & Autonomous Cloud Synthesis
+##  Wave 3: Orbital Control-Plane Drawer, 1-Tap 3-Tier Stack Synthesizer, Flight Recorder & 3-Engine Autonomous Enforcer (`OrbitalControlPlaneDrawer.jsx`)
 
-### 1. Live 2030 Orbital Telemetry Ribbon (`FuturisticOrbitalHud.jsx`)
-- **Where to find it**: Persistent ribbon across the top of the main cockpit.
+### 1. Reincarnated Zero-Mock Orbital Control-Plane Drawer & Secondary Header Triggers (`OrbitalControlPlaneDrawer.jsx` + `GlobalNetworkWorldMap.jsx` Pillar `05`)
+- **Where to find it**:
+  - **Top Secondary Telemetry Bar (`src/App.jsx`)**: Compact live status pills (**`CFE X% · Grade A+`**, **`1-Tap Stack`**, **`Flight Recorder`**, and **`Auto-Pilot Guard`**) consuming `0px` of extra vertical screen height until opened.
+  - **Global Map & FinOps Tab (`GlobalNetworkWorldMap.jsx`)**: Pillar **`05 · 1-Tap 3-Tier Stack Synthesizer & CFE`** (`STACK_SYNTHESIZER`) with Continental Workload Distribution (`Americas`, `Europe`, `APAC`, `MENA`), Regional `CFE%` Carbon Score, and inline 3-Tier Stack deployment.
 - **What it shows**:
   - **API RTT (`ms`)**: Real-time round-trip latency from the CloudPulse bridge to Google Cloud REST APIs.
   - **Grid Carbon CFE (`% Clean`)**: Average **Google Cloud Carbon-Free Energy (`CFE%`)** across the regions where your active resources are deployed.
   - **Cloud Posture Grade (`A+` to `B`)**: Real-time security grade based on whether any VPC firewall rules expose ports to `0.0.0.0/0`.
-  - **Continental Workload Matrix**: Live count of active resources in `Americas`, `Europe`, `APAC`, and `MENA`.
+  - **3-Engine Autonomous FinOps & Zero-Trust Enforcer (`POST /finops/always-free-enforcer`, `POST /soc/guardian-reconcile`, `POST /hibernate`)**: Replaces legacy decorative toggles with 3 real 1-click Google Cloud REST enforcement engines: (1) **$0.00/Mo Always-Free Tier Micro-Charge Killer** (`LOG_SINK_HEALTHZ_EXCLUSION`, `SECRET_VERSION_PRUNE`, `ARTIFACT_CLEANUP_POLICY`), (2) **Zero-Trust Perimeter & Public Exposure Lockdown** (locks `0.0.0.0/0` firewalls to IAP `35.235.240.0/20`, enforces GCS Public Access Prevention, and revokes unauthenticated Cloud Run `allUsers`), and (3) **Night-Mode Compute & Warm Serverless Hibernation** (`SLEEP` / `WAKE`).
 
 ### 2.  1-Tap Multi-Service Architecture Stack Synthesizer (`POST /api/project/:id/stack-deploy`)
 - **The Problem**: In standard Google Cloud Console, deploying a 3-tier cloud application (Object Storage + Analytics Lakehouse + Serverless API Gateway) requires navigating 3 different product consoles and manually wiring environment variables.
 - **How it Works**:
-  1. Click **` 1-Tap Stack Synthesizer`** in the Orbital HUD.
+  1. Click **`1-Tap Stack`** in the top secondary bar or open **`Global Map & FinOps -> 05 · 1-Tap 3-Tier Stack Synthesizer & CFE`**.
   2. Choose one of 3 blueprints:
-     - ** Serverless AI RAG & Inference Stack**
-     - ** Real-Time Lakehouse & Streaming Stack**
-     - ** Zero-Trust Edge Microservice Stack**
+     - **Serverless AI RAG & Inference Stack**
+     - **Real-Time Lakehouse & Streaming Stack**
+     - **Zero-Trust Edge Microservice Stack**
   3. Pick a naming prefix and a target **Green GCP Region** (sorted by `CFE%`).
   4. Click **Deploy 3-Tier Stack**. CloudPulse calls `storage.googleapis.com`, `bigquery.googleapis.com`, and `run.googleapis.com/v2` in sequence, automatically injecting `GCS_BUCKET_URI` and `BIGQUERY_DATASET` into your new Cloud Run service's environment variables.
 - **Billing Impact**: Defaults to Scale-to-Zero (`minInstanceCount: 0`), meaning **$0.00/hr idle compute cost**.
 
-### 3.  Cloud Flight Recorder & Mutation Time-Machine (`GET /api/project/:id/flight-recorder`)
+### 3.  Cloud Flight Recorder & Mutation Time-Machine (`GET /api/project/:id/flight-recorder` & `DELETE /api/project/:id/resource`)
 - **The Problem**: When experimenting or deploying multiple resources, it is easy to lose track of what was just created and tedious to clean each resource up across different consoles.
 - **How it Works**:
-  - Click **` Flight Recorder & Undo`** in the Orbital HUD.
+  - Click **`Flight Recorder`** in the top secondary bar (or inside the Orbital Control-Plane Drawer).
   - Every stack synthesis and cross-region teleport is logged chronologically with a **`1-Tap Rewind / Delete`** button that calls `DELETE /api/project/:id/resource` to immediately roll back that resource.
 
 ---
@@ -737,10 +739,14 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
   3. **Enterprise Studio UX/UI Standardization Across All Studios**:
      - **Self-Contained Hero Module Grids**: Removed external cross-studio exit-link buttons from studio hero headers and placed each studio's own internal sub-studio navigation directly inside its hero header across `DataEngineeringStudio.jsx`, `BigLakeIcebergStudio.jsx`, `BigQueryStudio.jsx`, `CloudSqlAndAlloyDbStudio.jsx`, `Wave10Frontier2026Studio.jsx`, `SovereignTimeMachineIamStudio.jsx`, `AwsAzureEnvySuiteStudio.jsx`, `AutonomousCloudSocStudio.jsx`, and `FivePersonaCommandCenter.jsx`.
      - **Compact `<select>` Filter Toolbars & Fixed VPC Firewall Studio**: Replaced multi-row button walls used as filters with compact `<select>` dropdown + Search + Reset toolbars across `IcebergLakehousePlaybookMatrix.jsx`, `Revolutionary2026Suite.jsx`, `GcloudAlphaBetaStudio.jsx`, `GoogleCloudRemoteMcpStudio.jsx`, `InteractiveDocsGuide.jsx`, and `VpcNetworksAndFirewalls.jsx` (and resolved `isIapProtected` scoping inside `filteredFirewalls.map`).
-  4. **Compute Engine VM Metadata Filter Bar, Free-Tier `pd-standard` HDD Default & Inline Price Drift Attribution (`VmFleetAndSsh.jsx`, `ResourceProvisionModal.jsx`, `GlobalNetworkWorldMap.jsx`)**:
+  4. **Compute Engine VM Metadata & GPU/TPU Accelerator Filter Bar, Free-Tier `pd-standard` HDD Default & Inline Price Drift Attribution (`VmFleetAndSsh.jsx`, `ResourceProvisionModal.jsx`, `GlobalNetworkWorldMap.jsx`)**:
      - Enriched `GET /api/project/:id/vms` with live `labels`, `metadataKeys`, `tags`, and `serviceAccountEmail`.
-     - Removed the redundant `1-Tap Multi-Region VM Presets` block, changed the default VM boot disk in `ResourceProvisionModal.jsx` to `pd-standard` (**Standard Persistent Disk HDD — Included in 30GB Always Free Tier**), restored full-width flat **Region Filter** buttons, and added a **VM Metadata & Attribute Filter Bar** (`Status`, `Machine Type`, `Disk & Provisioning`, and `Tag / Label / Metadata Key` `<select>` dropdowns).
+     - Removed the redundant `1-Tap Multi-Region VM Presets` block, changed the default VM boot disk in `ResourceProvisionModal.jsx` to `pd-standard` (**Standard Persistent Disk HDD — Included in 30GB Always Free Tier**), restored full-width flat **Region Filter** buttons, and added a 6-column responsive **VM Metadata & Accelerator Filter Bar** (`Status`, `Machine Type`, `GPU / TPU vs. CPU-Only`, `Disk & Provisioning`, `Tag / Label / Metadata Key`, and `Search`, with `Reset Filters` anchored in the top-right header row so it never overflows).
+     - Added explicit **`GPU`**, **`TPU`**, and **`CPU-ONLY`** hardware badges on every VM instance card and filter dropdown (`All Hardware`, `Accelerated Only (GPU or TPU)`, `CPU-Only (Without GPU / TPU)`, `GPU Instances Only (NVIDIA L4 / H100 / A100 / T4 / V100)`, `Cloud TPU Only`).
      - Upgraded the `Price Drift Detected` badge in `GlobalNetworkWorldMap.jsx` to display the exact drifted SKU metric and percentage delta inline (`1 Price Drift Detected: computeL4GpuPerHourUsd ($0.56 → $0.6909, +23.4%)`) and jump directly to the live SKU drift table on click.
+  5. **Full-Width Widescreen Viewport (`w-full max-w-none`) & Reincarnated Zero-Mock Orbital Control-Plane Drawer (`src/App.jsx`, `OrbitalControlPlaneDrawer.jsx`, `GlobalNetworkWorldMap.jsx`)**:
+     - Removed the `max-w-[1600px] mx-auto` bottleneck across the header, navigation bar, and `<main>` container in `src/App.jsx` so all 20+ studios utilize 100% of widescreen viewports while preserving the horizontal scrollbar on the main `<nav>` menu.
+     - Reincarnated the retired `FuturisticOrbitalHud.jsx` top banner into the **Zero-Mock Orbital Control-Plane Drawer (`OrbitalControlPlaneDrawer.jsx`)** triggered from 4 compact secondary header pills (`CFE X% · Grade A+`, `1-Tap Stack`, `Flight Recorder`, `Auto-Pilot Guard`) and embedded **Pillar `05 · 1-Tap 3-Tier Stack Synthesizer & CFE`** directly inside `GlobalNetworkWorldMap.jsx`.
 
 
 

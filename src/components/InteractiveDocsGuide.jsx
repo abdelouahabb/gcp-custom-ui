@@ -1115,25 +1115,28 @@ const DOC_SECTIONS = [
   },
   {
     id: 'wave3-orbital-hud',
-    wave: 'WAVE 3 · 2030 ORBITAL UI',
-    title: '2030 Orbital Telemetry HUD, Stack Synthesizer & Flight Recorder',
-    badge: 'TOP RIBBON HUD',
+    wave: 'WAVE 3 · ORBITAL CONTROL-PLANE DRAWER & GLOBAL MAP PILLAR 05',
+    title:
+      'Orbital Control-Plane Drawer, 1-Tap 3-Tier Stack Synthesizer, Flight Recorder & 3-Engine Autonomous Enforcer',
+    badge: 'SECONDARY HEADER PILLS + GLOBAL MAP PILLAR 05',
     badgeColor: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
     icon: Wand2,
-    targetTab: 'OVERVIEW',
+    targetTab: 'GLOBAL_MAP',
     problemSolved:
-      'In the standard Google Cloud Console, deploying a connected 3-tier application (Storage + BigQuery + Cloud Run) requires visiting 3 separate product consoles and manually copying resource URIs. Furthermore, if you make a mistake, there is no single "Undo" button.',
+      'In the standard Google Cloud Console, deploying a connected 3-tier application (Storage + BigQuery + Cloud Run) requires visiting 3 separate product consoles and manually copying resource URIs, rolling back newly created resources requires manual deletion across consoles, and enforcing Always-Free Tier guardrails or Zero-Trust perimeter lockdowns requires multiple separate steps.',
     howItWorks: [
-      'Live Orbital Telemetry Ribbon: Continuously measures your real REST API Round-Trip Time (ms), calculates your project-wide Carbon-Free Energy score (CFE%), grades your security posture (A+ to B), and counts active workloads across Americas, Europe, APAC, and MENA.',
-      '1-Tap Stack Synthesizer: Lets you pick a complete architecture blueprint (AI RAG Inference Stack, Real-Time Lakehouse, or Zero-Trust Edge Stack) and provisions a Cloud Storage Bucket + BigQuery Dataset + Cloud Run Gen2 Service in parallel, automatically injecting GCS_BUCKET_URI and BIGQUERY_DATASET into the Cloud Run container environment variables.',
-      'Cloud Flight Recorder & 1-Tap Undo: Records every stack deployment and cross-region service teleport in a chronological ledger with a "1-Tap Rewind / Delete" button to immediately roll back any newly created resource.',
+      'Compact Top Secondary Header Pills & Zero-Vertical-Waste Drawer (OrbitalControlPlaneDrawer.jsx): Displays live Carbon-Free Energy (CFE% · Posture Grade A+), 1-Tap Stack, Flight Recorder, and Auto-Pilot Guard pills directly inside the existing secondary header bar (0px extra vertical height) plus Pillar 05 inside Global Map & FinOps.',
+      '1-Tap 3-Tier Stack Synthesizer (POST /api/project/:id/stack-deploy): Pick a complete architecture blueprint (AI RAG Inference Stack, Real-Time Lakehouse, or Zero-Trust Edge Stack) and provision a Cloud Storage Bucket + BigQuery Dataset + Cloud Run Gen2 Service in sequence, automatically injecting GCS_BUCKET_URI and BIGQUERY_DATASET into the Cloud Run container environment variables.',
+      'Cloud Flight Recorder & 1-Tap Undo (GET /api/project/:id/flight-recorder & DELETE /api/project/:id/resource): Records every stack deployment and cross-region service teleport in a chronological ledger with a "1-Tap Rewind / Delete" button to immediately roll back any newly created resource.',
+      '3-Engine Autonomous FinOps & Zero-Trust Enforcer: Replaces decorative toggles with 3 live REST enforcement engines: (1) $0.00/Mo Always-Free Tier Micro-Charge Killer (POST /finops/always-free-enforcer), (2) Zero-Trust Perimeter & Public Exposure Lockdown (POST /soc/guardian-reconcile), and (3) Night-Mode Compute & Warm Serverless Hibernation (POST /hibernate).',
     ],
     apisUsed: [
       'POST /api/project/:id/stack-deploy → storage.googleapis.com/storage/v1/b + bigquery.googleapis.com/v2 + run.googleapis.com/v2',
-      'GET /api/project/:id/flight-recorder → Session mutation ledger with 1-tap rollback payloads',
+      'GET /api/project/:id/flight-recorder & DELETE /api/project/:id/resource',
+      'POST /api/project/:id/finops/always-free-enforcer, POST /api/project/:id/soc/guardian-reconcile & POST /api/project/:id/hibernate',
     ],
     billingImpact:
-      'Synthesized stacks default to Scale-to-Zero Cloud Run (minInstances=0), Standard GCS, and Serverless BigQuery ($0.00/hr idle cost when not serving traffic).',
+      'Synthesized stacks default to Scale-to-Zero Cloud Run (minInstances=0), Standard GCS, and Serverless BigQuery ($0.00/hr idle cost), while the 3-Engine Autonomous Enforcer eliminates silent Free-Tier overages and idle overnight compute burn.',
   },
   {
     id: 'wave1-burn-radar',
@@ -1640,7 +1643,8 @@ const DOC_SECTIONS = [
       'Databricks Unity Catalog & AWS Glue Federation Bridge (BigLake Iceberg Studio -> Tab 06): Discovers and provisions federated Iceberg REST catalogs (GET & POST /api/project/:id/biglake/federated-catalogs) using Secret Manager PAT/OAuth credentials, BigQuery Cloud Resource Connections, and EXTERNAL_CATALOGBigQuery datasets across GCP and AWS S3 (aws-us-east-1 / aws-us-west-2).',
       '100% Native Google Cloud Lakehouse Workspace ($0.00 DBU Tax · Medallion ELT Studio -> Tab 09): Interactive 4-pillar workbench replacing Databricks end-to-end on Google Cloud: (01) BigFrames 2.0 (bigframes.pandas + bigframes.ml) pushing pandas/scikit-learn syntax down to BigQuery SQL, (02) BigQuery AI.FORECAST (TimesFM 2.0 Zero-Shot Foundation Model), AI.GENERATE_TABLE & VECTOR_SEARCH, (03) Dataform SQLX Declarative Assertions (assertions.nonNull / rowConditions replacing @dlt.expect) + BigQuery Continuous Queries, and (04) BQML + Vertex AI Model Registry replacing MLflow.',
       'Self-Contained Studio Hero Navigation & Compact <select> Filter Toolbars: Eliminated cross-studio exit-link buttons in hero headers across all studios (moving each studio’s own internal modules into its hero card) and replaced multi-row filter button grids with compact <select> dropdown + Search + Reset toolbars across Iceberg 50-Playbook Matrix, 2026 Lab, gcloud Alpha/Beta, Remote MCP, VPC Firewalls, and Docs.',
-      'Compute Engine VM Metadata Filter Bar, Free-Tier pd-standard Default & Inline Price Drift Attribution: Removed redundant 1-Tap VM Presets, defaulted VM provisioning to Standard Persistent Disk HDD (pd-standard — 30GB Always Free Tier eligible), restored full-width flat Region Filter buttons, added a live VM Metadata & Attribute Filter Bar (Status, Machine Type, Disk/Provisioning Model, and Network Tag / Label / Metadata Key <select> filters), and made the Global Map Price Drift badge display the exact drifted SKU metric inline.',
+      'Compute Engine VM Metadata & GPU/TPU Accelerator Filter Bar, Free-Tier pd-standard Default & Inline Price Drift Attribution: Removed redundant 1-Tap VM Presets, defaulted VM provisioning to Standard Persistent Disk HDD (pd-standard — 30GB Always Free Tier eligible), restored full-width flat Region Filter buttons, added a 6-column responsive VM Metadata & Accelerator Filter Bar (Status, Machine Type, GPU/TPU vs. CPU-Only Hardware Filter with GPU / TPU / CPU-ONLY instance card badges, Disk/Provisioning Model, Network Tag / Label / Metadata Key, and Search with top-right Reset Filters), and made the Global Map Price Drift badge display the exact drifted SKU metric inline.',
+      'Full-Width Widescreen Viewport (w-full max-w-none) & Zero-Mock Orbital Control-Plane Drawer: Removed the max-w-[1600px] container bottleneck across the header, navigation bar, and main studio workspace while preserving the horizontal main-menu scrollbar, and reincarnated the Orbital HUD into OrbitalControlPlaneDrawer.jsx (4 compact secondary header pills + Global Map Pillar 05).',
     ],
     apisUsed: [
       'GET & POST /api/project/:id/biglake/federated-catalogs (BigQuery v2 Datasets + BigQuery Connection v1beta1 + Secret Manager v1 + Storage v1)',
