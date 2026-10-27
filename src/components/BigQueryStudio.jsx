@@ -29,28 +29,28 @@ import {
 const STUDIO_TABS = [
   {
     id: 'DATASETS',
-    label: '1. Dataset Fleet & Compliance Hardener',
+    label: 'Dataset Fleet & Compliance Hardener',
     shortLabel: 'Datasets & Compliance',
     icon: ShieldCheck,
     tip: 'Inspect live BigQuery datasets, Zero-Trust & FinOps Posture Scores (0-100), and apply 1-Tap Physical Billing, Time-Travel, Partition TTL, Banker Rounding, or CMEK hardening',
   },
   {
     id: 'TABLES_SQL',
-    label: '2. SQL Pre-Crime X-Ray — Dry-Run Cost Estimator & Auto-Optimizer',
+    label: 'SQL Pre-Crime X-Ray — Dry-Run Cost Estimator & Auto-Optimizer',
     shortLabel: 'SQL Pre-Crime X-Ray',
     icon: Sparkles,
     tip: 'Browse or create Partitioned + Clustered tables, run live Dry-Run Byte Cost Estimation ($6.25/TB), and auto-rewrite SQL using Column Pruning, Predicate Pushdown & WHERE EXISTS semi-joins',
   },
   {
     id: 'FINOPS_CRYSTAL',
-    label: '3. Slot FinOps Crystal — Logical vs Physical Storage & Cost Forecaster',
+    label: 'Slot FinOps Crystal — Logical vs Physical Storage & Cost Forecaster',
     shortLabel: 'Storage & Slot Crystal',
     icon: DollarSign,
     tip: 'Interactive Capacitor Compression & Slot Edition Simulator: Compare Logical ($0.02/GB) vs Physical Compressed ($0.04/GB at 5:1 ratio) and On-Demand ($6.25/TB) vs Enterprise Autoscaling Slots',
   },
   {
     id: 'TIME_MACHINE',
-    label: '4. FOR SYSTEM_TIME AS OF Time-Machine',
+    label: 'FOR SYSTEM_TIME AS OF Time-Machine',
     shortLabel: '7-Day Time-Machine',
     icon: History,
     tip: 'Rewind any BigQuery table up to 168 hours (7 days) to recover accidentally deleted/corrupted rows via Zero-Copy Clone or FOR SYSTEM_TIME AS OF snapshot SQL',
@@ -1486,17 +1486,17 @@ export default function BigQueryStudio({
             {[
               {
                 id: 'as-of',
-                title: '1. Point-in-Time Snapshot Query',
+                title: 'Point-in-Time Snapshot Query',
                 sql: timeMachineSql.selectAsOf,
               },
               {
                 id: 'zero-copy-clone',
-                title: '2. Instant Zero-Copy Table Clone ($0 Storage)',
+                title: 'Instant Zero-Copy Table Clone ($0 Storage)',
                 sql: timeMachineSql.zeroCopyClone,
               },
               {
                 id: 'diff-audit',
-                title: '3. Diff Purged / Deleted Rows Since Snapshot',
+                title: 'Diff Purged / Deleted Rows Since Snapshot',
                 sql: timeMachineSql.diffDeletedRows,
               },
             ].map((card) => (

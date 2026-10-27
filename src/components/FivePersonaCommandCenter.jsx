@@ -673,7 +673,7 @@ export default function FivePersonaCommandCenter({
               10-Persona Enterprise Engineering Board · Live Cryptographic Launch Council &amp; Cross-Domain Swarm
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Simultaneously probes 20 live Google Cloud REST APIs across <strong>01 Cloud Architect</strong>, <strong>02 Cloud Engineer</strong>, <strong>03 Data Engineer</strong>, <strong>04 Network Engineer</strong>, <strong>05 DevSecOps</strong>, <strong>06 AI/MLOps</strong>, <strong>07 SRE Commander</strong>, <strong>08 DBRE</strong>, <strong>09 FinOps &amp; GreenOps</strong>, and <strong>10 K8s Platform Engineer</strong>—computing live <strong>GO / NO-GO</strong> cryptographic votes, cross-persona blast-radius ripple chains, Pareto trade-offs, and <strong>T0 vs. T_Now SHA-256 Merkle Snapshot Diffs</strong>.
+              Simultaneously probes 20 live Google Cloud REST APIs across <strong>Cloud Architect</strong>, <strong>Cloud Engineer</strong>, <strong>Data Engineer</strong>, <strong>Network Engineer</strong>, <strong>DevSecOps</strong>, <strong>AI/MLOps</strong>, <strong>SRE Commander</strong>, <strong>DBRE</strong>, <strong>FinOps &amp; GreenOps</strong>, and <strong>K8s Platform Engineer</strong>—computing live <strong>GO / NO-GO</strong> cryptographic votes, cross-persona blast-radius ripple chains, Pareto trade-offs, and <strong>T0 vs. T_Now SHA-256 Merkle Snapshot Diffs</strong>.
             </p>
           </div>
 
@@ -738,15 +738,6 @@ export default function FivePersonaCommandCenter({
               >
                 <div className="flex items-center justify-between gap-1.5">
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold ${
-                      isActive
-                        ? 'bg-black/25 text-white'
-                        : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
-                    }`}
-                  >
-                    {p.code}
-                  </span>
-                  <span
                     className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-extrabold ${
                       isActive
                         ? 'bg-white/20 text-white'
@@ -776,7 +767,7 @@ export default function FivePersonaCommandCenter({
           <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
             Active Specialist Lens:{' '}
             <strong className="text-blue-600 dark:text-blue-400">
-              [{activeTabMeta.code}] {activeTabMeta.role}
+              {activeTabMeta.role}
             </strong>{' '}
             · Focus: <strong>{activeTabMeta.subtitle}</strong>
           </div>
@@ -902,47 +893,47 @@ export default function FivePersonaCommandCenter({
             {[
               {
                 id: 'ROLL_CALL',
-                label: '01 · 10-Persona Roll-Call & Live Remediator',
+                label: '10-Persona Roll-Call & Live Remediator',
               },
               {
                 id: 'RIPPLE_GRAPH',
-                label: `02 · Cross-Persona Ripple Chains (${
+                label: `Cross-Persona Ripple Chains (${
                   (tribunalData.liveCrossPersonaChains || []).length
                 })`,
               },
               {
                 id: 'PARETO_SOLVER',
-                label: '03 · Pareto Conflict Solver',
+                label: 'Pareto Conflict Solver',
               },
               {
                 id: 'MERKLE_DIFF',
-                label: `04 · T0 vs. T_Now Merkle Diff & Undo Capsules (${
+                label: `T0 vs. T_Now Merkle Diff & Undo Capsules (${
                   (tribunalData.rollbackCapsules || []).length
                 })`,
               },
               {
                 id: 'MULTI_PROJECT_FLEET',
-                label: '05 · [2030] Multi-Project Fleet Council',
+                label: '[2030] Multi-Project Fleet Council',
               },
               {
                 id: 'PRE_CRIME_72H',
-                label: `06 · [2030] T_+72h Pre-Crime Forecaster — Quota, Cost & Drift Risk (${
+                label: `[2030] T_+72h Pre-Crime Forecaster — Quota, Cost & Drift Risk (${
                   tribunalData.preCrime72hForecast?.overall72hRiskLevel ||
                   'ACTIVE'
                 })`,
               },
               {
                 id: 'ZKP_BLIND_PROOF',
-                label: '07 · [2030] ZKP / Ed25519 Blinded Proof & Verifier',
+                label: '[2030] ZKP / Ed25519 Blinded Proof & Verifier',
               },
               {
                 id: 'INTENT_COMPILER',
-                label: '08 · [2030] Intent-to-Control-Plane Compiler',
+                label: '[2030] Intent-to-Control-Plane Compiler',
               },
               {
                 id: 'PRACTITIONER_WORKBENCH',
                 label:
-                  '09 · [2030] 6-Practitioner Agentless Workbench (Kill 2010 VM & Net Console)',
+                  '[2030] 6-Practitioner Agentless Workbench (Kill 2010 VM & Net Console)',
               },
             ].map((tab) => (
               <button
@@ -1022,7 +1013,7 @@ export default function FivePersonaCommandCenter({
                             }
                             className="font-extrabold text-zinc-900 dark:text-white hover:text-blue-500 text-left cursor-pointer"
                           >
-                            [{pv.code}] {pv.role}
+                            {pv.role}
                           </button>
                           <span
                             className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
@@ -1711,7 +1702,7 @@ export default function FivePersonaCommandCenter({
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-extrabold text-zinc-900 dark:text-white">
-                            [{pa.code}] {pa.role}
+                            {pa.role}
                           </span>
                           <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-500 text-[9px] font-extrabold">
                             {pa.verdict}
@@ -2239,7 +2230,7 @@ export default function FivePersonaCommandCenter({
         <div className="space-y-2.5">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-mono font-extrabold">
-              LENS {activeTabMeta.code} ACTIVE
+              ACTIVE SPECIALIST LENS
             </span>
             <span className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white">
               {activeTabMeta.role} Deep-Dive Studio · {activeTabMeta.subtitle}
@@ -2257,7 +2248,7 @@ export default function FivePersonaCommandCenter({
                     : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
                 }`}
               >
-                {t.code} {t.role.split(' ')[0]}
+                {t.role.split(' ')[0]}
               </button>
             ))}
           </div>

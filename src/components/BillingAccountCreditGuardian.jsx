@@ -2595,7 +2595,7 @@ ORDER BY
                     {
                       id: 'COMPUTE_VM',
                       badge: 'Compute Engine VM / Spot GPU',
-                      title: '1. Compute Engine Spot VM or L4 GPU Workstation',
+                      title: 'Compute Engine Spot VM or L4 GPU Workstation',
                       capacityLabel: `~${spotVmHours.toLocaleString()} Spot VM hrs (or ~${l4GpuVmHours.toLocaleString()} L4 GPU hrs)`,
                       shutdownTime: 'Shutdown / Stop Time: ~25–45 seconds',
                       shutdownNote:
@@ -2614,7 +2614,7 @@ ORDER BY
                     {
                       id: 'GCS_BUCKET',
                       badge: 'Cloud Storage (GCS)',
-                      title: '2. Cloud Storage Staging Lake & Snapshots',
+                      title: 'Cloud Storage Staging Lake & Snapshots',
                       capacityLabel: `~${gcsStandardTbMonths.toLocaleString()} TB-Months Standard Storage`,
                       shutdownTime: 'Empty & Delete Time: ~5s (<1k objects) to 1–24h (Lifecycle)',
                       shutdownNote:
@@ -2631,7 +2631,7 @@ ORDER BY
                     {
                       id: 'GKE_CLUSTER',
                       badge: 'Kubernetes (GKE)',
-                      title: '3. GKE Autopilot or GPU Burst Cluster',
+                      title: 'GKE Autopilot or GPU Burst Cluster',
                       capacityLabel: `~${gkeAutopilotPodHours.toLocaleString()} Pod-Hours (1 vCPU · 2 GB)`,
                       shutdownTime: 'Cluster Drain & Delete Time: ~5–12 minutes',
                       shutdownNote:
@@ -2648,7 +2648,7 @@ ORDER BY
                     {
                       id: 'CLOUD_RUN',
                       badge: 'Cloud Run Serverless L4 GPU',
-                      title: '4. Cloud Run Serverless L4 GPU Jobs & Microservices',
+                      title: 'Cloud Run Serverless L4 GPU Jobs & Microservices',
                       capacityLabel: `~${l4RunBatchHours.toLocaleString()} L4 GPU-Hours`,
                       shutdownTime: 'Scale-to-Zero / Delete Time: Instant (~0–5 seconds)',
                       shutdownNote:
@@ -2665,7 +2665,7 @@ ORDER BY
                     {
                       id: 'CLOUD_SQL',
                       badge: 'Cloud SQL / AlloyDB',
-                      title: '5. Cloud SQL (Postgres 16 / MySQL 8.4) Read-Replica Lab',
+                      title: 'Cloud SQL (Postgres 16 / MySQL 8.4) Read-Replica Lab',
                       capacityLabel: `~${cloudSqlHours.toLocaleString()} DB Instance-Hours`,
                       shutdownTime: 'Stop / Delete Time: ~2–6 minutes',
                       shutdownNote:
@@ -2684,7 +2684,7 @@ ORDER BY
                     {
                       id: 'BIGQUERY_DATASET',
                       badge: 'BigQuery Lakehouse & BQML',
-                      title: '6. BigQuery Gold Table Pre-Compute & BQML Training',
+                      title: 'BigQuery Gold Table Pre-Compute & BQML Training',
                       capacityLabel: `~${bqTibScans.toLocaleString()} TiB On-Demand Scans`,
                       shutdownTime: 'Query Cancel / Drop Time: Instant (<2 seconds)',
                       shutdownNote:

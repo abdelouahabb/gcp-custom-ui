@@ -877,15 +877,6 @@ export default function AutonomousCloudSocStudio({
                     : 'bg-zinc-900/70 hover:bg-zinc-800/80 border-zinc-800 text-zinc-300'
                 }`}
               >
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
-                    isActive
-                      ? 'bg-blue-400 text-zinc-950'
-                      : 'bg-zinc-800 text-zinc-400'
-                  }`}
-                >
-                  {p.step}
-                </span>
                 <div className="min-w-0">
                   <div className="text-xs font-extrabold truncate flex items-center gap-1.5">
                     <Icon className="w-3.5 h-3.5 shrink-0 text-blue-400" />
@@ -2595,7 +2586,7 @@ export default function AutonomousCloudSocStudio({
             <div className="space-y-1.5 max-w-3xl">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-mono font-extrabold">
                 <Lock className="w-3.5 h-3.5" />
-                <span>PILLAR 10 · COORDINATED ATOMIC SOAR CONTAINMENT PLAYBOOK</span>
+                <span>COORDINATED ATOMIC SOAR CONTAINMENT PLAYBOOK</span>
               </div>
               <h3 className="text-lg font-extrabold text-white">
                 1-Click &ldquo;Defcon-1 Atomic Project Lockdown&rdquo; (`{projectId}`)

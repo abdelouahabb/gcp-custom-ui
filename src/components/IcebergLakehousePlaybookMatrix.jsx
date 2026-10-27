@@ -67,56 +67,56 @@ const LAKEHOUSE_DOMAINS = [
   {
     id: 'CATALOG_MIGRATION',
     code: 'D01',
-    shortLabel: '1. Iceberg REST Catalog & Migrations',
+    shortLabel: 'Iceberg REST Catalog & Migrations',
     subtitle: 'HMS 100+ Tables · Delta · DIY Parquet',
     badge: '7 Playbooks',
   },
   {
     id: 'MULTI_ENGINE',
     code: 'D02',
-    shortLabel: '2. Engines & Interoperability (BQ / Spark / Trino)',
+    shortLabel: 'Engines & Interoperability (BQ / Spark / Trino)',
     subtitle: 'Single Copy · Zero-Copy Sharing · TPC-DS',
     badge: '7 Playbooks',
   },
   {
     id: 'STREAMING_CDC_DML',
     code: 'D03',
-    shortLabel: '3. Advanced ETL, CDC & Streaming Lakehouse',
+    shortLabel: 'Advanced ETL, CDC & Streaming Lakehouse',
     subtitle: 'Multi-Stmt ACID · Kafka · Beam · Debezium',
     badge: '7 Playbooks',
   },
   {
     id: 'STORAGE_PERF',
     code: 'D04',
-    shortLabel: '4. Storage Engineering, Caching & Compaction',
+    shortLabel: 'Storage Engineering, Caching & Compaction',
     subtitle: 'GCS Prefix Hash · Autoclass · Spanner Meta',
     badge: '7 Playbooks',
   },
   {
     id: 'MULTI_CLOUD',
     code: 'D05',
-    shortLabel: '5. Borderless Multi-Cloud (S3 / ADLS / CCI)',
+    shortLabel: 'Borderless Multi-Cloud (S3 / ADLS / CCI)',
     subtitle: 'BigQuery Omni · Glue & Unity · Zero-Egress',
     badge: '6 Playbooks',
   },
   {
     id: 'GOVERNANCE_SECURITY',
     code: 'D06',
-    shortLabel: '6. Unified Governance, RLS/CLS & WORM Vault',
+    shortLabel: 'Unified Governance, RLS/CLS & WORM Vault',
     subtitle: 'Row/Col Masking · CMEK · SEC 17a-4 Lock',
     badge: '6 Playbooks',
   },
   {
     id: 'HTAP_CONVERGENCE',
     code: 'D07',
-    shortLabel: '7. Operational DB Convergence & HTAP',
+    shortLabel: 'Operational DB Convergence & HTAP',
     subtitle: 'Spanner · AlloyDB Columnar · Bigtable Zero-ETL',
     badge: '5 Playbooks',
   },
   {
     id: 'GENAI_AGENTS',
     code: 'D08',
-    shortLabel: '8. Agents, Semantic SQL & Vector Lakehouse',
+    shortLabel: 'Agents, Semantic SQL & Vector Lakehouse',
     subtitle: 'Conversational BI · AI.IF · Vector RAG · Feature Store',
     badge: '5 Playbooks',
   },
@@ -1299,7 +1299,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
             >
               {LAKEHOUSE_DOMAINS.map((dom) => (
                 <option key={dom.id} value={dom.id}>
-                  [{dom.code}] {dom.shortLabel} ({dom.badge})
+                  {dom.shortLabel} ({dom.badge})
                 </option>
               ))}
             </select>
@@ -1893,15 +1893,6 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
-                              active
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
-                            }`}
-                          >
-                            {ct.code}
-                          </span>
                           <span className="truncate">{ct.label}</span>
                         </div>
                         <span

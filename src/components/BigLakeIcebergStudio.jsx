@@ -26,32 +26,32 @@ import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 const BIGLAKE_TABS = [
   {
     id: 'METASTORE_CATALOGS',
-    label: '1. BigLake Metastore & Iceberg REST Catalogs',
+    label: 'BigLake Metastore & Iceberg REST Catalogs',
     badge: 'biglake.googleapis.com/v1',
   },
   {
     id: 'PROVISION_WIZARD',
-    label: '2. 1-Click BigLake Connection, IAM & Iceberg Wizard',
+    label: '1-Click BigLake Connection, IAM & Iceberg Wizard',
     badge: 'Zero-Trust gs://',
   },
   {
     id: 'COMPACTION_DOCTOR',
-    label: '3. Iceberg Small-File Compaction & Snapshot Doctor',
+    label: 'Iceberg Small-File Compaction & Snapshot Doctor',
     badge: 'Z-Order & GC',
   },
   {
     id: 'RLS_CLS_OMNI',
-    label: '4. Row/Column Security & Cross-Cloud Omni (S3 / Azure)',
+    label: 'Row/Column Security & Cross-Cloud Omni (S3 / Azure)',
     badge: '$0 Egress Omni',
   },
   {
     id: 'ICEBERG_50_MATRIX',
-    label: '5. 50-Playbook Borderless Iceberg & Multi-Engine Matrix',
+    label: '50-Playbook Borderless Iceberg & Multi-Engine Matrix',
     badge: '50 Scenarios · 8 Domains',
   },
   {
     id: 'DATABRICKS_UNITY_BRIDGE',
-    label: '6. Databricks Unity & Glue Federation + Native GCP Transpiler',
+    label: 'Databricks Unity & Glue Federation + Native GCP Transpiler',
     badge: 'Unity / Glue + $0 DBU Spark',
   },
 ];

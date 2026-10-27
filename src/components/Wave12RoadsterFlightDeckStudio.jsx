@@ -636,15 +636,6 @@ export default function Wave12RoadsterFlightDeckStudio({
                     : 'bg-white/90 dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-blue-500/50'
                 }`}
               >
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
-                    active
-                      ? 'bg-white/20 text-white'
-                      : 'bg-blue-500/15 text-blue-600 dark:text-blue-300'
-                  }`}
-                >
-                  {t.step}
-                </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-mono font-extrabold truncate flex items-center gap-1.5">
                     <Icon className="w-3.5 h-3.5 shrink-0" />

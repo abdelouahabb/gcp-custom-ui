@@ -383,17 +383,17 @@ export default function OrbitalControlPlaneDrawer({
           {[
             {
               id: 'STACK_COMPOSER',
-              label: '01 · 1-Tap 3-Tier Stack Synthesizer',
+              label: '1-Tap 3-Tier Stack Synthesizer',
               icon: Wand2,
             },
             {
               id: 'FLIGHT_RECORDER',
-              label: `02 · Cloud Flight Recorder & Undo (${flightEvents.length})`,
+              label: `Cloud Flight Recorder & Undo (${flightEvents.length})`,
               icon: History,
             },
             {
               id: 'AUTOPILOT_GUARD',
-              label: '03 · Autonomous FinOps & Zero-Trust Enforcer',
+              label: 'Autonomous FinOps & Zero-Trust Enforcer',
               icon: Cpu,
             },
           ].map((tab) => {
@@ -694,7 +694,7 @@ export default function OrbitalControlPlaneDrawer({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                     <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>01 · Scale-to-Zero Enforcer</span>
+                    <span>Scale-to-Zero Enforcer</span>
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
                     {orbitalMetrics.warmRunCount} Warm Services
@@ -725,7 +725,7 @@ export default function OrbitalControlPlaneDrawer({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-                    <span>02 · 12-Invariant Self-Healer</span>
+                    <span>12-Invariant Self-Healer</span>
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold">
                     Posture {orbitalMetrics.postureGrade} ({orbitalMetrics.riskyFwCount} Open FW)
@@ -756,7 +756,7 @@ export default function OrbitalControlPlaneDrawer({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                     <Moon className="w-3.5 h-3.5 text-amber-500" />
-                    <span>03 · Night-Mode Fleet Switch</span>
+                    <span>Night-Mode Fleet Switch</span>
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                     VMs + Cloud Run

@@ -622,7 +622,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                       : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
                   }`}
                 >
-                  MODULE {t.step}
+                  MODULE
                 </span>
                 <Icon className="w-4 h-4 shrink-0" />
               </div>

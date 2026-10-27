@@ -33,7 +33,7 @@ const personaTelemetryCache = new Map();
 const PERSONA_META = {
   ARCHITECT: {
     id: 'ARCHITECT',
-    badge: '01 · ARCHITECT HELPER',
+    badge: 'ARCHITECT HELPER',
     roleTitle: 'Cloud Architect Contextual Helper',
     subtitle: 'Region Blackout SPOF Blast-Radius Drill · Org Policy Guardrails · 3-Cloud FinOps Arbitrage',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -43,7 +43,7 @@ const PERSONA_META = {
   },
   CLOUD_ENG: {
     id: 'CLOUD_ENG',
-    badge: '02 · CLOUD ENG HELPER',
+    badge: 'CLOUD ENG HELPER',
     roleTitle: 'Cloud Engineer Contextual Helper',
     subtitle: 'ClickOps-to-GitOps .tf Exporter · 5-Gate Pre-Flight Dry-Run Validator · Compensating Undo Saga',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -53,7 +53,7 @@ const PERSONA_META = {
   },
   DATA_ENG: {
     id: 'DATA_ENG',
-    badge: '03 · DATA ENG HELPER',
+    badge: 'DATA ENG HELPER',
     roleTitle: 'Data Engineer Contextual Helper',
     subtitle: 'Column-Level Lineage Breaking-Change Guard · Quarantine DLQ Auto-Repair · BQ Slot-to-Spark Offload',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -63,7 +63,7 @@ const PERSONA_META = {
   },
   NETOPS: {
     id: 'NETOPS',
-    badge: '04 · NETOPS HELPER',
+    badge: 'NETOPS HELPER',
     roleTitle: 'Network Engineer Contextual Helper',
     subtitle: 'Live 4-Hop Packet Tracer (Ingress -> FW -> Route -> PSC/NAT) · IPAM CIDR Overlap Matrix · Peering Analyzer',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -73,7 +73,7 @@ const PERSONA_META = {
   },
   DEVSECOPS: {
     id: 'DEVSECOPS',
-    badge: '05 · DEVSECOPS HELPER',
+    badge: 'DEVSECOPS HELPER',
     roleTitle: 'DevSecOps Contextual Helper',
     subtitle: 'Binary Authz @sha256 Digest Gate · IAM Escalation Path Detector · Zero-Key OIDC WIF Generator',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -83,7 +83,7 @@ const PERSONA_META = {
   },
   AI_MLOPS: {
     id: 'AI_MLOPS',
-    badge: '06 · AI / MLOPS HELPER',
+    badge: 'AI / MLOPS HELPER',
     roleTitle: 'AI / MLOps Engineer Contextual Helper',
     subtitle: 'Model Armor Prompt/PII Firewall · Smart Router (gemini-3.8-flash / gemini-3.1-pro) · RAG Vector Sync · GPU/TPU Finder',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -93,7 +93,7 @@ const PERSONA_META = {
   },
   SRE_ONCALL: {
     id: 'SRE_ONCALL',
-    badge: '07 · SRE COMMANDER HELPER',
+    badge: 'SRE COMMANDER HELPER',
     roleTitle: 'SRE On-Call Commander Contextual Helper',
     subtitle: '14.4x SLO Burn Release Freeze Gate · Golden-Signal Change Correlator · Chaos GameDay Fault Injector',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -103,7 +103,7 @@ const PERSONA_META = {
   },
   DBRE: {
     id: 'DBRE',
-    badge: '08 · DBRE HELPER',
+    badge: 'DBRE HELPER',
     roleTitle: 'Database Reliability Engineer (DBRE) Helper',
     subtitle: 'Active Lock-Tree & Spanner Hot-Key Detector · CREATE INDEX CONCURRENTLY Advisor · PgBouncer Guard · 1.6s PITR Clone',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -113,7 +113,7 @@ const PERSONA_META = {
   },
   FINOPS_ENG: {
     id: 'FINOPS_ENG',
-    badge: '09 · FINOPS & GREENOPS HELPER',
+    badge: 'FINOPS & GREENOPS HELPER',
     roleTitle: 'FinOps & GreenOps Economics Helper',
     subtitle: 'Unit Cost Attribution ($/1k req) · Zombie Resource Reaper · Flexible CUD Optimizer · 98% Carbon-Free Region Shifter',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',
@@ -123,7 +123,7 @@ const PERSONA_META = {
   },
   PLATFORM_K8S: {
     id: 'PLATFORM_K8S',
-    badge: '10 · K8S & IDP HELPER',
+    badge: 'K8S & IDP HELPER',
     roleTitle: 'Kubernetes & Platform (IDP) Engineer Helper',
     subtitle: 'Pod OOMKilled/CPU Right-Sizer · GKE Scale-Down Blocker Detector · STRICT mTLS Mesh Map · Golden-Path Scaffolder',
     accentBorder: 'border-zinc-200 dark:border-zinc-800',

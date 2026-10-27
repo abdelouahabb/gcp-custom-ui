@@ -2288,9 +2288,6 @@ export default function GcsObjectWorkbench({
                 className="w-full h-9 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1b1c1f] hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-semibold transition-all cursor-pointer flex items-center justify-between gap-2"
               >
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 shrink-0">
-                    {item.code}
-                  </span>
                   <span className="truncate">{item.label}</span>
                 </div>
                 <span className="text-zinc-400 dark:text-zinc-500 shrink-0">

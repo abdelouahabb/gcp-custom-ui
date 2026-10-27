@@ -1036,17 +1036,17 @@ spec:
                 {[
                   {
                     id: 'ARTIFACT_REGISTRY',
-                    label: '1. Project Artifact Registry',
+                    label: 'Project Artifact Registry',
                     sub: `Pick from ${arImages.length} live GCP image(s)`,
                   },
                   {
                     id: 'GITHUB_REPO',
-                    label: '2. Build from GitHub Repo',
+                    label: 'Build from GitHub Repo',
                     sub: 'Cloud Build → AR → GKE Deploy',
                   },
                   {
                     id: 'PUBLIC_URI',
-                    label: '3. Public / Custom URI',
+                    label: 'Public / Custom URI',
                     sub: 'Docker Hub / GCR / Custom URI',
                   },
                 ].map((m) => {

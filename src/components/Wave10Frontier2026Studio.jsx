@@ -88,7 +88,7 @@ const SPANNER_EDITIONS = [
 const GQL_QUERY_PRESETS = [
   {
     id: 'BLAST_RADIUS',
-    label: '1. Multi-Hop IAM & Database Blast Radius (ISO GQL)',
+    label: 'Multi-Hop IAM & Database Blast Radius (ISO GQL)',
     query: `GRAPH FinOpsKnowledgeGraph
 MATCH (s:CloudService)-[c:CALLS]->{1,3}(db:CloudDatabase)<-[g:GRANTS_ACCESS]-(p:IAMPrincipal)
 WHERE db.engine = 'SPANNER_GRAPH_100PU'
@@ -122,7 +122,7 @@ LIMIT 10;`,
   },
   {
     id: 'FRAUD_RING',
-    label: '2. Real-Time Payment Fraud Ring Detection (3-Hop Cycle)',
+    label: 'Real-Time Payment Fraud Ring Detection (3-Hop Cycle)',
     query: `GRAPH FinOpsKnowledgeGraph
 MATCH (acct1:CloudService)-[t1:CALLS]->(acct2:CloudService)-[t2:CALLS]->(acct3:CloudService)-[t3:CALLS]->(acct1)
 WHERE t1.latency_ms < 50 AND acct1.monthly_burn > 100
@@ -654,15 +654,6 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
-                      isActive
-                        ? 'bg-black/25 text-white'
-                        : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
-                    }`}
-                  >
-                    {tab.code}
-                  </span>
                   <span className="truncate">{tab.label}</span>
                 </div>
                 <span

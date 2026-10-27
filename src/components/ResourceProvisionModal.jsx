@@ -4098,12 +4098,12 @@ export default function ResourceProvisionModal({
                   {[
                     {
                       id: 'SERVICE',
-                      label: '1. Cloud Run v2 Service (HTTP / gRPC / WebSockets)',
+                      label: 'Cloud Run v2 Service (HTTP / gRPC / WebSockets)',
                       sub: 'Exposes HTTPS .run.app URL · Auto-scales 0→1000 on requests (max 60m request timeout)',
                     },
                     {
                       id: 'JOB',
-                      label: '2. Cloud Run v2 Batch Job (Parallel Shards + Cron :run)',
+                      label: 'Cloud Run v2 Batch Job (Parallel Shards + Cron :run)',
                       sub: 'Zero open ports · Runs to Exit(0) · Up to 24h (86,400s) timeout · 1–100 CLOUD_RUN_TASK_INDEX shards',
                     },
                   ].map((wk) => {
@@ -4264,17 +4264,17 @@ export default function ResourceProvisionModal({
                   {[
                     {
                       id: 'ARTIFACT_REGISTRY',
-                      label: '1. Project Artifact Registry',
+                      label: 'Project Artifact Registry',
                       sub: `Pick from ${arImages.length} live GCP image(s)`,
                     },
                     {
                       id: 'GITHUB_REPO',
-                      label: '2. Build & Deploy from GitHub',
+                      label: 'Build & Deploy from GitHub',
                       sub: 'Cloud Build → AR → Cloud Run',
                     },
                     {
                       id: 'PUBLIC_URI',
-                      label: '3. Public / Custom URI',
+                      label: 'Public / Custom URI',
                       sub: 'Docker Hub / GCR / Quick Presets',
                     },
                   ].map((m) => {

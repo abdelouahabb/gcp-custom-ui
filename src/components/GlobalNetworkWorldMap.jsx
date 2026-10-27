@@ -3207,31 +3207,31 @@ export default function GlobalNetworkWorldMap({
           {[
             {
               id: 'LATENCY_PROBES',
-              label: `01 · Live Regional TCP/TLS Latency (${
+              label: `Live Regional TCP/TLS Latency (${
                 liveGeoTelemetry?.regionalSocketProbes?.length || 8
               } Regions)`,
             },
             {
               id: 'ASSET_SOVEREIGNTY',
-              label: `02 · Project Asset Residency & Multi-Region Quorum (${
+              label: `Project Asset Residency & Multi-Region Quorum (${
                 liveGeoTelemetry?.geoAssets?.length || 0
               })`,
             },
             {
               id: 'REGIONAL_QUOTAS',
-              label: `03 · Live Regional Compute Quotas (${
+              label: `Live Regional Compute Quotas (${
                 liveGeoTelemetry?.regionalQuotas?.length || 0
               } Regions)`,
             },
             {
               id: 'VPC_SUBNETS',
-              label: `04 · Regional VPC Subnets & CIDR Map (${
+              label: `Regional VPC Subnets & CIDR Map (${
                 liveGeoTelemetry?.liveSubnets?.length || 0
               } Subnets)`,
             },
             {
               id: 'STACK_SYNTHESIZER',
-              label: `05 · 1-Tap 3-Tier Stack Synthesizer & CFE (${orbitalMapMetrics.avgCfe}% Clean)`,
+              label: `1-Tap 3-Tier Stack Synthesizer & CFE (${orbitalMapMetrics.avgCfe}% Clean)`,
             },
           ].map((tab) => (
             <button

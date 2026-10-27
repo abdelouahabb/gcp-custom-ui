@@ -580,7 +580,7 @@ export default function Wave11MoonshotStudio({
                 key={tab.id}
                 type="button"
                 data-feature-id={tab.id}
-                title={`${tab.step}. ${tab.label} (${tab.badge})`}
+                title={`${tab.label} (${tab.badge})`}
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`w-full p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
                   isActive
@@ -588,15 +588,6 @@ export default function Wave11MoonshotStudio({
                     : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/90 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                 }`}
               >
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
-                  }`}
-                >
-                  {tab.step}
-                </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-mono font-extrabold truncate flex items-center gap-1.5">
                     <Icon className="w-3.5 h-3.5 shrink-0" />

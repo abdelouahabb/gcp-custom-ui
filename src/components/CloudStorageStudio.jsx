@@ -1267,15 +1267,6 @@ export default function CloudStorageStudio({
                       : 'bg-zinc-50 dark:bg-[#16171a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                   }`}
                 >
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
-                      active
-                        ? 'bg-black/25 text-white'
-                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    {t.code}
-                  </span>
                   <span className="truncate">{t.label}</span>
                 </button>
               );
@@ -1688,15 +1679,6 @@ export default function CloudStorageStudio({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-extrabold truncate">{p.label}</span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
-                          active
-                            ? 'bg-black/25 text-white'
-                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
-                        }`}
-                      >
-                        {p.code}
-                      </span>
                     </div>
                     <div
                       className={`text-[10px] mt-1 truncate ${

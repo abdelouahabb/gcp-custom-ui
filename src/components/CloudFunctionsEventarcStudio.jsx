@@ -1066,19 +1066,19 @@ main:
           {[
             {
               id: 'TRIGGER_WIZARD',
-              label: '1. Plain-English Eventarc Trigger Wizard & Visual X-Ray',
+              label: 'Plain-English Eventarc Trigger Wizard & Visual X-Ray',
             },
             {
               id: 'LIVE_FLEET',
-              label: `2. Live Functions Fleet & 1-Click v1→v2 Upgrader (${functionsList.length})`,
+              label: `Live Functions Fleet & 1-Click v1→v2 Upgrader (${functionsList.length})`,
             },
             {
               id: 'FINOPS_COMPARE',
-              label: '3. 1st Gen (v1) vs 2nd Gen (v2) Concurrency & Cost Calculator',
+              label: '1st Gen (v1) vs 2nd Gen (v2) Concurrency & Cost Calculator',
             },
             {
               id: 'CHOREOGRAPHER',
-              label: `4. Messaging & Workflows Matrix (${workflowsList.length} Workflows)`,
+              label: `Messaging & Workflows Matrix (${workflowsList.length} Workflows)`,
             },
           ].map((tab) => (
             <button
@@ -2098,35 +2098,35 @@ main:
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               {[
                 {
-                  title: '1. Eventarc',
+                  title: 'Eventarc',
                   pattern: 'Event Router (130+ GCP Services)',
                   useWhen: 'Reacting to GCS uploads, VM creation, IAM changes, or Firestore writes.',
                   freeTier: '$0.00 Direct & Admin Audit',
                   badgeColor: 'text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10',
                 },
                 {
-                  title: '2. Cloud Pub/Sub',
+                  title: 'Cloud Pub/Sub',
                   pattern: '1-to-Many Event Streaming Bus',
                   useWhen: 'Decoupling high-throughput producers from multiple subscribers (1M+ msg/sec).',
                   freeTier: 'First 10 GiB/mo FREE',
                   badgeColor: 'text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/10',
                 },
                 {
-                  title: '3. Cloud Tasks',
+                  title: 'Cloud Tasks',
                   pattern: '1-to-1 Rate-Limited Queue',
                   useWhen: 'Dispatching work to an API/LLM with strict RPS rate-limiting, retries & deduplication.',
                   freeTier: 'First 1,000,000 ops/mo FREE',
                   badgeColor: 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
                 },
                 {
-                  title: '4. Cloud Workflows',
+                  title: 'Cloud Workflows',
                   pattern: 'Durable Multi-Step Saga State Machine',
                   useWhen: 'Orchestrating multi-step sagas with retries, compensation, and $0 human callbacks.',
                   freeTier: '5,000 internal steps/mo FREE',
                   badgeColor: 'text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/10',
                 },
                 {
-                  title: '5. Cloud Scheduler',
+                  title: 'Cloud Scheduler',
                   pattern: 'Managed Distributed Cron Timer',
                   useWhen: 'Triggering recurring nightly/hourly batch pipelines, heartbeats, or Hibernate.',
                   freeTier: '3 Jobs/mo 100% FREE',

@@ -508,14 +508,14 @@ export default function SreWarRoomPerimeterStudio({
     {
       id: 'SRE-INV-01',
       key: 'RB_UPTIME',
-      title: 'SRE-01 · Global 60s HTTPS Uptime Check Prober',
+      title: 'Global 60s HTTPS Uptime Check Prober',
       compliant: hasActiveUptimeCheck,
       statusDetail: hasActiveUptimeCheck
         ? `${uptimeChecks.length} Global HTTPS Probe(s) Active (${uptimeChecks[0]?.displayName || uptimeChecks[0]?.host})`
         : `0 Uptime Checks configured in monitoring.googleapis.com/v3`,
       desc: `Provisions a 60s SSL-validated global HTTPS probe in monitoring.googleapis.com/v3 for ${projectId}.appspot.com.`,
       pillarId: 'UPTIME_AND_ALERT_POLICIES',
-      pillarLabel: 'Inspect in Pillar 03',
+      pillarLabel: 'Inspect Uptime & Alerts',
       onRemediate: () =>
         handleExecuteSreAction('RB_UPTIME', {
           action: 'CREATE_CLOUD_MONITORING_UPTIME_CHECK',
@@ -526,14 +526,14 @@ export default function SreWarRoomPerimeterStudio({
     {
       id: 'SRE-INV-02',
       key: 'RB_ALERT',
-      title: 'SRE-02 · 14.4x Multi-Window P1 SLO Burn Alert Policy',
+      title: '14.4x Multi-Window P1 SLO Burn Alert Policy',
       compliant: hasActiveAlertPolicy,
       statusDetail: hasActiveAlertPolicy
         ? `${alertPolicies.filter((a) => a.enabled !== false).length} Enabled Alert Policy (${alertPolicies[0]?.displayName})`
         : `No enabled P1 SLO Alert Policy in monitoring.googleapis.com/v3`,
       desc: 'Provisions a Cloud Monitoring Alert Policy watching for P1 CRITICAL/ERROR War-Room cascades.',
       pillarId: 'UPTIME_AND_ALERT_POLICIES',
-      pillarLabel: 'Inspect in Pillar 03',
+      pillarLabel: 'Inspect Uptime & Alerts',
       onRemediate: () =>
         handleExecuteSreAction('RB_ALERT', {
           action: 'CREATE_SLO_ALERT_POLICY',
@@ -542,14 +542,14 @@ export default function SreWarRoomPerimeterStudio({
     {
       id: 'SRE-INV-03',
       key: 'RB_SLI_METRICS',
-      title: 'SRE-03 · 3 Golden Log-Based SLI Counter Metrics',
+      title: '3 Golden Log-Based SLI Counter Metrics',
       compliant: allGoldenSlisActive,
       statusDetail: allGoldenSlisActive
         ? `${logBasedMetrics.length} Log-Based SLI Counter Metric(s) Active (5xx, OOM-137, IAM-403)`
         : `${goldenSlisCount}/3 Golden SLI Counter Metrics provisioned in Cloud Logging v2`,
       desc: 'Provisions cloudpulse_sre_5xx_errors, cloudpulse_sre_oom_exit137, and cloudpulse_sre_iam_403_denied in Cloud Logging v2.',
       pillarId: 'LOG_BASED_METRICS_SLI',
-      pillarLabel: 'Inspect in Pillar 05',
+      pillarLabel: 'Inspect Log-Based SLIs',
       onRemediate: () =>
         handleExecuteSreAction('RB_SLI_METRICS', {
           action: 'BOOTSTRAP_ALL_GOLDEN_SLI_METRICS',
@@ -558,12 +558,12 @@ export default function SreWarRoomPerimeterStudio({
     {
       id: 'SRE-INV-04',
       key: 'RB_PGA_ALL',
-      title: 'SRE-04 · 100% Regional VPC Subnet Private Google Access',
+      title: '100% Regional VPC Subnet Private Google Access',
       compliant: allSubnetsPgaEnabled,
       statusDetail: `${vpcScData?.summary?.pgaEnabledSubnets ?? 0}/${vpcScData?.summary?.totalSubnets ?? 0} Subnets Hardened (${vpcScData?.pgaCoveragePct ?? 100}% PGA Coverage)`,
       desc: 'Batch-enables privateIpGoogleAccess=true across all regional VPC subnetworks for VPC-SC readiness.',
       pillarId: 'VPCSC_ZERO_EXFIL_ARCHITECT',
-      pillarLabel: 'Inspect in Pillar 09',
+      pillarLabel: 'Inspect VPC-SC Architect',
       onRemediate: () =>
         handleExecuteSreAction('RB_PGA_ALL', {
           action: 'ENFORCE_ALL_SUBNETS_PGA',
@@ -572,7 +572,7 @@ export default function SreWarRoomPerimeterStudio({
     {
       id: 'SRE-INV-05',
       key: 'RB_DLQ_SHIELD',
-      title: 'SRE-05 · Resilient Pub/Sub Dead-Letter Queue (-dlq) Shield',
+      title: 'Resilient Pub/Sub Dead-Letter Queue (-dlq) Shield',
       compliant: allPubsubDlqProtected,
       statusDetail: allPubsubDlqProtected
         ? `${pubsubData?.summary?.dlqProtectedCount || 0}/${pubsubData?.summary?.subscriptionsCount || 0} Subscription(s) DLQ-Protected`
@@ -581,7 +581,7 @@ export default function SreWarRoomPerimeterStudio({
         : `${unshieldedSubs.length} Subscription(s) missing Dead-Letter Queue protection`,
       desc: 'Provisions or attaches a Dead-Letter Queue (-dlq) topic (maxDeliveryAttempts=5) so poison-pill messages never block subscribers.',
       pillarId: 'PUBSUB_DLQ_AUTOPSY',
-      pillarLabel: 'Inspect in Pillar 10',
+      pillarLabel: 'Inspect Pub/Sub DLQ',
       onRemediate: () => {
         if ((pubsubData?.summary?.subscriptionsCount || 0) === 0) {
           return handleProvisionPubsubPair();
@@ -595,7 +595,7 @@ export default function SreWarRoomPerimeterStudio({
     {
       id: 'SRE-INV-06',
       key: 'RB_RESOLVE_P1',
-      title: 'SRE-06 · Zero Active P1 Chaos Cascades & Merkle Baseline Sealed',
+      title: 'Zero Active P1 Chaos Cascades & Merkle Baseline Sealed',
       compliant:
         noActiveP1ChaosDrill &&
         (healthAndSocBridge.merkleSnapshotsCount || 0) > 0,
@@ -609,8 +609,8 @@ export default function SreWarRoomPerimeterStudio({
         ? 'CHAOS_GAME_DAY_LAB'
         : 'HEALTH_DRIFT_SOC_BRIDGE',
       pillarLabel: !noActiveP1ChaosDrill
-        ? 'Inspect in Pillar 06'
-        : 'Inspect in Pillar 12',
+        ? 'Inspect Chaos Game-Day'
+        : 'Inspect Health & SOC Bridge',
       onRemediate: () => {
         if (!noActiveP1ChaosDrill) {
           return handleIncidentDrill('RESOLVE_INCIDENT');
@@ -962,15 +962,6 @@ export default function SreWarRoomPerimeterStudio({
               >
                 <div className="flex items-center justify-between gap-1.5">
                   <span
-                    className={`text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded ${
-                      active
-                        ? 'bg-black/30 text-white'
-                        : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    PILLAR {p.num}
-                  </span>
-                  <span
                     className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded truncate ${
                       active
                         ? 'bg-white/20 text-white'
@@ -1024,7 +1015,7 @@ export default function SreWarRoomPerimeterStudio({
                     onClick={() => setActivePillar('UPTIME_AND_ALERT_POLICIES')}
                     className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-extrabold cursor-pointer"
                   >
-                    [ARMED · {alertPolicies.length} Alert Policy Active] Manage in Pillar 03 &rarr;
+                    [ARMED · {alertPolicies.length} Alert Policy Active] Manage Uptime &amp; Alerts &rarr;
                   </button>
                 ) : (
                   <button
@@ -1049,7 +1040,7 @@ export default function SreWarRoomPerimeterStudio({
                     onClick={() => setActivePillar('LOG_BASED_METRICS_SLI')}
                     className="px-3 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-600 dark:text-blue-400 text-xs font-mono font-extrabold cursor-pointer"
                   >
-                    [VERIFIED · {logBasedMetrics.length} Golden SLIs Active] Manage in Pillar 05 &rarr;
+                    [VERIFIED · {logBasedMetrics.length} Golden SLIs Active] Manage Log-Based SLIs &rarr;
                   </button>
                 ) : (
                   <button
@@ -1873,7 +1864,7 @@ export default function SreWarRoomPerimeterStudio({
                         }
                         className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-extrabold cursor-pointer"
                       >
-                        [60s UPTIME CHECK ACTIVE] View in Pillar 03 &rarr;
+                        [60s UPTIME CHECK ACTIVE] View Uptime &amp; Alerts &rarr;
                       </button>
                     ) : (
                       <button

@@ -305,7 +305,7 @@ export default function Startup10xMentorStudio({
                 type="button"
                 data-feature-id={m.id}
                 onClick={() => setActiveModule(m.id)}
-                title={`${m.step}. ${m.title} — ${m.subtitle}`}
+                title={`${m.title} — ${m.subtitle}`}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
@@ -313,15 +313,6 @@ export default function Startup10xMentorStudio({
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shrink-0 ${
-                      isActive
-                        ? 'bg-black/25 text-white'
-                        : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
-                    }`}
-                  >
-                    {m.step}
-                  </span>
                   <div className="min-w-0">
                     <div className="text-xs font-extrabold truncate">
                       {m.title}

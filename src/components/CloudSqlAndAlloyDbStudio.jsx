@@ -657,15 +657,6 @@ WITH (m = 16, ef_construction = 64);`;
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
-                        active
-                          ? 'bg-black/25 text-white'
-                          : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
-                      }`}
-                    >
-                      {t.code}
-                    </span>
                     <span className="truncate">{t.label}</span>
                   </div>
                 </button>

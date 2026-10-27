@@ -642,7 +642,7 @@ export default function GcloudAlphaBetaStudio({
           <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
-                01 · NON-HTTP PULL WORKERS
+                NON-HTTP PULL WORKERS
               </span>
               <ReleaseTrackBadge track="BETA" />
             </div>
@@ -742,7 +742,7 @@ export default function GcloudAlphaBetaStudio({
           <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
-                02 · MULTI-CONTINENT ACTIVE-ACTIVE
+                MULTI-CONTINENT ACTIVE-ACTIVE
               </span>
               <ReleaseTrackBadge track="BETA" />
             </div>
@@ -830,7 +830,7 @@ export default function GcloudAlphaBetaStudio({
           <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
-                03 · LIVE INSTANCES &amp; COMPOSE UP
+                LIVE INSTANCES &amp; COMPOSE UP
               </span>
               <ReleaseTrackBadge track="BETA" />
             </div>
@@ -2031,7 +2031,7 @@ export default function GcloudAlphaBetaStudio({
               {[
                 {
                   badge: '[BETA]',
-                  title: '1. Gemini Cloud Assist SRE Investigations',
+                  title: 'Gemini Cloud Assist SRE Investigations',
                   cmd: `gcloud beta gemini cloud-assist investigations list --project=${projectId} --location=global --format=json`,
                   desc: 'Lists active and historical AI root-cause investigations managed by Gemini Cloud Assist.',
                   ownerTab: 'SRE_WAR_ROOM',
@@ -2039,7 +2039,7 @@ export default function GcloudAlphaBetaStudio({
                 },
                 {
                   badge: '[GA]',
-                  title: '2. Parameter Manager Centralized Config Store',
+                  title: 'Parameter Manager Centralized Config Store',
                   cmd: `gcloud parametermanager parameters list --project=${projectId} --location=global --format=json`,
                   desc: 'Single source of truth for typed application parameters and regional/global configuration templates.',
                   ownerTab: 'SECRETS_KMS',
@@ -2047,7 +2047,7 @@ export default function GcloudAlphaBetaStudio({
                 },
                 {
                   badge: '[GA]',
-                  title: '3. Vector Search Data Collections',
+                  title: 'Vector Search Data Collections',
                   cmd: `gcloud vector-search collections list --project=${projectId} --location=${region} --format=json`,
                   desc: 'Inspects managed Vector Search embedding collections and index operations.',
                   ownerTab: 'VERTEX_AI',
@@ -2055,7 +2055,7 @@ export default function GcloudAlphaBetaStudio({
                 },
                 {
                   badge: '[ALPHA]',
-                  title: '4. Cloud Number Registry (CNR) Enterprise IPAM',
+                  title: 'Cloud Number Registry (CNR) Enterprise IPAM',
                   cmd: `gcloud alpha number-registry discovered-ranges list --project=${projectId} --location=global --format=json`,
                   desc: 'Discovers VPC/hybrid IP ranges, IPAM admin scopes, realms, and free CIDR allocations.',
                   ownerTab: 'VPC_FIREWALL',
@@ -2063,7 +2063,7 @@ export default function GcloudAlphaBetaStudio({
                 },
                 {
                   badge: '[ALPHA]',
-                  title: '5. ML Diagnostics & XLA/GPU Profiler Sessions',
+                  title: 'ML Diagnostics & XLA/GPU Profiler Sessions',
                   cmd: `gcloud alpha mldiagnostics machine-learning-run list --project=${projectId} --location=${region} --format=json`,
                   desc: 'Tracks AI training/inference runs, monitored hardware events, and XLA profiler targets.',
                   ownerTab: 'VERTEX_AI',
@@ -2071,7 +2071,7 @@ export default function GcloudAlphaBetaStudio({
                 },
                 {
                   badge: '[GA · 590.0.1]',
-                  title: '6. Cloud Observability Default Scope & TraceScopes',
+                  title: 'Cloud Observability Default Scope & TraceScopes',
                   cmd: `gcloud observability scopes describe _Default --location=global --project=${projectId} --format=json && gcloud observability trace-scopes list --location=global --project=${projectId} --format=json`,
                   desc: 'Inspects unified Cloud Observability LogScopes, TraceScopes, and cross-project telemetry buckets (promoted to GA in 590.0.1).',
                   ownerTab: 'SRE_WAR_ROOM',
@@ -2079,7 +2079,7 @@ export default function GcloudAlphaBetaStudio({
                 },
                 {
                   badge: '[BETA · 590.0.1]',
-                  title: '7. Declarative Orchestration Pipelines Resource Schema Registry',
+                  title: 'Declarative Orchestration Pipelines Resource Schema Registry',
                   cmd: `gcloud beta orchestration-pipelines resource-types list --format=json`,
                   desc: 'Lists declarative resource schemas supported by Data Agent Kit & Cloud Composer deployment.yaml orchestration pipelines.',
                   ownerTab: 'DATA_ENGINEER',
@@ -2087,7 +2087,7 @@ export default function GcloudAlphaBetaStudio({
                 },
                 {
                   badge: '[GA · 590.0.1]',
-                  title: '8. Unified Compliance Manager Frameworks & Cloud Controls',
+                  title: 'Unified Compliance Manager Frameworks & Cloud Controls',
                   cmd: `gcloud compliance-manager frameworks list --project=${projectId} --location=global --format=json`,
                   desc: 'Audits Compliance Manager regulatory frameworks, Cloud Controls, and continuous framework deployments (promoted to GA in 590.0.1).',
                   ownerTab: 'CLOUD_SOC',

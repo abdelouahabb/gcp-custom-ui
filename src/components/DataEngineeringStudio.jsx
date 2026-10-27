@@ -1040,7 +1040,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   type="button"
                   data-feature-id={t.id}
                   onClick={() => setActiveSubTab(t.id)}
-                  title={`${t.code}. ${t.label} (${t.badge})`}
+                  title={`${t.label} (${t.badge})`}
                   className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                     isActive
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
@@ -1048,15 +1048,6 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0 ${
-                        isActive
-                          ? 'bg-black/25 text-white'
-                          : 'bg-zinc-200 dark:bg-zinc-800 text-blue-600 dark:text-blue-400'
-                      }`}
-                    >
-                      {t.code}
-                    </span>
                     <span className="truncate">{t.label}</span>
                   </div>
                   <span
@@ -2790,9 +2781,6 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold">
-                      {pillar.code}
-                    </span>
                     <span className="text-[10px] text-zinc-500 truncate">
                       Replaces: {pillar.legacy}
                     </span>
@@ -2813,10 +2801,10 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-xs font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
-                  Module 1 · Multi-Engine Interactive Lakehouse Notebook (`%%bqsql` + `bigframes.pandas` + `AI.FORECAST` + `AI.GENERATE_TABLE`)
+                  Multi-Engine Interactive Lakehouse Notebook (`%%bqsql` + `bigframes.pandas` + `AI.FORECAST` + `AI.GENERATE_TABLE`)
                 </div>
                 <p className="text-[11px] text-zinc-500 mt-0.5">
-                  Select any cell in the 4-stage Lakehouse workflow below to inspect, copy, or execute live against project <code className="font-mono font-bold">{projectId}</code>.
+                  Select any cell in the Lakehouse workflow below to inspect, copy, or execute live against project <code className="font-mono font-bold">{projectId}</code>.
                 </p>
               </div>
               <div className="text-[10px] font-mono text-zinc-500">
@@ -2865,15 +2853,6 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                          isSelected
-                            ? 'bg-black/25 text-white'
-                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                        }`}
-                      >
-                        {cell.code}
-                      </span>
                       <span className="text-xs font-bold truncate">{cell.title}</span>
                     </div>
                     <span
@@ -2895,7 +2874,7 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
               const targetFqTable = `${projectId}.${cleanTargetDs}.${cleanTargetTable}`;
               const cellsMap = {
                 CELL_1_EXPLORE: {
-                  badge: 'Cell 01 · Mandatory Data Exploration (`ML.DESCRIBE_DATA` + Sample Preview)',
+                  badge: 'Mandatory Data Exploration (`ML.DESCRIBE_DATA` + Sample Preview)',
                   why: 'Following Google Cloud BigQuery AI/ML best practices, always profile distribution statistics (`ML.DESCRIBE_DATA`) and sample rows (`LIMIT 10`) before training models or invoking foundation TVFs.',
                   isSql: true,
                   code: `%%bqsql
@@ -2919,7 +2898,7 @@ FROM \`${targetFqTable}\`
 LIMIT 10;`,
                 },
                 CELL_2_BIGFRAMES: {
-                  badge: 'Cell 02 · BigQuery DataFrames (`bigframes.pandas`) — Zero Client OOMs',
+                  badge: 'BigQuery DataFrames (`bigframes.pandas`) — Zero Client OOMs',
                   why: 'Replaces Databricks Koalas / PySpark DataFrames with 100% serverless pushdown to BigQuery. Uses partial ordering mode (`ordering_mode = "partial"`), `.peek(5)` random sampling instead of `.head()`, and native `.str` accessors instead of slow Python UDFs.',
                   isSql: false,
                   code: `import bigframes.pandas as bpd
@@ -2941,7 +2920,7 @@ print(df.dtypes)
 display(df.peek(5))`,
                 },
                 CELL_3_BQ_AI_ML: {
-                  badge: 'Cell 03 · Zero-Infra Foundation Models (`AI.FORECAST` TimesFM + `AI.GENERATE_TABLE` Gemini 2.5 Flash)',
+                  badge: 'Zero-Infra Foundation Models (`AI.FORECAST` TimesFM + `AI.GENERATE_TABLE` Gemini 2.5 Flash)',
                   why: 'Runs Google Research TimesFM time-series forecasting and Gemini 2.5 Flash structured table generation directly inside BigQuery SQL using Table-Valued Functions (TVFs) in the FROM clause and named `=>` arguments.',
                   isSql: true,
                   code: `%%bqsql
@@ -2992,7 +2971,7 @@ FROM AI.GENERATE_TABLE(
 );`,
                 },
                 CELL_4_VERTEX_MODEL: {
-                  badge: 'Cell 04 · Zero-Infra MLflow Replacement (`BigQuery ML` + `Vertex AI Model Registry`)',
+                  badge: 'Zero-Infra MLflow Replacement (`BigQuery ML` + `Vertex AI Model Registry`)',
                   why: 'Eliminates hosting a separate Databricks MLflow tracking server. Trains directly on your BigLake/BigQuery table with automatic splitting (`AUTO_SPLIT`) and registers the model natively in Vertex AI Model Registry in a single SQL statement.',
                   isSql: true,
                   code: `%%bqsql

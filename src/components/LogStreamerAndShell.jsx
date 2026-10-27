@@ -1642,62 +1642,62 @@ export default function LogStreamerAndShell({
             {[
               {
                 id: 'SMART_STREAM',
-                label: `01. Faceted Stream & Table (${chronoEntries.length})`,
+                label: `Faceted Stream & Table (${chronoEntries.length})`,
                 icon: Zap,
               },
               {
                 id: 'LOG_TO_METRICS',
-                label: `02. Log-to-Metrics & P99 Heatmap (${chronoData?.logToMetricsByService?.length || 4})`,
+                label: `Log-to-Metrics & P99 Heatmap (${chronoData?.logToMetricsByService?.length || 4})`,
                 icon: Cpu,
               },
               {
                 id: 'GROK_EXTRACTOR',
-                label: `03. Live Grok / Regex Extractor (${chronoData?.grokVirtualExtractors?.length || 3})`,
+                label: `Live Grok / Regex Extractor (${chronoData?.grokVirtualExtractors?.length || 3})`,
                 icon: Terminal,
               },
               {
                 id: 'DRAIN3_CLUSTERS',
-                label: `04. Drain3 Pattern Signatures (${chronoData?.drainClusters?.length || 0})`,
+                label: `Drain3 Pattern Signatures (${chronoData?.drainClusters?.length || 0})`,
                 icon: Layers,
               },
               {
                 id: 'ANOMALY_DIFF',
-                label: `05. Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 412}%)`,
+                label: `Anomaly Baseline Diff (+${chronoData?.anomalyBaselineDiff?.overallErrorDeltaPct || 412}%)`,
                 icon: AlertTriangle,
               },
               {
                 id: 'TRACE_WATERFALL',
-                label: `06. Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
+                label: `Cross-Service Trace Waterfall (${chronoData?.traceWaterfalls?.length || 0})`,
                 icon: GitCommit,
               },
               {
                 id: 'QUERY_TRANSPILER',
-                label: `07. Polyglot Query Transpiler (6 Formats)`,
+                label: `Polyglot Query Transpiler (6 Formats)`,
                 icon: FileCode2,
               },
               {
                 id: 'FINOPS_DLP',
-                label: `08. Log FinOps ($0.50/GiB) & DLP (${chronoData?.dlpAlerts?.length || 0})`,
+                label: `Log FinOps ($0.50/GiB) & DLP (${chronoData?.dlpAlerts?.length || 0})`,
                 icon: DollarSign,
               },
               {
                 id: 'SOURCE_BLAME',
-                label: `09. Source-Code Blame & Hotfix (${chronoData?.sourceBlameAndHotfixes?.length || 3})`,
+                label: `Source-Code Blame & Hotfix (${chronoData?.sourceBlameAndHotfixes?.length || 3})`,
                 icon: FileCode2,
               },
               {
                 id: 'SLO_BURN_MATRIX',
-                label: `10. SLO Error-Budget Burn (18.6x Fast)`,
+                label: `SLO Error-Budget Burn (18.6x Fast)`,
                 icon: AlertCircle,
               },
               {
                 id: 'EBPF_KERNEL_XRAY',
-                label: `11. eBPF Syscall, DNS & TCP X-Ray (${chronoData?.ebpfKernelTelemetry?.length || 3})`,
+                label: `eBPF Syscall, DNS & TCP X-Ray (${chronoData?.ebpfKernelTelemetry?.length || 3})`,
                 icon: Cpu,
               },
               {
                 id: 'CANARY_REPLAY',
-                label: `12. Canary Log Replay & Alert Drill (${chronoData?.replayScenarios?.length || 3})`,
+                label: `Canary Log Replay & Alert Drill (${chronoData?.replayScenarios?.length || 3})`,
                 icon: Play,
               },
             ].map((tab) => {

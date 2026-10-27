@@ -476,17 +476,17 @@ export default function StudioGcpAdvantageBar({
                   {
                     id: 'REACHABILITY',
                     label:
-                      '01 · Free Mathematical VPC Reachability Prover ($0 vs AWS $0.10)',
+                      'Free Mathematical VPC Reachability Prover ($0 vs AWS $0.10)',
                   },
                   {
                     id: 'GLOBAL_SUBNET',
-                    label: `02 · Global Single-VPC Subnet Spanner (${
+                    label: `Global Single-VPC Subnet Spanner (${
                       vpcData?.totalSubnetsCount || 0
                     } Subnets / ${vpcData?.uniqueRegionsCount || 0} Regions)`,
                   },
                   {
                     id: 'ANYCAST_IP',
-                    label: `03 · Global Anycast IPv4 Allocator (${
+                    label: `Global Anycast IPv4 Allocator (${
                       anycastData?.globalAddressesCount || 0
                     } Reserved)`,
                   },
@@ -926,7 +926,7 @@ export default function StudioGcpAdvantageBar({
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                   }`}
                 >
-                  01 · Live IAM Least-Privilege Surgeon (
+                  Live IAM Least-Privilege Surgeon (
                   {iamData?.overPrivilegedCount || 0} Over-Privileged Bindings)
                 </button>
                 <button
@@ -938,7 +938,7 @@ export default function StudioGcpAdvantageBar({
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                   }`}
                 >
-                  02 · Zero-Key Workload Identity Federation (GitHub / AWS OIDC)
+                  Zero-Key Workload Identity Federation (GitHub / AWS OIDC)
                 </button>
               </div>
 

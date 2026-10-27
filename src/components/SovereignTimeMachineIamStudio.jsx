@@ -963,15 +963,6 @@ export default function SovereignTimeMachineIamStudio({
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                        active
-                          ? 'bg-white/20 text-white'
-                          : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                      }`}
-                    >
-                      {tab.code}
-                    </span>
                     <span className="truncate">{tab.label}</span>
                   </div>
                   <span

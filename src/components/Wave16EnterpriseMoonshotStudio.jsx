@@ -257,7 +257,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                 type="button"
                 data-feature-id={t.id}
                 onClick={() => setActiveTab(t.id)}
-                title={`${t.step}. ${t.title} — ${t.subtitle}`}
+                title={`${t.title} — ${t.subtitle}`}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
@@ -265,9 +265,6 @@ export default function Wave16EnterpriseMoonshotStudio({
                 }`}
               >
                 <div className="min-w-0">
-                  <div className="text-[10px] font-mono font-bold opacity-80">
-                    STEP {t.step}
-                  </div>
                   <div className="text-xs font-extrabold truncate">
                     {t.title}
                   </div>
