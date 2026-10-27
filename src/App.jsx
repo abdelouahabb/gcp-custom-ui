@@ -4110,21 +4110,6 @@ function CloudPulseCockpit() {
                       <Cpu className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                       <span>Auto-Pilot Guard</span>
                     </button>
-
-                    <button
-                      type="button"
-                      data-feature-id="STARTUP_10X"
-                      onClick={() => setActiveTab('STARTUP_10X')}
-                      title="Open Dedicated Startup 10X Menu — Google for Startups Scale & Bottleneck Radar (Cold-Starts, DB Connection Storms, Launch-Day HTTP 429 Quotas & Credit Runway)"
-                      className={`inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer ${
-                        activeTab === 'STARTUP_10X'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'border-blue-500/40 bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-700 dark:text-blue-300'
-                      }`}
-                    >
-                      <Rocket className="w-3.5 h-3.5 shrink-0" />
-                      <span>Startup 10X</span>
-                    </button>
                   </>
                 );
               })()}
