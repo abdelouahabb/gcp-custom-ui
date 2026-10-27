@@ -32971,9 +32971,14 @@ function getProjectDataEngineerState(projectId) {
       dataplexScans: [],
       dataProducts: [],
       serverlessDags: [],
+      deletedMedallionPrefixes: new Set(),
+      deletedResourceIds: new Set(),
     });
   }
-  return dataEngineerStateByProject.get(projectId);
+  const st = dataEngineerStateByProject.get(projectId);
+  if (!st.deletedMedallionPrefixes) st.deletedMedallionPrefixes = new Set();
+  if (!st.deletedResourceIds) st.deletedResourceIds = new Set();
+  return st;
 }
 
 app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
@@ -33064,7 +33069,8 @@ app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
     // Discover live Medallion pipelines from real BigQuery datasets (`*_bronze_raw` / `*_silver_cleaned` / `*_gold_marts`)
     const bronzePrefixes = datasets
       .filter((d) => String(d.id || '').endsWith('_bronze_raw'))
-      .map((d) => d.id.replace(/_bronze_raw$/, ''));
+      .map((d) => d.id.replace(/_bronze_raw$/, ''))
+      .filter((prefix) => !state.deletedMedallionPrefixes.has(prefix));
     for (const prefix of bronzePrefixes) {
       if (!state.medallionPipelines.some((p) => p.name === prefix)) {
         state.medallionPipelines.unshift({
@@ -33092,68 +33098,80 @@ app.get('/api/project/:projectId/data-engineer/overview', async (req, res) => {
 
     const liveDataformRepos =
       dataformRes?.status === 'fulfilled'
-        ? (dataformRes.value.data?.repositories || []).map((r) => ({
-            id: r.name.split('/').pop(),
-            name: r.name,
-            region: r.name.split('/')[3] || 'us-central1',
-            gitRemote: r.gitRemoteSettings?.url || 'Managed GCP Workspace',
-            defaultBranch: r.gitRemoteSettings?.defaultBranch || 'main',
-            serviceAccount: r.serviceAccount || 'Default Dataform Agent',
-            source: 'LIVE_GCP',
-          }))
+        ? (dataformRes.value.data?.repositories || [])
+            .map((r) => ({
+              id: r.name.split('/').pop(),
+              name: r.name,
+              region: r.name.split('/')[3] || 'us-central1',
+              gitRemote: r.gitRemoteSettings?.url || 'Managed GCP Workspace',
+              defaultBranch: r.gitRemoteSettings?.defaultBranch || 'main',
+              serviceAccount: r.serviceAccount || 'Default Dataform Agent',
+              source: 'LIVE_GCP',
+            }))
+            .filter((r) => !state.deletedResourceIds.has(r.id))
         : [];
 
     const dataformRepos = [
       ...liveDataformRepos,
       ...state.dataformRepos.filter(
-        (f) => !liveDataformRepos.some((l) => l.id === f.id)
+        (f) =>
+          !state.deletedResourceIds.has(f.id) &&
+          !liveDataformRepos.some((l) => l.id === f.id)
       ),
     ];
 
     const liveDataplexScans =
       dataplexScansRes?.status === 'fulfilled'
-        ? (dataplexScansRes.value.data?.dataScans || []).map((s) => ({
-            id: s.name.split('/').pop(),
-            name: s.name,
-            type: s.type || 'DATA_PROFILE',
-            targetResource:
-              s.data?.resource ||
-              `//bigquery.googleapis.com/projects/${projectId}/datasets/silver_cleaned_core/tables/events`,
-            state: s.state || 'ACTIVE',
-            location: s.name.split('/')[3] || 'us-central1',
-            createTime: s.createTime || new Date().toISOString(),
-            source: 'LIVE_GCP',
-          }))
+        ? (dataplexScansRes.value.data?.dataScans || [])
+            .map((s) => ({
+              id: s.name.split('/').pop(),
+              name: s.name,
+              type: s.type || 'DATA_PROFILE',
+              targetResource:
+                s.data?.resource ||
+                `//bigquery.googleapis.com/projects/${projectId}/datasets/silver_cleaned_core/tables/events`,
+              state: s.state || 'ACTIVE',
+              location: s.name.split('/')[3] || 'us-central1',
+              createTime: s.createTime || new Date().toISOString(),
+              source: 'LIVE_GCP',
+            }))
+            .filter((s) => !state.deletedResourceIds.has(s.id))
         : [];
 
     const dataplexScans = [
       ...liveDataplexScans,
       ...state.dataplexScans.filter(
-        (f) => !liveDataplexScans.some((l) => l.id === f.id)
+        (f) =>
+          !state.deletedResourceIds.has(f.id) &&
+          !liveDataplexScans.some((l) => l.id === f.id)
       ),
     ];
 
     const liveDataProducts =
       dataplexProductsRes?.status === 'fulfilled'
-        ? (dataplexProductsRes.value.data?.dataProducts || []).map((p) => ({
-            id: p.name.split('/').pop(),
-            displayName: p.displayName || p.name.split('/').pop(),
-            domain: p.description || 'Enterprise Data Mesh',
-            location: p.name.split('/')[3] || 'us-central1',
-            ownerEmail: (p.ownerEmails || [])[0] || 'data-mesh@gcp.local',
-            slaFreshnessMinutes: 15,
-            qualityScore: 99.2,
-            assetsCount: p.assetCount || 3,
-            dbtSynced: true,
-            createdAt: p.createTime || new Date().toISOString(),
-            source: 'LIVE_GCP',
-          }))
+        ? (dataplexProductsRes.value.data?.dataProducts || [])
+            .map((p) => ({
+              id: p.name.split('/').pop(),
+              displayName: p.displayName || p.name.split('/').pop(),
+              domain: p.description || 'Enterprise Data Mesh',
+              location: p.name.split('/')[3] || 'us-central1',
+              ownerEmail: (p.ownerEmails || [])[0] || 'data-mesh@gcp.local',
+              slaFreshnessMinutes: 15,
+              qualityScore: 99.2,
+              assetsCount: p.assetCount || 3,
+              dbtSynced: true,
+              createdAt: p.createTime || new Date().toISOString(),
+              source: 'LIVE_GCP',
+            }))
+            .filter((p) => !state.deletedResourceIds.has(p.id))
         : [];
 
     const dataProducts = [
       ...liveDataProducts,
       ...state.dataProducts.filter(
-        (f) => !liveDataProducts.some((l) => l.id === f.id)
+        (f) =>
+          !state.deletedResourceIds.has(f.id) &&
+          !liveDataProducts.some((l) => l.id === f.id)
       ),
     ];
 
@@ -33576,6 +33594,10 @@ GROUP BY 1, 2;
         rowsProcessed: 3,
         quarantinedRows: 1,
       };
+      state.deletedMedallionPrefixes.delete(prefix);
+      state.medallionPipelines = state.medallionPipelines.filter(
+        (m) => m.name !== prefix
+      );
       state.medallionPipelines.unshift(newPipeline);
 
       return res.json({
@@ -34246,46 +34268,124 @@ app.delete(
   '/api/project/:projectId/data-engineer/resource',
   async (req, res) => {
     const { projectId } = req.params;
-    const { resourceKind, id, region = 'us-central1' } =
-      req.body || req.query || {};
+    const mergedParams = { ...(req.query || {}), ...(req.body || {}) };
+    const {
+      resourceKind,
+      id,
+      name,
+      region = 'us-central1',
+    } = mergedParams;
     const state = getProjectDataEngineerState(projectId);
 
     try {
       const { token } = await resolveRequestAuth(req);
-      if (token) {
-        if (resourceKind === 'DATAFORM_REPO') {
-          await axios
-            .delete(
-              `https://dataform.googleapis.com/v1beta1/projects/${encodeURIComponent(
-                projectId
-              )}/locations/${encodeURIComponent(
-                region
-              )}/repositories/${encodeURIComponent(id)}?force=true`,
-              { headers: { Authorization: `Bearer ${token}` }, timeout: 6000 }
+      let deletedDetails = '';
+
+      if (
+        resourceKind === 'MEDALLION_PIPELINE' ||
+        String(id || '').startsWith('medallion-')
+      ) {
+        const matchedPipeline = state.medallionPipelines.find(
+          (m) => m.id === id || m.name === id || (name && m.name === name)
+        );
+        const prefix =
+          matchedPipeline?.name ||
+          name ||
+          String(id || '')
+            .replace(/^medallion-live-/, '')
+            .replace(/^medallion-/, '')
+            .replace(/-\d+$/, '');
+
+        if (prefix) {
+          state.deletedMedallionPrefixes.add(prefix);
+        }
+        if (id) {
+          state.deletedResourceIds.add(String(id));
+        }
+
+        const datasetsToDelete = matchedPipeline
+          ? [
+              matchedPipeline.bronzeDataset,
+              matchedPipeline.silverDataset,
+              matchedPipeline.goldDataset,
+            ].filter(Boolean)
+          : prefix
+          ? [
+              `${prefix}_bronze_raw`,
+              `${prefix}_silver_cleaned`,
+              `${prefix}_gold_marts`,
+            ]
+          : [];
+
+        if (token && datasetsToDelete.length > 0) {
+          await Promise.allSettled(
+            datasetsToDelete.map((dsId) =>
+              axios.delete(
+                `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+                  projectId
+                )}/datasets/${encodeURIComponent(dsId)}?deleteContents=true`,
+                { headers: { Authorization: `Bearer ${token}` }, timeout: 8000 }
+              )
             )
-            .catch(() => null);
-        } else if (resourceKind === 'DATAPLEX_SCAN') {
-          await axios
-            .delete(
-              `https://dataplex.googleapis.com/v1/projects/${encodeURIComponent(
-                projectId
-              )}/locations/${encodeURIComponent(
-                region
-              )}/dataScans/${encodeURIComponent(id)}`,
-              { headers: { Authorization: `Bearer ${token}` }, timeout: 6000 }
-            )
-            .catch(() => null);
-        } else if (resourceKind === 'SERVERLESS_DAG') {
-          await axios
-            .delete(
-              `https://workflows.googleapis.com/v1/projects/${encodeURIComponent(
-                projectId
-              )}/locations/${encodeURIComponent(
-                region
-              )}/workflows/${encodeURIComponent(id)}`,
-              { headers: { Authorization: `Bearer ${token}` }, timeout: 6000 }
-            )
-            .catch(() => null);
+          );
+          deletedDetails = ` and permanently dropped BigQuery datasets (${datasetsToDelete.join(
+            ', '
+          )})`;
+        }
+
+        state.medallionPipelines = state.medallionPipelines.filter(
+          (m) => m.id !== id && m.name !== id && m.name !== prefix
+        );
+      } else {
+        if (id) {
+          state.deletedResourceIds.add(String(id));
+        }
+        if (token) {
+          if (resourceKind === 'DATAFORM_REPO') {
+            await axios
+              .delete(
+                `https://dataform.googleapis.com/v1beta1/projects/${encodeURIComponent(
+                  projectId
+                )}/locations/${encodeURIComponent(
+                  region
+                )}/repositories/${encodeURIComponent(id)}?force=true`,
+                { headers: { Authorization: `Bearer ${token}` }, timeout: 6000 }
+              )
+              .catch(() => null);
+          } else if (resourceKind === 'DATAPLEX_SCAN') {
+            await axios
+              .delete(
+                `https://dataplex.googleapis.com/v1/projects/${encodeURIComponent(
+                  projectId
+                )}/locations/${encodeURIComponent(
+                  region
+                )}/dataScans/${encodeURIComponent(id)}`,
+                { headers: { Authorization: `Bearer ${token}` }, timeout: 6000 }
+              )
+              .catch(() => null);
+          } else if (resourceKind === 'DATAPLEX_DATA_PRODUCT') {
+            await axios
+              .delete(
+                `https://dataplex.googleapis.com/v1/projects/${encodeURIComponent(
+                  projectId
+                )}/locations/${encodeURIComponent(
+                  region
+                )}/dataProducts/${encodeURIComponent(id)}`,
+                { headers: { Authorization: `Bearer ${token}` }, timeout: 6000 }
+              )
+              .catch(() => null);
+          } else if (resourceKind === 'SERVERLESS_DAG') {
+            await axios
+              .delete(
+                `https://workflows.googleapis.com/v1/projects/${encodeURIComponent(
+                  projectId
+                )}/locations/${encodeURIComponent(
+                  region
+                )}/workflows/${encodeURIComponent(id)}`,
+                { headers: { Authorization: `Bearer ${token}` }, timeout: 6000 }
+              )
+              .catch(() => null);
+          }
         }
       }
 
@@ -34299,7 +34399,9 @@ app.delete(
 
       res.json({
         ok: true,
-        message: `Deleted ${resourceKind || 'Data Engineering resource'} "${id}" (${region}).`,
+        message: `Deleted ${
+          resourceKind || 'Data Engineering resource'
+        } "${name || id}" (${region})${deletedDetails}.`,
       });
     } catch (err) {
       res.status(500).json({ error: err.message });

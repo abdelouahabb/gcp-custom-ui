@@ -352,8 +352,25 @@ function classifyDestructiveAxiosConfig(config) {
     // Data Engineering Studio resource delete (/data-engineer/resource)
     if (rawUrl.includes('/data-engineer/resource')) {
       const kind = body.resourceKind || params.resourceKind || 'Data Engineering Resource';
-      const target = body.id || params.id || 'selected-pipeline';
+      const target = body.name || params.name || body.id || params.id || 'selected-pipeline';
       const region = body.region || params.region || 'us-central1';
+      if (kind === 'MEDALLION_PIPELINE') {
+        const cleanPrefix = String(target)
+          .replace(/^medallion-live-/, '')
+          .replace(/^medallion-/, '')
+          .replace(/-\d+$/, '');
+        return {
+          title: `Permanently Delete Medallion Lakehouse Pipeline "${cleanPrefix}"`,
+          resourceKind: '3-Tier BigQuery Medallion Pipeline (Bronze / Silver / Gold)',
+          targetName: cleanPrefix,
+          location: region,
+          projectId,
+          method: 'DELETE',
+          endpoint: rawUrl,
+          whatHappensNext: `1. Calls DELETE https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/{datasetId}?deleteContents=true across ${cleanPrefix}_bronze_raw, ${cleanPrefix}_silver_cleaned, and ${cleanPrefix}_gold_marts.\n2. Removes the Medallion ELT pipeline registration from the Data Engineering Studio.`,
+          impactWarning: `This permanently deletes Medallion pipeline "${cleanPrefix}" (${region}) and drops its 3 BigQuery datasets (${cleanPrefix}_bronze_raw, ${cleanPrefix}_silver_cleaned, ${cleanPrefix}_gold_marts) in project "${projectId}".`,
+        };
+      }
       return {
         title: `Permanently Delete ${kind}`,
         resourceKind: kind,

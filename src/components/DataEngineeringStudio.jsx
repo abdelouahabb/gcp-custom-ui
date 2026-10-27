@@ -529,14 +529,31 @@ LIMIT 25;`;
     }
   };
 
-  const handleDeleteResource = async (resourceKind, id, region = 'us-central1') => {
+  const handleDeleteResource = async (
+    resourceKind,
+    id,
+    region = 'us-central1',
+    name = ''
+  ) => {
     try {
+      const payload = { resourceKind, id, name: name || id, region };
       const res = await axios.delete(
         `/api/project/${encodeURIComponent(projectId)}/data-engineer/resource`,
         {
-          data: { resourceKind, id, region },
+          params: payload,
+          data: payload,
         }
       );
+      setData((prev) => ({
+        ...prev,
+        medallionPipelines: (prev.medallionPipelines || []).filter(
+          (m) => m.id !== id && m.name !== id && (!name || m.name !== name)
+        ),
+        dataformRepos: (prev.dataformRepos || []).filter((r) => r.id !== id),
+        dataplexScans: (prev.dataplexScans || []).filter((s) => s.id !== id),
+        dataProducts: (prev.dataProducts || []).filter((p) => p.id !== id),
+        serverlessDags: (prev.serverlessDags || []).filter((d) => d.id !== id),
+      }));
       if (onShowToast && res.data?.message) onShowToast(res.data.message);
       await fetchOverview();
     } catch (err) {
@@ -1315,9 +1332,14 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                       <button
                         type="button"
                         onClick={() =>
-                          handleDeleteResource('MEDALLION_PIPELINE', p.id, p.region)
+                          handleDeleteResource(
+                            'MEDALLION_PIPELINE',
+                            p.id,
+                            p.region,
+                            p.name
+                          )
                         }
-                        title={`Delete Medallion pipeline ${p.name}`}
+                        title={`Delete Medallion pipeline ${p.name} and drop its Bronze/Silver/Gold BigQuery datasets`}
                         className="p-1 rounded hover:bg-red-500/15 text-zinc-400 hover:text-red-500 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
