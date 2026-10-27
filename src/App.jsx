@@ -1537,25 +1537,32 @@ function classifyDestructiveAxiosConfig(config) {
 
     // 3C. 1-Tap Cross-Region Cloud Run Teleporter (/cloudrun/teleport)
     if (rawUrl.includes('/cloudrun/teleport')) {
-      const src = body.serviceName || body.sourceService || 'cloud-run-service';
+      const src =
+        body.sourceServiceName ||
+        body.serviceName ||
+        body.sourceService ||
+        'cloud-run-service';
+      const srcReg = body.sourceRegion || 'us-central1';
       const targetReg = body.targetRegion || 'europe-west1';
+      const dstName =
+        body.newServiceName || `${src}-${targetReg.split('-')[0]}`;
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm 1-Tap Cross-Region Teleport of "${src}" to ${targetReg}?`,
-        headerBadge: 'CloudPulse 2026 1-Tap Cloud & Billing Gatekeeper',
-        targetLabel: 'Cloud Run Service to Clone Across Regions',
-        resourceKind: 'Cloud Run Gen2 Service (run.googleapis.com/v2)',
-        targetName: `${src} → ${targetReg}`,
+        title: `Teleport Cloud Run Service "${src}" (${srcReg}) → ${targetReg}?`,
+        headerBadge: 'Multi-Region Failover & Cloud Run Teleporter Gatekeeper',
+        targetLabel: 'Source → Failover Destination Cloud Run Service',
+        resourceKind: 'Cloud Run Gen2 Service Clone (run.googleapis.com/v2)',
+        targetName: `${src} (${srcReg}) → ${dstName} (${targetReg})`,
         location: targetReg,
         projectId,
         method: '1-TAP TELEPORT',
         endpoint: rawUrl,
-        confirmLabel: `Confirm & Teleport Service to ${targetReg}`,
+        confirmLabel: `Teleport "${src}" to ${targetReg}`,
         cancelToast: `Cross-region teleport of "${src}" cancelled.`,
-        whatHappensNext: `1. Reads the live revision spec (image, CPU/RAM/GPU, env vars, IAM policy) of "${src}".\n2. Deploys a cloned Cloud Run service in target region "${targetReg}" via run.googleapis.com/v2.\n3. Mirrors the public/private IAM invoker policy on the new regional endpoint.`,
+        whatHappensNext: `1. Inspects Live Source Service "${src}" in ${srcReg}: Reads the active container image, CPU/Memory limits, environment variables, Secret Manager references, and GCS FUSE mounts from "${src}".\n2. Deploys Standby Replica "${dstName}" in Failover Region ${targetReg}: Provisions a cloned Cloud Run Gen2 service in "${targetReg}" via run.googleapis.com/v2.\n3. Mirrors Zero-Trust IAM Invoker Policy & Verifies HTTPS Endpoint: Replicates the source IAM invoker bindings onto the new regional *.run.app URL and records a reversible receipt.`,
         costWarning: `CLOUD COST & EGRESS NOTICE: Deploying into "${targetReg}" applies ${targetReg}'s regional pricing tier multiplier. If the source service has minInstances > 0 or attached GPUs, the cloned service will also incur continuous hourly warm-instance charges unless scaled to 0.`,
-        impactWarning: `This provisions a live Cloud Run service in "${targetReg}" inside project "${projectId}".`,
+        impactWarning: `Provisions live failover Cloud Run service "${dstName}" in region "${targetReg}" inside project "${projectId}" without interrupting "${src}" in "${srcReg}".`,
       };
     }
 
@@ -2963,23 +2970,37 @@ function classifyDestructiveAxiosConfig(config) {
     // 3G-14. VPC Firewall Rule Patch (/firewalls/:ruleName)
     if (rawUrl.includes('/firewalls/') && method === 'patch') {
       const fwName = decodeURIComponent(rawUrl.split('/firewalls/')[1]?.split('?')[0] || 'firewall-rule');
+      const nextRanges = Array.isArray(body.sourceRanges)
+        ? body.sourceRanges.join(', ')
+        : String(body.sourceRanges || '');
+      const isIapLock = nextRanges.includes('35.235.240.0/20');
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Update Live VPC Firewall Rule "${fwName}" on "${projectId}"?`,
-        headerBadge: 'VPC Firewall Rule & IAP Security Gatekeeper',
-        targetLabel: 'Target VPC Firewall Rule',
+        title: isIapLock
+          ? `Lock Firewall Rule "${fwName}" to Google Cloud IAP (35.235.240.0/20)?`
+          : `Update Live VPC Firewall Rule "${fwName}" on "${projectId}"?`,
+        headerBadge: 'VPC Firewall X-Ray & Zero-Trust IAP Gatekeeper',
+        targetLabel: 'Target VPC Firewall Rule to Harden',
         resourceKind: 'Compute Engine VPC Firewall (compute.googleapis.com/v1)',
-        targetName: `projects/${projectId}/global/firewalls/${fwName}`,
+        targetName: isIapLock
+          ? `${fwName} (sourceRanges: 0.0.0.0/0 → 35.235.240.0/20)`
+          : `projects/${projectId}/global/firewalls/${fwName}`,
         location: 'Global VPC Perimeter',
         projectId,
-        method: 'PATCH FIREWALL RULE',
+        method: isIapLock ? 'LOCK TO CLOUD IAP' : 'PATCH FIREWALL RULE',
         endpoint: rawUrl,
-        confirmLabel: `Update Firewall Rule "${fwName}" ($0.00)`,
+        confirmLabel: isIapLock
+          ? `Restrict "${fwName}" to Cloud IAP (35.235.240.0/20)`
+          : `Update Firewall Rule "${fwName}" ($0.00)`,
         cancelToast: `Firewall rule update on "${fwName}" cancelled.`,
-        whatHappensNext: `1. Calls PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${fwName}.\n2. Updates source CIDR ranges (${body.sourceRanges ? JSON.stringify(body.sourceRanges) : 'configured CIDRs'}), allowed ports/protocols, priority, or disabled state across the VPC network.`,
-        costWarning: `ZERO COST ($0.00/MO): Modifying VPC Firewall rules is a free control-plane operation.`,
-        impactWarning: `Immediately updates packet filtering for all VMs matching firewall rule "${fwName}" in project "${projectId}".`,
+        whatHappensNext: isIapLock
+          ? `1. Replaces Open Public Internet (0.0.0.0/0) with Cloud IAP CIDR: Updates "${fwName}" in-place so only Google Cloud Identity-Aware Proxy's TCP forwarding range (35.235.240.0/20) is permitted.\n2. Blocks Direct Public Internet Brute-Force While Keeping Browser/CLI SSH Alive: Immediately flips the World Map's public exposure verdict to LOCKED while preserving authenticated "--tunnel-through-iap" sessions.\n3. Enables Firewall Hit Logging & Audit Trail: Activates VPC Firewall Rule Logging on "${fwName}" and records the change in Cloud Audit Logs.`
+          : `1. Updates Live Firewall Rule "${fwName}" In-Place: Applies your requested source CIDR ranges (${nextRanges || 'configured CIDRs'}), priority, or enabled/disabled state across the VPC network.\n2. Recalculates Live World Map Verdicts: Immediately re-evaluates all packet trajectories against the updated "${fwName}" rule.\n3. Enables Audit Logging: Records the configuration update in Google Cloud Audit Logs.`,
+        costWarning: `ZERO COST ($0.00/MO): Modifying VPC Firewall rules and using Cloud IAP TCP forwarding incurs $0.00/mo.`,
+        impactWarning: isIapLock
+          ? `Direct unauthenticated public internet connections to "${fwName}" will be dropped; authorized engineers continue connecting seamlessly via Cloud IAP.`
+          : `Immediately updates packet filtering for all VMs matching firewall rule "${fwName}" in project "${projectId}".`,
       };
     }
 

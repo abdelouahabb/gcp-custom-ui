@@ -1846,6 +1846,155 @@ function evaluatePacketAgainstFirewalls(packet, firewalls = []) {
   };
 }
 
+// Step-by-Step Priority 0 -> 65535 VPC Firewall X-Ray Debugger (identifies winning rule, shadowed rules, and skipped rules)
+function tracePacketFirewallXRay(packet, firewalls = []) {
+  const sortedRules = [...firewalls]
+    .filter((fw) => (fw.direction || 'INGRESS') === 'INGRESS')
+    .sort((a, b) => (a.priority ?? 1000) - (b.priority ?? 1000));
+
+  let winningRule = null;
+  const shadowedRules = [];
+  const steps = [];
+
+  for (const fw of sortedRules) {
+    const isDeny =
+      fw.action === 'DENY' || (Array.isArray(fw.denied) && fw.denied.length > 0);
+    const actionLabel = isDeny ? 'DENY' : 'ALLOW';
+    const ranges =
+      fw.sourceRanges && fw.sourceRanges.length > 0
+        ? fw.sourceRanges
+        : ['0.0.0.0/0'];
+    const specs = isDeny ? fw.denied || [] : fw.allowed || [];
+    const portsSummary =
+      specs.length > 0
+        ? specs
+            .map(
+              (s) =>
+                `${String(s.IPProtocol || 'all').toUpperCase()}${
+                  Array.isArray(s.ports) && s.ports.length > 0
+                    ? `:${s.ports.join(',')}`
+                    : ''
+                }`
+            )
+            .join(', ')
+        : 'ALL';
+
+    if (fw.disabled) {
+      steps.push({
+        name: fw.name,
+        priority: fw.priority ?? 1000,
+        action: actionLabel,
+        sourceRanges: ranges,
+        portsSummary,
+        status: 'DISABLED',
+        reason: 'Rule is disabled in GCP',
+      });
+      continue;
+    }
+
+    const cidrMatch = ranges.some((cidr) => ipMatchesCidr(packet.sourceIp, cidr));
+    const protoMatch = specs.some((s) => {
+      const p = String(s.IPProtocol || '').toLowerCase();
+      if (p === 'all') return true;
+      if (p !== String(packet.protocol || 'tcp').toLowerCase()) return false;
+      if (p === 'icmp') return true;
+      return portMatchesSpec(Number(packet.port), s.ports);
+    });
+
+    if (cidrMatch && protoMatch) {
+      if (!winningRule) {
+        winningRule = {
+          name: fw.name,
+          priority: fw.priority ?? 1000,
+          action: actionLabel,
+          sourceRanges: ranges,
+          portsSummary,
+          isWorldOpen: ranges.includes('0.0.0.0/0'),
+        };
+        steps.push({
+          name: fw.name,
+          priority: fw.priority ?? 1000,
+          action: actionLabel,
+          sourceRanges: ranges,
+          portsSummary,
+          status: 'WINNING_MATCH',
+          reason: `Matched CIDR (${ranges[0]}) & ${portsSummary} -> Decided ${actionLabel}`,
+        });
+      } else {
+        const shadowedEntry = {
+          name: fw.name,
+          priority: fw.priority ?? 1000,
+          action: actionLabel,
+          sourceRanges: ranges,
+          portsSummary,
+          status: 'SHADOWED_MATCH',
+          reason: `Shadowed by higher-priority rule "${winningRule.name}" (P-${winningRule.priority})`,
+        };
+        shadowedRules.push(shadowedEntry);
+        steps.push(shadowedEntry);
+      }
+    } else if (!cidrMatch) {
+      steps.push({
+        name: fw.name,
+        priority: fw.priority ?? 1000,
+        action: actionLabel,
+        sourceRanges: ranges,
+        portsSummary,
+        status: 'SKIPPED_CIDR',
+        reason: `Source IP ${packet.sourceIp} not in ${ranges.join(', ')}`,
+      });
+    } else {
+      steps.push({
+        name: fw.name,
+        priority: fw.priority ?? 1000,
+        action: actionLabel,
+        sourceRanges: ranges,
+        portsSummary,
+        status: 'SKIPPED_PORT',
+        reason: `Port ${String(packet.protocol || 'tcp').toUpperCase()}:${packet.port} not in ${portsSummary}`,
+      });
+    }
+  }
+
+  // Implicit GCP Priority-65535 Default Deny Ingress Rule
+  if (!winningRule) {
+    winningRule = {
+      name: 'default-deny-ingress',
+      priority: 65535,
+      action: 'DENY',
+      sourceRanges: ['0.0.0.0/0'],
+      portsSummary: 'ALL',
+      isWorldOpen: true,
+    };
+    steps.push({
+      name: 'default-deny-ingress',
+      priority: 65535,
+      action: 'DENY',
+      sourceRanges: ['0.0.0.0/0'],
+      portsSummary: 'ALL',
+      status: 'WINNING_MATCH',
+      reason: 'Implicit GCP VPC fallback when no higher-priority rule matches',
+    });
+  } else {
+    steps.push({
+      name: 'default-deny-ingress',
+      priority: 65535,
+      action: 'DENY',
+      sourceRanges: ['0.0.0.0/0'],
+      portsSummary: 'ALL',
+      status: 'SHADOWED_MATCH',
+      reason: `Overridden by "${winningRule.name}" (P-${winningRule.priority})`,
+    });
+  }
+
+  return {
+    verdict: winningRule.action,
+    winningRule,
+    shadowedRules,
+    steps,
+  };
+}
+
 // Compute curved SVG quadratic bezier path between two points
 function buildArcPath(x1, y1, x2, y2) {
   const mx = (x1 + x2) / 2;
@@ -2766,6 +2915,128 @@ export default function GlobalNetworkWorldMap({
   const [customProtocol, setCustomProtocol] = useState('tcp');
   const [customPort, setCustomPort] = useState(22);
 
+  // Unified 3-Pillar 10x Orbital Command Dock State (Firewall X-Ray | Failover Teleporter | Cloud Audit Time-Machine)
+  const [active10xDockTab, setActive10xDockTab] = useState('FIREWALL_XRAY');
+  const [patchingFirewallRule, setPatchingFirewallRule] = useState(false);
+  const [teleportingFailover, setTeleportingFailover] = useState(false);
+  const [selectedTeleportServiceName, setSelectedTeleportServiceName] = useState('');
+  const [timeMachineCursor, setTimeMachineCursor] = useState(0); // 0 = Live, 1..N = Replay Event
+
+  // Live Priority 0 -> 65535 VPC Firewall X-Ray Evaluation for the selected Custom Packet
+  const customPacketXRay = useMemo(() => {
+    const orig =
+      effectiveClientOrigins.find((o) => o.id === customOriginId) ||
+      liveClientOriginNode;
+    const evalIp = orig.evalIp || orig.ip || '198.51.100.1';
+    return {
+      origin: orig,
+      sourceIp: evalIp,
+      displayIp: orig.ip,
+      protocol: customProtocol,
+      port: customProtocol === 'icmp' ? 0 : Number(customPort),
+      ...tracePacketFirewallXRay(
+        {
+          sourceIp: evalIp,
+          protocol: customProtocol,
+          port: customProtocol === 'icmp' ? 0 : Number(customPort),
+        },
+        firewalls
+      ),
+    };
+  }, [
+    customOriginId,
+    customProtocol,
+    customPort,
+    effectiveClientOrigins,
+    liveClientOriginNode,
+    firewalls,
+  ]);
+
+  // Unified Real Cloud Logging / Audit & Socket Probe Timeline for the Time-Machine Scrubber
+  const liveTimeMachineEvents = useMemo(() => {
+    const events = [];
+    const logs = liveGeoTelemetry?.liveNetworkLogEvents || [];
+    const probes = liveGeoTelemetry?.regionalSocketProbes || [];
+
+    logs.forEach((ev, idx) => {
+      const matchedReg =
+        GCP_GLOBAL_REGIONS.find((r) => ev.region?.startsWith(r.id)) ||
+        selectedRegion ||
+        GCP_GLOBAL_REGIONS[4];
+      const arc = buildArcPath(
+        liveClientOriginNode.x,
+        liveClientOriginNode.y,
+        matchedReg.x,
+        matchedReg.y
+      );
+      events.push({
+        id: `tm-log-${idx}`,
+        timestamp: ev.timestamp
+          ? new Date(ev.timestamp).toLocaleTimeString()
+          : 'Live Log',
+        category: ev.logType || 'cloudaudit.googleapis.com',
+        summary: ev.summary || `${ev.logType} -> ${matchedReg.id}`,
+        regionId: matchedReg.id,
+        regionCity: matchedReg.city,
+        verdict: ev.disposition === 'DENIED' ? 'DENY' : 'ALLOW',
+        sourceIp: ev.remoteIp || liveClientOriginNode.ip,
+        port: ev.destPort || 443,
+        x1: liveClientOriginNode.x,
+        y1: liveClientOriginNode.y,
+        x2: matchedReg.x,
+        y2: matchedReg.y,
+        cx: arc.cx,
+        cy: arc.cy,
+        arcD: arc.d,
+      });
+    });
+
+    probes.forEach((p, idx) => {
+      const matchedReg =
+        GCP_GLOBAL_REGIONS.find((r) => r.id === p.regionId) ||
+        GCP_GLOBAL_REGIONS[4];
+      const arc = buildArcPath(
+        liveClientOriginNode.x,
+        liveClientOriginNode.y,
+        matchedReg.x,
+        matchedReg.y
+      );
+      events.push({
+        id: `tm-probe-${idx}`,
+        timestamp: liveGeoTelemetry?.probedAt
+          ? new Date(liveGeoTelemetry.probedAt).toLocaleTimeString()
+          : 'Live Socket',
+        category: `TLS 1.3 Socket (${p.tlsCipher || 'AEAD'})`,
+        summary: `${p.endpoint || `${p.regionId}-aiplatform.googleapis.com`} · ${p.tcpMs}ms TCP / ${p.totalRttMs}ms TLS`,
+        regionId: matchedReg.id,
+        regionCity: matchedReg.city,
+        verdict: p.reachable !== false ? 'ALLOW' : 'DENY',
+        sourceIp: p.resolvedIp || liveClientOriginNode.ip,
+        port: 443,
+        x1: liveClientOriginNode.x,
+        y1: liveClientOriginNode.y,
+        x2: matchedReg.x,
+        y2: matchedReg.y,
+        cx: arc.cx,
+        cy: arc.cy,
+        arcD: arc.d,
+      });
+    });
+
+    return events;
+  }, [liveGeoTelemetry, liveClientOriginNode, selectedRegion]);
+
+  const timeMachineActiveEvent = useMemo(() => {
+    if (timeMachineCursor <= 0 || liveTimeMachineEvents.length === 0) {
+      return null;
+    }
+    return (
+      liveTimeMachineEvents[
+        Math.min(timeMachineCursor - 1, liveTimeMachineEvents.length - 1)
+      ] || null
+    );
+  }, [timeMachineCursor, liveTimeMachineEvents]);
+
   const packetIdRef = useRef(1);
 
   // Optional background GCP API sync timer controlled by user
@@ -3373,6 +3644,150 @@ export default function GlobalNetworkWorldMap({
       }
     } finally {
       setDeployingHttpsShield(false);
+    }
+  };
+
+  // 1-Click Surgical Fix from Firewall X-Ray: Lock an open 0.0.0.0/0 rule in-place to Google Cloud IAP (35.235.240.0/20)
+  const handleLockRuleToIap = async (ruleName) => {
+    if (!ruleName || ruleName === 'default-deny-ingress' || patchingFirewallRule) {
+      return;
+    }
+    setPatchingFirewallRule(true);
+    try {
+      const res = await axios.patch(
+        `/api/project/${encodeURIComponent(projectId)}/firewalls/${encodeURIComponent(
+          ruleName
+        )}`,
+        {
+          sourceRanges: ['35.235.240.0/20'],
+          enableLogging: true,
+        }
+      );
+      const msg =
+        res.data?.message ||
+        `Locked firewall rule "${ruleName}" to Cloud IAP (35.235.240.0/20)`;
+      showMapBanner(msg);
+      if (onShowToast) onShowToast(msg);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to lock "${ruleName}" to Cloud IAP.`
+        );
+      }
+    } finally {
+      setPatchingFirewallRule(false);
+    }
+  };
+
+  // 1-Click Surgical Fix from Firewall X-Ray: Deploy Priority-90 ALLOW or DENY rule for the inspected Protocol:Port
+  const handleDeployCustomPortRule = async (nextAction) => {
+    if (patchingFirewallRule) return;
+    setPatchingFirewallRule(true);
+    const proto = String(customProtocol || 'tcp').toLowerCase();
+    const portVal = proto === 'icmp' ? [] : [String(customPort || 443)];
+    const actionUpper = String(nextAction || 'DENY').toUpperCase();
+    try {
+      const ruleName = `xray-${actionUpper.toLowerCase()}-${proto}${
+        portVal[0] ? `-${portVal[0]}` : ''
+      }-${Math.floor(100 + Math.random() * 899)}`;
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/provision`,
+        {
+          serviceType: 'VPC_FIREWALL',
+          name: ruleName,
+          config: {
+            network: vpcs[0]?.name || 'default',
+            action: actionUpper,
+            direction: 'INGRESS',
+            priority: 90,
+            rules: [{ IPProtocol: proto, ...(portVal.length ? { ports: portVal } : {}) }],
+            sourceRanges: '0.0.0.0/0',
+            enableLogging: true,
+            description: `Priority-90 ${actionUpper} rule created via Global Map Firewall X-Ray Debugger for ${proto.toUpperCase()}${portVal[0] ? `:${portVal[0]}` : ''}.`,
+          },
+        }
+      );
+      if (res.data?.message) showMapBanner(res.data.message);
+      if (onShowToast) onShowToast(res.data.message);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            `Failed to deploy ${actionUpper} firewall rule.`
+        );
+      }
+    } finally {
+      setPatchingFirewallRule(false);
+    }
+  };
+
+  // 1-Tap Multi-Region Failover Teleporter: Clones a live Cloud Run service (or deploys a standby failover replica) into the healthy peer region
+  const handleTeleportFailoverService = async (sourceRegionId, targetRegionId) => {
+    if (teleportingFailover) return;
+    setTeleportingFailover(true);
+    try {
+      const allRunServices = overview?.cloudRunServices || [];
+      const chosenSvc =
+        allRunServices.find((s) => s.name === selectedTeleportServiceName) ||
+        allRunServices.find((s) => s.region === sourceRegionId) ||
+        allRunServices[0] ||
+        null;
+
+      if (chosenSvc) {
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/cloudrun/teleport`,
+          {
+            sourceServiceName: chosenSvc.name,
+            sourceRegion: chosenSvc.region || sourceRegionId || 'us-central1',
+            targetRegion: targetRegionId || 'us-east1',
+            newServiceName: `${chosenSvc.name}-${(
+              targetRegionId || 'us-east1'
+            ).split('-')[0]}`.slice(0, 46),
+          }
+        );
+        const msg =
+          res.data?.message ||
+          `Teleported Cloud Run service "${chosenSvc.name}" to failover region ${targetRegionId}`;
+        showMapBanner(msg);
+        if (onShowToast) onShowToast(msg);
+      } else {
+        const standbyName = `failover-standby-${(
+          targetRegionId || 'us-east1'
+        ).replace(/[^a-z0-9-]/g, '-')}`.slice(0, 45);
+        const res = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/provision`,
+          {
+            serviceType: 'CLOUD_RUN',
+            name: standbyName,
+            region: targetRegionId || 'us-east1',
+            config: {
+              region: targetRegionId || 'us-east1',
+              image: 'us-docker.pkg.dev/cloudrun/container/hello',
+              minInstances: 0,
+              maxInstances: 10,
+              allowUnauthenticated: true,
+            },
+          }
+        );
+        const msg =
+          res.data?.message ||
+          `Deployed failover standby Cloud Run service "${standbyName}" in ${targetRegionId}`;
+        showMapBanner(msg);
+        if (onShowToast) onShowToast(msg);
+      }
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            'Failed to execute cross-region failover teleport.'
+        );
+      }
+    } finally {
+      setTeleportingFailover(false);
     }
   };
 
@@ -5147,6 +5562,77 @@ export default function GlobalNetworkWorldMap({
                   </g>
                 )}
 
+              {/* Cloud Audit & Log Time-Machine Historical Replay Arc on SVG Map */}
+              {timeMachineActiveEvent && (
+                <g>
+                  <path
+                    d={timeMachineActiveEvent.arcD}
+                    fill="none"
+                    stroke={
+                      timeMachineActiveEvent.verdict === 'ALLOW'
+                        ? '#38bdf8'
+                        : '#ef4444'
+                    }
+                    strokeWidth={4.5 * invScale}
+                    strokeOpacity="0.24"
+                  />
+                  <path
+                    d={timeMachineActiveEvent.arcD}
+                    fill="none"
+                    stroke={
+                      timeMachineActiveEvent.verdict === 'ALLOW'
+                        ? '#38bdf8'
+                        : '#ef4444'
+                    }
+                    strokeWidth={2.2 * invScale}
+                    strokeDasharray="5 2.5"
+                    strokeOpacity="0.95"
+                  />
+                  {(() => {
+                    const midPt = pointOnQuadraticBezier(
+                      timeMachineActiveEvent.x1,
+                      timeMachineActiveEvent.y1,
+                      timeMachineActiveEvent.cx,
+                      timeMachineActiveEvent.cy,
+                      timeMachineActiveEvent.x2,
+                      timeMachineActiveEvent.y2,
+                      0.5
+                    );
+                    return (
+                      <g
+                        transform={`translate(${midPt.x}, ${midPt.y}) scale(${invScale})`}
+                      >
+                        <rect
+                          x={-72}
+                          y={-8}
+                          width={144}
+                          height={15}
+                          rx={4}
+                          fill="#090d16"
+                          fillOpacity="0.95"
+                          stroke={
+                            timeMachineActiveEvent.verdict === 'ALLOW'
+                              ? '#38bdf8'
+                              : '#ef4444'
+                          }
+                          strokeWidth="1.1"
+                        />
+                        <text
+                          y={2}
+                          textAnchor="middle"
+                          fill="#e0f2fe"
+                          fontSize="5.8"
+                          fontWeight="bold"
+                          fontFamily="monospace"
+                        >
+                          {`REPLAY [${timeMachineActiveEvent.timestamp}] → ${timeMachineActiveEvent.regionId} (${timeMachineActiveEvent.verdict})`}
+                        </text>
+                      </g>
+                    );
+                  })()}
+                </g>
+              )}
+
               {/* Global Client / Proxy / Threat Origin Nodes (Only shown while packet simulation is running) */}
               {isRunning &&
                 GLOBAL_CLIENT_ORIGINS.map((orig) => (
@@ -5864,115 +6350,577 @@ export default function GlobalNetworkWorldMap({
             </div>
           </div>
 
-          {/* DVR Flight Recorder Time-Machine Scrubber Bar */}
-          <div className="px-3.5 py-2 bg-white dark:bg-zinc-950/95 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono">
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
-                  dvrScrubIndex === 0
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                    : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
-                }`}
-              >
-                {dvrScrubIndex === 0
-                  ? '● LIVE STREAM'
-                  : ` DVR REPLAY (-${dvrScrubIndex} ticks · ${
-                      dvrSnapshots[dvrScrubIndex - 1]?.timestamp || ''
-                    })`}
-              </span>
-              <span className="text-zinc-400">
-                Flight Recorder ({dvrSnapshots.length}/20 snapshots):
-              </span>
-            </div>
-            <div className="flex items-center gap-2 flex-1 max-w-md">
-              <span className="text-[10px] text-zinc-500">LIVE</span>
-              <input
-                type="range"
-                min={0}
-                max={Math.max(dvrSnapshots.length, 1)}
-                value={dvrScrubIndex}
-                disabled={dvrSnapshots.length === 0}
-                onChange={(e) => setDvrScrubIndex(Number(e.target.value))}
-                className="flex-1 accent-blue-400 cursor-pointer disabled:opacity-40"
-              />
-              <span className="text-[10px] text-zinc-500">PAST</span>
-              {dvrScrubIndex > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setDvrScrubIndex(0)}
-                  className="px-2 py-0.5 rounded bg-blue-500 text-zinc-950 font-extrabold text-[10px] cursor-pointer"
-                >
-                  Resume Live
-                </button>
+          {/* ================================================================= */}
+          {/* UNIFIED 3-PILLAR 10X ORBITAL COMMAND DOCK BELOW WORLD MAP         */}
+          {/* ================================================================= */}
+          <div className="bg-zinc-50/95 dark:bg-[#090d16] border-t border-zinc-200 dark:border-zinc-800/90 p-3 space-y-2.5 text-[11px] font-mono">
+            {/* Segmented 3-Pillar Mode Selector Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="inline-flex items-center rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5 gap-1 shadow-xs">
+                {[
+                  {
+                    id: 'FIREWALL_XRAY',
+                    featureId: 'GLOBAL_MAP_10X_FIREWALL_XRAY',
+                    label: `1. Live Firewall X-Ray (0→65535 · ${customPacketXRay.steps.length} Rules)`,
+                    badge: customPacketXRay.verdict,
+                    badgeColor:
+                      customPacketXRay.verdict === 'ALLOW'
+                        ? 'bg-emerald-500/20 text-emerald-500'
+                        : 'bg-red-500/20 text-red-500',
+                  },
+                  {
+                    id: 'FAILOVER_TELEPORTER',
+                    featureId: 'GLOBAL_MAP_10X_FAILOVER_TELEPORT',
+                    label: `2. Multi-Region Outage Failover & 1-Tap Teleport`,
+                    badge:
+                      severedRegions.length > 0
+                        ? `${severedRegions.length} OUTAGE`
+                        : 'READY',
+                    badgeColor:
+                      severedRegions.length > 0
+                        ? 'bg-red-500/20 text-red-400 animate-pulse'
+                        : 'bg-blue-500/20 text-blue-400',
+                  },
+                  {
+                    id: 'AUDIT_TIME_MACHINE',
+                    featureId: 'GLOBAL_MAP_10X_TIME_MACHINE',
+                    label: `3. Cloud Audit & Log Time-Machine (${liveTimeMachineEvents.length} Events)`,
+                    badge: timeMachineCursor > 0 ? `REPLAY #${timeMachineCursor}` : 'LIVE',
+                    badgeColor:
+                      timeMachineCursor > 0
+                        ? 'bg-sky-500/20 text-sky-400'
+                        : 'bg-emerald-500/20 text-emerald-400',
+                  },
+                ].map((tab) => {
+                  const isActive = active10xDockTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      data-feature-id={tab.featureId}
+                      onClick={() => setActive10xDockTab(tab.id)}
+                      className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[10.5px] font-extrabold transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                          isActive ? 'bg-white/20 text-white' : tab.badgeColor
+                        }`}
+                      >
+                        {tab.badge}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Quick Scenario Presets for Instant 1-Click Inspection */}
+              {active10xDockTab === 'FIREWALL_XRAY' && (
+                <div className="inline-flex items-center gap-1">
+                  <span className="text-[9.5px] uppercase font-bold text-zinc-400">
+                    Presets:
+                  </span>
+                  {[
+                    {
+                      label: 'Public SSH :22',
+                      orig: 'scanner-botnet-east',
+                      proto: 'tcp',
+                      port: 22,
+                    },
+                    {
+                      label: 'IAP Tunnel :22',
+                      orig: 'gcp-iap-proxy',
+                      proto: 'tcp',
+                      port: 22,
+                    },
+                    {
+                      label: 'HTTPS Edge :443',
+                      orig: 'my-live-client',
+                      proto: 'tcp',
+                      port: 443,
+                    },
+                    {
+                      label: 'Public RDP :3389',
+                      orig: 'scanner-botnet-east',
+                      proto: 'tcp',
+                      port: 3389,
+                    },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setCustomOriginId(preset.orig);
+                        setCustomProtocol(preset.proto);
+                        setCustomPort(preset.port);
+                      }}
+                      className={`h-6 px-2 rounded-md text-[9.5px] font-bold border transition-colors cursor-pointer ${
+                        customOriginId === preset.orig &&
+                        customProtocol === preset.proto &&
+                        Number(customPort) === preset.port
+                          ? 'bg-blue-500/20 border-blue-500/50 text-blue-600 dark:text-blue-300'
+                          : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
+
+            {/* =============================================================== */}
+            {/* PILLAR 1: LIVE VPC FIREWALL X-RAY DEBUGGER (PRIORITY 0 -> 65535) */}
+            {/* =============================================================== */}
+            {active10xDockTab === 'FIREWALL_XRAY' && (
+              <div className="space-y-2">
+                <form
+                  onSubmit={handleFireCustomPacket}
+                  className="p-2 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2"
+                >
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Crosshair className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <select
+                      value={customOriginId}
+                      onChange={(e) => setCustomOriginId(e.target.value)}
+                      className="h-7 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 text-[10.5px] font-bold"
+                    >
+                      {effectiveClientOrigins.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          From: {o.label} ({o.ip})
+                        </option>
+                      ))}
+                    </select>
+
+                    <span className="text-zinc-400">→</span>
+
+                    <select
+                      value={customTargetRegionId}
+                      onChange={(e) => setCustomTargetRegionId(e.target.value)}
+                      className="h-7 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 text-[10.5px] font-bold"
+                    >
+                      {GCP_GLOBAL_REGIONS.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          To: {r.name} ({r.city})
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={customProtocol}
+                      onChange={(e) => setCustomProtocol(e.target.value)}
+                      className="h-7 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 text-[10.5px] font-bold"
+                    >
+                      <option value="tcp">TCP</option>
+                      <option value="udp">UDP</option>
+                      <option value="icmp">ICMP</option>
+                    </select>
+
+                    <input
+                      type="number"
+                      disabled={customProtocol === 'icmp'}
+                      value={customPort}
+                      onChange={(e) => setCustomPort(Number(e.target.value))}
+                      className="h-7 w-18 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 text-[10.5px] font-bold disabled:opacity-40"
+                      placeholder="Port"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-1 h-7 bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-2.5 rounded-lg text-[10.5px] cursor-pointer shadow-xs"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>Fire Packet on Map</span>
+                    </button>
+
+                    {/* 1-Click Surgical Fix directly from the X-Ray Verdict */}
+                    {customPacketXRay.verdict === 'ALLOW' &&
+                      customPacketXRay.winningRule?.isWorldOpen &&
+                      customPacketXRay.winningRule?.name !==
+                        'default-deny-ingress' && (
+                        <button
+                          type="button"
+                          disabled={patchingFirewallRule}
+                          onClick={() =>
+                            handleLockRuleToIap(
+                              customPacketXRay.winningRule.name
+                            )
+                          }
+                          className="inline-flex items-center gap-1 h-7 bg-amber-600 hover:bg-amber-500 text-white font-extrabold px-2.5 rounded-lg text-[10px] cursor-pointer disabled:opacity-50"
+                        >
+                          <Lock className="w-3 h-3" />
+                          <span>
+                            Lock &ldquo;{customPacketXRay.winningRule.name}&rdquo;
+                            to IAP
+                          </span>
+                        </button>
+                      )}
+
+                    <button
+                      type="button"
+                      disabled={patchingFirewallRule}
+                      onClick={() =>
+                        handleDeployCustomPortRule(
+                          customPacketXRay.verdict === 'ALLOW'
+                            ? 'DENY'
+                            : 'ALLOW'
+                        )
+                      }
+                      className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-white font-extrabold text-[10px] cursor-pointer disabled:opacity-50 ${
+                        customPacketXRay.verdict === 'ALLOW'
+                          ? 'bg-red-600 hover:bg-red-500'
+                          : 'bg-emerald-600 hover:bg-emerald-500'
+                      }`}
+                    >
+                      <Shield className="w-3 h-3" />
+                      <span>
+                        {customPacketXRay.verdict === 'ALLOW'
+                          ? `Block ${customProtocol.toUpperCase()}${
+                              customProtocol === 'icmp' ? '' : `:${customPort}`
+                            } (P-90)`
+                          : `Allow ${customProtocol.toUpperCase()}${
+                              customProtocol === 'icmp' ? '' : `:${customPort}`
+                            } (P-90)`}
+                      </span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Winning Verdict + Shadowed Rule Warning + Priority 0 -> 65535 Waterfall Strip */}
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          customPacketXRay.verdict === 'ALLOW'
+                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
+                            : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40'
+                        }`}
+                      >
+                        {customPacketXRay.verdict === 'ALLOW'
+                          ? '✓ PACKET ALLOWED'
+                          : '✕ PACKET BLOCKED'}
+                      </span>
+                      <span className="text-zinc-700 dark:text-zinc-200 font-bold">
+                        Decided by{' '}
+                        <code className="text-blue-600 dark:text-blue-400 font-extrabold">
+                          {customPacketXRay.winningRule?.name}
+                        </code>{' '}
+                        (Priority {customPacketXRay.winningRule?.priority})
+                      </span>
+                    </div>
+
+                    {customPacketXRay.shadowedRules.length > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                        ⚡ Shadows {customPacketXRay.shadowedRules.length}{' '}
+                        lower-priority rule(s):{' '}
+                        {customPacketXRay.shadowedRules
+                          .map((sr) => `${sr.name} (P-${sr.priority})`)
+                          .join(', ')}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Step-by-Step Priority 0 -> 65535 Rule Evaluation Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+                    {customPacketXRay.steps.map((step) => {
+                      const isWinner = step.status === 'WINNING_MATCH';
+                      const isShadowed = step.status === 'SHADOWED_MATCH';
+                      return (
+                        <div
+                          key={`${step.name}-${step.priority}`}
+                          title={step.reason}
+                          className={`px-2 py-1 rounded-lg border text-[9.5px] flex items-center gap-1.5 ${
+                            isWinner
+                              ? step.action === 'ALLOW'
+                                ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-200 font-extrabold shadow-xs'
+                                : 'bg-red-500/15 border-red-500 text-red-700 dark:text-red-200 font-extrabold shadow-xs'
+                              : isShadowed
+                              ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-bold'
+                              : 'bg-zinc-50 dark:bg-zinc-950/70 border-zinc-200 dark:border-zinc-800/80 text-zinc-400'
+                          }`}
+                        >
+                          <span className="px-1 py-0.2 rounded bg-black/15 dark:bg-white/10 font-extrabold">
+                            P-{step.priority}
+                          </span>
+                          <span>{step.name}</span>
+                          <span className="opacity-75">
+                            ({step.action} {step.portsSummary})
+                          </span>
+                          <span className="uppercase text-[8.5px] px-1 rounded bg-black/10 dark:bg-white/10">
+                            {isWinner
+                              ? '★ WINNER'
+                              : isShadowed
+                              ? 'SHADOWED'
+                              : step.status === 'SKIPPED_CIDR'
+                              ? 'CIDR SKIP'
+                              : step.status === 'SKIPPED_PORT'
+                              ? 'PORT SKIP'
+                              : 'DISABLED'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* =============================================================== */}
+            {/* PILLAR 2: MULTI-REGION OUTAGE FAILOVER & 1-TAP TELEPORTER       */}
+            {/* =============================================================== */}
+            {active10xDockTab === 'FAILOVER_TELEPORTER' &&
+              (() => {
+                const primaryFailoverSrcId =
+                  severedRegions[0] || selectedRegion.id || 'us-central1';
+                const srcReg =
+                  GCP_GLOBAL_REGIONS.find(
+                    (r) => r.id === primaryFailoverSrcId
+                  ) || selectedRegion;
+                const healthyPeerId =
+                  srcReg.backbonePeers?.find(
+                    (p) => !severedRegions.includes(p)
+                  ) ||
+                  migrationTargetRegionId ||
+                  'us-east1';
+                const dstReg =
+                  GCP_GLOBAL_REGIONS.find((r) => r.id === healthyPeerId) ||
+                  GCP_GLOBAL_REGIONS[5];
+                const greatKm = calculateGreatCircleKm(
+                  srcReg.lat,
+                  srcReg.lon,
+                  dstReg.lat,
+                  dstReg.lon
+                );
+                const fiberKm = Math.max(120, Math.round(greatKm * 1.22));
+                const estRtt = Math.max(4, Math.round((fiberKm / 200) * 2 + 4));
+                const cfeDelta = dstReg.cfePercent - srcReg.cfePercent;
+                const runList = overview?.cloudRunServices || [];
+
+                return (
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                            severedRegions.includes(srcReg.id)
+                              ? 'bg-red-500/20 text-red-500 border border-red-500/40 animate-pulse'
+                              : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40'
+                          }`}
+                        >
+                          {severedRegions.includes(srcReg.id)
+                            ? `● ${srcReg.id} IN OUTAGE`
+                            : `● ${srcReg.id} ONLINE`}
+                        </span>
+                        <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                          Failover Corridor: {srcReg.id} ({srcReg.city}) ➔{' '}
+                          <span className="text-emerald-500">
+                            {dstReg.id} ({dstReg.city})
+                          </span>
+                        </span>
+                        <span className="text-zinc-400">
+                          · {fiberKm.toLocaleString()} km fiber · ~{estRtt}ms RTT
+                          ·{' '}
+                          <strong
+                            className={
+                              cfeDelta >= 0
+                                ? 'text-emerald-500'
+                                : 'text-amber-500'
+                            }
+                          >
+                            {dstReg.cfePercent}% CFE ({cfeDelta >= 0 ? '+' : ''}
+                            {cfeDelta}%)
+                          </strong>
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleSeverRegion(srcReg.id)}
+                          className={`h-7 px-2.5 rounded-lg text-[10px] font-extrabold text-white cursor-pointer ${
+                            severedRegions.includes(srcReg.id)
+                              ? 'bg-emerald-600 hover:bg-emerald-500'
+                              : 'bg-red-600 hover:bg-red-500'
+                          }`}
+                        >
+                          {severedRegions.includes(srcReg.id)
+                            ? `Restore ${srcReg.id}`
+                            : `Simulate Outage on ${srcReg.id}`}
+                        </button>
+
+                        {runList.length > 0 && (
+                          <select
+                            value={
+                              selectedTeleportServiceName ||
+                              runList[0]?.name ||
+                              ''
+                            }
+                            onChange={(e) =>
+                              setSelectedTeleportServiceName(e.target.value)
+                            }
+                            className="h-7 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-2 text-[10px] font-bold text-zinc-800 dark:text-zinc-200"
+                          >
+                            {runList.map((svc) => (
+                              <option key={svc.name} value={svc.name}>
+                                Service: {svc.name} ({svc.region})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={teleportingFailover}
+                          onClick={() =>
+                            handleTeleportFailoverService(srcReg.id, dstReg.id)
+                          }
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 shadow-xs"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>
+                            {teleportingFailover
+                              ? 'Teleporting...'
+                              : runList.length > 0
+                              ? `1-Tap Teleport Cloud Run to ${dstReg.id}`
+                              : `1-Tap Deploy Failover Standby in ${dstReg.id}`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+            {/* =============================================================== */}
+            {/* PILLAR 3: REAL CLOUD AUDIT & NETWORK TIME-MACHINE SCRUBBER      */}
+            {/* =============================================================== */}
+            {active10xDockTab === 'AUDIT_TIME_MACHINE' && (
+              <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                        timeMachineCursor === 0
+                          ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40'
+                          : 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
+                      }`}
+                    >
+                      {timeMachineCursor === 0
+                        ? '● LIVE STREAM'
+                        : `⏪ EVENT REPLAY #${timeMachineCursor}/${liveTimeMachineEvents.length}`}
+                    </span>
+                    {timeMachineActiveEvent ? (
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        [{timeMachineActiveEvent.timestamp}]{' '}
+                        <span className="text-blue-500">
+                          {timeMachineActiveEvent.category}
+                        </span>{' '}
+                        → {timeMachineActiveEvent.regionId} (
+                        {timeMachineActiveEvent.summary})
+                      </span>
+                    ) : (
+                      <span className="text-zinc-500">
+                        Scrub the slider or click any real Cloud Logging / TLS
+                        1.3 Socket event below to replay its trajectory on the
+                        World Map:
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={
+                        liveTimeMachineEvents.length === 0 ||
+                        timeMachineCursor <= 1
+                      }
+                      onClick={() =>
+                        setTimeMachineCursor((c) => Math.max(1, c - 1))
+                      }
+                      className="h-6 px-2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] disabled:opacity-40 cursor-pointer"
+                    >
+                      ◀ Prev
+                    </button>
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(liveTimeMachineEvents.length, 1)}
+                      value={timeMachineCursor}
+                      disabled={liveTimeMachineEvents.length === 0}
+                      onChange={(e) =>
+                        setTimeMachineCursor(Number(e.target.value))
+                      }
+                      className="w-36 accent-sky-400 cursor-pointer disabled:opacity-40"
+                    />
+                    <button
+                      type="button"
+                      disabled={
+                        liveTimeMachineEvents.length === 0 ||
+                        timeMachineCursor >= liveTimeMachineEvents.length
+                      }
+                      onClick={() =>
+                        setTimeMachineCursor((c) =>
+                          Math.min(liveTimeMachineEvents.length, c + 1)
+                        )
+                      }
+                      className="h-6 px-2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] disabled:opacity-40 cursor-pointer"
+                    >
+                      Next ▶
+                    </button>
+                    {timeMachineCursor > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setTimeMachineCursor(0)}
+                        className="h-6 px-2 rounded bg-emerald-600 text-white font-extrabold text-[10px] cursor-pointer"
+                      >
+                        Resume Live
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Clickable Real Event Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+                  {liveTimeMachineEvents.slice(0, 8).map((ev, idx) => {
+                    const active = timeMachineCursor === idx + 1;
+                    return (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        onClick={() => {
+                          setTimeMachineCursor(idx + 1);
+                          setSelectedRegionId(ev.regionId);
+                          setIsRegionPinnedOnMap(true);
+                        }}
+                        className={`px-2 py-1 rounded-lg border text-[9.5px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                          active
+                            ? 'bg-sky-500/20 border-sky-400 text-sky-600 dark:text-sky-200 shadow-xs'
+                            : 'bg-zinc-50 dark:bg-zinc-950/70 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-sky-500/40'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            ev.verdict === 'ALLOW'
+                              ? 'bg-emerald-400'
+                              : 'bg-red-500'
+                          }`}
+                        />
+                        <span>{ev.regionId}</span>
+                        <span className="opacity-70">· {ev.summary}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Custom Test Packet Launcher Bar below Map */}
-          <form
-            onSubmit={handleFireCustomPacket}
-            className="p-3 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
-          >
-            <div className="flex items-center gap-1.5 text-blue-400 font-bold">
-              <Crosshair className="w-3.5 h-3.5" />
-              <span>Launch Custom Test Packet:</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={customOriginId}
-                onChange={(e) => setCustomOriginId(e.target.value)}
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
-              >
-                {effectiveClientOrigins.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    From: {o.label} ({o.ip})
-                  </option>
-                ))}
-              </select>
-
-              <span className="text-zinc-500">→</span>
-
-              <select
-                value={customTargetRegionId}
-                onChange={(e) => setCustomTargetRegionId(e.target.value)}
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
-              >
-                {GCP_GLOBAL_REGIONS.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    To: {r.name} ({r.city})
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={customProtocol}
-                onChange={(e) => setCustomProtocol(e.target.value)}
-                className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px]"
-              >
-                <option value="tcp">TCP</option>
-                <option value="udp">UDP</option>
-                <option value="icmp">ICMP</option>
-              </select>
-
-              <input
-                type="number"
-                disabled={customProtocol === 'icmp'}
-                value={customPort}
-                onChange={(e) => setCustomPort(Number(e.target.value))}
-                className="w-20 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg px-2 py-1 text-[11px] disabled:opacity-40"
-                placeholder="Port"
-              />
-
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1 bg-blue-500 hover:bg-blue-400 text-zinc-950 font-extrabold px-3 py-1 rounded-lg text-[11px] cursor-pointer"
-              >
-                <Send className="w-3 h-3" />
-                <span>Fire Packet</span>
-              </button>
-            </div>
-          </form>
         </div>
 
         {/* Right 4 Columns: Selected Region & Availability Zones Deep-Dive + Chaos & FinOps + Live Packet Ticker */}

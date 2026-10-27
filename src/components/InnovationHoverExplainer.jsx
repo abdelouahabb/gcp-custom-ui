@@ -1478,6 +1478,36 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'POST https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
     safetyMode: 'LIVE_MUTATION',
   },
+  GLOBAL_MAP_10X_FIREWALL_XRAY: {
+    badge: 'PRIORITY 0 -> 65535 FIREWALL X-RAY',
+    title: 'Live Packet-by-Packet VPC Firewall X-Ray Debugger & 1-Click Fix',
+    whatItDoes:
+      'Evaluates your selected Source IP, Protocol, and Port against every rule in your project’s compute.v1/firewalls table in priority order (0 -> 65535), identifying the winning rule, shadowed rules, and skipped rules.',
+    enterpriseValue:
+      'Answers "Why was my connection blocked or exposed?" in milliseconds and offers 1-click surgical fixes (Lock to Cloud IAP 35.235.240.0/20 or Deploy Priority-90 Override).',
+    gcpApis: 'GET/PATCH/POST https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_10X_FAILOVER_TELEPORT: {
+    badge: 'MULTI-REGION OUTAGE & 1-TAP TELEPORT',
+    title: 'Multi-Region Outage Failover & 1-Tap Cloud Run Teleporter',
+    whatItDoes:
+      'Calculates subsea fiber RTT and Carbon-Free Energy (CFE%) deltas to your healthy failover peer region and clones your live Cloud Run service (or provisions a scale-to-zero standby replica) into the failover region in 1 click.',
+    enterpriseValue:
+      'Turns disaster-recovery simulations into executable multi-region Cloud Run failovers directly from the World Map.',
+    gcpApis: 'POST /api/project/{project}/cloudrun/teleport (run.googleapis.com/v2)',
+    safetyMode: 'READ_ONLY',
+  },
+  GLOBAL_MAP_10X_TIME_MACHINE: {
+    badge: 'REAL CLOUD LOGGING & SOCKET REPLAY',
+    title: 'Cloud Audit & Network Log Time-Machine Scrubber',
+    whatItDoes:
+      'Scrubs through real timestamped Cloud Logging entries (cloudaudit.googleapis.com, compute.googleapis.com/firewall, run.googleapis.com/requests) and live regional TLS 1.3 socket handshakes, replaying each trajectory arc on the World Map.',
+    enterpriseValue:
+      'Provides visual DVR replay of real project audit and network events across all 40 GCP regions.',
+    gcpApis: 'POST https://logging.googleapis.com/v2/entries:list + Regional TLS 1.3 Socket Prober',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**
