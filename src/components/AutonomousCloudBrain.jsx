@@ -1237,11 +1237,11 @@ export default function AutonomousCloudBrain({
       {/* ==================================================================== */}
       {/* MODULE 1: 30-DAY BILLING ANOMALY FORECASTER & SPEND CAP SIMULATOR    */}
       {/* ==================================================================== */}
-      <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 PRE-CRIME FINOPS · BILLING TIME-CRYSTAL
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-1.5">
@@ -1720,11 +1720,11 @@ export default function AutonomousCloudBrain({
       {/* ==================================================================== */}
       {/* MODULE 2: INTERACTIVE BLAST-RADIUS & FAILURE CASCADE X-RAY           */}
       {/* ==================================================================== */}
-      <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3.5">
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 WHAT-IF BLAST-RADIUS X-RAY
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
@@ -1850,11 +1850,11 @@ export default function AutonomousCloudBrain({
       {/* ==================================================================== */}
       {/* MODULE 3: MULTI-REGION ARCHITECTURE & COST COMPILER                  */}
       {/* ==================================================================== */}
-      <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                 DREAM STACK COMPILER
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">

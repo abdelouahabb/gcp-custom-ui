@@ -36,9 +36,9 @@ const PERSONA_META = {
     badge: '01 · ARCHITECT HELPER',
     roleTitle: 'Cloud Architect Contextual Helper',
     subtitle: 'Region Blackout SPOF Blast-Radius Drill · Org Policy Guardrails · 3-Cloud FinOps Arbitrage',
-    accentBorder: 'border-indigo-500/40',
-    accentBg: 'bg-indigo-500/10',
-    accentText: 'text-indigo-600 dark:text-indigo-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: Layers
   },
   CLOUD_ENG: {
@@ -46,7 +46,7 @@ const PERSONA_META = {
     badge: '02 · CLOUD ENG HELPER',
     roleTitle: 'Cloud Engineer Contextual Helper',
     subtitle: 'ClickOps-to-GitOps .tf Exporter · 5-Gate Pre-Flight Dry-Run Validator · Compensating Undo Saga',
-    accentBorder: 'border-blue-500/40',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
     accentBg: 'bg-blue-500/10',
     accentText: 'text-blue-600 dark:text-blue-400',
     icon: Terminal
@@ -56,9 +56,9 @@ const PERSONA_META = {
     badge: '03 · DATA ENG HELPER',
     roleTitle: 'Data Engineer Contextual Helper',
     subtitle: 'Column-Level Lineage Breaking-Change Guard · Quarantine DLQ Auto-Repair · BQ Slot-to-Spark Offload',
-    accentBorder: 'border-emerald-500/40',
-    accentBg: 'bg-emerald-500/10',
-    accentText: 'text-emerald-600 dark:text-emerald-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: Database
   },
   NETOPS: {
@@ -66,9 +66,9 @@ const PERSONA_META = {
     badge: '04 · NETOPS HELPER',
     roleTitle: 'Network Engineer Contextual Helper',
     subtitle: 'Live 4-Hop Packet Tracer (Ingress -> FW -> Route -> PSC/NAT) · IPAM CIDR Overlap Matrix · Peering Analyzer',
-    accentBorder: 'border-amber-500/40',
-    accentBg: 'bg-amber-500/10',
-    accentText: 'text-amber-600 dark:text-amber-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: Network
   },
   DEVSECOPS: {
@@ -76,9 +76,9 @@ const PERSONA_META = {
     badge: '05 · DEVSECOPS HELPER',
     roleTitle: 'DevSecOps Contextual Helper',
     subtitle: 'Binary Authz @sha256 Digest Gate · IAM Escalation Path Detector · Zero-Key OIDC WIF Generator',
-    accentBorder: 'border-rose-500/40',
-    accentBg: 'bg-rose-500/10',
-    accentText: 'text-rose-600 dark:text-rose-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: ShieldCheck
   },
   AI_MLOPS: {
@@ -86,9 +86,9 @@ const PERSONA_META = {
     badge: '06 · AI / MLOPS HELPER',
     roleTitle: 'AI / MLOps Engineer Contextual Helper',
     subtitle: 'Model Armor Prompt/PII Firewall · Smart Router (gemini-3.8-flash / gemini-3.1-pro) · RAG Vector Sync · GPU/TPU Finder',
-    accentBorder: 'border-purple-500/40',
-    accentBg: 'bg-purple-500/10',
-    accentText: 'text-purple-600 dark:text-purple-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: Sparkles
   },
   SRE_ONCALL: {
@@ -96,9 +96,9 @@ const PERSONA_META = {
     badge: '07 · SRE COMMANDER HELPER',
     roleTitle: 'SRE On-Call Commander Contextual Helper',
     subtitle: '14.4x SLO Burn Release Freeze Gate · Golden-Signal Change Correlator · Chaos GameDay Fault Injector',
-    accentBorder: 'border-orange-500/40',
-    accentBg: 'bg-orange-500/10',
-    accentText: 'text-orange-600 dark:text-orange-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: Flame
   },
   DBRE: {
@@ -106,9 +106,9 @@ const PERSONA_META = {
     badge: '08 · DBRE HELPER',
     roleTitle: 'Database Reliability Engineer (DBRE) Helper',
     subtitle: 'Active Lock-Tree & Spanner Hot-Key Detector · CREATE INDEX CONCURRENTLY Advisor · PgBouncer Guard · 1.6s PITR Clone',
-    accentBorder: 'border-cyan-500/40',
-    accentBg: 'bg-cyan-500/10',
-    accentText: 'text-cyan-600 dark:text-cyan-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: HardDrive
   },
   FINOPS_ENG: {
@@ -116,9 +116,9 @@ const PERSONA_META = {
     badge: '09 · FINOPS & GREENOPS HELPER',
     roleTitle: 'FinOps & GreenOps Economics Helper',
     subtitle: 'Unit Cost Attribution ($/1k req) · Zombie Resource Reaper · Flexible CUD Optimizer · 98% Carbon-Free Region Shifter',
-    accentBorder: 'border-teal-500/40',
-    accentBg: 'bg-teal-500/10',
-    accentText: 'text-teal-600 dark:text-teal-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: DollarSign
   },
   PLATFORM_K8S: {
@@ -126,9 +126,9 @@ const PERSONA_META = {
     badge: '10 · K8S & IDP HELPER',
     roleTitle: 'Kubernetes & Platform (IDP) Engineer Helper',
     subtitle: 'Pod OOMKilled/CPU Right-Sizer · GKE Scale-Down Blocker Detector · STRICT mTLS Mesh Map · Golden-Path Scaffolder',
-    accentBorder: 'border-sky-500/40',
-    accentBg: 'bg-sky-500/10',
-    accentText: 'text-sky-600 dark:text-sky-400',
+    accentBorder: 'border-zinc-200 dark:border-zinc-800',
+    accentBg: 'bg-blue-500/10',
+    accentText: 'text-blue-600 dark:text-blue-400',
     icon: Cpu
   }
 };

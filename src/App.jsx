@@ -3819,10 +3819,10 @@ function CloudPulseCockpit() {
                   setActiveTab('INNOVATION_LAB');
                 }}
                 title="Open 10-Persona Enterprise Architecture Board & Pre-Flight War-Room: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps, (06) AI/MLOps Engineer, (07) SRE Commander, (08) Database Reliability Engineer (DBRE), (09) FinOps & GreenOps, and (10) K8s & IDP Platform Engineer"
-                className="inline-flex items-center gap-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40 rounded-xl px-3 py-2.5 text-xs font-mono font-extrabold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span>[10-Persona Board]</span>
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <span>10-Persona Board</span>
               </button>
 
               {/* 1-Click [GA/BETA/ALPHA] gcloud 590.0.1 Frontier Lab Launcher */}
@@ -3833,10 +3833,10 @@ function CloudPulseCockpit() {
                   setActiveTab('INNOVATION_LAB');
                 }}
                 title="Open [GA/BETA/ALPHA] gcloud 590.0.1 Frontier Lab (Wave 1–3: Cloud Run Worker Pools & Multi-Region [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Model Armor [GA], Cluster Director [GA], Lustre [GA], NetApp QoS [GA/BETA], Database Center [ALPHA], Cloud Quotas [GA/BETA], Observability [GA], Orchestration Pipelines [BETA] & Compliance Manager [GA])"
-                className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 rounded-xl px-3 py-2.5 text-xs font-mono font-extrabold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                <span>[SDK 590.0.1] Lab</span>
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <span>SDK 590.0.1 Lab</span>
               </button>
 
               {/* Live GCP Project Dropdown */}
@@ -4071,11 +4071,11 @@ function CloudPulseCockpit() {
                       title="Open Real Autonomous FinOps & Zero-Trust Control-Plane Enforcer (Scale-to-Zero, 12-Invariant Self-Healer & Night-Mode Sleep)"
                       className={`inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer ${
                         activeOrbitalDrawer === 'AUTOPILOT_GUARD'
-                          ? 'bg-emerald-600 text-white border-emerald-600'
-                          : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
                       }`}
                     >
-                      <Cpu className="w-3.5 h-3.5 shrink-0" />
+                      <Cpu className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                       <span>Auto-Pilot Guard</span>
                     </button>
                   </>
@@ -4170,7 +4170,7 @@ function CloudPulseCockpit() {
                     title={tab.tip}
                     className={`inline-flex items-center gap-1 text-[11.5px] whitespace-nowrap transition-all cursor-pointer shrink-0 pb-1.5 font-semibold border-b-2 ${
                       isActive
-                        ? 'border-zinc-900 dark:border-zinc-100 text-zinc-950 dark:text-white'
+                        ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
                         : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border-transparent hover:border-zinc-400 dark:hover:border-zinc-600'
                     }`}
                   >
