@@ -1391,13 +1391,33 @@ WITH (m = 16, ef_construction = 64);`;
                 dbEngine: 'ALLOYDB',
               })),
             ]}
-            onShowToast={onTriggerToast}
+            onShowToast={onShowToast}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 font-mono text-[11px] space-y-1.5">
-              <div className="text-zinc-400 font-bold">
-                1. Start Zero-Password Auth Proxy (Local / Sidecar):
+            <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-blue-700 dark:text-blue-300 font-mono text-[11px] space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Start Zero-Password Auth Proxy (Local / Sidecar):</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(
+                      sqlArchitecture === 'ALLOYDB'
+                        ? `alloydb-auth-proxy "projects/${projectId}/locations/${sqlRegion}/clusters/${sqlName}/instances/${sqlName}-primary" \\\n  --auto-iam-authn \\\n  --private-ip \\\n  --port=5432`
+                        : `cloud-sql-proxy "${projectId}:${sqlRegion}:${sqlName}" \\\n  --auto-iam-authn \\\n  --private-ip \\\n  --port=${
+                            sqlEngineFamily === 'MYSQL' ? 3306 : 5432
+                          }`,
+                      'Auth Proxy command'
+                    )
+                  }
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Copy</span>
+                </button>
               </div>
               <pre className="overflow-x-auto text-emerald-700 dark:text-emerald-300">
                 {sqlArchitecture === 'ALLOYDB'
@@ -1408,9 +1428,27 @@ WITH (m = 16, ef_construction = 64);`;
               </pre>
             </div>
 
-            <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 text-blue-700 dark:text-blue-300 font-mono text-[11px] space-y-1.5">
-              <div className="text-zinc-400 font-bold">
-                2. Prisma / Drizzle / SQLAlchemy DSN (via Local Auth Proxy):
+            <div className="p-3 rounded-[8px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-blue-700 dark:text-blue-300 font-mono text-[11px] space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Prisma / Drizzle / SQLAlchemy DSN (via Local Auth Proxy):</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(
+                      sqlEngineFamily === 'MYSQL'
+                        ? `DATABASE_URL="mysql://iam_user@127.0.0.1:3306/production_db?sslaccept=strict"`
+                        : `DATABASE_URL="postgresql://iam_service_account@127.0.0.1:5432/production_db?sslmode=disable"`,
+                      'ORM DSN'
+                    )
+                  }
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Copy</span>
+                </button>
               </div>
               <pre className="overflow-x-auto text-amber-700 dark:text-amber-300">
                 {sqlEngineFamily === 'MYSQL'
