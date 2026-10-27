@@ -2166,7 +2166,7 @@ export default function CloudStorageStudio({
               <div className="text-xs font-extrabold uppercase text-blue-500 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4" />
                 <span>
-                  Storage Class &amp; 4-Tier Lifecycle Cost Forecaster
+                  FinOps Time-Crystal — Storage Class &amp; 4-Tier Lifecycle Cost Forecaster
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-1">

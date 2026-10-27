@@ -22,28 +22,28 @@ const FLIGHT_DECK_TABS = [
   {
     id: 'AUTOPILOT_FSD',
     step: '01',
-    title: 'Automated Drift Reconciler & SHA-256 Audit',
+    title: 'FSD Cloud Autopilot — Automated Drift Reconciler',
     subtitle: '6-Vector Telemetry · Self-Healing Actions · SHA-256 Receipts',
     icon: ShieldCheck,
   },
   {
     id: 'ZERO_GRAVITY_TELEPORTER',
     step: '02',
-    title: 'Cross-Project Live Resource Migrator',
+    title: 'Zero-Gravity Teleporter — Cross-Project Migrator',
     subtitle: 'GCS rewriteTo · BigQuery Copy Jobs · Secret Vault Sync',
     icon: Rocket,
   },
   {
     id: 'LUDICROUS_MEGACAST',
     step: '03',
-    title: '12-Service Parallel MCP & REST Telemetry Probe',
+    title: 'Ludicrous Megacast — 12-Service Parallel MCP Probe',
     subtitle: '12 Concurrent *.googleapis.com/mcp Lanes · Latency Waterfall',
     icon: Zap,
   },
   {
     id: 'FLIGHT_DIRECTOR',
     step: '04',
-    title: 'Gemini 3.8 Flash Architecture & Ops Advisor',
+    title: 'Gemini 3.8 Flash Flight Director — Ops Advisor',
     subtitle: 'Live Telemetry + Developer Knowledge MCP Briefing',
     icon: Sparkles,
   },
@@ -533,7 +533,7 @@ export default function Wave12RoadsterFlightDeckStudio({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-indigo-600 text-white">
-                AUTOMATED DRIFT RECONCILER · CROSS-PROJECT MIGRATOR &amp; 12-WAY MCP PROBE
+                WAVE 12 · ROADSTER FLIGHT DECK (DRIFT RECONCILER, CROSS-PROJECT MIGRATOR &amp; 12-WAY MCP PROBE)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 100% LIVE GCP REST + 12-LANE MCP TELEMETRY
@@ -542,7 +542,7 @@ export default function Wave12RoadsterFlightDeckStudio({
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
               <Rocket className="w-5 h-5 text-indigo-500 shrink-0" />
               <span>
-                Automated Drift Reconciler, Cross-Project Resource Migrator &amp; 12-Service Parallel MCP Probe
+                Wave 12 Roadster Flight Deck — FSD Drift Reconciler, Zero-Gravity Cross-Project Migrator &amp; Ludicrous 12-Way MCP Probe
               </span>
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">

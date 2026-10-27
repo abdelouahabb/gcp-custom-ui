@@ -23,28 +23,28 @@ const SINGULARITY_TABS = [
   {
     id: 'STARLINK_ORBITAL_MESH',
     step: '01',
-    title: 'Multi-Region TLS 1.3 Latency & Geo-Failover Probe',
+    title: 'Starlink Orbital Mesh — Multi-Region TLS 1.3 & Geo-Failover Probe',
     subtitle: '6 Intercontinental Corridors · Live TLS 1.3 Probe · Geo-Failover',
     icon: Globe,
   },
   {
     id: 'NEURALINK_THOUGHT_COMPILER',
     step: '02',
-    title: 'Natural-Language Schema & 4-Node DAG Builder',
+    title: 'Neuralink Thought-to-Cloud — Natural-Language 4-Node DAG Builder',
     subtitle: '1-Sentence Intent -> 4-Node Live GCP DAG Materializer',
     icon: Cpu,
   },
   {
     id: 'OPTIMUS_AUTONOMOUS_COUNCIL',
     step: '03',
-    title: '3-Agent Architecture Review Board (FinOps, SecOps & SRE)',
-    subtitle: 'FinOps Analyst + Zero-Trust Security + SRE Lead Review',
+    title: 'Optimus 3-Agent Council — FinOps, SecOps & SRE Review Board',
+    subtitle: 'FinOps Hawk + Zero-Trust Sentinel + SRE Prime Review',
     icon: Sparkles,
   },
   {
     id: 'CRYPTO_BLACKBOX_LEDGER',
     step: '04',
-    title: 'Ed25519 Signed Audit Trail Ledger',
+    title: 'Cryptographic Black-Box — Ed25519 Signed Audit Trail Ledger',
     subtitle: 'RFC 8032 Asymmetric Signatures · SHA-256 Hash Chain',
     icon: Lock,
   },
@@ -549,7 +549,7 @@ export default function Wave13StarlinkNeuralinkStudio({
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/40">
-                MULTI-REGION TLS 1.3 PROBE · NATURAL-LANGUAGE DAG BUILDER &amp; ED25519 AUDIT TRAIL
+                WAVE 13 · STARLINK &amp; NEURALINK (MULTI-REGION TLS 1.3 PROBE, NATURAL-LANGUAGE DAG &amp; ED25519 LEDGER)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 Ed25519 RFC 8032 SIGNED · 100% LIVE GCP REST &amp; TLS 1.3
@@ -561,7 +561,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               )}
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              Multi-Region TLS 1.3 Control-Plane Matrix, Natural-Language DAG Builder, 3-Agent Architecture Review &amp; Ed25519 Audit Ledger
+              Wave 13 Starlink &amp; Neuralink — Multi-Region TLS 1.3 Matrix, Prompt-to-DAG Builder, Optimus 3-Agent Review &amp; Ed25519 Audit Ledger
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
               Execute real DNS + TLS 1.3 + HTTPS REST probes across 6 regional Google Cloud control planes, stream live failover heartbeats into BigQuery, compile natural-language requirements into live GCS objects + SecretVersions + BigQuery SQL rows, run a 3-agent Gemini 3.8 Flash review, and sign every mutation with RFC 8032 Ed25519 keys.
@@ -805,7 +805,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-indigo-500" />
                   <span>
-                    Natural-Language Schema Compiler &amp; Live 4-Node Cloud DAG Builder
+                    Neuralink &ldquo;Thought-to-Cloud&rdquo; — Natural-Language Schema Compiler &amp; Live 4-Node DAG Builder
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">

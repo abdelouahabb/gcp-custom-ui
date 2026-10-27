@@ -1242,12 +1242,12 @@ export default function AutonomousCloudBrain({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
-                FINOPS MODULE 01 · BILLING FORECASTER
+                PRE-CRIME FINOPS · BILLING TIME-CRYSTAL
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  30-Day Billing Anomaly Forecaster &amp; 24/7 Spend Cap Circuit-Breaker
+                  &ldquo;Pre-Crime&rdquo; 30-Day Billing Time-Crystal — Anomaly Forecaster &amp; 24/7 Spend Cap Circuit-Breaker
                 </span>
               </h4>
             </div>
@@ -1725,10 +1725,10 @@ export default function AutonomousCloudBrain({
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
-                RESILIENCE MODULE 02 · IMPACT ANALYZER
+                WHAT-IF BLAST-RADIUS X-RAY
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
-                Resource Dependency &amp; Failure Impact Analyzer (&ldquo;What-If&rdquo; Blast Radius)
+                &ldquo;What-If&rdquo; Blast-Radius X-Ray — Resource Dependency &amp; Failure Impact Analyzer
               </h4>
             </div>
             <p className="text-xs text-zinc-500 mt-0.5">
@@ -1855,10 +1855,10 @@ export default function AutonomousCloudBrain({
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
-                ARCHITECTURE MODULE 03 · STACK COMPILER
+                DREAM STACK COMPILER
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
-                Multi-Region Cloud Stack &amp; Cost Compiler (SKU + FinOps + Carbon Optimized)
+                Dream Stack Compiler — Multi-Region Cloud Stack &amp; Cost Architect (SKU + FinOps + Carbon Optimized)
               </h4>
             </div>
             <p className="text-xs text-zinc-500 mt-0.5">

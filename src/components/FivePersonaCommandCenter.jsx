@@ -924,7 +924,7 @@ export default function FivePersonaCommandCenter({
               },
               {
                 id: 'PRE_CRIME_72H',
-                label: `06 · 72-Hour Quota, Cost & Drift Risk Forecaster (${
+                label: `06 · [2030] T_+72h Pre-Crime Forecaster — Quota, Cost & Drift Risk (${
                   tribunalData.preCrime72hForecast?.overall72hRiskLevel ||
                   'ACTIVE'
                 })`,

@@ -158,32 +158,32 @@ export default function Lab2026QuantumNexus({
     {
       id: 'CAUSAL_GRAPH',
       icon: Share2,
-      badge: 'MODULE #1',
-      label: 'Resource Dependency & Blast-Radius Simulator',
+      badge: 'BREAKTHROUGH #1',
+      label: 'Causal Blast-Radius Graph (Resource Dependency Simulator)',
     },
     {
       id: 'TIME_MACHINE',
       icon: History,
-      badge: 'MODULE #2',
-      label: 'Project State Snapshot & 1-Click Rollback',
+      badge: 'BREAKTHROUGH #2',
+      label: 'Time-Machine Flight Recorder (State Snapshot & 1-Click Rollback)',
     },
     {
       id: 'FINOPS_AUTOPILOT',
       icon: DollarSign,
-      badge: 'MODULE #3',
-      label: 'FinOps Right-Sizing & Spend Cap Circuit-Breaker',
+      badge: 'BREAKTHROUGH #3',
+      label: 'FinOps Autopilot (Right-Sizing & Spend Cap Circuit-Breaker)',
     },
     {
       id: 'EPHEMERAL_PR',
       icon: GitBranch,
-      badge: 'MODULE #4',
-      label: 'Ephemeral PR Previews & Traffic Mirroring',
+      badge: 'BREAKTHROUGH #4',
+      label: 'Ephemeral PR Previews & Shadow Traffic Mirror',
     },
     {
       id: 'HONEY_GRID',
       icon: ShieldAlert,
-      badge: 'MODULE #5',
-      label: 'Security Canary Tokens & Intrusion Tripwires',
+      badge: 'BREAKTHROUGH #5',
+      label: 'Zero-Trust Honey-Token Grid (Security Canary & Tripwires)',
     },
   ];
 
@@ -199,14 +199,14 @@ export default function Lab2026QuantumNexus({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="text-sm sm:text-base font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
-                  Cloud Resilience &amp; Governance Suite (5-in-1 Control Plane)
+                  2026 Quantum Nexus — 5-in-1 Cloud Resilience &amp; Governance Suite
                 </h4>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
-                  5 ENTERPRISE MODULES LIVE
+                  5 WORLD-FIRST CAPABILITIES LIVE
                 </span>
               </div>
               <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                Dependency Blast-Radius Simulator, Immutable Project State Snapshots &amp; Rollback, FinOps Spend Cap Circuit-Breaker, PR Preview Traffic Mirroring &amp; Security Canary Tripwires.
+                Causal Dependency Blast-Radius Simulator, Immutable Project State Time-Machine &amp; Rollback, Autonomous FinOps Circuit-Breaker, Shadow-Traffic PR Previews &amp; Honey-Token Canary Tripwires.
               </p>
             </div>
           </div>

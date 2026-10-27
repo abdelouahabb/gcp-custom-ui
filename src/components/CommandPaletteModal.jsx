@@ -179,10 +179,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave15-dyson-moonshot',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Supply-Chain & Observability Suite: BigQuery Anomaly SQL, SLSA v1.0 Provenance, Log RCA & TLS 1.3 Inspector',
+        title: 'Open Wave 15 Moonshot — BigQuery Anomaly SQL, SLSA v1.0 Provenance, Log Surgeon (RCA) & TLS 1.3 Inspector',
         subtitle: 'Live BigQuery Standard SQL Z-Score & Cosine Vector CTE, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Attestor, Live logging.googleapis.com Correlator + Gemini 3.8 Flash RCA & Real TLS 1.3 X.509 Handshake Inspector',
-        keywords: 'wave 15 moonshot bigquery vector cosine similarity zscore anomaly sql slsa provenance in-toto dsse artifact registry cloud build logging entries list gemini rca tls 1.3 x509 certificate cipher',
-        badge: 'SLSA & LOG RCA',
+        keywords: 'wave 15 moonshot bigquery vector cosine similarity zscore anomaly sql slsa provenance in-toto dsse artifact registry cloud build logging entries list gemini rca surgeon tls 1.3 x509 certificate cipher',
+        badge: 'WAVE 15 · SLSA & RCA',
         badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
         icon: Database,
         run: () => {
@@ -193,10 +193,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave14-quantum-doctor',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Point-in-Time Recovery SQL, Automated Drift Remediation, IAM Permission Graph & Post-Quantum Vault',
+        title: 'Open Wave 14 Quantum Doctor — BigQuery Time-Travel Recovery, Self-Healing Drift Auto-Fix, IAM Graph & PQC Vault',
         subtitle: 'Live BigQuery FOR SYSTEM_TIME AS OF SQL Diff, Automated GCS/BQ/Secret REST PATCH Remediation, Live getIamPolicy Permission Graph & X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
-        keywords: 'wave 14 quantum pqc x25519 shake256 hkdf aes-256-gcm secret manager bigquery time travel point in time recovery for system_time as of config drift remediation iam permission graph getiampolicy',
-        badge: 'DRIFT & PQC VAULT',
+        keywords: 'wave 14 quantum doctor pqc x25519 shake256 hkdf aes-256-gcm secret manager bigquery time travel point in time recovery for system_time as of self healing config drift remediation iam permission blast radius graph getiampolicy',
+        badge: 'WAVE 14 · DRIFT & PQC',
         badgeColor: 'text-violet-700 dark:text-violet-300 bg-violet-500/15 border-violet-500/30',
         icon: Key,
         run: () => {
@@ -207,10 +207,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave13-starlink-neuralink',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Multi-Region TLS 1.3 Probe, Natural-Language DAG Builder & Ed25519 Signed Audit Trail',
-        subtitle: '6-Region Live HTTPS/TLS Probe + BigQuery Heartbeat Streamer, Natural-Language Prompt-to-Schema 4-Node DAG Builder, 3-Agent Architecture Review & Ed25519 Signed Audit Trail',
-        keywords: 'wave 13 multi region tls 1.3 latency probe natural language schema dag compiler builder 3 agent review board ed25519 audit trail signature',
-        badge: 'MULTI-REGION & DAG',
+        title: 'Open Wave 13 Starlink & Neuralink — Multi-Region TLS 1.3 Probe, Natural-Language DAG Builder & Ed25519 Audit Ledger',
+        subtitle: '6-Region Live HTTPS/TLS Probe + BigQuery Heartbeat Streamer, Neuralink Prompt-to-Schema 4-Node DAG Builder, Optimus 3-Agent Review & Ed25519 Signed Audit Trail',
+        keywords: 'wave 13 starlink orbital laser subsea fiber neuralink thought to cloud multi region tls 1.3 latency probe natural language schema dag compiler builder optimus 3 agent review board ed25519 audit trail signature',
+        badge: 'WAVE 13 · TLS & DAG',
         badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
         icon: Globe,
         run: () => {
@@ -221,10 +221,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave12-roadster',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Automated Drift Reconciler, Cross-Project Resource Migrator & 12-Service Parallel MCP Probe',
-        subtitle: 'Closed-Loop Drift Reconciler (SHA-256 Receipts), Cross-Project Live Resource Migrator (BQ/GCS/Secrets), 12-Service Parallel MCP Probe & Gemini 3.8 Flash Ops Advisor',
-        keywords: 'wave 12 drift reconciler self healing merkle sha256 cross project migrator copy bigquery bucket secret 12 way parallel mcp probe',
-        badge: 'DRIFT & MIGRATOR',
+        title: 'Open Wave 12 Roadster Flight Deck — FSD Drift Reconciler, Cross-Project Teleporter & 12-Way Parallel MCP Probe',
+        subtitle: 'Closed-Loop FSD Cloud Drift Reconciler (SHA-256 Receipts), Zero-Gravity Cross-Project Resource Migrator (BQ/GCS/Secrets), Ludicrous 12-Service Parallel MCP Probe & Gemini 3.8 Flash Flight Director',
+        keywords: 'wave 12 roadster spacex fsd autopilot drift reconciler self healing merkle sha256 zero gravity cross project teleporter migrator copy bigquery bucket secret ludicrous megacast 12 way parallel mcp probe',
+        badge: 'WAVE 12 · FSD & MCP',
         badgeColor: 'text-red-700 dark:text-red-300 bg-red-500/15 border-red-500/30',
         icon: Rocket,
         run: () => {
@@ -235,10 +235,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave11-moonshot',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Cloud Deploy Canary Pipelines, Firestore NoSQL, Quota Optimizer & Multi-Project Matrix',
+        title: 'Open Wave 11 Moonshot Studio — Cloud Deploy Canary Pipelines, Firestore NoSQL, Quota Optimizer & Multi-Project Matrix',
         subtitle: 'Live clouddeploy.googleapis.com, firestore.googleapis.com, Active Assist Recommender, 18-Studio Stress Audit & Executive HTML Report',
-        keywords: 'wave 11 cloud deploy canary pipeline firestore nosql document recommender quota multi project compare stress audit dossier dockerfile',
-        badge: 'DEPLOY & FIRESTORE',
+        keywords: 'wave 11 moonshot cloud deploy canary pipeline firestore nosql document recommender quota multi project compare stress audit dossier dockerfile',
+        badge: 'WAVE 11 · DEPLOY & DB',
         badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
         icon: Rocket,
         run: () => {
@@ -249,10 +249,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-quantum-nexus',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Cloud Resilience Suite (Blast-Radius Simulator, State Rollback, FinOps, PR Previews & Canary Tripwires)',
-        subtitle: 'Launch all 5 enterprise resilience & governance modules inside the 2026 Innovation Lab',
-        keywords: 'resilience suite causal blast radius rollback snapshot finops circuit breaker ephemeral pr preview traffic mirror canary token tripwire',
-        badge: '5-IN-1 RESILIENCE',
+        title: 'Open 2026 Quantum Nexus — 5-in-1 Cloud Resilience Suite (Blast-Radius, State Rollback, FinOps, PR Mirror & Honey-Grid)',
+        subtitle: 'Launch all 5 world-first resilience & governance modules inside the 2026 Innovation Lab',
+        keywords: 'quantum nexus resilience suite causal blast radius rollback snapshot finops arbitrage circuit breaker ephemeral pr preview shadow traffic mirror honey token canary tripwire',
+        badge: 'QUANTUM NEXUS · 5-IN-1',
         badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 dark:bg-blue-500/25 border-amber-500/40',
         icon: Sparkles,
         run: () => {
@@ -425,10 +425,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-zombie-hunter',
         category: 'Wave 2 Engineer Wishlist',
-        title: 'Run Idle & Orphaned Resource Cleaner (Unattached Disks & Static IPs)',
+        title: 'Run Zombie Resource Hunter — Idle & Orphaned Disk / Static IP Cleaner',
         subtitle: 'Detect unattached Persistent Disks, unused Static External IPs ($7.30/mo), and idle resources',
-        keywords: 'idle orphan disk unused static ip clean waste save money',
-        badge: 'IDLE CLEANER',
+        keywords: 'zombie hunter idle orphan disk unused static ip clean waste save money',
+        badge: 'ZOMBIE HUNTER',
         badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
         icon: ShieldAlert,
         run: () => {
@@ -439,10 +439,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-teleport-diff-carbon',
         category: 'Wave 2 Engineer Wishlist',
-        title: 'Cross-Region Cloud Run Migrator, Carbon CFE% & Visual Config Diff',
+        title: '1-Tap Cross-Region Teleporter — Cloud Run Migrator, Carbon CFE% & Visual Config Diff',
         subtitle: 'Clone services to 98% Carbon-Free regions (Montréal/Finland) or diff two services side-by-side',
-        keywords: 'clone region migrate carbon green cfe diff compare revision',
-        badge: 'MIGRATE & DIFF',
+        keywords: 'teleport clone region migrate carbon green cfe diff compare revision',
+        badge: 'TELEPORT & DIFF',
         badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
         icon: Globe,
         run: () => {

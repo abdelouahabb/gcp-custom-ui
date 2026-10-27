@@ -124,23 +124,23 @@ This guide explains **what every revolutionary feature in CloudPulse 2026 does**
 
 ---
 
-##  Wave 5 — 30-Day Billing Anomaly Forecaster, Failure Impact Analyzer & Multi-Region Stack Architect (`AutonomousCloudBrain.jsx`)
+##  Wave 5 — Autonomous Cloud Brain: "Pre-Crime" Billing Time-Crystal (30-Day Anomaly Forecaster), "What-If" Blast-Radius X-Ray & Dream Stack Compiler (`AutonomousCloudBrain.jsx`)
 
-### 15.  30-Day Billing Anomaly Forecaster (22 "What Happens If..." Scenarios) & 24/7 Permanent GCP Spend Cap
-- **Where to find it**: **2026 Lab ✦ → Tab 1 (`30-Day Billing Anomaly Forecaster & Multi-Region Stack Architect`) → Mode 1 (`30-Day Billing Anomaly Forecaster`)**.
+### 15.  "Pre-Crime" 30-Day Billing Time-Crystal — Anomaly Forecaster (22 "What Happens If..." Scenarios) & 24/7 Permanent GCP Spend Cap
+- **Where to find it**: **2026 Lab ✦ → Tab 1 (`Pre-Crime Bill & Dream Stack — 30-Day Billing Forecaster & Multi-Region Architect`) → Mode 1 (`"Pre-Crime" 30-Day Billing Time-Crystal — Anomaly Forecaster`)**.
 - **How it Works**:
   - **22 Categorized "What Happens If..." Scenarios (100% Read-Only Math Projection)**: Organized into 6 `<optgroup>` categories (*0. Baseline*, *1. AI, Gemini & GPU Billing Traps* including **Leaked Gemini API Key** at `1.28x/d` exponential compounding, **Recursive Vertex AI Agent Loop**, **Uncontrolled Cloud Run GPU Autoscaling**, and **Forgotten A100 Workbench**, *2. Serverless & Event-Driven Runaway Loops*, *3. Cross-Region 45 TB Backup & Cloud NAT Hairpin Egress*, *4. BigQuery `SELECT *` & Database Explosions*, and *5. Observability, GKE & Zombie Infra Traps*), each paired with a **Newcomer Prevention Guide** and copy-ready emergency CLI mitigation command.
   - **Exponential (`1.10x/d–1.28x/d`) vs. Linear Burn Curves & Synchronized `$` Input + Slider Max Scale**: Models daily compounding up to API RPM/TPM quota ceilings (`maxDailyCeilingUsd`), explains `Steady-State 30d Bill`, `Unguarded Anomaly Bill (If Unstopped)`, `Budget Exhaustion ETA`, and `Saved by Circuit-Breaker` in plain English, and automatically updates the slider's `max` (`customSliderMaxUsd`) whenever you type a custom dollar value in the `$` input box.
   - **24/7 Permanent Server-Side GCP Spend Cap (`GoogleCloudBillingBudgetsV1SpendCap` + `cloudpulse-budget-killswitch`)**: Starts `OFF` by default (syncing live state from `/billing-guardian/spend-cap-catalog` on mount), prompts for confirmation via the Pre-Execution Warning Modal, and provisions a real `spendCap.inputState = "CONFIGURED"` budget (`Spend cap: Configured` in Google Cloud Console) + Cloud Pub/Sub Kill-Switch topic (`projects/<id>/topics/cloudpulse-budget-killswitch`) that enforces your cap 24/7 on Google's servers even when your laptop is off.
 
-### 16.  Resource Dependency & Failure Impact Analyzer ("What-If" Blast Radius)
-- **Where to find it**: **2026 Lab ✦ → Tab 1 (`30-Day Billing Anomaly Forecaster & Multi-Region Stack Architect`) → Mode 2 (`Resource Dependency & Failure Impact Analyzer`)**.
+### 16.  "What-If" Blast-Radius X-Ray — Resource Dependency & Failure Impact Analyzer
+- **Where to find it**: **2026 Lab ✦ → Tab 1 (`Pre-Crime Bill & Dream Stack — 30-Day Billing Forecaster & Multi-Region Architect`) → Mode 2 (`"What-If" Blast-Radius X-Ray — Resource Dependency & Failure Impact Analyzer`)**.
 - **How it Works**:
   - Builds a dependency graph across your live VMs, Cloud Run services, VPC Firewall rules, Persistent Disks, and Regional Hubs.
   - Select any resource and switch between **Delete / Terminate**, **Revoke / Tighten Access**, and **Regional Blackout** to inspect every downstream casualty, severity score (`CRITICAL` / `ELEVATED` / `CONTAINED`), and a **Pre-Flight Safety Checklist** before mutating production infrastructure.
 
-### 17.  Multi-Region Cloud Stack & Cost Compiler (Prompt → Optimal 40-Region Terraform / `gcloud` + Live Deploy)
-- **Where to find it**: **2026 Lab ✦ → Tab 1 (`30-Day Billing Anomaly Forecaster & Multi-Region Stack Architect`) → Mode 3 (`Multi-Region Cloud Stack & Cost Compiler`)**.
+### 17.  Dream Stack Compiler — Multi-Region Cloud Stack & Cost Architect (Prompt → Optimal 40-Region Terraform / `gcloud` + Live Deploy)
+- **Where to find it**: **2026 Lab ✦ → Tab 1 (`Pre-Crime Bill & Dream Stack — 30-Day Billing Forecaster & Multi-Region Architect`) → Mode 3 (`Dream Stack Compiler — Multi-Region Cloud Stack & Cost Architect`)**.
 - **How it Works**:
   - Choose an architecture blueprint (*LLM Inference GPU API*, *Global Zero-Trust Microservice*, *High-Throughput Event Pipeline*, *Green FinOps Batch Compute*) or write a natural-language specification, and select your optimization priority (**Balanced**, **Lowest Cost `$`**, **Zero-Carbon `CFE%`**, or **Ultra-Low Latency**).
   - Evaluates all **40 Google Cloud regions** against hardware SKU availability (`NVIDIA L4 GPU` / `A3 H100`) + regional pricing multipliers + Carbon-Free Energy % to select the mathematically optimal region, generate a complete **Itemized Monthly Bill of Materials (`$/mo`)**, output a ready-to-run **`gcloud` / Infrastructure-as-Code script**, or **1-Click Live Deploy** directly into your active GCP project (`POST /api/project/:id/cloudrun`).

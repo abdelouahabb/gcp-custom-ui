@@ -21,28 +21,28 @@ const WAVE14_TABS = [
   {
     id: 'BIGQUERY_TIME_TRAVEL',
     step: '01',
-    title: 'BigQuery Point-in-Time Recovery SQL',
+    title: 'BigQuery Time-Travel — Point-in-Time Recovery SQL',
     subtitle: 'Live FOR SYSTEM_TIME AS OF Diff',
     icon: Clock,
   },
   {
     id: 'SELF_HEALING_DOCTOR',
     step: '02',
-    title: 'Automated Config Drift Remediation',
+    title: 'Self-Healing Cloud Doctor — Drift Auto-Remediation',
     subtitle: 'Live GCS / BQ / Secret PATCH Loop',
     icon: Wrench,
   },
   {
     id: 'IAM_BLAST_RADIUS',
     step: '03',
-    title: 'IAM Permission & Risk Graph',
+    title: 'IAM Blast-Radius — Permission & Risk Graph',
     subtitle: 'Live getIamPolicy & Least-Privilege',
     icon: Users,
   },
   {
     id: 'QUANTUM_ENVELOPE_VAULT',
     step: '04',
-    title: 'Hybrid Post-Quantum Secret Vault',
+    title: 'Quantum Envelope Vault — Hybrid Post-Quantum Secrets',
     subtitle: 'X25519 + SHAKE256 + AES-GCM + Secret',
     icon: KeyRound,
   },
@@ -501,14 +501,14 @@ export default function Wave14QuantumTimeTravelDoctorStudio({
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/40">
-                POINT-IN-TIME RECOVERY SQL · DRIFT AUTO-REMEDIATION · IAM GRAPH &amp; PQC VAULT
+                WAVE 14 · QUANTUM DOCTOR (POINT-IN-TIME RECOVERY SQL, DRIFT AUTO-REMEDIATION, IAM GRAPH &amp; PQC VAULT)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 100% LIVE GCP REST &amp; CRYPTO · ZERO SIMULATION
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              BigQuery Point-in-Time Recovery SQL, Automated Config Drift Remediation, Live IAM Permission Graph &amp; Post-Quantum Vault
+              Wave 14 Quantum Doctor — BigQuery Time-Travel Recovery, Self-Healing Drift Auto-Fix, Live IAM Blast-Radius Graph &amp; PQC Vault
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
               Query historical BigQuery storage snapshots via native <code>FOR SYSTEM_TIME AS OF</code>, heal drifted GCS/BigQuery/Secret Manager configurations via live REST <code>PATCH</code>, inspect live <code>projects:getIamPolicy</code> blast radius, and seal/decrypt X25519 + SHAKE256 + AES-256-GCM + Ed25519 envelopes inside Google Cloud Secret Manager.

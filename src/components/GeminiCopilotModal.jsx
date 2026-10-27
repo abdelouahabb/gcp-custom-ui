@@ -1188,7 +1188,7 @@ export default function GeminiCopilotModal({
                   }}
                   className="text-[11px] font-mono font-bold text-blue-500 hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Open Billing Forecaster &amp; 2026 Lab</span>
+                  <span>Open Pre-Crime Billing Forecaster &amp; 2026 Lab</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               )}
