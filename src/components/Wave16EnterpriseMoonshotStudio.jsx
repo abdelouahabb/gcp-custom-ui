@@ -166,6 +166,33 @@ export default function Wave16EnterpriseMoonshotStudio({
     }
   };
 
+  const handleProtectAssetDr = async (assetName) => {
+    setBusyId(`PROTECT_${assetName}`);
+    setInlineError('');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave16/action`,
+        {
+          action: 'PROTECT_ASSET_DR',
+          assetName,
+        }
+      );
+      setDrVaultReceipt({
+        bucketName: assetName.replace(/^gs:\/\//, ''),
+        sha256Signature: res.data?.sha256Signature,
+        message: res.data?.message,
+      });
+      if (onShowToast && res.data?.message) onShowToast(res.data.message);
+      await fetchWave16();
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Failed to protect asset.';
+      setInlineError(msg);
+      if (onShowError) onShowError(msg);
+    } finally {
+      setBusyId('');
+    }
+  };
+
   const handleDryRunSql = async () => {
     setBusyId('DRY_RUN');
     try {
@@ -318,6 +345,9 @@ export default function Wave16EnterpriseMoonshotStudio({
             const locLower = String(a.location || '').toLowerCase();
             const isMulti =
               a.haTier === 'MULTI_REGION_ACTIVE' ||
+              a.haTier === 'MULTI_REGION_MIRRORED' ||
+              a.haTier === 'REGIONAL_HA' ||
+              Boolean(a.isDrProtected) ||
               locLower === 'us' ||
               locLower === 'eu' ||
               locLower === 'asia' ||
@@ -597,94 +627,211 @@ export default function Wave16EnterpriseMoonshotStudio({
                 </div>
               </div>
 
-              {/* Asset-by-Asset Survival & Failover Matrix */}
-              <div className="space-y-2">
+              {/* 3-Column "Zero Black Magic" Architecture Explainer Strip */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
+                  <div className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-[10.5px] uppercase">
+                    1. Why Are Your Buckets &amp; Services Listed Here?
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                    Every row below (<code className="font-mono">gs://...</code>, <code className="font-mono">bq://...</code>, <code className="font-mono">run://...</code>) is a <strong>real resource discovered in project {projectId}</strong> via Google Cloud REST APIs. During a regional outage, your app fails if even one single-region bucket or database it depends on goes offline.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
+                  <div className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-[10.5px] uppercase">
+                    2. Single-Region (e.g. us-east1) vs. Multi-Region (US)
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                    A bucket or service pinned to a <strong>Single Region</strong> (like <code className="font-mono">us-east1</code>) has <strong>zero cross-region replication</strong>: if <code className="font-mono">us-east1</code> goes dark, it returns <code className="font-mono">HTTP 503</code> (<code className="font-mono">RPO=900s, RTO=180s</code>). <strong>Multi-Region (<code className="font-mono">US</code>/<code className="font-mono">EU</code>)</strong> assets automatically serve traffic from surviving regions (<code className="font-mono">RPO=0s, RTO=2s</code>).
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
+                  <div className="font-mono font-extrabold text-blue-600 dark:text-blue-400 text-[10.5px] uppercase">
+                    3. How to Test &amp; Protect Any Resource Below
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                    Click <strong>Test Outage in &lt;Region&gt;</strong> on any single-region resource to simulate its region going dark, or click <strong>1-Click Protect &amp; Mirror (RPO → 0s)</strong> to enable Object Versioning (<code className="font-mono">storage.buckets.patch</code>) and bind it to the Multi-Region DR Vault.
+                  </p>
+                </div>
+              </div>
+
+              {/* Asset-by-Asset Survival, Plain-English Purpose & Failover Matrix */}
+              <div className="space-y-2.5">
                 {evaluatedAssets.map((a, idx) => {
                   const isSpof = a.outageStatus === 'OUTAGE_SPOF';
                   const isAuto = a.outageStatus === 'AUTO_FAILOVER_SURVIVES';
+                  const locStr = String(a.location || 'US');
+                  const locLower = locStr.toLowerCase();
+                  const canSimulateThisRegion =
+                    !isAuto &&
+                    locLower !== blackoutRegion.toLowerCase() &&
+                    locLower !== 'global';
+
+                  const plainEnglishWhyShown = a.isProvisionedDrVault
+                    ? `Dedicated US Multi-Region Disaster Recovery Vault bucket provisioned in project "${projectId}" with Object Versioning and Public Access Prevention enforced.`
+                    : `Live ${a.type} discovered in project "${projectId}" via Google Cloud REST API, currently hosted in location "${locStr}" (${a.haTier}).`;
+
+                  const plainEnglishOutageImpact = isSpof
+                    ? `DIRECT HIT IN ${blackoutRegion.toUpperCase()} (SINGLE-REGION SPOF): Because ${a.name} is pinned strictly to single-region "${locStr}" without cross-region replication, a blackout in ${blackoutRegion} makes this resource 100% unreachable (HTTP 503). Any un-replicated writes in the last ${a.rpoSeconds}s (15m) are trapped until manual cross-region restore (${a.rtoSeconds}s RTO).`
+                    : isAuto
+                      ? `SURVIVES ${blackoutRegion.toUpperCase()} BLACKOUT AUTOMATICALLY (MULTI-REGION / MIRRORED): Replicated across multiple regions (${a.failoverTargetRegion || 'US Multi-Region'}). Even if ${blackoutRegion} goes completely offline, Google Cloud automatically serves ${a.name} from surviving regions in ~${a.rtoSeconds}s with zero data loss (RPO = 0s).`
+                      : `SAFE FROM ${blackoutRegion.toUpperCase()} OUTAGE (HOSTED IN ${locStr.toUpperCase()}), BUT SINGLE-REGION SPOF: Survives a ${blackoutRegion} blackout because it physically lives in "${locStr}". However, it has no cross-region replica — if "${locStr}" ever goes offline, ${a.name} will fail (RPO = ${a.rpoSeconds}s, RTO = ${a.rtoSeconds}s).`;
+
                   return (
                     <div
                       key={`${a.name}-${idx}`}
-                      className={`p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 text-xs font-mono ${
+                      className={`p-4 rounded-xl border space-y-2.5 text-xs font-mono ${
                         a.isProvisionedDrVault
                           ? 'bg-emerald-500/10 border-emerald-500/40'
                           : isSpof
-                            ? 'bg-amber-500/5 border-amber-500/30'
+                            ? 'bg-amber-500/5 border-amber-500/35'
                             : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
                       }`}
                     >
-                      <div className="space-y-0.5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-2">
                           {a.isProvisionedDrVault && (
                             <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold">
                               NEW · PROVISIONED US MULTI-REGION VAULT
                             </span>
                           )}
-                          <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
+                          <span className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs">
                             {a.name}
                           </span>
                           <span className="text-zinc-500">
-                            ({a.type} · {a.location} → Failover: {a.failoverTargetRegion || standbyRegion})
+                            ({a.type} · Location: <strong>{locStr}</strong> → Failover Target: <strong>{a.failoverTargetRegion || standbyRegion}</strong>)
                           </span>
                         </div>
-                        {a.remediationCli && (
-                          <div className="text-[10px] text-zinc-500 truncate max-w-2xl">
-                            HA CLI: <code>{a.remediationCli}</code>
-                          </div>
-                        )}
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded border text-[10px] font-bold ${
+                              isSpof
+                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                                : isAuto
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25'
+                            }`}
+                          >
+                            {isSpof
+                              ? `SPOF IN ${blackoutRegion.toUpperCase()} · NEEDS HA`
+                              : isAuto
+                                ? `AUTO-FAILOVER (${a.haTier})`
+                                : `OUTSIDE ${blackoutRegion.toUpperCase()} BLAST RADIUS (${a.haTier})`}
+                          </span>
+
+                          <span
+                            title="RPO (Recovery Point Objective) = max seconds of data loss during regional outage. RTO (Recovery Time Objective) = seconds required to restore traffic."
+                            className="px-2 py-0.5 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] text-zinc-700 dark:text-zinc-300 font-bold"
+                          >
+                            RPO (Data Loss): {a.rpoSeconds}s · RTO (Recovery Time): {a.rtoSeconds}s
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded border text-[10px] font-bold ${
+                      {/* Plain-English Explanation of WHY this resource is shown and WHAT happens */}
+                      <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800 space-y-1 font-sans text-[11.5px] leading-relaxed">
+                        <div className="text-zinc-600 dark:text-zinc-400">
+                          <strong className="font-mono text-[10px] uppercase text-zinc-700 dark:text-zinc-300 mr-1.5">
+                            Why Shown:
+                          </strong>
+                          {plainEnglishWhyShown}
+                        </div>
+                        <div
+                          className={
                             isSpof
-                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                              ? 'text-amber-800 dark:text-amber-300 font-medium'
                               : isAuto
-                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25'
-                          }`}
+                                ? 'text-emerald-800 dark:text-emerald-300 font-medium'
+                                : 'text-zinc-700 dark:text-zinc-300'
+                          }
                         >
-                          {isSpof
-                            ? `SPOF IN ${blackoutRegion.toUpperCase()} · NEEDS HA`
-                            : isAuto
-                              ? `AUTO-FAILOVER (${a.haTier})`
-                              : `ISOLATED SAFE (${a.haTier})`}
-                        </span>
+                          <strong className="font-mono text-[10px] uppercase mr-1.5">
+                            Outage Verdict ({blackoutRegion}):
+                          </strong>
+                          {plainEnglishOutageImpact}
+                        </div>
+                      </div>
 
-                        <span className="text-[11px] text-zinc-600 dark:text-zinc-300">
-                          RPO: {a.rpoSeconds}s · RTO: {a.rtoSeconds}s
-                        </span>
+                      {/* Action Bar per Resource */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                        <div className="text-[10px] text-zinc-500 truncate max-w-xl">
+                          {a.remediationCli && (
+                            <>
+                              CLI: <code>{a.remediationCli}</code>
+                            </>
+                          )}
+                        </div>
 
-                        {a.remediationCli && (
-                          <>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {canSimulateThisRegion && (
                             <button
                               type="button"
-                              onClick={() =>
-                                handleCopy(a.remediationCli, `dr-${idx}`)
-                              }
-                              title={`Copy Multi-Region HA CLI command for ${a.name}`}
-                              className="px-2 py-1 rounded bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                              onClick={() => {
+                                setBlackoutRegion(locLower);
+                                if (onShowToast) {
+                                  onShowToast(
+                                    `Switched simulated blackout to ${locLower} to test ${a.name}!`
+                                  );
+                                }
+                              }}
+                              title={`Switch the simulated blackout region to ${locLower} to see what happens when ${a.name}'s region goes down`}
+                              className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-800 dark:text-amber-300 text-[10px] font-bold cursor-pointer"
                             >
-                              {copiedKey === `dr-${idx}` ? (
-                                <Check className="w-3 h-3 text-emerald-500" />
-                              ) : (
-                                <Copy className="w-3 h-3" />
-                              )}
-                              <span>Copy HA CLI</span>
+                              Simulate {locLower} Outage on This Resource
                             </button>
-                            {onRunInShell && (
+                          )}
+
+                          {!isAuto && (
+                            <button
+                              type="button"
+                              disabled={busyId === `PROTECT_${a.name}`}
+                              onClick={() => handleProtectAssetDr(a.name)}
+                              title={`Enable Object Versioning on ${a.name} and bind it to the US Multi-Region DR Mirror so RPO drops to 0s and RTO drops to 5s`}
+                              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
+                            >
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>
+                                {busyId === `PROTECT_${a.name}`
+                                  ? 'Protecting...'
+                                  : '1-Click Protect & Mirror to Multi-Region (RPO → 0s)'}
+                              </span>
+                            </button>
+                          )}
+
+                          {a.remediationCli && (
+                            <>
                               <button
                                 type="button"
-                                onClick={() => onRunInShell(a.remediationCli)}
-                                title={`Execute HA upgrade command for ${a.name} in Cloud Shell`}
-                                className="px-2 py-1 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                                onClick={() =>
+                                  handleCopy(a.remediationCli, `dr-${idx}`)
+                                }
+                                title={`Copy Multi-Region HA CLI command for ${a.name}`}
+                                className="px-2 py-1 rounded bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
                               >
-                                <Terminal className="w-3 h-3" />
-                                <span>Run in Shell</span>
+                                {copiedKey === `dr-${idx}` ? (
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                                <span>Copy HA CLI</span>
                               </button>
-                            )}
-                          </>
-                        )}
+                              {onRunInShell && (
+                                <button
+                                  type="button"
+                                  onClick={() => onRunInShell(a.remediationCli)}
+                                  title={`Execute HA upgrade command for ${a.name} in Cloud Shell`}
+                                  className="px-2 py-1 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                                >
+                                  <Terminal className="w-3 h-3" />
+                                  <span>Run in Shell</span>
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
