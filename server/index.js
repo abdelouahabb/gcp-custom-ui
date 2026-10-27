@@ -7264,6 +7264,11 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
     const { token } = await resolveRequestAuth(req);
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
 
+    const invalidateProjectOverviewCache = () => {
+      overviewSwrCache.delete(projectId);
+      overviewInFlight.delete(projectId);
+    };
+
     if (resolvedType === 'Compute Engine VM' || resolvedType === 'COMPUTE_VM') {
       const zone = region || 'us-east1-b';
       const op = await gcpFetch(
@@ -7276,6 +7281,7 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
         projectId,
         { method: 'DELETE', timeout: 8000 }
       );
+      invalidateProjectOverviewCache();
       return res.json({
         ok: true,
         operation: op,
@@ -7297,6 +7303,7 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
         projectId,
         { method: 'DELETE', timeout: 8000 }
       );
+      invalidateProjectOverviewCache();
       return res.json({
         ok: true,
         operation: op,
@@ -7318,6 +7325,7 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
         projectId,
         { method: 'DELETE', timeout: 8000 }
       );
+      invalidateProjectOverviewCache();
       return res.json({
         ok: true,
         operation: op,
@@ -7332,17 +7340,83 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
       resolvedType === 'Cloud Storage' ||
       resolvedType === 'GCS_BUCKET'
     ) {
-      await gcpFetch(
-        `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
-          name
-        )}`,
-        token,
-        projectId,
-        { method: 'DELETE', timeout: 6000 }
-      );
+      let purgedCount = 0;
+      try {
+        await gcpFetch(
+          `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+            name
+          )}`,
+          token,
+          projectId,
+          { method: 'DELETE', timeout: 6000 }
+        );
+      } catch (bktErr) {
+        const status = bktErr.response?.status;
+        const errMsg = String(
+          bktErr.response?.data?.error?.message || bktErr.message || ''
+        ).toLowerCase();
+
+        if (status === 404 || errMsg.includes('not found')) {
+          invalidateProjectOverviewCache();
+          return res.json({
+            ok: true,
+            alreadyDeleted: true,
+            message: `Cloud Storage bucket gs://${name} was already deleted.`,
+          });
+        }
+
+        // If bucket is not empty (409), automatically purge all object versions and delete the bucket
+        if (status === 409 || errMsg.includes('not empty')) {
+          const listRes = await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              name
+            )}/o?versions=true&maxResults=500`,
+            token,
+            projectId,
+            { timeout: 8000 }
+          );
+          const items = listRes?.items || [];
+          for (let i = 0; i < items.length; i += 15) {
+            const batch = items.slice(i, i + 15);
+            await Promise.allSettled(
+              batch.map((obj) =>
+                gcpFetch(
+                  `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+                    name
+                  )}/o/${encodeURIComponent(obj.name)}${
+                    obj.generation
+                      ? `?generation=${encodeURIComponent(obj.generation)}`
+                      : ''
+                  }`,
+                  token,
+                  projectId,
+                  { method: 'DELETE', timeout: 5000 }
+                ).then(() => {
+                  purgedCount += 1;
+                })
+              )
+            );
+          }
+          await gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(
+              name
+            )}`,
+            token,
+            projectId,
+            { method: 'DELETE', timeout: 8000 }
+          );
+        } else {
+          throw bktErr;
+        }
+      }
+      invalidateProjectOverviewCache();
       return res.json({
         ok: true,
-        message: `Deleted Cloud Storage bucket gs://${name} from ${projectId}.`,
+        purgedCount,
+        message:
+          purgedCount > 0
+            ? `Purged ${purgedCount} object(s) and deleted Cloud Storage bucket gs://${name} from ${projectId}.`
+            : `Deleted Cloud Storage bucket gs://${name} from ${projectId}.`,
       });
     }
 
@@ -7350,14 +7424,25 @@ app.delete('/api/project/:projectId/resource', async (req, res) => {
       resolvedType === 'BigQuery Dataset' ||
       resolvedType === 'BIGQUERY_DATASET'
     ) {
-      await gcpFetch(
-        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
-          projectId
-        )}/datasets/${encodeURIComponent(name)}?deleteContents=true`,
-        token,
-        projectId,
-        { method: 'DELETE', timeout: 6000 }
-      );
+      try {
+        await gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+            projectId
+          )}/datasets/${encodeURIComponent(name)}?deleteContents=true`,
+          token,
+          projectId,
+          { method: 'DELETE', timeout: 6000 }
+        );
+      } catch (bqErr) {
+        const status = bqErr.response?.status;
+        const errMsg = String(
+          bqErr.response?.data?.error?.message || bqErr.message || ''
+        ).toLowerCase();
+        if (status !== 404 && !errMsg.includes('not found')) {
+          throw bqErr;
+        }
+      }
+      invalidateProjectOverviewCache();
       return res.json({
         ok: true,
         message: `Deleted BigQuery dataset ${projectId}.${name}.`,

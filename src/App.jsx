@@ -3547,8 +3547,24 @@ function CloudPulseCockpit() {
           },
         }
       );
+      // Immediately evict deleted resource from client state & sessionStorage SWR cache
+      try {
+        sessionStorage.removeItem(`cloudpulse_overview_swr_v2_${selectedProjectId}`);
+      } catch {
+        // ignore storage quota errors
+      }
+      setOverview((prev) => {
+        if (!prev) return prev;
+        const nextResources = (prev.resources || []).filter(
+          (r) => r.id !== resource.id && !(r.name === resource.name && r.type === resource.type)
+        );
+        return {
+          ...prev,
+          resources: nextResources,
+        };
+      });
       showToast(res.data.message || `Deleted ${resource.name} from ${selectedProjectId}`);
-      await fetchProjectOverview(selectedProjectId);
+      await fetchProjectOverview(selectedProjectId, { force: true });
       setVmRefreshTrigger((c) => c + 1);
     } catch (err) {
       setErrorBanner(
