@@ -225,10 +225,10 @@ export default function Wave16EnterpriseMoonshotStudio({
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase">
               <Sparkles className="w-3 h-3" />
-              <span>WAVE 16 ENTERPRISE MOONSHOT LAB · LIVE GCP CONTROL PLANE</span>
+              <span>06 · MULTI-REGION DR GAMEDAY &amp; SQL SURGEON · LIVE GCP CONTROL PLANE</span>
             </div>
             <h2 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
-              Wave 16 Moonshot — FinOps Auto-Surgeon, DR GameDay, Least-Privilege IAM &amp; SQL Dry-Run Surgeon
+              06. Multi-Region DR GameDay &amp; SQL Surgeon — FinOps Auto-Surgeon, DR GameDay, Least-Privilege IAM &amp; SQL Dry-Run Surgeon
             </h2>
           </div>
 
@@ -236,13 +236,13 @@ export default function Wave16EnterpriseMoonshotStudio({
             type="button"
             disabled={loading}
             onClick={fetchWave16}
-            title="Refresh live Wave 16 telemetry across Storage, BigQuery, Cloud Run, and IAM"
+            title="Refresh live telemetry across Storage, BigQuery, Cloud Run, and IAM"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
             />
-            <span>Refresh Wave 16</span>
+            <span>Refresh Telemetry</span>
           </button>
         </div>
 

@@ -549,7 +549,7 @@ export default function Wave13StarlinkNeuralinkStudio({
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
-                WAVE 13 · STARLINK &amp; NEURALINK (MULTI-REGION TLS 1.3 PROBE, NATURAL-LANGUAGE DAG &amp; ED25519 LEDGER)
+                03 · GLOBAL EDGE &amp; PROMPT-TO-DAG STUDIO (MULTI-REGION TLS 1.3 PROBE, NATURAL-LANGUAGE DAG &amp; ED25519 LEDGER)
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 Ed25519 RFC 8032 SIGNED · 100% LIVE GCP REST &amp; TLS 1.3
@@ -561,7 +561,7 @@ export default function Wave13StarlinkNeuralinkStudio({
               )}
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              Wave 13 Starlink &amp; Neuralink — Multi-Region TLS 1.3 Matrix, Prompt-to-DAG Builder, Optimus 3-Agent Review &amp; Ed25519 Audit Ledger
+              03. Global Edge &amp; Prompt-to-DAG Studio — Multi-Region TLS 1.3 Matrix, Prompt-to-DAG Builder, 3-Agent Review &amp; Ed25519 Audit Ledger
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
               Execute real DNS + TLS 1.3 + HTTPS REST probes across 6 regional Google Cloud control planes, stream live failover heartbeats into BigQuery, compile natural-language requirements into live GCS objects + SecretVersions + BigQuery SQL rows, run a 3-agent Gemini 3.8 Flash review, and sign every mutation with RFC 8032 Ed25519 keys.

@@ -1041,7 +1041,7 @@ export default function Revolutionary2026Suite({
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
               <option value="ALL">All Domains (01–24 Ordered Cloud Engineering Studios)</option>
-              <option value="ALPHA_BETA">[D01 · 01–08] Waves 11 → 16 Moonshot Studios, 10-Persona Council &amp; SDK 590.0.1</option>
+              <option value="ALPHA_BETA">[D01 · 01–08] Release Pipelines, Drift Migration, DR GameDay, 10-Persona Board &amp; SDK 590.0.1</option>
               <option value="QUANTUM">[D02 · 09] 2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews</option>
               <option value="FINOPS">[D03 · 10–13] FinOps Cost Control, Night-Mode Sleep, Zombie Hunter &amp; Egress Analysis</option>
               <option value="PERF_TOPOLOGY">[D04 · 14–17] 4-Layer Topology, Latency Benchmark &amp; Cold-Start Surgeon</option>
@@ -1059,65 +1059,65 @@ export default function Revolutionary2026Suite({
             )}
           </div>
           <span className="text-[11px] font-mono text-zinc-500">
-            Ordered 01 → 24 (Wave 11 → Wave 16) — hover any button for architecture &amp; API guide:
+            Ordered 01 → 24 by Engineering Domain — hover any button for architecture &amp; API guide:
           </span>
         </div>
 
-        {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards · Strict Ascending 01–24 & Wave 11–16 Order) */}
+        {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards · Strict Ascending 01–24 Order) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
             {
               id: 'WAVE11_MOONSHOT',
               category: 'ALPHA_BETA',
-              badge: '01 · WAVE 11',
+              badge: '01 · DEPLOY & QUOTAS',
               label:
-                '01. Wave 11 Moonshot — Cloud Deploy Canary Pipelines, Firestore NoSQL, Quotas & Multi-Project',
-              tip: 'Wave 11 Moonshot: Live Google Cloud Deploy Canary Pipelines, Cloud Firestore NoSQL Document CRUD, Active Assist Recommender & Regional Quotas, Multi-Project Estate Matrix, 18-Studio Stress Audit & 1-Click Cloud Run Self-Hosting',
+                '01. Release & Multi-Project Studio — Cloud Deploy Canary, Firestore NoSQL & Quota Optimizer',
+              tip: 'Release & Multi-Project Studio: Live Google Cloud Deploy Canary Pipelines, Cloud Firestore NoSQL Document CRUD, Active Assist Recommender & Regional Quotas, Multi-Project Estate Matrix, 18-Studio Stress Audit & 1-Click Cloud Run Self-Hosting',
               icon: Rocket,
             },
             {
               id: 'WAVE12_ROADSTER',
               category: 'ALPHA_BETA',
-              badge: '02 · WAVE 12',
+              badge: '02 · DRIFT & MIGRATE',
               label:
-                '02. Wave 12 Roadster Flight Deck — FSD Drift Reconciler, Cross-Project Teleporter & 12-Way MCP',
-              tip: 'Wave 12 Roadster Flight Deck: Closed-Loop FSD Cloud Drift Reconciler with SHA-256 state receipts, Zero-Gravity Cross-Project Resource Migrator (BigQuery + GCS + Secrets), Ludicrous 12-Service Parallel MCP Probe & Grounded Gemini 3.8 Flash Flight Director',
+                '02. Autonomous Drift & Migration Deck — Closed-Loop Drift Reconciler, Cross-Project Migrator & 12-Way MCP',
+              tip: 'Autonomous Drift & Migration Deck: Closed-Loop Cloud Drift Reconciler with SHA-256 state receipts, Cross-Project Resource Migrator (BigQuery + GCS + Secrets), 12-Service Parallel MCP Probe & Grounded Gemini 3.8 Flash Flight Director',
               icon: Rocket,
             },
             {
               id: 'WAVE13_STARLINK_NEURALINK',
               category: 'ALPHA_BETA',
-              badge: '03 · WAVE 13',
+              badge: '03 · TLS & DAG',
               label:
-                '03. Wave 13 Starlink & Neuralink — Multi-Region TLS 1.3 Probe, Prompt-to-DAG & Ed25519 Ledger',
-              tip: 'Wave 13 Starlink & Neuralink: 6-Region Live HTTPS/TLS Latency Probe + BigQuery Failover Streamer, Neuralink Natural-Language Prompt-to-Schema DAG Builder, Optimus 3-Agent Architecture Review Board & Ed25519 Signed Audit Ledger',
+                '03. Global Edge & Prompt-to-DAG Studio — Multi-Region TLS 1.3 Probe, Natural-Language DAG & Ed25519 Ledger',
+              tip: 'Global Edge & Prompt-to-DAG Studio: 6-Region Live HTTPS/TLS Latency Probe + BigQuery Failover Streamer, Natural-Language Prompt-to-Schema DAG Builder, 3-Agent Architecture Review Board & Ed25519 Signed Audit Ledger',
               icon: Globe,
             },
             {
               id: 'WAVE14_QUANTUM_DOCTOR',
               category: 'ALPHA_BETA',
-              badge: '04 · WAVE 14',
+              badge: '04 · PITR & DOCTOR',
               label:
-                '04. Wave 14 Quantum Doctor — BigQuery Time-Travel, Self-Healing Drift Fix, IAM Graph & PQC Vault',
-              tip: 'Wave 14 Quantum Doctor: Live BigQuery FOR SYSTEM_TIME AS OF Point-in-Time Recovery SQL, Self-Healing Cloud Doctor (Live GCS/BQ/Secret PATCH), Live IAM Blast-Radius Graph & Hybrid X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
+                '04. Self-Healing Cloud Doctor & PITR — BigQuery Time-Travel SQL, Drift Auto-Fix, IAM Graph & PQC Vault',
+              tip: 'Self-Healing Cloud Doctor & PITR: Live BigQuery FOR SYSTEM_TIME AS OF Point-in-Time Recovery SQL, Self-Healing Cloud Doctor (Live GCS/BQ/Secret PATCH), Live IAM Blast-Radius Graph & Hybrid X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
               icon: ShieldCheck,
             },
             {
               id: 'WAVE15_DYSON_MOONSHOT',
               category: 'ALPHA_BETA',
-              badge: '05 · WAVE 15',
+              badge: '05 · SLSA & RCA',
               label:
-                '05. Wave 15 Moonshot — BigQuery Anomaly SQL, SLSA Supply-Chain, Log Surgeon & TLS 1.3',
-              tip: 'Wave 15 Moonshot: Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 3.8 Flash Root-Cause Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
+                '05. Supply-Chain SLSA & Log RCA Studio — BigQuery Vector Anomaly SQL, SLSA v1.0 Attestor & Log Surgeon',
+              tip: 'Supply-Chain SLSA & Log RCA Studio: Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 3.8 Flash Root-Cause Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
               icon: Database,
             },
             {
               id: 'WAVE16_ENTERPRISE_MOONSHOT',
               category: 'ALPHA_BETA',
-              badge: '06 · WAVE 16',
+              badge: '06 · DR & SURGEON',
               label:
-                '06. Wave 16 Moonshot — FinOps Anomaly Auto-Fixer, Multi-Region DR GameDay, IAM & SQL Surgeon',
-              tip: 'Wave 16 Enterprise Moonshot Lab: Live FinOps Anomaly Auto-Fixer (GCS Lifecycle & Scale-to-Zero Surgeon), Multi-Region Disaster Recovery (DR) GameDay RTO/RPO Prover, IAM Least-Privilege Role Synthesizer & Live BigQuery SQL Dry-Run Cost Surgeon',
+                '06. Multi-Region DR GameDay & SQL Surgeon — FinOps Anomaly Auto-Fixer, RTO/RPO Prover & IAM Surgeon',
+              tip: 'Multi-Region DR GameDay & SQL Surgeon: Live FinOps Anomaly Auto-Fixer (GCS Lifecycle & Scale-to-Zero Surgeon), Multi-Region Disaster Recovery (DR) GameDay RTO/RPO Prover, IAM Least-Privilege Role Synthesizer & Live BigQuery SQL Dry-Run Cost Surgeon',
               icon: Sparkles,
             },
             {
