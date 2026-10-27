@@ -60814,7 +60814,7 @@ app.get(
         mermaidC4Lines.push(`    CloudRun["Cloud Run v2 (${runServices.length} Services)"]`);
       }
       mermaidC4Lines.push(`  end`);
-      mermaidC4Lines.push(`  subgraph Data["Lakehouse, Object Storage & Relational Databases"]`);
+      mermaidC4Lines.push(`  subgraph Data["Project Storage & Lakehouse (Standalone Serverless Resources)"]`);
       if (gcsBuckets.length > 0) {
         mermaidC4Lines.push(`    GCS["Cloud Storage (${gcsBuckets.length} Buckets)"]`);
       }
@@ -60825,25 +60825,12 @@ app.get(
         mermaidC4Lines.push(`    SQL["Cloud SQL / AlloyDB (${sqlInstances.length} Instances)"]`);
       }
       mermaidC4Lines.push(`  end`);
-      mermaidC4Lines.push(`  Internet -->|VPC Firewall Rules| VPC`);
-      mermaidC4Lines.push(`  VPC -->|Subnetwork nic0| VMs`);
+      mermaidC4Lines.push(`  Internet -->|${firewalls.length} VPC Firewall Rules| VPC`);
+      if (vmInstances.length > 0) {
+        mermaidC4Lines.push(`  VPC -->|Subnetwork nic0 (default)| VMs`);
+      }
       if (runServices.length > 0) {
-        mermaidC4Lines.push(`  VPC -->|Serverless VPC Access| CloudRun`);
-      }
-      if (gcsBuckets.length > 0) {
-        mermaidC4Lines.push(`  VMs -->|IAM SA OAuth Scope + storage.googleapis.com| GCS`);
-        if (runServices.length > 0) {
-          mermaidC4Lines.push(`  CloudRun -->|Workload Identity SA| GCS`);
-        }
-      }
-      if (bqDatasets.length > 0) {
-        mermaidC4Lines.push(`  VMs -->|IAM SA OAuth Scope + bigquery.googleapis.com| BQ`);
-        if (runServices.length > 0) {
-          mermaidC4Lines.push(`  CloudRun -->|Workload Identity SA| BQ`);
-        }
-      }
-      if (sqlInstances.length > 0 && runServices.length > 0) {
-        mermaidC4Lines.push(`  CloudRun -->|Cloud SQL Auth Proxy| SQL`);
+        mermaidC4Lines.push(`  Internet -->|HTTPS Ingress| CloudRun`);
       }
       const mermaidC4Diagram = mermaidC4Lines.join('\n');
 

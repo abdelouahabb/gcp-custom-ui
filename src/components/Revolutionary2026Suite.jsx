@@ -831,7 +831,7 @@ export default function Revolutionary2026Suite({
     }
     lines.push(`  end`);
 
-    lines.push(`  subgraph Data["Lakehouse, Object Storage & Relational Databases"]`);
+    lines.push(`  subgraph Data["Project Storage & Lakehouse (Standalone Serverless Resources)"]`);
     if (buckets.length > 0) {
       lines.push(
         `    GCS["Cloud Storage (${buckets.length} Buckets${bucketNames ? `: ${bucketNames}` : ''})"]`
@@ -847,33 +847,68 @@ export default function Revolutionary2026Suite({
     }
     lines.push(`  end`);
 
-    // Explicit top-to-bottom architectural edges with connection mechanism labels
-    lines.push(`  Internet -->|VPC Firewall Rules| VPC`);
-    lines.push(`  VPC -->|Subnetwork nic0| VMs`);
-    if (buckets.length > 0) {
-      lines.push(`  VMs -->|IAM SA OAuth Scope + storage.googleapis.com| GCS`);
+    // Only emit edges for verified, real infrastructure attachments (no assumed VMs -> GCS/BQ arrows!)
+    lines.push(`  Internet -->|${firewalls.length} VPC Firewall Rules| VPC`);
+    if (effectiveVms.length > 0) {
+      const primaryNet = effectiveVms[0]?.network || vpcs[0]?.name || 'default';
+      lines.push(`  VPC -->|Subnetwork nic0 (${primaryNet})| VMs`);
+
+      // Only connect VMs -> GCS or VMs -> BQ if VM metadata/labels explicitly reference a bucket or dataset
+      const vmMetaStr = JSON.stringify(
+        effectiveVms.map((v) => ({
+          labels: v.labels,
+          metadataKeys: v.metadataKeys,
+        }))
+      ).toLowerCase();
+      const hasExplicitGcsBinding =
+        buckets.length > 0 &&
+        buckets.some((b) => b.name && vmMetaStr.includes(b.name.toLowerCase()));
+      const hasExplicitBqBinding =
+        datasets.length > 0 &&
+        datasets.some((d) => {
+          const shortDs = (d.name || '').split('.').pop().toLowerCase();
+          return shortDs && vmMetaStr.includes(shortDs);
+        });
+
+      if (hasExplicitGcsBinding) {
+        lines.push(`  VMs -->|Configured Bucket Metadata| GCS`);
+      }
+      if (hasExplicitBqBinding) {
+        lines.push(`  VMs -->|Configured Dataset Metadata| BQ`);
+      }
     }
-    if (datasets.length > 0) {
-      lines.push(`  VMs -->|IAM SA OAuth Scope + bigquery.googleapis.com| BQ`);
-    }
+
     if (runServices.length > 0) {
-      lines.push(`  VPC -->|Serverless VPC Access| CloudRun`);
-      if (secrets.length > 0) {
+      const runEnvStr = JSON.stringify(runServices).toLowerCase();
+      if (runEnvStr.includes('vpcaccess') || runEnvStr.includes('networkinterfaces')) {
+        lines.push(`  VPC -->|Direct VPC Egress| CloudRun`);
+      } else {
+        lines.push(`  Internet -->|HTTPS Ingress| CloudRun`);
+      }
+      if (secrets.length > 0 && runEnvStr.includes('secretkeyref')) {
         lines.push(`  Secrets -->|Mounted Secret Env| CloudRun`);
       }
-      if (buckets.length > 0) {
-        lines.push(`  CloudRun -->|Workload Identity SA| GCS`);
+      if (
+        buckets.length > 0 &&
+        buckets.some((b) => b.name && runEnvStr.includes(b.name.toLowerCase()))
+      ) {
+        lines.push(`  CloudRun -->|Bucket Env / Volume Mount| GCS`);
       }
-      if (datasets.length > 0) {
-        lines.push(`  CloudRun -->|Workload Identity SA| BQ`);
+      if (
+        datasets.length > 0 &&
+        datasets.some((d) => {
+          const shortDs = (d.name || '').split('.').pop().toLowerCase();
+          return shortDs && runEnvStr.includes(shortDs);
+        })
+      ) {
+        lines.push(`  CloudRun -->|Dataset Env Config| BQ`);
       }
-      if (sqlInstances.length > 0) {
+      if (
+        sqlInstances.length > 0 &&
+        sqlInstances.some((s) => s.name && runEnvStr.includes(s.name.toLowerCase()))
+      ) {
         lines.push(`  CloudRun -->|Cloud SQL Auth Proxy| SQL`);
       }
-    }
-    if (gkeClusters.length > 0 && datasets.length > 0) {
-      lines.push(`  VPC -->|GKE Pod CIDR| GKE`);
-      lines.push(`  GKE -->|Workload Identity Federation| BQ`);
     }
 
     return lines.join('\n');
