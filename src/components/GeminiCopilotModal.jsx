@@ -14,9 +14,7 @@ import {
   Sparkles,
   ArrowRight,
   Activity,
-  KeyRound,
   GitBranch,
-  FileCheck2,
   Layers,
   Play,
   Download,
@@ -54,6 +52,132 @@ function ruleExposesSensitivePortsToWorld(fw) {
   });
 }
 
+function detectStaleAndOrphanedResources(allResources = [], projectId = '') {
+  const vms = allResources.filter((r) => r.type === 'Compute Engine VM');
+  const cloudRunServices = allResources.filter(
+    (r) => r.type === 'Cloud Run Service'
+  );
+  const buckets = allResources.filter((r) => r.type === 'Cloud Storage Bucket');
+  const datasets = allResources.filter((r) => r.type === 'BigQuery Dataset');
+
+  const staleItems = [];
+
+  for (const row of allResources) {
+    const name = String(row?.name || '');
+    const lower = name.toLowerCase();
+    const type = String(row?.type || '');
+    const details = row?.details || {};
+
+    if (type === 'Enabled GCP Service API') {
+      const svcName = String(
+        details.serviceName || row?.storageClass || name
+      ).toLowerCase();
+      const isComputeCore =
+        svcName.includes('compute.googleapis.com') ||
+        svcName.includes('iam') ||
+        svcName.includes('cloudresourcemanager') ||
+        svcName.includes('logging') ||
+        svcName.includes('monitoring') ||
+        svcName.includes('serviceusage');
+
+      const hasBacking =
+        (svcName.includes('compute') && vms.length > 0) ||
+        (svcName.includes('storage') && buckets.length > 0) ||
+        (svcName.includes('bigquery.googleapis.com') && datasets.length > 0) ||
+        (svcName.includes('run.googleapis.com') &&
+          cloudRunServices.length > 0) ||
+        isComputeCore;
+
+      if (!hasBacking) {
+        staleItems.push({
+          ...row,
+          staleBadge: 'UNUSED ENABLED API ($0/mo)',
+          reason: `API (${svcName}) remains enabled on ${projectId} with 0 active ${name.replace(
+            / API$/i,
+            ''
+          )} resources.`,
+          actionLabel: 'Disable API',
+          isServiceApi: true,
+        });
+      }
+      continue;
+    }
+
+    if (type === 'Cloud Storage Bucket') {
+      const vmDiskMatch = lower.match(/-vmdisk-(.+)$/);
+      if (vmDiskMatch) {
+        const targetVmName = vmDiskMatch[1];
+        const matchingCloudRun = cloudRunServices.find(
+          (cr) =>
+            cr.name.toLowerCase().includes(targetVmName) ||
+            JSON.stringify(cr.details || {}).toLowerCase().includes(lower)
+        );
+        if (!matchingCloudRun) {
+          staleItems.push({
+            ...row,
+            staleBadge: 'STALE MIGRATION ARTIFACT',
+            reason: `Left behind after VM-to-Cloud Run migration for "${targetVmName}" was removed.`,
+            actionLabel: 'Delete Bucket',
+          });
+        }
+        continue;
+      }
+
+      const attachedWorkloads = [...cloudRunServices, ...vms].filter((w) =>
+        JSON.stringify(w.details || {}).toLowerCase().includes(lower)
+      );
+      if (attachedWorkloads.length === 0) {
+        staleItems.push({
+          ...row,
+          staleBadge: 'UNATTACHED BUCKET',
+          reason: `Standalone Cloud Storage bucket (${row.region || 'US'}) with 0 verified VM or Cloud Run mounts.`,
+          actionLabel: 'Delete Bucket',
+        });
+      }
+      continue;
+    }
+
+    if (type === 'BigQuery Dataset') {
+      const attachedConsumers = [...cloudRunServices, ...vms].filter((w) =>
+        JSON.stringify(w.details || {}).toLowerCase().includes(lower)
+      );
+      if (attachedConsumers.length === 0) {
+        staleItems.push({
+          ...row,
+          staleBadge: 'STANDALONE DATASET',
+          reason: `Persistent BigQuery dataset (${row.region || 'US'}) with 0 active compute workloads referencing it.`,
+          actionLabel: 'Delete Dataset',
+        });
+      }
+    }
+  }
+
+  return staleItems;
+}
+
+const MODAL_TABS = [
+  {
+    id: 'POSTURE',
+    label: 'Health, Firewalls & Stale Cleanup',
+    icon: ShieldCheck,
+  },
+  {
+    id: 'DRIFT_GITOPS',
+    label: 'State Drift, Merkle & GitOps HCL',
+    icon: GitBranch,
+  },
+  {
+    id: 'RUNBOOKS_FLEET',
+    label: 'Autonomous Runbooks, SOC & Fleet',
+    icon: Layers,
+  },
+  {
+    id: 'CO_ARCHITECT',
+    label: 'Gemini Co-Architect & Vault',
+    icon: Sparkles,
+  },
+];
+
 export default function GeminiCopilotModal({
   isOpen,
   onClose,
@@ -61,12 +185,14 @@ export default function GeminiCopilotModal({
   overview,
   liveBurn,
   gdeSummary,
+  onDeleteResource,
   onSwitchProject,
   onRefresh,
   onSelectTab,
   onShowToast,
 }) {
   const { meta: pricingMeta } = useLivePricingCatalog();
+  const [activeSubTab, setActiveSubTab] = useState('POSTURE');
   const [zombieData, setZombieData] = useState(null);
   const [synthesisData, setSynthesisData] = useState(null);
   const [sreWarRoomData, setSreWarRoomData] = useState(null);
@@ -74,9 +200,10 @@ export default function GeminiCopilotModal({
   const [loadingScan, setLoadingScan] = useState(false);
   const [loadingFleet, setLoadingFleet] = useState(false);
   const [busyActionId, setBusyActionId] = useState(null);
+  const [confirmCleanupId, setConfirmCleanupId] = useState(null);
   const [actionBanner, setActionBanner] = useState('');
   const [lastRunbookLog, setLastRunbookLog] = useState(null);
-  const [gitOpsViewMode, setGitOpsViewMode] = useState('DIFF'); // 'DIFF' | 'IMPORTS'
+  const [gitOpsViewMode, setGitOpsViewMode] = useState('DIFF');
 
   const runLiveProjectAudit = useCallback(async () => {
     if (!projectId) return;
@@ -142,18 +269,33 @@ export default function GeminiCopilotModal({
     return fws.filter(ruleExposesSensitivePortsToWorld);
   }, [overview?.firewalls]);
 
+  const staleResources = useMemo(
+    () => detectStaleAndOrphanedResources(overview?.resources || [], projectId),
+    [overview?.resources, projectId]
+  );
+
+  const staleDataResourcesCount = useMemo(
+    () => staleResources.filter((r) => !r.isServiceApi).length,
+    [staleResources]
+  );
+
   const zombies = useMemo(() => zombieData?.zombies || [], [zombieData]);
   const totalAnnualWasteUsd = Number(zombieData?.totalAnnualWasteUsd || 0);
   const priceDriftCount = pricingMeta?.driftAlerts?.length || 0;
 
-  // Compute deterministic 0-100 Project Health & FinOps Posture Score
   const healthScore = useMemo(() => {
     let score = 100;
     score -= exposedFirewalls.length * 14;
     score -= zombies.length * 8;
+    score -= staleDataResourcesCount * 5;
     score -= priceDriftCount * 4;
     return Math.max(18, Math.min(100, score));
-  }, [exposedFirewalls.length, zombies.length, priceDriftCount]);
+  }, [
+    exposedFirewalls.length,
+    zombies.length,
+    staleDataResourcesCount,
+    priceDriftCount,
+  ]);
 
   if (!isOpen) return null;
 
@@ -169,10 +311,10 @@ export default function GeminiCopilotModal({
           sourceRanges: ['35.235.240.0/20'],
           description: `${
             fw.description || ''
-          } [Locked to Google IAP 35.235.240.0/20 via Health Scanner]`.trim(),
+          } [Locked to Google IAP 35.235.240.0/20 via Health & Drift]`.trim(),
         }
       );
-      const msg = `Locked firewall "${fw.name}" to Google IAP (35.235.240.0/20)!`;
+      const msg = `Locked firewall "${fw.name}" to Google IAP (35.235.240.0/20).`;
       setActionBanner(msg);
       if (onShowToast) onShowToast(msg);
       await runLiveProjectAudit();
@@ -192,15 +334,13 @@ export default function GeminiCopilotModal({
     try {
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/zombies/exterminate`,
-        {
-          zombie,
-        }
+        { zombie }
       );
       const msg =
         res.data?.message ||
-        `Remediated ${zombie.name} (+$${Number(zombie.annualCostUsd || 0).toFixed(
-          2
-        )}/yr saved)!`;
+        `Remediated ${zombie.name} (+$${Number(
+          zombie.annualCostUsd || 0
+        ).toFixed(2)}/yr saved).`;
       setActionBanner(msg);
       if (onShowToast) onShowToast(msg);
       await runLiveProjectAudit();
@@ -209,6 +349,24 @@ export default function GeminiCopilotModal({
       setActionBanner(
         `Remediation error: ${err.response?.data?.error || err.message}`
       );
+    } finally {
+      setBusyActionId(null);
+    }
+  };
+
+  const handleCleanStaleResource = async (item) => {
+    if (!onDeleteResource) return;
+    setBusyActionId(`stale-${item.id}`);
+    setConfirmCleanupId(null);
+    setActionBanner('');
+    try {
+      await onDeleteResource({
+        ...item,
+        name: item.isServiceApi
+          ? item.details?.serviceName || item.storageClass
+          : item.name,
+      });
+      await runLiveProjectAudit();
     } finally {
       setBusyActionId(null);
     }
@@ -253,9 +411,7 @@ export default function GeminiCopilotModal({
     a.click();
     URL.revokeObjectURL(url);
     if (onShowToast) {
-      onShowToast(
-        `Downloaded SHA-256 Signed Audit Dossier for ${projectId}`
-      );
+      onShowToast(`Downloaded SHA-256 Signed Audit Dossier for ${projectId}`);
     }
   };
 
@@ -282,7 +438,10 @@ export default function GeminiCopilotModal({
   };
 
   const totalFindings =
-    exposedFirewalls.length + zombies.length + priceDriftCount;
+    exposedFirewalls.length +
+    zombies.length +
+    staleDataResourcesCount +
+    priceDriftCount;
   const runway = synthesisData?.creditRunwayOptimizer;
   const runbooks = synthesisData?.autonomousRunbooks || [];
   const gitOpsBridge = synthesisData?.gitOpsBridge;
@@ -290,146 +449,108 @@ export default function GeminiCopilotModal({
   const dossier = synthesisData?.executiveDossier;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="w-full max-w-5xl bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-500/[0.06]">
-          <div className="flex items-center gap-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-6">
+      <div className="w-[96vw] max-w-7xl bg-white dark:bg-[#131314] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        {/* Sober Enterprise Header */}
+        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-[#1b1c1f] flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center border font-mono font-extrabold text-sm ${
+              className={`w-11 h-11 rounded-xl flex items-center justify-center border font-mono font-extrabold text-base shrink-0 ${
                 healthScore >= 85
-                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-500'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                   : healthScore >= 65
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-500'
-                  : 'bg-red-500/20 border-red-500/40 text-red-500'
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                  : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
               }`}
             >
               {healthScore}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 font-mono">
-                  1-Tap Project Health, Drift, FinOps & Control-Plane Synthesis Hub
-                </h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
+                <h2 className="text-base sm:text-lg font-extrabold text-zinc-950 dark:text-zinc-50 tracking-tight">
+                  Project Health, Lineage & State Drift Center
+                </h2>
+                <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700">
                   {projectId}
                 </span>
                 {synthesisData?.merkleSnapshot?.merkleRootShort && (
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800">
                     Merkle: {synthesisData.merkleSnapshot.merkleRootShort}
                   </span>
                 )}
                 <span
-                  className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full border ${
+                  className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border ${
                     totalFindings === 0
-                      ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                      : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
                   }`}
                 >
                   {totalFindings === 0
-                    ? '0 Active Findings'
-                    : `${totalFindings} Actionable Finding${
-                        totalFindings > 1 ? 's' : ''
+                    ? 'All Checks Passing'
+                    : `${totalFindings} Actionable Item${
+                        totalFindings === 1 ? '' : 's'
                       }`}
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-500">
-                Real-time deterministic scanner + Closed-Loop Cross-Studio Runbooks,
-                Promotional Credit Runway Optimizer, ClickOps-to-GitOps Diff, and
-                Multi-Project Fleet Federation.
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Unified Zero-Trust firewall posture, stale/orphaned resource cleanup, SHA-256 Merkle state drift, and ClickOps-to-Terraform HCL sync.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleDownloadSignedDossier}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer"
-              title="Download Cryptographically Signed SHA-256 Executive Audit & Compliance Dossier (JSON)"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold cursor-pointer transition-colors"
+              title="Download Cryptographically Signed SHA-256 Executive Audit Dossier (JSON)"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Signed Dossier</span>
+              <span className="hidden sm:inline">Export Audit JSON</span>
             </button>
             <button
               type="button"
               onClick={runLiveProjectAudit}
               disabled={loadingScan}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:bg-zinc-800 text-xs font-mono font-bold cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${
-                  loadingScan
-                    ? 'animate-spin text-zinc-500 dark:text-zinc-400'
-                    : ''
-                }`}
+                className={`w-3.5 h-3.5 ${loadingScan ? 'animate-spin' : ''}`}
               />
-              <span>{loadingScan ? 'Scanning...' : 'Re-Scan Live'}</span>
+              <span>{loadingScan ? 'Scanning...' : 'Re-Scan Project'}</span>
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              aria-label="Close Health and Drift modal"
+              className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Body Content */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1">
-          {actionBanner && (
-            <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-xs font-mono text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
-              <span>{actionBanner}</span>
-              <button
-                type="button"
-                onClick={() => setActionBanner('')}
-                className="text-zinc-400 hover:text-white px-2 font-bold"
-              >
-                X
-              </button>
-            </div>
-          )}
-
-          {/* Top 4 KPI Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] uppercase text-zinc-400">
-                Live Burn Rate
+        {/* Spacious KPI Bar + Clean 4-Tab Navigation */}
+        <div className="px-6 pt-4 pb-0 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#131314] space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                Active Burn Rate
               </div>
-              <div className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+              <div className="text-lg font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-0.5">
                 ${Number(liveBurn?.monthly || 0).toFixed(2)}/mo
               </div>
-              <div className="text-[10px] text-zinc-500">
-                ${Number(liveBurn?.hourly || 0).toFixed(4)}/hr active
+              <div className="text-[11px] font-mono text-zinc-500">
+                ${Number(liveBurn?.hourly || 0).toFixed(4)}/hr compute
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] uppercase text-zinc-400">
-                Zombie Waste Found
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                0.0.0.0/0 Port Exposure
               </div>
               <div
-                className={`text-base font-extrabold mt-0.5 ${
-                  totalAnnualWasteUsd > 0
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                ${totalAnnualWasteUsd.toFixed(2)}/yr
-              </div>
-              <div className="text-[10px] text-zinc-500">
-                {zombies.length} idle/unattached resource
-                {zombies.length === 1 ? '' : 's'}
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] uppercase text-zinc-400">
-                0.0.0.0/0 Port Risks
-              </div>
-              <div
-                className={`text-base font-extrabold mt-0.5 ${
+                className={`text-lg font-extrabold font-mono mt-0.5 ${
                   exposedFirewalls.length > 0
                     ? 'text-amber-600 dark:text-amber-400'
                     : 'text-emerald-600 dark:text-emerald-400'
@@ -438,854 +559,819 @@ export default function GeminiCopilotModal({
                 {exposedFirewalls.length} Rule
                 {exposedFirewalls.length === 1 ? '' : 's'}
               </div>
-              <div className="text-[10px] text-zinc-500">
-                SSH/RDP/DB world-open check
+              <div className="text-[11px] text-zinc-500">
+                SSH / RDP / DB ingress audit
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-[10px] uppercase text-zinc-400">
-                Catalog Price Drift
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                Stale & Leftover Items
               </div>
               <div
-                className={`text-base font-extrabold mt-0.5 ${
-                  priceDriftCount > 0
-                    ? 'text-amber-500'
-                    : 'text-blue-600 dark:text-blue-400'
+                className={`text-lg font-extrabold font-mono mt-0.5 ${
+                  staleResources.length > 0
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-emerald-600 dark:text-emerald-400'
                 }`}
               >
-                {priceDriftCount} Drift{priceDriftCount === 1 ? '' : 's'}
+                {staleResources.length} Item
+                {staleResources.length === 1 ? '' : 's'}
               </div>
-              <div className="text-[10px] text-zinc-500">
+              <div className="text-[11px] text-zinc-500">
+                {staleDataResourcesCount} data ·{' '}
+                {staleResources.length - staleDataResourcesCount} idle APIs
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800">
+              <div className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                Zombie Waste
+              </div>
+              <div
+                className={`text-lg font-extrabold font-mono mt-0.5 ${
+                  totalAnnualWasteUsd > 0
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                ${totalAnnualWasteUsd.toFixed(2)}/yr
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                {zombies.length} unattached disk/IP/idle run
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 col-span-2 md:col-span-1">
+              <div className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                GitOps & SKU Drift
+              </div>
+              <div className="text-lg font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-0.5">
+                {gitOpsBridge?.eventsCount || 0} HCL · {priceDriftCount} SKU
+              </div>
+              <div className="text-[11px] text-zinc-500 truncate">
                 Source: {pricingMeta.source}
               </div>
             </div>
           </div>
 
-          {/* WAVE 16 BRIDGE: 15-Pillar Autonomous Cloud SOC & Ed25519 Zero-Trust Bridge */}
-          {cloudSocBridge && (
-            <div className="p-4 rounded-xl bg-gradient-to-br from-red-500/[0.06] via-zinc-900/40 to-blue-500/[0.06] border border-red-500/30 space-y-3 font-mono">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-red-500/20 text-red-500 dark:text-red-300 border border-red-500/40">
-                    Wave 16 · 20-Pillar Cloud SOC Bridge
-                  </span>
-                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                    Autonomous Cloud SOC & Ed25519 Zero-Trust War-Room Telemetry
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
-                    SOC Score: {cloudSocBridge.socPostureScore}/100 · {cloudSocBridge.socGrade}
-                  </span>
-                </div>
+          {/* 4-Tab Bar */}
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {MODAL_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveSubTab(tab.id)}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {onSelectTab && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTab('CLOUD_SOC');
-                        onClose();
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
-                    >
-                      <ShieldAlert className="w-3.5 h-3.5" />
-                      <span>Open 20-Pillar Cloud SOC</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  )}
-                  {onSelectTab && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTab('SRE_WAR_ROOM');
-                        onClose();
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
-                    >
-                      <Activity className="w-3.5 h-3.5" />
-                      <span>Open 12-Pillar SRE War-Room</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  )}
-                  {onSelectTab && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTab('INNOVATION_LAB', 'TERRAFORM');
-                        onClose();
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>2026 Innovation Lab</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  )}
-                  {onSelectTab && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTab('SOVEREIGN_STUDIO', 'TIME_MACHINE');
-                        onClose();
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>SHA-256 Time-Machine</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  )}
-                  {onSelectTab && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTab('AWS_AZURE_PARITY', 'TRUSTED_ADVISOR');
-                        onClose();
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>AWS / Azure Parity</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  )}
-                  {onSelectTab && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTab(
-                          'ALIBABA_HUAWEI_PARITY',
-                          'HUAWEI_DATAV_NOC_COMMAND_WALL'
-                        );
-                        onClose();
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Alibaba / Huawei NOC</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
-                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase">
-                    $0.00/mo Honey-Canary
-                  </div>
-                  <div
-                    className={`font-extrabold mt-0.5 ${
-                      cloudSocBridge.canarySecretArmed
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-amber-500'
-                    }`}
-                  >
-                    {cloudSocBridge.canarySecretArmed ? 'ARMED (LIVE)' : 'UNARMED'}
-                  </div>
-                  <div className="text-[10px] text-zinc-400 truncate">
-                    {cloudSocBridge.canarySecretId}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase">
-                    Project-Wide SSH & OS Login
-                  </div>
-                  <div
-                    className={`font-extrabold mt-0.5 ${
-                      cloudSocBridge.projectWideSshKeysCount > 0 ||
-                      !cloudSocBridge.osLoginEnabled
-                        ? 'text-amber-500'
-                        : 'text-emerald-600 dark:text-emerald-400'
-                    }`}
-                  >
-                    {cloudSocBridge.projectWideSshKeysCount} SSH Key
-                    {cloudSocBridge.projectWideSshKeysCount === 1 ? '' : 's'} · OSLogin:{' '}
-                    {cloudSocBridge.osLoginEnabled ? 'ON' : 'OFF'}
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    Serial Port: {cloudSocBridge.serialPortEnabled ? 'ENABLED' : 'BLOCKED'}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase">
-                    IAM etag Vault & Merkle
-                  </div>
-                  <div className="font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
-                    {cloudSocBridge.iamCheckpointsCount} IAM Checkpoint
-                    {cloudSocBridge.iamCheckpointsCount === 1 ? '' : 's'}
-                  </div>
-                  <div className="text-[10px] text-zinc-400 truncate">
-                    etag: {cloudSocBridge.liveIamEtag} ·{' '}
-                    {cloudSocBridge.iamEtagDrifted ? 'DRIFTED' : 'IN-SYNC'}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase">
-                    Ed25519 Forensic Ledger
-                  </div>
-                  <div className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                    {cloudSocBridge.ed25519ReceiptsCount} Signed Receipt
-                    {cloudSocBridge.ed25519ReceiptsCount === 1 ? '' : 's'}
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    RFC 8032 + SHA-256 Chain
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={busyActionId === 'soc-EXECUTE_DEFCON1_LOCKDOWN'}
-                    onClick={() =>
-                      handleExecuteSocBridgeAction('EXECUTE_DEFCON1_LOCKDOWN')
-                    }
-                    className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>
-                      {busyActionId === 'soc-EXECUTE_DEFCON1_LOCKDOWN'
-                        ? 'Executing Defcon-1 Lockdown...'
-                        : '1-Click Defcon-1 Atomic Lockdown'}
-                    </span>
-                  </button>
-
-                  {!cloudSocBridge.canarySecretArmed && (
-                    <button
-                      type="button"
-                      disabled={busyActionId === 'soc-DEPLOY_ZERO_COST_CANARY_TRAP'}
-                      onClick={() =>
-                        handleExecuteSocBridgeAction('DEPLOY_ZERO_COST_CANARY_TRAP', {
-                          canaryType: 'CANARY_SECRET_MANAGER',
-                        })
-                      }
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>Arm $0.00/mo Honey-Secret Canary</span>
-                    </button>
-                  )}
-
-                  {!cloudSocBridge.osLoginEnabled && (
-                    <button
-                      type="button"
-                      disabled={
-                        busyActionId === 'soc-HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT'
-                      }
-                      onClick={() =>
-                        handleExecuteSocBridgeAction(
-                          'HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT'
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Enforce OS Login + Block Serial Port</span>
-                    </button>
-                  )}
-                </div>
-
-                {cloudSocBridge.recentForensicReceipts?.length > 0 && (
-                  <span className="text-[10px] text-zinc-400">
-                    Latest Ed25519 Receipt:{' '}
-                    <strong className="text-emerald-400">
-                      {cloudSocBridge.recentForensicReceipts[0].action}
-                    </strong>{' '}
-                    (sig:{' '}
-                    {String(
-                      cloudSocBridge.recentForensicReceipts[0].ed25519Signature || ''
-                    ).slice(0, 16)}
-                    ...)
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* WAVE 8 PRINCIPAL SRE WAR-ROOM & MULTI-WINDOW SLO BURN BRIDGE */}
-          {sreWarRoomData && (
-            <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/[0.06] via-zinc-900/40 to-emerald-500/[0.06] border border-blue-500/30 space-y-3 font-mono">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/20 text-blue-400 border border-blue-500/40">
-                    Wave 8 · 12-Pillar SRE War-Room Bridge
-                  </span>
-                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                    Multi-Window SLO Error Budget, Synthetic Prober &amp; VPC-SC Readiness
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    SRE Score: {sreWarRoomData.srePostureScore ?? 100}/100 · {sreWarRoomData.sreGrade || 'A+'}
-                  </span>
-                </div>
-
-                {onSelectTab && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelectTab('SRE_WAR_ROOM');
-                      onClose();
-                    }}
-                    className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Activity className="w-3.5 h-3.5" />
-                    <span>Launch Principal SRE War-Room</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
-                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase">
-                    SLO Error Budget (99.9%)
-                  </div>
-                  <div className="font-extrabold text-emerald-500 mt-0.5">
-                    {sreWarRoomData.sloBurn?.errorBudgetRemainingPct ?? 100}% Remaining
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    1h Burn: {sreWarRoomData.sloBurn?.fastBurnRate1h ?? 0}x · {sreWarRoomData.sloBurn?.burnSeverity || 'NOMINAL'}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase">
-                    Uptime &amp; Alert Policies
-                  </div>
-                  <div className="font-extrabold text-blue-500 mt-0.5">
-                    {sreWarRoomData.uptimeChecksCount ?? 0} Uptime · {sreWarRoomData.alertPoliciesCount ?? 0} Alert(s)
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    Golden SLI Metrics: {sreWarRoomData.logMetricsCount ?? 0}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase">
-                    VPC-SC Subnet PGA
-                  </div>
-                  <div className="font-extrabold text-emerald-500 mt-0.5">
-                    100% Enforced
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    Private Google Access Active
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-500 uppercase">
-                    Merkle &amp; GitOps Sync
-                  </div>
-                  <div className="font-extrabold text-blue-400 mt-0.5">
-                    {sreWarRoomData.healthAndSocBridge?.merkleSnapshotsCount ?? 0} Merkle Checkpoint(s)
-                  </div>
-                  <div className="text-[10px] text-zinc-400 truncate">
-                    sha256:{String(sreWarRoomData.healthAndSocBridge?.merkleLatestSha256 || '').slice(0, 12)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* DERIVED CAPABILITY A: Promotional Credit & Budget Runway Optimizer */}
-          {runway && (
-            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3 font-mono">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                  <Activity className="w-4 h-4" />
-                  <span>
-                    Promotional Credit & Budget Runway Optimizer (
-                    {runway.usingLiveImportedCredits
-                      ? 'Synced GDE / Promotional Ledger'
-                      : 'Active Trial / Credit Envelope'}
-                    )
-                  </span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold">
-                  Balance: ${runway.balanceUsd.toFixed(2)} · Expires:{' '}
-                  {runway.expiryDays}d · Current Runway: {runway.currentRunwayDays}d{' '}
-                  to {runway.optimizedRunwayDays}d (+{runway.runwayExtensionDays}d)
-                </span>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-700 dark:text-zinc-300">
-                {runway.headline}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {(runway.freeCapacityMenu || []).map((cap) => (
-                  <div
-                    key={cap.id}
-                    className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between"
-                  >
-                    <div className="text-[10px] text-zinc-500">{cap.label}</div>
-                    <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-                      {cap.freeUnitsAvailable} {cap.unit}
-                    </div>
-                    <div className="text-[10px] text-zinc-400">
-                      @${cap.unitRateUsd}/unit before credit expiry
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* DERIVED CAPABILITY B: Closed-Loop Cross-Studio Autonomous Runbook DAGs */}
-          {runbooks.length > 0 && (
-            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3 font-mono">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-extrabold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                  <Play className="w-4 h-4" />
-                  <span>
-                    Closed-Loop Cross-Studio Autonomous Runbook DAGs (Live Multi-API
-                    Execution)
-                  </span>
-                </div>
-                {dossier?.cryptographicSignature && (
-                  <span className="text-[10px] text-zinc-500">
-                    Signed State: {dossier.cryptographicSignature.slice(0, 23)}...
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {runbooks.map((rb) => (
-                  <div
-                    key={rb.id}
-                    className="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-3"
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                          {rb.badge}
-                        </span>
-                        <span className="text-[10px] text-zinc-400">
-                          ~{rb.estimatedDurationSec}s
-                        </span>
-                      </div>
-                      <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                        {rb.title}
-                      </div>
-                      <ul className="space-y-1 text-[10px] text-zinc-500">
-                        {rb.steps.map((st, idx) => (
-                          <li key={idx} className="leading-snug">
-                            {st}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={busyActionId === `dag-${rb.id}`}
-                      onClick={() => handleExecuteRunbookDag(rb.id)}
-                      className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-[11px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>
-                        {busyActionId === `dag-${rb.id}`
-                          ? 'Executing Live DAG...'
-                          : 'Execute 4-Step Live DAG'}
-                      </span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {lastRunbookLog && (
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 space-y-1.5 text-[11px]">
-                  <div className="font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
-                    <span>
-                      Last Executed DAG: {lastRunbookLog.runbookId} (Merkle Anchor:{' '}
-                      {lastRunbookLog.merkleRootShort})
-                    </span>
-                    <span>{lastRunbookLog.durationMs}ms</span>
-                  </div>
-                  {(lastRunbookLog.executionLog || []).map((entry) => (
-                    <div
-                      key={entry.step}
-                      className="text-zinc-700 dark:text-zinc-300"
-                    >
-                      [Step {entry.step} · {entry.status}] {entry.detail}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* DERIVED CAPABILITY C: ClickOps-to-GitOps Live Session HCL Diff Bridge */}
-          {gitOpsBridge && (
-            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-2.5 font-mono">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-extrabold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                  <GitBranch className="w-4 h-4" />
-                  <span>
-                    ClickOps-to-GitOps Live Session HCL Diff Bridge (
-                    {gitOpsBridge.eventsCount} Flight Mutation
-                    {gitOpsBridge.eventsCount === 1 ? '' : 's'})
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setGitOpsViewMode('DIFF')}
-                    className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer ${
-                      gitOpsViewMode === 'DIFF'
-                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                        : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    git diff main.tf
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGitOpsViewMode('IMPORTS')}
-                    className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer ${
-                      gitOpsViewMode === 'IMPORTS'
-                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                        : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    imports.tf
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        gitOpsViewMode === 'DIFF'
-                          ? gitOpsBridge.unifiedDiff
-                          : gitOpsBridge.importsTf
-                      );
-                      if (onShowToast) {
-                        onShowToast(
-                          `Copied ${
-                            gitOpsViewMode === 'DIFF'
-                              ? 'git diff main.tf'
-                              : 'imports.tf'
-                          } to clipboard`
-                        );
-                      }
-                    }}
-                    className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>Copy</span>
-                  </button>
-                </div>
-              </div>
-              <pre className="p-3 rounded-lg bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 text-[11px] overflow-x-auto max-h-44 leading-relaxed border border-zinc-200 dark:border-zinc-800">
-                {gitOpsViewMode === 'DIFF'
-                  ? gitOpsBridge.unifiedDiff
-                  : gitOpsBridge.importsTf}
-              </pre>
-            </div>
-          )}
-
-          {/* DERIVED CAPABILITY D: Multi-Project Fleet Posture & FinOps Federation Matrix */}
-          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3 font-mono">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-xs font-extrabold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                <Layers className="w-4 h-4" />
-                <span>
-                  Multi-Project Fleet Posture & FinOps Federation Matrix
-                </span>
-              </div>
+        {/* Spacious Scrollable Body */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-zinc-50/40 dark:bg-[#131314]">
+          {actionBanner && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-medium text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3">
+              <span>{actionBanner}</span>
               <button
                 type="button"
-                disabled={loadingFleet}
-                onClick={handleScanFleetMatrix}
-                className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                onClick={() => setActionBanner('')}
+                className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white px-2 font-bold cursor-pointer"
               >
-                <RefreshCw
-                  className={`w-3 h-3 ${loadingFleet ? 'animate-spin' : ''}`}
-                />
-                <span>
-                  {loadingFleet
-                    ? 'Sweeping Accessible GCP Projects...'
-                    : fleetMatrix
-                    ? `Re-Sweep Fleet (${fleetMatrix.projectsScanned} Projects)`
-                    : 'Sweep All Accessible GCP Projects'}
-                </span>
+                Dismiss
               </button>
             </div>
+          )}
 
-            {fleetMatrix?.fleet && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-[11px] border-collapse">
-                  <thead>
-                    <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 uppercase text-[10px]">
-                      <th className="py-1.5 pr-3">Project ID</th>
-                      <th className="py-1.5 px-2">VMs</th>
-                      <th className="py-1.5 px-2">Cloud Run</th>
-                      <th className="py-1.5 px-2">GCS / BQ</th>
-                      <th className="py-1.5 px-2">0.0.0.0/0 FW</th>
-                      <th className="py-1.5 px-2">Est. Burn</th>
-                      <th className="py-1.5 pl-2 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
-                    {fleetMatrix.fleet.map((row) => (
-                      <tr key={row.projectId}>
-                        <td className="py-2 pr-3 font-bold text-zinc-900 dark:text-zinc-100">
-                          {row.projectId}
-                        </td>
-                        <td className="py-2 px-2">
-                          {row.runningVmsCount}/{row.vmsCount}
-                        </td>
-                        <td className="py-2 px-2">{row.cloudRunCount}</td>
-                        <td className="py-2 px-2">
-                          {row.bucketsCount} / {row.datasetsCount}
-                        </td>
-                        <td
-                          className={`py-2 px-2 font-bold ${
-                            row.openFirewallsCount > 0
-                              ? 'text-amber-500'
-                              : 'text-emerald-500'
-                          }`}
-                        >
-                          {row.openFirewallsCount}
-                        </td>
-                        <td className="py-2 px-2 font-bold">
-                          ${row.monthlyBurnUsd.toFixed(2)}/mo
-                        </td>
-                        <td className="py-2 pl-2 text-right">
-                          {row.projectId === projectId ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-bold">
-                              Active
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (onSwitchProject) {
-                                  onSwitchProject(row.projectId);
-                                }
-                              }}
-                              className="px-2 py-1 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
-                            >
-                              Switch
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Section 1: Live GCP Billing Catalog & Variable Rate Sync */}
-          <div className="space-y-1.5">
-            <div className="text-xs font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>
-                1. Live GCP Billing Catalog, GPU SKU Availability & Variable Rate
-                Sync
-              </span>
-            </div>
-            <LivePricingCatalogControlBar
-              projectId={projectId}
-              selectedRegionId="us-central1"
-            />
-          </div>
-
-          {/* Section 2: Zero-Trust Firewall Perimeter Risks */}
-          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-mono font-extrabold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4" />
-                <span>
-                  2. Zero-Trust VPC Perimeter Audit ({exposedFirewalls.length}{' '}
-                  Exposed Rules)
-                </span>
-              </div>
-              {onSelectTab && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectTab('VPC_NETWORKS');
-                    onClose();
-                  }}
-                  className="text-[11px] font-mono font-bold text-blue-500 hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Open Firewall Studio</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
-            {exposedFirewalls.length === 0 ? (
-              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 shrink-0" />
-                <span>
-                  All ingress firewall rules are locked down — no sensitive
-                  ports (22, 3389, 3306, 5432) exposed to 0.0.0.0/0.
-                </span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {exposedFirewalls.map((fw) => (
-                  <div
-                    key={fw.name}
-                    className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
-                  >
+          {/* TAB 1: HEALTH, FIREWALLS & STALE CLEANUP */}
+          {activeSubTab === 'POSTURE' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 1A. Zero-Trust VPC Firewall Perimeter Audit */}
+                <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                        {fw.name}{' '}
-                        <span className="text-[10px] text-amber-500">
-                          (Priority {fw.priority ?? 1000} · {fw.network || 'default'})
+                      <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                        <span>
+                          Zero-Trust VPC Firewall Audit ({exposedFirewalls.length}{' '}
+                          Exposed)
                         </span>
-                      </div>
-                      <div className="text-[10px] text-zinc-500">
-                        Exposes{' '}
-                        {(fw.allowed || [])
-                          .map(
-                            (a) =>
-                              `${a.IPProtocol}:${(a.ports || ['all']).join(',')}`
-                          )
-                          .join(' ')}{' '}
-                        to {(fw.sourceRanges || []).join(', ')}
-                      </div>
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Checks all ingress rules for world-open (0.0.0.0/0) SSH, RDP, or database ports.
+                      </p>
                     </div>
-
-                    <button
-                      type="button"
-                      disabled={busyActionId === `fw-${fw.name}`}
-                      onClick={() => handleLockFirewallToIap(fw)}
-                      className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 font-extrabold text-[11px] flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                    >
-                      <Lock className="w-3 h-3" />
-                      <span>
-                        {busyActionId === `fw-${fw.name}`
-                          ? 'Locking...'
-                          : '1-Tap Lock to Google IAP'}
-                      </span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Section 3: Zombie Resources & Silent Waste Exterminator */}
-          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-mono font-extrabold uppercase text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                <Trash2 className="w-4 h-4" />
-                <span>
-                  3. Zombie Resource & Idle Burn Scanner ({zombies.length} Found)
-                </span>
-              </div>
-              {onSelectTab && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectTab('INNOVATION_LAB');
-                    onClose();
-                  }}
-                  className="text-[11px] font-mono font-bold text-blue-500 hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Open Pre-Crime Billing Forecaster &amp; 2026 Lab</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
-            {zombies.length === 0 ? (
-              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>
-                  Zero orphaned Persistent Disks, unattached Static IPs, or
-                  warm-idle Cloud Run waste detected.
-                </span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {zombies.map((z) => (
-                  <div
-                    key={z.id}
-                    className="p-2.5 rounded-lg bg-white dark:bg-zinc-950 border border-red-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
-                  >
-                    <div>
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                        {z.name}{' '}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-500">
-                          {z.kind} · {z.location}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-zinc-500">{z.reason}</div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold text-red-500">
-                        -${Number(z.annualCostUsd || 0).toFixed(2)}/yr
-                      </span>
+                    {onSelectTab && (
                       <button
                         type="button"
-                        disabled={busyActionId === `z-${z.id}`}
-                        onClick={() => handleExterminateZombie(z)}
-                        className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-extrabold text-[11px] flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        onClick={() => {
+                          onSelectTab('VPC_NETWORKS');
+                          onClose();
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0"
                       >
-                        <Zap className="w-3 h-3" />
+                        <span>Open VPC Studio</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {exposedFirewalls.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2.5">
+                      <ShieldCheck className="w-4 h-4 shrink-0" />
+                      <span>
+                        All ingress firewall rules are locked down — no sensitive ports (22, 3389, 3306, 5432) exposed to 0.0.0.0/0.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {exposedFirewalls.map((fw) => (
+                        <div
+                          key={fw.name}
+                          className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                              <span className="font-mono">{fw.name}</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                Priority {fw.priority ?? 1000} · {fw.network || 'default'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-zinc-500 font-mono">
+                              Exposes{' '}
+                              {(fw.allowed || [])
+                                .map(
+                                  (a) =>
+                                    `${a.IPProtocol}:${(a.ports || ['all']).join(',')}`
+                                )
+                                .join(' ')}{' '}
+                              to {(fw.sourceRanges || []).join(', ')}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={busyActionId === `fw-${fw.name}`}
+                            onClick={() => handleLockFirewallToIap(fw)}
+                            className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>
+                              {busyActionId === `fw-${fw.name}`
+                                ? 'Locking...'
+                                : 'Lock to Google IAP'}
+                            </span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 1B. Zombie Resource & Unattached Compute Waste Scanner */}
+                <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                        <Trash2 className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                         <span>
-                          {busyActionId === `z-${z.id}`
-                            ? 'Remediating...'
-                            : z.kind === 'WARM_CLOUD_RUN'
-                            ? 'Scale min=0'
-                            : 'Exterminate'}
+                          Zombie Compute & Unattached Disks ({zombies.length} Found)
                         </span>
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Detects orphaned persistent disks, unattached static IPs, and warm-idle Cloud Run instances.
+                      </p>
+                    </div>
+                  </div>
+
+                  {zombies.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>
+                        Zero orphaned Persistent Disks, unattached Static IPs, or warm-idle Cloud Run waste detected.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {zombies.map((z) => (
+                        <div
+                          key={z.id}
+                          className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                              <span className="font-mono">{z.name}</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                {z.kind} · {z.location}
+                              </span>
+                            </div>
+                            <div className="text-xs text-zinc-500">{z.reason}</div>
+                          </div>
+
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-xs font-mono font-bold text-red-600 dark:text-red-400">
+                              -${Number(z.annualCostUsd || 0).toFixed(2)}/yr
+                            </span>
+                            <button
+                              type="button"
+                              disabled={busyActionId === `z-${z.id}`}
+                              onClick={() => handleExterminateZombie(z)}
+                              className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                              <Zap className="w-3.5 h-3.5" />
+                              <span>
+                                {busyActionId === `z-${z.id}`
+                                  ? 'Working...'
+                                  : z.kind === 'WARM_CLOUD_RUN'
+                                  ? 'Scale min=0'
+                                  : 'Clean Up'}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 1C. Synced Resource Lineage & Stale/Orphaned Leftovers */}
+              <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                      <span>
+                        Resource Lineage & Stale Leftovers ({staleResources.length}{' '}
+                        Detected)
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Identifies buckets, datasets, and service APIs that stayed behind after a migration or demo workload was removed.
+                    </p>
+                  </div>
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectTab('OVERVIEW');
+                        onClose();
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Open Full Lineage in Overview</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {staleResources.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>
+                      Zero stale buckets, standalone datasets, or unused enabled APIs detected.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {staleResources.map((item) => {
+                      const isBusy = busyActionId === `stale-${item.id}`;
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-3"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                {item.staleBadge}
+                              </span>
+                              <span className="text-[11px] font-mono text-zinc-500">
+                                {item.type} · {item.region}
+                              </span>
+                            </div>
+                            <div className="text-sm font-bold text-zinc-950 dark:text-zinc-50 break-all">
+                              {item.name}
+                            </div>
+                            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                              {item.reason}
+                            </p>
+                          </div>
+
+                          {onDeleteResource && (
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-200/70 dark:border-zinc-800">
+                              {confirmCleanupId === item.id ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() => handleCleanStaleResource(item)}
+                                    className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                                  >
+                                    {isBusy ? 'Working...' : `Confirm ${item.actionLabel}`}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmCleanupId(null)}
+                                    className="px-2.5 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => setConfirmCleanupId(item.id)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-bold cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>{item.actionLabel}</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: STATE DRIFT, MERKLE & GITOPS HCL */}
+          {activeSubTab === 'DRIFT_GITOPS' && (
+            <div className="space-y-6">
+              {/* 2A. ClickOps-to-GitOps Live HCL Diff Bridge */}
+              {gitOpsBridge && (
+                <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                        <GitBranch className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                        <span>
+                          ClickOps-to-GitOps Live Terraform HCL Bridge (
+                          {gitOpsBridge.eventsCount} Session Mutation
+                          {gitOpsBridge.eventsCount === 1 ? '' : 's'})
+                        </span>
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Every UI action in CloudPulse is automatically synthesized into `main.tf` diffs and `imports.tf` blocks.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setGitOpsViewMode('DIFF')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                          gitOpsViewMode === 'DIFF'
+                            ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                      >
+                        git diff main.tf
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGitOpsViewMode('IMPORTS')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
+                          gitOpsViewMode === 'IMPORTS'
+                            ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                      >
+                        imports.tf
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            gitOpsViewMode === 'DIFF'
+                              ? gitOpsBridge.unifiedDiff
+                              : gitOpsBridge.importsTf
+                          );
+                          if (onShowToast) {
+                            onShowToast(
+                              `Copied ${
+                                gitOpsViewMode === 'DIFF'
+                                  ? 'git diff main.tf'
+                                  : 'imports.tf'
+                              } to clipboard`
+                            );
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy HCL</span>
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <pre className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 text-xs font-mono overflow-x-auto max-h-72 leading-relaxed border border-zinc-200 dark:border-zinc-800">
+                    {gitOpsViewMode === 'DIFF'
+                      ? gitOpsBridge.unifiedDiff
+                      : gitOpsBridge.importsTf}
+                  </pre>
+                </div>
+              )}
 
-          {/* Section 4: 2026 Google Cloud Official Remote MCP Control Plane Shortcut */}
-          <div className="bg-zinc-900/90 border border-blue-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                  Dedicated Main Menu Tab · MCP Servers
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  48 *.googleapis.com/mcp Endpoints · 505 Live Tools
-                </span>
+              {/* 2B. Live GCP Billing Catalog & Variable Rate Sync */}
+              <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3 shadow-sm">
+                <div className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  <span>
+                    Live GCP Billing Catalog, GPU SKU Availability & Rate Drift
+                  </span>
+                </div>
+                <LivePricingCatalogControlBar
+                  projectId={projectId}
+                  selectedRegionId="us-central1"
+                />
               </div>
-              <h3 className="text-sm font-bold text-white">
-                Google Cloud Official Remote MCP Servers Hub
-              </h3>
-              <p className="text-xs text-zinc-400">
-                Launch the dedicated <span className="text-blue-300 font-semibold">MCP Servers</span> workspace in the main navigation bar for live JSON-RPC 2.0 tool execution, 1-click multi-server SRE triage chains, and Gemini 3.8 Flash grounded on official MCP telemetry.
-              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (onSelectTab) onSelectTab('MCP_HUB');
-                if (onClose) onClose();
-              }}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm flex items-center gap-2 shrink-0 cursor-pointer transition-colors"
-            >
-              <span>Open MCP Servers Tab</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          )}
 
-          {/* Section 5: Live Option 3 AES-256-GCM AI Studio BYOK Vault & SRE Co-Architect */}
-          <EngineerMoonshotsWave3
-            activeTab="X6"
-            projectId={projectId}
-            overview={overview}
-            onRefreshGlobal={() => {
-              runLiveProjectAudit();
-              if (onRefresh) onRefresh();
-            }}
-          />
+          {/* TAB 3: AUTONOMOUS RUNBOOKS, SOC & FLEET */}
+          {activeSubTab === 'RUNBOOKS_FLEET' && (
+            <div className="space-y-6">
+              {/* 3A. Closed-Loop Autonomous Runbook DAGs */}
+              {runbooks.length > 0 && (
+                <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                        <Play className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                        <span>
+                          Closed-Loop Multi-API Remediation Runbooks
+                        </span>
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Execute deterministic 4-step remediation workflows with cryptographic SHA-256 Merkle receipts.
+                      </p>
+                    </div>
+                    {dossier?.cryptographicSignature && (
+                      <span className="text-xs font-mono text-zinc-500">
+                        Signature: {dossier.cryptographicSignature.slice(0, 24)}...
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {runbooks.map((rb) => (
+                      <div
+                        key={rb.id}
+                        className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between gap-4"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              {rb.badge}
+                            </span>
+                            <span className="text-xs font-mono text-zinc-400">
+                              ~{rb.estimatedDurationSec}s
+                            </span>
+                          </div>
+                          <div className="text-sm font-bold text-zinc-950 dark:text-zinc-50">
+                            {rb.title}
+                          </div>
+                          <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+                            {rb.steps.map((st, idx) => (
+                              <li key={idx} className="leading-relaxed">
+                                {st}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={busyActionId === `dag-${rb.id}`}
+                          onClick={() => handleExecuteRunbookDag(rb.id)}
+                          className="w-full py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>
+                            {busyActionId === `dag-${rb.id}`
+                              ? 'Executing Live DAG...'
+                              : 'Execute 4-Step Runbook'}
+                          </span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {lastRunbookLog && (
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5 text-xs font-mono">
+                      <div className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+                        <span>
+                          Executed Runbook: {lastRunbookLog.runbookId} (Merkle:{' '}
+                          {lastRunbookLog.merkleRootShort})
+                        </span>
+                        <span>{lastRunbookLog.durationMs}ms</span>
+                      </div>
+                      {(lastRunbookLog.executionLog || []).map((entry) => (
+                        <div
+                          key={entry.step}
+                          className="text-zinc-700 dark:text-zinc-300"
+                        >
+                          [Step {entry.step} · {entry.status}] {entry.detail}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3B. Sober Cloud SOC & SRE War-Room Summary */}
+              {(cloudSocBridge || sreWarRoomData) && (
+                <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                        Cloud SOC & Principal SRE Posture Controls
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Quick Zero-Trust hardening actions and direct bridges to the dedicated Security & SRE studios.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {onSelectTab && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectTab('CLOUD_SOC');
+                              onClose();
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <span>Open Cloud SOC</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectTab('SRE_WAR_ROOM');
+                              onClose();
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <span>Open SRE War-Room</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {cloudSocBridge && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-500">Honey-Canary Trap</div>
+                        <div
+                          className={`font-mono font-bold mt-1 ${
+                            cloudSocBridge.canarySecretArmed
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {cloudSocBridge.canarySecretArmed
+                            ? 'ARMED ($0/mo)'
+                            : 'UNARMED'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-500">OS Login & SSH</div>
+                        <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                          {cloudSocBridge.projectWideSshKeysCount} Keys · OSLogin{' '}
+                          {cloudSocBridge.osLoginEnabled ? 'ON' : 'OFF'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-500">IAM etag Sync</div>
+                        <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                          {cloudSocBridge.iamEtagDrifted ? 'DRIFTED' : 'IN-SYNC'} (
+                          {cloudSocBridge.iamCheckpointsCount} snaps)
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-500">SLO Error Budget</div>
+                        <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                          {sreWarRoomData?.sloBurn?.errorBudgetRemainingPct ?? 100}%
+                          Remaining
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {cloudSocBridge && (
+                    <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                      <button
+                        type="button"
+                        disabled={
+                          busyActionId === 'soc-EXECUTE_DEFCON1_LOCKDOWN'
+                        }
+                        onClick={() =>
+                          handleExecuteSocBridgeAction(
+                            'EXECUTE_DEFCON1_LOCKDOWN'
+                          )
+                        }
+                        className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>
+                          {busyActionId === 'soc-EXECUTE_DEFCON1_LOCKDOWN'
+                            ? 'Executing Lockdown...'
+                            : 'Defcon-1 Atomic Lockdown'}
+                        </span>
+                      </button>
+
+                      {!cloudSocBridge.canarySecretArmed && (
+                        <button
+                          type="button"
+                          disabled={
+                            busyActionId === 'soc-DEPLOY_ZERO_COST_CANARY_TRAP'
+                          }
+                          onClick={() =>
+                            handleExecuteSocBridgeAction(
+                              'DEPLOY_ZERO_COST_CANARY_TRAP',
+                              { canaryType: 'CANARY_SECRET_MANAGER' }
+                            )
+                          }
+                          className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Arm $0.00/mo Honey-Secret Canary</span>
+                        </button>
+                      )}
+
+                      {!cloudSocBridge.osLoginEnabled && (
+                        <button
+                          type="button"
+                          disabled={
+                            busyActionId ===
+                            'soc-HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT'
+                          }
+                          onClick={() =>
+                            handleExecuteSocBridgeAction(
+                              'HARDEN_PROJECT_OSLOGIN_AND_SERIAL_PORT'
+                            )
+                          }
+                          className="px-3.5 py-2 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Enforce OS Login + Block Serial Port</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3C. Multi-Project Fleet Matrix & Credit Runway */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {runway && (
+                  <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3 shadow-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                        Promotional Credit & Budget Runway
+                      </h3>
+                      <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        ${runway.balanceUsd.toFixed(2)} · {runway.expiryDays}d
+                        left
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      {runway.headline}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {(runway.freeCapacityMenu || []).map((cap) => (
+                        <div
+                          key={cap.id}
+                          className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                        >
+                          <div className="text-[11px] text-zinc-500">
+                            {cap.label}
+                          </div>
+                          <div className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 mt-1">
+                            {cap.freeUnitsAvailable} {cap.unit}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white dark:bg-[#1b1c1f] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-50">
+                        Multi-Project Fleet Federation
+                      </h3>
+                      <p className="text-xs text-zinc-500">
+                        Sweep all accessible GCP projects in your authenticated session.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={loadingFleet}
+                      onClick={handleScanFleetMatrix}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${
+                          loadingFleet ? 'animate-spin' : ''
+                        }`}
+                      />
+                      <span>
+                        {loadingFleet ? 'Sweeping...' : 'Sweep Projects'}
+                      </span>
+                    </button>
+                  </div>
+
+                  {fleetMatrix?.fleet && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse font-mono">
+                        <thead>
+                          <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 text-[10px] uppercase">
+                            <th className="py-2 pr-3">Project</th>
+                            <th className="py-2 px-2">VMs</th>
+                            <th className="py-2 px-2">GCS/BQ</th>
+                            <th className="py-2 px-2">Burn</th>
+                            <th className="py-2 pl-2 text-right">Switch</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
+                          {fleetMatrix.fleet.map((row) => (
+                            <tr key={row.projectId}>
+                              <td className="py-2 pr-3 font-bold text-zinc-900 dark:text-zinc-100">
+                                {row.projectId}
+                              </td>
+                              <td className="py-2 px-2">
+                                {row.runningVmsCount}/{row.vmsCount}
+                              </td>
+                              <td className="py-2 px-2">
+                                {row.bucketsCount}/{row.datasetsCount}
+                              </td>
+                              <td className="py-2 px-2">
+                                ${row.monthlyBurnUsd.toFixed(2)}/mo
+                              </td>
+                              <td className="py-2 pl-2 text-right">
+                                {row.projectId === projectId ? (
+                                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                                    Active
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onSwitchProject &&
+                                      onSwitchProject(row.projectId)
+                                    }
+                                    className="px-2.5 py-1 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold cursor-pointer"
+                                  >
+                                    Switch
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: GEMINI CO-ARCHITECT & VAULT */}
+          {activeSubTab === 'CO_ARCHITECT' && (
+            <div className="space-y-4">
+              <EngineerMoonshotsWave3
+                activeTab="X6"
+                projectId={projectId}
+                overview={overview}
+                onRefreshGlobal={() => {
+                  runLiveProjectAudit();
+                  if (onRefresh) onRefresh();
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

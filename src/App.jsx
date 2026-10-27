@@ -5511,6 +5511,7 @@ function CloudPulseCockpit() {
         overview={overview}
         liveBurn={liveBurn}
         gdeSummary={gdeSummary}
+        onDeleteResource={handleDeleteResource}
         onSwitchProject={(nextProjId) => {
           if (nextProjId) {
             sessionStorage.setItem('cloudpulse_project_explicit', 'true');
@@ -5518,7 +5519,7 @@ function CloudPulseCockpit() {
           }
         }}
         onRefresh={() => {
-          fetchProjectOverview(selectedProjectId);
+          fetchProjectOverview(selectedProjectId, { force: true });
           setVmRefreshTrigger((c) => c + 1);
         }}
         onSelectTab={handleNavigateStudioTab}
