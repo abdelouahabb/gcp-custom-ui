@@ -243,18 +243,10 @@ export default function PersonaContextualHelper({
       const openFw = netOps.packetPathTracer?.openInternetRulesCount || 0;
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
-            overlaps === 0
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
-          }`}>
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             IPAM Overlaps: {overlaps}
           </span>
-          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
-            openFw === 0
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-          }`}>
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             0.0.0.0/0 Rules: {openFw}
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -269,14 +261,10 @@ export default function PersonaContextualHelper({
       const highRiskPaths = devSecOps.iamPrivilegeEscalation?.highRiskPathCount || 0;
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
-            mutableCount === 0
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-          }`}>
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Mutable :latest Tags: {mutableCount}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Static JSON SA Keys: {activeKeys}
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -290,10 +278,10 @@ export default function PersonaContextualHelper({
       const totalGates = cloudEng.preflightValidator?.totalGates || 5;
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Pre-Flight Gates: {gatesPassed}/{totalGates} PASS
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Live .tf Export Ready ({cloudEng.clickOpsToGitOps?.resourcesExported || 0} resources)
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -308,10 +296,10 @@ export default function PersonaContextualHelper({
       const lineageNodes = (dataEng.columnLineageGraph?.nodes || dataEng.columnLineageDag || []).length;
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Freshness SLA: {freshnessSla}%
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Quarantine DLQ: {dlqRows} rows
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -323,10 +311,10 @@ export default function PersonaContextualHelper({
     if (persona === 'AI_MLOPS') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Model Armor: {aiMlOps.modelArmorFirewall?.status || 'ENFORCED_GA'}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Cache Hit: {aiMlOps.smartModelRouter?.contextCacheHitRatePct || 81.5}% (-80% Cost)
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -338,10 +326,10 @@ export default function PersonaContextualHelper({
     if (persona === 'SRE_ONCALL') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             1h Burn Rate: {sreOncall.sloBurnFreezeGate?.burnRate1h || 1.2}x (&lt;14.4x)
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             SLO Budget Left: {sreOncall.sloBurnFreezeGate?.remainingErrorBudgetPct || 84.2}%
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -353,10 +341,10 @@ export default function PersonaContextualHelper({
     if (persona === 'DBRE') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Blocking PIDs: {dbre.lockTreeAndHotKeyInspector?.activeBlockingPids || 0}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Pool: {dbre.connectionPoolGuard?.activeConnections || 24}/{dbre.connectionPoolGuard?.maxConnections || 400} conns
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -368,10 +356,10 @@ export default function PersonaContextualHelper({
     if (persona === 'FINOPS_ENG') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Unit Cost: ${finopsEng.unitEconomicsAttribution?.costPer1kRequestsUsd || 0.0042}/1k req
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             CUD Coverage: {finopsEng.cudAndSpotOptimizer?.currentCudCoveragePct || 72}%
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -383,10 +371,10 @@ export default function PersonaContextualHelper({
     if (persona === 'PLATFORM_K8S') {
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             OOMKilled (24h): {platformK8s.oomAndCpuRightSizer?.oomKilledPodsLast24h || 0}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
             Mesh: {platformK8s.serviceMeshMtlsMap?.mtlsEnforcement?.split(' ')[0] || 'STRICT'} mTLS
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
@@ -400,17 +388,13 @@ export default function PersonaContextualHelper({
     const wArchScore = arch.wellArchitectedScorecard?.overallScore || 95;
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
           Well-Architected: {wArchScore}/100
         </span>
-        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
-          spofCount === 0
-            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-        }`}>
+        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
           Single-Region SPOFs: {spofCount}
         </span>
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
           vs AWS Save: ${arch.multiCloudArbitrage?.monthlySavingsVsAwsUsd || 160}/mo
         </span>
       </div>
@@ -418,7 +402,7 @@ export default function PersonaContextualHelper({
   };
 
   return (
-    <div className={`rounded-2xl border ${meta.accentBorder} bg-white/95 dark:bg-[#18191c]/95 shadow-sm overflow-hidden transition-all`}>
+    <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] shadow-sm overflow-hidden transition-all">
       {/* Compact Always-Visible Contextual Helper Header Bar */}
       <div className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -483,17 +467,17 @@ export default function PersonaContextualHelper({
 
       {/* Expanded Contextual Helper Workspace */}
       {expanded && (
-        <div className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#131416] p-4 space-y-4">
+        <div className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 p-4 space-y-4">
           {/* 1. NETWORK ENGINEER CONTEXTUAL HELPER */}
           {persona === 'NETOPS' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-3.5 space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                    <Network className="w-3.5 h-3.5 text-amber-500" />
+                    <Network className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     Inline 4-Hop Packet Path Tracer (Ingress -&gt; Firewall -&gt; Route -&gt; PSC / Cloud NAT)
                   </div>
-                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="text-[10px] font-mono text-zinc-700 dark:text-zinc-300 font-bold">
                     Verdict: {netOps.packetPathTracer?.overallVerdict || 'DELIVERED_VIA_IAP_AND_PSC'}
                   </span>
                 </div>
@@ -531,7 +515,7 @@ export default function PersonaContextualHelper({
                         protocol: 'TCP'
                       })
                     }
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-600 hover:bg-amber-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>{executingAction === 'RUN_NETOPS_CONNECTIVITY_TRACE' ? 'Tracing...' : 'Run 4-Hop Trace'}</span>
@@ -546,7 +530,7 @@ export default function PersonaContextualHelper({
                     >
                       <div className="flex items-center justify-between text-[10px] font-mono">
                         <span className="font-bold text-zinc-500">HOP {hop.hop}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">{hop.verdict}</span>
+                        <span className="text-blue-600 dark:text-blue-400 font-bold">{hop.verdict}</span>
                       </div>
                       <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-0.5 truncate">
                         {hop.stage}
@@ -566,7 +550,7 @@ export default function PersonaContextualHelper({
                   </div>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                     Recommended next non-overlapping `/20` block:{' '}
-                    <code className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                    <code className="font-mono font-bold text-blue-600 dark:text-blue-400">
                       {netOps.ipamAllocationMap?.recommendedNextAvailableCidr || '10.148.0.0/20'}
                     </code>
                   </p>
@@ -577,7 +561,7 @@ export default function PersonaContextualHelper({
                         className="flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800/70"
                       >
                         <span className="truncate">{sub.network}/{sub.subnet}</span>
-                        <span className="text-amber-600 dark:text-amber-400 font-bold">{sub.cidr}</span>
+                        <span className="text-zinc-700 dark:text-zinc-300 font-bold">{sub.cidr}</span>
                       </div>
                     ))}
                   </div>
@@ -602,10 +586,10 @@ export default function PersonaContextualHelper({
               <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-rose-500" />
+                    <Lock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     Binary Authz @sha256 Digest Gate
                   </span>
-                  <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400">
+                  <span className="text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300">
                     {devSecOps.supplyChainSigning?.policyStatus || 'ENFORCED'}
                   </span>
                 </div>
@@ -619,11 +603,7 @@ export default function PersonaContextualHelper({
                         <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate">{art.service}</div>
                         <div className="text-[10px] text-zinc-500 truncate">{art.slsaLevel} · Vulns: 0</div>
                       </div>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                        art.digestPinned
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                      }`}>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                         {art.digestPinned ? '@sha256 PINNED' : 'MUTABLE TAG'}
                       </span>
                     </div>
@@ -633,7 +613,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'VERIFY_DEVSECOPS_SUPPLY_CHAIN_AND_OIDC'}
                   onClick={() => executeContextualAction('VERIFY_DEVSECOPS_SUPPLY_CHAIN_AND_OIDC')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>
@@ -655,7 +635,7 @@ export default function PersonaContextualHelper({
                       className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 space-y-1"
                     >
                       <div className="flex items-center justify-between text-[10px] font-mono">
-                        <span className="font-bold text-rose-600 dark:text-rose-400">{ep.vector}</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">{ep.vector}</span>
                         <span className="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                           {ep.status}
                         </span>
@@ -676,7 +656,7 @@ export default function PersonaContextualHelper({
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                     Eliminate long-lived JSON keys (`roles/iam.workloadIdentityUser`) for GitHub Actions &amp; GitLab CI:
                   </p>
-                  <pre className="p-2 rounded-lg bg-zinc-950 text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-24">
+                  <pre className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-24">
                     {devSecOps.zeroKeyWorkloadIdentity?.githubActionsOidcYaml || ''}
                   </pre>
                 </div>
@@ -733,7 +713,7 @@ export default function PersonaContextualHelper({
                       className="flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800/60"
                     >
                       <span className="truncate">{chk.gate}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">{chk.status}</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0">{chk.status}</span>
                     </div>
                   ))}
                 </div>
@@ -775,7 +755,7 @@ export default function PersonaContextualHelper({
                   Exports your live `{projectId}` resources into deterministic Terraform (`main.tf`) or idempotent `gcloud` shell script.
                 </p>
                 {showCodePreview && (
-                  <pre className="p-2 rounded-lg bg-zinc-950 text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-28">
+                  <pre className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-28">
                     {cloudEng.clickOpsToGitOps?.terraformHcl || ''}
                   </pre>
                 )}
@@ -813,7 +793,7 @@ export default function PersonaContextualHelper({
                     >
                       <div className="flex items-center justify-between text-[10px] font-mono">
                         <span className="font-bold text-zinc-800 dark:text-zinc-200">{saga.operation}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">{saga.state}</span>
+                        <span className="text-blue-600 dark:text-blue-400 font-bold">{saga.state}</span>
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <code className="text-[10px] font-mono text-zinc-500 truncate">{saga.compensatingCommand}</code>
@@ -840,11 +820,11 @@ export default function PersonaContextualHelper({
               <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                    <GitBranch className="w-3.5 h-3.5 text-emerald-500" />
+                    <GitBranch className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     Column-Level Lineage Breaking-Change Guard
                   </span>
                 </div>
-                <p className="text-[11px] text-amber-600 dark:text-amber-400 font-mono">
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
                   {dataEng.columnLineageGraph?.breakingChangeSimulation?.warning ||
                     'Renaming payload_json.amount_cents impacts 3 downstream tables & Vertex AI feature views.'}
                 </p>
@@ -854,7 +834,7 @@ export default function PersonaContextualHelper({
                       key={n.id}
                       className="flex items-center justify-between text-[10px] font-mono px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800/60"
                     >
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">{n.stage}</span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400">{n.stage}</span>
                       <span className="truncate max-w-[180px]">{n.asset}</span>
                     </div>
                   ))}
@@ -867,14 +847,14 @@ export default function PersonaContextualHelper({
                     <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                       Quarantine Dead-Letter (`_dlq`) Replay
                     </span>
-                    <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">
+                    <span className="text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-400">
                       {dataEng.quarantineDlqReplay?.quarantinedRowsLast24h || 3} rows queued
                     </span>
                   </div>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                     Table: <code className="font-mono">{dataEng.quarantineDlqReplay?.dlqTable}</code>
                   </p>
-                  <pre className="p-2 rounded bg-zinc-950 text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-20">
+                  <pre className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-20">
                     {dataEng.quarantineDlqReplay?.autoRepairSql || ''}
                   </pre>
                 </div>
@@ -883,7 +863,7 @@ export default function PersonaContextualHelper({
                     type="button"
                     disabled={executingAction === 'REPLAY_DATA_ENG_QUARANTINE_DLQ'}
                     onClick={() => executeContextualAction('REPLAY_DATA_ENG_QUARANTINE_DLQ')}
-                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer disabled:opacity-50"
+                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>
@@ -910,7 +890,7 @@ export default function PersonaContextualHelper({
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                     Reservation: <span className="font-mono font-bold">{dataEng.slotContentionSparkBalancer?.activeSlotReservation || 'AUTOSCALE (100-400 slots)'}</span>
                   </p>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
                     {dataEng.slotContentionSparkBalancer?.offloadRecommendation}
                   </p>
                 </div>
@@ -934,7 +914,7 @@ export default function PersonaContextualHelper({
               <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-indigo-500" />
+                    <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     Region Blackout SPOF Blast-Radius Simulator
                   </span>
                   <select
@@ -948,8 +928,8 @@ export default function PersonaContextualHelper({
                   </select>
                 </div>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                  Estimated RTO: <strong className="font-mono text-indigo-600 dark:text-indigo-400">{arch.spofBlastRadius?.estimatedRegionalFailoverRtoSeconds || 12}s</strong> ·
-                  RPO: <strong className="font-mono text-emerald-600 dark:text-emerald-400">{arch.spofBlastRadius?.estimatedRpoSeconds || 0}s</strong>
+                  Estimated RTO: <strong className="font-mono text-zinc-900 dark:text-zinc-100">{arch.spofBlastRadius?.estimatedRegionalFailoverRtoSeconds || 12}s</strong> ·
+                  RPO: <strong className="font-mono text-zinc-900 dark:text-zinc-100">{arch.spofBlastRadius?.estimatedRpoSeconds || 0}s</strong>
                 </p>
                 <button
                   type="button"
@@ -959,7 +939,7 @@ export default function PersonaContextualHelper({
                       region: blackoutRegion
                     })
                   }
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Play className="w-3.5 h-3.5" />
                   <span>
@@ -981,7 +961,7 @@ export default function PersonaContextualHelper({
                       className="flex items-center justify-between text-[10px] font-mono px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800/60"
                     >
                       <span className="truncate">{pol.constraint.replace('constraints/', '')}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">{pol.effectiveState}</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0">{pol.effectiveState}</span>
                     </div>
                   ))}
                 </div>
@@ -989,13 +969,13 @@ export default function PersonaContextualHelper({
 
               <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-3.5 space-y-2">
                 <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                  <DollarSign className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   3-Cloud FinOps Arbitrage (Monthly TCO)
                 </div>
                 <div className="grid grid-cols-3 gap-2 pt-1">
-                  <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-center">
+                  <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-center">
                     <div className="text-[10px] font-mono text-zinc-500">GCP (CUD)</div>
-                    <div className="text-xs font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                    <div className="text-xs font-mono font-extrabold text-blue-600 dark:text-blue-400">
                       ${arch.multiCloudArbitrage?.gcpMonthlyCudUsd || 380}
                     </div>
                   </div>
@@ -1028,7 +1008,7 @@ export default function PersonaContextualHelper({
                     <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                       Model Armor Prompt/PII Firewall (GA 590.0.1)
                     </span>
-                    <span className="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400">
+                    <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400">
                       Grounding: {aiMlOps.modelArmorFirewall?.groundingScorePct || 98.4}%
                     </span>
                   </div>
@@ -1041,7 +1021,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC'}
                   onClick={() => executeContextualAction('RUN_AI_MLOPS_MODEL_ARMOR_AND_RAG_SYNC')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-purple-600 hover:bg-purple-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
@@ -1060,10 +1040,10 @@ export default function PersonaContextualHelper({
                   {aiMlOps.smartModelRouter?.routingRule}
                 </p>
                 <div className="flex items-center justify-between text-[11px] font-mono pt-1">
-                  <span className="text-purple-600 dark:text-purple-400 font-bold">
+                  <span className="text-zinc-700 dark:text-zinc-300 font-bold">
                     Flash Share: {aiMlOps.smartModelRouter?.flashTrafficSharePct || 78}%
                   </span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold">
                     Saved: ${aiMlOps.smartModelRouter?.monthlyTokenSavingsUsd || 490}/mo
                   </span>
                 </div>
@@ -1080,7 +1060,7 @@ export default function PersonaContextualHelper({
                       className="flex items-center justify-between text-[10px] font-mono px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800/60"
                     >
                       <span className="truncate">{acc.zone} · {acc.accelerator}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">${acc.hourlySpotUsd}/hr</span>
+                      <span className="text-zinc-700 dark:text-zinc-300 font-bold">${acc.hourlySpotUsd}/hr</span>
                     </div>
                   ))}
                 </div>
@@ -1097,7 +1077,7 @@ export default function PersonaContextualHelper({
                     <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                       SLO Error-Budget Release Freeze Gate
                     </span>
-                    <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400">
                       {sreOncall.sloBurnFreezeGate?.releaseGateStatus || 'OPEN_HEALTHY'}
                     </span>
                   </div>
@@ -1110,7 +1090,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION'}
                   onClick={() => executeContextualAction('RUN_SRE_SLO_FREEZE_AND_CHANGE_CORRELATION')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-orange-600 hover:bg-orange-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Flame className="w-3.5 h-3.5" />
                   <span>
@@ -1133,7 +1113,7 @@ export default function PersonaContextualHelper({
                     >
                       <div className="flex justify-between font-bold">
                         <span>{ev.timestampOffset} · {ev.eventType}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400">{ev.verdict}</span>
+                        <span className="text-blue-600 dark:text-blue-400">{ev.verdict}</span>
                       </div>
                       <div className="text-zinc-500 truncate">{ev.resource} -&gt; {ev.correlatedSignal}</div>
                     </div>
@@ -1147,7 +1127,7 @@ export default function PersonaContextualHelper({
                     Chaos GameDay &amp; Canary Rollback
                   </div>
                   <p className="text-[11px] text-zinc-500 mt-1">
-                    Circuit Breaker: <strong className="font-mono text-emerald-600 dark:text-emerald-400">{sreOncall.chaosGameDayHarness?.circuitBreakerStatus || 'VERIFIED_TRIPPED_IN_1.8S'}</strong>
+                    Circuit Breaker: <strong className="font-mono text-zinc-700 dark:text-zinc-300">{sreOncall.chaosGameDayHarness?.circuitBreakerStatus || 'VERIFIED_TRIPPED_IN_1.8S'}</strong>
                   </p>
                 </div>
                 {onRunInShell && sreOncall.sloBurnFreezeGate?.canaryRollbackCmd && (
@@ -1175,7 +1155,7 @@ export default function PersonaContextualHelper({
                   <p className="text-[11px] text-zinc-500 font-mono">
                     Spanner Key Prefix: {dbre.lockTreeAndHotKeyInspector?.spannerHotKeyPrefix || 'Balanced <35% CPU'}
                   </p>
-                  <pre className="p-2 rounded bg-zinc-950 text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-16">
+                  <pre className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-16">
                     {dbre.lockTreeAndHotKeyInspector?.terminateLockSql || ''}
                   </pre>
                 </div>
@@ -1183,7 +1163,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR'}
                   onClick={() => executeContextualAction('RUN_DBRE_LOCK_AUDIT_AND_INDEX_ADVISOR')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <HardDrive className="w-3.5 h-3.5" />
                   <span>
@@ -1203,7 +1183,7 @@ export default function PersonaContextualHelper({
                     <div key={i} className="p-2 rounded bg-zinc-50 dark:bg-zinc-800/60 text-[10px] font-mono space-y-1">
                       <div className="flex justify-between font-bold">
                         <span>{idx.table}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400">-{idx.estimatedLatencyDropPct}% latency</span>
+                        <span className="text-blue-600 dark:text-blue-400">-{idx.estimatedLatencyDropPct}% latency</span>
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <code className="text-zinc-500 truncate">{idx.concurrentIndexDdl}</code>
@@ -1228,7 +1208,7 @@ export default function PersonaContextualHelper({
                   <p className="text-[11px] text-zinc-500">
                     Mode: <strong className="font-mono">{dbre.connectionPoolGuard?.poolingMode}</strong>
                   </p>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
                     {dbre.pitrCloneVerification?.rpoStatus}
                   </p>
                 </div>
@@ -1264,7 +1244,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT'}
                   onClick={() => executeContextualAction('RUN_FINOPS_ZOMBIE_REAP_AND_UNIT_AUDIT')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-teal-600 hover:bg-teal-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <DollarSign className="w-3.5 h-3.5" />
                   <span>
@@ -1282,7 +1262,7 @@ export default function PersonaContextualHelper({
                 <p className="text-[11px] text-zinc-500">
                   Current CUD: <strong>{finopsEng.cudAndSpotOptimizer?.currentCudCoveragePct || 72}%</strong> -&gt; Target: <strong>{finopsEng.cudAndSpotOptimizer?.targetCudCoveragePct || 90}%</strong>
                 </p>
-                <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                <p className="text-[11px] font-mono text-blue-600 dark:text-blue-400">
                   Net Additional Savings: ${finopsEng.cudAndSpotOptimizer?.netMonthlyCudSavingsUsd || 168}/mo (Break-even: {finopsEng.cudAndSpotOptimizer?.breakEvenMonths || 2.1} mos)
                 </p>
               </div>
@@ -1298,7 +1278,7 @@ export default function PersonaContextualHelper({
                       className="flex items-center justify-between text-[10px] font-mono px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800/60"
                     >
                       <span className="truncate">{g.region}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      <span className="text-zinc-700 dark:text-zinc-300 font-bold">
                         {g.cfePct}% CFE ({g.carbonIntensityGco2Kwh}g)
                       </span>
                     </div>
@@ -1316,7 +1296,7 @@ export default function PersonaContextualHelper({
                   <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                     Pod OOMKilled (`Exit 137`) &amp; CPU Right-Sizer
                   </div>
-                  <pre className="p-2 rounded bg-zinc-950 text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-20">
+                  <pre className="p-2 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono overflow-x-auto max-h-20">
                     {platformK8s.oomAndCpuRightSizer?.patchedResourcesYaml || ''}
                   </pre>
                 </div>
@@ -1324,7 +1304,7 @@ export default function PersonaContextualHelper({
                   type="button"
                   disabled={executingAction === 'RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK'}
                   onClick={() => executeContextualAction('RUN_PLATFORM_K8S_RIGHTSIZER_AND_MESH_CHECK')}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-sky-600 hover:bg-sky-500 text-white cursor-pointer disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer disabled:opacity-50"
                 >
                   <Cpu className="w-3.5 h-3.5" />
                   <span>
@@ -1346,7 +1326,7 @@ export default function PersonaContextualHelper({
                       className="flex items-center justify-between text-[10px] font-mono px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800/60"
                     >
                       <span className="truncate">{hop.path}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">{hop.p99Ms}ms ({hop.protocol})</span>
+                      <span className="text-zinc-700 dark:text-zinc-300 font-bold">{hop.p99Ms}ms ({hop.protocol})</span>
                     </div>
                   ))}
                 </div>
@@ -1377,16 +1357,16 @@ export default function PersonaContextualHelper({
 
           {/* Live Action Receipt Banner when an inline tool runs */}
           {actionResult && (
-            <div className="p-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2 text-xs font-mono text-emerald-800 dark:text-emerald-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <div className="p-3 rounded-xl border border-blue-500/30 bg-blue-500/10 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-xs font-mono text-blue-800 dark:text-blue-200">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                 <span className="font-bold">{actionResult.action}:</span>
                 <span>{actionResult.summary}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setActionResult(null)}
-                className="text-[10px] font-mono underline text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                className="text-[10px] font-mono underline text-blue-700 dark:text-blue-300 cursor-pointer"
               >
                 Dismiss
               </button>

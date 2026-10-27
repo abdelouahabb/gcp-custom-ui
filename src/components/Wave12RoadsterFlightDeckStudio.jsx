@@ -528,19 +528,19 @@ export default function Wave12RoadsterFlightDeckStudio({
   return (
     <div className="space-y-5">
       {/* ORBITAL FLIGHT DECK HEADER */}
-      <div className="rounded-2xl border border-indigo-500/40 bg-gradient-to-r from-indigo-950/20 via-purple-950/15 to-cyan-950/20 p-5 space-y-4">
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-indigo-600 text-white">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-blue-600 text-white">
                 WAVE 12 · ROADSTER FLIGHT DECK (DRIFT RECONCILER, CROSS-PROJECT MIGRATOR &amp; 12-WAY MCP PROBE)
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
                 100% LIVE GCP REST + 12-LANE MCP TELEMETRY
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-              <Rocket className="w-5 h-5 text-indigo-500 shrink-0" />
+              <Rocket className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
               <span>
                 Wave 12 Roadster Flight Deck — FSD Drift Reconciler, Zero-Gravity Cross-Project Migrator &amp; Ludicrous 12-Way MCP Probe
               </span>
@@ -559,7 +559,7 @@ export default function Wave12RoadsterFlightDeckStudio({
               type="button"
               disabled={loadingAutopilot}
               onClick={fetchAutopilotRadar}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold shadow-sm cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${loadingAutopilot ? 'animate-spin' : ''}`}
@@ -575,9 +575,9 @@ export default function Wave12RoadsterFlightDeckStudio({
 
         {/* 4 Speedometer & Flight Telemetry Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800">
             <div className="text-zinc-500">Autopilot Flight Readiness</div>
-            <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+            <div className="text-lg font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               {autopilotData?.flightReadinessScore ?? 92} / 100
             </div>
             <div className="text-[10px] text-zinc-500">
@@ -585,9 +585,9 @@ export default function Wave12RoadsterFlightDeckStudio({
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800">
             <div className="text-zinc-500">Self-Healing Maneuvers Queued</div>
-            <div className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">
+            <div className="text-lg font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               {(autopilotData?.maneuvers || []).length} Flight Actions
             </div>
             <div className="text-[10px] text-zinc-500">
@@ -595,9 +595,9 @@ export default function Wave12RoadsterFlightDeckStudio({
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800">
             <div className="text-zinc-500">Cross-Project Teleport Targets</div>
-            <div className="text-lg font-extrabold text-cyan-600 dark:text-cyan-400 mt-0.5">
+            <div className="text-lg font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
               {(teleportInventory?.activeProjects || []).length || 1} Active GCP Projects
             </div>
             <div className="text-[10px] text-zinc-500">
@@ -605,10 +605,10 @@ export default function Wave12RoadsterFlightDeckStudio({
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800">
             <div className="text-zinc-500">Canonical State Merkle Digest</div>
             <div
-              className="text-xs font-extrabold text-purple-600 dark:text-purple-400 mt-1 truncate"
+              className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 mt-1 truncate"
               title={autopilotData?.stateSha256 || ''}
             >
               SHA-256: {(autopilotData?.stateSha256 || 'calibrating...').slice(0, 18)}...
@@ -1056,10 +1056,10 @@ export default function Wave12RoadsterFlightDeckStudio({
 
       {/* TAB 03: LUDICROUS-MODE 12-WAY PARALLEL MCP & REST MEGACAST */}
       {activeTab === 'LUDICROUS_MEGACAST' && (
-        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-5 space-y-4">
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3">
             <div>
-              <div className="text-[10px] font-mono font-extrabold uppercase text-amber-600 dark:text-amber-400">
+              <div className="text-[10px] font-mono font-extrabold uppercase text-blue-600 dark:text-blue-400">
                 12 CONCURRENT OFFICIAL *.GOOGLEAPIS.COM/MCP LANES
               </div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1076,7 +1076,7 @@ export default function Wave12RoadsterFlightDeckStudio({
               type="button"
               disabled={runningMegacast}
               onClick={handleRunLudicrousMegacast}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-mono font-extrabold cursor-pointer disabled:opacity-50"
             >
               <Zap className="w-3.5 h-3.5" />
               <span>
@@ -1092,25 +1092,25 @@ export default function Wave12RoadsterFlightDeckStudio({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <div className="text-zinc-500">Ludicrous Parallel Burst</div>
-                  <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                  <div className="text-base font-extrabold text-zinc-900 dark:text-zinc-100">
                     {megacastData.wallClockMs}ms Wall Time
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <div className="text-zinc-500">Sequential Equivalent</div>
-                  <div className="text-base font-extrabold text-zinc-700 dark:text-zinc-300">
+                  <div className="text-base font-extrabold text-zinc-900 dark:text-zinc-100">
                     {megacastData.sequentialSumMs}ms Sum
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <div className="text-zinc-500">Sonic-Boom Speedup</div>
-                  <div className="text-base font-extrabold text-amber-600 dark:text-amber-400">
+                  <div className="text-base font-extrabold text-blue-600 dark:text-blue-400">
                     {megacastData.speedupMultiplier}x Faster
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <div className="text-zinc-500">Endpoints Responded</div>
-                  <div className="text-base font-extrabold text-indigo-600 dark:text-indigo-400">
+                  <div className="text-base font-extrabold text-zinc-900 dark:text-zinc-100">
                     {megacastData.onlineLanes} / {megacastData.totalLanes} Online
                   </div>
                 </div>
@@ -1131,7 +1131,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 text-[10px] font-extrabold">
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold">
                             {lane.laneId}
                           </span>
                           <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -1139,7 +1139,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[10.5px]">
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                          <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
                             {lane.badge}
                           </span>
                           <span className="text-zinc-500">
@@ -1150,7 +1150,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                       <div className="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
                         <div
                           className={`h-full rounded-full ${
-                            lane.ok ? 'bg-indigo-500' : 'bg-amber-500'
+                            lane.ok ? 'bg-blue-600' : 'bg-zinc-400 dark:bg-zinc-600'
                           }`}
                           style={{ width: `${widthPct}%` }}
                         />
