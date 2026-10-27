@@ -2229,16 +2229,6 @@ export default function GlobalNetworkWorldMap({
       setSelectedZoneName(zoneId);
       setIsRegionPinnedOnMap(true);
       setShowZoneRings(true);
-      if (reg) {
-        const nextZ = Math.max(zoom, 2.8);
-        setZoom(nextZ);
-        const halfW = 1200 / nextZ / 2;
-        const halfH = 560 / nextZ / 2;
-        setCameraCenter({
-          x: Math.max(halfW, Math.min(1200 - halfW, reg.x)),
-          y: Math.max(halfH, Math.min(560 - halfH, reg.y)),
-        });
-      }
       const healthySibling =
         reg?.zones?.find((z) => z !== zoneId && !severedZones.includes(z)) ||
         `${parentRegionId}-b`;
