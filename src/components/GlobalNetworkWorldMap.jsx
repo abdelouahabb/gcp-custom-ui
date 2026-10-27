@@ -6713,123 +6713,70 @@ export default function GlobalNetworkWorldMap({
           {/* UNIFIED 3-PILLAR 10X ORBITAL COMMAND DOCK BELOW WORLD MAP         */}
           {/* ================================================================= */}
           <div className="bg-zinc-50/95 dark:bg-[#090d16] border-t border-zinc-200 dark:border-zinc-800/90 p-3 space-y-2.5 text-[11px] font-mono">
-            {/* Segmented 3-Pillar Mode Selector Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="inline-flex items-center rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5 gap-1 shadow-xs">
-                {[
-                  {
-                    id: 'FIREWALL_XRAY',
-                    featureId: 'GLOBAL_MAP_10X_FIREWALL_XRAY',
-                    label: `1. Live Firewall X-Ray (0→65535 · ${customPacketXRay.steps.length} Rules)`,
-                    badge: customPacketXRay.verdict,
-                    badgeColor:
-                      customPacketXRay.verdict === 'ALLOW'
-                        ? 'bg-emerald-500/20 text-emerald-500'
-                        : 'bg-red-500/20 text-red-500',
-                  },
-                  {
-                    id: 'FAILOVER_TELEPORTER',
-                    featureId: 'GLOBAL_MAP_10X_FAILOVER_TELEPORT',
-                    label: `2. Multi-Region Outage Failover & 1-Tap Teleport`,
-                    badge:
-                      severedRegions.length > 0
-                        ? `${severedRegions.length} OUTAGE`
-                        : 'READY',
-                    badgeColor:
-                      severedRegions.length > 0
-                        ? 'bg-red-500/20 text-red-400 animate-pulse'
-                        : 'bg-blue-500/20 text-blue-400',
-                  },
-                  {
-                    id: 'AUDIT_TIME_MACHINE',
-                    featureId: 'GLOBAL_MAP_10X_TIME_MACHINE',
-                    label: `3. Cloud Audit & Log Time-Machine (${liveTimeMachineEvents.length} Events)`,
-                    badge: timeMachineCursor > 0 ? `REPLAY #${timeMachineCursor}` : 'LIVE',
-                    badgeColor:
-                      timeMachineCursor > 0
-                        ? 'bg-sky-500/20 text-sky-400'
-                        : 'bg-emerald-500/20 text-emerald-400',
-                  },
-                ].map((tab) => {
-                  const isActive = active10xDockTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      data-feature-id={tab.featureId}
-                      onClick={() => setActive10xDockTab(tab.id)}
-                      className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[10.5px] font-extrabold transition-all cursor-pointer ${
-                        isActive
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+            {/* Segmented 3-Pillar Mode Selector Bar (Fixed 3-Column Grid — Zero Layout Shift) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-1 shadow-xs">
+              {[
+                {
+                  id: 'FIREWALL_XRAY',
+                  featureId: 'GLOBAL_MAP_10X_FIREWALL_XRAY',
+                  label: `1. Live Firewall X-Ray (0→65535 · ${customPacketXRay.steps.length} Rules)`,
+                  badge: customPacketXRay.verdict,
+                  badgeColor:
+                    customPacketXRay.verdict === 'ALLOW'
+                      ? 'bg-emerald-500/20 text-emerald-500'
+                      : 'bg-red-500/20 text-red-500',
+                },
+                {
+                  id: 'FAILOVER_TELEPORTER',
+                  featureId: 'GLOBAL_MAP_10X_FAILOVER_TELEPORT',
+                  label: `2. Multi-Region Outage Failover & 1-Tap Teleport`,
+                  badge:
+                    severedRegions.length > 0
+                      ? `${severedRegions.length} OUTAGE`
+                      : 'READY',
+                  badgeColor:
+                    severedRegions.length > 0
+                      ? 'bg-red-500/20 text-red-400 animate-pulse'
+                      : 'bg-blue-500/20 text-blue-400',
+                },
+                {
+                  id: 'AUDIT_TIME_MACHINE',
+                  featureId: 'GLOBAL_MAP_10X_TIME_MACHINE',
+                  label: `3. Cloud Audit & Log Time-Machine (${liveTimeMachineEvents.length} Events)`,
+                  badge:
+                    timeMachineCursor > 0
+                      ? `REPLAY #${timeMachineCursor}`
+                      : 'LIVE',
+                  badgeColor:
+                    timeMachineCursor > 0
+                      ? 'bg-sky-500/20 text-sky-400'
+                      : 'bg-emerald-500/20 text-emerald-400',
+                },
+              ].map((tab) => {
+                const isActive = active10xDockTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    data-feature-id={tab.featureId}
+                    onClick={() => setActive10xDockTab(tab.id)}
+                    className={`flex items-center justify-between gap-1.5 h-8 px-2.5 rounded-lg text-[10.5px] font-extrabold transition-all cursor-pointer min-w-0 ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <span className="truncate">{tab.label}</span>
+                    <span
+                      className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                        isActive ? 'bg-white/20 text-white' : tab.badgeColor
                       }`}
                     >
-                      <span>{tab.label}</span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
-                          isActive ? 'bg-white/20 text-white' : tab.badgeColor
-                        }`}
-                      >
-                        {tab.badge}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Quick Scenario Presets for Instant 1-Click Inspection */}
-              {active10xDockTab === 'FIREWALL_XRAY' && (
-                <div className="inline-flex items-center gap-1">
-                  <span className="text-[9.5px] uppercase font-bold text-zinc-400">
-                    Presets:
-                  </span>
-                  {[
-                    {
-                      label: 'Public SSH :22',
-                      orig: 'scanner-botnet-east',
-                      proto: 'tcp',
-                      port: 22,
-                    },
-                    {
-                      label: 'IAP Tunnel :22',
-                      orig: 'gcp-iap-proxy',
-                      proto: 'tcp',
-                      port: 22,
-                    },
-                    {
-                      label: 'HTTPS Edge :443',
-                      orig: 'my-live-client',
-                      proto: 'tcp',
-                      port: 443,
-                    },
-                    {
-                      label: 'Public RDP :3389',
-                      orig: 'scanner-botnet-east',
-                      proto: 'tcp',
-                      port: 3389,
-                    },
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => {
-                        setCustomOriginId(preset.orig);
-                        setCustomProtocol(preset.proto);
-                        setCustomPort(preset.port);
-                      }}
-                      className={`h-6 px-2 rounded-md text-[9.5px] font-bold border transition-colors cursor-pointer ${
-                        customOriginId === preset.orig &&
-                        customProtocol === preset.proto &&
-                        Number(customPort) === preset.port
-                          ? 'bg-blue-500/20 border-blue-500/50 text-blue-600 dark:text-blue-300'
-                          : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+                      {tab.badge}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* =============================================================== */}
@@ -6839,8 +6786,66 @@ export default function GlobalNetworkWorldMap({
               <div className="space-y-2">
                 <form
                   onSubmit={handleFireCustomPacket}
-                  className="p-2 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2"
+                  className="p-2 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2"
                 >
+                  {/* Quick Scenario Presets Row */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-zinc-100 dark:border-zinc-800/80">
+                    <div className="inline-flex items-center gap-1 flex-wrap">
+                      <span className="text-[9.5px] uppercase font-bold text-zinc-400 mr-1">
+                        1-Tap Packet Presets:
+                      </span>
+                      {[
+                        {
+                          label: 'Public SSH :22',
+                          orig: 'scanner-botnet-east',
+                          proto: 'tcp',
+                          port: 22,
+                        },
+                        {
+                          label: 'IAP Tunnel :22',
+                          orig: 'gcp-iap-proxy',
+                          proto: 'tcp',
+                          port: 22,
+                        },
+                        {
+                          label: 'HTTPS Edge :443',
+                          orig: 'my-live-client',
+                          proto: 'tcp',
+                          port: 443,
+                        },
+                        {
+                          label: 'Public RDP :3389',
+                          orig: 'scanner-botnet-east',
+                          proto: 'tcp',
+                          port: 3389,
+                        },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            setCustomOriginId(preset.orig);
+                            setCustomProtocol(preset.proto);
+                            setCustomPort(preset.port);
+                          }}
+                          className={`h-6 px-2 rounded-md text-[9.5px] font-bold border transition-colors cursor-pointer ${
+                            customOriginId === preset.orig &&
+                            customProtocol === preset.proto &&
+                            Number(customPort) === preset.port
+                              ? 'bg-blue-500/20 border-blue-500/50 text-blue-600 dark:text-blue-300'
+                              : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[9.5px] text-zinc-400">
+                      Evaluates every VPC rule in priority order (0 → 65535)
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Crosshair className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                     <select
@@ -6948,6 +6953,7 @@ export default function GlobalNetworkWorldMap({
                             } (P-90)`}
                       </span>
                     </button>
+                    </div>
                   </div>
                 </form>
 
@@ -7162,10 +7168,10 @@ export default function GlobalNetworkWorldMap({
             {/* =============================================================== */}
             {active10xDockTab === 'AUDIT_TIME_MACHINE' && (
               <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                  <div className="min-w-0 flex-1 flex items-center gap-2 overflow-hidden">
                     <span
-                      className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                      className={`shrink-0 px-2 py-0.5 rounded font-extrabold text-[10px] ${
                         timeMachineCursor === 0
                           ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40'
                           : 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
@@ -7173,10 +7179,13 @@ export default function GlobalNetworkWorldMap({
                     >
                       {timeMachineCursor === 0
                         ? '● LIVE STREAM'
-                        : `⏪ EVENT REPLAY #${timeMachineCursor}/${liveTimeMachineEvents.length}`}
+                        : `⏪ REPLAY #${timeMachineCursor}/${liveTimeMachineEvents.length}`}
                     </span>
                     {timeMachineActiveEvent ? (
-                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      <span
+                        title={`[${timeMachineActiveEvent.timestamp}] ${timeMachineActiveEvent.category} → ${timeMachineActiveEvent.regionId} (${timeMachineActiveEvent.summary})`}
+                        className="truncate font-bold text-zinc-800 dark:text-zinc-200"
+                      >
                         [{timeMachineActiveEvent.timestamp}]{' '}
                         <span className="text-blue-500">
                           {timeMachineActiveEvent.category}
@@ -7185,7 +7194,7 @@ export default function GlobalNetworkWorldMap({
                         {timeMachineActiveEvent.summary})
                       </span>
                     ) : (
-                      <span className="text-zinc-500">
+                      <span className="truncate text-zinc-500">
                         Scrub the slider or click any real Cloud Logging / TLS
                         1.3 Socket event below to replay its trajectory on the
                         World Map:
@@ -7193,7 +7202,7 @@ export default function GlobalNetworkWorldMap({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="shrink-0 flex items-center justify-end gap-1.5 ml-auto">
                     <button
                       type="button"
                       disabled={
@@ -7203,7 +7212,7 @@ export default function GlobalNetworkWorldMap({
                       onClick={() =>
                         setTimeMachineCursor((c) => Math.max(1, c - 1))
                       }
-                      className="h-6 px-2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] disabled:opacity-40 cursor-pointer"
+                      className="shrink-0 h-6 px-2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] disabled:opacity-40 cursor-pointer"
                     >
                       ◀ Prev
                     </button>
@@ -7216,7 +7225,7 @@ export default function GlobalNetworkWorldMap({
                       onChange={(e) =>
                         setTimeMachineCursor(Number(e.target.value))
                       }
-                      className="w-36 accent-sky-400 cursor-pointer disabled:opacity-40"
+                      className="w-32 sm:w-36 shrink-0 accent-sky-400 cursor-pointer disabled:opacity-40"
                     />
                     <button
                       type="button"
@@ -7229,19 +7238,22 @@ export default function GlobalNetworkWorldMap({
                           Math.min(liveTimeMachineEvents.length, c + 1)
                         )
                       }
-                      className="h-6 px-2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] disabled:opacity-40 cursor-pointer"
+                      className="shrink-0 h-6 px-2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] disabled:opacity-40 cursor-pointer"
                     >
                       Next ▶
                     </button>
-                    {timeMachineCursor > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setTimeMachineCursor(0)}
-                        className="h-6 px-2 rounded bg-emerald-600 text-white font-extrabold text-[10px] cursor-pointer"
-                      >
-                        Resume Live
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      disabled={timeMachineCursor === 0}
+                      onClick={() => setTimeMachineCursor(0)}
+                      className={`shrink-0 h-6 w-22 rounded font-extrabold text-[10px] text-center transition-colors ${
+                        timeMachineCursor > 0
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer'
+                          : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-400 opacity-50 cursor-default'
+                      }`}
+                    >
+                      Resume Live
+                    </button>
                   </div>
                 </div>
 
