@@ -349,6 +349,17 @@ export default function Wave16EnterpriseMoonshotStudio({
             100 - spofCount * 18
           );
 
+          const activeTimelineSteps = drDrillReceipt?.blackoutRegion === blackoutRegion
+            ? drDrillReceipt.failoverSteps
+            : [
+                `1. [T+02s] Cloud DNS & Global External Application Load Balancer health probes detect 100% packet loss in ${blackoutRegion}.`,
+                `2. [T+05s] Multi-Region Storage (US/EU) & BigQuery datasets automatically serve reads from ${standbyRegion} with RPO=0s (${autoFailoverCount} multi-region assets unaffected).`,
+                `3. [T+35s] Cloud Run & stateless ingress traffic shifts to standby revision in ${standbyRegion} (Composite RTO=${maxRtoSeconds}s).`,
+                spofCount > 0
+                  ? `4. [ACTION REQUIRED] ${spofCount} single-region SPOF asset(s) pinned to ${blackoutRegion} require cross-region snapshot or REGIONAL HA promotion to ${standbyRegion}.`
+                  : `4. [VERIFIED] Zero single-region SPOF assets pinned to ${blackoutRegion} — 100% of inspected resources survive a ${blackoutRegion} blackout.`,
+              ];
+
           return (
             <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -357,7 +368,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                     02. Multi-Region Disaster Recovery (DR) GameDay &amp; RTO/RPO Prover ({evaluatedAssets.length} Live Assets)
                   </h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Select a regional blackout scenario below or trigger a live DR GameDay drill to verify failover paths, composite RTO/RPO, and single-region SPOFs.
+                    Change the simulated outage region below to instantly recalculate SPOFs, failover targets, and RTO/RPO, or click Run GameDay Drill to seal an audit receipt.
                   </p>
                 </div>
 
@@ -367,8 +378,18 @@ export default function Wave16EnterpriseMoonshotStudio({
                     value={blackoutRegion}
                     onChange={(e) => {
                       const nextReg = e.target.value;
+                      const nextStandby =
+                        nextReg === 'us-central1'
+                          ? 'us-east1'
+                          : nextReg === 'europe-west1'
+                            ? 'europe-west4'
+                            : 'us-central1';
                       setBlackoutRegion(nextReg);
-                      handleRunDrGameDayDrill(nextReg);
+                      if (onShowToast) {
+                        onShowToast(
+                          `Simulated regional blackout: ${nextReg} → Standby failover target: ${nextStandby}`
+                        );
+                      }
                     }}
                     className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer"
                   >
@@ -390,7 +411,7 @@ export default function Wave16EnterpriseMoonshotStudio({
                     <span>
                       {busyId === 'DR_GAMEDAY_DRILL'
                         ? 'Simulating Blackout...'
-                        : `Run GameDay Drill (${blackoutRegion} → ${standbyRegion})`}
+                        : `Seal GameDay Receipt (${blackoutRegion} → ${standbyRegion})`}
                     </span>
                   </button>
 
@@ -422,17 +443,17 @@ export default function Wave16EnterpriseMoonshotStudio({
                   </div>
                   <div className="text-[11px] font-mono text-zinc-500">
                     {spofCount === 0
-                      ? 'Zero regional SPOFs in outage zone'
+                      ? `Zero regional SPOFs in ${blackoutRegion}`
                       : `${spofCount} single-region SPOF(s) in ${blackoutRegion}`}
                   </div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                   <div className="text-[10px] font-mono uppercase text-zinc-500">
-                    Multi-Region Auto-Failover Assets
+                    Active Outage Route ({blackoutRegion} → {standbyRegion})
                   </div>
                   <div className="text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-                    {autoFailoverCount} / {evaluatedAssets.length}
+                    {evaluatedAssets.length - spofCount} / {evaluatedAssets.length} Survive
                   </div>
                   <div className="text-[11px] font-mono text-zinc-500">
                     Standby Target: {standbyRegion}
@@ -466,27 +487,29 @@ export default function Wave16EnterpriseMoonshotStudio({
                 </div>
               </div>
 
-              {/* Live DR GameDay Execution Receipt & 4-Step Failover Timeline */}
-              {drDrillReceipt && (
-                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-2 text-xs font-mono">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-extrabold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>
-                        LIVE GAMEDAY RECEIPT ({drDrillReceipt.drillId}): {drDrillReceipt.blackoutRegion} → {drDrillReceipt.standbyRegion}
-                      </span>
+              {/* Always-Visible Live Simulated Failover Sequence for Selected Region */}
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-2 text-xs font-mono">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-extrabold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>
+                      {drDrillReceipt?.blackoutRegion === blackoutRegion
+                        ? `SEALED GAMEDAY RECEIPT (${drDrillReceipt.drillId}): ${blackoutRegion} → ${standbyRegion}`
+                        : `LIVE SIMULATED FAILOVER RUNBOOK: ${blackoutRegion.toUpperCase()} BLACKOUT → ${standbyRegion.toUpperCase()} STANDBY`}
                     </span>
-                    <span className="text-[10px] text-zinc-500">
-                      {drDrillReceipt.executedAt}
-                    </span>
-                  </div>
-                  <div className="space-y-1 text-[11px] text-zinc-800 dark:text-zinc-200">
-                    {(drDrillReceipt.failoverSteps || []).map((step, i) => (
-                      <div key={i}>{step}</div>
-                    ))}
-                  </div>
+                  </span>
+                  <span className="text-[10px] text-zinc-500">
+                    {drDrillReceipt?.blackoutRegion === blackoutRegion
+                      ? drDrillReceipt.executedAt
+                      : 'Updates immediately on region select'}
+                  </span>
                 </div>
-              )}
+                <div className="space-y-1 text-[11px] text-zinc-800 dark:text-zinc-200">
+                  {activeTimelineSteps.map((step, i) => (
+                    <div key={i}>{step}</div>
+                  ))}
+                </div>
+              </div>
 
               {/* Asset-by-Asset Survival & Failover Matrix */}
               <div className="space-y-2">
