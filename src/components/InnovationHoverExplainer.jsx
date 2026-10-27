@@ -1802,9 +1802,9 @@ export const INNOVATION_FEATURE_GUIDE = {
     badge: 'FIREWALL RULES LOGGING · LOGCONFIG (PATCH)',
     title: 'Toggle Firewall Rule Hit Logging (`Logs: ON` / `Logs: OFF`)',
     whatItDoes:
-      'Enables or disables Google Cloud Firewall Rules Logging (`logConfig: { enable: true/false, metadata: "INCLUDE_ALL_METADATA" }`) on this firewall rule via a live PATCH request.',
+      'Enables or disables Google Cloud Firewall Rules Logging (`logConfig: { enable: true/false, metadata: "INCLUDE_ALL_METADATA" }`) on this firewall rule via a live PATCH request. ⚠️ Note: Enabling `Logs: ON` writes a log record for every matching connection, which increases log volume ingested into your Cloud Logging `_Default` storage bucket (standard Cloud Logging ingestion & storage rates apply above the 50 GiB/month free tier).',
     enterpriseValue:
-      'When `Logs: ON` is enabled, every TCP/UDP/ICMP connection allowed or denied by this rule is recorded in Cloud Logging (`compute.googleapis.com/firewall`) with source IP, destination VM, port, and geo-location—critical for security forensics, brute-force detection, and compliance auditing. Turning `Logs: OFF` on noisy health-check rules reduces Cloud Logging ingestion costs.',
+      'When `Logs: ON` is enabled, every TCP/UDP/ICMP connection allowed or denied by this rule is recorded in Cloud Logging (`compute.googleapis.com/firewall`) with source IP, destination VM, port, and geo-location—critical for security forensics, brute-force detection, and compliance auditing. Turning `Logs: OFF` on high-volume rules (like HTTP/HTTPS or Load Balancer health checks) avoids unnecessary log storage ingestion and billing.',
     gcpApis: 'PATCH compute.v1/projects/{project}/global/firewalls/{rule} (logConfig.enable)',
     safetyMode: 'LIVE_MUTATION',
   },
@@ -1812,9 +1812,9 @@ export const INNOVATION_FEATURE_GUIDE = {
     badge: 'FIREWALL HIT TELEMETRY · LOGS ON/OFF',
     title: 'Firewall Rules Logging (`logConfig.enable` + `INCLUDE_ALL_METADATA`)',
     whatItDoes:
-      'Controls whether Google Cloud writes a real-time connection log entry to Cloud Logging (`logName: ".../logs/compute.googleapis.com%2Ffirewall"`) every time a packet matches this rule.',
+      'Controls whether Google Cloud writes a real-time connection log entry to Cloud Logging (`logName: ".../logs/compute.googleapis.com%2Ffirewall"`) every time a packet matches this rule. ⚠️ FinOps Storage Note: Enabling `Logs: ON` on high-traffic rules can ingest significant log volume into your Cloud Logging storage bucket (`_Default`), consuming your 50 GiB/month free logging quota and incurring $0.50/GiB ingestion & storage charges beyond that.',
     enterpriseValue:
-      'Essential for security incident response and the Global Network Map Time-Machine: enabling `Logs: ON` on DENY guardrails and sensitive SSH/RDP/DB rules proves who attempted to connect and which rule blocked or allowed them.',
+      'Best practice: Enable `Logs: ON` on `DENY` guardrails and sensitive management rules (SSH :22, RDP :3389, databases) for audit forensics and Global Map Time-Machine replay, while keeping `Logs: OFF` on noisy health-check or high-throughput internal rules to save storage.',
     gcpApis: 'compute.v1/firewalls (logConfig: { enable: true, metadata: "INCLUDE_ALL_METADATA" })',
     safetyMode: 'READ_ONLY',
   },

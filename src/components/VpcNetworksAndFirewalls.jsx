@@ -1110,8 +1110,7 @@ export default function VpcNetworksAndFirewalls({
       if (
         filterMode === 'EXPOSED' &&
         fw.risk.level !== 'CRITICAL' &&
-        fw.risk.level !== 'HIGH' &&
-        fw.risk.level !== 'MODERATE'
+        fw.risk.level !== 'HIGH'
       ) {
         return false;
       }
@@ -1450,9 +1449,20 @@ export default function VpcNetworksAndFirewalls({
           <button
             type="button"
             data-feature-id="VPC_FW_KPI_EXPOSED"
-            onClick={() =>
-              setFilterMode(filterMode === 'EXPOSED' ? 'ALL' : 'EXPOSED')
-            }
+            onClick={() => {
+              const nextMode = filterMode === 'EXPOSED' ? 'ALL' : 'EXPOSED';
+              setFilterMode(nextMode);
+              setSearchQuery('');
+              setSelectedVpcFilter('ALL');
+              if (nextMode === 'EXPOSED') {
+                const el = document.getElementById(
+                  'live-vpc-firewall-rules-section'
+                );
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }
+            }}
             className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
               filterMode === 'EXPOSED'
                 ? 'ring-1 ring-amber-500/50 border-amber-500 bg-amber-500/15'
@@ -1500,11 +1510,27 @@ export default function VpcNetworksAndFirewalls({
             <button
               type="button"
               data-feature-id="VPC_FW_KPI_EXPOSED"
-              onClick={() => setFilterMode('EXPOSED')}
+              onClick={() => {
+                const nextMode = filterMode === 'EXPOSED' ? 'ALL' : 'EXPOSED';
+                setFilterMode(nextMode);
+                setSearchQuery('');
+                setSelectedVpcFilter('ALL');
+                const el = document.getElementById(
+                  'live-vpc-firewall-rules-section'
+                );
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
               className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 font-mono font-bold text-xs shrink-0 cursor-pointer"
             >
-              Inspect {stats.exposedHighRisk.length} Flagged Rule
-              {stats.exposedHighRisk.length === 1 ? '' : 's'}
+              {filterMode === 'EXPOSED'
+                ? `Showing ${stats.exposedHighRisk.length} Flagged Rule${
+                    stats.exposedHighRisk.length === 1 ? '' : 's'
+                  } (Click to Show All)`
+                : `Inspect ${stats.exposedHighRisk.length} Flagged Rule${
+                    stats.exposedHighRisk.length === 1 ? '' : 's'
+                  }`}
             </button>
           </div>
         )}
