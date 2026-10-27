@@ -1940,8 +1940,9 @@ export default function GlobalNetworkWorldMap({
     return active.length > 0 ? active : ['us-central1', 'us-east1', 'europe-west1'];
   }, [regionWorkloadsMap]);
 
-  // Selected Region & Zone on the World Map
+  // Selected Region & Zone on the World Map (`isRegionPinnedOnMap` releases when clicking elsewhere on the map)
   const [selectedRegionId, setSelectedRegionId] = useState('us-central1');
+  const [isRegionPinnedOnMap, setIsRegionPinnedOnMap] = useState(false);
   const [selectedZoneName, setSelectedZoneName] = useState('us-central1-a');
   const [hoveredRegionId, setHoveredRegionId] = useState(null);
   const selectedRegion = useMemo(
@@ -2399,10 +2400,18 @@ export default function GlobalNetworkWorldMap({
     [clampCamera]
   );
 
+  const handleReleaseMapSelection = useCallback(() => {
+    setIsRegionPinnedOnMap(false);
+    setShowZoneRings(false);
+    setHoveredRegionId(null);
+  }, []);
+
   const handleResetMapCamera = useCallback(() => {
     setZoom(1);
     setCameraCenter({ x: 600, y: 280 });
+    setIsRegionPinnedOnMap(false);
     setShowZoneRings(false);
+    setHoveredRegionId(null);
   }, []);
 
   const scrollToMapCanvas = useCallback(() => {
@@ -2419,6 +2428,7 @@ export default function GlobalNetworkWorldMap({
       const reg = GCP_GLOBAL_REGIONS.find((r) => r.id === regionId);
       if (!reg) return;
       setSelectedRegionId(reg.id);
+      setIsRegionPinnedOnMap(true);
       setShowZoneRings(true);
       if (reg.zones?.length > 0) {
         setSelectedZoneName(reg.zones[0]);
@@ -2436,6 +2446,7 @@ export default function GlobalNetworkWorldMap({
       const reg = GCP_GLOBAL_REGIONS.find((r) => r.id === regionId);
       if (!reg) return;
       setSelectedRegionId(reg.id);
+      setIsRegionPinnedOnMap(true);
       setShowZoneRings(true);
       if (reg.zones?.length > 0) {
         setSelectedZoneName(reg.zones[0]);
@@ -4168,6 +4179,10 @@ export default function GlobalNetworkWorldMap({
             onMouseDown={handleMapMouseDown}
             onMouseMove={handleMapMouseMove}
             onMouseUp={handleMapMouseUp}
+            onClick={() => {
+              if (didPanRef.current) return;
+              handleReleaseMapSelection();
+            }}
             className={`relative w-full aspect-[1200/560] bg-[radial-gradient(ellipse_at_center,_#e0f2fe_0%,_#f8fafc_100%)] dark:bg-[radial-gradient(ellipse_at_center,_#0b1528_0%,_#04060c_100%)] overflow-hidden overscroll-contain touch-none select-none outline-none ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
@@ -4183,7 +4198,7 @@ export default function GlobalNetworkWorldMap({
               <Move className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
               <span>
                 {isPointerInsideMap ? 'WGS84 Cartographic Projection: ' : ''}
-                Wheel to Zoom ({zoom.toFixed(1)}x) · Drag or WASD to Pan
+                Wheel to Zoom ({zoom.toFixed(1)}x) · Drag or WASD to Pan · Click Empty Map to Release Selection
               </span>
               {cursorGps && (
                 <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold">
@@ -4203,7 +4218,8 @@ export default function GlobalNetworkWorldMap({
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSeveredRegions([]);
                     setSeveredZones([]);
                   }}
@@ -4214,14 +4230,33 @@ export default function GlobalNetworkWorldMap({
               </div>
             )}
 
-            {zoom > 1.1 && (
-              <button
-                type="button"
-                onClick={handleResetMapCamera}
-                className="absolute top-2.5 right-3 z-10 px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
-              >
-                Reset to Global View (1.0x)
-              </button>
+            {(isRegionPinnedOnMap || zoom > 1.1) && (
+              <div className="absolute top-2.5 right-3 z-10 flex items-center gap-1.5">
+                {isRegionPinnedOnMap && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReleaseMapSelection();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                  >
+                    Release Selection ({selectedRegion.name})
+                  </button>
+                )}
+                {zoom > 1.1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleResetMapCamera();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                  >
+                    Reset to Global View (1.0x)
+                  </button>
+                )}
+              </div>
             )}
 
             <svg
@@ -4325,9 +4360,10 @@ export default function GlobalNetworkWorldMap({
               {/* 178 Real Natural Earth Country Polygons (With Host Country, Selected Country & Live Client Country Illumination) */}
               {WORLD_COUNTRY_PATHS.map((country) => {
                 const isSelectedCountry =
-                  selectedRegion?.countryCode === country.id ||
-                  (selectedRegion?.countryCode === 'SGP' && country.id === 'MYS') ||
-                  (selectedRegion?.countryCode === 'HKG' && country.id === 'CHN');
+                  isRegionPinnedOnMap &&
+                  (selectedRegion?.countryCode === country.id ||
+                    (selectedRegion?.countryCode === 'SGP' && country.id === 'MYS') ||
+                    (selectedRegion?.countryCode === 'HKG' && country.id === 'CHN'));
                 const isClientCountry =
                   liveClientOriginNode.countryIso3 === country.id;
                 return (
@@ -4684,10 +4720,10 @@ export default function GlobalNetworkWorldMap({
               {sortedRegionsForRender.map((reg) => {
                 const workloads = regionWorkloadsMap[reg.id];
                 const hasWorkloads = (workloads?.totalCount || 0) > 0;
-                const isSelected = selectedRegionId === reg.id;
+                const isSelected = isRegionPinnedOnMap && selectedRegionId === reg.id;
                 const isHovered = hoveredRegionId === reg.id;
                 const isSevered = severedRegions.includes(reg.id);
-                const isPeer = selectedRegionPeers.has(reg.id);
+                const isPeer = isRegionPinnedOnMap && selectedRegionPeers.has(reg.id);
                 const isFocusedNode = isSelected || isHovered || isSevered;
 
                 // Only expand the Availability Zone constellation when explicitly clicked/selected (never prematurely on hover!)
@@ -4697,9 +4733,11 @@ export default function GlobalNetworkWorldMap({
                 const showDetailedZones = shouldRenderZones;
                 const zoneOrbitRadius = isSelected ? 22 : 14;
 
-                // Tactical Spotlight Opacity: Selected/Hovered = 1.0, Peers/Workloads = subtle, Unselected Neighbors = clear dot
+                // Tactical Spotlight Opacity: Selected/Hovered = 1.0, Unselected when no region is pinned = crisp 0.9, Dimmed when a region is pinned
                 const nodeOpacity = isFocusedNode
                   ? 1
+                  : !isRegionPinnedOnMap
+                  ? 0.92
                   : !spotlightMode
                   ? 0.94
                   : zoom >= 1.5
@@ -4707,7 +4745,7 @@ export default function GlobalNetworkWorldMap({
                     ? 0.65
                     : hasWorkloads
                     ? 0.75
-                    : 0.38
+                    : 0.45
                   : isPeer || hasWorkloads
                   ? 0.9
                   : 0.62;
@@ -4716,8 +4754,7 @@ export default function GlobalNetworkWorldMap({
                 const shouldShowLabelPill =
                   isFocusedNode ||
                   !spotlightMode ||
-                  hasWorkloads ||
-                  (isPeer && zoom >= 1.9);
+                  (hasWorkloads && zoom < 2.0);
 
                 // Determine core node color based on active Map Lens (Traffic / Carbon / Spot)
                 let lensColor = '#475569';
@@ -4770,8 +4807,8 @@ export default function GlobalNetworkWorldMap({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (didPanRef.current) return;
-                      if (isSelected && shouldRenderZones) {
-                        setShowZoneRings(false);
+                      if (isSelected) {
+                        handleReleaseMapSelection();
                       } else {
                         focusOnRegion(reg.id, zoom < 2.6 ? 3.2 : zoom);
                       }
@@ -5086,8 +5123,19 @@ export default function GlobalNetworkWorldMap({
                 </span>
               </div>
               <span className="text-blue-500 dark:text-blue-400 font-bold">
-                Selected: {selectedRegion.name} · {selectedRegion.city} [
-                {selectedRegion.countryCode}] · GPS {selectedRegion.gpsLabel}
+                {isRegionPinnedOnMap ? (
+                  <>
+                    Selected: {selectedRegion.name} · {selectedRegion.city} [
+                    {selectedRegion.countryCode}] · GPS {selectedRegion.gpsLabel}{' '}
+                    <span className="text-zinc-400 font-normal">
+                      (Click empty map to release)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Selection Released (Free Navigation) · Hover or click any region pin ({selectedRegion.name} in Inspector)
+                  </>
+                )}
               </span>
             </div>
           </div>
