@@ -68,31 +68,12 @@ export function ReleaseTrackBadge({ track = 'ALPHA' }) {
 }
 
 const STUDIO_TABS = [
-  {
-    id: 'OFFICIAL_REMOTE_MCP_HUB',
-    wave: 'WAVE_2',
-    track: 'ALPHA_AND_BETA',
-    shortLabel: 'W3 · [2026 MCP] 48 Official *.googleapis.com/mcp Servers',
-    subtitle: 'Live JSON-RPC 2.0 tools/list · tools/call · 4-Server Triage Chains · Gemini MCP Agent',
-    icon: Sparkles,
-    ownerStudioTab: 'CLOUD_SOC',
-    ownerStudioLabel: 'Open Cloud SOC & MCP Sentinel',
-  },
-  {
-    id: 'WAVE3_GCLOUD_590_SUITE',
-    wave: 'WAVE_3',
-    track: 'ALPHA_AND_BETA',
-    shortLabel: 'W3 · [SDK 590.0.1] 8-Pillar Observability, Orchestration & AI',
-    subtitle: 'observability · orchestration-pipelines · compliance-manager · gemini · vector-search · IPAM',
-    icon: Terminal,
-    ownerStudioTab: 'DATA_ENGINEER',
-    ownerStudioLabel: 'Open Data Engineering & Orchestration Studio',
-  },
+  // WAVE 1: CORE PREVIEW & GA PROMOTED (01–05)
   {
     id: 'BETA_CLOUD_RUN',
     wave: 'WAVE_1',
     track: 'BETA',
-    shortLabel: 'W1 · [BETA/GA] Cloud Run 4-Primitive Lab',
+    shortLabel: '01 · W1 · [BETA/GA] Cloud Run 4-Primitive Lab',
     subtitle: 'worker-pools · multi-region-services · compose [GA] · instances',
     icon: Server,
     ownerStudioTab: 'CLOUD_RUN',
@@ -102,7 +83,7 @@ const STUDIO_TABS = [
     id: 'ALPHA_AGENT_MCP',
     wave: 'WAVE_1',
     track: 'GA',
-    shortLabel: 'W1 · [GA 590.0.1] Agent Registry & Identity Control Plane',
+    shortLabel: '02 · W1 · [GA 590.0.1] Agent Registry & Identity Control Plane',
     subtitle: 'gcloud agent-registry mcp-servers · agents · agent-identity [GA] · skills [ALPHA]',
     icon: Cpu,
     ownerStudioTab: 'CLOUD_SOC',
@@ -112,7 +93,7 @@ const STUDIO_TABS = [
     id: 'ALPHA_PAM_TROUBLESHOOT',
     wave: 'WAVE_1',
     track: 'GA',
-    shortLabel: 'W1 · [GA 590.0.1] PAM JIT IAM & 403 Troubleshooter',
+    shortLabel: '03 · W1 · [GA 590.0.1] PAM JIT IAM & 403 Troubleshooter',
     subtitle: 'gcloud pam entitlements/grants [GA] · gcloud policy-troubleshoot iam [GA]',
     icon: KeyRound,
     ownerStudioTab: 'SOVEREIGN_STUDIO',
@@ -122,7 +103,7 @@ const STUDIO_TABS = [
     id: 'ALPHA_HEALTH_FAULT',
     wave: 'WAVE_1',
     track: 'ALPHA_AND_BETA',
-    shortLabel: 'W1 · [GA/ALPHA] Service Health & Chaos Fault-Testing',
+    shortLabel: '04 · W1 · [GA/ALPHA] Service Health & Chaos Fault-Testing',
     subtitle: 'gcloud service-health [GA 590.0.1] · gcloud alpha fault-testing [ALPHA]',
     icon: Radar,
     ownerStudioTab: 'SRE_WAR_ROOM',
@@ -132,18 +113,18 @@ const STUDIO_TABS = [
     id: 'ALPHA_BETA_PLATFORM',
     wave: 'WAVE_1',
     track: 'BETA',
-    shortLabel: 'W1 · [GA/BETA] App Optimize, Location Finder & Asset Vet',
+    shortLabel: '05 · W1 · [GA/BETA] App Optimize, Location Finder & Asset Vet',
     subtitle: 'beta app-optimize · gcloud cloudlocationfinder [GA 590.0.1] · gcloud asset list',
     icon: Layers,
     ownerStudioTab: 'AWS_AZURE_PARITY',
     ownerStudioLabel: 'Open Multi-Cloud Parity Suite',
   },
-  // WAVE 2: GCLOUD 590.0.1 FRONTIER LAB
+  // WAVE 2: GCLOUD 590.0.1 FRONTIER LAB (06–10)
   {
     id: 'WAVE2_MODEL_ARMOR',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: 'W2 · [GA 590.0.1] Model Armor LLM Firewall & Safety Floor',
+    shortLabel: '06 · W2 · [GA 590.0.1] Model Armor LLM Firewall & Safety Floor',
     subtitle: 'gcloud model-armor templates · floorsettings · sanitize-user-prompt [GA]',
     icon: ShieldAlert,
     ownerStudioTab: 'CLOUD_SOC',
@@ -153,7 +134,7 @@ const STUDIO_TABS = [
     id: 'WAVE2_DEV_KNOWLEDGE_TOPOLOGY',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: 'W2 · [GA 590.0.1] Grounded Dev Knowledge & App Topology',
+    shortLabel: '07 · W2 · [GA 590.0.1] Grounded Dev Knowledge & App Topology',
     subtitle: 'gcloud developer-knowledge answer-query · app-topology · design-center [GA]',
     icon: Globe,
     ownerStudioTab: 'SRE_WAR_ROOM',
@@ -163,7 +144,7 @@ const STUDIO_TABS = [
     id: 'WAVE2_BETA_CLOUD_QUOTAS',
     wave: 'WAVE_2',
     track: 'BETA',
-    shortLabel: 'W2 · [GA/BETA] Cloud Quotas Autonomous Adjuster & Caps',
+    shortLabel: '08 · W2 · [GA/BETA] Cloud Quotas Autonomous Adjuster & Caps',
     subtitle: 'gcloud quotas preferences & info [GA 590.0.1] · beta quotas adjuster [BETA]',
     icon: Activity,
     ownerStudioTab: 'BILLING_CREDITS',
@@ -173,7 +154,7 @@ const STUDIO_TABS = [
     id: 'WAVE2_AUDIT_DELIVERY_TRUST',
     wave: 'WAVE_2',
     track: 'ALPHA_AND_BETA',
-    shortLabel: 'W2 · [GA/ALPHA] Audit Manager, Compliance & Delivery Trust',
+    shortLabel: '09 · W2 · [GA/ALPHA] Audit Manager, Compliance & Delivery Trust',
     subtitle: 'gcloud audit-manager & compliance-manager [GA] · alpha software-delivery-trust',
     icon: ShieldCheck,
     ownerStudioTab: 'CLOUD_SOC',
@@ -183,11 +164,32 @@ const STUDIO_TABS = [
     id: 'WAVE2_AI_HYPERCOMPUTER_HPC',
     wave: 'WAVE_2',
     track: 'GA',
-    shortLabel: 'W2 · [GA 590.0.1] AI Hypercomputer Cluster Director & Lustre',
+    shortLabel: '10 · W2 · [GA 590.0.1] AI Hypercomputer Cluster Director & Lustre',
     subtitle: 'gcloud cluster-director clusters [GA 590.0.1] · gcloud lustre [GA] · mldiagnostics',
     icon: Sparkles,
     ownerStudioTab: 'VERTEX_AI',
     ownerStudioLabel: 'Open Vertex AI & Hypercomputer Studio',
+  },
+  // WAVE 3: REMOTE MCP HUB & SDK 590.0.1 8-PILLAR SUITE (11–12)
+  {
+    id: 'OFFICIAL_REMOTE_MCP_HUB',
+    wave: 'WAVE_3',
+    track: 'ALPHA_AND_BETA',
+    shortLabel: '11 · W3 · [2026 MCP] 48 Official *.googleapis.com/mcp Servers',
+    subtitle: 'Live JSON-RPC 2.0 tools/list · tools/call · 4-Server Triage Chains · Gemini MCP Agent',
+    icon: Sparkles,
+    ownerStudioTab: 'CLOUD_SOC',
+    ownerStudioLabel: 'Open Cloud SOC & MCP Sentinel',
+  },
+  {
+    id: 'WAVE3_GCLOUD_590_SUITE',
+    wave: 'WAVE_3',
+    track: 'ALPHA_AND_BETA',
+    shortLabel: '12 · W3 · [SDK 590.0.1] 8-Pillar Observability, Orchestration & AI',
+    subtitle: 'observability · orchestration-pipelines · compliance-manager · gemini · vector-search · IPAM',
+    icon: Terminal,
+    ownerStudioTab: 'DATA_ENGINEER',
+    ownerStudioLabel: 'Open Data Engineering & Orchestration Studio',
   },
 ];
 
@@ -198,7 +200,7 @@ export default function GcloudAlphaBetaStudio({
   onSelectStudioTab,
   onOpenHealthAndDrift,
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('OFFICIAL_REMOTE_MCP_HUB');
+  const [activeSubTab, setActiveSubTab] = useState('BETA_CLOUD_RUN');
   const [waveFilter, setWaveFilter] = useState('ALL');
   const [trackFilter, setTrackFilter] = useState('ALL');
   const [region, setRegion] = useState('us-central1');
@@ -515,10 +517,10 @@ export default function GcloudAlphaBetaStudio({
               onChange={(e) => setWaveFilter(e.target.value)}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
-              <option value="ALL">Wave: All Waves (12)</option>
-              <option value="WAVE_1">Wave 1: Core Preview (5)</option>
-              <option value="WAVE_2">Wave 2: Next-Gen Labs (6)</option>
-              <option value="WAVE_3">Wave 3: SDK 590.0.1 (1)</option>
+              <option value="ALL">Wave: All Waves (01–12)</option>
+              <option value="WAVE_1">Wave 1: Core Preview (01–05)</option>
+              <option value="WAVE_2">Wave 2: Next-Gen Labs (06–10)</option>
+              <option value="WAVE_3">Wave 3: SDK 590.0.1 &amp; MCP (11–12)</option>
             </select>
 
             <select

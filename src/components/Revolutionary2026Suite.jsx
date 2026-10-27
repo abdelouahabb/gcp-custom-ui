@@ -200,7 +200,7 @@ export function calculateLiveBurnRate(overview, vms = []) {
 export default function Revolutionary2026Suite({
   projectId,
   overview,
-  initialSubTab = 'DREAM_BRAIN',
+  initialSubTab = 'WAVE11_MOONSHOT',
   onRefreshOverview,
   onOpenProvision,
   onDeleteResource,
@@ -215,7 +215,7 @@ export default function Revolutionary2026Suite({
 }) {
   const { activeTimeZone, utcOffsetLabel } = useTimezone();
   const [subTab, setSubTab] = useState(
-    initialSubTab || 'TOPOLOGY'
+    initialSubTab || 'WAVE11_MOONSHOT'
   );
   useEffect(() => {
     if (initialSubTab) {
@@ -995,10 +995,14 @@ export default function Revolutionary2026Suite({
               onChange={(e) => {
                 const nextCat = e.target.value;
                 setLabCategory(nextCat);
-                if (nextCat === 'QUANTUM') setSubTab('QUANTUM_NEXUS');
                 if (
                   nextCat === 'ALPHA_BETA' &&
                   ![
+                    'WAVE11_MOONSHOT',
+                    'WAVE12_ROADSTER',
+                    'WAVE13_STARLINK_NEURALINK',
+                    'WAVE14_QUANTUM_DOCTOR',
+                    'WAVE15_DYSON_MOONSHOT',
                     'WAVE16_ENTERPRISE_MOONSHOT',
                     'FIVE_PERSONA_COUNCIL',
                     'FIVE_PERSONA_ARCHITECT',
@@ -1006,26 +1010,43 @@ export default function Revolutionary2026Suite({
                     'FIVE_PERSONA_DATA_ENG',
                     'FIVE_PERSONA_NETOPS',
                     'FIVE_PERSONA_DEVSECOPS',
-                    'WAVE15_DYSON_MOONSHOT',
-                    'WAVE14_QUANTUM_DOCTOR',
-                    'WAVE13_STARLINK_NEURALINK',
-                    'WAVE12_ROADSTER',
-                    'WAVE11_MOONSHOT',
                     'GCLOUD_ALPHA_BETA',
                   ].includes(subTab)
                 ) {
-                  setSubTab('FIVE_PERSONA_COUNCIL');
+                  setSubTab('WAVE11_MOONSHOT');
+                } else if (nextCat === 'QUANTUM') {
+                  setSubTab('QUANTUM_NEXUS');
+                } else if (
+                  nextCat === 'FINOPS' &&
+                  !['FINOPS_SLEEP', 'ZOMBIES', 'TELEPORT_DIFF', 'X3'].includes(subTab)
+                ) {
+                  setSubTab('FINOPS_SLEEP');
+                } else if (
+                  nextCat === 'PERF_TOPOLOGY' &&
+                  !['TOPOLOGY', 'BENCHMARK', 'X2', 'X5'].includes(subTab)
+                ) {
+                  setSubTab('TOPOLOGY');
+                } else if (
+                  nextCat === 'SECURITY_DLP' &&
+                  !['SECURITY', 'X1', 'X4'].includes(subTab)
+                ) {
+                  setSubTab('SECURITY');
+                } else if (
+                  nextCat === 'AI_IAC' &&
+                  !['DREAM_BRAIN', 'MODEL_ARMOR_FINOPS', 'TERRAFORM', 'X6'].includes(subTab)
+                ) {
+                  setSubTab('DREAM_BRAIN');
                 }
               }}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
-              <option value="ALL">All Domains (23 Specialized Cloud Engineering Studios)</option>
-              <option value="ALPHA_BETA">[D01] Wave 16 Moonshot, 10-Persona Council, Waves 11–15 &amp; SDK 590.0.1</option>
-              <option value="QUANTUM">[D02] 2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews</option>
-              <option value="FINOPS">[D03] FinOps Cost Control, Night-Mode Sleep, Zombie Hunter &amp; Egress Analysis</option>
-              <option value="PERF_TOPOLOGY">[D04] 4-Layer Topology, Latency Benchmark &amp; Cold-Start Surgeon</option>
-              <option value="SECURITY_DLP">[D05] In-Memory Storage DLP, Ransomware Air-Gap &amp; Zero-Trust IAM</option>
-              <option value="AI_IAC">[D06] Pre-Crime Billing Forecaster, Dream Stack Compiler, Model Armor &amp; Terraform</option>
+              <option value="ALL">All Domains (01–24 Ordered Cloud Engineering Studios)</option>
+              <option value="ALPHA_BETA">[D01 · 01–08] Waves 11 → 16 Moonshot Studios, 10-Persona Council &amp; SDK 590.0.1</option>
+              <option value="QUANTUM">[D02 · 09] 2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews</option>
+              <option value="FINOPS">[D03 · 10–13] FinOps Cost Control, Night-Mode Sleep, Zombie Hunter &amp; Egress Analysis</option>
+              <option value="PERF_TOPOLOGY">[D04 · 14–17] 4-Layer Topology, Latency Benchmark &amp; Cold-Start Surgeon</option>
+              <option value="SECURITY_DLP">[D05 · 18–20] Zero-Trust IAM, In-Memory Storage DLP &amp; Ransomware Air-Gap</option>
+              <option value="AI_IAC">[D06 · 21–24] Pre-Crime Billing Forecaster, Model Armor, Reverse-Terraform &amp; RAM Vault</option>
             </select>
             {labCategory !== 'ALL' && (
               <button
@@ -1038,213 +1059,228 @@ export default function Revolutionary2026Suite({
             )}
           </div>
           <span className="text-[11px] font-mono text-zinc-500">
-            Select an Engineering Tool below (hover any button for full architecture &amp; API guide):
+            Ordered 01 → 24 (Wave 11 → Wave 16) — hover any button for architecture &amp; API guide:
           </span>
         </div>
 
-        {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards) */}
+        {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards · Strict Ascending 01–24 & Wave 11–16 Order) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
             {
+              id: 'WAVE11_MOONSHOT',
+              category: 'ALPHA_BETA',
+              badge: '01 · WAVE 11',
+              label:
+                '01. Wave 11 Moonshot — Cloud Deploy Canary Pipelines, Firestore NoSQL, Quotas & Multi-Project',
+              tip: 'Wave 11 Moonshot: Live Google Cloud Deploy Canary Pipelines, Cloud Firestore NoSQL Document CRUD, Active Assist Recommender & Regional Quotas, Multi-Project Estate Matrix, 18-Studio Stress Audit & 1-Click Cloud Run Self-Hosting',
+              icon: Rocket,
+            },
+            {
+              id: 'WAVE12_ROADSTER',
+              category: 'ALPHA_BETA',
+              badge: '02 · WAVE 12',
+              label:
+                '02. Wave 12 Roadster Flight Deck — FSD Drift Reconciler, Cross-Project Teleporter & 12-Way MCP',
+              tip: 'Wave 12 Roadster Flight Deck: Closed-Loop FSD Cloud Drift Reconciler with SHA-256 state receipts, Zero-Gravity Cross-Project Resource Migrator (BigQuery + GCS + Secrets), Ludicrous 12-Service Parallel MCP Probe & Grounded Gemini 3.8 Flash Flight Director',
+              icon: Rocket,
+            },
+            {
+              id: 'WAVE13_STARLINK_NEURALINK',
+              category: 'ALPHA_BETA',
+              badge: '03 · WAVE 13',
+              label:
+                '03. Wave 13 Starlink & Neuralink — Multi-Region TLS 1.3 Probe, Prompt-to-DAG & Ed25519 Ledger',
+              tip: 'Wave 13 Starlink & Neuralink: 6-Region Live HTTPS/TLS Latency Probe + BigQuery Failover Streamer, Neuralink Natural-Language Prompt-to-Schema DAG Builder, Optimus 3-Agent Architecture Review Board & Ed25519 Signed Audit Ledger',
+              icon: Globe,
+            },
+            {
+              id: 'WAVE14_QUANTUM_DOCTOR',
+              category: 'ALPHA_BETA',
+              badge: '04 · WAVE 14',
+              label:
+                '04. Wave 14 Quantum Doctor — BigQuery Time-Travel, Self-Healing Drift Fix, IAM Graph & PQC Vault',
+              tip: 'Wave 14 Quantum Doctor: Live BigQuery FOR SYSTEM_TIME AS OF Point-in-Time Recovery SQL, Self-Healing Cloud Doctor (Live GCS/BQ/Secret PATCH), Live IAM Blast-Radius Graph & Hybrid X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
+              icon: ShieldCheck,
+            },
+            {
+              id: 'WAVE15_DYSON_MOONSHOT',
+              category: 'ALPHA_BETA',
+              badge: '05 · WAVE 15',
+              label:
+                '05. Wave 15 Moonshot — BigQuery Anomaly SQL, SLSA Supply-Chain, Log Surgeon & TLS 1.3',
+              tip: 'Wave 15 Moonshot: Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 3.8 Flash Root-Cause Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
+              icon: Database,
+            },
+            {
               id: 'WAVE16_ENTERPRISE_MOONSHOT',
               category: 'ALPHA_BETA',
-              badge: 'WAVE 16 · DR & SURGEON',
+              badge: '06 · WAVE 16',
               label:
-                'Wave 16 Moonshot — FinOps Anomaly Auto-Fixer, Multi-Region DR GameDay, IAM & SQL Surgeon',
+                '06. Wave 16 Moonshot — FinOps Anomaly Auto-Fixer, Multi-Region DR GameDay, IAM & SQL Surgeon',
               tip: 'Wave 16 Enterprise Moonshot Lab: Live FinOps Anomaly Auto-Fixer (GCS Lifecycle & Scale-to-Zero Surgeon), Multi-Region Disaster Recovery (DR) GameDay RTO/RPO Prover, IAM Least-Privilege Role Synthesizer & Live BigQuery SQL Dry-Run Cost Surgeon',
               icon: Sparkles,
             },
             {
               id: 'FIVE_PERSONA_COUNCIL',
               category: 'ALPHA_BETA',
-              badge: '10-PERSONA COUNCIL',
+              badge: '07 · 10-PERSONA',
               label:
-                '10-Persona War-Room — Enterprise Architecture Review Board (Architect, SRE, FinOps, SecOps)',
+                '07. 10-Persona War-Room — Enterprise Architecture Review Board (Architect, SRE, FinOps, SecOps)',
               tip: '10-Persona War-Room & Enterprise Architecture Review Board: (01) Cloud Architect, (02) Cloud Engineer, (03) Data Engineer, (04) Network Engineer, (05) DevSecOps Lead, (06) AI/MLOps, (07) SRE Commander, (08) DBRE, (09) FinOps & GreenOps, and (10) K8s Platform Engineer + Live SHA-256 State Diff',
               icon: ShieldCheck,
             },
             {
-              id: 'WAVE15_DYSON_MOONSHOT',
-              category: 'ALPHA_BETA',
-              badge: 'WAVE 15 · SLSA & RCA',
-              label:
-                'Wave 15 Moonshot — BigQuery Anomaly SQL, SLSA Supply-Chain, Log Surgeon & TLS 1.3',
-              tip: 'Wave 15 Moonshot: Live BigQuery Statistical Z-Score & Cosine Vector SQL Engine, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Provenance Attestor, Live Cloud Logging Correlator + Gemini 3.8 Flash Root-Cause Surgeon & Real TLS 1.3 X.509 Certificate Inspector',
-              icon: Database,
-            },
-            {
-              id: 'WAVE14_QUANTUM_DOCTOR',
-              category: 'ALPHA_BETA',
-              badge: 'WAVE 14 · DRIFT & PQC',
-              label:
-                'Wave 14 Quantum Doctor — BigQuery Time-Travel, Self-Healing Drift Fix, IAM Graph & PQC Vault',
-              tip: 'Wave 14 Quantum Doctor: Live BigQuery FOR SYSTEM_TIME AS OF Point-in-Time Recovery SQL, Self-Healing Cloud Doctor (Live GCS/BQ/Secret PATCH), Live IAM Blast-Radius Graph & Hybrid X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
-              icon: ShieldCheck,
-            },
-            {
-              id: 'WAVE13_STARLINK_NEURALINK',
-              category: 'ALPHA_BETA',
-              badge: 'WAVE 13 · TLS & DAG',
-              label:
-                'Wave 13 Starlink & Neuralink — Multi-Region TLS 1.3 Probe, Prompt-to-DAG & Ed25519 Ledger',
-              tip: 'Wave 13 Starlink & Neuralink: 6-Region Live HTTPS/TLS Latency Probe + BigQuery Failover Streamer, Neuralink Natural-Language Prompt-to-Schema DAG Builder, Optimus 3-Agent Architecture Review Board & Ed25519 Signed Audit Ledger',
-              icon: Globe,
-            },
-            {
-              id: 'WAVE12_ROADSTER',
-              category: 'ALPHA_BETA',
-              badge: 'WAVE 12 · FSD & MCP',
-              label:
-                'Wave 12 Roadster Flight Deck — FSD Drift Reconciler, Cross-Project Teleporter & 12-Way MCP',
-              tip: 'Wave 12 Roadster Flight Deck: Closed-Loop FSD Cloud Drift Reconciler with SHA-256 state receipts, Zero-Gravity Cross-Project Resource Migrator (BigQuery + GCS + Secrets), Ludicrous 12-Service Parallel MCP Probe & Grounded Gemini 3.8 Flash Flight Director',
-              icon: Rocket,
-            },
-            {
-              id: 'WAVE11_MOONSHOT',
-              category: 'ALPHA_BETA',
-              badge: 'WAVE 11 · DEPLOY & DB',
-              label:
-                'Wave 11 Moonshot — Cloud Deploy Canary Pipelines, Firestore NoSQL, Quotas & Multi-Project',
-              tip: 'Wave 11 Moonshot: Live Google Cloud Deploy Canary Pipelines, Cloud Firestore NoSQL Document CRUD, Active Assist Recommender & Regional Quotas, Multi-Project Estate Matrix, 18-Studio Stress Audit & 1-Click Cloud Run Self-Hosting',
-              icon: Rocket,
-            },
-            {
               id: 'GCLOUD_ALPHA_BETA',
               category: 'ALPHA_BETA',
-              badge: '[SDK 590.0.1] GA / BETA',
+              badge: '08 · SDK 590.0.1',
               label:
-                '[SDK 590.0.1] Google Cloud CLI Lab (Worker Pools, Cluster Director, Model Armor, Quotas)',
+                '08. [SDK 590.0.1] Google Cloud CLI Lab (Worker Pools, Cluster Director, Model Armor, Quotas)',
               tip: 'Google Cloud SDK 590.0.1 (2026.10.22) [GA], [BETA], and [ALPHA] capabilities: Cloud Run Worker Pools & Multi-Region Services [BETA], Agent Registry & MCP [GA], PAM JIT IAM [GA], Vertex AI Model Armor [GA], Cluster Director & Lustre [GA], Cloud Observability [GA], Orchestration Pipelines [BETA], Compliance Manager [GA] & Audit Manager [GA]',
               icon: Rocket,
             },
             {
               id: 'QUANTUM_NEXUS',
               category: 'QUANTUM',
-              badge: 'QUANTUM NEXUS · 5-IN-1',
+              badge: '09 · QUANTUM 5-IN-1',
               label:
-                '2026 Quantum Nexus — Cloud Resilience Suite (Blast-Radius, Rollback, FinOps, PR & Honey-Grid)',
+                '09. 2026 Quantum Nexus — Cloud Resilience Suite (Blast-Radius, Rollback, FinOps, PR & Honey-Grid)',
               tip: '2026 Quantum Nexus (5-in-1 Cloud Resilience Suite): Causal Blast-Radius Graph, Time-Machine 1-Click Project State Rollback, Autonomous FinOps Arbitrage, Ephemeral PR Shadow Previews & Zero-Trust Honey-Token Intrusion Traps',
-              icon: Sparkles,
-            },
-            {
-              id: 'MODEL_ARMOR_FINOPS',
-              category: 'AI_IAC',
-              badge: '-80% LLM Cache',
-              label: 'Vertex AI Model Armor Firewall & Context Cache Cost Calculator',
-              tip: 'Block prompt injection, jailbreaks, and secret/PII exfiltration at the GCP edge with Vertex AI Model Armor, plus calculate -80% LLM Context Caching savings',
-              icon: ShieldCheck,
-            },
-            {
-              id: 'DREAM_BRAIN',
-              category: 'AI_IAC',
-              badge: 'PRE-CRIME & DREAM STACK',
-              label: 'Pre-Crime Bill & Dream Stack — 30-Day Billing Forecaster & Multi-Region Architect',
-              tip: 'Pre-Crime Billing Time-Crystal & Dream Stack Compiler: Forecast 30-day billing anomalies across 22 cost traps, arm a 24/7 Google Cloud Spend Cap, inspect resource failure blast radius, and compile multi-region architectures with live SKU pricing',
-              icon: Sparkles,
-            },
-            {
-              id: 'TERRAFORM',
-              category: 'AI_IAC',
-              badge: 'IaC Export',
-              label: 'Reverse-Terraform — Live Project to main.tf & gcloud Script Exporter',
-              tip: 'Reverse-engineer your live GCP VPCs, Firewall Rules, VMs, Cloud Run services, and Storage Buckets into Terraform HCL (main.tf), Terraform 1.5+ import blocks, or a reproducible gcloud script',
-              icon: FileCode2,
-            },
-            {
-              id: 'X6',
-              category: 'AI_IAC',
-              badge: 'RAM AI Vault',
-              label: 'Zero-Disk RAM Vault — AES-256-GCM Encrypted Gemini API Key & SRE Assistant',
-              tip: 'Zero-disk-persistence AES-256-GCM In-Memory Vault for live Gemini 3.8 Flash / 3.1 Pro SRE & FinOps Architecture Assistant',
               icon: Sparkles,
             },
             {
               id: 'FINOPS_SLEEP',
               category: 'FINOPS',
-              badge: 'Night-Mode $0',
-              label: 'Night-Mode Sleep & Burn Radar — Hourly Cost Breakdown & Compute Hibernation',
+              badge: '10 · NIGHT-MODE $0',
+              label:
+                '10. Night-Mode Sleep & Burn Radar — Hourly Cost Breakdown & Compute Hibernation',
               tip: 'Inspect real-time hourly & 30-day cost breakdown per resource and park all non-production VMs & Cloud Run services to $0/hr overnight',
               icon: DollarSign,
             },
             {
               id: 'ZOMBIES',
               category: 'FINOPS',
-              badge: 'Zombie Hunter',
-              label: 'Zombie Resource Hunter — Idle & Orphaned Disk / Static IP Cleaner',
+              badge: '11 · ZOMBIE HUNTER',
+              label:
+                '11. Zombie Resource Hunter — Idle & Orphaned Disk / Static IP Cleaner',
               tip: 'Detect unattached Persistent Disks, unused Static External IPs ($7.30/mo), and idle warm instances to reclaim wasted cloud spend in 1 click',
               icon: AlertTriangle,
             },
             {
               id: 'TELEPORT_DIFF',
               category: 'FINOPS',
-              badge: 'Teleport & CFE%',
-              label: 'Cross-Region Teleporter — Cloud Run Migrator, Carbon CFE% & GPU SKU Checker',
+              badge: '12 · TELEPORT & CFE%',
+              label:
+                '12. Cross-Region Teleporter — Cloud Run Migrator, Carbon CFE% & GPU SKU Checker',
               tip: 'Compare regional carbon intensity, FinOps pricing, and NVIDIA GPU (L4 / H100 / A100) availability across 40 global GCP regions and clone Cloud Run services in 1 click',
               icon: Leaf,
             },
             {
               id: 'X3',
               category: 'FINOPS',
-              badge: 'Egress Audit',
-              label: 'Data-Gravity Tollbooth — Cross-Region Network Egress & Transfer Cost Analyzer',
+              badge: '13 · EGRESS AUDIT',
+              label:
+                '13. Data-Gravity Tollbooth — Cross-Region Network Egress & Transfer Cost Analyzer',
               tip: 'Detect hidden $/GB cross-region and inter-continental data transfer fees between Compute VMs, Cloud Run, GCS Buckets, and BigQuery',
               icon: DollarSign,
             },
             {
               id: 'TOPOLOGY',
               category: 'PERF_TOPOLOGY',
-              badge: '4-Layer Graph',
-              label: '4-Layer Cloud Topology — Live Architecture & Public Exposure Graph',
+              badge: '14 · 4-LAYER GRAPH',
+              label:
+                '14. 4-Layer Cloud Topology — Live Architecture & Public Exposure Graph',
               tip: 'Visualize your live 4-Layer GCP Architecture (Public Internet Edge, VPC Backbone, Compute/Serverless, Storage/Lakehouse) and inspect blast radius',
               icon: Share2,
             },
             {
               id: 'BENCHMARK',
               category: 'PERF_TOPOLOGY',
-              badge: 'HTTP X-Ray',
-              label: 'Stress Arena & HTTP X-Ray — Cold-Start & P95 Latency Load Tester',
+              badge: '15 · HTTP X-RAY',
+              label:
+                '15. Stress Arena & HTTP X-Ray — Cold-Start & P95 Latency Load Tester',
               tip: 'Measure #1 First-Hit Cold-Start latency vs Warm P50/P95/P99 latency, throughput (RPS), and HTTP response headers against live endpoints',
               icon: Zap,
             },
             {
               id: 'X2',
               category: 'PERF_TOPOLOGY',
-              badge: 'Cold-Start',
-              label: 'Cold-Start Surgeon — Cloud Run Startup Profiler & Distroless Dockerfile Generator',
+              badge: '16 · COLD-START',
+              label:
+                '16. Cold-Start Surgeon — Cloud Run Startup Profiler & Distroless Dockerfile Generator',
               tip: 'Break down Cloud Run startup phases, generate multi-stage Distroless Dockerfiles, and enable Startup CPU Boost + Gen2 execution in 1 click',
               icon: Zap,
             },
             {
               id: 'X5',
               category: 'PERF_TOPOLOGY',
-              badge: '12 Cities RTT',
-              label: '12-Metropolis Speed-of-Light — Global Client Latency & Cloud CDN Edge Comparator',
+              badge: '17 · 12 CITIES RTT',
+              label:
+                '17. 12-Metropolis Speed-of-Light — Global Client Latency & Cloud CDN Edge Comparator',
               tip: 'Calculate optical-fiber RTT and TLS 1.3 latency from 12 global client cities to your active GCP regions vs Google Cloud CDN Anycast Edge',
               icon: Globe,
             },
             {
               id: 'SECURITY',
               category: 'SECURITY_DLP',
-              badge: `${(auditData?.findings?.length || 0) + publicRun.length} Alerts`,
-              label: 'Zero-Trust Perimeter Scanner — VPC Firewall 0.0.0.0/0 & IAM Auditor',
+              badge: `18 · ${(auditData?.findings?.length || 0) + publicRun.length} ALERTS`,
+              label:
+                '18. Zero-Trust Perimeter Scanner — VPC Firewall 0.0.0.0/0 & IAM Auditor',
               tip: 'Audit open 0.0.0.0/0 firewall rules, public Cloud Run endpoints, and active IAM Service Accounts with 1-Tap remediation',
               icon: ShieldAlert,
             },
             {
               id: 'X1',
               category: 'SECURITY_DLP',
-              badge: 'RAM DLP',
-              label: 'Storage RAM DLP X-Ray — Cloud Storage Secret Leak & PII Scanner',
+              badge: '19 · RAM DLP',
+              label:
+                '19. Storage RAM DLP X-Ray — Cloud Storage Secret Leak & PII Scanner',
               tip: 'Stream live Cloud Storage objects in server RAM, scan for leaked API keys, private keys, and regulated PII, and redact leaks in-place',
               icon: ShieldAlert,
             },
             {
               id: 'X4',
               category: 'SECURITY_DLP',
-              badge: 'SEC 17a-4',
-              label: 'Ransomware Air-Gap Auditor — Cloud Storage WORM Lock & Retention Shield',
+              badge: '20 · SEC 17a-4',
+              label:
+                '20. Ransomware Air-Gap Auditor — Cloud Storage WORM Lock & Retention Shield',
               tip: 'Audit every Cloud Storage bucket against ransomware deletion risks (Soft-Delete, Object Versioning, WORM Lock) and harden in 1 click',
               icon: Lock,
+            },
+            {
+              id: 'DREAM_BRAIN',
+              category: 'AI_IAC',
+              badge: '21 · PRE-CRIME',
+              label:
+                '21. Pre-Crime Bill & Dream Stack — 30-Day Billing Forecaster & Multi-Region Architect',
+              tip: 'Pre-Crime Billing Time-Crystal & Dream Stack Compiler: Forecast 30-day billing anomalies across 22 cost traps, arm a 24/7 Google Cloud Spend Cap, inspect resource failure blast radius, and compile multi-region architectures with live SKU pricing',
+              icon: Sparkles,
+            },
+            {
+              id: 'MODEL_ARMOR_FINOPS',
+              category: 'AI_IAC',
+              badge: '22 · -80% LLM CACHE',
+              label:
+                '22. Vertex AI Model Armor Firewall & Context Cache Cost Calculator',
+              tip: 'Block prompt injection, jailbreaks, and secret/PII exfiltration at the GCP edge with Vertex AI Model Armor, plus calculate -80% LLM Context Caching savings',
+              icon: ShieldCheck,
+            },
+            {
+              id: 'TERRAFORM',
+              category: 'AI_IAC',
+              badge: '23 · IaC EXPORT',
+              label:
+                '23. Reverse-Terraform — Live Project to main.tf & gcloud Script Exporter',
+              tip: 'Reverse-engineer your live GCP VPCs, Firewall Rules, VMs, Cloud Run services, and Storage Buckets into Terraform HCL (main.tf), Terraform 1.5+ import blocks, or a reproducible gcloud script',
+              icon: FileCode2,
+            },
+            {
+              id: 'X6',
+              category: 'AI_IAC',
+              badge: '24 · RAM AI VAULT',
+              label:
+                '24. Zero-Disk RAM Vault — AES-256-GCM Encrypted Gemini API Key & SRE Assistant',
+              tip: 'Zero-disk-persistence AES-256-GCM In-Memory Vault for live Gemini 3.8 Flash / 3.1 Pro SRE & FinOps Architecture Assistant',
+              icon: Sparkles,
             },
           ]
             .filter((t) => labCategory === 'ALL' || t.category === labCategory)

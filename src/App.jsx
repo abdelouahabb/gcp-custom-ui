@@ -3107,7 +3107,7 @@ function CloudPulseCockpit() {
 
   const [activeTab, setActiveTab] = useState('OVERVIEW');
   const [activeOrbitalDrawer, setActiveOrbitalDrawer] = useState(null); // null | 'STACK_COMPOSER' | 'FLIGHT_RECORDER' | 'AUTOPILOT_GUARD'
-  const [innovationSubTab, setInnovationSubTab] = useState('TOPOLOGY');
+  const [innovationSubTab, setInnovationSubTab] = useState('WAVE11_MOONSHOT');
   const [sovereignSubTab, setSovereignSubTab] = useState('IAM_SURGEON');
   const [awsAzureSubTab, setAwsAzureSubTab] = useState('RESOURCE_GROUPS');
   const [alibabaHuaweiSubTab, setAlibabaHuaweiSubTab] = useState(
