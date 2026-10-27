@@ -1280,11 +1280,11 @@ export const INNOVATION_FEATURE_GUIDE = {
   },
   GLOBAL_MAP_REGIONAL_QUOTAS: {
     badge: '100% REAL LIVE GCP REST API',
-    title: 'Live Regional Compute Quotas & Capacity Headroom',
+    title: 'Live Regional Compute, NVIDIA GPU & TPU Quotas',
     whatItDoes:
-      'Fetches live regional quota usage and limits (CPUS, DISKS_TOTAL_GB, IN_USE_ADDRESSES) directly from the Google Compute Engine Regions API across all project regions.',
+      'Fetches live regional quota usage and limits—including On-Demand & Spot NVIDIA GPUs (NVIDIA_L4_GPUS, NVIDIA_A100_GPUS, NVIDIA_T4_GPUS, NVIDIA_V100_GPUS), Cloud TPU v5e PodSlices (TPU_LITE_PODSLICE_V5), A2 GPU-host vCPUs, CPUS, SSD_TOTAL_GB, DISKS_TOTAL_GB, and IN_USE_ADDRESSES—directly from the Compute Engine Regions API.',
     enterpriseValue:
-      'Prevents regional quota exhaustion failures during autoscaling spikes or multi-region disaster recovery failovers.',
+      'Lets AI/ML and NetOps teams instantly see which regions have available NVIDIA L4/A100/T4/V100 GPU and TPU v5e quota headroom before deploying inference services or failing over workloads.',
     gcpApis: 'GET https://compute.googleapis.com/compute/v1/projects/{project}/regions',
     safetyMode: 'READ_ONLY',
   },

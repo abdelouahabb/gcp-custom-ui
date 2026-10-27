@@ -3906,7 +3906,7 @@ export default function GlobalNetworkWorldMap({
           </div>
           <div>
             1. <strong>Live Regional Socket RTT:</strong> Node `dns.promises.lookup` + `net.createConnection(:443)` + `tls.connect` with `perf_hooks.performance.now()` microsecond timers against 8 regional `*-aiplatform.googleapis.com` frontends.
-            {' '}2. <strong>Regional Compute Quotas:</strong> Queries `GET https://compute.googleapis.com/compute/v1/projects/{projectId}/regions` for live `CPUS`, `DISKS_TOTAL_GB`, and `IN_USE_ADDRESSES` headroom.
+            {' '}2. <strong>Regional Compute, GPU &amp; TPU Quotas:</strong> Queries `GET https://compute.googleapis.com/compute/v1/projects/{projectId}/regions` for live `CPUS`, `PREEMPTIBLE_CPUS`, `A2_CPUS`, `NVIDIA_L4_GPUS`, `NVIDIA_A100_GPUS`, `NVIDIA_T4_GPUS`, `NVIDIA_V100_GPUS`, `TPU_LITE_PODSLICE_V5`, `DISKS_TOTAL_GB`, `SSD_TOTAL_GB`, and `IN_USE_ADDRESSES` headroom.
             {' '}3. <strong>VPC Subnet CIDRs &amp; Asset Residency:</strong> Queries `subnetworks.aggregatedList`, `storage.v1/b`, `bigquery.v2/datasets`, and `run.v2/services` to verify multi-region quorum (`RPO=0s`) vs single-region SPOFs.
           </div>
         </div>
@@ -3934,7 +3934,7 @@ export default function GlobalNetworkWorldMap({
               id: 'REGIONAL_QUOTAS',
               featureId: 'GLOBAL_MAP_REGIONAL_QUOTAS',
               icon: Cpu,
-              label: `Live Regional Compute Quotas (${
+              label: `Live Regional Compute & GPU Quotas (${
                 liveGeoTelemetry?.regionalQuotas?.length || 0
               } Regions)`,
             },
@@ -4147,11 +4147,22 @@ export default function GlobalNetworkWorldMap({
           </div>
         )}
 
-        {/* TAB 03: LIVE REGIONAL COMPUTE QUOTAS & HEADROOM */}
+        {/* TAB 03: LIVE REGIONAL COMPUTE, GPU & TPU QUOTAS & HEADROOM */}
         {activeGeoTab === 'REGIONAL_QUOTAS' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-96 overflow-y-auto">
             {(liveGeoTelemetry?.regionalQuotas || []).map((rq) => {
               const isSelected = selectedRegionId === rq.regionName;
+              const l4Lim = rq.l4GpusLimit ?? 0;
+              const l4SpotLim = rq.spotL4GpusLimit ?? 0;
+              const a100Lim = rq.a100GpusLimit ?? 0;
+              const a100SpotLim = rq.spotA100GpusLimit ?? 0;
+              const t4Lim = rq.t4GpusLimit ?? 0;
+              const v100Lim = rq.v100GpusLimit ?? 0;
+              const tpuLim = rq.tpuV5ePodSliceLimit ?? 0;
+              const totalOnDemandGpusLim =
+                rq.totalOnDemandGpusLimit ?? l4Lim + a100Lim + t4Lim + v100Lim;
+              const totalSpotGpusLim =
+                rq.totalSpotGpusLimit ?? l4SpotLim + a100SpotLim;
               return (
                 <div
                   key={rq.regionName}
@@ -4172,6 +4183,15 @@ export default function GlobalNetworkWorldMap({
                           SELECTED
                         </span>
                       )}
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                          totalOnDemandGpusLim > 0
+                            ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30'
+                            : 'bg-zinc-500/10 text-zinc-500'
+                        }`}
+                      >
+                        GPUs: {rq.totalOnDemandGpusUsed ?? 0}/{totalOnDemandGpusLim}
+                      </span>
                       <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[9.5px] font-bold">
                         {rq.status}
                       </span>
@@ -4180,15 +4200,103 @@ export default function GlobalNetworkWorldMap({
                   <div className="text-[10.5px] text-zinc-600 dark:text-zinc-400 space-y-0.5">
                     <div>
                       vCPUs: <strong>{rq.cpusUsed}</strong> / {rq.cpusLimit}
+                      {rq.preemptibleCpusLimit > 0 && (
+                        <span className="text-zinc-400">
+                          {' '}
+                          (Spot: {rq.preemptibleCpusUsed ?? 0}/{rq.preemptibleCpusLimit})
+                        </span>
+                      )}
                     </div>
                     <div>
-                      Disks GB: <strong>{rq.disksGbUsed}</strong> /{' '}
-                      {rq.disksGbLimit} GB
+                      Disks: <strong>{rq.disksGbUsed}</strong> / {rq.disksGbLimit} GB
+                      {rq.ssdGbLimit > 0 && (
+                        <span className="text-zinc-400">
+                          {' '}
+                          · SSD: {rq.ssdGbUsed ?? 0}/{rq.ssdGbLimit} GB
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between pt-0.5">
+
+                    {/* GPU & TPU Accelerator Regional Quota Breakdown */}
+                    <div className="mt-1.5 pt-1.5 border-t border-zinc-200 dark:border-zinc-800 space-y-1">
+                      <div className="flex items-center justify-between text-[9.5px] font-extrabold text-violet-600 dark:text-violet-400">
+                        <span>
+                          NVIDIA GPUs (On-Demand / Spot)
+                        </span>
+                        <span>
+                          {rq.totalOnDemandGpusUsed ?? 0}/{totalOnDemandGpusLim} OD ·{' '}
+                          {rq.totalSpotGpusUsed ?? 0}/{totalSpotGpusLim} Spot
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 text-[9.5px]">
+                        <div className="px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-zinc-700 dark:text-zinc-300">
+                          <span className="text-zinc-400">L4:</span>{' '}
+                          <strong>
+                            {rq.l4GpusUsed ?? 0}/{l4Lim}
+                          </strong>
+                          {l4SpotLim > 0 && (
+                            <span className="text-zinc-400"> (S:{l4SpotLim})</span>
+                          )}
+                        </div>
+                        <div className="px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-zinc-700 dark:text-zinc-300">
+                          <span className="text-zinc-400">A100:</span>{' '}
+                          <strong>
+                            {rq.a100GpusUsed ?? 0}/{a100Lim}
+                          </strong>
+                          {a100SpotLim > 0 && (
+                            <span className="text-zinc-400"> (S:{a100SpotLim})</span>
+                          )}
+                        </div>
+                        <div className="px-1.5 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300">
+                          <span className="text-zinc-400">T4:</span>{' '}
+                          <strong>
+                            {rq.t4GpusUsed ?? 0}/{t4Lim}
+                          </strong>
+                          {(rq.spotT4GpusLimit ?? 0) > 0 && (
+                            <span className="text-zinc-400">
+                              {' '}
+                              (S:{rq.spotT4GpusLimit})
+                            </span>
+                          )}
+                        </div>
+                        <div className="px-1.5 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300">
+                          <span className="text-zinc-400">V100:</span>{' '}
+                          <strong>
+                            {rq.v100GpusUsed ?? 0}/{v100Lim}
+                          </strong>
+                          {(rq.spotV100GpusLimit ?? 0) > 0 && (
+                            <span className="text-zinc-400">
+                              {' '}
+                              (S:{rq.spotV100GpusLimit})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {(tpuLim > 0 || (rq.a2CpusLimit ?? 0) > 0) && (
+                        <div className="flex items-center justify-between text-[9px] text-zinc-500 pt-0.5">
+                          {tpuLim > 0 && (
+                            <span>
+                              TPU v5e PodSlice:{' '}
+                              <strong className="text-emerald-600 dark:text-emerald-400">
+                                {rq.tpuV5ePodSliceUsed ?? 0}/{tpuLim}
+                              </strong>
+                            </span>
+                          )}
+                          {(rq.a2CpusLimit ?? 0) > 0 && (
+                            <span>
+                              A2 GPU Host vCPUs:{' '}
+                              <strong>
+                                {rq.a2CpusUsed ?? 0}/{rq.a2CpusLimit}
+                              </strong>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
                       <span>
-                        Static IPs: <strong>{rq.ipsUsed}</strong> /{' '}
-                        {rq.ipsLimit}
+                        Static IPs: <strong>{rq.ipsUsed}</strong> / {rq.ipsLimit}
                       </span>
                       <button
                         type="button"
@@ -7035,29 +7143,68 @@ export default function GlobalNetworkWorldMap({
                   )}
 
                   {(liveSubnet || liveQuota) && (
-                    <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-amber-500/20">
-                      {liveSubnet && (
-                        <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
-                          <span className="text-zinc-400 block">
-                            Live VPC Subnet ({liveSubnet.network})
-                          </span>
-                          <strong className="text-blue-600 dark:text-blue-400">
-                            {liveSubnet.ipCidrRange}
-                          </strong>{' '}
-                          <span className="text-zinc-400">
-                            (GW {liveSubnet.gatewayAddress})
-                          </span>
-                        </div>
-                      )}
+                    <div className="space-y-1.5 pt-1 border-t border-amber-500/20">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {liveSubnet && (
+                          <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                            <span className="text-zinc-400 block">
+                              Live VPC Subnet ({liveSubnet.network})
+                            </span>
+                            <strong className="text-blue-600 dark:text-blue-400">
+                              {liveSubnet.ipCidrRange}
+                            </strong>{' '}
+                            <span className="text-zinc-400">
+                              (GW {liveSubnet.gatewayAddress})
+                            </span>
+                          </div>
+                        )}
+                        {liveQuota && (
+                          <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
+                            <span className="text-zinc-400 block">
+                              Live Regional Quotas ({liveQuota.status})
+                            </span>
+                            <strong className="text-zinc-900 dark:text-zinc-100">
+                              {liveQuota.cpusUsed}/{liveQuota.cpusLimit} vCPU
+                            </strong>{' '}
+                            · {liveQuota.disksGbUsed}/{liveQuota.disksGbLimit}GB
+                          </div>
+                        )}
+                      </div>
+
                       {liveQuota && (
-                        <div className="p-1.5 rounded bg-white/70 dark:bg-zinc-950/70">
-                          <span className="text-zinc-400 block">
-                            Live Regional Quotas ({liveQuota.status})
-                          </span>
-                          <strong className="text-zinc-900 dark:text-zinc-100">
-                            {liveQuota.cpusUsed}/{liveQuota.cpusLimit} vCPU
-                          </strong>{' '}
-                          · {liveQuota.disksGbUsed}/{liveQuota.disksGbLimit}GB
+                        <div className="p-1.5 rounded bg-violet-500/10 border border-violet-500/25">
+                          <div className="flex items-center justify-between text-[9.5px] font-bold text-violet-700 dark:text-violet-300">
+                            <span>
+                              Live Regional GPU &amp; TPU Quotas ({selectedRegion.id})
+                            </span>
+                            <span>
+                              OD GPUs: {liveQuota.totalOnDemandGpusUsed ?? 0}/
+                              {liveQuota.totalOnDemandGpusLimit ?? 0} · Spot:{' '}
+                              {liveQuota.totalSpotGpusUsed ?? 0}/
+                              {liveQuota.totalSpotGpusLimit ?? 0}
+                            </span>
+                          </div>
+                          <div className="flex items-center flex-wrap gap-1.5 mt-1 text-[9.5px] text-zinc-700 dark:text-zinc-300">
+                            <span className="px-1.5 py-0.5 rounded bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
+                              L4: <strong>{liveQuota.l4GpusUsed ?? 0}/{liveQuota.l4GpusLimit ?? 0}</strong>
+                              {(liveQuota.spotL4GpusLimit ?? 0) > 0 && ` (Spot:${liveQuota.spotL4GpusLimit})`}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
+                              A100: <strong>{liveQuota.a100GpusUsed ?? 0}/{liveQuota.a100GpusLimit ?? 0}</strong>
+                              {(liveQuota.spotA100GpusLimit ?? 0) > 0 && ` (Spot:${liveQuota.spotA100GpusLimit})`}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
+                              T4: <strong>{liveQuota.t4GpusUsed ?? 0}/{liveQuota.t4GpusLimit ?? 0}</strong>
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-white/70 dark:bg-zinc-950/70 border border-violet-500/20">
+                              V100: <strong>{liveQuota.v100GpusUsed ?? 0}/{liveQuota.v100GpusLimit ?? 0}</strong>
+                            </span>
+                            {(liveQuota.tpuV5ePodSliceLimit ?? 0) > 0 && (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300">
+                                TPU v5e: <strong>{liveQuota.tpuV5ePodSliceUsed ?? 0}/{liveQuota.tpuV5ePodSliceLimit}</strong>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

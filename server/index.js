@@ -16211,7 +16211,13 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
       'NETWORKS',
       'GPUS_ALL_REGIONS',
       'NVIDIA_L4_GPUS',
+      'NVIDIA_A100_GPUS',
+      'NVIDIA_A100_80GB_GPUS',
+      'NVIDIA_T4_GPUS',
+      'NVIDIA_V100_GPUS',
       'PREEMPTIBLE_CPUS',
+      'PREEMPTIBLE_NVIDIA_L4_GPUS',
+      'PREEMPTIBLE_NVIDIA_A100_GPUS',
     ]);
 
     if (computeProjRes.status === 'fulfilled' && Array.isArray(computeProjRes.value?.quotas)) {
@@ -16261,7 +16267,15 @@ app.get('/api/project/:projectId/quotas/radar', async (req, res) => {
             usage === 0 &&
             !(
               (regName === 'us-central1' || regName === 'europe-west1') &&
-              (rq.metric === 'CPUS' || rq.metric === 'IN_USE_ADDRESSES' || rq.metric === 'NVIDIA_L4_GPUS')
+              (rq.metric === 'CPUS' ||
+                rq.metric === 'IN_USE_ADDRESSES' ||
+                rq.metric === 'NVIDIA_L4_GPUS' ||
+                rq.metric === 'NVIDIA_A100_GPUS' ||
+                rq.metric === 'NVIDIA_T4_GPUS' ||
+                rq.metric === 'NVIDIA_V100_GPUS' ||
+                rq.metric === 'PREEMPTIBLE_NVIDIA_L4_GPUS' ||
+                rq.metric === 'PREEMPTIBLE_NVIDIA_A100_GPUS' ||
+                rq.metric === 'TPU_LITE_PODSLICE_V5')
             )
           ) {
             continue;
@@ -65757,31 +65771,169 @@ app.get(
       );
       const fastestRegion = sortedProbes[0] || null;
 
-      // Extract live regional quotas from compute.regions.list across all project regions
+      // Extract live regional quotas from compute.regions.list across all project regions (including GPUs, Spot GPUs, TPUs, SSD & vCPUs)
       const rawRegions = regionsRes?.items || [];
       const regionalQuotas = rawRegions.slice(0, 48).map((reg) => {
         const quotas = reg.quotas || [];
-        const cpuQ = quotas.find((q) => q.metric === 'CPUS') || {
-          usage: 0,
-          limit: 24,
+        const findQ = (metricName, defaultLimit = 0) => {
+          const found = quotas.find((q) => q.metric === metricName);
+          return {
+            usage: found?.usage ?? 0,
+            limit: found?.limit ?? defaultLimit,
+          };
         };
-        const diskQ = quotas.find((q) => q.metric === 'DISKS_TOTAL_GB') || {
-          usage: 0,
-          limit: 4096,
-        };
-        const ipQ = quotas.find((q) => q.metric === 'IN_USE_ADDRESSES') || {
-          usage: 0,
-          limit: 8,
-        };
+
+        const cpuQ = findQ('CPUS', 24);
+        const preemptCpuQ = findQ('PREEMPTIBLE_CPUS', 0);
+        const a2CpuQ = findQ('A2_CPUS', 0);
+        const diskQ = findQ('DISKS_TOTAL_GB', 4096);
+        const ssdQ = findQ('SSD_TOTAL_GB', 0);
+        const ipQ = findQ('IN_USE_ADDRESSES', 8);
+
+        // GPU & Accelerator Regional Quotas (On-Demand + Preemptible/Spot)
+        const l4Q = findQ('NVIDIA_L4_GPUS', 0);
+        const spotL4Q = findQ('PREEMPTIBLE_NVIDIA_L4_GPUS', 0);
+        const a100Q = findQ('NVIDIA_A100_GPUS', 0);
+        const spotA100Q = findQ('PREEMPTIBLE_NVIDIA_A100_GPUS', 0);
+        const a100_80Q = findQ('NVIDIA_A100_80GB_GPUS', 0);
+        const spotA100_80Q = findQ('PREEMPTIBLE_NVIDIA_A100_80GB_GPUS', 0);
+        const t4Q = findQ('NVIDIA_T4_GPUS', 0);
+        const spotT4Q = findQ('PREEMPTIBLE_NVIDIA_T4_GPUS', 0);
+        const v100Q = findQ('NVIDIA_V100_GPUS', 0);
+        const spotV100Q = findQ('PREEMPTIBLE_NVIDIA_V100_GPUS', 0);
+        const p100Q = findQ('NVIDIA_P100_GPUS', 0);
+        const spotP100Q = findQ('PREEMPTIBLE_NVIDIA_P100_GPUS', 0);
+        const p4Q = findQ('NVIDIA_P4_GPUS', 0);
+        const spotP4Q = findQ('PREEMPTIBLE_NVIDIA_P4_GPUS', 0);
+        const k80Q = findQ('NVIDIA_K80_GPUS', 0);
+        const spotK80Q = findQ('PREEMPTIBLE_NVIDIA_K80_GPUS', 0);
+        const tpuV5eQ = findQ('TPU_LITE_PODSLICE_V5', 0);
+        const spotTpuV5eQ = findQ('PREEMPTIBLE_TPU_LITE_PODSLICE_V5', 0);
+
+        const gpuCatalog = [
+          {
+            id: 'L4',
+            label: 'NVIDIA L4 (24GB)',
+            metric: 'NVIDIA_L4_GPUS',
+            used: l4Q.usage,
+            limit: l4Q.limit,
+            spotUsed: spotL4Q.usage,
+            spotLimit: spotL4Q.limit,
+          },
+          {
+            id: 'A100',
+            label: 'NVIDIA A100 (40GB)',
+            metric: 'NVIDIA_A100_GPUS',
+            used: a100Q.usage,
+            limit: a100Q.limit,
+            spotUsed: spotA100Q.usage,
+            spotLimit: spotA100Q.limit,
+          },
+          {
+            id: 'A100_80GB',
+            label: 'NVIDIA A100 (80GB)',
+            metric: 'NVIDIA_A100_80GB_GPUS',
+            used: a100_80Q.usage,
+            limit: a100_80Q.limit,
+            spotUsed: spotA100_80Q.usage,
+            spotLimit: spotA100_80Q.limit,
+          },
+          {
+            id: 'T4',
+            label: 'NVIDIA T4 (16GB)',
+            metric: 'NVIDIA_T4_GPUS',
+            used: t4Q.usage,
+            limit: t4Q.limit,
+            spotUsed: spotT4Q.usage,
+            spotLimit: spotT4Q.limit,
+          },
+          {
+            id: 'V100',
+            label: 'NVIDIA V100 (16GB)',
+            metric: 'NVIDIA_V100_GPUS',
+            used: v100Q.usage,
+            limit: v100Q.limit,
+            spotUsed: spotV100Q.usage,
+            spotLimit: spotV100Q.limit,
+          },
+          {
+            id: 'P100',
+            label: 'NVIDIA P100',
+            metric: 'NVIDIA_P100_GPUS',
+            used: p100Q.usage,
+            limit: p100Q.limit,
+            spotUsed: spotP100Q.usage,
+            spotLimit: spotP100Q.limit,
+          },
+          {
+            id: 'P4',
+            label: 'NVIDIA P4',
+            metric: 'NVIDIA_P4_GPUS',
+            used: p4Q.usage,
+            limit: p4Q.limit,
+            spotUsed: spotP4Q.usage,
+            spotLimit: spotP4Q.limit,
+          },
+          {
+            id: 'K80',
+            label: 'NVIDIA K80',
+            metric: 'NVIDIA_K80_GPUS',
+            used: k80Q.usage,
+            limit: k80Q.limit,
+            spotUsed: spotK80Q.usage,
+            spotLimit: spotK80Q.limit,
+          },
+        ];
+
+        const totalOnDemandGpusUsed = gpuCatalog.reduce((acc, g) => acc + g.used, 0);
+        const totalOnDemandGpusLimit = gpuCatalog.reduce((acc, g) => acc + g.limit, 0);
+        const totalSpotGpusUsed = gpuCatalog.reduce((acc, g) => acc + g.spotUsed, 0);
+        const totalSpotGpusLimit = gpuCatalog.reduce((acc, g) => acc + g.spotLimit, 0);
+
         return {
           regionName: reg.name,
           status: reg.status || 'UP',
-          cpusUsed: cpuQ.usage ?? 0,
-          cpusLimit: cpuQ.limit ?? 24,
-          disksGbUsed: diskQ.usage ?? 0,
-          disksGbLimit: diskQ.limit ?? 4096,
-          ipsUsed: ipQ.usage ?? 0,
-          ipsLimit: ipQ.limit ?? 8,
+          cpusUsed: cpuQ.usage,
+          cpusLimit: cpuQ.limit,
+          preemptibleCpusUsed: preemptCpuQ.usage,
+          preemptibleCpusLimit: preemptCpuQ.limit,
+          a2CpusUsed: a2CpuQ.usage,
+          a2CpusLimit: a2CpuQ.limit,
+          disksGbUsed: diskQ.usage,
+          disksGbLimit: diskQ.limit,
+          ssdGbUsed: ssdQ.usage,
+          ssdGbLimit: ssdQ.limit,
+          ipsUsed: ipQ.usage,
+          ipsLimit: ipQ.limit,
+          l4GpusUsed: l4Q.usage,
+          l4GpusLimit: l4Q.limit,
+          spotL4GpusUsed: spotL4Q.usage,
+          spotL4GpusLimit: spotL4Q.limit,
+          a100GpusUsed: a100Q.usage,
+          a100GpusLimit: a100Q.limit,
+          spotA100GpusUsed: spotA100Q.usage,
+          spotA100GpusLimit: spotA100Q.limit,
+          a100_80GbGpusUsed: a100_80Q.usage,
+          a100_80GbGpusLimit: a100_80Q.limit,
+          t4GpusUsed: t4Q.usage,
+          t4GpusLimit: t4Q.limit,
+          spotT4GpusUsed: spotT4Q.usage,
+          spotT4GpusLimit: spotT4Q.limit,
+          v100GpusUsed: v100Q.usage,
+          v100GpusLimit: v100Q.limit,
+          spotV100GpusUsed: spotV100Q.usage,
+          spotV100GpusLimit: spotV100Q.limit,
+          tpuV5ePodSliceUsed: tpuV5eQ.usage,
+          tpuV5ePodSliceLimit: tpuV5eQ.limit,
+          spotTpuV5ePodSliceUsed: spotTpuV5eQ.usage,
+          spotTpuV5ePodSliceLimit: spotTpuV5eQ.limit,
+          totalOnDemandGpusUsed,
+          totalOnDemandGpusLimit,
+          totalSpotGpusUsed,
+          totalSpotGpusLimit,
+          gpuModels: gpuCatalog.filter(
+            (g) => g.limit > 0 || g.spotLimit > 0 || g.id === 'L4' || g.id === 'A100' || g.id === 'T4'
+          ),
         };
       });
 
