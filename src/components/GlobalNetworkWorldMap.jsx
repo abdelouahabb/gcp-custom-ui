@@ -4187,29 +4187,59 @@ export default function GlobalNetworkWorldMap({
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
-            {/* Floating Interactive Camera Help & Live GPS Readout Pill */}
-            <div
-              className={`absolute top-2.5 left-3 z-10 pointer-events-none flex items-center gap-2.5 px-2.5 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono transition-colors ${
-                isPointerInsideMap
-                  ? 'bg-blue-500/10 dark:bg-blue-950/85 border-blue-500/60 text-blue-800 dark:text-blue-200 shadow-lg shadow-blue-950/50'
-                  : 'bg-white/90 dark:bg-zinc-950/80 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
-              }`}
-            >
-              <Move className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
-              <span>
-                {isPointerInsideMap ? 'WGS84 Cartographic Projection: ' : ''}
-                Wheel to Zoom ({zoom.toFixed(1)}x) · Drag or WASD to Pan · Click Empty Map to Release Selection
-              </span>
-              {cursorGps && (
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold">
-                  GPS: {formatLatLon(cursorGps.lat, cursorGps.lon)}
+            {/* Unified Top Map Overlay Bar (Never Collides Between Left GPS Readout & Right Action Buttons) */}
+            <div className="absolute top-2.5 left-3 right-3 z-10 pointer-events-none flex flex-wrap items-center justify-between gap-2">
+              <div
+                className={`pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono transition-colors ${
+                  isPointerInsideMap
+                    ? 'bg-blue-500/10 dark:bg-blue-950/85 border-blue-500/60 text-blue-800 dark:text-blue-200 shadow-lg shadow-blue-950/50'
+                    : 'bg-white/90 dark:bg-zinc-950/80 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                }`}
+              >
+                <Move className="w-3 h-3 text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span className="truncate">
+                  Zoom {zoom.toFixed(1)}x · Wheel/Drag · Click Empty Map to Unselect
                 </span>
+                {cursorGps && (
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold shrink-0">
+                    {formatLatLon(cursorGps.lat, cursorGps.lon)}
+                  </span>
+                )}
+              </div>
+
+              {(isRegionPinnedOnMap || zoom > 1.1) && (
+                <div className="pointer-events-auto flex items-center gap-1.5 shrink-0">
+                  {isRegionPinnedOnMap && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReleaseMapSelection();
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                    >
+                      Unselect {selectedRegion.name}
+                    </button>
+                  )}
+                  {zoom > 1.1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleResetMapCamera();
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
+                    >
+                      Reset View (1.0x)
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Chaos Outage Active Alert Pill */}
             {(severedRegions.length > 0 || severedZones.length > 0) && (
-              <div className="absolute top-10 left-3 z-10 flex items-center gap-2 px-3 py-1 rounded-lg bg-red-500/10 dark:bg-red-950/90 border border-red-500 text-red-800 dark:text-red-200 text-[10px] font-mono font-bold shadow-lg">
+              <div className="absolute top-11 left-3 z-10 flex items-center gap-2 px-3 py-1 rounded-lg bg-red-500/10 dark:bg-red-950/90 border border-red-500 text-red-800 dark:text-red-200 text-[10px] font-mono font-bold shadow-lg">
                 <AlertTriangle className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-bounce" />
                 <span>
                   CHAOS MODE: {severedRegions.length} Region(s), {severedZones.length}{' '}
@@ -4227,35 +4257,6 @@ export default function GlobalNetworkWorldMap({
                 >
                   Restore All
                 </button>
-              </div>
-            )}
-
-            {(isRegionPinnedOnMap || zoom > 1.1) && (
-              <div className="absolute top-2.5 right-3 z-10 flex items-center gap-1.5">
-                {isRegionPinnedOnMap && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleReleaseMapSelection();
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
-                  >
-                    Release Selection ({selectedRegion.name})
-                  </button>
-                )}
-                {zoom > 1.1 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleResetMapCamera();
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer backdrop-blur-md"
-                  >
-                    Reset to Global View (1.0x)
-                  </button>
-                )}
               </div>
             )}
 
@@ -4462,44 +4463,16 @@ export default function GlobalNetworkWorldMap({
                   );
                 })}
 
-              {/* Live Client Workstation Uplink Beam & Radar Beacon (Client Origin -> Selected GCP Region) */}
-              {showHybridTunnel && (
-                <g>
-                  <path
-                    d={clientUplinkTelemetry.arc.d}
-                    fill="none"
-                    stroke="#f59e0b"
-                    strokeWidth={2.1 * invScale}
-                    strokeDasharray="5 3"
-                    strokeOpacity="0.88"
-                  />
-                  {/* Uplink Midpoint Telemetry Badge (Client -> Selected Region Distance & RTT) */}
-                  <g
-                    transform={`translate(${clientUplinkTelemetry.mid.x}, ${clientUplinkTelemetry.mid.y}) scale(${invScale})`}
-                  >
-                    <rect
-                      x={-72}
-                      y={-9}
-                      width={144}
-                      height={14}
-                      rx={3.5}
-                      fill="#020617"
-                      fillOpacity="0.92"
-                      stroke="#f59e0b"
-                      strokeWidth="0.8"
-                    />
-                    <text
-                      y={0.8}
-                      textAnchor="middle"
-                      fill="#fde68a"
-                      fontSize="6.5"
-                      fontWeight="bold"
-                      fontFamily="monospace"
-                    >
-                      {`${liveClientOriginNode.countryCode} ⇄ ${selectedRegion.name}: ${clientUplinkTelemetry.greatCircleKm.toLocaleString()}km (${clientUplinkTelemetry.estRttMs})`}
-                    </text>
-                  </g>
-                </g>
+              {/* Live Client Workstation Uplink Beam (Client Origin -> Selected GCP Region) — Clean Arc Without Overlapping Midpoint Text */}
+              {showHybridTunnel && isRegionPinnedOnMap && (
+                <path
+                  d={clientUplinkTelemetry.arc.d}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth={1.8 * invScale}
+                  strokeDasharray="5 3"
+                  strokeOpacity="0.72"
+                />
               )}
 
               {/* Always-Visible Live Client Origin Radar Beacon ("YOU ARE HERE") */}
@@ -4511,116 +4484,81 @@ export default function GlobalNetworkWorldMap({
                 }}
                 className="cursor-pointer"
               >
-                <circle r={18} fill="url(#selectedRegionHalo)" opacity="0.55" />
+                <circle r={15} fill="url(#selectedRegionHalo)" opacity="0.45" />
                 <circle
-                  r={12}
+                  r={10}
                   fill="none"
                   stroke="#f59e0b"
-                  strokeWidth="1.2"
+                  strokeWidth="1.1"
                   strokeDasharray="2.5 2"
                 />
                 <circle
-                  r={6}
+                  r={5.2}
                   fill="#f59e0b"
                   stroke="#020617"
-                  strokeWidth="1.5"
+                  strokeWidth="1.4"
                 >
                   <title>{`YOU ARE HERE: ${liveClientOriginNode.city}, ${liveClientOriginNode.region}, ${liveClientOriginNode.country} [${liveClientOriginNode.countryCode}] · IP Hidden (Privacy Mode) · ${liveClientOriginNode.asn} ${liveClientOriginNode.isp} · GPS ${liveClientOriginNode.gpsLabel}`}</title>
                 </circle>
-                <circle r={2} fill="#ffffff" />
+                <circle r={1.8} fill="#ffffff" />
                 <rect
-                  x={-68}
-                  y={9}
-                  width={136}
-                  height={13}
-                  rx={3.5}
+                  x={-28}
+                  y={-18}
+                  width={56}
+                  height={10.5}
+                  rx={3}
                   fill="#020617"
-                  fillOpacity="0.94"
+                  fillOpacity="0.92"
                   stroke="#f59e0b"
-                  strokeWidth="1"
+                  strokeWidth="0.9"
                 />
                 <text
-                  y={17.8}
+                  y={-10.6}
                   textAnchor="middle"
                   fill="#fde68a"
-                  fontSize="6.7"
+                  fontSize="6.2"
                   fontWeight="bold"
                   fontFamily="monospace"
                 >
-                  {`YOU: ${liveClientOriginNode.city}, ${liveClientOriginNode.countryCode} (IP Hidden)`}
+                  {`YOU (${liveClientOriginNode.countryCode})`}
                 </text>
               </g>
 
-              {/* Point-to-Point Subsea Fiber RTT & Cross-Region Egress Telemetry Beam */}
+              {/* Point-to-Point Subsea Fiber RTT & Cross-Region Egress Telemetry Beam (Clean Arc — Metrics Shown in Toolbar) */}
               {routeAnalyzerEnabled &&
                 routeTelemetry.src.id !== routeTelemetry.dst.id && (
-                  <g>
-                    <path
-                      d={routeTelemetry.arc.d}
-                      fill="none"
-                      stroke="#f59e0b"
-                      strokeWidth={2.4 * invScale}
-                      strokeDasharray="6 3"
-                      strokeOpacity="0.9"
-                    />
-                    <g
-                      transform={`translate(${routeTelemetry.mid.x}, ${routeTelemetry.mid.y}) scale(${invScale})`}
-                    >
-                      <rect
-                        x={-68}
-                        y={-11}
-                        width={136}
-                        height={18}
-                        rx={4}
-                        fill="#020617"
-                        fillOpacity="0.92"
-                        stroke="#f59e0b"
-                        strokeWidth="1"
-                      />
-                      <text
-                        y={0.5}
-                        textAnchor="middle"
-                        fill="#fcd34d"
-                        fontSize="7.2"
-                        fontWeight="bold"
-                        fontFamily="monospace"
-                      >
-                        {`${routeTelemetry.rttMs}ms RTT · ${routeTelemetry.fiberKm.toLocaleString()}km · $${routeTelemetry.ratePerGb}/GB`}
-                      </text>
-                    </g>
-                  </g>
+                  <path
+                    d={routeTelemetry.arc.d}
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth={2 * invScale}
+                    strokeDasharray="6 3"
+                    strokeOpacity="0.7"
+                  />
                 )}
 
-              {/* Global Client / Proxy / Threat Origin Nodes */}
-              {GLOBAL_CLIENT_ORIGINS.map((orig) => (
-                <g
-                  key={orig.id}
-                  transform={`translate(${orig.x}, ${orig.y}) scale(${invScale})`}
-                  opacity={spotlightMode && zoom >= 1.8 ? 0.35 : 0.85}
-                >
-                  <circle
-                    r={3.5}
-                    fill={
-                      orig.kind === 'THREAT_SCANNER'
-                        ? '#ea4335'
-                        : orig.kind === 'IAP_ZERO_TRUST'
-                        ? '#10b981'
-                        : '#4285f4'
-                    }
+              {/* Global Client / Proxy / Threat Origin Nodes (Only shown while packet simulation is running) */}
+              {isRunning &&
+                GLOBAL_CLIENT_ORIGINS.map((orig) => (
+                  <g
+                    key={orig.id}
+                    transform={`translate(${orig.x}, ${orig.y}) scale(${invScale})`}
+                    opacity={spotlightMode && zoom >= 1.8 ? 0.35 : 0.85}
                   >
-                    <title>{`${orig.label} (${orig.ip})`}</title>
-                  </circle>
-                  <text
-                    y={-6}
-                    textAnchor="middle"
-                    fill="#94a3b8"
-                    fontSize="7.2"
-                    fontFamily="monospace"
-                  >
-                    {orig.ip}
-                  </text>
-                </g>
-              ))}
+                    <circle
+                      r={3.5}
+                      fill={
+                        orig.kind === 'THREAT_SCANNER'
+                          ? '#ea4335'
+                          : orig.kind === 'IAP_ZERO_TRUST'
+                          ? '#10b981'
+                          : '#4285f4'
+                      }
+                    >
+                      <title>{`${orig.label} (${orig.ip})`}</title>
+                    </circle>
+                  </g>
+                ))}
 
               {/* Live (or DVR Scrubbed) In-Flight Packet Trajectory Arcs & Moving Photon Dots */}
               {(dvrScrubIndex > 0 && dvrSnapshots[dvrScrubIndex - 1]
@@ -5040,10 +4978,8 @@ export default function GlobalNetworkWorldMap({
                       </g>
                     )}
 
-                    {/* City + GPS Subtitle for Focused Region (or when Map Lens is Carbon/Spot) */}
-                    {(isFocusedNode ||
-                      (!spotlightMode && zoom >= 2.2) ||
-                      (mapLens !== 'TRAFFIC' && (isFocusedNode || isPeer))) && (
+                    {/* Subtitle only when Map Lens is Carbon or Spot (City & GPS are shown cleanly in Bottom Bar & Right Inspector) */}
+                    {mapLens !== 'TRAFFIC' && isFocusedNode && (
                       <text
                         x={labelDx}
                         y={labelDy + 9.5}
@@ -5053,8 +4989,6 @@ export default function GlobalNetworkWorldMap({
                             ? reg.cfePercent >= 80
                               ? '#34d399'
                               : '#fcd34d'
-                            : isSelected
-                            ? '#a7f3d0'
                             : '#94a3b8'
                         }
                         fontSize="6.1"
@@ -5062,12 +4996,10 @@ export default function GlobalNetworkWorldMap({
                       >
                         {mapLens === 'CARBON_GRID'
                           ? `${reg.cfePercent}% CFE · ${reg.gco2}gCO2`
-                          : mapLens === 'SPOT_ARBITRAGE'
-                          ? `Spot -$${(
+                          : `Spot -$${(
                               0.018 +
                               (100 - reg.cfePercent) * 0.0002
-                            ).toFixed(3)}/hr`
-                          : `${reg.city} (${reg.gpsLabel})`}
+                            ).toFixed(3)}/hr`}
                       </text>
                     )}
 
@@ -5106,7 +5038,7 @@ export default function GlobalNetworkWorldMap({
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                   <span>
                     You: {liveClientOriginNode.city},{' '}
-                    {liveClientOriginNode.countryCode} (IP Hidden)
+                    {liveClientOriginNode.countryCode}
                   </span>
                 </span>
                 <span className="flex items-center gap-1">
@@ -5125,15 +5057,14 @@ export default function GlobalNetworkWorldMap({
               <span className="text-blue-500 dark:text-blue-400 font-bold">
                 {isRegionPinnedOnMap ? (
                   <>
-                    Selected: {selectedRegion.name} · {selectedRegion.city} [
-                    {selectedRegion.countryCode}] · GPS {selectedRegion.gpsLabel}{' '}
-                    <span className="text-zinc-400 font-normal">
-                      (Click empty map to release)
-                    </span>
+                    {selectedRegion.name} · {selectedRegion.city} [
+                    {selectedRegion.countryCode}] ·{' '}
+                    {clientUplinkTelemetry.greatCircleKm.toLocaleString()}km (
+                    {clientUplinkTelemetry.estRttMs})
                   </>
                 ) : (
                   <>
-                    Selection Released (Free Navigation) · Hover or click any region pin ({selectedRegion.name} in Inspector)
+                    Free Navigation · Click any region pin to focus
                   </>
                 )}
               </span>
