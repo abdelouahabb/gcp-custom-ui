@@ -4022,7 +4022,7 @@ export default function GlobalNetworkWorldMap({
             liveGeoTelemetry?.liveNetworkLogEvents?.[0]?.summary || '';
 
           return (
-            <div className="px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#090d16] border border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-x-auto no-scrollbar">
+            <div className="px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#090d16] border border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-hidden">
               {/* Left: Live Telemetry Badge */}
               <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-extrabold uppercase tracking-wide shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -4121,7 +4121,7 @@ export default function GlobalNetworkWorldMap({
         {/* Left/Center 8 Columns: Full Interactive SVG World Map */}
         <div className="xl:col-span-8 bg-white dark:bg-[#05070e] border border-blue-500/30 rounded-2xl overflow-hidden shadow-2xl relative">
           {/* Structured Instrument Deck Row 1: Playback & Speed Dock | Live Probe & Shield Actions | Zoom & Cadence Dock */}
-          <div className="px-3 py-1.5 bg-zinc-50/90 dark:bg-[#090d16] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-x-auto no-scrollbar">
+          <div className="px-3 py-1.5 bg-zinc-50/90 dark:bg-[#090d16] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-hidden">
             {/* Left Dock: Unified Segmented Transport & Speed Controller */}
             <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5 gap-0.5 shrink-0 shadow-xs">
               <button
@@ -4279,7 +4279,7 @@ export default function GlobalNetworkWorldMap({
           </div>
 
           {/* Structured Instrument Deck Row 2: Single-Line Camera Switchboard | Lens Switchboard | Layer Switchboard */}
-          <div className="px-3 py-1.5 bg-white dark:bg-[#060911] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10px] font-mono overflow-x-auto no-scrollbar">
+          <div className="px-3 py-1.5 bg-white dark:bg-[#060911] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10px] font-mono overflow-hidden">
             {/* Left Switchboard: Segmented Continent Presets + Compact 40-Region Selector */}
             <div className="inline-flex items-center gap-1.5 shrink-0">
               <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 p-0.5 gap-0.5">
@@ -4451,8 +4451,8 @@ export default function GlobalNetworkWorldMap({
           </div>
 
           {/* Structured Instrument Deck Row 3: Subsea Laser Selectors (Left) | ALLOW/BLOCK/FIBER Telemetry Dock (Center) | Fiber RTT Readout (Right) */}
-          <div className="px-3 py-1.5 bg-amber-500/5 dark:bg-[#080b14] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10px] font-mono overflow-x-auto no-scrollbar">
-            {/* Left Dock: Point-to-Point Subsea Fiber Laser Selectors (Full City Names Without Truncation) */}
+          <div className="px-3 py-1.5 bg-amber-500/5 dark:bg-[#080b14] border-b border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10px] font-mono overflow-hidden">
+            {/* Left Dock: Point-to-Point Subsea Fiber Laser Selectors */}
             <div className="inline-flex items-center gap-1.5 shrink-0">
               <span className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 font-extrabold uppercase tracking-wider text-[9px]">
                 <Crosshair className="w-2.5 h-2.5" />
@@ -4461,7 +4461,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={routeSourceRegionId}
                 onChange={(e) => setRouteSourceRegionId(e.target.value)}
-                className="h-6 bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-2 text-[10px] font-semibold cursor-pointer"
+                className="h-6 w-[170px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
               >
                 {GCP_GLOBAL_REGIONS.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -4473,7 +4473,7 @@ export default function GlobalNetworkWorldMap({
               <select
                 value={routeDestRegionId}
                 onChange={(e) => setRouteDestRegionId(e.target.value)}
-                className="h-6 bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-2 text-[10px] font-semibold cursor-pointer"
+                className="h-6 w-[170px] bg-white dark:bg-zinc-900 border border-amber-500/40 text-amber-800 dark:text-amber-200 rounded-md px-1.5 text-[10px] font-semibold cursor-pointer truncate"
               >
                 {GCP_GLOBAL_REGIONS.map((r) => (
                   <option key={r.id} value={r.id}>
