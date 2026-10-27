@@ -3433,44 +3433,85 @@ function CloudPulseCockpit() {
     }
 
     const storedToken = sessionStorage.getItem('cloudpulse_access_token');
-    const storedAccount = sessionStorage.getItem('cloudpulse_account');
+    const storedAccount =
+      sessionStorage.getItem('cloudpulse_account') ||
+      localStorage.getItem('cloudpulse_account');
+    const storedProj =
+      sessionStorage.getItem('cloudpulse_project') ||
+      localStorage.getItem('cloudpulse_project') ||
+      '';
     if (storedToken) {
       axios.defaults.headers.common['x-gcp-access-token'] = storedToken;
-      if (storedAccount) {
-        axios.defaults.headers.common['x-gcp-account'] = storedAccount;
-      }
+    }
+    if (storedAccount) {
+      axios.defaults.headers.common['x-gcp-account'] = storedAccount;
     }
 
     axios
-      .get('/api/context')
+      .get('/api/context', {
+        params: storedProj ? { preferredProject: storedProj } : {},
+      })
       .then((res) => {
         if (res.data.authenticated) {
-          if (
-            res.data.accessToken &&
-            !axios.defaults.headers.common['x-gcp-access-token']
-          ) {
+          if (res.data.accessToken) {
+            sessionStorage.setItem(
+              'cloudpulse_access_token',
+              res.data.accessToken
+            );
             axios.defaults.headers.common['x-gcp-access-token'] =
               res.data.accessToken;
           }
-          setContextData(res.data);
-          const storedProj = sessionStorage.getItem('cloudpulse_project');
-          const explicitProjChoice =
-            sessionStorage.getItem('cloudpulse_project_explicit') === 'true';
+          if (res.data.account) {
+            sessionStorage.setItem('cloudpulse_account', res.data.account);
+            localStorage.setItem('cloudpulse_account', res.data.account);
+            axios.defaults.headers.common['x-gcp-account'] = res.data.account;
+          }
+
+          let mergedProjects = Array.isArray(res.data.projects)
+            ? [...res.data.projects]
+            : [];
+          try {
+            const cachedProjectsRaw = localStorage.getItem(
+              'cloudpulse_projects_list_v1'
+            );
+            if (cachedProjectsRaw) {
+              const cachedProjects = JSON.parse(cachedProjectsRaw);
+              if (Array.isArray(cachedProjects)) {
+                const seenIds = new Set(mergedProjects.map((p) => p.projectId));
+                cachedProjects.forEach((cp) => {
+                  if (cp?.projectId && !seenIds.has(cp.projectId)) {
+                    seenIds.add(cp.projectId);
+                    mergedProjects.push(cp);
+                  }
+                });
+              }
+            }
+            if (mergedProjects.length > 0) {
+              localStorage.setItem(
+                'cloudpulse_projects_list_v1',
+                JSON.stringify(mergedProjects)
+              );
+            }
+          } catch {
+            // ignore storage errors
+          }
+
+          setContextData({
+            ...res.data,
+            projects: mergedProjects,
+          });
+
           const validProjectIds = new Set(
-            (res.data.projects || []).map((p) => p.projectId)
+            mergedProjects.map((p) => p.projectId)
           );
           const canUseStored =
             Boolean(storedProj) &&
-            (validProjectIds.size === 0 || validProjectIds.has(storedProj)) &&
-            (explicitProjChoice ||
-              !res.data.defaultProject ||
-              storedProj === res.data.defaultProject ||
-              storedProj !== res.data.projects?.[0]?.projectId);
+            (validProjectIds.size === 0 || validProjectIds.has(storedProj));
 
           const projToUse =
             (canUseStored ? storedProj : '') ||
             res.data.defaultProject ||
-            res.data.projects?.[0]?.projectId ||
+            mergedProjects[0]?.projectId ||
             '';
           setSelectedProjectId(projToUse);
           setIsAuthenticated(true);
@@ -3485,6 +3526,51 @@ function CloudPulseCockpit() {
         setCheckingAuth(false);
       });
   }, []);
+
+  const handleRefreshProjectsList = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/context', {
+        params: selectedProjectId
+          ? { preferredProject: selectedProjectId }
+          : {},
+      });
+      if (res.data?.authenticated && Array.isArray(res.data.projects)) {
+        if (res.data.accessToken) {
+          sessionStorage.setItem(
+            'cloudpulse_access_token',
+            res.data.accessToken
+          );
+          axios.defaults.headers.common['x-gcp-access-token'] =
+            res.data.accessToken;
+        }
+        try {
+          if (res.data.projects.length > 0) {
+            localStorage.setItem(
+              'cloudpulse_projects_list_v1',
+              JSON.stringify(res.data.projects)
+            );
+          }
+        } catch {
+          // ignore
+        }
+        setContextData((prev) => ({
+          ...prev,
+          ...res.data,
+          projects:
+            res.data.projects.length > 0
+              ? res.data.projects
+              : prev.projects || [],
+        }));
+        showToast(
+          `Synced ${res.data.projects.length} active GCP projects for ${
+            res.data.account || 'session'
+          }`
+        );
+      }
+    } catch {
+      showToast('Could not refresh GCP projects list.');
+    }
+  }, [selectedProjectId, showToast]);
 
   const fetchProjectOverview = useCallback(async (projId, { force = false } = {}) => {
     if (!projId) return;
@@ -3567,6 +3653,11 @@ function CloudPulseCockpit() {
   useEffect(() => {
     if (isAuthenticated && selectedProjectId) {
       sessionStorage.setItem('cloudpulse_project', selectedProjectId);
+      try {
+        localStorage.setItem('cloudpulse_project', selectedProjectId);
+      } catch {
+        // ignore
+      }
       fetchProjectOverview(selectedProjectId);
       axios
         .get(
@@ -3622,17 +3713,41 @@ function CloudPulseCockpit() {
     if (sessionData.accessToken) {
       sessionStorage.setItem('cloudpulse_access_token', sessionData.accessToken);
       sessionStorage.setItem('cloudpulse_account', sessionData.account || '');
+      try {
+        localStorage.setItem('cloudpulse_account', sessionData.account || '');
+      } catch {
+        // ignore
+      }
       axios.defaults.headers.common['x-gcp-access-token'] =
         sessionData.accessToken;
       axios.defaults.headers.common['x-gcp-account'] =
         sessionData.account || '';
     }
+    const incomingProjects = sessionData.projects || [];
+    try {
+      if (incomingProjects.length > 0) {
+        localStorage.setItem(
+          'cloudpulse_projects_list_v1',
+          JSON.stringify(incomingProjects)
+        );
+      }
+    } catch {
+      // ignore
+    }
     setContextData({
       authenticated: true,
       account: sessionData.account,
       defaultProject: sessionData.selectedProjectId,
-      projects: sessionData.projects || [],
+      projects: incomingProjects,
     });
+    sessionStorage.setItem('cloudpulse_project', sessionData.selectedProjectId);
+    sessionStorage.setItem('cloudpulse_project_explicit', 'true');
+    try {
+      localStorage.setItem('cloudpulse_project', sessionData.selectedProjectId);
+      localStorage.setItem('cloudpulse_project_explicit', 'true');
+    } catch {
+      // ignore
+    }
     setSelectedProjectId(sessionData.selectedProjectId);
     setIsAuthenticated(true);
     showToast(
@@ -4084,7 +4199,13 @@ function CloudPulseCockpit() {
               <div className={`relative shrink-0 ${projectMenuOpen ? 'z-[70]' : 'z-50'}`}>
                 <button
                   type="button"
-                  onClick={() => setProjectMenuOpen((o) => !o)}
+                  onClick={() => {
+                    const nextOpen = !projectMenuOpen;
+                    setProjectMenuOpen(nextOpen);
+                    if (nextOpen && (contextData.projects?.length || 0) <= 1) {
+                      handleRefreshProjectsList();
+                    }
+                  }}
                   title={`Active GCP Project: ${selectedProjectId} — Click to switch between your authenticated Google Cloud projects`}
                   className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
                 >
@@ -4100,8 +4221,20 @@ function CloudPulseCockpit() {
 
                 {projectMenuOpen && (
                   <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] shadow-2xl border border-zinc-200 dark:border-zinc-800 rounded-[12px] py-1.5 z-[80] max-h-80 overflow-y-auto">
-                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800">
-                      GCP Projects ({contextData.projects?.length || 1})
+                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+                      <span>
+                        GCP Projects ({contextData.projects?.length || 1})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRefreshProjectsList();
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 font-bold text-[9.5px] cursor-pointer normal-case"
+                      >
+                        🔄 Sync Projects
+                      </button>
                     </div>
                     {(contextData.projects || []).map((proj) => (
                       <button
@@ -4109,9 +4242,25 @@ function CloudPulseCockpit() {
                         type="button"
                         onClick={() => {
                           sessionStorage.setItem(
+                            'cloudpulse_project',
+                            proj.projectId
+                          );
+                          sessionStorage.setItem(
                             'cloudpulse_project_explicit',
                             'true'
                           );
+                          try {
+                            localStorage.setItem(
+                              'cloudpulse_project',
+                              proj.projectId
+                            );
+                            localStorage.setItem(
+                              'cloudpulse_project_explicit',
+                              'true'
+                            );
+                          } catch {
+                            // ignore
+                          }
                           setSelectedProjectId(proj.projectId);
                           setProjectMenuOpen(false);
                           showToast(

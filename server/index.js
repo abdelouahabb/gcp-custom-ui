@@ -947,10 +947,16 @@ async function resolveHostDefaultProject() {
   return localMetadataProjectId || '';
 }
 
+let cachedProjectsList = [];
+
 // Fast 240ms IPv4 token exchange using ADC refresh_token or Cloud Run Metadata Server
-async function getLocalOrMetadataAccessToken(preferredEmail) {
+async function getLocalOrMetadataAccessToken(
+  preferredEmail,
+  forceRefresh = false
+) {
   const now = Date.now();
   if (
+    !forceRefresh &&
     localCachedToken &&
     now < localTokenExpiry &&
     (!preferredEmail || preferredEmail === localSelectedAccount)
@@ -1032,11 +1038,24 @@ async function getLocalOrMetadataAccessToken(preferredEmail) {
 }
 
 // Resolve token for the current HTTP request:
-// Priority 1: Header `x-gcp-access-token` (stateless per-user browser session for any account!)
-// Priority 2: Local gcloud / Cloud Run metadata session (if localSessionConnected is true)
+// Priority 1: Local ADC / Metadata auto-refreshed token when localSessionConnected is active (never expires!)
+// Priority 2: Header `x-gcp-access-token` (stateless per-user browser session for any account!)
 async function resolveRequestAuth(req) {
   const headerToken = req.headers['x-gcp-access-token'];
   const headerAccount = String(req.headers['x-gcp-account'] || '').trim();
+
+  if (localSessionConnected) {
+    const { token: freshLocalToken, account: localAcct } =
+      await getLocalOrMetadataAccessToken(headerAccount || undefined);
+    if (freshLocalToken) {
+      return {
+        token: freshLocalToken,
+        account: localAcct || headerAccount,
+        authMode: 'LOCAL_ADC_OR_CLOUD_RUN',
+      };
+    }
+  }
+
   if (headerToken && String(headerToken).trim()) {
     let fallbackAcct = '';
     if (!headerAccount || /^connected[\s_]*oauth[\s_]*user$/i.test(headerAccount)) {
@@ -1056,16 +1075,7 @@ async function resolveRequestAuth(req) {
     };
   }
 
-  if (!localSessionConnected) {
-    return { token: null, account: null, authMode: 'DISCONNECTED' };
-  }
-
-  const { token, account } = await getLocalOrMetadataAccessToken();
-  return {
-    token,
-    account,
-    authMode: token ? 'LOCAL_ADC_OR_CLOUD_RUN' : 'UNAUTHENTICATED',
-  };
+  return { token: null, account: null, authMode: 'DISCONNECTED' };
 }
 
 async function gcpFetch(url, token, projectId, options = {}) {
@@ -1075,7 +1085,7 @@ async function gcpFetch(url, token, projectId, options = {}) {
     typeof rawBody === 'string'
       ? JSON.parse(rawBody)
       : rawBody;
-  const reqTimeout = options.timeout || 4500;
+  const reqTimeout = options.timeout || 5500;
   const headers = {
     Authorization: `Bearer ${token}`,
     ...(projectId ? { 'x-goog-user-project': projectId } : {}),
@@ -1092,6 +1102,24 @@ async function gcpFetch(url, token, projectId, options = {}) {
     return response.data;
   } catch (err) {
     const status = err.response?.status;
+    // If OAuth token expired (401), automatically refresh via local ADC refresh_token and retry once
+    if (status === 401) {
+      const refreshed = await getLocalOrMetadataAccessToken(undefined, true);
+      if (refreshed?.token && refreshed.token !== token) {
+        const retryAuthHeaders = {
+          ...headers,
+          Authorization: `Bearer ${refreshed.token}`,
+        };
+        const retryAuthRes = await gcpHttp.request({
+          url,
+          method: options.method || 'GET',
+          headers: retryAuthHeaders,
+          data: parsedData,
+          timeout: reqTimeout,
+        });
+        return retryAuthRes.data;
+      }
+    }
     // If target project rejects x-goog-user-project quota header (403 USER_PROJECT_DENIED or 400),
     // automatically retry once without x-goog-user-project so cross-project telemetry works on Cloud Run
     if (projectId && (status === 403 || status === 400)) {
@@ -1111,6 +1139,73 @@ async function gcpFetch(url, token, projectId, options = {}) {
     }
     throw err;
   }
+}
+
+async function fetchAllActiveGcpProjects(token, defaultProject = '') {
+  let projects = [];
+  let activeToken = token;
+  try {
+    const data = await gcpFetch(
+      'https://cloudresourcemanager.googleapis.com/v1/projects?pageSize=100',
+      activeToken,
+      null,
+      { timeout: 9000 }
+    );
+    projects = (data?.projects || [])
+      .filter((p) => p.lifecycleState === 'ACTIVE')
+      .map((p) => ({
+        projectId: p.projectId,
+        name: p.name || p.projectId,
+        projectNumber: p.projectNumber,
+        createTime: p.createTime,
+        labels: p.labels || {},
+        lifecycleState: p.lifecycleState || 'ACTIVE',
+      }));
+  } catch {
+    // If token was stale or request timed out, try refreshing local ADC token and retrying once
+    try {
+      const refreshed = await getLocalOrMetadataAccessToken(undefined, true);
+      if (refreshed?.token) {
+        activeToken = refreshed.token;
+        const retryData = await gcpFetch(
+          'https://cloudresourcemanager.googleapis.com/v1/projects?pageSize=100',
+          activeToken,
+          null,
+          { timeout: 9000 }
+        );
+        projects = (retryData?.projects || [])
+          .filter((p) => p.lifecycleState === 'ACTIVE')
+          .map((p) => ({
+            projectId: p.projectId,
+            name: p.name || p.projectId,
+            projectNumber: p.projectNumber,
+            createTime: p.createTime,
+            labels: p.labels || {},
+            lifecycleState: p.lifecycleState || 'ACTIVE',
+          }));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (projects.length > 1) {
+    cachedProjectsList = projects;
+  } else if (projects.length <= 1 && cachedProjectsList.length > 1) {
+    projects = cachedProjectsList;
+  } else if (projects.length === 0 && defaultProject) {
+    projects = [
+      {
+        projectId: defaultProject,
+        name: defaultProject,
+        projectNumber: '',
+        createTime: new Date().toISOString(),
+        labels: {},
+        lifecycleState: 'ACTIVE',
+      },
+    ];
+  }
+  return { projects, activeToken };
 }
 
 // ============================================================================
@@ -1390,35 +1485,10 @@ app.post('/api/auth/connect', async (req, res) => {
     }
 
     const defaultProject = await resolveHostDefaultProject();
-    let projects = [];
-    try {
-      const projData = await gcpFetch(
-        'https://cloudresourcemanager.googleapis.com/v1/projects?pageSize=50',
-        token,
-        null
-      );
-      projects = (projData?.projects || [])
-        .filter((p) => p.lifecycleState === 'ACTIVE')
-        .map((p) => ({
-          projectId: p.projectId,
-          name: p.name || p.projectId,
-          projectNumber: p.projectNumber,
-          createTime: p.createTime,
-          labels: p.labels || {},
-        }));
-    } catch {
-      if (defaultProject) {
-        projects = [
-          {
-            projectId: defaultProject,
-            name: defaultProject,
-            projectNumber: '',
-            createTime: new Date().toISOString(),
-            labels: {},
-          },
-        ];
-      }
-    }
+    const { projects, activeToken } = await fetchAllActiveGcpProjects(
+      token,
+      defaultProject
+    );
 
     const matchedDefault =
       projects.find((p) => p.projectId === defaultProject)?.projectId ||
@@ -1430,7 +1500,7 @@ app.post('/api/auth/connect', async (req, res) => {
       ok: true,
       authMode: 'LOCAL_ADC_OR_CLOUD_RUN',
       account,
-      accessToken: token,
+      accessToken: activeToken || token,
       projects,
       defaultProject: matchedDefault,
     });
@@ -1495,39 +1565,17 @@ app.get('/api/context', async (req, res) => {
     }
 
     const defaultProject = await resolveHostDefaultProject();
-    let projects = [];
-    try {
-      const data = await gcpFetch(
-        'https://cloudresourcemanager.googleapis.com/v1/projects?pageSize=50',
-        token,
-        null
-      );
-      projects = (data?.projects || [])
-        .filter((p) => p.lifecycleState === 'ACTIVE')
-        .map((p) => ({
-          projectId: p.projectId,
-          name: p.name || p.projectId,
-          projectNumber: p.projectNumber,
-          createTime: p.createTime,
-          labels: p.labels || {},
-          lifecycleState: p.lifecycleState,
-        }));
-    } catch {
-      if (defaultProject) {
-        projects = [
-          {
-            projectId: defaultProject,
-            name: defaultProject,
-            projectNumber: '',
-            createTime: new Date().toISOString(),
-            labels: {},
-            lifecycleState: 'ACTIVE',
-          },
-        ];
-      }
-    }
+    const { projects, activeToken } = await fetchAllActiveGcpProjects(
+      token,
+      defaultProject
+    );
 
+    const preferredProject = String(
+      req.query.preferredProject || req.headers['x-gcp-project'] || ''
+    ).trim();
     const initialProject =
+      (preferredProject &&
+        projects.find((p) => p.projectId === preferredProject)?.projectId) ||
       projects.find((p) => p.projectId === defaultProject)?.projectId ||
       defaultProject ||
       projects[0]?.projectId ||
@@ -1537,7 +1585,7 @@ app.get('/api/context', async (req, res) => {
       authenticated: true,
       authMode,
       account: resolvedAccount,
-      accessToken: token,
+      accessToken: activeToken || token,
       defaultProject: initialProject,
       projects,
     });
