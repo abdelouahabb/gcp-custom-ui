@@ -143,6 +143,7 @@ function analyzeFirewallRuleRisk(fw) {
 const ZERO_TRUST_TEMPLATES = [
   {
     id: 'iap-zero-trust-ssh',
+    featureId: 'VPC_TPL_IAP_ZERO_TRUST',
     title: 'Allow IAP Zero-Trust SSH & RDP',
     subtitle: 'ALLOW INGRESS · tcp:22,3389 · Source 35.235.240.0/20 · Priority 90',
     badge: 'RECOMMENDED',
@@ -162,6 +163,7 @@ const ZERO_TRUST_TEMPLATES = [
   },
   {
     id: 'block-public-ssh-rdp',
+    featureId: 'VPC_TPL_BLOCK_SSH_RDP',
     title: 'Block Public SSH & RDP Brute-Force',
     subtitle: 'DENY INGRESS · tcp:22,3389 · Source 0.0.0.0/0 · Priority 100',
     badge: 'HARDENING',
@@ -181,6 +183,7 @@ const ZERO_TRUST_TEMPLATES = [
   },
   {
     id: 'allow-gclb-health-checks',
+    featureId: 'VPC_TPL_ALLOW_GCLB',
     title: 'Allow Google Load Balancer Health Checks',
     subtitle: 'ALLOW INGRESS · tcp:80,443,8080 · Google Probers · Priority 500',
     badge: 'INFRA',
@@ -200,6 +203,7 @@ const ZERO_TRUST_TEMPLATES = [
   },
   {
     id: 'deny-malicious-egress',
+    featureId: 'VPC_TPL_BLOCK_EGRESS',
     title: 'Block Risky Egress Ports (SMTP/SMB)',
     subtitle: 'DENY EGRESS · tcp:25,135-139,445 · Dest 0.0.0.0/0 · Priority 200',
     badge: 'EGRESS LOCK',
@@ -1199,6 +1203,7 @@ export default function VpcNetworksAndFirewalls({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
+              data-feature-id="VPC_FW_SYNC_GCP"
               disabled={loading || directFetching}
               onClick={() => {
                 fetchDirectVpcAndFirewalls();
@@ -1216,6 +1221,7 @@ export default function VpcNetworksAndFirewalls({
 
             <button
               type="button"
+              data-feature-id="VPC_FW_JUMP_RULES"
               onClick={() => {
                 setFilterMode('ALL');
                 setSearchQuery('');
@@ -1233,6 +1239,7 @@ export default function VpcNetworksAndFirewalls({
 
             <button
               type="button"
+              data-feature-id="VPC_FW_PACKET_TESTER"
               onClick={() =>
                 setActiveSubPanel(
                   activeSubPanel === 'SIMULATOR' ? 'NONE' : 'SIMULATOR'
@@ -1250,6 +1257,7 @@ export default function VpcNetworksAndFirewalls({
 
             <button
               type="button"
+              data-feature-id="VPC_FW_CREATE_RULE"
               onClick={() => handleOpenCreateStudio(null)}
               className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer"
             >
@@ -1259,6 +1267,7 @@ export default function VpcNetworksAndFirewalls({
 
             <button
               type="button"
+              data-feature-id="VPC_FW_NEW_VPC"
               onClick={onOpenProvisionVpc}
               className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3.5 py-2 text-xs font-mono font-bold transition-colors shadow-sm cursor-pointer"
             >
@@ -1268,58 +1277,120 @@ export default function VpcNetworksAndFirewalls({
           </div>
         </div>
 
-        {/* Security Posture KPI Strip */}
+        {/* Security Posture KPI Strip (Clickable Filter Cards with Hover Explainers) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
-          <div className="p-2.5 rounded-lg bg-emerald-500/[0.07] border border-emerald-500/25">
+          <button
+            type="button"
+            data-feature-id="VPC_FW_KPI_ALLOW"
+            onClick={() =>
+              setFilterMode(filterMode === 'ALLOW' ? 'ALL' : 'ALLOW')
+            }
+            className={`p-2.5 rounded-lg bg-emerald-500/[0.07] hover:bg-emerald-500/15 border text-left transition-all cursor-pointer ${
+              filterMode === 'ALLOW'
+                ? 'border-emerald-500 ring-1 ring-emerald-500/40'
+                : 'border-emerald-500/25'
+            }`}
+          >
             <div className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400">
               ✓ ALLOW Rules
             </div>
             <div className="text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
               {stats.allowCount}
             </div>
-          </div>
+          </button>
 
-          <div className="p-2.5 rounded-lg bg-red-500/[0.07] border border-red-500/25">
+          <button
+            type="button"
+            data-feature-id="VPC_FW_KPI_DENY"
+            onClick={() =>
+              setFilterMode(filterMode === 'DENY' ? 'ALL' : 'DENY')
+            }
+            className={`p-2.5 rounded-lg bg-red-500/[0.07] hover:bg-red-500/15 border text-left transition-all cursor-pointer ${
+              filterMode === 'DENY'
+                ? 'border-red-500 ring-1 ring-red-500/40'
+                : 'border-red-500/25'
+            }`}
+          >
             <div className="text-[10px] font-mono uppercase text-red-600 dark:text-red-400">
               ✕ DENY Rules
             </div>
             <div className="text-lg font-extrabold font-mono text-red-600 dark:text-red-400">
               {stats.denyCount}
             </div>
-          </div>
+          </button>
 
-          <div className="p-2.5 rounded-lg bg-blue-500/[0.07] border border-blue-500/25">
+          <button
+            type="button"
+            data-feature-id="VPC_FW_KPI_INGRESS"
+            onClick={() =>
+              setFilterMode(filterMode === 'INGRESS' ? 'ALL' : 'INGRESS')
+            }
+            className={`p-2.5 rounded-lg bg-blue-500/[0.07] hover:bg-blue-500/15 border text-left transition-all cursor-pointer ${
+              filterMode === 'INGRESS'
+                ? 'border-blue-500 ring-1 ring-blue-500/40'
+                : 'border-blue-500/25'
+            }`}
+          >
             <div className="text-[10px] font-mono uppercase text-blue-600 dark:text-blue-400">
               ↙ INGRESS (Inbound)
             </div>
             <div className="text-lg font-extrabold font-mono text-blue-600 dark:text-blue-400">
               {stats.ingressCount}
             </div>
-          </div>
+          </button>
 
-          <div className="p-2.5 rounded-lg bg-blue-500/[0.07] border border-blue-500/25">
+          <button
+            type="button"
+            data-feature-id="VPC_FW_KPI_EGRESS"
+            onClick={() =>
+              setFilterMode(filterMode === 'EGRESS' ? 'ALL' : 'EGRESS')
+            }
+            className={`p-2.5 rounded-lg bg-blue-500/[0.07] hover:bg-blue-500/15 border text-left transition-all cursor-pointer ${
+              filterMode === 'EGRESS'
+                ? 'border-blue-500 ring-1 ring-blue-500/40'
+                : 'border-blue-500/25'
+            }`}
+          >
             <div className="text-[10px] font-mono uppercase text-blue-600 dark:text-blue-400">
               ↗ EGRESS (Outbound)
             </div>
             <div className="text-lg font-extrabold font-mono text-blue-600 dark:text-blue-400">
               {stats.egressCount}
             </div>
-          </div>
+          </button>
 
-          <div className="p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+          <button
+            type="button"
+            data-feature-id="VPC_FW_KPI_DISABLED"
+            onClick={() =>
+              setFilterMode(filterMode === 'DISABLED' ? 'ALL' : 'DISABLED')
+            }
+            className={`p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 border text-left transition-all cursor-pointer ${
+              filterMode === 'DISABLED'
+                ? 'border-blue-500 ring-1 ring-blue-500/40'
+                : 'border-zinc-200 dark:border-zinc-800'
+            }`}
+          >
             <div className="text-[10px] font-mono uppercase text-zinc-500">
               Paused / Disabled
             </div>
             <div className="text-lg font-extrabold font-mono text-zinc-700 dark:text-zinc-300">
               {stats.disabledCount}
             </div>
-          </div>
+          </button>
 
-          <div
-            className={`p-2.5 rounded-lg border ${
-              stats.exposedHighRisk.length > 0
-                ? 'bg-amber-500/10 border-amber-500/40'
-                : 'bg-emerald-500/10 border-emerald-500/30'
+          <button
+            type="button"
+            data-feature-id="VPC_FW_KPI_EXPOSED"
+            onClick={() =>
+              setFilterMode(filterMode === 'EXPOSED' ? 'ALL' : 'EXPOSED')
+            }
+            className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+              filterMode === 'EXPOSED'
+                ? 'ring-1 ring-amber-500/50 border-amber-500 bg-amber-500/15'
+                : stats.exposedHighRisk.length > 0
+                ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40'
+                : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30'
             }`}
           >
             <div className="text-[10px] font-mono uppercase text-amber-600 dark:text-amber-400">
@@ -1336,7 +1407,7 @@ export default function VpcNetworksAndFirewalls({
                 ? '0 Exposed'
                 : `${stats.exposedHighRisk.length} At Risk`}
             </div>
-          </div>
+          </button>
         </div>
 
         {/* High-Risk Public Port Exposure Alert Banner */}
@@ -1360,6 +1431,7 @@ export default function VpcNetworksAndFirewalls({
             </div>
             <button
               type="button"
+              data-feature-id="VPC_FW_KPI_EXPOSED"
               onClick={() => setFilterMode('EXPOSED')}
               className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 font-mono font-bold text-xs shrink-0 cursor-pointer"
             >
@@ -1391,6 +1463,7 @@ export default function VpcNetworksAndFirewalls({
                 <button
                   key={tpl.id}
                   type="button"
+                  data-feature-id={tpl.featureId}
                   onClick={() => handleOpenCreateStudio(tpl.config)}
                   className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 hover:bg-blue-500/[0.08] border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-left transition-all cursor-pointer group"
                 >
@@ -1564,6 +1637,7 @@ export default function VpcNetworksAndFirewalls({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
+                    data-feature-id="VPC_STUDIO_ALLOW"
                     onClick={() => setRuleAction('ALLOW')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       ruleAction === 'ALLOW'
@@ -1576,6 +1650,7 @@ export default function VpcNetworksAndFirewalls({
                   </button>
                   <button
                     type="button"
+                    data-feature-id="VPC_STUDIO_DENY"
                     onClick={() => setRuleAction('DENY')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       ruleAction === 'DENY'
@@ -1596,6 +1671,7 @@ export default function VpcNetworksAndFirewalls({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
+                    data-feature-id="VPC_STUDIO_INGRESS"
                     disabled={Boolean(editingRuleName)}
                     onClick={() => setRuleDirection('INGRESS')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 ${
@@ -1609,6 +1685,7 @@ export default function VpcNetworksAndFirewalls({
                   </button>
                   <button
                     type="button"
+                    data-feature-id="VPC_STUDIO_EGRESS"
                     disabled={Boolean(editingRuleName)}
                     onClick={() => setRuleDirection('EGRESS')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 ${
@@ -2084,6 +2161,7 @@ export default function VpcNetworksAndFirewalls({
                         <span>·</span>
                         <button
                           type="button"
+                          data-feature-id="VPC_NET_FILTER_RULES"
                           onClick={() =>
                             setSelectedVpcFilter(
                               isSelectedFilter ? 'ALL' : vpc.name
@@ -2102,6 +2180,7 @@ export default function VpcNetworksAndFirewalls({
                         <div className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-md px-2 py-1">
                           <button
                             type="button"
+                            data-feature-id="VPC_NET_DELETE"
                             onClick={() =>
                               handleConfirmDelete('VPC Network', vpc.name)
                             }
@@ -2120,6 +2199,7 @@ export default function VpcNetworksAndFirewalls({
                       ) : (
                         <button
                           type="button"
+                          data-feature-id="VPC_NET_DELETE"
                           onClick={() => setConfirmDeleteKey(delKey)}
                           className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2 py-1 rounded-md transition-colors cursor-pointer"
                         >
@@ -2244,6 +2324,7 @@ export default function VpcNetworksAndFirewalls({
               </span>
               <select
                 aria-label="Filter Firewall Rules"
+                data-feature-id="VPC_FW_FILTER_SELECT"
                 value={filterMode}
                 onChange={(e) => setFilterMode(e.target.value)}
                 className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
@@ -2463,6 +2544,7 @@ export default function VpcNetworksAndFirewalls({
                       <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                         <button
                           type="button"
+                          data-feature-id="VPC_FW_XRAY_ON_MAP"
                           onClick={() => handleTestRuleOnMap(fw)}
                           title="Launch a live packet for this rule's protocol/port on the Global World Map and inspect its Priority 0 -> 65535 X-Ray evaluation"
                           className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2.5 py-1 rounded-md bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-300 border border-sky-500/35 transition-colors cursor-pointer"
@@ -2473,6 +2555,7 @@ export default function VpcNetworksAndFirewalls({
 
                         <button
                           type="button"
+                          data-feature-id="VPC_FW_RULE_LOGS"
                           onClick={() => handleOpenRuleLogs(fw)}
                           title="Open Cloud Logs Explorer & Shell Studio pre-filtered to this firewall rule"
                           className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
@@ -2484,6 +2567,7 @@ export default function VpcNetworksAndFirewalls({
                         {isPublicAllowIngress && (
                           <button
                             type="button"
+                            data-feature-id="VPC_FW_LOCK_TO_IAP"
                             disabled={Boolean(tracker)}
                             onClick={() => setPendingIapLockdownFw(fw)}
                             title="Replace 0.0.0.0/0 with Google Cloud IAP Zero-Trust CIDR (35.235.240.0/20) — opens impact warning first"
@@ -2497,6 +2581,7 @@ export default function VpcNetworksAndFirewalls({
                         {!isDeny && !isEgress && isIapProtected && !ranges.includes('0.0.0.0/0') && (
                           <button
                             type="button"
+                            data-feature-id="VPC_FW_RESTORE_PUBLIC"
                             disabled={Boolean(tracker)}
                             onClick={() => handleRestoreFromIap(fw)}
                             title="Restore sourceRanges back to 0.0.0.0/0 so direct gcloud compute ssh / public IP connections work without --tunnel-through-iap"
@@ -2509,6 +2594,7 @@ export default function VpcNetworksAndFirewalls({
 
                         <button
                           type="button"
+                          data-feature-id="VPC_FW_TOGGLE_PAUSE"
                           disabled={Boolean(tracker)}
                           onClick={() => handleToggleRuleDisabled(fw)}
                           title={
@@ -2528,6 +2614,7 @@ export default function VpcNetworksAndFirewalls({
 
                         <button
                           type="button"
+                          data-feature-id="VPC_FW_EDIT_RULE"
                           disabled={Boolean(tracker)}
                           onClick={() => handleOpenEditStudio(fw)}
                           className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 transition-colors cursor-pointer disabled:opacity-50"
@@ -2540,6 +2627,7 @@ export default function VpcNetworksAndFirewalls({
                           <div className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-md px-2 py-0.5">
                             <button
                               type="button"
+                              data-feature-id="VPC_FW_DELETE_RULE"
                               onClick={() =>
                                 handleConfirmDelete('VPC Firewall Rule', fw.name)
                               }
@@ -2558,6 +2646,7 @@ export default function VpcNetworksAndFirewalls({
                         ) : (
                           <button
                             type="button"
+                            data-feature-id="VPC_FW_DELETE_RULE"
                             disabled={Boolean(tracker)}
                             onClick={() => setConfirmDeleteKey(delKey)}
                             className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 px-2.5 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
