@@ -3759,7 +3759,7 @@ export default function GlobalNetworkWorldMap({
                 className="px-3 py-1.5 rounded-lg text-xs font-mono font-extrabold bg-blue-600 hover:bg-blue-700 text-white shadow-sm cursor-pointer flex items-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Pre-Crime Bill & Dream Stack</span>
+                <span>30-Day Billing Forecaster &amp; Stack Architect</span>
               </button>
             )}
           </div>

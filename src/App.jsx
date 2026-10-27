@@ -699,7 +699,7 @@ function classifyDestructiveAxiosConfig(config) {
           : `Arm Auto-Circuit-Breaker & Cloud Billing Budget ($${capUsd}/mo)?`,
         headerBadge: isSpendCap
           ? 'GoogleCloudBillingBudgetsV1SpendCap Gatekeeper'
-          : 'CloudPulse 2026 Pre-Crime Circuit-Breaker Gatekeeper',
+          : 'CloudPulse 2026 Billing Spend Cap Circuit-Breaker Gatekeeper',
         targetLabel: isSpendCap
           ? 'Target GCP Service for Hard Spend Cap'
           : 'Target Project for Monthly Hard Budget Cap',
@@ -716,7 +716,7 @@ function classifyDestructiveAxiosConfig(config) {
           'Action cancelled — Circuit-Breaker / Spend Cap was not enabled.',
         impactWarning: isSpendCap
           ? `HARD SPEND CAP WARNING: Setting spendCap.inputState = "CONFIGURED" ($${capUsd}/mo · EXCLUDE_ALL_CREDITS) instructs Google Cloud Billing to automatically pause usage of "${svcRef}" in "${projectId}" for the rest of the calendar month once gross estimated usage reaches 100% of $${capUsd} USD. (Note: Because EXCLUDE_ALL_CREDITS is required by Google, gross usage is measured before promotional credits settle.)`
-          : `CIRCUIT-BREAKER & BILLING BUDGET WARNING: Confirming this action provisions a live $${capUsd}/mo Cloud Billing Budget on billingbudgets.googleapis.com/v1 (50%, 80%, 100% thresholds) and arms the Pre-Crime Auto-Circuit-Breaker so compute spend is clamped if your project crosses $${capUsd}/mo.`,
+          : `CIRCUIT-BREAKER & BILLING BUDGET WARNING: Confirming this action provisions a live $${capUsd}/mo Cloud Billing Budget on billingbudgets.googleapis.com/v1 (50%, 80%, 100% thresholds) and arms the Automated Spend Cap Circuit-Breaker so compute spend is clamped if your project crosses $${capUsd}/mo.`,
       };
     }
 
@@ -1306,67 +1306,67 @@ function classifyDestructiveAxiosConfig(config) {
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm Starlink Orbital Geo-Standby Failover (${targetReg})?`,
-        headerBadge: 'Wave 13 Starlink Orbital Mesh Gatekeeper',
+        title: `Confirm Multi-Region Geo-Standby Failover (${targetReg})?`,
+        headerBadge: 'Multi-Region Geo-Failover Gatekeeper',
         targetLabel: 'Intercontinental Corridor & Geo-Standby Jurisdiction',
         resourceKind: `BigQuery Geo-Failover Dataset (${corridorId})`,
         targetName: `${projectId}:starlink_orbital_failover_${String(targetReg).toLowerCase()}`,
         location: targetReg,
         projectId,
-        method: 'STARLINK GEO-FAILOVER',
+        method: 'MULTI-REGION GEO-FAILOVER',
         endpoint: rawUrl,
-        confirmLabel: `Engage Orbital Geo-Standby in ${targetReg} ($0.00)`,
-        cancelToast: 'Starlink Orbital Geo-Standby cancelled.',
-        whatHappensNext: `1. Provisions or synchronizes standby BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in "${targetReg}" via bigquery.googleapis.com/bigquery/v2.\n2. Binds corridor failover metadata for "${corridorId}".\n3. Signs and appends an Ed25519 (RFC 8032) cryptographic block to the Wave 13 Black-Box Flight Recorder.`,
+        confirmLabel: `Provision Geo-Standby Dataset in ${targetReg} ($0.00)`,
+        cancelToast: 'Multi-Region Geo-Standby cancelled.',
+        whatHappensNext: `1. Provisions or synchronizes standby BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in "${targetReg}" via bigquery.googleapis.com/bigquery/v2.\n2. Binds corridor failover metadata for "${corridorId}".\n3. Signs and appends an Ed25519 (RFC 8032) cryptographic block to the Signed Audit Trail Ledger.`,
         costWarning: `ZERO IDLE COST ($0.00/MO): Creating or updating a BigQuery dataset container incurs $0.00/mo in Google Cloud charges.`,
         impactWarning: `Provisions/updates live BigQuery dataset "starlink_orbital_failover_${String(targetReg).toLowerCase()}" in project "${projectId}".`,
       };
     }
 
-    // 3A-000b. Wave 13 Neuralink 4-Node DAG Materializer (/wave13/neuralink-materialize)
+    // 3A-000b. Wave 13 Natural-Language 4-Node DAG Builder (/wave13/neuralink-materialize)
     if (rawUrl.includes('/wave13/neuralink-materialize')) {
       const slug = body.stackSlug || 'neuralink_singularity_2026';
       const loc = body.location || 'US';
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm Neuralink 4-Node DAG Materialization ("${slug}")?`,
-        headerBadge: 'Wave 13 Neuralink Thought-to-Cloud Gatekeeper',
+        title: `Confirm 4-Node Cloud DAG Provisioning ("${slug}")?`,
+        headerBadge: 'Natural-Language 4-Node DAG Gatekeeper',
         targetLabel: '4-Node Parallel Cloud Architecture DAG',
         resourceKind: 'GCS Hardened Bucket + BigQuery Dataset + Typed Table + Secret Manager Vault',
         targetName: `${projectId} · ${slug} (${loc})`,
         location: loc,
         projectId,
-        method: 'NEURALINK 4-NODE DAG',
+        method: 'PROVISION 4-NODE DAG',
         endpoint: rawUrl,
-        confirmLabel: `Materialize 4-Node DAG on ${projectId}`,
-        cancelToast: 'Neuralink 4-Node DAG materialization cancelled.',
-        whatHappensNext: `1. Node 01: Provisions hardened Cloud Storage bucket (Public Access Prevention + Uniform IAM + 7d Soft-Delete) via storage.googleapis.com/storage/v1.\n2. Node 02 & 03: Provisions BigQuery dataset "${slug}_lakehouse" and 5-column typed table "neural_telemetry_events" via bigquery.googleapis.com/bigquery/v2.\n3. Node 04: Provisions AES-256 hardware-encrypted Secret Manager container via secretmanager.googleapis.com/v1.\n4. Seals the 4-node execution receipt in the Ed25519 Black-Box Ledger.`,
+        confirmLabel: `Provision 4-Node DAG on ${projectId}`,
+        cancelToast: '4-Node DAG provisioning cancelled.',
+        whatHappensNext: `1. Node 01: Provisions hardened Cloud Storage bucket (Public Access Prevention + Uniform IAM + 7d Soft-Delete) via storage.googleapis.com/storage/v1.\n2. Node 02 & 03: Provisions BigQuery dataset "${slug}_lakehouse" and 5-column typed table "neural_telemetry_events" via bigquery.googleapis.com/bigquery/v2.\n3. Node 04: Provisions AES-256 hardware-encrypted Secret Manager container via secretmanager.googleapis.com/v1.\n4. Seals the 4-node execution receipt in the Ed25519 Signed Audit Trail Ledger.`,
         costWarning: `ALWAYS-FREE TIER ELIGIBLE ($0.00 INITIAL COST): Empty GCS buckets, BigQuery dataset/table metadata, and up to 6 Secret Manager versions per month fall within Google Cloud's Always-Free Tier ($0.00/mo).`,
         impactWarning: `Provisions/verifies 4 live Google Cloud resources in project "${projectId}" (${loc}).`,
       };
     }
 
-    // 3A-00a. Wave 12 Closed-Loop FSD Cloud Autopilot Maneuver (/wave12/autopilot-execute)
+    // 3A-00a. Wave 12 Automated Drift Remediation (/wave12/autopilot-execute)
     if (rawUrl.includes('/wave12/autopilot-execute')) {
       const mId = String(body.maneuverType || body.maneuverId || 'CALIBRATE_AUTOPILOT_DATASET').toUpperCase();
       const targetName = body.targetResource || body.targetName || 'All Eligible Project Resources';
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm FSD Autopilot Maneuver: "${mId}"?`,
-        headerBadge: 'Wave 12 SpaceX Roadster FSD Autopilot Gatekeeper',
-        targetLabel: 'Autopilot Maneuver & Target Fleet',
-        resourceKind: `Closed-Loop Reconciler (${mId})`,
+        title: `Confirm Automated Drift Remediation: "${mId}"?`,
+        headerBadge: 'Automated Drift Reconciler Gatekeeper',
+        targetLabel: 'Remediation Action & Target Resource',
+        resourceKind: `Closed-Loop Drift Reconciler (${mId})`,
         targetName: `${projectId} · ${targetName}`,
         location: 'Global / Multi-Region',
         projectId,
-        method: `FSD AUTOPILOT (${mId})`,
+        method: `REMEDIATE DRIFT (${mId})`,
         endpoint: rawUrl,
-        confirmLabel: `Engage FSD Autopilot Maneuver (${mId})`,
-        cancelToast: `FSD Autopilot maneuver ${mId} aborted.`,
-        whatHappensNext: `1. Computes pre-flight SHA-256 Merkle state digest across your live GCP project.\n2. Executes "${mId}" (${body.title || targetName}) via live Google Cloud REST APIs.\n3. Re-runs the 6-vector telemetry radar and verifies the post-flight SHA-256 digest.`,
-        costWarning: `ZERO EXTRA CHARGE ($0.00): Hardening GCS buckets (Uniform Bucket-Level Access + 7-day Soft Delete), locking firewall rules to IAP, or calibrating the Autopilot dataset incurs $0.00 in API charges and reduces ongoing FinOps burn.`,
+        confirmLabel: `Execute Drift Remediation (${mId})`,
+        cancelToast: `Drift remediation action ${mId} cancelled.`,
+        whatHappensNext: `1. Computes pre-change SHA-256 Merkle state digest across your live GCP project.\n2. Executes "${mId}" (${body.title || targetName}) via live Google Cloud REST APIs.\n3. Re-runs the 6-vector telemetry scan and verifies the post-change SHA-256 digest.`,
+        costWarning: `ZERO EXTRA CHARGE ($0.00): Hardening GCS buckets (Uniform Bucket-Level Access + 7-day Soft Delete), locking firewall rules to IAP, or calibrating the audit dataset incurs $0.00 in API charges and reduces ongoing FinOps burn.`,
         impactWarning: `Mutates live configuration on target resource "${targetName}" in project "${projectId}".`,
       };
     }
@@ -3570,7 +3570,7 @@ function CloudPulseCockpit() {
       group: 'COMMAND',
       label: '2026 Innovation',
       isStar: true,
-      tip: '14 Exclusive Beyond-Console Engineering Tools: Pre-Crime Billing, Topology Blast Radius, Night-Mode Sleep, Reverse-Terraform, Storage RAM DLP, Cold-Start Surgeon & AES-256-GCM Gemini 3.8 Vault',
+      tip: '22 Enterprise Cloud Engineering Tools: 30-Day Billing Forecaster, Dependency Blast Radius, Cloud Resilience Suite, Off-Hours Scheduler, Reverse-Terraform, Storage Secret/PII Scanner, Cold-Start Profiler & AES-256-GCM Gemini 3.8 Vault',
       icon: Sparkles,
     },
     {

@@ -36,14 +36,14 @@ const STUDIO_TABS = [
   },
   {
     id: 'TABLES_SQL',
-    label: '2. SQL Pre-Crime X-Ray & Auto-Optimizer',
+    label: '2. SQL Dry-Run Cost Estimator & Auto-Optimizer',
     shortLabel: 'SQL Optimizer & Tables',
     icon: Sparkles,
-    tip: 'Browse or create Partitioned + Clustered tables, run live Dry-Run Byte X-Ray ($6.25/TB), and auto-rewrite SQL using Column Pruning, Predicate Pushdown & WHERE EXISTS semi-joins',
+    tip: 'Browse or create Partitioned + Clustered tables, run live Dry-Run Byte Cost Estimation ($6.25/TB), and auto-rewrite SQL using Column Pruning, Predicate Pushdown & WHERE EXISTS semi-joins',
   },
   {
     id: 'FINOPS_CRYSTAL',
-    label: '3. Logical vs Physical & Slot FinOps Crystal',
+    label: '3. Logical vs Physical Storage & Slot Cost Forecaster',
     shortLabel: 'Storage & Slot FinOps',
     icon: DollarSign,
     tip: 'Interactive Capacitor Compression & Slot Edition Simulator: Compare Logical ($0.02/GB) vs Physical Compressed ($0.04/GB at 5:1 ratio) and On-Demand ($6.25/TB) vs Enterprise Autoscaling Slots',
@@ -485,7 +485,7 @@ export default function BigQueryStudio({
                 </span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Live BigQuery Capacitor Control Plane for <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">{projectId}</span> — Harden datasets with Physical Compressed Billing (`$0.04/GB`), run Dry-Run SQL Pre-Crime X-Ray (`$6.25/TB`), model Enterprise Autoscaling Slots, and rewind tables 168h via `FOR SYSTEM_TIME AS OF`.
+                Live BigQuery Capacitor Control Plane for <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-200">{projectId}</span> — Harden datasets with Physical Compressed Billing (`$0.04/GB`), run Dry-Run SQL Cost Estimation (`$6.25/TB`), model Enterprise Autoscaling Slots, and rewind tables 168h via `FOR SYSTEM_TIME AS OF`.
               </p>
             </div>
           </div>
@@ -793,7 +793,7 @@ export default function BigQueryStudio({
                             setSelectedDatasetId(ds.datasetId);
                             setActiveSubTab('TABLES_SQL');
                           }}
-                          title={`Explore tables & run Pre-Crime SQL Dry-Run X-Ray in ${ds.datasetId}`}
+                          title={`Explore tables & run Dry-Run SQL Cost Estimator in ${ds.datasetId}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer"
                         >
                           <Layers className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
@@ -1025,7 +1025,7 @@ export default function BigQueryStudio({
             </div>
           </div>
 
-          {/* Right Column (7 cols): Pre-Crime SQL Dry-Run X-Ray & Automatic SQL Optimizer */}
+          {/* Right Column (7 cols): Dry-Run SQL Cost Estimator & Automatic SQL Optimizer */}
           <div className="xl:col-span-7 space-y-4">
             <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1033,7 +1033,7 @@ export default function BigQueryStudio({
                   <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4" />
                     <span>
-                      Pre-Crime SQL Dry-Run Cost X-Ray & Automatic Optimizer
+                      SQL Pre-Execution Cost Estimator (Dry-Run) &amp; Automatic Optimizer
                     </span>
                   </h3>
                   <p className="text-[11px] text-zinc-500">
@@ -1539,7 +1539,7 @@ export default function BigQueryStudio({
                     setSqlInput(card.sql);
                     setActiveSubTab('TABLES_SQL');
                   }}
-                  title={`Load "${card.title}" into the SQL Pre-Crime X-Ray & Live Executor`}
+                  title={`Load "${card.title}" into the SQL Dry-Run Cost Estimator & Live Executor`}
                   className="w-full mt-2 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[11px] font-mono font-bold transition-colors cursor-pointer"
                 >
                   Load into SQL X-Ray & Execute →

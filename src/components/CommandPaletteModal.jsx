@@ -179,10 +179,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave15-dyson-moonshot',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Wave 15 Moonshot: BigQuery Vector/Z-Score SQL, SLSA v1.0 DSSE Provenance, Cloud Logging Surgeon & TLS 1.3 X.509 Inspector',
+        title: 'Open Supply-Chain & Observability Suite: BigQuery Anomaly SQL, SLSA v1.0 Provenance, Log RCA & TLS 1.3 Inspector',
         subtitle: 'Live BigQuery Standard SQL Z-Score & Cosine Vector CTE, Cloud Build + Artifact Registry SHA-256 SLSA v1.0 DSSE Attestor, Live logging.googleapis.com Correlator + Gemini 3.8 Flash RCA & Real TLS 1.3 X.509 Handshake Inspector',
-        keywords: 'wave 15 moonshot bigquery vector cosine similarity zscore anomaly sql slsa provenance in-toto dsse artifact registry cloud build logging entries list gemini surgeon tls 1.3 x509 certificate cipher',
-        badge: 'WAVE 15 MOONSHOT',
+        keywords: 'wave 15 moonshot bigquery vector cosine similarity zscore anomaly sql slsa provenance in-toto dsse artifact registry cloud build logging entries list gemini rca tls 1.3 x509 certificate cipher',
+        badge: 'SLSA & LOG RCA',
         badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
         icon: Database,
         run: () => {
@@ -193,10 +193,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave14-quantum-doctor',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Wave 14 Quantum Envelope Vault, BigQuery Time-Travel SQL, Self-Healing Doctor & IAM Blast-Radius',
-        subtitle: 'Live BigQuery FOR SYSTEM_TIME AS OF SQL Diff, Autonomous GCS/BQ/Secret REST PATCH Remediation, Live getIamPolicy Blast-Radius & X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
-        keywords: 'wave 14 quantum pqc x25519 shake256 hkdf aes-256-gcm secret manager bigquery time travel for system_time as of self healing cloud doctor iam blast radius getiampolicy',
-        badge: 'WAVE 14 TEMPORAL & PQC',
+        title: 'Open Point-in-Time Recovery SQL, Automated Drift Remediation, IAM Permission Graph & Post-Quantum Vault',
+        subtitle: 'Live BigQuery FOR SYSTEM_TIME AS OF SQL Diff, Automated GCS/BQ/Secret REST PATCH Remediation, Live getIamPolicy Permission Graph & X25519 + SHAKE256 + AES-256-GCM Secret Manager Vault',
+        keywords: 'wave 14 quantum pqc x25519 shake256 hkdf aes-256-gcm secret manager bigquery time travel point in time recovery for system_time as of config drift remediation iam permission graph getiampolicy',
+        badge: 'DRIFT & PQC VAULT',
         badgeColor: 'text-violet-700 dark:text-violet-300 bg-violet-500/15 border-violet-500/30',
         icon: Key,
         run: () => {
@@ -207,10 +207,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave13-starlink-neuralink',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Wave 13 Starlink Orbital Mesh & Neuralink Cloud Singularity',
-        subtitle: '6-Region Live HTTPS/TLS Probe + BigQuery Heartbeat Streamer, Dynamic Prompt-to-Schema 4-Node DAG Executor, Optimus 3-Agent Council & Ed25519 Black-Box Ledger',
-        keywords: 'wave 13 starlink orbital laser subsea fiber neuralink thought to cloud dag compiler optimus 3 agent council ed25519 blackbox signature',
-        badge: 'WAVE 13 SINGULARITY',
+        title: 'Open Multi-Region TLS 1.3 Probe, Natural-Language DAG Builder & Ed25519 Signed Audit Trail',
+        subtitle: '6-Region Live HTTPS/TLS Probe + BigQuery Heartbeat Streamer, Natural-Language Prompt-to-Schema 4-Node DAG Builder, 3-Agent Architecture Review & Ed25519 Signed Audit Trail',
+        keywords: 'wave 13 multi region tls 1.3 latency probe natural language schema dag compiler builder 3 agent review board ed25519 audit trail signature',
+        badge: 'MULTI-REGION & DAG',
         badgeColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
         icon: Globe,
         run: () => {
@@ -221,10 +221,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave12-roadster',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Wave 12 SpaceX Roadster Autopilot & Zero-Gravity Flight Deck',
-        subtitle: 'Closed-Loop FSD Cloud Autopilot (SHA-256 Merkle), Cross-Project Live Teleporter (BQ/GCS/Secrets), 12-Way Parallel MCP Megacast & Gemini 3.8 Flash Flight Director',
-        keywords: 'wave 12 roadster tesla spacex fsd autopilot self healing merkle sha256 cross project teleport clone bigquery bucket secreticrous megacast 12 way mcp flight director',
-        badge: 'WAVE 12 ROADSTER',
+        title: 'Open Automated Drift Reconciler, Cross-Project Resource Migrator & 12-Service Parallel MCP Probe',
+        subtitle: 'Closed-Loop Drift Reconciler (SHA-256 Receipts), Cross-Project Live Resource Migrator (BQ/GCS/Secrets), 12-Service Parallel MCP Probe & Gemini 3.8 Flash Ops Advisor',
+        keywords: 'wave 12 drift reconciler self healing merkle sha256 cross project migrator copy bigquery bucket secret 12 way parallel mcp probe',
+        badge: 'DRIFT & MIGRATOR',
         badgeColor: 'text-red-700 dark:text-red-300 bg-red-500/15 border-red-500/30',
         icon: Rocket,
         run: () => {
@@ -235,10 +235,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-wave11-moonshot',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open Wave 11 Moonshot Studio (Cloud Deploy Canary, Firestore NoSQL, Quota Optimizer & Multi-Project Matrix)',
-        subtitle: 'Live clouddeploy.googleapis.com, firestore.googleapis.com, Active Assist Recommender, 18-Studio Stress Audit & Executive HTML Dossier',
-        keywords: 'wave 11 moonshot cloud deploy canary pipeline firestore nosql document recommender quota multi project compare stress audit dossier dockerfile',
-        badge: 'WAVE 11 MOONSHOT',
+        title: 'Open Cloud Deploy Canary Pipelines, Firestore NoSQL, Quota Optimizer & Multi-Project Matrix',
+        subtitle: 'Live clouddeploy.googleapis.com, firestore.googleapis.com, Active Assist Recommender, 18-Studio Stress Audit & Executive HTML Report',
+        keywords: 'wave 11 cloud deploy canary pipeline firestore nosql document recommender quota multi project compare stress audit dossier dockerfile',
+        badge: 'DEPLOY & FIRESTORE',
         badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
         icon: Rocket,
         run: () => {
@@ -249,10 +249,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-quantum-nexus',
         category: '2026 Innovation Lab (Star)',
-        title: 'Open 2026 Quantum Nexus (Causal Blast-Radius, State Rollback, FinOps, PR Mirror & Honey-Grid)',
-        subtitle: 'Launch all 5 world-first 2026 breakthroughs inside the 2026 Innovation Lab',
-        keywords: 'quantum nexus causal blast radius rollback snapshot finops arbitrage ephemeral pr preview shadow mirror honey token deception',
-        badge: '2026 STAR',
+        title: 'Open Cloud Resilience Suite (Blast-Radius Simulator, State Rollback, FinOps, PR Previews & Canary Tripwires)',
+        subtitle: 'Launch all 5 enterprise resilience & governance modules inside the 2026 Innovation Lab',
+        keywords: 'resilience suite causal blast radius rollback snapshot finops circuit breaker ephemeral pr preview traffic mirror canary token tripwire',
+        badge: '5-IN-1 RESILIENCE',
         badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 dark:bg-blue-500/25 border-amber-500/40',
         icon: Sparkles,
         run: () => {
@@ -425,10 +425,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-zombie-hunter',
         category: 'Wave 2 Engineer Wishlist',
-        title: 'Run Zombie Resource Hunter & Silent-Waste Exterminator',
-        subtitle: 'Detect orphaned Persistent Disks, unused Static External IPs ($7.30/mo), and idle resources',
-        keywords: 'zombie waste orphan disk unused static ip clean exterminate save money',
-        badge: 'ZOMBIE HUNTER',
+        title: 'Run Idle & Orphaned Resource Cleaner (Unattached Disks & Static IPs)',
+        subtitle: 'Detect unattached Persistent Disks, unused Static External IPs ($7.30/mo), and idle resources',
+        keywords: 'idle orphan disk unused static ip clean waste save money',
+        badge: 'IDLE CLEANER',
         badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
         icon: ShieldAlert,
         run: () => {
@@ -439,10 +439,10 @@ export default function CommandPaletteModal({
       {
         id: 'open-teleport-diff-carbon',
         category: 'Wave 2 Engineer Wishlist',
-        title: '1-Tap Cross-Region Cloud Run Teleporter, Carbon CFE% & Visual Config Diff',
+        title: 'Cross-Region Cloud Run Migrator, Carbon CFE% & Visual Config Diff',
         subtitle: 'Clone services to 98% Carbon-Free regions (Montréal/Finland) or diff two services side-by-side',
-        keywords: 'teleport clone region migrate carbon green cfe diff compare revision',
-        badge: 'TELEPORT & DIFF',
+        keywords: 'clone region migrate carbon green cfe diff compare revision',
+        badge: 'MIGRATE & DIFF',
         badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
         icon: Globe,
         run: () => {
@@ -594,8 +594,8 @@ export default function CommandPaletteModal({
         id: 'open-bigquery-studio',
         category: 'Data Lakehouse & Sovereign SRE Studios',
         title: 'Open BigQuery 2026 Lakehouse & Compliance Studio',
-        subtitle: 'Physical compressed billing (-54%), Pre-Crime SQL Dry-Run X-Ray & 168h Time-Machine',
-        keywords: 'bigquery sql dataset table physical billing dry run time travel',
+        subtitle: 'Physical compressed billing (-54%), SQL Dry-Run Cost Estimator & 168h Point-in-Time Recovery',
+        keywords: 'bigquery sql dataset table physical billing dry run point in time recovery',
         badge: 'BIGQUERY',
         badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,

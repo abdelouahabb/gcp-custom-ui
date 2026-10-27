@@ -22,29 +22,29 @@ const FLIGHT_DECK_TABS = [
   {
     id: 'AUTOPILOT_FSD',
     step: '01',
-    title: 'FSD Cloud Autopilot & Closed-Loop Reconciler',
-    subtitle: '6-Vector Telemetry · Self-Healing Maneuvers · SHA-256 Receipts',
+    title: 'Automated Drift Reconciler & SHA-256 Audit',
+    subtitle: '6-Vector Telemetry · Self-Healing Actions · SHA-256 Receipts',
     icon: ShieldCheck,
   },
   {
     id: 'ZERO_GRAVITY_TELEPORTER',
     step: '02',
-    title: 'Zero-Gravity Cross-Project Live Teleporter',
+    title: 'Cross-Project Live Resource Migrator',
     subtitle: 'GCS rewriteTo · BigQuery Copy Jobs · Secret Vault Sync',
     icon: Rocket,
   },
   {
     id: 'LUDICROUS_MEGACAST',
     step: '03',
-    title: 'Ludicrous-Mode 12-Way MCP & REST Megacast',
-    subtitle: '12 Concurrent *.googleapis.com/mcp Lanes · Sonic-Boom Waterfall',
+    title: '12-Service Parallel MCP & REST Telemetry Probe',
+    subtitle: '12 Concurrent *.googleapis.com/mcp Lanes · Latency Waterfall',
     icon: Zap,
   },
   {
     id: 'FLIGHT_DIRECTOR',
     step: '04',
-    title: 'Gemini 3.8 Flash Grounded Flight Director',
-    subtitle: 'Live Autopilot + Developer Knowledge MCP Mission Briefing',
+    title: 'Gemini 3.8 Flash Architecture & Ops Advisor',
+    subtitle: 'Live Telemetry + Developer Knowledge MCP Briefing',
     icon: Sparkles,
   },
 ];
@@ -533,7 +533,7 @@ export default function Wave12RoadsterFlightDeckStudio({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-indigo-600 text-white">
-                WAVE 12 · SPACEX ROADSTER AUTOPILOT &amp; ZERO-GRAVITY FLIGHT DECK
+                AUTOMATED DRIFT RECONCILER · CROSS-PROJECT MIGRATOR &amp; 12-WAY MCP PROBE
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 100% LIVE GCP REST + 12-LANE MCP TELEMETRY
@@ -542,14 +542,14 @@ export default function Wave12RoadsterFlightDeckStudio({
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
               <Rocket className="w-5 h-5 text-indigo-500 shrink-0" />
               <span>
-                Autopilot FSD Cloud Reconciler, Cross-Project Teleporter &amp; Ludicrous 12-Way Megacast
+                Automated Drift Reconciler, Cross-Project Resource Migrator &amp; 12-Service Parallel MCP Probe
               </span>
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
-              Continuous closed-loop SRE &amp; FinOps Autopilot with cryptographic{' '}
-              <code className="font-mono font-bold">SHA-256</code> state receipts, Zero-Gravity
-              cross-project resource teleportation over Google&apos;s backbone, and a 12-way
-              concurrent <code className="font-mono font-bold">*.googleapis.com/mcp</code> sonic-boom
+              Continuous closed-loop SRE &amp; FinOps drift remediation with cryptographic{' '}
+              <code className="font-mono font-bold">SHA-256</code> state receipts, server-side
+              cross-project resource migration over Google&apos;s backbone, and a 12-service
+              concurrent <code className="font-mono font-bold">*.googleapis.com/mcp</code> latency
               waterfall.
             </p>
           </div>
@@ -1063,7 +1063,7 @@ export default function Wave12RoadsterFlightDeckStudio({
                 12 CONCURRENT OFFICIAL *.GOOGLEAPIS.COM/MCP LANES
               </div>
               <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                Ludicrous-Mode 12-Way Parallel MCP Megacast &amp; Sonic-Boom Waterfall
+                12-Service Parallel MCP Probe &amp; Latency Waterfall
               </h3>
               <p className="text-xs text-zinc-500">
                 Fires 12 authenticated JSON-RPC 2.0 requests simultaneously across Billing,
@@ -1082,7 +1082,7 @@ export default function Wave12RoadsterFlightDeckStudio({
               <span>
                 {runningMegacast
                   ? 'Firing 12 Concurrent MCP Lanes...'
-                  : 'Fire 12-Lane Ludicrous Megacast Now'}
+                  : 'Run 12-Service Parallel MCP Probe'}
               </span>
             </button>
           </div>

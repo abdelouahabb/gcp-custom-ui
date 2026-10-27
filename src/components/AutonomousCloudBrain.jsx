@@ -748,7 +748,7 @@ export default function AutonomousCloudBrain({
       }
       setAutoBreakerArmed(false);
       if (onShowToast) {
-        onShowToast('Disarmed Pre-Crime Circuit-Breaker.');
+        onShowToast('Disarmed Billing Spend Cap Circuit-Breaker.');
       }
       return;
     }
@@ -1235,27 +1235,26 @@ export default function AutonomousCloudBrain({
       />
 
       {/* ==================================================================== */}
-      {/* MODULE 1: PRE-CRIME 30-DAY BILLING & QUOTA TIME-CRYSTAL SIMULATOR    */}
+      {/* MODULE 1: 30-DAY BILLING ANOMALY FORECASTER & SPEND CAP SIMULATOR    */}
       {/* ==================================================================== */}
       <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-500/[0.08] border border-blue-500/30 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40">
-                WAVE 5 DREAM FEATURE #1
+                FINOPS MODULE 01 · BILLING FORECASTER
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <span>
-                  &ldquo;Pre-Crime&rdquo; 30-Day Billing Time-Crystal &
-                  Autonomous Circuit-Breaker
+                  30-Day Billing Anomaly Forecaster &amp; 24/7 Spend Cap Circuit-Breaker
                 </span>
               </h4>
             </div>
             <p className="text-xs text-zinc-500 mt-1">
               Simulate traffic surges, infinite retry loops, or GPU billing
-              spikes before they happen — see the exact day & hour your budget
-              cap would breach and arm an automatic $0-Idle Circuit-Breaker.
+              spikes before they happen — see the exact day &amp; hour your budget
+              cap would breach and arm an automatic 24/7 Google Cloud Spend Cap.
             </p>
           </div>
 
@@ -1429,7 +1428,7 @@ export default function AutonomousCloudBrain({
         <div className="p-3.5 rounded-xl bg-blue-500/[0.06] dark:bg-blue-500/10 border border-blue-500/25 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300 space-y-2">
           <div>
             <strong className="text-zinc-900 dark:text-zinc-100">
-              How to read this Pre-Crime Billing Simulator:
+              How to read this 30-Day Billing Anomaly Forecaster:
             </strong>{' '}
             This tool takes your project&apos;s live hourly spend and simulates what
             happens over a 30-day month if an unexpected incident hits (such as a
@@ -1726,11 +1725,10 @@ export default function AutonomousCloudBrain({
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
-                WAVE 5 DREAM FEATURE #2
+                RESILIENCE MODULE 02 · IMPACT ANALYZER
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
-                &ldquo;What-If&rdquo; Resource Blast-Radius & Failure Cascade
-                X-Ray
+                Resource Dependency &amp; Failure Impact Analyzer (&ldquo;What-If&rdquo; Blast Radius)
               </h4>
             </div>
             <p className="text-xs text-zinc-500 mt-0.5">
@@ -1850,18 +1848,17 @@ export default function AutonomousCloudBrain({
       </div>
 
       {/* ==================================================================== */}
-      {/* MODULE 3: NATURAL-LANGUAGE DREAM STACK ARCHITECTURE COMPILER         */}
+      {/* MODULE 3: MULTI-REGION ARCHITECTURE & COST COMPILER                  */}
       {/* ==================================================================== */}
       <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/[0.06] border border-emerald-500/30 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40">
-                WAVE 5 DREAM FEATURE #3
+                ARCHITECTURE MODULE 03 · STACK COMPILER
               </span>
               <h4 className="text-sm font-extrabold font-mono text-zinc-950 dark:text-zinc-50">
-                Autonomous Cloud Architecture Compiler (SKU + FinOps + Carbon
-                Optimized)
+                Multi-Region Cloud Stack &amp; Cost Compiler (SKU + FinOps + Carbon Optimized)
               </h4>
             </div>
             <p className="text-xs text-zinc-500 mt-0.5">

@@ -23,29 +23,29 @@ const SINGULARITY_TABS = [
   {
     id: 'STARLINK_ORBITAL_MESH',
     step: '01',
-    title: 'Starlink Orbital Laser & Subsea Rerouter',
+    title: 'Multi-Region TLS 1.3 Latency & Geo-Failover Probe',
     subtitle: '6 Intercontinental Corridors · Live TLS 1.3 Probe · Geo-Failover',
     icon: Globe,
   },
   {
     id: 'NEURALINK_THOUGHT_COMPILER',
     step: '02',
-    title: 'Neuralink Thought-to-Cloud DAG Executor',
+    title: 'Natural-Language Schema & 4-Node DAG Builder',
     subtitle: '1-Sentence Intent -> 4-Node Live GCP DAG Materializer',
     icon: Cpu,
   },
   {
     id: 'OPTIMUS_AUTONOMOUS_COUNCIL',
     step: '03',
-    title: 'Optimus 3-Agent Autonomous Council',
-    subtitle: 'FinOps Hawk + Zero-Trust Sentinel + SRE Prime Debate',
+    title: '3-Agent Architecture Review Board (FinOps, SecOps & SRE)',
+    subtitle: 'FinOps Analyst + Zero-Trust Security + SRE Lead Review',
     icon: Sparkles,
   },
   {
     id: 'CRYPTO_BLACKBOX_LEDGER',
     step: '04',
-    title: 'Ed25519 Cryptographic Black-Box Ledger',
-    subtitle: 'RFC 8032 Asymmetric Signatures · SHA-256 Blockchain Proof',
+    title: 'Ed25519 Signed Audit Trail Ledger',
+    subtitle: 'RFC 8032 Asymmetric Signatures · SHA-256 Hash Chain',
     icon: Lock,
   },
 ];
@@ -549,10 +549,10 @@ export default function Wave13StarlinkNeuralinkStudio({
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/40">
-                WAVE 13 · STARLINK ORBITAL MESH & NEURALINK SINGULARITY
+                MULTI-REGION TLS 1.3 PROBE · NATURAL-LANGUAGE DAG BUILDER &amp; ED25519 AUDIT TRAIL
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                Ed25519 RFC 8032 SIGNED · 100% LIVE GCP REST & TLS 1.3
+                Ed25519 RFC 8032 SIGNED · 100% LIVE GCP REST &amp; TLS 1.3
               </span>
               {ledgerData?.publicKeyFingerprint && (
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-200/70 dark:bg-zinc-800">
@@ -561,10 +561,10 @@ export default function Wave13StarlinkNeuralinkStudio({
               )}
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              Global Regional TLS 1.3 Control-Plane Matrix, Prompt-Driven DAG Materializer, Optimus 3-Agent Council & Ed25519 Black-Box
+              Multi-Region TLS 1.3 Control-Plane Matrix, Natural-Language DAG Builder, 3-Agent Architecture Review &amp; Ed25519 Audit Ledger
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 max-w-4xl">
-              Execute real DNS + TLS 1.3 + HTTPS REST probes across 6 regional Google Cloud control planes, stream live failover heartbeats into BigQuery, compile custom prompts into live GCS objects + SecretVersions + BigQuery SQL rows, convene a 3-agent Gemini 3.8 Flash council, and seal every mutation with RFC 8032 Ed25519 signatures.
+              Execute real DNS + TLS 1.3 + HTTPS REST probes across 6 regional Google Cloud control planes, stream live failover heartbeats into BigQuery, compile natural-language requirements into live GCS objects + SecretVersions + BigQuery SQL rows, run a 3-agent Gemini 3.8 Flash review, and sign every mutation with RFC 8032 Ed25519 keys.
             </p>
           </div>
 
@@ -805,7 +805,7 @@ export default function Wave13StarlinkNeuralinkStudio({
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-indigo-500" />
                   <span>
-                    Neuralink &ldquo;Thought-to-Cloud&rdquo; Dynamic Schema Compiler & Live 4-Node DAG Executor
+                    Natural-Language Schema Compiler &amp; Live 4-Node Cloud DAG Builder
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">

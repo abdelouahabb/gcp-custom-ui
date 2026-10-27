@@ -924,7 +924,7 @@ export default function FivePersonaCommandCenter({
               },
               {
                 id: 'PRE_CRIME_72H',
-                label: `06 · [2030] T_+72h Pre-Crime Forecaster (${
+                label: `06 · 72-Hour Quota, Cost & Drift Risk Forecaster (${
                   tribunalData.preCrime72hForecast?.overall72hRiskLevel ||
                   'ACTIVE'
                 })`,
@@ -1471,7 +1471,7 @@ export default function FivePersonaCommandCenter({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-extrabold text-zinc-900 dark:text-white">
-                      T_Now → T_+72h Pre-Crime Outage, Quota-Wall &amp; Drift Trajectory Engine
+                      72-Hour Outage, Quota Saturation &amp; Config Drift Risk Forecaster
                     </span>
                     <span className="ml-2 px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 text-[10px] font-extrabold">
                       {tribunalData.preCrime72hForecast.overall72hRiskLevel}

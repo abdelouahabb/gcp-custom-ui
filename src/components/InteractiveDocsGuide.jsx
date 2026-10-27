@@ -32,9 +32,9 @@ import {
 const DOC_SECTIONS = [
   {
     id: 'native-cloud-billing-spend-caps-and-22-scenario-precrime-studio',
-    wave: '2026 FINOPS & EMERGENCY COST-STOP · NATIVE CLOUD BILLING SPEND CAP API, 24/7 PUB/SUB KILL-SWITCH, LEVEL 1.5 GUARD & 22-SCENARIO PRE-CRIME SIMULATOR',
+    wave: '2026 FINOPS & EMERGENCY COST-STOP · NATIVE CLOUD BILLING SPEND CAP API, 24/7 PUB/SUB KILL-SWITCH, LEVEL 1.5 GUARD & 22-SCENARIO BILLING ANOMALY FORECASTER',
     title:
-      'Native Cloud Billing Spend Cap & Budget API Studio (GoogleCloudBillingBudgetsV1SpendCap), 24/7 Permanent Server-Side Circuit-Breaker (cloudpulse-budget-killswitch), Level 1.5 Surgical Per-Service Kill-Switch & 22-Scenario Exponential "What Happens If..." Pre-Crime Simulator',
+      'Native Cloud Billing Spend Cap & Budget API Studio (GoogleCloudBillingBudgetsV1SpendCap), 24/7 Permanent Server-Side Circuit-Breaker (cloudpulse-budget-killswitch), Level 1.5 Surgical Per-Service Kill-Switch & 22-Scenario Exponential "What Happens If..." Billing Anomaly Forecaster',
     badge: 'FINOPS TAB + KILL-SWITCH + 2026 LAB',
     badgeColor:
       'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40',

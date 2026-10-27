@@ -158,38 +158,38 @@ export default function Lab2026QuantumNexus({
     {
       id: 'CAUSAL_GRAPH',
       icon: Share2,
-      badge: 'BREAKTHROUGH #1',
-      label: 'Cross-Cloud Blast-Radius & Causal Graph',
+      badge: 'MODULE #1',
+      label: 'Resource Dependency & Blast-Radius Simulator',
     },
     {
       id: 'TIME_MACHINE',
       icon: History,
-      badge: 'BREAKTHROUGH #2',
-      label: 'Time-Machine Flight Recorder & 1-Click Rollback',
+      badge: 'MODULE #2',
+      label: 'Project State Snapshot & 1-Click Rollback',
     },
     {
       id: 'FINOPS_AUTOPILOT',
       icon: DollarSign,
-      badge: 'BREAKTHROUGH #3',
-      label: 'Autonomous FinOps Arbitrage & Circuit-Breaker',
+      badge: 'MODULE #3',
+      label: 'FinOps Right-Sizing & Spend Cap Circuit-Breaker',
     },
     {
       id: 'EPHEMERAL_PR',
       icon: GitBranch,
-      badge: 'BREAKTHROUGH #4',
-      label: 'Ephemeral PR Previews & Shadow Traffic Mirror',
+      badge: 'MODULE #4',
+      label: 'Ephemeral PR Previews & Traffic Mirroring',
     },
     {
       id: 'HONEY_GRID',
       icon: ShieldAlert,
-      badge: 'BREAKTHROUGH #5',
-      label: 'Zero-Trust Honey-Token & Breach Deception Grid',
+      badge: 'MODULE #5',
+      label: 'Security Canary Tokens & Intrusion Tripwires',
     },
   ];
 
   return (
     <div className="space-y-5">
-      {/* Top 5 Quantum Breakthroughs Selector Bar */}
+      {/* Top 5 Resilience Modules Selector Bar */}
       <div className="p-4 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -199,14 +199,14 @@ export default function Lab2026QuantumNexus({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="text-sm sm:text-base font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
-                  2026 Quantum Nexus — Beyond-Console Autonomous Engine
+                  Cloud Resilience &amp; Governance Suite (5-in-1 Control Plane)
                 </h4>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
-                  5 WORLD-FIRST CAPABILITIES LIVE
+                  5 ENTERPRISE MODULES LIVE
                 </span>
               </div>
               <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                Unified Causal Blast-Radius Simulator, Immutable Project State Time-Machine, Autonomous FinOps Arbitrage, Shadow-Traffic PR Previews &amp; Active Honey-Token Deception.
+                Dependency Blast-Radius Simulator, Immutable Project State Snapshots &amp; Rollback, FinOps Spend Cap Circuit-Breaker, PR Preview Traffic Mirroring &amp; Security Canary Tripwires.
               </p>
             </div>
           </div>
