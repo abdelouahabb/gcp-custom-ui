@@ -395,15 +395,72 @@ export default function Wave16EnterpriseMoonshotStudio({
                   : `4. [VERIFIED] Zero single-region SPOF assets pinned to ${blackoutRegion} — 100% of inspected resources survive a ${blackoutRegion} blackout.`,
               ];
 
+          // Compute per-region resource counts from the project's actual discovered assets
+          const regionCounts = {};
+          for (const a of evaluatedAssets) {
+            const r = String(a.location || 'US').toLowerCase();
+            if (r !== 'global' && r !== 'us' && r !== 'eu' && r !== 'asia') {
+              regionCounts[r] = (regionCounts[r] || 0) + 1;
+            }
+          }
+          const selectableRegions = Array.from(
+            new Set([
+              ...Object.keys(regionCounts),
+              'us-central1',
+              'us-east1',
+              'us-west1',
+              'europe-west1',
+              'asia-east1',
+            ])
+          );
+
+          const handleDownloadDrReport = () => {
+            const reportPayload = {
+              projectId,
+              generatedAt: new Date().toISOString(),
+              simulatedOutageRegion: blackoutRegion,
+              standbyFailoverRegion: standbyRegion,
+              drResilienceScore: resilienceScore,
+              compositeRtoSeconds: maxRtoSeconds,
+              compositeRpoSeconds: maxRpoSeconds,
+              singleRegionSpofCount: spofCount,
+              autoFailoverAssetCount: autoFailoverCount,
+              assets: evaluatedAssets,
+            };
+            const blob = new Blob([JSON.stringify(reportPayload, null, 2)], {
+              type: 'application/json',
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projectId}-dr-gameday-report-${blackoutRegion}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            if (onShowToast) {
+              onShowToast(
+                `Downloaded DR GameDay Audit Report (${projectId}-dr-gameday-report-${blackoutRegion}.json)`
+              );
+            }
+          };
+
+          const handleProtectAllInRegion = async () => {
+            const spofTargets = evaluatedAssets.filter(
+              (a) => a.outageStatus === 'OUTAGE_SPOF'
+            );
+            for (const target of spofTargets) {
+              await handleProtectAssetDr(target.name);
+            }
+          };
+
           return (
             <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                    02. Multi-Region Disaster Recovery (DR) GameDay &amp; RTO/RPO Prover ({evaluatedAssets.length} Live Assets)
+                    02. Multi-Region Disaster Recovery (DR) GameDay &amp; RTO/RPO Prover ({evaluatedAssets.length} Live Project Assets)
                   </h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Change the simulated outage region below to instantly recalculate SPOFs, failover targets, and RTO/RPO, or click Run GameDay Drill to seal an audit receipt.
+                    Select any GCP region below to simulate a regional blackout and inspect which of your project&apos;s buckets, datasets, and services survive vs. go offline.
                   </p>
                 </div>
 
@@ -413,59 +470,58 @@ export default function Wave16EnterpriseMoonshotStudio({
                     value={blackoutRegion}
                     onChange={(e) => {
                       const nextReg = e.target.value;
-                      const nextStandby =
-                        nextReg === 'us-central1'
-                          ? 'us-east1'
-                          : nextReg === 'europe-west1'
-                            ? 'europe-west4'
-                            : 'us-central1';
                       setBlackoutRegion(nextReg);
-                      if (onShowToast) {
-                        onShowToast(
-                          `Simulated regional blackout: ${nextReg} → Standby failover target: ${nextStandby}`
-                        );
-                      }
                     }}
-                    className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                    className="h-9 px-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer"
                   >
-                    <option value="us-central1">Simulate Outage: us-central1 (Iowa)</option>
-                    <option value="us-east1">Simulate Outage: us-east1 (S. Carolina)</option>
-                    <option value="us-west1">Simulate Outage: us-west1 (Oregon)</option>
-                    <option value="europe-west1">Simulate Outage: europe-west1 (Belgium)</option>
-                    <option value="asia-east1">Simulate Outage: asia-east1 (Taiwan)</option>
+                    {selectableRegions.map((reg) => {
+                      const cnt = regionCounts[reg] || 0;
+                      return (
+                        <option key={reg} value={reg}>
+                          Simulate Outage: {reg} ({cnt} Regional {cnt === 1 ? 'Asset' : 'Assets'})
+                        </option>
+                      );
+                    })}
                   </select>
 
                   <button
                     type="button"
-                    disabled={busyId === 'DR_GAMEDAY_DRILL'}
-                    onClick={() => handleRunDrGameDayDrill(blackoutRegion)}
-                    title={`Execute a live Multi-Region DR GameDay Blackout Drill for ${blackoutRegion} -> ${standbyRegion}`}
-                    className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                    onClick={handleDownloadDrReport}
+                    title={`Download JSON Disaster Recovery Audit Report for ${projectId} (${blackoutRegion} outage simulation)`}
+                    className="h-9 px-3.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold cursor-pointer inline-flex items-center gap-1.5"
                   >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>
-                      {busyId === 'DR_GAMEDAY_DRILL'
-                        ? 'Simulating Blackout...'
-                        : `Seal GameDay Receipt (${blackoutRegion} → ${standbyRegion})`}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={busyId === 'PROVISION_DR_VAULT'}
-                    onClick={handleProvisionDrVault}
-                    title="Provision a live US Multi-Region Cloud Storage DR Vault Bucket with Object Versioning & Public Access Prevention enforced"
-                    className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>
-                      {busyId === 'PROVISION_DR_VAULT'
-                        ? 'Provisioning DR Vault...'
-                        : '1-Click Provision US Multi-Region DR Vault'}
-                    </span>
+                    <Globe className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>Export DR Report (.json)</span>
                   </button>
                 </div>
               </div>
+
+              {/* Interactive Region Pills for Regions Where Your Project Has Live Resources */}
+              {Object.keys(regionCounts).length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-[10.5px] font-mono font-bold text-zinc-500 uppercase">
+                    Your Active Regional Footprints (Click to Simulate Blackout):
+                  </span>
+                  {Object.entries(regionCounts).map(([reg, cnt]) => {
+                    const active = blackoutRegion.toLowerCase() === reg;
+                    return (
+                      <button
+                        key={reg}
+                        type="button"
+                        onClick={() => setBlackoutRegion(reg)}
+                        title={`Simulate a complete regional blackout in ${reg} (${cnt} project asset(s) hosted in ${reg})`}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer ${
+                          active
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                        }`}
+                      >
+                        {reg} ({cnt} {cnt === 1 ? 'resource' : 'resources'})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {inlineError && (
                 <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-700 dark:text-red-300 flex items-center justify-between gap-2">
@@ -604,21 +660,32 @@ export default function Wave16EnterpriseMoonshotStudio({
               </div>
 
               {/* Always-Visible Live Simulated Failover Sequence for Selected Region */}
-              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-2 text-xs font-mono">
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-2.5 text-xs font-mono">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-extrabold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                     <span>
-                      {drDrillReceipt?.blackoutRegion === blackoutRegion
-                        ? `SEALED GAMEDAY RECEIPT (${drDrillReceipt.drillId}): ${blackoutRegion} → ${standbyRegion}`
-                        : `LIVE SIMULATED FAILOVER RUNBOOK: ${blackoutRegion.toUpperCase()} BLACKOUT → ${standbyRegion.toUpperCase()} STANDBY`}
+                      LIVE SIMULATED FAILOVER RUNBOOK: {blackoutRegion.toUpperCase()} BLACKOUT → {standbyRegion.toUpperCase()} STANDBY
                     </span>
                   </span>
-                  <span className="text-[10px] text-zinc-500">
-                    {drDrillReceipt?.blackoutRegion === blackoutRegion
-                      ? drDrillReceipt.executedAt
-                      : 'Updates immediately on region select'}
-                  </span>
+
+                  {spofCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={handleProtectAllInRegion}
+                      title={`Enable Object Versioning and Multi-Region DR Mirroring for all ${spofCount} single-region SPOF resource(s) in ${blackoutRegion}`}
+                      className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>
+                        Protect All {spofCount} At-Risk Resource{spofCount === 1 ? '' : 's'} in {blackoutRegion} (RPO → 0s)
+                      </span>
+                    </button>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                      ✓ 100% OF {blackoutRegion.toUpperCase()} ASSETS SURVIVE OUTAGE
+                    </span>
+                  )}
                 </div>
                 <div className="space-y-1 text-[11px] text-zinc-800 dark:text-zinc-200">
                   {activeTimelineSteps.map((step, i) => (
