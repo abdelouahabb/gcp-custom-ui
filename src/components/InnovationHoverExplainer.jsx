@@ -249,8 +249,8 @@ export const INNOVATION_FEATURE_GUIDE = {
   // 2. 22 INNOVATION LAB STUDIOS (Revolutionary2026Suite.jsx)
   // ============================================================================
   FIVE_PERSONA_COUNCIL: {
-    badge: '10-PERSONA LAUNCH TRIBUNAL',
-    title: '10-Persona War-Room — Enterprise Architecture Review Board',
+    badge: '10-PERSONA ARCHITECTURE COUNCIL',
+    title: '10-Persona War-Room — Enterprise Architecture Review Council',
     whatItDoes:
       'Runs a coordinated pre-flight audit of your live project from 10 specialized engineering perspectives: Cloud Architect, Cloud Engineer, Data Engineer, NetOps, DevSecOps, AI/MLOps, SRE Commander, DBRE, FinOps, and K8s Platform Engineer.',
     enterpriseValue:
@@ -1508,11 +1508,11 @@ export default function GlobalInnovationHoverExplainer() {
 
   useEffect(() => {
     const HOVER_SELECTOR =
-      'button, [data-feature-id], [data-kpi-id], [data-hover-explain], [role="tab"], select[title], select[aria-label], [title], [data-original-title]';
+      '[data-feature-id], [data-kpi-id], [data-hover-explain]';
 
     const handleMouseOver = (e) => {
       const target = e.target?.closest?.(HOVER_SELECTOR);
-      if (!target) {
+      if (!target || target.closest?.('[data-no-hover-explainer]')) {
         if (timerRef.current) clearTimeout(timerRef.current);
         setHoverState(null);
         return;
@@ -1555,7 +1555,7 @@ export default function GlobalInnovationHoverExplainer() {
           placeAbove,
           cardWidth,
         });
-      }, 140);
+      }, 350);
     };
 
     const handleMouseOut = (e) => {

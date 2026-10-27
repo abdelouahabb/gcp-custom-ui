@@ -107,6 +107,7 @@ export default function LogStreamerAndShell({
 
   // --- 2026 Open-Source Log Explorer Suite (ClickHouse / HyperDX / VictoriaLogs / SigNoz / lnav / Grafana Loki) ---
   const [selectedHistogramBucket, setSelectedHistogramBucket] = useState(null);
+  const [hoveredHistogramBucket, setHoveredHistogramBucket] = useState(null);
   const [showFacetSidebar, setShowFacetSidebar] = useState(true);
   const [expandedFacetKeys, setExpandedFacetKeys] = useState({
     serviceName: true,
@@ -1477,90 +1478,137 @@ export default function LogStreamerAndShell({
             {(() => {
               const buckets = chronoData.histogramBuckets;
               const maxTotal = Math.max(1, ...buckets.map((b) => b.totalCount));
+              const activeReadoutBucket =
+                buckets.find((b) => b.bucketIndex === hoveredHistogramBucket) ||
+                buckets.find((b) => b.bucketIndex === selectedHistogramBucket) ||
+                buckets[buckets.length - 1] ||
+                buckets[0];
               return (
-                <div
-                  className="grid grid-cols-24 gap-1 items-end h-28 pt-3 px-1"
-                  style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}
-                >
-                  {buckets.map((b) => {
-                    const errH = Math.round((b.errorCount / maxTotal) * 56);
-                    const warnH = Math.round((b.warningCount / maxTotal) * 56);
-                    const infoH = Math.max(4, Math.round((b.infoCount / maxTotal) * 56));
-                    const isSelected = selectedHistogramBucket === b.bucketIndex;
-                    return (
-                      <div
-                        key={b.bucketIndex}
-                        onClick={() => {
-                          setSelectedHistogramBucket(b.bucketIndex);
-                          triggerTimeTravelPeek(b.centerIso);
-                        }}
-                        title={`Bucket ${b.label} | Total: ${b.totalCount} (ERR: ${b.errorCount}, WARN: ${b.warningCount}, INFO: ${b.infoCount}) | P95: ${b.p95LatencyMs}ms | CPU: ${b.cpuUtilizationPct || 38}% | RAM: ${b.memoryUtilizationPct || 52}%${b.infraMarker ? ` | EVENT: ${b.infraMarker.title}` : ''}`}
-                        className={`group flex flex-col justify-end items-center h-full cursor-pointer rounded-t transition-all relative ${
-                          isSelected
-                            ? 'ring-2 ring-amber-500 bg-amber-500/10'
-                            : b.isAnomalySpike
-                            ? 'bg-red-500/5 hover:bg-red-500/15'
-                            : 'hover:bg-zinc-200/70 dark:hover:bg-zinc-800/70'
-                        }`}
-                      >
-                        {/* Top Infra Event Marker Badge */}
-                        {showInfraOverlay && b.infraMarker && (
-                          <span
-                            className={`text-[8px] font-mono font-extrabold px-1 rounded mb-0.5 truncate max-w-full ${
-                              b.infraMarker.type === 'QUOTA_EXHAUSTION'
-                                ? 'bg-red-600 text-white'
-                                : b.infraMarker.type === 'REVISION_DEPLOY'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-blue-600 text-white'
-                            }`}
-                          >
-                            {b.infraMarker.badge}
+                <div className="space-y-2" data-no-hover-explainer="true">
+                  <div
+                    className="grid grid-cols-24 gap-1 items-end h-28 pt-3 px-1"
+                    style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}
+                    onMouseLeave={() => setHoveredHistogramBucket(null)}
+                  >
+                    {buckets.map((b) => {
+                      const errH = Math.round((b.errorCount / maxTotal) * 56);
+                      const warnH = Math.round((b.warningCount / maxTotal) * 56);
+                      const infoH = Math.max(4, Math.round((b.infoCount / maxTotal) * 56));
+                      const isSelected = selectedHistogramBucket === b.bucketIndex;
+                      const isHovered = hoveredHistogramBucket === b.bucketIndex;
+                      return (
+                        <div
+                          key={b.bucketIndex}
+                          onMouseEnter={() => setHoveredHistogramBucket(b.bucketIndex)}
+                          onClick={() => {
+                            setSelectedHistogramBucket(b.bucketIndex);
+                            triggerTimeTravelPeek(b.centerIso);
+                          }}
+                          className={`group flex flex-col justify-end items-center h-full cursor-pointer rounded-t transition-colors relative ${
+                            isSelected
+                              ? 'ring-2 ring-amber-500 bg-amber-500/10'
+                              : isHovered
+                              ? 'bg-zinc-200/80 dark:bg-zinc-800/80'
+                              : b.isAnomalySpike
+                              ? 'bg-red-500/5 hover:bg-red-500/15'
+                              : 'hover:bg-zinc-200/70 dark:hover:bg-zinc-800/70'
+                          }`}
+                        >
+                          {/* Top Infra Event Marker Badge */}
+                          {showInfraOverlay && b.infraMarker && (
+                            <span
+                              className={`text-[8px] font-mono font-extrabold px-1 rounded mb-0.5 truncate max-w-full ${
+                                b.infraMarker.type === 'QUOTA_EXHAUSTION'
+                                  ? 'bg-red-600 text-white'
+                                  : b.infraMarker.type === 'REVISION_DEPLOY'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-blue-600 text-white'
+                              }`}
+                            >
+                              {b.infraMarker.badge}
+                            </span>
+                          )}
+
+                          <div className="w-full flex flex-col justify-end rounded-t overflow-hidden px-0.5">
+                            {b.errorCount > 0 && (
+                              <div
+                                style={{ height: `${Math.max(4, errH)}px` }}
+                                className="w-full bg-red-500 rounded-t-[2px]"
+                              />
+                            )}
+                            {b.warningCount > 0 && (
+                              <div
+                                style={{ height: `${Math.max(3, warnH)}px` }}
+                                className="w-full bg-amber-500"
+                              />
+                            )}
+                            <div
+                              style={{ height: `${infoH}px` }}
+                              className="w-full bg-blue-500/80 dark:bg-blue-500/70 rounded-b-[2px]"
+                            />
+                          </div>
+
+                          {/* Correlated Container CPU Utilization Micro-Bar */}
+                          {showInfraOverlay && (
+                            <div className="w-full px-0.5 mt-1">
+                              <div className="w-full h-1 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                                <div
+                                  style={{ width: `${b.cpuUtilizationPct || 35}%` }}
+                                  className={`h-full ${
+                                    (b.cpuUtilizationPct || 0) >= 85
+                                      ? 'bg-red-500'
+                                      : (b.cpuUtilizationPct || 0) >= 65
+                                      ? 'bg-amber-500'
+                                      : 'bg-emerald-500'
+                                  }`}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          <span className="text-[8.5px] font-mono text-zinc-400 mt-0.5 truncate">
+                            {b.bucketIndex % 4 === 0 ? b.label : ''}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Fixed-Height Single-Line Bucket Readout Bar (Zero Layout Shift on Hover) */}
+                  {activeReadoutBucket && (
+                    <div className="h-7 px-3 rounded-lg bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-[11px] font-mono overflow-hidden">
+                      <div className="flex items-center gap-2.5 truncate">
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
+                          Bucket #{activeReadoutBucket.bucketIndex + 1}/24 ({activeReadoutBucket.label})
+                        </span>
+                        {activeReadoutBucket.windowLabel && (
+                          <span className="text-zinc-500 shrink-0">
+                            [{activeReadoutBucket.windowLabel}]
                           </span>
                         )}
-
-                        <div className="w-full flex flex-col justify-end rounded-t overflow-hidden px-0.5">
-                          {b.errorCount > 0 && (
-                            <div
-                              style={{ height: `${Math.max(4, errH)}px` }}
-                              className="w-full bg-red-500 rounded-t-[2px]"
-                            />
-                          )}
-                          {b.warningCount > 0 && (
-                            <div
-                              style={{ height: `${Math.max(3, warnH)}px` }}
-                              className="w-full bg-amber-500"
-                            />
-                          )}
-                          <div
-                            style={{ height: `${infoH}px` }}
-                            className="w-full bg-blue-500/80 dark:bg-blue-500/70 rounded-b-[2px]"
-                          />
-                        </div>
-
-                        {/* Correlated Container CPU Utilization Micro-Bar */}
-                        {showInfraOverlay && (
-                          <div className="w-full px-0.5 mt-1">
-                            <div className="w-full h-1 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-                              <div
-                                style={{ width: `${b.cpuUtilizationPct || 35}%` }}
-                                className={`h-full ${
-                                  (b.cpuUtilizationPct || 0) >= 85
-                                    ? 'bg-red-500'
-                                    : (b.cpuUtilizationPct || 0) >= 65
-                                    ? 'bg-amber-500'
-                                    : 'bg-emerald-500'
-                                }`}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        <span className="text-[8.5px] font-mono text-zinc-400 mt-0.5 truncate">
-                          {b.bucketIndex % 4 === 0 ? b.label : ''}
+                        <span className="text-zinc-400">·</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200 shrink-0">
+                          Total: {activeReadoutBucket.totalCount}
+                        </span>
+                        <span className="text-red-600 dark:text-red-400 shrink-0">
+                          ERR: {activeReadoutBucket.errorCount}
+                        </span>
+                        <span className="text-amber-600 dark:text-amber-400 shrink-0">
+                          WARN: {activeReadoutBucket.warningCount}
+                        </span>
+                        <span className="text-blue-600 dark:text-blue-400 shrink-0">
+                          INFO: {activeReadoutBucket.infoCount}
                         </span>
                       </div>
-                    );
-                  })}
+                      <div className="hidden sm:flex items-center gap-2.5 text-zinc-500 shrink-0">
+                        <span>P95: {activeReadoutBucket.p95LatencyMs}ms</span>
+                        <span>·</span>
+                        <span>CPU: {activeReadoutBucket.cpuUtilizationPct || 0}%</span>
+                        <span>·</span>
+                        <span>RAM: {activeReadoutBucket.memoryUtilizationPct || 0}%</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}

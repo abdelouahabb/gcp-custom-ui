@@ -13180,7 +13180,7 @@ app.post('/api/project/:projectId/tunnels/probe', async (req, res) => {
 // INNOVATION #3: LIVE CLOUD AUDIT "WHO-CHANGED-WHAT" ACTIVITY TIMELINE &
 // 1-CLICK CHANGE INSPECTOR (`logging.googleapis.com/v2` `cloudaudit.googleapis.com/activity`)
 // ============================================================================
-function classifyAuditActivityMethod(serviceName = '', methodName = '', resourceName = '') {
+function classifyAuditActivityMethod(serviceName = '', methodName = '', resourceName = '', projectId = '') {
   const m = String(methodName || '');
   const s = String(serviceName || '');
   const lowerM = m.toLowerCase();
@@ -13197,18 +13197,25 @@ function classifyAuditActivityMethod(serviceName = '', methodName = '', resource
     actionCategory = 'POWER';
   }
 
+  // Always prefer the alphanumeric projectId over numeric project numbers extracted from resourceName
+  const extractedProj = String(resourceName).match(/projects\/([^/]+)/)?.[1] || '';
+  const safeProjectId =
+    projectId && !/^\d+$/.test(String(projectId))
+      ? projectId
+      : extractedProj && !/^\d+$/.test(extractedProj)
+      ? extractedProj
+      : projectId || 'PROJECT_ID';
+
   let humanSummary = `${m.split('.').slice(-2).join('.')} on ${shortResource}`;
-  let reverseCli = `gcloud logging read 'protoPayload.methodName="${m}"' --project=${
-    String(resourceName).match(/projects\/([^/]+)/)?.[1] || 'PROJECT_ID'
-  } --limit=5`;
+  let reverseCli = `gcloud logging read 'protoPayload.methodName="${m}"' --project=${safeProjectId} --limit=5`;
 
   if (s.includes('run.googleapis.com')) {
     if (lowerM.includes('createservice')) {
       humanSummary = `Deployed new Cloud Run service "${shortResource}"`;
-      reverseCli = `gcloud run services delete ${shortResource} --quiet`;
+      reverseCli = `gcloud run services describe ${shortResource} --project=${safeProjectId} --format=yaml`;
     } else if (lowerM.includes('updateservice') || lowerM.includes('replaceservice')) {
       humanSummary = `Updated Cloud Run service "${shortResource}" revision / traffic spec`;
-      reverseCli = `gcloud run services describe ${shortResource} --format=yaml`;
+      reverseCli = `gcloud run services describe ${shortResource} --project=${safeProjectId} --format=yaml`;
     } else if (lowerM.includes('deleteservice')) {
       humanSummary = `Deleted Cloud Run service "${shortResource}"`;
     } else if (lowerM.includes('setiampolicy')) {
@@ -13217,18 +13224,18 @@ function classifyAuditActivityMethod(serviceName = '', methodName = '', resource
   } else if (s.includes('compute.googleapis.com')) {
     if (lowerM.includes('instances.insert')) {
       humanSummary = `Provisioned Compute Engine VM "${shortResource}"`;
-      reverseCli = `gcloud compute instances delete ${shortResource} --quiet`;
+      reverseCli = `gcloud compute instances list --filter="name=${shortResource}" --project=${safeProjectId}`;
     } else if (lowerM.includes('instances.delete')) {
       humanSummary = `Deleted Compute Engine VM "${shortResource}"`;
     } else if (lowerM.includes('instances.stop')) {
       humanSummary = `Stopped Compute Engine VM "${shortResource}" ($0/hr vCPU)`;
-      reverseCli = `gcloud compute instances start ${shortResource}`;
+      reverseCli = `gcloud compute instances list --filter="name=${shortResource}" --project=${safeProjectId}`;
     } else if (lowerM.includes('instances.start')) {
       humanSummary = `Started Compute Engine VM "${shortResource}"`;
-      reverseCli = `gcloud compute instances stop ${shortResource}`;
+      reverseCli = `gcloud compute instances list --filter="name=${shortResource}" --project=${safeProjectId}`;
     } else if (lowerM.includes('firewalls.')) {
       humanSummary = `${actionCategory === 'DELETE' ? 'Deleted' : 'Updated'} VPC Firewall Rule "${shortResource}"`;
-      reverseCli = `gcloud compute firewall-rules describe ${shortResource}`;
+      reverseCli = `gcloud compute firewall-rules describe ${shortResource} --project=${safeProjectId}`;
     }
   } else if (s.includes('secretmanager.googleapis.com')) {
     if (lowerM.includes('addsecretversion')) {
@@ -13321,7 +13328,8 @@ app.get('/api/project/:projectId/audit-timeline', async (req, res) => {
       const classified = classifyAuditActivityMethod(
         serviceName,
         methodName,
-        resourceName
+        resourceName,
+        projectId
       );
 
       return {
@@ -15237,13 +15245,28 @@ app.post('/api/project/:projectId/chrono-logs/query', async (req, res) => {
         0,
         Math.round((newestMs - bucketEndMs) / 60000)
       );
+      let formattedRelLabel = 'now';
+      if (relMinutes >= 1440) {
+        const d = Math.floor(relMinutes / 1440);
+        const h = Math.floor((relMinutes % 1440) / 60);
+        formattedRelLabel = h > 0 ? `-${d}d ${h}h` : `-${d}d`;
+      } else if (relMinutes >= 60) {
+        const h = Math.floor(relMinutes / 60);
+        const m = relMinutes % 60;
+        formattedRelLabel = m > 0 ? `-${h}h ${m}m` : `-${h}h`;
+      } else if (relMinutes > 0) {
+        formattedRelLabel = `-${relMinutes}m`;
+      }
+      const startUtcStr = new Date(bucketStartMs).toISOString().slice(11, 16);
+      const endUtcStr = new Date(bucketEndMs).toISOString().slice(11, 16);
 
       return {
         bucketIndex: bIdx,
         startIso: new Date(bucketStartMs).toISOString(),
         endIso: new Date(bucketEndMs).toISOString(),
         centerIso: new Date(Math.round((bucketStartMs + bucketEndMs) / 2)).toISOString(),
-        label: relMinutes > 0 ? `-${relMinutes}m` : 'now',
+        label: formattedRelLabel,
+        windowLabel: `${startUtcStr}–${endUtcStr} UTC`,
         errorCount,
         warningCount,
         infoCount,
@@ -16819,13 +16842,89 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
         output: `ACTIVE ACCOUNT: ${account}\nACTIVE PROJECT: ${projectId}\nMETRICS_ENV: datacloud.antigravity`,
       });
     }
+
+    if (lower.startsWith('gcloud logging read')) {
+      const limitMatch = normalizedCmd.match(/--limit[=\s]+(\d+)/i);
+      const pageSize = Math.min(50, Math.max(1, Number(limitMatch?.[1]) || 10));
+      const filterArg = parsedTokens
+        .slice(3)
+        .find((tok) => !tok.startsWith('-'));
+      const logResp = await gcpFetch(
+        'https://logging.googleapis.com/v2/entries:list',
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            resourceNames: [`projects/${projectId}`],
+            ...(filterArg ? { filter: filterArg } : {}),
+            orderBy: 'timestamp desc',
+            pageSize,
+          },
+          timeout: 8000,
+        }
+      );
+      const entries = Array.isArray(logResp?.entries) ? logResp.entries : [];
+      const sanitizedCmdDisplay = normalizedCmd.replace(
+        /--project[=\s]+\d+/g,
+        `--project=${projectId}`
+      );
+      const output =
+        entries.length === 0
+          ? `Listed 0 log entries matching filter ${JSON.stringify(
+              filterArg || ''
+            )} in project ${projectId}.`
+          : entries
+              .map((e) => {
+                const ts = e.timestamp || e.receiveTimestamp || '-';
+                const sev = e.severity || 'DEFAULT';
+                const method =
+                  e.protoPayload?.methodName ||
+                  e.resource?.type ||
+                  'log_entry';
+                const actor =
+                  e.protoPayload?.authenticationInfo?.principalEmail ||
+                  'system';
+                const target =
+                  e.protoPayload?.resourceName ||
+                  e.textPayload ||
+                  JSON.stringify(e.jsonPayload || {}).slice(0, 120);
+                return `[${ts}] ${sev.padEnd(8)} ${method} (${actor}) -> ${target}`;
+              })
+              .join('\n');
+      return res.json({
+        command: sanitizedCmdDisplay,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'DIRECT_REST_BRIDGE (logging.googleapis.com/v2)',
+        output,
+      });
+    }
   } catch {
     // If REST fast-path encounters a custom flag or error, fall through to real CLI binary execution below
   }
 
   // 3. Real Native CLI Execution (`execFile` on `gcloud`, `bq`, `gsutil`, `kubectl`)
-  // Automatically injects `--project=${projectId}` (or `--project_id=${projectId}` for bq) if omitted
-  const cliArgs = parsedTokens.slice(1);
+  // Automatically injects `--project=${projectId}` (or `--project_id=${projectId}` for bq) if omitted,
+  // and rewrites any numeric project number (`--project=243917726587`) to the alphanumeric Project ID!
+  const cliArgs = parsedTokens.slice(1).map((arg, idx, arr) => {
+    if (projectId && /^--project=\d+$/.test(arg)) {
+      return `--project=${projectId}`;
+    }
+    if (projectId && /^--project_id=\d+$/.test(arg)) {
+      return `--project_id=${projectId}`;
+    }
+    if (
+      projectId &&
+      /^\d+$/.test(arg) &&
+      idx > 0 &&
+      (arr[idx - 1] === '--project' || arr[idx - 1] === '--project_id')
+    ) {
+      return projectId;
+    }
+    return arg;
+  });
   const hasProjectFlag = cliArgs.some(
     (a) =>
       a === '--project' ||
@@ -38917,6 +39016,7 @@ app.get(
         auditLogsRes,
         pubsubTopicsRes,
         gkeClustersRes,
+        firewallsRes,
       ] = await Promise.all([
         gcpApiRequest({
           method: 'GET',
@@ -39047,6 +39147,13 @@ app.get(
           quotaProject: projectId,
           timeout: 3500,
         }).catch(() => ({ clusters: [] })),
+        gcpApiRequest({
+          method: 'GET',
+          url: `https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls?maxResults=100`,
+          token,
+          quotaProject: projectId,
+          timeout: 3500,
+        }).catch(() => ({ items: [] })),
       ]);
       const overviewScanLatencyMs = Math.max(1, Date.now() - scanStartMs);
 
@@ -39169,6 +39276,92 @@ app.get(
             labels['cloudpulse-group'] ||
             labels.stack ||
             null,
+        });
+      });
+
+      (gkeClustersRes?.clusters || []).forEach((c) => {
+        const labels = c.resourceLabels || {};
+        unifiedResources.push({
+          id: `GKE_CLUSTER:${c.location || 'us-central1'}:${c.name}`,
+          type: 'GKE_CLUSTER',
+          typeBadge: 'GKE Cluster',
+          name: c.name,
+          location: c.location || 'us-central1',
+          status: c.status || 'RUNNING',
+          estMonthlyUsd: 73.0,
+          labels,
+          detectedGroupSlug:
+            labels.resource_group ||
+            labels['cloudpulse-group'] ||
+            labels.stack ||
+            null,
+        });
+      });
+
+      (pubsubTopicsRes?.topics || []).forEach((t) => {
+        const tName = (t.name || '').split('/').pop();
+        const labels = t.labels || {};
+        if (!tName) return;
+        unifiedResources.push({
+          id: `PUBSUB_TOPIC:global:${tName}`,
+          type: 'PUBSUB_TOPIC',
+          typeBadge: 'Pub/Sub Topic',
+          name: tName,
+          location: 'global',
+          status: 'ACTIVE',
+          estMonthlyUsd: 0.0,
+          labels,
+          detectedGroupSlug:
+            labels.resource_group ||
+            labels['cloudpulse-group'] ||
+            labels.stack ||
+            null,
+        });
+      });
+
+      (networksRes?.items || []).forEach((net) => {
+        if (!net?.name) return;
+        unifiedResources.push({
+          id: `VPC_NETWORK:global:${net.name}`,
+          type: 'VPC_NETWORK',
+          typeBadge: 'VPC Network',
+          name: net.name,
+          location: 'global',
+          status: net.autoCreateSubnetworks ? 'AUTO_SUBNETS' : 'CUSTOM_SUBNETS',
+          estMonthlyUsd: 0.0,
+          labels: {},
+          detectedGroupSlug: null,
+        });
+      });
+
+      (firewallsRes?.items || []).forEach((fw) => {
+        if (!fw?.name) return;
+        unifiedResources.push({
+          id: `VPC_FIREWALL:global:${fw.name}`,
+          type: 'VPC_FIREWALL',
+          typeBadge: 'Firewall Rule',
+          name: fw.name,
+          location: fw.direction || 'INGRESS',
+          status: fw.disabled ? 'DISABLED' : 'ENABLED',
+          estMonthlyUsd: 0.0,
+          labels: {},
+          detectedGroupSlug: null,
+        });
+      });
+
+      (saRes?.accounts || []).forEach((sa) => {
+        if (!sa?.email) return;
+        const shortName = sa.displayName || sa.email.split('@')[0];
+        unifiedResources.push({
+          id: `SERVICE_ACCOUNT:global:${sa.email}`,
+          type: 'SERVICE_ACCOUNT',
+          typeBadge: 'Service Account',
+          name: `${shortName} (${sa.email})`,
+          location: 'global',
+          status: sa.disabled ? 'DISABLED' : 'ENABLED',
+          estMonthlyUsd: 0.0,
+          labels: {},
+          detectedGroupSlug: null,
         });
       });
 
@@ -40183,19 +40376,23 @@ app.post(
 
         const rgMap = getOrInitResourceGroupsForProject(projectId);
         const existing = rgMap.get(rawSlug);
-        const memberIdsSet = existing ? existing.memberIds : new Set();
+        const memberIdsSet =
+          body.replaceMembers === true || !existing
+            ? new Set()
+            : new Set(existing.memberIds);
         if (Array.isArray(body.memberIds)) {
           body.memberIds.forEach((id) => memberIdsSet.add(String(id)));
         }
 
         const groupObj = {
           slug: rawSlug,
-          displayName: body.displayName || rawSlug,
+          displayName: body.displayName || existing?.displayName || rawSlug,
           description:
             body.description ||
+            existing?.description ||
             `Azure-style logical resource container (${rawSlug})`,
-          environment: body.environment || 'dev',
-          color: body.color || 'emerald',
+          environment: body.environment || existing?.environment || 'dev',
+          color: body.color || existing?.color || 'emerald',
           createdAt: existing?.createdAt || new Date().toISOString(),
           memberIds: memberIdsSet,
         };
@@ -45818,9 +46015,19 @@ async function runGcloudAlphaBetaJson(args = [], timeoutMs = 9500, token = null)
 
   let res = await execOnce();
 
-  // Auto-detect SERVICE_DISABLED in stderr, enable the missing API on targetProjectId, and retry once!
+  // Never auto-enable disabled APIs on read-only list/describe/info/version commands
+  const isReadOnlyCli =
+    args.includes('list') ||
+    args.includes('describe') ||
+    args.includes('info') ||
+    args.includes('search') ||
+    args.includes('version') ||
+    args.includes('check-iam-policy');
+
+  // Auto-detect SERVICE_DISABLED in stderr ONLY for explicit mutating commands
   if (
     !res.ok &&
+    !isReadOnlyCli &&
     targetProjectId &&
     /SERVICE_DISABLED|has not been used in project|is disabled/i.test(res.stderr)
   ) {
@@ -46285,54 +46492,16 @@ app.post('/api/project/:projectId/alpha-beta/action', async (req, res) => {
   try {
     const token = await resolveRequestToken(req);
 
-    // Pre-Flight API Enablement Map: check & auto-enable required Google Cloud APIs on `projectId` BEFORE running `gcloud`!
+    // Pre-Flight API Enablement Map: ONLY auto-enable APIs for explicit mutating/deployment actions (NEVER on read-only SCAN / INSPECT / QUERY / TROUBLESHOOT actions!)
     const REQUIRED_APIS_BY_ACTION = {
       DEPLOY_BETA_WORKER_POOL: ['run.googleapis.com'],
       DEPLOY_BETA_MULTI_REGION_SERVICE: ['run.googleapis.com'],
-      INSPECT_BETA_RUN_INSTANCES: ['run.googleapis.com'],
-      SCAN_ALPHA_AGENT_REGISTRY: ['apphub.googleapis.com'],
-      TROUBLESHOOT_ALPHA_IAM_POLICY: [
-        'policytroubleshooter.googleapis.com',
-        'iam.googleapis.com',
-      ],
       CHECK_OR_CREATE_ALPHA_PAM_JIT: ['privilegedaccessmanager.googleapis.com'],
-      SCAN_ALPHA_SERVICE_HEALTH_AND_FAULT_TESTING: [
-        'servicehealth.googleapis.com',
-      ],
-      RUN_ALPHA_BETA_PLATFORM_INTELLIGENCE: [
-        'cloudlocationfinder.googleapis.com',
-        'appoptimize.googleapis.com',
-        'apphub.googleapis.com',
-        'cloudasset.googleapis.com',
-      ],
-      SCAN_ALPHA_MODEL_ARMOR_AND_SANITIZE: ['modelarmor.googleapis.com'],
       DEPLOY_ALPHA_MODEL_ARMOR_TEMPLATE: ['modelarmor.googleapis.com'],
-      QUERY_ALPHA_DEVELOPER_KNOWLEDGE_AND_TOPOLOGY: [
-        'developerknowledge.googleapis.com',
-        'apphub.googleapis.com',
-      ],
-      SCAN_BETA_CLOUD_QUOTAS: ['cloudquotas.googleapis.com'],
       APPLY_BETA_QUOTA_PREFERENCE_OR_ADJUSTER: ['cloudquotas.googleapis.com'],
-      SCAN_ALPHA_AUDIT_AND_DELIVERY_TRUST: [
-        'auditmanager.googleapis.com',
-        'binaryauthorization.googleapis.com',
-      ],
-      GENERATE_ALPHA_AUDIT_OR_TRUST_POLICY: [
-        'auditmanager.googleapis.com',
-        'binaryauthorization.googleapis.com',
-      ],
-      SCAN_ALPHA_CLUSTER_DIRECTOR_AND_LUSTRE: [
-        'hypercomputecluster.googleapis.com',
-        'lustre.googleapis.com',
-      ],
       PROVISION_ALPHA_CLUSTER_DIRECTOR_BLUEPRINT: [
         'hypercomputecluster.googleapis.com',
         'lustre.googleapis.com',
-      ],
-      SCAN_WAVE3_GCLOUD_590_FRONTIER: [
-        'cloudaicompanion.googleapis.com',
-        'parametermanager.googleapis.com',
-        'vectorsearch.googleapis.com',
       ],
     };
 

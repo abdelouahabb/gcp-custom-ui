@@ -658,7 +658,7 @@ export default function FivePersonaCommandCenter({
           <div className="space-y-1.5 max-w-4xl">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-[10px] font-mono font-extrabold uppercase tracking-wider">
-                10-PERSONA ENTERPRISE ARCHITECTURE BOARD &amp; AUTONOMOUS LAUNCH TRIBUNAL
+                10-PERSONA ENTERPRISE ARCHITECTURE BOARD &amp; AUTONOMOUS LAUNCH COUNCIL
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 100% LIVE CONTROL-PLANE TELEMETRY · SDK {overview?.sdkVersion || '590.0.1 (2026.10.22)'}
@@ -670,7 +670,7 @@ export default function FivePersonaCommandCenter({
               )}
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-zinc-50">
-              10-Persona Enterprise Engineering Board · Live Cryptographic Launch Tribunal &amp; Cross-Domain Swarm
+              10-Persona Enterprise Engineering Board · Live Cryptographic Launch Council &amp; Cross-Domain Swarm
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
               Simultaneously probes 20 live Google Cloud REST APIs across <strong>01 Cloud Architect</strong>, <strong>02 Cloud Engineer</strong>, <strong>03 Data Engineer</strong>, <strong>04 Network Engineer</strong>, <strong>05 DevSecOps</strong>, <strong>06 AI/MLOps</strong>, <strong>07 SRE Commander</strong>, <strong>08 DBRE</strong>, <strong>09 FinOps &amp; GreenOps</strong>, and <strong>10 K8s Platform Engineer</strong>—computing live <strong>GO / NO-GO</strong> cryptographic votes, cross-persona blast-radius ripple chains, Pareto trade-offs, and <strong>T0 vs. T_Now SHA-256 Merkle Snapshot Diffs</strong>.
@@ -693,7 +693,7 @@ export default function FivePersonaCommandCenter({
               onClick={() => {
                 fetchPersonaOverview();
                 runLaunchTribunal({
-                  toastMessage: `Re-evaluated 10-Persona Launch Tribunal against live ${projectId} control plane`,
+                  toastMessage: `Re-evaluated 10-Persona Architecture Council against live ${projectId} control plane`,
                 });
               }}
               disabled={loading || tribunalLoading}
@@ -707,7 +707,7 @@ export default function FivePersonaCommandCenter({
               <span>
                 {loading || tribunalLoading
                   ? 'Probing 10 Lenses...'
-                  : 'Sync All 10 Lenses & Tribunal'}
+                  : 'Sync All 10 Lenses & Council'}
               </span>
             </button>
           </div>
@@ -821,7 +821,7 @@ export default function FivePersonaCommandCenter({
       )}
 
       {/* =================================================================== */}
-      {/* 10-PERSONA AUTONOMOUS LAUNCH TRIBUNAL & CROSS-DOMAIN SWARM ENGINE   */}
+      {/* 10-PERSONA AUTONOMOUS LAUNCH COUNCIL & CROSS-DOMAIN SWARM ENGINE    */}
       {/* =================================================================== */}
       {tribunalData && (
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#202124] p-5 shadow-sm space-y-4">
@@ -829,7 +829,7 @@ export default function FivePersonaCommandCenter({
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-mono font-extrabold">
-                  10-PERSONA LAUNCH TRIBUNAL
+                  10-PERSONA ARCHITECTURE COUNCIL
                 </span>
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
@@ -922,7 +922,7 @@ export default function FivePersonaCommandCenter({
               },
               {
                 id: 'MULTI_PROJECT_FLEET',
-                label: '05 · [2030] Multi-Project Fleet Tribunal',
+                label: '05 · [2030] Multi-Project Fleet Council',
               },
               {
                 id: 'PRE_CRIME_72H',
@@ -981,7 +981,7 @@ export default function FivePersonaCommandCenter({
             <div className="space-y-3">
               <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] font-mono text-zinc-700 dark:text-zinc-300 space-y-0.5">
                 <div className="font-extrabold text-blue-600 dark:text-blue-400">
-                  UNDER THE HOOD · HOW THE 10-PERSONA LAUNCH TRIBUNAL WORKS (ZERO GIMMICK)
+                  UNDER THE HOOD · HOW THE 10-PERSONA ARCHITECTURE COUNCIL WORKS (ZERO GIMMICK)
                 </div>
                 <div>
                   1. <strong>20 Parallel Live GCP REST API Probes:</strong> Simultaneously queries `run.googleapis.com/v2`, `sqladmin.googleapis.com/v1`, `storage.googleapis.com/storage/v1`, `bigquery.googleapis.com/bigquery/v2`, `compute.googleapis.com/compute/v1` (Networks, Subnets, Firewalls, Disks, Addresses), `iam.googleapis.com/v1`, `container.googleapis.com/v1`, `logging.googleapis.com/v2`, `orgpolicy.googleapis.com/v2`, and `cloudresourcemanager.googleapis.com/v1` (`:testIamPermissions` &amp; `:getIamPolicy`).
@@ -1342,12 +1342,12 @@ export default function FivePersonaCommandCenter({
             </div>
           )}
 
-          {/* SUB-TAB 5: [2030] MULTI-PROJECT FLEET TRIBUNAL & CROSS-ESTATE ARBITRATOR */}
+          {/* SUB-TAB 5: [2030] MULTI-PROJECT FLEET COUNCIL & CROSS-ESTATE ARBITRATOR */}
           {tribunalSubTab === 'MULTI_PROJECT_FLEET' && (
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3 text-xs font-mono">
               <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-[10.5px] text-zinc-700 dark:text-zinc-300 space-y-1">
                 <div className="font-extrabold text-blue-600 dark:text-blue-400">
-                  UNDER THE HOOD · HOW MULTI-PROJECT FLEET TRIBUNAL WORKS (ZERO GIMMICK)
+                  UNDER THE HOOD · HOW MULTI-PROJECT FLEET COUNCIL WORKS (ZERO GIMMICK)
                 </div>
                 <div>
                   1. <strong>Live Account Discovery:</strong> Calls `GET https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE` using your live OAuth2 / ADC token.
@@ -1357,7 +1357,7 @@ export default function FivePersonaCommandCenter({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="font-extrabold text-zinc-900 dark:text-white">
-                    Multi-Project Cross-Estate Fleet Tribunal (All Active GCP Projects in Parallel)
+                    Multi-Project Cross-Estate Fleet Council (All Active GCP Projects in Parallel)
                   </span>
                   {fleetTribunalData && (
                     <span className="ml-2 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-[10px] font-extrabold">

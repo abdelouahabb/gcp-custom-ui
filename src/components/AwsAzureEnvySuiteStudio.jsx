@@ -200,6 +200,9 @@ export default function AwsAzureEnvySuiteStudio({
     'user:dev-lead@example.com'
   );
   const [rgRbacRole, setRgRbacRole] = useState('RG_CONTRIBUTOR');
+  const [rgSavedBanner, setRgSavedBanner] = useState(null);
+  const [expandedRgPickerSlug, setExpandedRgPickerSlug] = useState(null);
+  const [showRgRbacDrawer, setShowRgRbacDrawer] = useState(false);
 
   // Module 16: Multi-Brand OAuth & Identity Platform Studio (Single 'prod' Project)
   const [oauthBrandName, setOauthBrandName] = useState('PulseDocs AI Copilot');
@@ -473,14 +476,24 @@ export default function AwsAzureEnvySuiteStudio({
           description: newRgDesc.trim(),
           environment: newRgEnv,
           memberIds: selectedMemberIds,
+          replaceMembers: true,
         }
       );
-      onShowToast?.(res.data?.message || 'Resource Group saved.');
+      const msg =
+        res.data?.message ||
+        `Resource Group "${newRgSlug.trim()}" saved (${selectedMemberIds.length} resource(s)).`;
+      setRgSavedBanner({
+        slug: res.data?.slug || newRgSlug.trim(),
+        message: msg,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      onShowToast?.(msg);
       setNewRgSlug('');
       setNewRgDesc('');
       setSelectedMemberIds([]);
       await fetchOverview();
     } catch (err) {
+      if (err?.message === 'ACTION_CANCELLED_BY_USER') return;
       onShowError?.(
         err.response?.data?.error ||
           err.message ||
@@ -489,6 +502,58 @@ export default function AwsAzureEnvySuiteStudio({
     } finally {
       setActionBusy('');
     }
+  };
+
+  const handleToggleGroupMember = async (grp, resourceId) => {
+    const currentIds = (grp.members || []).map((m) => m.id);
+    const exists = currentIds.includes(resourceId);
+    const nextIds = exists
+      ? currentIds.filter((id) => id !== resourceId)
+      : [...currentIds, resourceId];
+    setActionBusy(`RG_MEMBER_${grp.slug}`);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/aws-azure-parity/action`,
+        {
+          action: 'UPSERT_RESOURCE_GROUP',
+          slug: grp.slug,
+          displayName: grp.displayName,
+          description: grp.description,
+          environment: grp.environment,
+          memberIds: nextIds,
+          replaceMembers: true,
+        }
+      );
+      const msg =
+        res.data?.message ||
+        `Updated "${grp.displayName}" (${nextIds.length} grouped resource(s)).`;
+      setRgSavedBanner({
+        slug: grp.slug,
+        message: msg,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      onShowToast?.(msg);
+      await fetchOverview();
+    } catch (err) {
+      if (err?.message === 'ACTION_CANCELLED_BY_USER') return;
+      onShowError?.(
+        err.response?.data?.error ||
+          err.message ||
+          'Failed to update Resource Group members.'
+      );
+    } finally {
+      setActionBusy('');
+    }
+  };
+
+  const handleLoadGroupIntoEditor = (grp) => {
+    setNewRgSlug(grp.slug);
+    setNewRgDesc(grp.description || '');
+    setNewRgEnv(grp.environment || 'dev');
+    setSelectedMemberIds((grp.members || []).map((m) => m.id));
+    onShowToast?.(
+      `Loaded "${grp.displayName}" into editor — check or uncheck resources on the right and click Save.`
+    );
   };
 
   const handleHibernateGroup = async (grp) => {
@@ -3670,48 +3735,36 @@ export default function AwsAzureEnvySuiteStudio({
                 </label>
               </div>
 
-              {/* RG-Scoped RBAC Quick Bar */}
-              <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/20 space-y-2 text-xs font-mono">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>
-                      Azure-Style Resource-Group-Scoped Access (RBAC) — Pick a
-                      Principal &amp; Role, then click &quot;Assign RG Access&quot;
-                      on any Group below:
+              {/* Persistent Save / Update Confirmation Banner */}
+              {rgSavedBanner && (
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-700 dark:text-emerald-300">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="truncate font-bold">
+                      {rgSavedBanner.message}
                     </span>
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    value={rgRbacPrincipal}
-                    onChange={(e) => setRgRbacPrincipal(e.target.value)}
-                    placeholder="user:engineer@company.com or serviceAccount:..."
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
-                  />
-                  <select
-                    value={rgRbacRole}
-                    onChange={(e) => setRgRbacRole(e.target.value)}
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                    <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 shrink-0">
+                      ({rgSavedBanner.timestamp})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRgSavedBanner(null)}
+                    className="px-2 py-0.5 rounded text-[10px] font-bold hover:bg-emerald-500/20 cursor-pointer shrink-0"
                   >
-                    <option value="RG_READER">
-                      Azure RG Reader (View Only inside this RG)
-                    </option>
-                    <option value="RG_CONTRIBUTOR">
-                      Azure RG Contributor (Deploy &amp; Operate inside this RG)
-                    </option>
-                    <option value="RG_OWNER">
-                      Azure RG Owner (Full Admin inside this RG)
-                    </option>
-                  </select>
+                    Dismiss
+                  </button>
                 </div>
-              </div>
+              )}
 
               <div className="space-y-3">
                 {resourceGroups.map((grp) => {
                   const isDeleting = Boolean(deletingGroupSlugs[grp.slug]);
                   const isHibernating = Boolean(hibernatingGroupSlugs[grp.slug]);
+                  const isPickerOpen = expandedRgPickerSlug === grp.slug;
+                  const memberIdSet = new Set(
+                    (grp.members || []).map((m) => m.id)
+                  );
                   return (
                     <div
                       key={grp.slug}
@@ -3736,13 +3789,9 @@ export default function AwsAzureEnvySuiteStudio({
                               {grp.environment}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                              ${grp.totalMonthlyUsd.toFixed(2)}/mo ($
-                              {Number(grp.totalHourlyUsd || 0).toFixed(3)}/hr) ·
-                              Accrued: $
-                              {Number(
-                                grp.accruedSpendSinceCreationUsd || 0
-                              ).toFixed(2)}{' '}
-                              · {grp.memberCount} resource(s)
+                              {grp.memberCount} resource(s) · $
+                              {grp.totalMonthlyUsd.toFixed(2)}/mo ($
+                              {Number(grp.totalHourlyUsd || 0).toFixed(3)}/hr)
                             </span>
                             {isDeleting && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse">
@@ -3763,18 +3812,30 @@ export default function AwsAzureEnvySuiteStudio({
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            disabled={
-                              isDeleting || actionBusy === `RG_IAM_${grp.slug}`
+                            disabled={isDeleting}
+                            onClick={() =>
+                              setExpandedRgPickerSlug(
+                                isPickerOpen ? null : grp.slug
+                              )
                             }
-                            onClick={() => handleAssignRgIamRole(grp)}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer"
                           >
-                            <UserCheck className="w-3.5 h-3.5" />
+                            <Plus className="w-3.5 h-3.5" />
                             <span>
-                              {actionBusy === `RG_IAM_${grp.slug}`
-                                ? 'Assigning...'
-                                : 'Assign RG Access'}
+                              {isPickerOpen
+                                ? 'Done Selecting Resources'
+                                : `Add / Manage Resources (${grp.memberCount})`}
                             </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={() => handleLoadGroupIntoEditor(grp)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold bg-zinc-200/80 hover:bg-zinc-300/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 cursor-pointer"
+                          >
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>Edit Group</span>
                           </button>
 
                           <button
@@ -3809,33 +3870,132 @@ export default function AwsAzureEnvySuiteStudio({
                         </div>
                       </div>
 
-                      {/* Member chips */}
-                      <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800 flex flex-wrap gap-1.5">
-                        {grp.members?.length > 0 ? (
-                          grp.members.map((m) => (
-                            <span
-                              key={m.id}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 ${
-                                isDeleting ? 'line-through opacity-60' : ''
-                              }`}
-                            >
-                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                [{m.typeBadge}]
-                              </span>
-                              <span>{m.name}</span>
-                              <span className="text-[10px] text-zinc-400">
-                                ({m.location})
-                              </span>
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-[11px] font-mono text-zinc-400">
-                            No resources assigned yet — select resources on the
-                            right and assign them to{' '}
-                            <code>{grp.displayName}</code>.
+                      {/* Grouped Resources Inventory */}
+                      <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500">
+                            Grouped Resources in {grp.displayName} (
+                            {grp.members?.length || 0})
                           </span>
-                        )}
+                          <span className="text-[10px] font-mono text-zinc-400">
+                            GCP Label: <code>resource_group={grp.slug}</code>
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {grp.members?.length > 0 ? (
+                            grp.members.map((m) => (
+                              <span
+                                key={m.id}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 ${
+                                  isDeleting ? 'line-through opacity-60' : ''
+                                }`}
+                              >
+                                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                  [{m.typeBadge}]
+                                </span>
+                                <span className="font-semibold">{m.name}</span>
+                                <span className="text-[10px] text-zinc-400">
+                                  ({m.location})
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={
+                                    actionBusy === `RG_MEMBER_${grp.slug}`
+                                  }
+                                  onClick={() =>
+                                    handleToggleGroupMember(grp, m.id)
+                                  }
+                                  className="ml-1 text-zinc-400 hover:text-red-500 font-bold cursor-pointer"
+                                  aria-label={`Remove ${m.name} from ${grp.displayName}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))
+                          ) : (
+                            <div className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-zinc-100/70 dark:bg-zinc-950/60 border border-dashed border-zinc-300 dark:border-zinc-800 text-[11px] font-mono text-zinc-500">
+                              <span>
+                                No resources grouped in{' '}
+                                <code>{grp.displayName}</code> yet.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedRgPickerSlug(grp.slug)
+                                }
+                                className="text-emerald-600 dark:text-emerald-400 font-bold underline cursor-pointer"
+                              >
+                                + Assign Project Resources Now
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Inline 1-Click Resource Assignment Drawer */}
+                      {isPickerOpen && (
+                        <div className="mt-3 pt-3 border-t border-emerald-500/30 bg-emerald-500/5 -mx-4 -mb-4 p-4 rounded-b-xl space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                              Check or uncheck live resources in{' '}
+                              <code>{projectId}</code> to group inside{' '}
+                              <code>{grp.displayName}</code>:
+                            </span>
+                            {actionBusy === `RG_MEMBER_${grp.slug}` && (
+                              <span className="text-[10px] font-mono font-bold text-emerald-500 animate-pulse">
+                                Syncing group membership...
+                              </span>
+                            )}
+                          </div>
+                          <div className="max-h-48 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-800 bg-white dark:bg-zinc-950">
+                            {unifiedResources.length === 0 ? (
+                              <div className="p-3 text-xs font-mono text-zinc-400">
+                                No live resources detected in {projectId}.
+                              </div>
+                            ) : (
+                              unifiedResources.map((resItem) => {
+                                const inGroup = memberIdSet.has(resItem.id);
+                                return (
+                                  <label
+                                    key={resItem.id}
+                                    className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs font-mono hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <input
+                                        type="checkbox"
+                                        checked={inGroup}
+                                        disabled={
+                                          actionBusy === `RG_MEMBER_${grp.slug}`
+                                        }
+                                        onChange={() =>
+                                          handleToggleGroupMember(
+                                            grp,
+                                            resItem.id
+                                          )
+                                        }
+                                        className="rounded accent-emerald-600"
+                                      />
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 shrink-0">
+                                        {resItem.typeBadge}
+                                      </span>
+                                      <span className="truncate font-semibold text-zinc-900 dark:text-zinc-100">
+                                        {resItem.name}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-zinc-500 shrink-0">
+                                      {resItem.location} · $
+                                      {Number(
+                                        resItem.estMonthlyUsd || 0
+                                      ).toFixed(2)}
+                                      /mo
+                                    </span>
+                                  </label>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* RG-Scoped RBAC Assignments */}
                       {(grp.iamAssignments || []).length > 0 && (
@@ -3876,6 +4036,71 @@ export default function AwsAzureEnvySuiteStudio({
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Optional Collapsible RG-Scoped RBAC Drawer */}
+              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setShowRgRbacDrawer((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>
+                    {showRgRbacDrawer
+                      ? 'Hide Optional Resource-Group-Scoped IAM / RBAC Access'
+                      : 'Optional: Delegate Resource-Group-Scoped IAM / RBAC Access (Reader / Contributor / Owner)'}
+                  </span>
+                </button>
+                {showRgRbacDrawer && (
+                  <div className="mt-2.5 p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/20 space-y-2.5 text-xs font-mono">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={rgRbacPrincipal}
+                        onChange={(e) => setRgRbacPrincipal(e.target.value)}
+                        placeholder="user:engineer@company.com or serviceAccount:..."
+                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                      />
+                      <select
+                        value={rgRbacRole}
+                        onChange={(e) => setRgRbacRole(e.target.value)}
+                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700"
+                      >
+                        <option value="RG_READER">
+                          Azure RG Reader (View Only inside selected RG)
+                        </option>
+                        <option value="RG_CONTRIBUTOR">
+                          Azure RG Contributor (Deploy &amp; Operate inside selected RG)
+                        </option>
+                        <option value="RG_OWNER">
+                          Azure RG Owner (Full Admin inside selected RG)
+                        </option>
+                      </select>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] text-zinc-500">
+                        Apply to Resource Group:
+                      </span>
+                      {resourceGroups.map((grp) => (
+                        <button
+                          key={grp.slug}
+                          type="button"
+                          disabled={actionBusy === `RG_IAM_${grp.slug}`}
+                          onClick={() => handleAssignRgIamRole(grp)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 border border-blue-500/30 cursor-pointer"
+                        >
+                          <UserCheck className="w-3 h-3" />
+                          <span>
+                            {actionBusy === `RG_IAM_${grp.slug}`
+                              ? 'Granting...'
+                              : `Grant on ${grp.displayName}`}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

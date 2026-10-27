@@ -111,10 +111,10 @@ const DOC_SECTIONS = [
   },
   {
     id: 'ten-persona-enterprise-board-and-contextual-studio-helpers',
-    wave: '2026–2030 ENTERPRISE WAR-ROOM · 10-PERSONA LAUNCH TRIBUNAL, MULTI-PROJECT FLEET ARBITRATOR, T_+72H PRE-CRIME, ZKP ED25519 PROOF & INTENT COMPILER',
+    wave: '2026–2030 ENTERPRISE WAR-ROOM · 10-PERSONA ARCHITECTURE COUNCIL, MULTI-PROJECT FLEET ARBITRATOR, T_+72H PRE-CRIME, ZKP ED25519 PROOF & INTENT COMPILER',
     title:
-      '10-Persona Enterprise Architecture Board, Live Cryptographic Launch Tribunal (GO / NO-GO Voting), Multi-Project Fleet Tribunal, T_+72h Pre-Crime Forecaster, Zero-Knowledge / Ed25519 Blinded Compliance Proof, Intent-to-Control-Plane Compiler & Contextual Studio Helpers',
-    badge: '10-PERSONA TRIBUNAL + 2030 HORIZON',
+      '10-Persona Enterprise Architecture Board, Live Cryptographic Launch Council (GO / NO-GO Voting), Multi-Project Fleet Council, T_+72h Pre-Crime Forecaster, Zero-Knowledge / Ed25519 Blinded Compliance Proof, Intent-to-Control-Plane Compiler & Contextual Studio Helpers',
+    badge: '10-PERSONA COUNCIL + 2030 HORIZON',
     badgeColor: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40',
     icon: ShieldCheck,
     targetTab: 'INNOVATION_LAB',
@@ -122,7 +122,7 @@ const DOC_SECTIONS = [
       'Standard cloud consoles present raw resource tables without role-specific pre-flight guards or cross-domain consensus, forcing specialized engineers (Architects, Platform Ops, Data Engineers, NetOps, DevSecOps, AI/MLOps, SREs, DBREs, FinOps, and K8s Engineers) to context-switch across dozens of pages or hold hours of manual architecture review meetings before production sign-off.',
     howItWorks: [
       'Sub-Tabs 01–04 (10-Persona Roll-Call, Ripple Chains, Pareto Solver & SHA-256 Merkle Diff + Rollback Capsules): Executes 20 parallel live Google Cloud REST API probes against your active project, computes each of the 10 personas\' live vote (APPROVE, CONDITIONAL_WARN, VETO_BLOCK) and score (0-100), executes 1-click Live GCP Remediations (EXECUTE_TRIBUNAL_LIVE_REMEDIATION -> LOCK_FIREWALL_TO_IAP and ENFORCE_BUCKET_PAP) while automatically sealing pre-mutation GCP state into 1-Click Rollback Capsules (ROLLBACK_TRIBUNAL_REMEDIATION), maps cross-persona blast-radius ripple chains, solves Pareto Cost vs. HA vs. Zero-Trust trade-offs, and tracks T0 vs. T_Now SHA-256 Merkle state deltas.',
-      'Sub-Tab 05 ([2030] Multi-Project Cross-Estate Fleet Tribunal — GET /api/enterprise-personas/fleet-tribunal): Discovers all ACTIVE GCP projects on your authenticated account via cloudresourcemanager.googleapis.com and probes their 10-Persona readiness in parallel, ranking every project on a unified Sovereignty Leaderboard.',
+      'Sub-Tab 05 ([2030] Multi-Project Cross-Estate Fleet Council — GET /api/enterprise-personas/fleet-tribunal): Discovers all ACTIVE GCP projects on your authenticated account via cloudresourcemanager.googleapis.com and probes their 10-Persona readiness in parallel, ranking every project on a unified Sovereignty Leaderboard.',
       'Sub-Tab 06 ([2030] T_Now -> T_+72h Pre-Crime Forecaster): Projects 72-hour control-plane trajectories across severity>=ERROR log velocity, world-open firewall & unhardened bucket exposure-hours, 72h idle disk/IP burn, and IAM Zero-Key governance.',
       'Sub-Tab 07 ([2030] Zero-Knowledge / Ed25519 Blinded Compliance Proof & Verifier — POST /api/project/:id/enterprise-personas/zkp-verify): Generates salted SHA-256 Pedersen-style commitments (H(salt || kind || name || status)) signed with Ed25519 (RFC 8032) so external auditors can mathematically verify compliance in microseconds without seeing a single internal resource name, bucket name, or Service Account email.',
       'Sub-Tab 08 ([2030] Intent-to-Control-Plane Compiler — POST /api/project/:id/enterprise-personas/intent-compiler): Compiles natural-language engineering intents across all 10 Personas using your live project inventory + Gemini (gemini-3.8-flash / gemini-3.1-pro) into persona amendments and copy-ready Terraform HCL (main.tf).',
@@ -130,7 +130,7 @@ const DOC_SECTIONS = [
     ],
     apisUsed: [
       'GET & POST /api/project/:id/enterprise-personas/tribunal (20 Parallel Live GCP REST Probes + SHA-256 Merkle Diff + T_+72h Forecast + ZKP Proof)',
-      'GET /api/enterprise-personas/fleet-tribunal (Multi-Project Cross-Estate Parallel Fleet Tribunal)',
+      'GET /api/enterprise-personas/fleet-tribunal (Multi-Project Cross-Estate Parallel Fleet Council)',
       'POST /api/project/:id/enterprise-personas/zkp-verify & POST /api/project/:id/enterprise-personas/intent-compiler',
       'POST /api/project/:id/enterprise-personas/agentless-vm-xray, /wire-packet-waterfall, /practitioner-devkit & /devsecops-entropy-gitops',
       'GET /api/project/:id/enterprise-personas/overview & POST /api/project/:id/enterprise-personas/action (EXECUTE_TRIBUNAL_LIVE_REMEDIATION + ROLLBACK_TRIBUNAL_REMEDIATION)',

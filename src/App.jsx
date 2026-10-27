@@ -1081,6 +1081,9 @@ function classifyDestructiveAxiosConfig(config) {
         )) ||
       (rawUrl.includes('/aws-azure-parity/action') &&
         [
+          'UPSERT_RESOURCE_GROUP',
+          'ASSIGN_RG_IAM_ROLE',
+          'LIST_BUCKET_OBJECTS',
           'SIMULATE_IAM_POLICY',
           'SIMULATE_SWITCH_ROLE',
           'DETECT_STACK_DRIFT',
@@ -1150,7 +1153,7 @@ function classifyDestructiveAxiosConfig(config) {
       return null;
     }
 
-    // 3A-0000-rollback. 10-Persona Tribunal Rollback Capsule Reverter
+    // 3A-0000-rollback. 10-Persona Council Rollback Capsule Reverter
     if (
       rawUrl.includes('/enterprise-personas/action') &&
       String(body.action || '').toUpperCase() ===
@@ -1161,7 +1164,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Restore Pre-Remediation GCP State from Rollback Capsule "${capId}"?`,
-        headerBadge: '10-Persona Launch Tribunal · 2030 Rollback Capsule',
+        headerBadge: '10-Persona Architecture Council · 2030 Rollback Capsule',
         targetLabel: 'Target Pre-Mutation Rollback Capsule',
         resourceKind: 'Compute Firewall / GCS Bucket Pre-Mutation Snapshot',
         targetName: capId,
@@ -1177,7 +1180,7 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // 3A-0000. 10-Persona Tribunal Live GCP Remediation (LOCK_FIREWALL_TO_IAP | ENFORCE_BUCKET_PAP)
+    // 3A-0000. 10-Persona Council Live GCP Remediation (LOCK_FIREWALL_TO_IAP | ENFORCE_BUCKET_PAP)
     if (
       rawUrl.includes('/enterprise-personas/action') &&
       String(body.action || '').toUpperCase() ===
@@ -1190,7 +1193,7 @@ function classifyDestructiveAxiosConfig(config) {
           gateType: 'ONE_TAP_CLOUD_ACTION',
           releaseTrack: 'GA',
           title: `Lock VPC Firewall Rule "${targetRes}" to Cloud IAP (35.235.240.0/20)?`,
-          headerBadge: '10-Persona Launch Tribunal · Live NetOps Remediation',
+          headerBadge: '10-Persona Architecture Council · Live NetOps Remediation',
           targetLabel: 'Target VPC Firewall Rule',
           resourceKind: 'Compute Engine Firewall Rule (compute.googleapis.com/v1)',
           targetName: targetRes,
@@ -1200,7 +1203,7 @@ function classifyDestructiveAxiosConfig(config) {
           endpoint: rawUrl,
           confirmLabel: `Lock "${targetRes}" to Cloud IAP (35.235.240.0/20)`,
           cancelToast: `Firewall remediation on "${targetRes}" cancelled.`,
-          whatHappensNext: `1. Calls PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${targetRes}.\n2. Replaces world-open 0.0.0.0/0 sourceRanges with Google Cloud IAP TCP forwarding (35.235.240.0/20).\n3. Re-runs the 10-Persona Launch Tribunal and updates the T0 vs. T_Now SHA-256 Merkle Diff.`,
+          whatHappensNext: `1. Calls PATCH https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls/${targetRes}.\n2. Replaces world-open 0.0.0.0/0 sourceRanges with Google Cloud IAP TCP forwarding (35.235.240.0/20).\n3. Re-runs the 10-Persona Architecture Council and updates the T0 vs. T_Now SHA-256 Merkle Diff.`,
           costWarning: `ZERO COST IMPACT ($0.00/MO): Updating VPC firewall sourceRanges and using Cloud IAP TCP forwarding incurs $0.00/mo.`,
           impactWarning: `Direct public internet connections to ports governed by "${targetRes}" will be blocked unless tunnelled through authenticated Google Cloud IAP (gcloud compute start-iap-tunnel).`,
         };
@@ -1209,7 +1212,7 @@ function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: `Enforce PublicAccessPrevention & Uniform Access on "gs://${targetRes}"?`,
-        headerBadge: '10-Persona Launch Tribunal · Live DevSecOps Remediation',
+        headerBadge: '10-Persona Architecture Council · Live DevSecOps Remediation',
         targetLabel: 'Target Cloud Storage Bucket',
         resourceKind: 'Cloud Storage Bucket IAM Config (storage.googleapis.com/v1)',
         targetName: `gs://${targetRes}`,
@@ -1219,7 +1222,7 @@ function classifyDestructiveAxiosConfig(config) {
         endpoint: rawUrl,
         confirmLabel: `Enforce PublicAccessPrevention on gs://${targetRes}`,
         cancelToast: `Bucket hardening on "gs://${targetRes}" cancelled.`,
-        whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${targetRes}.\n2. Sets iamConfiguration.publicAccessPrevention="enforced" and uniformBucketLevelAccess.enabled=true.\n3. Re-runs the 10-Persona Launch Tribunal and updates the T0 vs. T_Now SHA-256 Merkle Diff.`,
+        whatHappensNext: `1. Calls PATCH https://storage.googleapis.com/storage/v1/b/${targetRes}.\n2. Sets iamConfiguration.publicAccessPrevention="enforced" and uniformBucketLevelAccess.enabled=true.\n3. Re-runs the 10-Persona Architecture Council and updates the T0 vs. T_Now SHA-256 Merkle Diff.`,
         costWarning: `ZERO COST IMPACT ($0.00/MO): Enforcing Public Access Prevention and Uniform Bucket-Level Access incurs $0.00/mo.`,
         impactWarning: `Blocks any public allUsers / allAuthenticatedUsers object ACLs on "gs://${targetRes}" in project "${projectId}".`,
       };
@@ -3197,9 +3200,16 @@ function CloudPulseCockpit() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
+  const toastTimerRef = useRef(null);
   const showToast = useCallback((msg) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 5000);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+      toastTimerRef.current = null;
+    }, 9000);
   }, []);
 
   // Global Mandatory Delete & Destructive Action Confirmation Gatekeeper

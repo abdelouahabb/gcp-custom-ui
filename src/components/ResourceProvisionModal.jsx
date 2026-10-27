@@ -24,43 +24,43 @@ const SERVICE_TABS = [
     id: 'CLOUD_RUN',
     label: 'Cloud Run',
     icon: Cpu,
-    desc: 'Deploy real Cloud Run Service (run.googleapis.com)',
+    desc: 'Deploy Cloud Run Service (run.googleapis.com)',
   },
   {
     id: 'GKE_CLUSTER',
     label: 'GKE Cluster',
     icon: Sparkles,
-    desc: 'Create real GKE Autopilot or Standard GPU Cluster (container.googleapis.com)',
+    desc: 'Create GKE Autopilot or Standard GPU Cluster (container.googleapis.com)',
   },
   {
     id: 'COMPUTE_VM',
     label: 'Compute VM',
     icon: Server,
-    desc: 'Create real GCE VM (compute.googleapis.com)',
+    desc: 'Create Compute Engine VM (compute.googleapis.com)',
   },
   {
     id: 'VPC_NETWORK',
     label: 'VPC Network',
     icon: Network,
-    desc: 'Create real VPC Network (global/networks)',
+    desc: 'Create VPC Network (global/networks)',
   },
   {
     id: 'VPC_FIREWALL',
     label: 'Firewall Rule',
     icon: Shield,
-    desc: 'Create real VPC Firewall Rule (global/firewalls)',
+    desc: 'Create VPC Firewall Rule (global/firewalls)',
   },
   {
     id: 'GCS_BUCKET',
     label: 'Cloud Storage',
     icon: HardDrive,
-    desc: 'Create real GCS Bucket (storage.googleapis.com)',
+    desc: 'Create Cloud Storage Bucket (storage.googleapis.com)',
   },
   {
     id: 'BIGQUERY_DATASET',
     label: 'BigQuery Dataset',
     icon: Database,
-    desc: 'Create real BQ Dataset (bigquery.googleapis.com)',
+    desc: 'Create BigQuery Dataset (bigquery.googleapis.com)',
   },
   {
     id: 'CLOUD_SQL',
@@ -1767,7 +1767,12 @@ export default function ResourceProvisionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-white dark:bg-zinc-950/60 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 overflow-y-auto">
+    <div
+      className="fixed inset-0 z-[100] bg-zinc-950/60 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) onClose();
+      }}
+    >
       <div className="bg-white dark:bg-[#202124] rounded-[14px] border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-[1220px] max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-auto">
         <div className="shrink-0 flex items-start justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-4 pb-3.5 bg-white dark:bg-[#202124]">
           <div className="flex items-center gap-3">
@@ -1776,13 +1781,13 @@ export default function ResourceProvisionModal({
             </div>
             <div>
               <h3 className="text-lg font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                <span>Provision Real GCP Resource</span>
+                <span>Provision GCP Resource</span>
                 <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded">
                   {projectId}
                 </span>
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Executes live Google Cloud REST API calls against your authenticated project.
+                Configure and create resources in your active Google Cloud project.
               </p>
             </div>
           </div>
@@ -6777,7 +6782,7 @@ export default function ResourceProvisionModal({
                 >
                   {submitting
                     ? 'Creating on Google Cloud...'
-                    : `Create Live ${
+                    : `Create ${
                         SERVICE_TABS.find((s) => s.id === serviceType)?.label
                       }`}
                 </button>
