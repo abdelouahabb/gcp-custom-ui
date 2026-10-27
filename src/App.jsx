@@ -2492,9 +2492,11 @@ function classifyDestructiveAxiosConfig(config) {
 
     // 3G-10. Universal Resource Provisioner (/provision)
     if (rawUrl.endsWith('/provision')) {
+      const cfg = body.config || body || {};
       const svcType = String(body.serviceType || body.resourceType || 'CLOUD_RESOURCE').toUpperCase();
       const resName =
         body.name ||
+        cfg.name ||
         body.bucketName ||
         body.datasetId ||
         body.serviceName ||
@@ -2503,83 +2505,187 @@ function classifyDestructiveAxiosConfig(config) {
         body.networkName ||
         body.ruleName ||
         'new-gcp-resource';
-      const loc = body.region || body.zone || body.location || 'us-central1';
+      const loc =
+        body.location ||
+        cfg.location ||
+        body.region ||
+        cfg.region ||
+        body.zone ||
+        cfg.zone ||
+        (svcType === 'VPC_FIREWALL' || svcType === 'VPC_NETWORK' ? 'Global VPC Perimeter' : 'us-central1');
+
+      // Detailed human-first inspection for VPC Firewall Rules (SSH :22 / RDP :3389 / HTTPS :443 / Custom)
+      const fwNetwork = cfg.network || body.network || 'default';
+      const fwAction = String(cfg.action || body.action || 'ALLOW').toUpperCase();
+      const fwDirection = String(cfg.direction || body.direction || 'INGRESS').toUpperCase();
+      const fwPriority = cfg.priority ?? body.priority ?? 1000;
+      const fwRulesList = Array.isArray(cfg.rules) ? cfg.rules : [];
+      const fwPortsSummary =
+        fwRulesList.length > 0
+          ? fwRulesList
+              .map(
+                (r) =>
+                  `${String(r.IPProtocol || 'tcp').toUpperCase()}:${
+                    Array.isArray(r.ports) && r.ports.length > 0 ? r.ports.join(',') : 'all'
+                  }`
+              )
+              .join(', ')
+          : 'TCP:22';
+      const fwSourceRanges = Array.isArray(cfg.sourceRanges)
+        ? cfg.sourceRanges.join(', ')
+        : String(cfg.sourceRanges || body.sourceRanges || '0.0.0.0/0');
+      const isSshRule = /\b22\b/.test(fwPortsSummary);
+      const isHttpsRule = /\b443\b/.test(fwPortsSummary);
+
+      const buildFirewallSpec = () => {
+        if (isSshRule && fwAction === 'DENY') {
+          return {
+            title: `Block Public Internet SSH (:22) & RDP (:3389) on VPC "${fwNetwork}" (Priority-${fwPriority})?`,
+            badge: `Zero-Trust VPC Perimeter Shield · Priority-${fwPriority} Override`,
+            kind: `VPC Firewall DENY Rule (${fwPortsSummary} · Priority ${fwPriority})`,
+            target: `${resName} (${fwDirection} DENY ${fwPortsSummary} from ${fwSourceRanges} on VPC "${fwNetwork}")`,
+            confirm: `Block Public SSH/RDP on VPC "${fwNetwork}" ($0.00/mo)`,
+            what: `1. Drops Public SSH & RDP Brute-Force at the Andromeda Edge (Priority ${fwPriority}): Creates a high-priority INGRESS DENY rule ("${resName}") on VPC "${fwNetwork}" that evaluates before Google Cloud's permissive default-allow-ssh / default-allow-rdp rules (Priority 65534), dropping unsolicited ${fwSourceRanges} packets on ${fwPortsSummary} before they reach any VM.\n2. Flips World Map Verdict to LOCKED & Preserves Safe Cloud IAP Tunneling: Immediately turns the map's "SSH :22" & "RDP :3389" badges from EXPOSED (Red) to LOCKED (Green) and blocks red brute-force arcs at the VPC shield ring—while still allowing you to connect safely via Identity-Aware Proxy (--tunnel-through-iap, 35.235.240.0/20).\n3. Enables Firewall Hit Logging & 1-Click Rollback: Activates VPC Firewall Rule Logging so blocked connection attempts are recorded in Cloud Logging, and saves a reversible receipt so you can delete or toggle this rule anytime from the VPC Studio.`,
+            cost: `ZERO COST ($0.00/MO): Google Cloud VPC Firewall rules and Andromeda virtual switch packet filtering are 100% free ($0.00/mo).`,
+            impact: `Direct public internet SSH (port 22) and RDP (port 3389) from ${fwSourceRanges} into VPC "${fwNetwork}" will be blocked immediately. HTTPS (:443) web traffic, internal VPC traffic, and Cloud IAP tunnels are unaffected.`,
+          };
+        }
+        if (isSshRule && fwAction === 'ALLOW') {
+          return {
+            title: `Allow Public SSH (:22) Ingress on VPC "${fwNetwork}" (Priority-${fwPriority})?`,
+            badge: `VPC SSH Ingress Override · Priority-${fwPriority} ALLOW`,
+            kind: `VPC Firewall ALLOW Rule (${fwPortsSummary} · Priority ${fwPriority})`,
+            target: `${resName} (${fwDirection} ALLOW ${fwPortsSummary} from ${fwSourceRanges} on VPC "${fwNetwork}")`,
+            confirm: `Allow SSH :22 Ingress on VPC "${fwNetwork}" ($0.00/mo)`,
+            what: `1. Re-Opens TCP Port 22 (SSH) on VPC "${fwNetwork}" (Priority ${fwPriority}): Creates an INGRESS ALLOW rule ("${resName}") at Priority ${fwPriority} that overrides lower-priority DENY shields and permits inbound SSH connections from ${fwSourceRanges}.\n2. Updates Live World Map SSH :22 Verdict: Immediately flips the World Map's "SSH :22" badge to EXPOSED/ALLOW so inbound TCP:22 trajectories pass through the VPC perimeter.\n3. Enables Connection Audit Logging & 1-Click Rollback: Turns on VPC Firewall Rule Logging for audit visibility and records a reversible creation receipt.`,
+            cost: `ZERO COST ($0.00/MO): VPC Firewall rules incur $0.00/mo in Google Cloud.`,
+            impact: `WARNING — PUBLIC SSH EXPOSURE: Opening TCP:22 to ${fwSourceRanges} exposes Compute Engine VMs with public IPs in VPC "${fwNetwork}" to internet SSH connections. Prefer Cloud IAP (35.235.240.0/20) for production workloads.`,
+          };
+        }
+        if (isHttpsRule && fwAction === 'DENY') {
+          return {
+            title: `Block Public HTTPS (:443) Ingress on VPC "${fwNetwork}" (Priority-${fwPriority})?`,
+            badge: `Zero-Trust VPC Edge Lockdown · Priority-${fwPriority} HTTPS Shield`,
+            kind: `VPC Firewall DENY Rule (${fwPortsSummary} · Priority ${fwPriority})`,
+            target: `${resName} (${fwDirection} DENY ${fwPortsSummary} from ${fwSourceRanges} on VPC "${fwNetwork}")`,
+            confirm: `Block Public HTTPS :443 on VPC "${fwNetwork}" ($0.00/mo)`,
+            what: `1. Blocks Inbound HTTPS (TCP:443) at the VPC Perimeter (Priority ${fwPriority}): Creates a high-priority INGRESS DENY rule ("${resName}") on VPC "${fwNetwork}" that overrides lower-priority allow rules and drops inbound TCP:443 packets from ${fwSourceRanges} at Google's Andromeda virtual switch.\n2. Flips Live World Map "HTTPS :443" Verdict to DENY: Immediately updates the World Map's "HTTPS :443" badge to DENY and intercepts port :443 packet arcs at the VPC perimeter ring.\n3. Enables Firewall Hit Logging & 1-Click Rollback: Turns on VPC Firewall Rule Logging in Cloud Logging and saves a reversible receipt so you can re-open HTTPS :443 anytime in 1 click.`,
+            cost: `ZERO COST ($0.00/MO): VPC Firewall rules and edge packet drops incur $0.00/mo in Google Cloud.`,
+            impact: `Inbound HTTPS (port 443) traffic from ${fwSourceRanges} to Compute Engine VMs in VPC "${fwNetwork}" will be blocked until you click Allow HTTPS :443 or delete this rule.`,
+          };
+        }
+        if (isHttpsRule && fwAction === 'ALLOW') {
+          return {
+            title: `Allow Public HTTPS (:443) Ingress on VPC "${fwNetwork}" (Priority-${fwPriority})?`,
+            badge: `VPC HTTPS Edge Ingress Gatekeeper · Priority-${fwPriority} ALLOW`,
+            kind: `VPC Firewall ALLOW Rule (${fwPortsSummary} · Priority ${fwPriority})`,
+            target: `${resName} (${fwDirection} ALLOW ${fwPortsSummary} from ${fwSourceRanges} on VPC "${fwNetwork}")`,
+            confirm: `Allow Public HTTPS :443 on VPC "${fwNetwork}" ($0.00/mo)`,
+            what: `1. Opens Encrypted HTTPS (TCP:443) Ingress on VPC "${fwNetwork}" (Priority ${fwPriority}): Creates an INGRESS ALLOW rule ("${resName}") at Priority ${fwPriority} permitting inbound TLS/HTTPS traffic on TCP port 443 from ${fwSourceRanges} (including Google Front End / Cloud Load Balancers) to reach web & API workloads in VPC "${fwNetwork}".\n2. Flips Live World Map "HTTPS :443" Verdict to ALLOW: Immediately switches the World Map's "HTTPS :443" security indicator to ALLOW (Green) so port :443 trajectories pass cleanly into your regions.\n3. Enables Connection Audit Logging & 1-Click Rollback: Enables VPC Firewall Rule Logging in Cloud Logging and records a reversible creation receipt in the Flight Recorder.`,
+            cost: `ZERO COST ($0.00/MO): Creating VPC Firewall rules incurs $0.00/mo in Google Cloud.`,
+            impact: `Permits inbound TCP port 443 (HTTPS) traffic from ${fwSourceRanges} into VPC "${fwNetwork}" while keeping SSH (:22) and internal ports protected by their own rules.`,
+          };
+        }
+        return {
+          title: `${fwAction === 'DENY' ? 'Block' : 'Allow'} ${fwPortsSummary} (${fwDirection}) on VPC "${fwNetwork}" (Priority-${fwPriority})?`,
+          badge: `VPC Firewall Rule Gatekeeper · Priority-${fwPriority} ${fwAction}`,
+          kind: `VPC Firewall ${fwAction} Rule (${fwPortsSummary} · Priority ${fwPriority})`,
+          target: `${resName} (${fwDirection} ${fwAction} ${fwPortsSummary} from ${fwSourceRanges} on VPC "${fwNetwork}")`,
+          confirm: `Create ${fwAction} Firewall Rule "${resName}" ($0.00/mo)`,
+          what: `1. Enforces ${fwDirection} ${fwAction} on ${fwPortsSummary} (Priority ${fwPriority}): Creates firewall rule "${resName}" on VPC network "${fwNetwork}" matching source range ${fwSourceRanges} at Priority ${fwPriority}.\n2. Updates Live VPC Packet Evaluation on the World Map: Immediately recalculates live packet verdicts against "${resName}" across all VMs and subnets attached to VPC "${fwNetwork}".\n3. Enables Audit Logging & 1-Click Rollback: Records the rule in Google Compute Engine Firewalls and saves a reversible receipt in the CloudPulse Flight Recorder.`,
+          cost: `ZERO COST ($0.00/MO): VPC Firewall rules incur $0.00/mo in Google Cloud.`,
+          impact: `Immediately applies ${fwDirection} ${fwAction} filtering for ${fwPortsSummary} (source ${fwSourceRanges}) across VPC "${fwNetwork}" in project "${projectId}".`,
+        };
+      };
+
       const provSpecs = {
         GCS_BUCKET: {
           title: `Provision Cloud Storage Bucket "gs://${resName}" in ${loc}?`,
-          kind: `Cloud Storage Bucket (${body.storageClass || 'STANDARD'} · storage.googleapis.com/storage/v1)`,
-          what: `1. Calls POST https://storage.googleapis.com/storage/v1/b?project=${projectId} with name="${resName}", location="${loc}", and storageClass="${body.storageClass || 'STANDARD'}".\n2. Enforces Uniform Bucket-Level Access (uniformBucketLevelAccess.enabled=true) and Public Access Prevention (publicAccessPrevention="enforced").\n3. Records a reversible creation receipt in the Cloud Flight Recorder.`,
+          kind: `Cloud Storage Bucket (${cfg.storageClass || 'STANDARD'} · storage.googleapis.com/storage/v1)`,
+          what: `1. Creates Zero-Trust Cloud Storage Bucket "gs://${resName}" in ${loc}: Provisions the bucket with storageClass="${cfg.storageClass || 'STANDARD'}" in region "${loc}".\n2. Enforces Public Access Prevention & Uniform IAM: Automatically sets publicAccessPrevention="enforced" and uniformBucketLevelAccess=true so objects can never be accidentally exposed to anonymous internet users.\n3. Enables 1-Click Rollback & Lifecycle Tracking: Registers the bucket in your Cloud Storage Workbench and records a reversible receipt in the Flight Recorder.`,
           cost: `ALWAYS-FREE TIER ELIGIBLE ($0.00 EMPTY): Empty buckets cost $0.00/mo. Standard storage in US-CENTRAL1/US-EAST1/US-WEST1 includes 5 GB-months Always Free ($0.020/GB-mo beyond Free Tier).`,
+          impact: `Creates live Cloud Storage bucket "gs://${resName}" in "${loc}" on project "${projectId}".`,
         },
         BIGQUERY_DATASET: {
           title: `Provision BigQuery Dataset "${projectId}:${resName}" in ${loc}?`,
           kind: `BigQuery Dataset (bigquery.googleapis.com/bigquery/v2)`,
-          what: `1. Calls POST https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets with datasetReference.datasetId="${resName}" and location="${loc}".\n2. Configures default table expiration and storage billing model metadata.\n3. Records a reversible creation receipt in the Cloud Flight Recorder.`,
+          what: `1. Creates BigQuery Analytics Dataset "${projectId}:${resName}" in ${loc}: Provisions the dataset container in "${loc}" ready for SQL tables, views, and Iceberg external tables.\n2. Configures Governance & Storage Billing Metadata: Applies default table expiration and storage billing model settings.\n3. Registers in BigQuery Studio & Flight Recorder: Makes the dataset immediately queryable in BigQuery Studio with a 1-click reversible creation receipt.`,
           cost: `ZERO IDLE COST ($0.00/MO): Creating a BigQuery dataset container is 100% free ($0.00/mo). Google Cloud includes 10 GiB of active table storage and 1 TiB of SQL queries per month Always Free.`,
+          impact: `Creates live BigQuery dataset "${projectId}:${resName}" in "${loc}".`,
         },
         CLOUD_RUN: {
           title: `Deploy Cloud Run Gen2 Service "${resName}" in ${loc}?`,
           kind: `Cloud Run v2 Service (run.googleapis.com/v2)`,
-          what: `1. Calls POST https://run.googleapis.com/v2/projects/${projectId}/locations/${loc}/services?serviceId=${resName}.\n2. Deploys container image "${body.image || 'us-docker.pkg.dev/cloudrun/container/hello'}" with minInstanceCount=${body.minInstances ?? 0}, maxInstanceCount=${body.maxInstances ?? 10}, and CPU/Memory limits.\n3. Configures IAM invoker policy (${body.allowUnauthenticated ? 'Public allUsers' : 'Private IAM Authenticated'}).`,
+          what: `1. Deploys Serverless Container "${resName}" in ${loc}: Provisions a Cloud Run Gen2 service running image "${cfg.image || 'us-docker.pkg.dev/cloudrun/container/hello'}" with minInstanceCount=${cfg.minInstances ?? 0} and maxInstanceCount=${cfg.maxInstances ?? 10}.\n2. Provisions Dedicated *.run.app HTTPS Endpoint & TLS Certificate: Automatically configures Google Front End global load balancing and managed TLS 1.3 certificates.\n3. Applies Zero-Trust IAM Invoker Policy: Sets access control to ${cfg.allowUnauthenticated ? 'Public Internet (allUsers)' : 'Private IAM Authenticated Only'} and logs a reversible receipt.`,
           cost:
-            Number(body.minInstances || 0) > 0
-              ? `WARM INSTANCE BILLING WARNING: Because minInstances=${body.minInstances} (> 0), this Cloud Run service will keep ${body.minInstances} container instance(s) warm 24/7 and bill continuously for vCPU and Memory.`
+            Number(cfg.minInstances || 0) > 0
+              ? `WARM INSTANCE BILLING WARNING: Because minInstances=${cfg.minInstances} (> 0), this Cloud Run service will keep ${cfg.minInstances} container instance(s) warm 24/7 and bill continuously for vCPU and Memory.`
               : `SCALE-TO-ZERO ($0.00/HR IDLE): Configured with minInstanceCount=0 and request-only CPU billing (2 million requests/mo, 180,000 vCPU-sec/mo, and 360,000 GiB-sec/mo Always Free).`,
+          impact: `Deploys live Cloud Run v2 service "${resName}" in "${loc}" on project "${projectId}".`,
         },
         COMPUTE_VM: {
-          title: `Provision Compute Engine VM "${resName}" (${body.machineType || 'e2-micro'}) in ${loc}?`,
-          kind: `Compute Engine VM Instance (${body.machineType || 'e2-micro'} · compute.googleapis.com/v1)`,
-          what: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/zones/${loc}/instances.\n2. Provisions VM "${resName}" with machineType="${body.machineType || 'e2-micro'}", boot disk (${body.diskSizeGb || 10} GB ${body.diskType || 'pd-standard'}), and VPC network "${body.network || 'default'}".\n3. Polls the live Zone Operation until the VM reaches RUNNING state.`,
+          title: `Provision Compute Engine VM "${resName}" (${cfg.machineType || 'e2-micro'}) in ${loc}?`,
+          kind: `Compute Engine VM Instance (${cfg.machineType || 'e2-micro'} · compute.googleapis.com/v1)`,
+          what: `1. Boots Compute Engine VM "${resName}" in Zone ${loc}: Provisions a ${cfg.machineType || 'e2-micro'} virtual machine with a ${cfg.diskSizeGb || 10} GB ${cfg.diskType || 'pd-standard'} boot disk attached to VPC "${cfg.network || 'default'}".\n2. Hardens Instance Identity & Shielded VM Controls: Configures Shielded VM integrity monitoring and prepares the instance for Browser SSH / Cloud IAP tunneling.\n3. Polls Live Zone Operation to RUNNING State: Tracks the Compute Engine zone operation until the VM boots and registers it in the VM Fleet Studio.`,
           cost: `CONTINUOUS VM & DISK BILLING NOTICE: Running a Compute Engine VM bills hourly for vCPU/RAM plus monthly for its Persistent Boot Disk. (Note: 1 e2-micro instance in us-central1, us-west1, or us-east1 with up to 30 GB pd-standard disk is eligible for the Google Cloud Always-Free Tier.)`,
+          impact: `Provisions and starts live Compute Engine VM "${resName}" in zone "${loc}".`,
         },
         GKE_CLUSTER: {
           title: `Provision Google Kubernetes Engine (GKE) Cluster "${resName}" in ${loc}?`,
-          kind: `GKE Kubernetes Cluster (${body.autopilot !== false ? 'Autopilot' : 'Standard'} · container.googleapis.com/v1)`,
-          what: `1. Calls POST https://container.googleapis.com/v1/projects/${projectId}/locations/${loc}/clusters.\n2. Bootstraps control plane and node provisioning for GKE cluster "${resName}".\n3. Registers the cluster in the GKE Fleet Studio.`,
+          kind: `GKE Kubernetes Cluster (${cfg.autopilot !== false ? 'Autopilot' : 'Standard'} · container.googleapis.com/v1)`,
+          what: `1. Bootstraps Managed Kubernetes Control Plane "${resName}" in ${loc}: Provisions a GKE ${cfg.autopilot !== false ? 'Autopilot' : 'Standard'} cluster in "${loc}" with Workload Identity and private control-plane networking.\n2. Configures Auto-Scaling Node / Pod Compute Pool: Registers managed compute capacity and Kubernetes API server endpoints.\n3. Links to GKE Fleet Studio: Streams live cluster status and records a reversible creation receipt.`,
           cost: `GKE CLUSTER & NODE BILLING WARNING: GKE charges $0.10/hr (~$73.00/mo) per cluster management fee (after the 1 free zonal/Autopilot cluster tier per billing account) plus active worker node/pod vCPU, Memory, and Persistent Disk charges.`,
+          impact: `Provisions live GKE Kubernetes cluster "${resName}" in "${loc}" on project "${projectId}".`,
         },
         CLOUD_SQL: {
-          title: `Provision Cloud SQL Database Instance "${resName}" (${body.databaseVersion || 'POSTGRES_15'}) in ${loc}?`,
-          kind: `Cloud SQL Instance (${body.databaseVersion || 'POSTGRES_15'} · sqladmin.googleapis.com/sql/v1beta4)`,
-          what: `1. Calls POST https://sqladmin.googleapis.com/sql/v1beta4/projects/${projectId}/instances.\n2. Provisions managed relational database instance "${resName}" with tier "${body.tier || 'db-f1-micro'}" in "${loc}".\n3. Configures automated backups and storage auto-increase.`,
-          cost: `CONTINUOUS DATABASE BILLING WARNING: Cloud SQL instances do NOT scale to $0 when idle — they bill continuously per hour for instance vCPU/RAM tier (${body.tier || 'db-f1-micro'}) plus SSD/HDD storage ($0.09–$0.17/GB-mo) until stopped or deleted.`,
+          title: `Provision Cloud SQL Database Instance "${resName}" (${cfg.databaseVersion || 'POSTGRES_15'}) in ${loc}?`,
+          kind: `Cloud SQL Instance (${cfg.databaseVersion || 'POSTGRES_15'} · sqladmin.googleapis.com/sql/v1beta4)`,
+          what: `1. Provisions Managed Relational Database "${resName}" (${cfg.databaseVersion || 'POSTGRES_15'}): Creates a Cloud SQL instance on machine tier "${cfg.tier || 'db-f1-micro'}" in "${loc}".\n2. Configures Encrypted Storage & Automated Backups: Sets up AES-256 encrypted database storage and point-in-time recovery metadata.\n3. Registers in Cloud SQL Studio: Tracks the database build operation and logs a reversible receipt.`,
+          cost: `CONTINUOUS DATABASE BILLING WARNING: Cloud SQL instances do NOT scale to $0 when idle — they bill continuously per hour for instance vCPU/RAM tier (${cfg.tier || 'db-f1-micro'}) plus SSD/HDD storage ($0.09–$0.17/GB-mo) until stopped or deleted.`,
+          impact: `Provisions live Cloud SQL instance "${resName}" in "${loc}" on project "${projectId}".`,
         },
         VPC_NETWORK: {
           title: `Provision Custom VPC Network "${resName}" on "${projectId}"?`,
           kind: `VPC Network (compute.googleapis.com/v1)`,
-          what: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/global/networks with name="${resName}" and autoCreateSubnetworks=${Boolean(body.autoCreateSubnetworks)}.\n2. Registers the global Andromeda virtual network routing plane.`,
+          what: `1. Creates Isolated Global VPC Network "${resName}": Provisions a software-defined Andromeda virtual network with autoCreateSubnetworks=${Boolean(cfg.autoCreateSubnetworks)}.\n2. Initializes Global Routing Table: Sets up private internal routing across Google's global fiber backbone without exposing workloads to the public internet.\n3. Registers in VPC & Firewall Studio: Makes "${resName}" immediately available for subnets, firewall rules, and VM placement.`,
           cost: `ZERO IDLE COST ($0.00/MO): Creating a VPC network and subnets incurs $0.00/mo in fixed charges (standard egress rates apply only to actual traffic).`,
+          impact: `Creates live VPC network "${resName}" in project "${projectId}".`,
         },
-        VPC_FIREWALL: {
-          title: `Create VPC Firewall Rule "${resName}" on Network "${body.network || 'default'}"?`,
-          kind: `VPC Firewall Rule (compute.googleapis.com/v1)`,
-          what: `1. Calls POST https://compute.googleapis.com/compute/v1/projects/${projectId}/global/firewalls.\n2. Configures ${body.direction || 'INGRESS'} firewall rule "${resName}" with priority ${body.priority || 1000} and sourceRanges ${JSON.stringify(body.sourceRanges || ['35.235.240.0/20'])}.`,
-          cost: `ZERO COST ($0.00/MO): VPC Firewall rules incur $0.00/mo in Google Cloud.`,
-        },
+        VPC_FIREWALL: buildFirewallSpec(),
       };
       const spec = provSpecs[svcType] || {
         title: `Provision ${svcType} "${resName}" in ${loc}?`,
         kind: `${svcType} (Google Cloud Control Plane API)`,
         what: `1. Validates project quotas and API readiness on "${projectId}".\n2. Provisions live ${svcType} resource "${resName}" in "${loc}" via official Google Cloud REST APIs.\n3. Logs a reversible creation receipt in the Cloud Flight Recorder.`,
         cost: `CLOUD BILLING NOTICE: Provisioning "${resName}" (${svcType}) in "${loc}" creates a live resource on project "${projectId}" billed according to its service tier.`,
+        impact: `Creates live ${svcType} resource "${resName}" in project "${projectId}" (${loc}).`,
       };
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: spec.title,
-        headerBadge: 'CloudPulse 2026 Live Resource Provisioning Gatekeeper',
-        targetLabel: 'New Google Cloud Resource to Provision',
+        headerBadge:
+          spec.badge || 'CloudPulse 2026 Live Resource Provisioning Gatekeeper',
+        targetLabel:
+          svcType === 'VPC_FIREWALL'
+            ? 'Target VPC Firewall Rule & Traffic Policy'
+            : 'New Google Cloud Resource to Provision',
         resourceKind: spec.kind,
-        targetName: `${resName} (${loc})`,
+        targetName: spec.target || `${resName} (${loc})`,
         location: loc,
         projectId,
-        method: `PROVISION ${svcType}`,
+        method:
+          svcType === 'VPC_FIREWALL'
+            ? `FIREWALL ${fwAction} (P-${fwPriority})`
+            : `PROVISION ${svcType}`,
         endpoint: rawUrl,
-        confirmLabel: `Confirm & Provision "${resName}"`,
-        cancelToast: `Provisioning of "${resName}" cancelled — 0 resources created.`,
+        confirmLabel: spec.confirm || `Confirm & Provision "${resName}"`,
+        cancelToast: `Provisioning of "${resName}" cancelled — 0 changes made.`,
         whatHappensNext: spec.what,
         costWarning: spec.cost,
-        impactWarning: `Creates live ${svcType} resource "${resName}" in project "${projectId}" (${loc}).`,
+        impactWarning:
+          spec.impact ||
+          `Creates live ${svcType} resource "${resName}" in project "${projectId}" (${loc}).`,
       };
     }
 

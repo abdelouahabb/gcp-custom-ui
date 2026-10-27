@@ -2748,6 +2748,25 @@ export default function GlobalNetworkWorldMap({
     backbonePackets: 0,
   });
   const [deployingShield, setDeployingShield] = useState(false);
+  const [deployingHttpsShield, setDeployingHttpsShield] = useState(false);
+
+  // Live VPC Firewall Evaluation for Public SSH (:22) and Public HTTPS (:443)
+  const liveSshPublicEval = useMemo(
+    () =>
+      evaluatePacketAgainstFirewalls(
+        { sourceIp: '185.220.101.44', protocol: 'tcp', port: 22 },
+        firewalls
+      ),
+    [firewalls]
+  );
+  const liveHttpsEdgeEval = useMemo(
+    () =>
+      evaluatePacketAgainstFirewalls(
+        { sourceIp: '130.211.0.22', protocol: 'tcp', port: 443 },
+        firewalls
+      ),
+    [firewalls]
+  );
 
   // Custom Test Packet Launcher state (defaults to User's Live Client Location -> Selected Region)
   const [customOriginId, setCustomOriginId] = useState('my-live-client');
@@ -3277,12 +3296,17 @@ export default function GlobalNetworkWorldMap({
     spawnSimulatedPacket,
   ]);
 
-  // 1-Tap Deploy Priority-100 Zero-Trust SSH/RDP Shield directly from the World Map
+  // 1-Tap Deploy Priority-100 Zero-Trust SSH/RDP Shield (or Toggle Allow) directly from the World Map
   const handleDeployMapShield = async () => {
     if (deployingShield) return;
     setDeployingShield(true);
+    const isCurrentlyAllowed = liveSshPublicEval.verdict === 'ALLOW';
+    const nextAction = isCurrentlyAllowed ? 'DENY' : 'ALLOW';
+    const nextPriority = isCurrentlyAllowed ? 100 : 90;
     try {
-      const ruleName = `map-shield-deny-ssh-${Math.floor(100 + Math.random() * 899)}`;
+      const ruleName = `map-shield-${nextAction.toLowerCase()}-ssh-${Math.floor(
+        100 + Math.random() * 899
+      )}`;
       const res = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/provision`,
         {
@@ -3290,14 +3314,16 @@ export default function GlobalNetworkWorldMap({
           name: ruleName,
           config: {
             network: vpcs[0]?.name || 'default',
-            action: 'DENY',
+            action: nextAction,
             direction: 'INGRESS',
-            priority: 100,
+            priority: nextPriority,
             rules: [{ IPProtocol: 'tcp', ports: ['22', '3389'] }],
             sourceRanges: '0.0.0.0/0',
             enableLogging: true,
             description:
-              'Priority-100 Global Cyber-Shield deployed from Orbital World Map to block public SSH/RDP brute-force.',
+              nextAction === 'DENY'
+                ? 'Priority-100 Global Cyber-Shield deployed from Orbital World Map to block public SSH/RDP brute-force.'
+                : 'Priority-90 SSH/RDP Ingress rule deployed from Orbital World Map.',
           },
         }
       );
@@ -3307,11 +3333,56 @@ export default function GlobalNetworkWorldMap({
     } catch (err) {
       if (onShowError) {
         onShowError(
-          err.response?.data?.error || 'Failed to deploy firewall shield.'
+          err.response?.data?.error || 'Failed to deploy SSH firewall rule.'
         );
       }
     } finally {
       setDeployingShield(false);
+    }
+  };
+
+  // 1-Tap Deploy Priority-100 HTTPS (:443) Ingress Rule (Allow or Block depending on live verdict)
+  const handleDeployMapHttpsRule = async () => {
+    if (deployingHttpsShield) return;
+    setDeployingHttpsShield(true);
+    const isCurrentlyAllowed = liveHttpsEdgeEval.verdict === 'ALLOW';
+    const nextAction = isCurrentlyAllowed ? 'DENY' : 'ALLOW';
+    const nextPriority = isCurrentlyAllowed ? 95 : 100;
+    try {
+      const ruleName = `map-edge-${nextAction.toLowerCase()}-https-${Math.floor(
+        100 + Math.random() * 899
+      )}`;
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/provision`,
+        {
+          serviceType: 'VPC_FIREWALL',
+          name: ruleName,
+          config: {
+            network: vpcs[0]?.name || 'default',
+            action: nextAction,
+            direction: 'INGRESS',
+            priority: nextPriority,
+            rules: [{ IPProtocol: 'tcp', ports: ['443'] }],
+            sourceRanges: '0.0.0.0/0',
+            enableLogging: true,
+            description:
+              nextAction === 'ALLOW'
+                ? 'Priority-100 HTTPS (:443) Edge Ingress ALLOW rule deployed from Orbital World Map.'
+                : 'Priority-95 HTTPS (:443) Edge Lockdown DENY rule deployed from Orbital World Map.',
+          },
+        }
+      );
+      if (res.data?.message) showMapBanner(res.data.message);
+      if (onShowToast) onShowToast(res.data.message);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error || 'Failed to deploy HTTPS :443 firewall rule.'
+        );
+      }
+    } finally {
+      setDeployingHttpsShield(false);
     }
   };
 
@@ -4092,11 +4163,15 @@ export default function GlobalNetworkWorldMap({
               <div className="inline-flex items-center h-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-3 gap-3 shrink-0">
                 <span
                   title={`Matched Rule: ${httpsEdgeEval.ruleName}`}
-                  className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-bold ${
+                    httpsEdgeEval.verdict === 'ALLOW'
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                  }`}
                 >
-                  <span className="text-zinc-400">HTTPS :443</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    {httpsEdgeEval.verdict}
+                  <span>HTTPS :443</span>
+                  <span>
+                    {httpsEdgeEval.verdict === 'ALLOW' ? 'ALLOW' : 'BLOCKED'}
                   </span>
                 </span>
 
@@ -4234,7 +4309,7 @@ export default function GlobalNetworkWorldMap({
               ))}
             </div>
 
-            {/* Center Dock: Re-Probe & Priority-100 Firewall Shield Actions */}
+            {/* Center Dock: Re-Probe + Priority-100 SSH (:22) & HTTPS (:443) Firewall Actions */}
             <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-0.5 gap-1 shrink-0 shadow-xs">
               <button
                 type="button"
@@ -4244,7 +4319,7 @@ export default function GlobalNetworkWorldMap({
                   fetchLiveGeoTelemetry(true);
                   handleSelectSimMode(simMode);
                 }}
-                className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-60 transition-colors"
+                className="inline-flex items-center gap-1.5 h-6 px-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-60 transition-colors"
               >
                 {geoLoading ? (
                   <RefreshCw className="w-3 h-3 shrink-0 animate-spin" />
@@ -4252,7 +4327,7 @@ export default function GlobalNetworkWorldMap({
                   <Zap className="w-3 h-3 shrink-0" />
                 )}
                 <span>
-                  {geoLoading ? 'Probing Sockets...' : 'Re-Probe & Replay Wave'}
+                  {geoLoading ? 'Probing...' : 'Re-Probe Wave'}
                 </span>
               </button>
               <button
@@ -4260,11 +4335,39 @@ export default function GlobalNetworkWorldMap({
                 disabled={deployingShield}
                 data-feature-id="GLOBAL_MAP_DEPLOY_SHIELD"
                 onClick={handleDeployMapShield}
-                className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-red-600/90 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 transition-colors"
+                className={`inline-flex items-center gap-1 h-6 px-2 rounded-md text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 transition-colors ${
+                  liveSshPublicEval.verdict === 'ALLOW'
+                    ? 'bg-red-600/90 hover:bg-red-500'
+                    : 'bg-emerald-600/90 hover:bg-emerald-500'
+                }`}
               >
                 <Shield className="w-3 h-3 shrink-0" />
                 <span>
-                  {deployingShield ? 'Deploying...' : 'Block Public SSH (Priority-100)'}
+                  {deployingShield
+                    ? 'Applying...'
+                    : liveSshPublicEval.verdict === 'ALLOW'
+                    ? 'Block SSH :22'
+                    : 'Allow SSH :22'}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={deployingHttpsShield}
+                data-feature-id="GLOBAL_MAP_DEPLOY_HTTPS_RULE"
+                onClick={handleDeployMapHttpsRule}
+                className={`inline-flex items-center gap-1 h-6 px-2 rounded-md text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 transition-colors ${
+                  liveHttpsEdgeEval.verdict === 'ALLOW'
+                    ? 'bg-amber-600/90 hover:bg-amber-500'
+                    : 'bg-teal-600/90 hover:bg-teal-500'
+                }`}
+              >
+                <Lock className="w-3 h-3 shrink-0" />
+                <span>
+                  {deployingHttpsShield
+                    ? 'Applying...'
+                    : liveHttpsEdgeEval.verdict === 'ALLOW'
+                    ? 'Block HTTPS :443'
+                    : 'Allow HTTPS :443'}
                 </span>
               </button>
             </div>

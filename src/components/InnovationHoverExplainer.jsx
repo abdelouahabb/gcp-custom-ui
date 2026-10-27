@@ -1460,11 +1460,21 @@ export const INNOVATION_FEATURE_GUIDE = {
   },
   GLOBAL_MAP_DEPLOY_SHIELD: {
     badge: '1-CLICK LIVE VPC FIREWALL MUTATION',
-    title: 'Deploy Priority-100 Zero-Trust SSH/RDP Block Shield',
+    title: 'Deploy Priority-100 Zero-Trust SSH/RDP Perimeter Rule (:22 & :3389)',
     whatItDoes:
-      'Calls the Google Compute Engine Firewalls API to provision a real Priority-100 INGRESS DENY rule blocking public 0.0.0.0/0 traffic on TCP ports 22 (SSH) and 3389 (RDP).',
+      'Calls the Google Compute Engine Firewalls API to provision a real Priority-100 INGRESS DENY rule (or Priority-90 ALLOW override) on TCP ports 22 (SSH) and 3389 (RDP) from 0.0.0.0/0.',
     enterpriseValue:
-      'Overrides permissive default-allow-ssh (Priority 65534) rules in seconds without deleting default rules, immediately turning red exposed SSH probes into blocked perimeter shields.',
+      'Overrides permissive default-allow-ssh (Priority 65534) rules in seconds without deleting default rules, immediately turning red exposed SSH probes into blocked perimeter shields while preserving Cloud IAP (35.235.240.0/20).',
+    gcpApis: 'POST https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  GLOBAL_MAP_DEPLOY_HTTPS_RULE: {
+    badge: '1-CLICK LIVE HTTPS :443 FIREWALL RULE',
+    title: 'Deploy Priority-100 HTTPS (:443) Edge Ingress / Lockdown Rule',
+    whatItDoes:
+      'Provisions a live Priority-100 INGRESS ALLOW (when HTTPS :443 is currently blocked) or Priority-95 INGRESS DENY (when HTTPS :443 is open) firewall rule on TCP port 443 across your VPC network.',
+    enterpriseValue:
+      'Lets engineers open encrypted TLS/HTTPS (:443) ingress on a new VPC or enforce an emergency port-443 edge lockdown in 1 click, immediately updating the World Map HTTPS :443 verdict.',
     gcpApis: 'POST https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
     safetyMode: 'LIVE_MUTATION',
   },
