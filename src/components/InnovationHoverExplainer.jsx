@@ -1212,21 +1212,11 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   // ============================================================================
-  // 7. WAVE 16 ENTERPRISE MOONSHOT LAB (Wave16EnterpriseMoonshotStudio.jsx)
+  // 7. 06 · MULTI-REGION DR GAMEDAY & SQL SURGEON SUB-TABS
   // ============================================================================
-  WAVE16_ENTERPRISE_MOONSHOT: {
-    badge: 'WAVE 16 · DR, IAM & SQL SURGEON',
-    title: 'Wave 16 Moonshot — FinOps Auto-Surgeon, Multi-Region DR GameDay, Least-Privilege IAM & SQL Surgeon',
-    whatItDoes:
-      'Unites 4 live enterprise engines: (1) FinOps Anomaly Auto-Fixer (live GCS Lifecycle PATCH & idle scale-to-zero), (2) Multi-Region DR GameDay RTO/RPO Prover, (3) IAM Least-Privilege Role Synthesizer, and (4) Live BigQuery SQL Dry-Run Cost Surgeon.',
-    enterpriseValue:
-      'Automates day-2 FinOps lifecycle remediation, proves multi-region disaster recovery SLAs, and verifies BigQuery SQL scan costs before execution.',
-    gcpApis: 'storage · bigquery (dryRun) · run v2 · cloudresourcemanager:getIamPolicy',
-    safetyMode: 'LIVE_MUTATION',
-  },
   FINOPS_AUTO_SURGEON: {
-    badge: 'WAVE 16 · STEP 01',
-    title: 'Live FinOps Anomaly Auto-Fixer & Lifecycle Surgeon',
+    badge: '06 · STEP 01 · FINOPS SURGEON',
+    title: '01. Live FinOps Anomaly Auto-Fixer & Lifecycle Surgeon',
     whatItDoes:
       'Scans live Cloud Storage buckets and Cloud Run services for missing object lifecycle policies and idle warm instances, applying 30d Nearline -> 90d Coldline tiering in 1 click.',
     enterpriseValue:
@@ -1235,8 +1225,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'LIVE_MUTATION',
   },
   DR_GAMEDAY_SIMULATOR: {
-    badge: 'WAVE 16 · STEP 02',
-    title: 'Multi-Region Disaster Recovery (DR) GameDay & RTO/RPO Prover',
+    badge: '06 · STEP 02 · DR GAMEDAY',
+    title: '02. Multi-Region Disaster Recovery (DR) GameDay & RTO/RPO Prover',
     whatItDoes:
       'Audits the regional vs. multi-region topology of your live Cloud Storage buckets, BigQuery datasets, and Cloud Run services, simulating a regional blackout to calculate exact RPO and RTO.',
     enterpriseValue:
@@ -1245,8 +1235,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'SIMULATION',
   },
   IAM_LEAST_PRIVILEGE: {
-    badge: 'WAVE 16 · STEP 03',
-    title: 'Live IAM Least-Privilege Role Synthesizer & Owner/Editor Stripper',
+    badge: '06 · STEP 03 · IAM SURGEON',
+    title: '03. Live IAM Least-Privilege Role Synthesizer & Owner/Editor Stripper',
     whatItDoes:
       'Reads live project IAM bindings, flags over-privileged roles/owner and roles/editor grants, and generates least-privilege replacement commands removing thousands of excess permissions.',
     enterpriseValue:
@@ -1255,8 +1245,8 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   SQL_COST_SURGEON: {
-    badge: 'WAVE 16 · STEP 04',
-    title: 'Live BigQuery SQL Dry-Run Cost Surgeon & Byte Verifier',
+    badge: '06 · STEP 04 · SQL DRY-RUN',
+    title: '04. Live BigQuery SQL Dry-Run Cost Surgeon & Byte Verifier',
     whatItDoes:
       'Executes a real $0.00 BigQuery Dry-Run (configuration.dryRun=true) against your SQL query to measure exact bytes scanned and on-demand dollar cost before running the query.',
     enterpriseValue:
