@@ -3995,7 +3995,7 @@ export default function GlobalNetworkWorldMap({
           })}
         </div>
 
-        {/* Compact Single-Row Live Verdict + Cloud Logging Strip */}
+        {/* Structured Single-Line Security Verdict & Cloud Logging Instrument Bar */}
         {(() => {
           const sshPublicEval = evaluatePacketAgainstFirewalls(
             { sourceIp: '185.220.101.44', protocol: 'tcp', port: 22 },
@@ -4017,44 +4017,104 @@ export default function GlobalNetworkWorldMap({
             { sourceIp: liveClientOriginNode.ip, protocol: 'icmp', port: 0 },
             firewalls
           );
+          const liveLogCount = (liveGeoTelemetry?.liveNetworkLogEvents || []).length;
+          const latestLogSummary =
+            liveGeoTelemetry?.liveNetworkLogEvents?.[0]?.summary || '';
 
           return (
-            <div className="px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[9.5px] font-extrabold uppercase">
-                  100% LIVE SOCKETS, LOGS &amp; {firewalls.length} FIREWALLS
+            <div className="px-2.5 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#090d16] border border-zinc-200 dark:border-zinc-800/90 flex items-center justify-between gap-2 text-[10.5px] font-mono overflow-x-auto no-scrollbar">
+              {/* Left + Center: Live Telemetry Badge + Segmented Protocol Verdict Matrix */}
+              <div className="inline-flex items-center gap-2 shrink-0">
+                <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-extrabold uppercase tracking-wide shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>LIVE SOCKETS · {firewalls.length} FIREWALLS</span>
                 </span>
-                <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
-                  HTTPS (:443): {httpsEdgeEval.verdict} ({httpsEdgeEval.ruleName})
-                </span>
-                <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
-                  ICMP: {icmpEval.verdict} ({icmpEval.ruleName})
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded font-bold ${
-                    sshPublicEval.verdict === 'ALLOW'
-                      ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
-                      : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                  }`}
-                >
-                  Public SSH (:22): {sshPublicEval.verdict} ({sshPublicEval.ruleName})
-                </span>
-                <span className="px-2 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">
-                  IAP (35.235.240.0/20): {iapSshEval.verdict}
-                </span>
-                {rdpPublicEval.verdict === 'ALLOW' && (
-                  <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 font-bold">
-                    RDP (:3389): EXPOSED
+
+                <div className="inline-flex items-center h-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-2.5 gap-2.5 shrink-0">
+                  <span
+                    title={`Matched Rule: ${httpsEdgeEval.ruleName}`}
+                    className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
+                  >
+                    <span className="text-zinc-400">HTTPS :443</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      {httpsEdgeEval.verdict}
+                    </span>
                   </span>
-                )}
-                {(liveGeoTelemetry?.liveNetworkLogEvents || []).length > 0 && (
-                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold">
-                    Cloud Logs: {(liveGeoTelemetry?.liveNetworkLogEvents || []).length} live entries (`{liveGeoTelemetry.liveNetworkLogEvents[0]?.summary}`)
+
+                  <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+
+                  <span
+                    title={`Matched Rule: ${icmpEval.ruleName}`}
+                    className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
+                  >
+                    <span className="text-zinc-400">ICMP</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      {icmpEval.verdict}
+                    </span>
                   </span>
-                )}
+
+                  <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+
+                  <span
+                    title={`Matched Rule: ${sshPublicEval.ruleName}`}
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-bold ${
+                      sshPublicEval.verdict === 'ALLOW'
+                        ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30'
+                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                    }`}
+                  >
+                    <span>SSH :22</span>
+                    <span>
+                      {sshPublicEval.verdict === 'ALLOW' ? 'EXPOSED' : 'LOCKED'}
+                    </span>
+                  </span>
+
+                  <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+
+                  <span
+                    title="Google Cloud IAP TCP Forwarding Range (35.235.240.0/20)"
+                    className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-bold"
+                  >
+                    <span className="text-zinc-400">IAP Tunnel</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      {iapSshEval.verdict}
+                    </span>
+                  </span>
+
+                  {rdpPublicEval.verdict === 'ALLOW' && (
+                    <>
+                      <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+                      <span
+                        title={`Matched Rule: ${rdpPublicEval.ruleName}`}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 font-bold"
+                      >
+                        <span>RDP :3389</span>
+                        <span>EXPOSED</span>
+                      </span>
+                    </>
+                  )}
+
+                  {liveLogCount > 0 && (
+                    <>
+                      <span className="h-3.5 w-px bg-zinc-200 dark:bg-zinc-800" />
+                      <span
+                        title={`Latest Cloud Logging Event: ${latestLogSummary}`}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold max-w-[230px] truncate"
+                      >
+                        <span>Logs: {liveLogCount}</span>
+                        {latestLogSummary && (
+                          <span className="text-blue-400/90 truncate">
+                            · {latestLogSummary}
+                          </span>
+                        )}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+              {/* Right: Action Buttons Docked Flush on the Same Single Line */}
+              <div className="inline-flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   data-feature-id="GLOBAL_MAP_FIRE_WAVE"
@@ -4062,9 +4122,9 @@ export default function GlobalNetworkWorldMap({
                     fetchLiveGeoTelemetry(true);
                     handleSelectSimMode(simMode);
                   }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-extrabold cursor-pointer shadow-xs"
+                  className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold cursor-pointer shadow-xs transition-colors"
                 >
-                  <Zap className="w-3 h-3" />
+                  <Zap className="w-3 h-3 shrink-0" />
                   <span>Re-Probe &amp; Replay Wave</span>
                 </button>
                 {sshPublicEval.verdict === 'ALLOW' && (
@@ -4073,9 +4133,9 @@ export default function GlobalNetworkWorldMap({
                     disabled={deployingShield}
                     data-feature-id="GLOBAL_MAP_DEPLOY_SHIELD"
                     onClick={handleDeployMapShield}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10.5px] font-extrabold cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold cursor-pointer disabled:opacity-50 transition-colors"
                   >
-                    <Shield className="w-3 h-3" />
+                    <Shield className="w-3 h-3 shrink-0" />
                     <span>
                       {deployingShield ? 'Deploying...' : 'Block Public SSH (Priority-100)'}
                     </span>
