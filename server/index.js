@@ -7684,15 +7684,23 @@ app.post(
 
 // Track previously linked billing account per project so user can re-link in 1 tap after an emergency kill
 const projectPreviousBillingMap = new Map();
+const enabledServiceApiCache = new Set();
 
-async function ensureCloudBillingApiEnabled(projectId, token) {
+async function ensureServiceApiEnabled(projectId, serviceName, token) {
+  if (!projectId || !serviceName || !token) return { ok: false };
+  const cleanProject = String(projectId).trim();
+  const cleanService = String(serviceName).trim();
+  const cacheKey = `${cleanProject}:${cleanService}`;
+  if (enabledServiceApiCache.has(cacheKey)) {
+    return { ok: true, cached: true };
+  }
   try {
     await gcpFetch(
       `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(
-        projectId
-      )}/services/cloudbilling.googleapis.com:enable`,
+        cleanProject
+      )}/services/${encodeURIComponent(cleanService)}:enable`,
       token,
-      projectId,
+      cleanProject,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -7700,9 +7708,16 @@ async function ensureCloudBillingApiEnabled(projectId, token) {
         timeout: 10000,
       }
     );
+    enabledServiceApiCache.add(cacheKey);
+    return { ok: true };
   } catch {
-    // ignore if already enabled
+    // Gracefully continue if already enabled or caller only has read/resource permissions
+    return { ok: false };
   }
+}
+
+async function ensureCloudBillingApiEnabled(projectId, token) {
+  return ensureServiceApiEnabled(projectId, 'cloudbilling.googleapis.com', token);
 }
 
 async function fetchProjectBillingStatus(projectId, token) {
