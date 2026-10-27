@@ -2402,6 +2402,7 @@ export default function GlobalNetworkWorldMap({
   const handleResetMapCamera = useCallback(() => {
     setZoom(1);
     setCameraCenter({ x: 600, y: 280 });
+    setShowZoneRings(false);
   }, []);
 
   const scrollToMapCanvas = useCallback(() => {
@@ -2418,6 +2419,7 @@ export default function GlobalNetworkWorldMap({
       const reg = GCP_GLOBAL_REGIONS.find((r) => r.id === regionId);
       if (!reg) return;
       setSelectedRegionId(reg.id);
+      setShowZoneRings(true);
       if (reg.zones?.length > 0) {
         setSelectedZoneName(reg.zones[0]);
       }
@@ -2434,6 +2436,7 @@ export default function GlobalNetworkWorldMap({
       const reg = GCP_GLOBAL_REGIONS.find((r) => r.id === regionId);
       if (!reg) return;
       setSelectedRegionId(reg.id);
+      setShowZoneRings(true);
       if (reg.zones?.length > 0) {
         setSelectedZoneName(reg.zones[0]);
       }
@@ -2663,7 +2666,7 @@ export default function GlobalNetworkWorldMap({
   // Live GCP API background refresh interval (0 = manual only, or 15/30/60/120 seconds)
   const [gcpSyncIntervalSec, setGcpSyncIntervalSec] = useState(0);
   const [showSubseaBackbone, setShowSubseaBackbone] = useState(true);
-  const [showZoneRings, setShowZoneRings] = useState(true);
+  const [showZoneRings, setShowZoneRings] = useState(false);
 
   // Live animated packets in flight + telemetry counters + event log
   const [inFlightPackets, setInFlightPackets] = useState([]);
@@ -4008,8 +4011,21 @@ export default function GlobalNetworkWorldMap({
 
               <button
                 type="button"
+                onClick={() => setShowZoneRings((prev) => !prev)}
+                title="Expand or collapse the orbiting Availability Zone nodes (-a, -b, -c, -f) around the selected region"
+                className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-colors cursor-pointer ${
+                  showZoneRings
+                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300'
+                    : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+              >
+                {showZoneRings ? 'Zones: Expanded' : 'Zones: Collapsed'}
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setSpotlightMode((prev) => !prev)}
-                title="When enabled, only the selected/hovered region displays its orbiting Availability Zone dots and full label, while neighboring regions fade into transparent Ghost Mode to prevent overlap when zoomed in"
+                title="When enabled, only the selected/hovered region displays its full label, while neighboring regions fade into transparent Ghost Mode to prevent overlap when zoomed in"
                 className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-colors cursor-pointer ${
                   spotlightMode
                     ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
@@ -4674,12 +4690,12 @@ export default function GlobalNetworkWorldMap({
                 const isPeer = selectedRegionPeers.has(reg.id);
                 const isFocusedNode = isSelected || isHovered || isSevered;
 
-                // Only the selected/hovered region expands its Availability Zone constellation in Spotlight Mode!
+                // Only expand the Availability Zone constellation when explicitly clicked/selected (never prematurely on hover!)
                 const shouldRenderZones =
                   showZoneRings &&
-                  (isSelected || isHovered || (!spotlightMode && zoom >= 2.2));
-                const showDetailedZones = isSelected || isHovered || zoom >= 2.2;
-                const zoneOrbitRadius = isSelected || isHovered ? 22 : 14;
+                  (isSelected || (!spotlightMode && zoom >= 2.2));
+                const showDetailedZones = shouldRenderZones;
+                const zoneOrbitRadius = isSelected ? 22 : 14;
 
                 // Tactical Spotlight Opacity: Selected/Hovered = 1.0, Peers/Workloads = subtle, Unselected Neighbors = clear dot
                 const nodeOpacity = isFocusedNode
@@ -4754,7 +4770,11 @@ export default function GlobalNetworkWorldMap({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (didPanRef.current) return;
-                      focusOnRegion(reg.id, zoom < 2.6 ? 3.2 : zoom);
+                      if (isSelected && shouldRenderZones) {
+                        setShowZoneRings(false);
+                      } else {
+                        focusOnRegion(reg.id, zoom < 2.6 ? 3.2 : zoom);
+                      }
                     }}
                     className="cursor-pointer transition-opacity duration-200"
                   >
@@ -4776,7 +4796,7 @@ export default function GlobalNetworkWorldMap({
                     )}
 
                     {/* Outer Selection or Chaos Outage Hazard Reticle + Zone Orbit Track */}
-                    {isFocusedNode && (
+                    {(shouldRenderZones || isSevered) && (
                       <circle
                         r={zoneOrbitRadius}
                         fill="none"
@@ -4805,7 +4825,7 @@ export default function GlobalNetworkWorldMap({
                       />
                     )}
 
-                    {/* Orbiting Availability Zone Nodes (-a, -b, -c, -f) - Only blooms on the focused region in Spotlight Mode! */}
+                    {/* Orbiting Availability Zone Nodes (-a, -b, -c, -f) - Only blooms when clicked/expanded! */}
                     {shouldRenderZones &&
                       reg.zones.map((z, idx) => {
                         const angle =
@@ -4905,7 +4925,11 @@ export default function GlobalNetworkWorldMap({
                       stroke="#020617"
                       strokeWidth="1.2"
                     >
-                      <title>{`${reg.name} — ${reg.city} [${reg.countryCode}] · GPS ${reg.gpsLabel} — Click to focus & expand ${reg.zones.length} Availability Zones`}</title>
+                      <title>
+                        {shouldRenderZones
+                          ? `${reg.name} — ${reg.city} [${reg.countryCode}] · GPS ${reg.gpsLabel} — ${reg.zones.length} Availability Zones Expanded (${reg.zones.join(', ')}) · Click to collapse zones`
+                          : `${reg.name} — ${reg.city} [${reg.countryCode}] · GPS ${reg.gpsLabel} — Click to focus & expand ${reg.zones.length} Availability Zones`}
+                      </title>
                     </circle>
 
                     {/* Precision Center Pinpoint Dot on Selected/Hovered Region */}
