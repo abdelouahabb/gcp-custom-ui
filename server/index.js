@@ -60448,6 +60448,7 @@ app.get(
         binAuthzRes,
         permissionsRes,
         quotasCliRes,
+        vmsRes,
       ] = await Promise.allSettled([
         gcpFetch(
           `https://orgpolicy.googleapis.com/v2/projects/${encodeURIComponent(
@@ -60586,7 +60587,31 @@ app.get(
           ['quotas', 'preferences', 'list', `--project=${projectId}`, '--format=json'],
           5500
         ),
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(
+            projectId
+          )}/aggregated/instances?maxResults=50&returnPartialSuccess=true`,
+          token,
+          projectId,
+          { timeout: 5500 }
+        ),
       ]);
+
+      const vmInstances = [];
+      if (vmsRes.status === 'fulfilled' && vmsRes.value?.items) {
+        for (const [zKey, zVal] of Object.entries(vmsRes.value.items)) {
+          const zName = zKey.replace('zones/', '');
+          for (const inst of zVal?.instances || []) {
+            vmInstances.push({
+              name: inst.name,
+              zone: zName,
+              region: zName.split('-').slice(0, 2).join('-'),
+              machineType: (inst.machineType || '').split('/').pop() || 'e2-medium',
+              status: inst.status || 'RUNNING',
+            });
+          }
+        }
+      }
 
       const orgPolicies =
         orgPoliciesRes.status === 'fulfilled'
@@ -60772,22 +60797,26 @@ app.get(
         };
       });
 
+      const vmNames = vmInstances
+        .slice(0, 2)
+        .map((v) => v.name)
+        .join(', ');
       const mermaidC4Lines = [
         `flowchart TB`,
-        `  subgraph Internet["Global Edge, VPC Perimeter & Identity (${projectId})"]`,
-        `    Client["External HTTPS / SSH Clients"]`,
-        `    IAM["Workload & VM IAM Service Account (OAuth 2.0 Metadata 169.254.169.254)"]`,
+        `  subgraph Edge["Global Edge, VPC Perimeter & Identity (${projectId})"]`,
+        `    Internet["External HTTPS / SSH Clients"]`,
+        `    VPC["VPC Networks (${vpcs.length || 1} VPCs · ${firewalls.length} Firewall Rules)"]`,
         `  end`,
-        `  subgraph Compute["Active Compute Fleet (${projectId})"]`,
+        `  subgraph Compute["Serverless, Containers & VM Compute Fleet (${projectId})"]`,
+        `    VMs["Compute Engine (${vmInstances.length} VMs${vmNames ? `: ${vmNames}` : ''})"]`,
       ];
       if (runServices.length > 0) {
-        mermaidC4Lines.push(`    Run["Cloud Run v2 Fleet (${runServices.length} Services)"]`);
+        mermaidC4Lines.push(`    CloudRun["Cloud Run v2 (${runServices.length} Services)"]`);
       }
-      mermaidC4Lines.push(`    VMs["Compute Engine & Serverless Workloads"]`);
       mermaidC4Lines.push(`  end`);
-      mermaidC4Lines.push(`  subgraph Data["Active Storage & Lakehouse (${projectId})"]`);
+      mermaidC4Lines.push(`  subgraph Data["Lakehouse, Object Storage & Relational Databases"]`);
       if (gcsBuckets.length > 0) {
-        mermaidC4Lines.push(`    GCS["Cloud Storage (${gcsBuckets.length} gs:// Buckets)"]`);
+        mermaidC4Lines.push(`    GCS["Cloud Storage (${gcsBuckets.length} Buckets)"]`);
       }
       if (bqDatasets.length > 0) {
         mermaidC4Lines.push(`    BQ["BigQuery Lakehouse (${bqDatasets.length} Datasets)"]`);
@@ -60796,20 +60825,25 @@ app.get(
         mermaidC4Lines.push(`    SQL["Cloud SQL / AlloyDB (${sqlInstances.length} Instances)"]`);
       }
       mermaidC4Lines.push(`  end`);
-      mermaidC4Lines.push(`  Client -->|VPC Firewall Rules| VMs`);
-      mermaidC4Lines.push(`  VMs -->|Attached Default Compute SA| IAM`);
+      mermaidC4Lines.push(`  Internet -->|VPC Firewall Rules| VPC`);
+      mermaidC4Lines.push(`  VPC -->|Subnetwork nic0| VMs`);
       if (runServices.length > 0) {
-        mermaidC4Lines.push(`  Client -->|HTTPS Ingress| Run`);
-        mermaidC4Lines.push(`  Run -->|Workload Identity SA| IAM`);
+        mermaidC4Lines.push(`  VPC -->|Serverless VPC Access| CloudRun`);
       }
       if (gcsBuckets.length > 0) {
-        mermaidC4Lines.push(`  IAM -->|HTTPS API / devstorage Scope| GCS`);
+        mermaidC4Lines.push(`  VMs -->|IAM SA OAuth Scope + storage.googleapis.com| GCS`);
+        if (runServices.length > 0) {
+          mermaidC4Lines.push(`  CloudRun -->|Workload Identity SA| GCS`);
+        }
       }
       if (bqDatasets.length > 0) {
-        mermaidC4Lines.push(`  IAM -->|BigQuery API OAuth Scope| BQ`);
+        mermaidC4Lines.push(`  VMs -->|IAM SA OAuth Scope + bigquery.googleapis.com| BQ`);
+        if (runServices.length > 0) {
+          mermaidC4Lines.push(`  CloudRun -->|Workload Identity SA| BQ`);
+        }
       }
       if (sqlInstances.length > 0 && runServices.length > 0) {
-        mermaidC4Lines.push(`  Run -->|Cloud SQL Auth Proxy| SQL`);
+        mermaidC4Lines.push(`  CloudRun -->|Cloud SQL Auth Proxy| SQL`);
       }
       const mermaidC4Diagram = mermaidC4Lines.join('\n');
 

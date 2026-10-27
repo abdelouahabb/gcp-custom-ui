@@ -224,7 +224,9 @@ export default function Revolutionary2026Suite({
     }
   }, [initialSubTab]);
   const [labCategory, setLabCategory] = useState('ALL'); // 'ALL' | 'QUANTUM' | 'FINOPS' | 'PERF_TOPOLOGY' | 'SECURITY_DLP' | 'AI_IAC'
-  const [vms, setVms] = useState([]);
+  const [vms, setVms] = useState(() =>
+    (overview?.resources || []).filter((r) => r.type === 'Compute Engine VM')
+  );
   const [auditData, setAuditData] = useState(null);
   const [sreBridgeData, setSreBridgeData] = useState(null);
   const [socBridgeData, setSocBridgeData] = useState(null);
@@ -323,7 +325,11 @@ export default function Revolutionary2026Suite({
           .get(`/api/project/${encodeURIComponent(projectId)}/soc/overview`)
           .catch(() => ({ data: null })),
       ]);
-      setVms(vmRes.data?.vms || []);
+      const fetchedVms = vmRes.data?.vms || [];
+      const overviewVms = (overview?.resources || []).filter(
+        (r) => r.type === 'Compute Engine VM'
+      );
+      setVms(fetchedVms.length > 0 ? fetchedVms : overviewVms);
       setAuditData(secRes.data);
       setSreBridgeData(sreRes.data);
       setSocBridgeData(socRes.data);
@@ -773,6 +779,12 @@ export default function Revolutionary2026Suite({
     const vpcs = overview?.vpcs || [];
     const firewalls = overview?.firewalls || [];
     const runServices = overview?.cloudRunServices || [];
+    const effectiveVms =
+      vms.length > 0
+        ? vms
+        : (overview?.resources || []).filter(
+            (r) => r.type === 'Compute Engine VM'
+          );
     const buckets = (overview?.resources || []).filter(
       (r) => r.type === 'Cloud Storage Bucket'
     );
@@ -783,7 +795,7 @@ export default function Revolutionary2026Suite({
     const sqlInstances = extraIacInventory.sqlInstances || [];
     const gkeClusters = extraIacInventory.gkeClusters || [];
 
-    const vmNames = vms
+    const vmNames = effectiveVms
       .slice(0, 2)
       .map((v) => v.name)
       .join(', ');
@@ -800,40 +812,34 @@ export default function Revolutionary2026Suite({
       `flowchart TB`,
       `  subgraph Edge["Global Edge, VPC Perimeter & Identity (${projectId})"]`,
       `    Internet["External HTTPS / SSH Clients"]`,
-      `    VPC["VPC Network (${vpcs.length || 1} VPC · ${firewalls.length} Firewall Rules)"]`,
-      `    IAM["VM & Workload IAM Service Account (OAuth 2.0 Metadata 169.254.169.254)"]`,
+      `    VPC["VPC Networks (${vpcs.length || 1} VPCs · ${firewalls.length} Firewall Rules)"]`,
     ];
     if (secrets.length > 0) {
       lines.push(`    Secrets["Secret Manager Vault (${secrets.length} Secrets)"]`);
     }
     lines.push(`  end`);
 
-    lines.push(`  subgraph Compute["Active Compute Fleet (${projectId})"]`);
-    if (vms.length > 0) {
-      lines.push(
-        `    VMs["Compute Engine (${vms.length} VM: ${vmNames}${vms.length > 2 ? '...' : ''})"]`
-      );
-    }
+    lines.push(`  subgraph Compute["Serverless, Containers & VM Compute Fleet"]`);
+    lines.push(
+      `    VMs["Compute Engine (${effectiveVms.length} VMs${vmNames ? `: ${vmNames}` : ''})"]`
+    );
     if (runServices.length > 0) {
       lines.push(`    CloudRun["Cloud Run v2 (${runServices.length} Services)"]`);
     }
     if (gkeClusters.length > 0) {
       lines.push(`    GKE["GKE Kubernetes (${gkeClusters.length} Clusters)"]`);
     }
-    if (vms.length === 0 && runServices.length === 0 && gkeClusters.length === 0) {
-      lines.push(`    NoCompute["No Active Compute VMs / Cloud Run Services"]`);
-    }
     lines.push(`  end`);
 
-    lines.push(`  subgraph Data["Active Storage & Lakehouse (${projectId})"]`);
+    lines.push(`  subgraph Data["Lakehouse, Object Storage & Relational Databases"]`);
     if (buckets.length > 0) {
       lines.push(
-        `    GCS["Cloud Storage (${buckets.length} Buckets: ${bucketNames}${buckets.length > 2 ? '...' : ''})"]`
+        `    GCS["Cloud Storage (${buckets.length} Buckets${bucketNames ? `: ${bucketNames}` : ''})"]`
       );
     }
     if (datasets.length > 0) {
       lines.push(
-        `    BQ["BigQuery Lakehouse (${datasets.length} Datasets: ${datasetNames}${datasets.length > 2 ? '...' : ''})"]`
+        `    BQ["BigQuery Lakehouse (${datasets.length} Datasets${datasetNames ? `: ${datasetNames}` : ''})"]`
       );
     }
     if (sqlInstances.length > 0) {
@@ -841,29 +847,25 @@ export default function Revolutionary2026Suite({
     }
     lines.push(`  end`);
 
-    // Explicit, real architectural edges with connection mechanism labels (zero phantom 0-resource edges)
+    // Explicit top-to-bottom architectural edges with connection mechanism labels
     lines.push(`  Internet -->|VPC Firewall Rules| VPC`);
-    if (vms.length > 0) {
-      lines.push(`  VPC -->|Subnetwork nic0| VMs`);
-      lines.push(`  VMs -->|Attached Default Compute SA| IAM`);
-      if (buckets.length > 0) {
-        lines.push(`  IAM -->|HTTPS API / devstorage Scope| GCS`);
-      }
-      if (datasets.length > 0) {
-        lines.push(`  IAM -->|BigQuery API OAuth Scope| BQ`);
-      }
+    lines.push(`  VPC -->|Subnetwork nic0| VMs`);
+    if (buckets.length > 0) {
+      lines.push(`  VMs -->|IAM SA OAuth Scope + storage.googleapis.com| GCS`);
+    }
+    if (datasets.length > 0) {
+      lines.push(`  VMs -->|IAM SA OAuth Scope + bigquery.googleapis.com| BQ`);
     }
     if (runServices.length > 0) {
       lines.push(`  VPC -->|Serverless VPC Access| CloudRun`);
-      lines.push(`  CloudRun -->|Workload Identity SA| IAM`);
       if (secrets.length > 0) {
         lines.push(`  Secrets -->|Mounted Secret Env| CloudRun`);
       }
       if (buckets.length > 0) {
-        lines.push(`  CloudRun -->|storage.googleapis.com| GCS`);
+        lines.push(`  CloudRun -->|Workload Identity SA| GCS`);
       }
       if (datasets.length > 0) {
-        lines.push(`  CloudRun -->|bigquery.googleapis.com| BQ`);
+        lines.push(`  CloudRun -->|Workload Identity SA| BQ`);
       }
       if (sqlInstances.length > 0) {
         lines.push(`  CloudRun -->|Cloud SQL Auth Proxy| SQL`);
