@@ -624,41 +624,64 @@ WITH (m = 16, ef_construction = 64);`;
             {[
               {
                 id: 'FLEET_PROVISION',
-                code: '01',
+                icon: Database,
                 label: 'Cloud SQL & AlloyDB Provisioner + Fleet',
+                badge: 'MySQL & PG 16',
               },
               {
                 id: 'ARCH_COMPARATOR',
-                code: '02',
+                icon: Layers,
                 label: 'Classic Cloud SQL vs. AlloyDB Comparator',
+                badge: '4x OLTP / 100x OLAP',
               },
               {
                 id: 'VECTOR_INDEX_SURGEON',
-                code: '03',
+                icon: Sparkles,
                 label: 'AI Vector (ScaNN / pgvector) & Slow-Query',
+                badge: '768-d ScaNN',
               },
               {
                 id: 'IAM_PROXY_VAULT',
-                code: '04',
+                icon: ShieldCheck,
                 label: 'Zero-Trust IAM Auth Proxy & ORM Vault',
+                badge: 'Zero Static Passwords',
               },
             ].map((t) => {
+              const Icon = t.icon;
               const active = activeSubTab === t.id;
               return (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setActiveSubTab(t.id)}
-                  title={t.label}
-                  className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                  title={`${t.label} (${t.badge})`}
+                  className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`p-1 rounded-md shrink-0 ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </span>
                     <span className="truncate">{t.label}</span>
                   </div>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                      active
+                        ? 'bg-white/20 text-white'
+                        : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
+                    }`}
+                  >
+                    {t.badge}
+                  </span>
                 </button>
               );
             })}

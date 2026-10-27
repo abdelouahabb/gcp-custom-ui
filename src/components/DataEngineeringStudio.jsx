@@ -980,59 +980,60 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
             {[
               {
                 id: 'ICEBERG_50_MATRIX',
-                code: '01',
+                icon: Layers,
                 label: '50-Playbook Iceberg Lakehouse Matrix',
                 badge: '50 Scenarios',
               },
               {
                 id: 'MEDALLION_ELT',
-                code: '02',
+                icon: GitBranch,
                 label: 'Medallion Pipeline Builder',
                 badge: 'Source → Gold',
               },
               {
                 id: 'DATAFORM_SQLX',
-                code: '03',
+                icon: Sparkles,
                 label: 'Dataform & dbt Auto-Clean SQLX',
                 badge: 'QUALIFY Dedup',
               },
               {
                 id: 'DATAPLEX_MESH',
-                code: '04',
+                icon: ShieldCheck,
                 label: 'Dataplex Profiling & Data Products',
                 badge: 'SDK 590.0.1',
               },
               {
                 id: 'SCHEMA_CONTRACTS',
-                code: '05',
+                icon: FileCode,
                 label: 'Visual Schema Mapper & Contracts',
                 badge: 'Zero Breakage',
               },
               {
                 id: 'SLOT_DOCTOR_DAGS',
-                code: '06',
+                icon: Cpu,
                 label: 'Slot/Skew Doctor & Serverless DAGs',
                 badge: '-$348/mo',
               },
               {
                 id: 'DATA_AGENT_KIT',
-                code: '07',
+                icon: Workflow,
                 label: 'Data Agent Kit (deployment.yaml & MCP)',
                 badge: 'MCP URIs',
               },
               {
                 id: 'SERVERLESS_SPARK',
-                code: '08',
+                icon: Zap,
                 label: 'Serverless Spark & BigLake Iceberg',
                 badge: '$0 Idle',
               },
               {
                 id: 'GCP_LAKEHOUSE_WORKSPACE',
-                code: '09',
+                icon: Database,
                 label: 'GCP Native Lakehouse (BigFrames + AI.FORECAST + DLT)',
                 badge: '100% GCP Tech',
               },
             ].map((t) => {
+              const Icon = t.icon || Layers;
               const isActive = activeSubTab === t.id;
               return (
                 <button
@@ -1041,13 +1042,22 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                   data-feature-id={t.id}
                   onClick={() => setActiveSubTab(t.id)}
                   title={`${t.label} (${t.badge})`}
-                  className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
+                  className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-between gap-2 ${
                     isActive
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`p-1 rounded-md shrink-0 ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </span>
                     <span className="truncate">{t.label}</span>
                   </div>
                   <span

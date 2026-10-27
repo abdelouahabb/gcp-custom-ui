@@ -3207,46 +3207,64 @@ export default function GlobalNetworkWorldMap({
           {[
             {
               id: 'LATENCY_PROBES',
+              icon: Activity,
               label: `Live Regional TCP/TLS Latency (${
                 liveGeoTelemetry?.regionalSocketProbes?.length || 8
               } Regions)`,
             },
             {
               id: 'ASSET_SOVEREIGNTY',
+              icon: ShieldCheck,
               label: `Project Asset Residency & Multi-Region Quorum (${
                 liveGeoTelemetry?.geoAssets?.length || 0
               })`,
             },
             {
               id: 'REGIONAL_QUOTAS',
+              icon: Cpu,
               label: `Live Regional Compute Quotas (${
                 liveGeoTelemetry?.regionalQuotas?.length || 0
               } Regions)`,
             },
             {
               id: 'VPC_SUBNETS',
+              icon: Layers,
               label: `Regional VPC Subnets & CIDR Map (${
                 liveGeoTelemetry?.liveSubnets?.length || 0
               } Subnets)`,
             },
             {
               id: 'STACK_SYNTHESIZER',
+              icon: Sparkles,
               label: `1-Tap 3-Tier Stack Synthesizer & CFE (${orbitalMapMetrics.avgCfe}% Clean)`,
             },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveGeoTab(tab.id)}
-              className={`w-full h-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-extrabold border transition-all cursor-pointer flex items-center justify-center text-center leading-snug ${
-                activeGeoTab === tab.id
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
-                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeGeoTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveGeoTab(tab.id)}
+                className={`w-full h-full px-3 py-2.5 rounded-xl text-[11px] font-mono font-extrabold border transition-all cursor-pointer flex items-center justify-start gap-2 text-left leading-snug ${
+                  active
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                }`}
+              >
+                <span
+                  className={`p-1.5 rounded-lg shrink-0 ${
+                    active
+                      ? 'bg-white/15 dark:bg-zinc-900/15 text-current'
+                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* TAB 01: LIVE REGIONAL TCP/TLS SOCKET LATENCY MATRIX */}

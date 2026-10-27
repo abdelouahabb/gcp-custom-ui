@@ -1066,35 +1066,67 @@ main:
           {[
             {
               id: 'TRIGGER_WIZARD',
+              icon: Zap,
               label: 'Plain-English Eventarc Trigger Wizard & Visual X-Ray',
+              badge: '130+ Events',
             },
             {
               id: 'LIVE_FLEET',
-              label: `Live Functions Fleet & 1-Click v1→v2 Upgrader (${functionsList.length})`,
+              icon: Layers,
+              label: 'Live Functions Fleet & 1-Click v1→v2 Upgrader',
+              badge: `${functionsList.length} Live`,
             },
             {
               id: 'FINOPS_COMPARE',
+              icon: DollarSign,
               label: '1st Gen (v1) vs 2nd Gen (v2) Concurrency & Cost Calculator',
+              badge: '80x Concurrency',
             },
             {
               id: 'CHOREOGRAPHER',
-              label: `Messaging & Workflows Matrix (${workflowsList.length} Workflows)`,
+              icon: Activity,
+              label: 'Messaging & Workflows Matrix',
+              badge: `${workflowsList.length} Workflows`,
             },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              title={tab.label}
-              onClick={() => setActiveSubTab(tab.id)}
-              className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
-                activeSubTab === tab.id
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
-              }`}
-            >
-              <span className="truncate">{tab.label}</span>
-            </button>
-          ))}
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                title={`${tab.label} (${tab.badge})`}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                  active
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`p-1 rounded-md shrink-0 ${
+                      active
+                        ? 'bg-white/20 text-white'
+                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </span>
+                  <span className="truncate">{tab.label}</span>
+                </div>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                    active
+                      ? 'bg-white/20 text-white'
+                      : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
+                  }`}
+                >
+                  {tab.badge}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

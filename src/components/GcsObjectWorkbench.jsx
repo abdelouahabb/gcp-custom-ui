@@ -2223,7 +2223,7 @@ export default function GcsObjectWorkbench({
             {[
               {
                 key: 'QUERY_BQ',
-                code: 'B01',
+                icon: Code,
                 label: 'Query in BigQuery SQL',
                 title:
                   'Open BigQuery Studio with an External Table query for this bucket/object',
@@ -2244,7 +2244,7 @@ export default function GcsObjectWorkbench({
               },
               {
                 key: 'BIGLAKE_ICEBERG',
-                code: 'B02',
+                icon: Globe,
                 label: 'BigLake Iceberg',
                 title:
                   'Mount this GCS bucket as an Apache Iceberg Open Table in BigLake Studio',
@@ -2253,7 +2253,7 @@ export default function GcsObjectWorkbench({
               },
               {
                 key: 'MEDALLION_ELT',
-                code: 'B03',
+                icon: FileCode,
                 label: 'Medallion ELT',
                 title:
                   'Build a Bronze-Silver-Gold Medallion pipeline from this bucket',
@@ -2262,39 +2262,45 @@ export default function GcsObjectWorkbench({
               },
               {
                 key: 'RAM_DLP_XRAY',
-                code: 'B04',
-                label: 'RAM DLP X-Ray (M06)',
+                icon: ShieldAlert,
+                label: 'RAM DLP X-Ray',
                 title:
-                  'Scan this bucket in-memory for leaked secrets, API keys, and PII (M06)',
+                  'Scan this bucket in-memory for leaked secrets, API keys, and PII',
                 onClick: () =>
                   onSwitchStorageSubTab && onSwitchStorageSubTab('DLP_XRAY'),
               },
               {
                 key: 'S3_MINIO_IMPORT',
-                code: 'B05',
-                label: 'S3 / MinIO Import (M03)',
+                icon: Upload,
+                label: 'S3 / MinIO Import',
                 title:
-                  'Import objects from AWS S3, MinIO, or Ceph RADOS Gateway into this bucket (M03)',
+                  'Import objects from AWS S3, MinIO, or Ceph RADOS Gateway into this bucket',
                 onClick: () =>
                   onSwitchStorageSubTab &&
                   onSwitchStorageSubTab('S3_COMPATIBLE_IMPORT'),
               },
-            ].map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={item.onClick}
-                title={item.title}
-                className="w-full h-9 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1b1c1f] hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-semibold transition-all cursor-pointer flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="truncate">{item.label}</span>
-                </div>
-                <span className="text-zinc-400 dark:text-zinc-500 shrink-0">
-                  →
-                </span>
-              </button>
-            ))}
+            ].map((item) => {
+              const ItemIcon = item.icon || Terminal;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={item.onClick}
+                  title={item.title}
+                  className="w-full h-9 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1b1c1f] hover:border-blue-500/60 dark:hover:border-blue-400/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-mono font-semibold transition-all cursor-pointer flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="p-1 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                      <ItemIcon className="w-3 h-3" />
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  <span className="text-zinc-400 dark:text-zinc-500 shrink-0">
+                    →
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

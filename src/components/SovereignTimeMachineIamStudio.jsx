@@ -896,7 +896,7 @@ export default function SovereignTimeMachineIamStudio({
             {[
               {
                 id: 'IAM_SURGEON',
-                code: '01',
+                icon: ShieldCheck,
                 section: 'SPLIT',
                 label: 'Autonomous IAM Surgeon',
                 badge: iamData
@@ -906,7 +906,7 @@ export default function SovereignTimeMachineIamStudio({
               },
               {
                 id: 'IAM_SURGEON_SA_VAULT',
-                code: '02',
+                icon: KeyRound,
                 targetTab: 'IAM_SURGEON',
                 section: 'SA_VAULT',
                 label: 'SA Keys, Tokens & Kill-Switch',
@@ -917,7 +917,7 @@ export default function SovereignTimeMachineIamStudio({
               },
               {
                 id: 'TIME_MACHINE',
-                code: '03',
+                icon: History,
                 label: 'SHA-256 Time-Machine & Drift',
                 badge: tmData
                   ? tmData.inSync
@@ -928,7 +928,7 @@ export default function SovereignTimeMachineIamStudio({
               },
               {
                 id: 'SECRETS_KMS_WAF',
-                code: '04',
+                icon: Lock,
                 label: 'Secret Manager, KMS & WAF',
                 badge: vaultData
                   ? `${vaultData.secrets?.length || 0} Secrets`
@@ -936,6 +936,7 @@ export default function SovereignTimeMachineIamStudio({
                 tip: 'Provision regionally-pinned GDPR/SEC/HIPAA secrets in Secret Manager, audit Cloud KMS rotation, and synthesize Cloud Armor OWASP Top-10 WAF policies',
               },
             ].map((tab) => {
+              const Icon = tab.icon || ShieldCheck;
               const active =
                 tab.id === 'IAM_SURGEON_SA_VAULT'
                   ? activeSubTab === 'IAM_SURGEON' && iamSectionView === 'SA_VAULT'
@@ -963,6 +964,15 @@ export default function SovereignTimeMachineIamStudio({
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`p-1 rounded-md shrink-0 ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </span>
                     <span className="truncate">{tab.label}</span>
                   </div>
                   <span

@@ -31,6 +31,7 @@ const STUDIO_TABS = [
     id: 'DATASETS',
     label: 'Dataset Fleet & Compliance Hardener',
     shortLabel: 'Datasets & Compliance',
+    badge: 'Zero-Trust & TTL',
     icon: ShieldCheck,
     tip: 'Inspect live BigQuery datasets, Zero-Trust & FinOps Posture Scores (0-100), and apply 1-Tap Physical Billing, Time-Travel, Partition TTL, Banker Rounding, or CMEK hardening',
   },
@@ -38,6 +39,7 @@ const STUDIO_TABS = [
     id: 'TABLES_SQL',
     label: 'SQL Pre-Crime X-Ray — Dry-Run Cost Estimator & Auto-Optimizer',
     shortLabel: 'SQL Pre-Crime X-Ray',
+    badge: '$6.25/TB Dry-Run',
     icon: Sparkles,
     tip: 'Browse or create Partitioned + Clustered tables, run live Dry-Run Byte Cost Estimation ($6.25/TB), and auto-rewrite SQL using Column Pruning, Predicate Pushdown & WHERE EXISTS semi-joins',
   },
@@ -45,6 +47,7 @@ const STUDIO_TABS = [
     id: 'FINOPS_CRYSTAL',
     label: 'Slot FinOps Crystal — Logical vs Physical Storage & Cost Forecaster',
     shortLabel: 'Storage & Slot Crystal',
+    badge: 'Capacitor 5:1',
     icon: DollarSign,
     tip: 'Interactive Capacitor Compression & Slot Edition Simulator: Compare Logical ($0.02/GB) vs Physical Compressed ($0.04/GB at 5:1 ratio) and On-Demand ($6.25/TB) vs Enterprise Autoscaling Slots',
   },
@@ -52,6 +55,7 @@ const STUDIO_TABS = [
     id: 'TIME_MACHINE',
     label: 'FOR SYSTEM_TIME AS OF Time-Machine',
     shortLabel: '7-Day Time-Machine',
+    badge: '168h Snapshot',
     icon: History,
     tip: 'Rewind any BigQuery table up to 168 hours (7 days) to recover accidentally deleted/corrupted rows via Zero-Copy Clone or FOR SYSTEM_TIME AS OF snapshot SQL',
   },
@@ -587,8 +591,9 @@ export default function BigQueryStudio({
               <span>BigQuery Studio Modules (Select Module Below):</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-            {STUDIO_TABS.map((t, idx) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {STUDIO_TABS.map((t) => {
+              const Icon = t.icon || Database;
               const active = activeSubTab === t.id;
               return (
                 <button
@@ -596,15 +601,35 @@ export default function BigQueryStudio({
                   type="button"
                   onClick={() => setActiveSubTab(t.id)}
                   title={t.tip}
-                  className={`w-full h-10 px-3 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                  className={`w-full h-11 px-3 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     active
                       ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
                       : 'bg-zinc-50 dark:bg-[#131314] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`p-1 rounded-md shrink-0 ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </span>
                     <span className="truncate">{t.label}</span>
                   </div>
+                  {t.badge && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold shrink-0 ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500'
+                      }`}
+                    >
+                      {t.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}

@@ -26,31 +26,37 @@ import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 const BIGLAKE_TABS = [
   {
     id: 'METASTORE_CATALOGS',
+    icon: Database,
     label: 'BigLake Metastore & Iceberg REST Catalogs',
     badge: 'biglake.googleapis.com/v1',
   },
   {
     id: 'PROVISION_WIZARD',
+    icon: ShieldCheck,
     label: '1-Click BigLake Connection, IAM & Iceberg Wizard',
     badge: 'Zero-Trust gs://',
   },
   {
     id: 'COMPACTION_DOCTOR',
+    icon: Sliders,
     label: 'Iceberg Small-File Compaction & Snapshot Doctor',
     badge: 'Z-Order & GC',
   },
   {
     id: 'RLS_CLS_OMNI',
+    icon: Globe,
     label: 'Row/Column Security & Cross-Cloud Omni (S3 / Azure)',
     badge: '$0 Egress Omni',
   },
   {
     id: 'ICEBERG_50_MATRIX',
+    icon: Layers,
     label: '50-Playbook Borderless Iceberg & Multi-Engine Matrix',
     badge: '50 Scenarios · 8 Domains',
   },
   {
     id: 'DATABRICKS_UNITY_BRIDGE',
+    icon: Sparkles,
     label: 'Databricks Unity & Glue Federation + Native GCP Transpiler',
     badge: 'Unity / Glue + $0 DBU Spark',
   },
@@ -1095,7 +1101,8 @@ OPTIONS (
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-          {BIGLAKE_TABS.map((tab, idx) => {
+          {BIGLAKE_TABS.map((tab) => {
+            const Icon = tab.icon || Layers;
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -1110,6 +1117,15 @@ OPTIONS (
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`p-1 rounded-md shrink-0 ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </span>
                   <span className="truncate">{tab.label}</span>
                 </div>
                 <span

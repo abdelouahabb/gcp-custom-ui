@@ -1199,32 +1199,53 @@ export default function VpcNetworksAndFirewalls({
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-            {ZERO_TRUST_TEMPLATES.map((tpl) => (
-              <button
-                key={tpl.id}
-                type="button"
-                onClick={() => handleOpenCreateStudio(tpl.config)}
-                className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 hover:bg-blue-500/[0.08] border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-500">
-                    {tpl.title}
-                  </span>
-                  <span
-                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                      tpl.config.action === 'DENY'
-                        ? 'bg-red-500/20 text-red-500'
-                        : 'bg-emerald-500/20 text-emerald-500'
-                    }`}
-                  >
-                    {tpl.config.action}
-                  </span>
-                </div>
-                <div className="text-[10px] font-mono text-zinc-500 line-clamp-1">
-                  {tpl.subtitle}
-                </div>
-              </button>
-            ))}
+            {ZERO_TRUST_TEMPLATES.map((tpl) => {
+              const TplIcon =
+                tpl.config.action === 'DENY'
+                  ? ShieldOff
+                  : tpl.id.includes('iap')
+                  ? Lock
+                  : tpl.id.includes('internal')
+                  ? Network
+                  : Globe;
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => handleOpenCreateStudio(tpl.config)}
+                  className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/70 hover:bg-blue-500/[0.08] border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40 text-left transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className={`p-1 rounded-md shrink-0 ${
+                          tpl.config.action === 'DENY'
+                            ? 'bg-red-500/15 text-red-500'
+                            : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        }`}
+                      >
+                        <TplIcon className="w-3.5 h-3.5" />
+                      </span>
+                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-500 truncate">
+                        {tpl.title}
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                        tpl.config.action === 'DENY'
+                          ? 'bg-red-500/20 text-red-500'
+                          : 'bg-emerald-500/20 text-emerald-500'
+                      }`}
+                    >
+                      {tpl.config.action}
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-500 line-clamp-1">
+                    {tpl.subtitle}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

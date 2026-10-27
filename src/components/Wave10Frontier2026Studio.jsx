@@ -617,29 +617,30 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
           {[
             {
               id: 'SPANNER_FLEET_PU',
-              code: '01',
+              icon: Database,
               label: 'Live Spanner Fleet & $65/mo PU Sizer',
               badge: `${spannerInstances.length} Live`,
             },
             {
               id: 'SPANNER_GRAPH_GQL',
-              code: '02',
+              icon: Share2,
               label: 'Spanner Graph (ISO GQL) & Interleaved',
               badge: 'ISO GQL',
             },
             {
               id: 'SPANNER_VECTOR_RAG',
-              code: '03',
+              icon: Sparkles,
               label: 'Spanner AI Vector Search (ScaNN) & RAG',
               badge: '768-d ScaNN',
             },
             {
               id: 'SPANNER_TRUETIME_CDC',
-              code: '04',
+              icon: Activity,
               label: '99.999% TrueTime, Change Streams & PG',
               badge: '5-Nines',
             },
           ].map((tab) => {
+            const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -654,6 +655,15 @@ gcloud dataflow flex-template run "spanner-cdc-to-pubsub-${spannerName}" \\
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`p-1 rounded-md shrink-0 ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </span>
                   <span className="truncate">{tab.label}</span>
                 </div>
                 <span

@@ -1212,40 +1212,41 @@ export default function CloudStorageStudio({
             {[
               {
                 id: 'BUCKETS',
-                code: 'M01',
+                icon: HardDrive,
                 label: `Bucket Governance (${buckets.length})`,
               },
               {
                 id: 'OBJECTS',
-                code: 'M02',
+                icon: FolderOpen,
                 label: `Object Workbench (${objects.length})`,
               },
               {
                 id: 'S3_COMPATIBLE_IMPORT',
-                code: 'M03',
+                icon: Globe,
                 label: 'S3 / MinIO / Ceph',
               },
               {
                 id: 'FINOPS_LIFECYCLE',
-                code: 'M04',
+                icon: DollarSign,
                 label: 'Lifecycle FinOps',
               },
               {
                 id: 'TELEPORT',
-                code: 'M05',
+                icon: Sparkles,
                 label: 'Region Teleporter (40)',
               },
               {
                 id: 'DLP_XRAY',
-                code: 'M06',
+                icon: ShieldAlert,
                 label: 'DLP Secret & PII X-Ray',
               },
               {
                 id: 'RANSOMWARE_AIRGAP',
-                code: 'M07',
+                icon: Lock,
                 label: 'Ransomware Auditor',
               },
             ].map((t) => {
+              const Icon = t.icon || HardDrive;
               const active = activeSubTab === t.id;
               return (
                 <button
@@ -1267,7 +1268,18 @@ export default function CloudStorageStudio({
                       : 'bg-zinc-50 dark:bg-[#16171a] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                   }`}
                 >
-                  <span className="truncate">{t.label}</span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className={`p-1 rounded-md shrink-0 ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="truncate">{t.label}</span>
+                  </div>
                 </button>
               );
             })}

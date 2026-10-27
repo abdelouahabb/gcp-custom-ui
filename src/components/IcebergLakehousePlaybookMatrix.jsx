@@ -2007,25 +2007,26 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                 {[
                   {
                     id: 'MIGRATE_VS_FEDERATE',
-                    code: 'S1',
+                    icon: Globe,
                     label: 'Migrate vs. Federate',
                   },
                   {
                     id: 'BQ_VS_TRINO',
-                    code: 'S2',
+                    icon: Database,
                     label: 'BigQuery vs. Trino',
                   },
                   {
                     id: 'HMS_100_MIGRATOR',
-                    code: 'S3',
+                    icon: GitBranch,
                     label: '100+ HMS to Iceberg',
                   },
                   {
                     id: 'COMPACTION_AUTOCLASS',
-                    code: 'S4',
+                    icon: Cpu,
                     label: 'Compaction & Autoclass',
                   },
                 ].map((sim) => {
+                  const SimIcon = sim.icon;
                   const active = simulatorTab === sim.id;
                   return (
                     <button
@@ -2038,6 +2039,7 @@ gcloud dataproc batches submit pyspark gs://${cleanBkt}/jobs/${p.id.toLowerCase(
                           : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/40'
                       }`}
                     >
+                      <SimIcon className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{sim.label}</span>
                     </button>
                   );

@@ -475,35 +475,51 @@ export default function StudioGcpAdvantageBar({
                 {[
                   {
                     id: 'REACHABILITY',
+                    icon: ShieldCheck,
                     label:
                       'Free Mathematical VPC Reachability Prover ($0 vs AWS $0.10)',
                   },
                   {
                     id: 'GLOBAL_SUBNET',
+                    icon: Globe,
                     label: `Global Single-VPC Subnet Spanner (${
                       vpcData?.totalSubnetsCount || 0
                     } Subnets / ${vpcData?.uniqueRegionsCount || 0} Regions)`,
                   },
                   {
                     id: 'ANYCAST_IP',
+                    icon: Network,
                     label: `Global Anycast IPv4 Allocator (${
                       anycastData?.globalAddressesCount || 0
                     } Reserved)`,
                   },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveVpcTool(tab.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer ${
-                      activeVpcTool === tab.id
-                        ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const active = activeVpcTool === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveVpcTool(tab.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer flex items-center gap-2 ${
+                        active
+                          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
+                      }`}
+                    >
+                      <span
+                        className={`p-1 rounded-md shrink-0 ${
+                          active
+                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                            : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                      </span>
+                      <span className="truncate">{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {activeVpcTool === 'REACHABILITY' && (
@@ -916,29 +932,35 @@ export default function StudioGcpAdvantageBar({
           {/* =============================================================== */}
           {studioDomain === 'IAM' && (
             <div className="space-y-2.5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setActiveIamTool('IAM_SURGEON')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer inline-flex items-center gap-2 ${
                     activeIamTool === 'IAM_SURGEON'
                       ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-300'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                   }`}
                 >
-                  Live IAM Least-Privilege Surgeon (
-                  {iamData?.overPrivilegedCount || 0} Over-Privileged Bindings)
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Live IAM Least-Privilege Surgeon (
+                    {iamData?.overPrivilegedCount || 0} Over-Privileged Bindings)
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveIamTool('OIDC_FEDERATION')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border cursor-pointer inline-flex items-center gap-2 ${
                     activeIamTool === 'OIDC_FEDERATION'
                       ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-300'
                       : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
                   }`}
                 >
-                  Zero-Key Workload Identity Federation (GitHub / AWS OIDC)
+                  <KeyRound className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Zero-Key Workload Identity Federation (GitHub / AWS OIDC)
+                  </span>
                 </button>
               </div>
 
