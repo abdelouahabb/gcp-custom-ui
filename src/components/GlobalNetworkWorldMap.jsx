@@ -2869,8 +2869,8 @@ export default function GlobalNetworkWorldMap({
   const [simSpeed, setSimSpeed] = useState(1); // 1x | 2x | 4x
   // Refresh / Tick Interval (ms) — defaults to 250ms (4 FPS) to prevent UI hang on large VM fleets
   const [tickIntervalMs, setTickIntervalMs] = useState(250);
-  // Max in-flight packets rendered in SVG DOM simultaneously
-  const [maxConcurrentPackets, setMaxConcurrentPackets] = useState(8);
+  // Max in-flight packets rendered in SVG DOM simultaneously (defaults to 3 for calm, readable log pacing)
+  const [maxConcurrentPackets, setMaxConcurrentPackets] = useState(3);
   // Live GCP API background refresh interval (0 = manual only, or 15/30/60/120 seconds)
   const [gcpSyncIntervalSec, setGcpSyncIntervalSec] = useState(0);
   const [showSubseaBackbone, setShowSubseaBackbone] = useState(true);
@@ -2888,6 +2888,15 @@ export default function GlobalNetworkWorldMap({
   });
   const [deployingShield, setDeployingShield] = useState(false);
   const [deployingHttpsShield, setDeployingHttpsShield] = useState(false);
+
+  // Log Feed Freeze & Forensic Event Inspection Controls (prevents chaotic log jumping when Play is active)
+  const [logsPaused, setLogsPaused] = useState(false);
+  const [isHoveringLogList, setIsHoveringLogList] = useState(false);
+  const [inspectedTimeMachineEvent, setInspectedTimeMachineEvent] =
+    useState(null);
+  const [timeMachineFilter, setTimeMachineFilter] = useState('ALL'); // 'ALL' | 'ALLOW' | 'DENY' | 'AUDIT_TLS'
+  const [frozenPacketLog, setFrozenPacketLog] = useState(null);
+  const lastPacketSpawnAtRef = useRef(0);
 
   // Live VPC Firewall Evaluation for Public SSH (:22) and Public HTTPS (:443)
   const liveSshPublicEval = useMemo(
@@ -2921,6 +2930,28 @@ export default function GlobalNetworkWorldMap({
   const [teleportingFailover, setTeleportingFailover] = useState(false);
   const [selectedTeleportServiceName, setSelectedTeleportServiceName] = useState('');
   const [timeMachineCursor, setTimeMachineCursor] = useState(0); // 0 = Live, 1..N = Replay Event
+
+  // Determine whether the log feeds should be frozen (manual pause, mouse hovering over list, or actively inspecting/scrubbing)
+  const isLogFeedLocked =
+    logsPaused ||
+    isHoveringLogList ||
+    Boolean(inspectedTimeMachineEvent) ||
+    timeMachineCursor > 0;
+
+  useEffect(() => {
+    if (!isLogFeedLocked) {
+      setFrozenPacketLog(packetLog);
+    } else if (frozenPacketLog === null) {
+      setFrozenPacketLog(packetLog);
+    }
+  }, [isLogFeedLocked, packetLog, frozenPacketLog]);
+
+  const effectivePacketLogForDisplay = isLogFeedLocked
+    ? frozenPacketLog || packetLog
+    : packetLog;
+  const bufferedLogCount = isLogFeedLocked
+    ? Math.max(0, packetLog.length - (frozenPacketLog?.length || 0))
+    : 0;
 
   // Live Priority 0 -> 65535 VPC Firewall X-Ray Evaluation for the selected Custom Packet
   const customPacketXRay = useMemo(() => {
@@ -2958,8 +2989,8 @@ export default function GlobalNetworkWorldMap({
     const logs = liveGeoTelemetry?.liveNetworkLogEvents || [];
     const probes = liveGeoTelemetry?.regionalSocketProbes || [];
 
-    // 1. Live Packet Evaluations completing across the World Map in real time (updates every ~1s)
-    (packetLog || []).slice(0, 6).forEach((pkt, idx) => {
+    // 1. Live Packet Evaluations completing across the World Map (uses frozen snapshot when inspecting/hovering/paused so rows never jump)
+    (effectivePacketLogForDisplay || []).slice(0, 10).forEach((pkt, idx) => {
       const matchedReg =
         GCP_GLOBAL_REGIONS.find((r) => r.id === pkt.targetRegionId) ||
         selectedRegion ||
@@ -2988,9 +3019,16 @@ export default function GlobalNetworkWorldMap({
               } by ${pkt.ruleName || 'implicit-deny'} (${pkt.latencyMs}ms)`,
         regionId: matchedReg.id,
         regionCity: matchedReg.city,
+        targetZone: pkt.targetZone || matchedReg.zones?.[0],
         verdict: pkt.verdict === 'DENY' ? 'DENY' : 'ALLOW',
         sourceIp: pkt.sourceIp || liveClientOriginNode.ip,
+        sourceLabel: pkt.sourceLabel || liveClientOriginNode.city,
+        protocol: pkt.protocol || 'tcp',
         port: pkt.port || 443,
+        ruleName: pkt.ruleName || 'default-allow-https',
+        priority: pkt.priority ?? 1000,
+        latencyMs: pkt.latencyMs || 18,
+        sourceType: 'PACKET',
         x1: pkt.x1 ?? liveClientOriginNode.x,
         y1: pkt.y1 ?? liveClientOriginNode.y,
         x2: pkt.x2 ?? matchedReg.x,
@@ -3022,9 +3060,16 @@ export default function GlobalNetworkWorldMap({
         summary: ev.summary || `${ev.logType} -> ${matchedReg.id}`,
         regionId: matchedReg.id,
         regionCity: matchedReg.city,
+        targetZone: matchedReg.zones?.[0],
         verdict: ev.disposition === 'DENIED' ? 'DENY' : 'ALLOW',
         sourceIp: ev.remoteIp || liveClientOriginNode.ip,
+        sourceLabel: 'Cloud Audit Log (logging.v2)',
+        protocol: 'tcp',
         port: ev.destPort || 443,
+        ruleName: ev.logType || 'cloudaudit.googleapis.com/activity',
+        priority: 1000,
+        latencyMs: 14,
+        sourceType: 'AUDIT_LOG',
         x1: liveClientOriginNode.x,
         y1: liveClientOriginNode.y,
         x2: matchedReg.x,
@@ -3055,9 +3100,16 @@ export default function GlobalNetworkWorldMap({
         summary: `${p.endpoint || `${p.regionId}-aiplatform.googleapis.com`} · ${p.tcpMs}ms TCP / ${p.totalRttMs}ms TLS`,
         regionId: matchedReg.id,
         regionCity: matchedReg.city,
+        targetZone: matchedReg.zones?.[0],
         verdict: p.reachable !== false ? 'ALLOW' : 'DENY',
         sourceIp: p.resolvedIp || liveClientOriginNode.ip,
+        sourceLabel: `${liveClientOriginNode.city} Edge Socket`,
+        protocol: 'tcp',
         port: 443,
+        ruleName: `TLS 1.3 Handshake (${p.tlsCipher || 'TLS_AES_256_GCM_SHA384'})`,
+        priority: 1000,
+        latencyMs: p.tcpMs || p.totalRttMs || 15,
+        sourceType: 'TLS_SOCKET',
         x1: liveClientOriginNode.x,
         y1: liveClientOriginNode.y,
         x2: matchedReg.x,
@@ -3069,11 +3121,34 @@ export default function GlobalNetworkWorldMap({
     });
 
     return events;
-  }, [packetLog, liveGeoTelemetry, liveClientOriginNode, selectedRegion]);
+  }, [
+    effectivePacketLogForDisplay,
+    liveGeoTelemetry,
+    liveClientOriginNode,
+    selectedRegion,
+  ]);
+
+  const filteredTimeMachineEvents = useMemo(() => {
+    if (timeMachineFilter === 'ALLOW') {
+      return liveTimeMachineEvents.filter((ev) => ev.verdict === 'ALLOW');
+    }
+    if (timeMachineFilter === 'DENY') {
+      return liveTimeMachineEvents.filter((ev) => ev.verdict === 'DENY');
+    }
+    if (timeMachineFilter === 'AUDIT_TLS') {
+      return liveTimeMachineEvents.filter(
+        (ev) => ev.sourceType === 'AUDIT_LOG' || ev.sourceType === 'TLS_SOCKET'
+      );
+    }
+    return liveTimeMachineEvents;
+  }, [liveTimeMachineEvents, timeMachineFilter]);
 
   // Background 15s live socket & Cloud Audit refresh when viewing the Time-Machine in Live Stream mode
   useEffect(() => {
-    if (active10xDockTab !== 'AUDIT_TIME_MACHINE' || timeMachineCursor > 0) {
+    if (
+      active10xDockTab !== 'AUDIT_TIME_MACHINE' ||
+      isLogFeedLocked
+    ) {
       return undefined;
     }
     const timer = setInterval(() => {
@@ -3081,9 +3156,12 @@ export default function GlobalNetworkWorldMap({
       fetchLiveGeoTelemetry(false);
     }, 15000);
     return () => clearInterval(timer);
-  }, [active10xDockTab, timeMachineCursor, fetchLiveGeoTelemetry]);
+  }, [active10xDockTab, isLogFeedLocked, fetchLiveGeoTelemetry]);
 
   const timeMachineActiveEvent = useMemo(() => {
+    if (inspectedTimeMachineEvent) {
+      return inspectedTimeMachineEvent;
+    }
     if (timeMachineCursor <= 0 || liveTimeMachineEvents.length === 0) {
       return null;
     }
@@ -3092,8 +3170,27 @@ export default function GlobalNetworkWorldMap({
         Math.min(timeMachineCursor - 1, liveTimeMachineEvents.length - 1)
       ] || null
     );
-  }, [timeMachineCursor, liveTimeMachineEvents]);
+  }, [inspectedTimeMachineEvent, timeMachineCursor, liveTimeMachineEvents]);
   const liveLatestEvent = liveTimeMachineEvents[0] || null;
+
+  const handleInspectEvent = useCallback(
+    (ev, idx = 0) => {
+      if (!ev) return;
+      setInspectedTimeMachineEvent(ev);
+      setTimeMachineCursor(idx + 1);
+      setSelectedRegionId(ev.regionId);
+      setIsRegionPinnedOnMap(true);
+      setActive10xDockTab('AUDIT_TIME_MACHINE');
+    },
+    []
+  );
+
+  const handleResumeLiveStream = useCallback(() => {
+    setInspectedTimeMachineEvent(null);
+    setTimeMachineCursor(0);
+    setLogsPaused(false);
+    setFrozenPacketLog(packetLog);
+  }, [packetLog]);
 
   const packetIdRef = useRef(1);
 
@@ -3550,8 +3647,17 @@ export default function GlobalNetworkWorldMap({
           }
         });
 
-        // Respect maxConcurrentPackets cap so large VM fleets never hang the UI
-        if (nextPackets.length < maxConcurrentPackets) {
+        // Respect maxConcurrentPackets cap AND a calm minimum spawn interval (~1.15s at 1x speed) so logs never turn into chaos
+        const nowMs = Date.now();
+        const minSpawnGapMs = Math.max(
+          280,
+          Math.round(1150 / Math.max(simSpeed, 1))
+        );
+        if (
+          nextPackets.length < maxConcurrentPackets &&
+          nowMs - lastPacketSpawnAtRef.current >= minSpawnGapMs
+        ) {
+          lastPacketSpawnAtRef.current = nowMs;
           nextPackets.push(spawnSimulatedPacket());
         }
 
@@ -7246,20 +7352,31 @@ export default function GlobalNetworkWorldMap({
             {/* PILLAR 3: REAL CLOUD AUDIT & NETWORK TIME-MACHINE SCRUBBER      */}
             {/* =============================================================== */}
             {active10xDockTab === 'AUDIT_TIME_MACHINE' && (
-              <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2">
+              <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                   <div className="min-w-0 flex-1 flex items-center gap-2 overflow-hidden">
                     <span
                       className={`shrink-0 px-2 py-0.5 rounded font-extrabold text-[10px] ${
-                        timeMachineCursor === 0
-                          ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 animate-pulse'
-                          : 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
+                        isLogFeedLocked
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40'
+                          : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 animate-pulse'
                       }`}
                     >
-                      {timeMachineCursor === 0
-                        ? '● LIVE STREAM'
-                        : `⏪ REPLAY #${timeMachineCursor}/${liveTimeMachineEvents.length}`}
+                      {inspectedTimeMachineEvent
+                        ? '🔍 INSPECTING EVENT'
+                        : timeMachineCursor > 0
+                        ? `⏪ REPLAY #${timeMachineCursor}/${filteredTimeMachineEvents.length}`
+                        : logsPaused
+                        ? '⏸ LOGS PAUSED'
+                        : isHoveringLogList
+                        ? '⏸ AUTO-FROZEN ON HOVER'
+                        : '● LIVE STREAM'}
                     </span>
+                    {bufferedLogCount > 0 && (
+                      <span className="shrink-0 px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/30 font-extrabold text-[9px]">
+                        +{bufferedLogCount} new buffered
+                      </span>
+                    )}
                     {timeMachineActiveEvent ? (
                       <span
                         title={`[${timeMachineActiveEvent.timestamp}] ${timeMachineActiveEvent.category} → ${timeMachineActiveEvent.regionId} (${timeMachineActiveEvent.summary})`}
@@ -7294,13 +7411,30 @@ export default function GlobalNetworkWorldMap({
                   <div className="shrink-0 flex items-center justify-end gap-1.5 ml-auto">
                     <button
                       type="button"
+                      onClick={() => setLogsPaused((p) => !p)}
+                      className={`shrink-0 h-6 px-2 rounded font-extrabold text-[10px] cursor-pointer border transition-colors ${
+                        logsPaused
+                          ? 'bg-amber-500/20 border-amber-500/40 text-amber-700 dark:text-amber-300'
+                          : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:border-amber-500/40'
+                      }`}
+                    >
+                      {logsPaused ? '▶ Unfreeze' : '⏸ Freeze Logs'}
+                    </button>
+                    <button
+                      type="button"
                       disabled={
-                        liveTimeMachineEvents.length === 0 ||
+                        filteredTimeMachineEvents.length === 0 ||
                         timeMachineCursor <= 1
                       }
-                      onClick={() =>
-                        setTimeMachineCursor((c) => Math.max(1, c - 1))
-                      }
+                      onClick={() => {
+                        const nextIdx = Math.max(1, timeMachineCursor - 1);
+                        setTimeMachineCursor(nextIdx);
+                        if (filteredTimeMachineEvents[nextIdx - 1]) {
+                          setInspectedTimeMachineEvent(
+                            filteredTimeMachineEvents[nextIdx - 1]
+                          );
+                        }
+                      }}
                       className="shrink-0 h-6 px-2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] disabled:opacity-40 cursor-pointer"
                     >
                       ◀ Prev
@@ -7308,35 +7442,50 @@ export default function GlobalNetworkWorldMap({
                     <input
                       type="range"
                       min={0}
-                      max={Math.max(liveTimeMachineEvents.length, 1)}
+                      max={Math.max(filteredTimeMachineEvents.length, 1)}
                       value={timeMachineCursor}
-                      disabled={liveTimeMachineEvents.length === 0}
-                      onChange={(e) =>
-                        setTimeMachineCursor(Number(e.target.value))
-                      }
-                      className="w-32 sm:w-36 shrink-0 accent-sky-400 cursor-pointer disabled:opacity-40"
+                      disabled={filteredTimeMachineEvents.length === 0}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setTimeMachineCursor(val);
+                        if (val === 0) {
+                          setInspectedTimeMachineEvent(null);
+                        } else if (filteredTimeMachineEvents[val - 1]) {
+                          setInspectedTimeMachineEvent(
+                            filteredTimeMachineEvents[val - 1]
+                          );
+                        }
+                      }}
+                      className="w-28 sm:w-32 shrink-0 accent-sky-400 cursor-pointer disabled:opacity-40"
                     />
                     <button
                       type="button"
                       disabled={
-                        liveTimeMachineEvents.length === 0 ||
-                        timeMachineCursor >= liveTimeMachineEvents.length
+                        filteredTimeMachineEvents.length === 0 ||
+                        timeMachineCursor >= filteredTimeMachineEvents.length
                       }
-                      onClick={() =>
-                        setTimeMachineCursor((c) =>
-                          Math.min(liveTimeMachineEvents.length, c + 1)
-                        )
-                      }
+                      onClick={() => {
+                        const nextIdx = Math.min(
+                          filteredTimeMachineEvents.length,
+                          timeMachineCursor + 1
+                        );
+                        setTimeMachineCursor(nextIdx);
+                        if (filteredTimeMachineEvents[nextIdx - 1]) {
+                          setInspectedTimeMachineEvent(
+                            filteredTimeMachineEvents[nextIdx - 1]
+                          );
+                        }
+                      }}
                       className="shrink-0 h-6 px-2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-[10px] disabled:opacity-40 cursor-pointer"
                     >
                       Next ▶
                     </button>
                     <button
                       type="button"
-                      disabled={timeMachineCursor === 0}
-                      onClick={() => setTimeMachineCursor(0)}
+                      disabled={!isLogFeedLocked}
+                      onClick={handleResumeLiveStream}
                       className={`shrink-0 h-6 w-22 rounded font-extrabold text-[10px] text-center transition-colors ${
-                        timeMachineCursor > 0
+                        isLogFeedLocked
                           ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer'
                           : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-400 opacity-50 cursor-default'
                       }`}
@@ -7346,31 +7495,233 @@ export default function GlobalNetworkWorldMap({
                   </div>
                 </div>
 
-                {/* Vertical Scrollable List of All Live Events (Flowing Packets + Cloud Audit Logs + TLS Sockets) */}
-                <div className="pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1">
-                  <div className="flex items-center justify-between text-[9px] font-extrabold uppercase tracking-wider text-zinc-400 px-1">
-                    <span>
-                      Chronological Event Stream ({liveTimeMachineEvents.length}{' '}
-                      captured · click any row to pin & replay on map)
-                    </span>
-                    <span>Scroll to view all ({liveTimeMachineEvents.length}) ↕</span>
+                {/* Forensic Event Inspector Drawer (Opens immediately when clicking any "Inspect ➔" row) */}
+                {timeMachineActiveEvent && (
+                  <div className="p-2.5 rounded-xl bg-sky-500/[0.08] dark:bg-sky-950/35 border border-sky-500/40 space-y-2 text-[10px] font-mono">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-600 dark:text-sky-300 border border-sky-500/40 font-extrabold">
+                          🔍 FORENSIC EVENT INSPECTOR
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-extrabold ${
+                            timeMachineActiveEvent.verdict === 'ALLOW'
+                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
+                              : 'bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
+                          }`}
+                        >
+                          {timeMachineActiveEvent.verdict === 'ALLOW'
+                            ? '● VERDICT: ALLOW'
+                            : '✕ VERDICT: DENY'}
+                        </span>
+                        <span className="text-zinc-500 dark:text-zinc-400">
+                          Captured at [{timeMachineActiveEvent.timestamp}] · ID:{' '}
+                          <code>{timeMachineActiveEvent.id}</code>
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            focusOnRegion(timeMachineActiveEvent.regionId, 3.4, {
+                              scrollToMap: true,
+                            })
+                          }
+                          className="h-6 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                        >
+                          🎯 Zoom Map to {timeMachineActiveEvent.regionId} (3.4x)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomTargetRegionId(
+                              timeMachineActiveEvent.regionId
+                            );
+                            setCustomProtocol(
+                              timeMachineActiveEvent.protocol || 'tcp'
+                            );
+                            setCustomPort(timeMachineActiveEvent.port || 443);
+                            setActive10xDockTab('FIREWALL_XRAY');
+                          }}
+                          className="h-6 px-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                        >
+                          🔬 Trace in Firewall X-Ray (Pillar 1)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleResumeLiveStream}
+                          className="h-6 px-2 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-extrabold text-[9.5px] cursor-pointer"
+                        >
+                          ✕ Close Inspector
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1 border-t border-sky-500/20">
+                      <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-[9px] uppercase text-zinc-400 font-bold">
+                          1. Source Origin &amp; IP
+                        </div>
+                        <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                          {timeMachineActiveEvent.sourceIp || 'edge'}
+                        </div>
+                        <div className="text-[9.5px] text-zinc-500 truncate">
+                          {timeMachineActiveEvent.sourceLabel ||
+                            liveClientOriginNode.city}
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-[9px] uppercase text-zinc-400 font-bold">
+                          2. Target Region &amp; Port
+                        </div>
+                        <div className="font-extrabold text-blue-600 dark:text-blue-400 mt-0.5">
+                          {timeMachineActiveEvent.regionId} (
+                          {timeMachineActiveEvent.regionCity || 'GCP Region'})
+                        </div>
+                        <div className="text-[9.5px] text-zinc-500">
+                          Zone:{' '}
+                          {timeMachineActiveEvent.targetZone ||
+                            `${timeMachineActiveEvent.regionId}-a`}{' '}
+                          ·{' '}
+                          {(
+                            timeMachineActiveEvent.protocol || 'tcp'
+                          ).toUpperCase()}
+                          :{timeMachineActiveEvent.port || 443}
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-[9px] uppercase text-zinc-400 font-bold">
+                          3. Matched Rule / Cipher / Audit
+                        </div>
+                        <div className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5 truncate">
+                          {timeMachineActiveEvent.ruleName ||
+                            timeMachineActiveEvent.category}
+                        </div>
+                        <div className="text-[9.5px] text-zinc-500 truncate">
+                          {timeMachineActiveEvent.summary}
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-[9px] uppercase text-zinc-400 font-bold">
+                          4. Measured Latency &amp; Priority
+                        </div>
+                        <div className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                          {timeMachineActiveEvent.latencyMs || 16}ms RTT
+                        </div>
+                        <div className="text-[9.5px] text-zinc-500">
+                          Priority: P-{timeMachineActiveEvent.priority ?? 1000}{' '}
+                          · Replay Arc Active on Map
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                )}
+
+                {/* Vertical Scrollable List of All Live Events (Auto-Freezes on Hover or Inspect so rows never jump) */}
+                <div
+                  onMouseEnter={() => setIsHoveringLogList(true)}
+                  onMouseLeave={() => setIsHoveringLogList(false)}
+                  className="pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-zinc-400">
+                        Chronological Event Stream (
+                        {filteredTimeMachineEvents.length} shown):
+                      </span>
+                      {[
+                        { id: 'ALL', label: `All (${liveTimeMachineEvents.length})` },
+                        {
+                          id: 'ALLOW',
+                          label: `Allow (${
+                            liveTimeMachineEvents.filter(
+                              (e) => e.verdict === 'ALLOW'
+                            ).length
+                          })`,
+                        },
+                        {
+                          id: 'DENY',
+                          label: `Deny (${
+                            liveTimeMachineEvents.filter(
+                              (e) => e.verdict === 'DENY'
+                            ).length
+                          })`,
+                        },
+                        {
+                          id: 'AUDIT_TLS',
+                          label: `Cloud Audit & TLS (${
+                            liveTimeMachineEvents.filter(
+                              (e) =>
+                                e.sourceType === 'AUDIT_LOG' ||
+                                e.sourceType === 'TLS_SOCKET'
+                            ).length
+                          })`,
+                        },
+                      ].map((f) => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setTimeMachineFilter(f.id)}
+                          className={`px-2 py-0.5 rounded text-[9px] font-extrabold cursor-pointer border transition-colors ${
+                            timeMachineFilter === f.id
+                              ? 'bg-sky-500/20 border-sky-400 text-sky-600 dark:text-sky-300'
+                              : 'bg-zinc-100 dark:bg-zinc-800/70 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[9px] font-extrabold text-zinc-400">
+                      <span>
+                        {isHoveringLogList
+                          ? '⏸ Auto-frozen while mouse is over list'
+                          : 'Click any row to open Forensic Inspector ↕'}
+                      </span>
+                      {packetLog.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPacketLog([]);
+                            setFrozenPacketLog([]);
+                            setInspectedTimeMachineEvent(null);
+                            setTimeMachineCursor(0);
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-red-500/20 hover:text-red-500 text-zinc-500 cursor-pointer"
+                        >
+                          Clear Packet Logs
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="max-h-48 overflow-y-auto flex flex-col gap-1.5 pr-1">
-                    {liveTimeMachineEvents.map((ev, idx) => {
-                      const active = timeMachineCursor === idx + 1;
-                      const isLiveHead = timeMachineCursor === 0 && idx === 0;
+                    {filteredTimeMachineEvents.map((ev, idx) => {
+                      const active =
+                        inspectedTimeMachineEvent?.id === ev.id ||
+                        (timeMachineCursor === idx + 1 &&
+                          !inspectedTimeMachineEvent);
+                      const isLiveHead =
+                        !isLogFeedLocked && timeMachineCursor === 0 && idx === 0;
                       return (
                         <button
                           key={ev.id}
                           type="button"
                           onClick={() => {
-                            setTimeMachineCursor(idx + 1);
-                            setSelectedRegionId(ev.regionId);
-                            setIsRegionPinnedOnMap(true);
+                            if (active) {
+                              handleResumeLiveStream();
+                            } else {
+                              handleInspectEvent(ev, idx);
+                            }
                           }}
                           className={`w-full px-2.5 py-1.5 rounded-lg border text-[10px] font-bold transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
                             active
-                              ? 'bg-sky-500/20 border-sky-400 text-sky-600 dark:text-sky-200 shadow-xs'
+                              ? 'bg-sky-500/20 border-sky-400 text-sky-700 dark:text-sky-200 shadow-xs ring-1 ring-sky-400/50'
                               : isLiveHead
                               ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
                               : 'bg-zinc-50 dark:bg-zinc-950/70 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-sky-500/40'
@@ -7403,12 +7754,20 @@ export default function GlobalNetworkWorldMap({
                               · {ev.summary}
                             </span>
                           </div>
-                          <span className="shrink-0 text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/5 text-zinc-400">
+                          <span
+                            className={`shrink-0 text-[9px] font-mono uppercase px-2 py-0.5 rounded font-extrabold ${
+                              active
+                                ? 'bg-sky-500 text-white'
+                                : isLiveHead
+                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                                : 'bg-black/5 dark:bg-white/5 text-sky-600 dark:text-sky-400'
+                            }`}
+                          >
                             {active
-                              ? '⏪ REPLAYING'
+                              ? '🔍 INSPECTING (Click to Close)'
                               : isLiveHead
-                              ? '● LATEST'
-                              : 'Inspect ➔'}
+                              ? '● LATEST (Click to Inspect)'
+                              : '🔍 Inspect Event ➔'}
                           </span>
                         </button>
                       );
@@ -8156,27 +8515,76 @@ export default function GlobalNetworkWorldMap({
           </div>
 
           {/* Live Packet Interception & Routing Feed */}
-          <div className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-2.5">
-            <div className="flex items-center justify-between">
+          <div
+            onMouseEnter={() => setIsHoveringLogList(true)}
+            onMouseLeave={() => setIsHoveringLogList(false)}
+            className="bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-2.5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-xs font-mono font-bold uppercase text-zinc-700 dark:text-zinc-200 flex items-center gap-1.5">
-                <Radio className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 animate-pulse" />
-                <span>Live Global Packet & Firewall Verdict Stream</span>
+                <Radio
+                  className={`w-3.5 h-3.5 ${
+                    isLogFeedLocked
+                      ? 'text-amber-500'
+                      : 'text-emerald-500 animate-pulse'
+                  }`}
+                />
+                <span>Live Global Packet &amp; Firewall Verdict Stream</span>
+                {isLogFeedLocked && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[9px] font-extrabold">
+                    {isHoveringLogList ? '⏸ HOVER-LOCKED' : '⏸ FROZEN'}
+                  </span>
+                )}
               </div>
-              <span className="text-[10px] font-mono text-zinc-400">
-                Total: {counters.totalPackets} pkts
-              </span>
+              <div className="flex items-center gap-1.5 text-[10px] font-mono">
+                <button
+                  type="button"
+                  onClick={() => setLogsPaused((p) => !p)}
+                  className={`px-2 py-0.5 rounded font-bold border cursor-pointer ${
+                    logsPaused
+                      ? 'bg-amber-500/20 border-amber-500/40 text-amber-700 dark:text-amber-300'
+                      : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300'
+                  }`}
+                >
+                  {logsPaused ? '▶ Resume' : '⏸ Freeze'}
+                </button>
+                {packetLog.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPacketLog([]);
+                      setFrozenPacketLog([]);
+                    }}
+                    className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-red-500/20 hover:text-red-500 text-zinc-500 font-bold cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+                <span className="text-zinc-400">
+                  Total: {counters.totalPackets}
+                </span>
+              </div>
             </div>
 
-            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80 max-h-64 overflow-y-auto text-[11px] font-mono">
-              {packetLog.length === 0 ? (
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80 max-h-64 overflow-y-auto text-[11px] font-mono pr-1">
+              {effectivePacketLogForDisplay.length === 0 ? (
                 <div className="py-6 text-center text-zinc-400">
                   Waiting for packets to traverse the global mesh...
                 </div>
               ) : (
-                packetLog.map((pkt) => (
+                effectivePacketLogForDisplay.map((pkt, idx) => (
                   <div
-                    key={pkt.id}
-                    className="py-2 flex items-start justify-between gap-2"
+                    key={pkt.id || idx}
+                    onClick={() => {
+                      const matchedEv =
+                        liveTimeMachineEvents.find(
+                          (e) => e.id === `tm-pkt-${pkt.id}`
+                        ) || liveTimeMachineEvents[0];
+                      if (matchedEv) {
+                        handleInspectEvent(matchedEv, idx);
+                      }
+                    }}
+                    className="py-2 px-1.5 rounded-lg hover:bg-sky-500/10 cursor-pointer flex items-start justify-between gap-2 transition-colors"
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -8211,9 +8619,14 @@ export default function GlobalNetworkWorldMap({
                         (p:{pkt.priority})
                       </div>
                     </div>
-                    <span className="text-[10px] text-zinc-400 shrink-0">
-                      {pkt.latencyMs}ms
-                    </span>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-[10px] text-zinc-400">
+                        {pkt.latencyMs}ms
+                      </span>
+                      <span className="text-[9px] text-sky-500 font-bold">
+                        Inspect ➔
+                      </span>
+                    </div>
                   </div>
                 ))
               )}
