@@ -2565,9 +2565,9 @@ export default function FivePersonaCommandCenter({
             </div>
           </div>
 
-          {/* Right 5 Cols: Org Policies & C4 Mermaid Architecture */}
+          {/* Right 5 Cols: Org Policies Scorecard */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm">
+            <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 space-y-3 shadow-sm h-full">
               <div className="border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
                   Organization Policy &amp; Sovereign Residency Scorecard (`orgpolicy.googleapis.com`)
@@ -2597,10 +2597,13 @@ export default function FivePersonaCommandCenter({
                 ))}
               </div>
             </div>
+          </div>
 
+          {/* Full-Width 12-Col Row: Live C4 Mermaid Architecture Diagram (Visual + Code) */}
+          <div className="lg:col-span-12 w-full">
             <MermaidArchitectureDiagram
               code={arch.mermaidC4Diagram || ''}
-              title="Live C4 Mermaid Architecture Diagram (Reverse-Compiled)"
+              title="Live C4 Mermaid Architecture Diagram (Reverse-Compiled · Full Width)"
               defaultMode="SPLIT"
             />
           </div>

@@ -208,20 +208,20 @@ export default function MermaidArchitectureDiagram({
 
   const parsed = useMemo(() => parseMermaidFlowchart(code), [code]);
 
-  // Compute deterministic coordinates for every layer and node in the SVG canvas
+  // Compute deterministic coordinates for every layer and node in the full-width SVG canvas
   const layout = useMemo(() => {
     const layers = parsed.layers || [];
     const maxCols = Math.max(1, ...layers.map((l) => l.nodes.length));
-    const nodeW = 240;
-    const nodeH = 62;
-    const colGap = 36;
-    const layerPadX = 32;
-    const layerPadTop = 44;
-    const layerPadBottom = 24;
-    const layerGapY = 46;
+    const nodeW = 340;
+    const nodeH = 68;
+    const colGap = 52;
+    const layerPadX = 36;
+    const layerPadTop = 48;
+    const layerPadBottom = 26;
+    const layerGapY = 54;
 
     const canvasW = Math.max(
-      760,
+      1200,
       maxCols * nodeW + Math.max(0, maxCols - 1) * colGap + layerPadX * 2 + 48
     );
 
@@ -267,7 +267,7 @@ export default function MermaidArchitectureDiagram({
       currentY += layerH + layerGapY;
     });
 
-    const canvasH = Math.max(260, currentY - layerGapY + 24);
+    const canvasH = Math.max(300, currentY - layerGapY + 24);
 
     // Compute smooth SVG cubic bezier paths for every edge
     const positionedEdges = (parsed.edges || [])
@@ -357,7 +357,7 @@ export default function MermaidArchitectureDiagram({
   };
 
   return (
-    <div className="bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 space-y-3.5 shadow-sm">
+    <div className="w-full bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 space-y-4 shadow-sm">
       {/* Top Toolbar: Title + View Mode Switcher + Zoom + Export SVG + Copy Mermaid */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -487,20 +487,26 @@ export default function MermaidArchitectureDiagram({
         </div>
       </div>
 
-      {/* Rendered Browser SVG Visualization */}
+      {/* Rendered Browser SVG Visualization (Full Width) */}
       {viewMode !== 'CODE' && (
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 overflow-x-auto p-2">
+        <div className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 overflow-x-auto p-3">
           <div
+            className="w-full"
             style={{
-              minWidth: `${Math.round(layout.canvasW * zoom)}px`,
+              minWidth: zoom > 1 ? `${Math.round(layout.canvasW * zoom)}px` : '100%',
             }}
           >
             <svg
               ref={svgRef}
               viewBox={`0 0 ${layout.canvasW} ${layout.canvasH}`}
+              preserveAspectRatio="xMidYMid meet"
               width="100%"
-              height={Math.round(layout.canvasH * zoom)}
-              className="block select-none"
+              style={{
+                width: '100%',
+                height: 'auto',
+                minHeight: `${Math.round(layout.canvasH * 0.85 * zoom)}px`,
+              }}
+              className="block w-full select-none"
             >
               <defs>
                 <marker
@@ -677,13 +683,13 @@ export default function MermaidArchitectureDiagram({
 
                   const rawLabel = String(node.label || node.id);
                   const line1 =
-                    rawLabel.length > 30
-                      ? rawLabel.slice(0, 30)
+                    rawLabel.length > 44
+                      ? rawLabel.slice(0, 44)
                       : rawLabel;
                   const line2 =
-                    rawLabel.length > 30
-                      ? rawLabel.slice(30, 62) +
-                        (rawLabel.length > 62 ? '…' : '')
+                    rawLabel.length > 44
+                      ? rawLabel.slice(44, 88) +
+                        (rawLabel.length > 88 ? '…' : '')
                       : '';
 
                   return (
