@@ -35,6 +35,8 @@ import Wave12RoadsterFlightDeckStudio from './Wave12RoadsterFlightDeckStudio';
 import Wave13StarlinkNeuralinkStudio from './Wave13StarlinkNeuralinkStudio';
 import Wave14QuantumTimeTravelDoctorStudio from './Wave14QuantumTimeTravelDoctorStudio';
 import Wave15DysonSupplyLoggingTlsStudio from './Wave15DysonSupplyLoggingTlsStudio';
+import Wave16EnterpriseMoonshotStudio from './Wave16EnterpriseMoonshotStudio';
+import Startup10xMentorStudio from './Startup10xMentorStudio';
 import FivePersonaCommandCenter from './FivePersonaCommandCenter';
 import { useTimezone } from '../context/TimezoneContext';
 
@@ -998,6 +1000,8 @@ export default function Revolutionary2026Suite({
                 if (
                   nextCat === 'ALPHA_BETA' &&
                   ![
+                    'STARTUP_10X',
+                    'WAVE16_ENTERPRISE_MOONSHOT',
                     'FIVE_PERSONA_COUNCIL',
                     'FIVE_PERSONA_ARCHITECT',
                     'FIVE_PERSONA_CLOUD_ENG',
@@ -1012,13 +1016,13 @@ export default function Revolutionary2026Suite({
                     'GCLOUD_ALPHA_BETA',
                   ].includes(subTab)
                 ) {
-                  setSubTab('FIVE_PERSONA_COUNCIL');
+                  setSubTab('STARTUP_10X');
                 }
               }}
               className="h-8 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
             >
-              <option value="ALL">All Domains (22 Specialized Cloud Engineering Studios)</option>
-              <option value="ALPHA_BETA">[D01] 10-Persona Council, Waves 11–15 Moonshots (Supply-Chain, DR, PQC) &amp; SDK 590.0.1</option>
+              <option value="ALL">All Domains (24 Specialized Cloud Engineering Studios)</option>
+              <option value="ALPHA_BETA">[D01] Startup 10X Mentor, Wave 16 Moonshot, 10-Persona Council, Waves 11–15 &amp; SDK 590.0.1</option>
               <option value="QUANTUM">[D02] 2026 Quantum Nexus — Cloud Resilience, State Rollback &amp; PR Shadow Previews</option>
               <option value="FINOPS">[D03] FinOps Cost Control, Night-Mode Sleep, Zombie Hunter &amp; Egress Analysis</option>
               <option value="PERF_TOPOLOGY">[D04] 4-Layer Topology, Latency Benchmark &amp; Cold-Start Surgeon</option>
@@ -1043,6 +1047,24 @@ export default function Revolutionary2026Suite({
         {/* Categorized Sub-Navigation Pills (Uniform h-11 Bento Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {[
+            {
+              id: 'STARTUP_10X',
+              category: 'ALPHA_BETA',
+              badge: 'GOOGLE FOR STARTUPS 10X',
+              label:
+                'Startup 10X — Google for Startups Scale & Bottleneck Radar (Cold-Starts, DB Storm, Quotas & Credits)',
+              tip: 'Google for Startups Mentor Edition — Startup 10X Scale & Bottleneck Radar: Expose and remediate Cloud Run Cold-Start & Legacy VPC Connector lags, Cloud SQL 200-instance Connection Storms, Launch-Day HTTP 429 Quota Walls, $2k–$350k Credit Vampires, SOC2 Deal-Blockers & GenAI -80% Context Caching',
+              icon: Rocket,
+            },
+            {
+              id: 'WAVE16_ENTERPRISE_MOONSHOT',
+              category: 'ALPHA_BETA',
+              badge: 'WAVE 16 · DR & SURGEON',
+              label:
+                'Wave 16 Moonshot — FinOps Anomaly Auto-Fixer, Multi-Region DR GameDay, IAM & SQL Surgeon',
+              tip: 'Wave 16 Enterprise Moonshot Lab: Live FinOps Anomaly Auto-Fixer (GCS Lifecycle & Scale-to-Zero Surgeon), Multi-Region Disaster Recovery (DR) GameDay RTO/RPO Prover, IAM Least-Privilege Role Synthesizer & Live BigQuery SQL Dry-Run Cost Surgeon',
+              icon: Sparkles,
+            },
             {
               id: 'FIVE_PERSONA_COUNCIL',
               category: 'ALPHA_BETA',
@@ -1273,6 +1295,26 @@ export default function Revolutionary2026Suite({
             })}
         </div>
       </div>
+
+      {/* FLAGSHIP GOOGLE FOR STARTUPS MENTOR EDITION: STARTUP 10X SCALE & BOTTLENECK RADAR */}
+      {subTab === 'STARTUP_10X' && (
+        <Startup10xMentorStudio
+          projectId={projectId}
+          onRunInShell={onRunInShell}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
+      )}
+
+      {/* FLAGSHIP WAVE 16 ENTERPRISE MOONSHOT LAB */}
+      {subTab === 'WAVE16_ENTERPRISE_MOONSHOT' && (
+        <Wave16EnterpriseMoonshotStudio
+          projectId={projectId}
+          onRunInShell={onRunInShell}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
+      )}
 
       {/* FLAGSHIP WAVE 15 DYSON VECTOR SQL, SLSA v1.0 PROVENANCE, LOGGING SURGEON & TLS 1.3 X.509 STUDIO */}
       {subTab === 'WAVE15_DYSON_MOONSHOT' && (

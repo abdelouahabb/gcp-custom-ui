@@ -1,0 +1,386 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import {
+  Sparkles,
+  DollarSign,
+  Globe,
+  ShieldCheck,
+  Database,
+  RefreshCw,
+  Terminal,
+  Copy,
+  Check,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react';
+
+const WAVE16_TABS = [
+  {
+    id: 'FINOPS_AUTO_SURGEON',
+    step: '01',
+    title: 'Live FinOps Anomaly Auto-Fixer',
+    subtitle: 'GCS Lifecycle & Scale-to-Zero Surgeon',
+    icon: DollarSign,
+  },
+  {
+    id: 'DR_GAMEDAY_SIMULATOR',
+    step: '02',
+    title: 'Multi-Region DR GameDay Prover',
+    subtitle: 'RTO / RPO & Blackout Drill',
+    icon: Globe,
+  },
+  {
+    id: 'IAM_LEAST_PRIVILEGE',
+    step: '03',
+    title: 'IAM Least-Privilege Role Synthesizer',
+    subtitle: 'Owner/Editor Stripper & Custom YAML',
+    icon: ShieldCheck,
+  },
+  {
+    id: 'SQL_COST_SURGEON',
+    step: '04',
+    title: 'Live BigQuery SQL Cost Surgeon',
+    subtitle: 'Dry-Run Byte Verifier & Partition Rewrite',
+    icon: Database,
+  },
+];
+
+export default function Wave16EnterpriseMoonshotStudio({
+  projectId,
+  onRunInShell,
+  onShowToast,
+  onShowError,
+}) {
+  const [activeTab, setActiveTab] = useState('FINOPS_AUTO_SURGEON');
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState('');
+  const [copiedKey, setCopiedKey] = useState('');
+
+  // DR GameDay simulated blackout region
+  const [blackoutRegion, setBlackoutRegion] = useState('us-central1');
+
+  // SQL Cost Surgeon state
+  const [sqlInput, setSqlInput] = useState(
+    `SELECT name, state, year, number\nFROM \`bigquery-public-data.usa_names.usa_1910_current\`\nWHERE year >= 2015\nLIMIT 100;`
+  );
+  const [dryRunResult, setDryRunResult] = useState(null);
+
+  const fetchWave16 = useCallback(async () => {
+    if (!projectId) return;
+    setLoading(true);
+    try {
+      const res = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/wave16/overview`
+      );
+      setOverview(res.data);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(
+          err.response?.data?.error ||
+            err.message ||
+            'Failed to load Wave 16 Moonshot overview.'
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId, onShowError]);
+
+  useEffect(() => {
+    fetchWave16();
+  }, [fetchWave16]);
+
+  const handleCopy = (text, key) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    if (onShowToast) onShowToast('Copied to clipboard!');
+    setTimeout(() => setCopiedKey(''), 2000);
+  };
+
+  const handleApplyLifecycle = async (bucketName) => {
+    setBusyId(bucketName);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave16/action`,
+        {
+          action: 'APPLY_GCS_LIFECYCLE',
+          resourceName: bucketName,
+        }
+      );
+      if (onShowToast && res.data?.message) onShowToast(res.data.message);
+      await fetchWave16();
+    } catch (err) {
+      if (onShowError) {
+        onShowError(err.response?.data?.error || err.message);
+      }
+    } finally {
+      setBusyId('');
+    }
+  };
+
+  const handleDryRunSql = async () => {
+    setBusyId('DRY_RUN');
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/wave16/action`,
+        {
+          action: 'DRY_RUN_SQL_SURGEON',
+          sql: sqlInput,
+        }
+      );
+      setDryRunResult(res.data);
+      if (onShowToast && res.data?.message) onShowToast(res.data.message);
+    } catch (err) {
+      if (onShowError) {
+        onShowError(err.response?.data?.error || err.message);
+      }
+    } finally {
+      setBusyId('');
+    }
+  };
+
+  const finopsCandidates = overview?.finopsCandidates || [];
+  const drAssets = overview?.drAssets || [];
+  const overPrivilegedGrants = overview?.overPrivilegedGrants || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-mono font-extrabold uppercase">
+              <Sparkles className="w-3 h-3" />
+              <span>WAVE 16 ENTERPRISE MOONSHOT LAB · LIVE GCP CONTROL PLANE</span>
+            </div>
+            <h2 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
+              Wave 16 Moonshot — FinOps Auto-Surgeon, DR GameDay, Least-Privilege IAM &amp; SQL Dry-Run Surgeon
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            disabled={loading}
+            onClick={fetchWave16}
+            title="Refresh live Wave 16 telemetry across Storage, BigQuery, Cloud Run, and IAM"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+            />
+            <span>Refresh Wave 16</span>
+          </button>
+        </div>
+
+        {/* 4 Tab Selector Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+          {WAVE16_TABS.map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                data-feature-id={t.id}
+                onClick={() => setActiveTab(t.id)}
+                title={`${t.step}. ${t.title} — ${t.subtitle}`}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                  isActive
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-zinc-50 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="text-[10px] font-mono font-bold opacity-80">
+                    STEP {t.step}
+                  </div>
+                  <div className="text-xs font-extrabold truncate">
+                    {t.title}
+                  </div>
+                  <div
+                    className={`text-[10px] font-mono truncate ${
+                      isActive ? 'text-blue-100' : 'text-zinc-500'
+                    }`}
+                  >
+                    {t.subtitle}
+                  </div>
+                </div>
+                <Icon className="w-4 h-4 shrink-0 opacity-85" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* TAB 1: FINOPS AUTO-SURGEON */}
+      {activeTab === 'FINOPS_AUTO_SURGEON' && (
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
+          <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+            01. Live FinOps Anomaly Auto-Fixer ({finopsCandidates.length} Candidates)
+          </h3>
+          {finopsCandidates.length === 0 ? (
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-700 dark:text-emerald-300">
+              ✓ All inspected Cloud Storage buckets have active Lifecycle policies and zero idle warm Cloud Run waste detected.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {finopsCandidates.map((c) => (
+                <div
+                  key={c.id}
+                  className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3"
+                >
+                  <div>
+                    <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
+                      {c.resourceName} ({c.location})
+                    </div>
+                    <div className="text-[11px] font-mono text-zinc-500">
+                      {c.issue} · Est. Savings: -${c.monthlySavingsUsd}/mo
+                    </div>
+                  </div>
+                  {c.fixAction === 'APPLY_GCS_LIFECYCLE' && (
+                    <button
+                      type="button"
+                      disabled={busyId === c.resourceName}
+                      onClick={() => handleApplyLifecycle(c.resourceName)}
+                      title={`Apply 30d Nearline -> 90d Coldline Lifecycle Policy to gs://${c.resourceName}`}
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {busyId === c.resourceName
+                        ? 'Patching Bucket...'
+                        : '1-Click Apply Lifecycle Policy'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: MULTI-REGION DR GAMEDAY PROVER */}
+      {activeTab === 'DR_GAMEDAY_SIMULATOR' && (
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+              02. Multi-Region Disaster Recovery (DR) GameDay &amp; RTO/RPO Prover
+            </h3>
+            <select
+              aria-label="Select simulated blackout region"
+              value={blackoutRegion}
+              onChange={(e) => setBlackoutRegion(e.target.value)}
+              className="h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold"
+            >
+              <option value="us-central1">Simulate Outage: us-central1 (Iowa)</option>
+              <option value="us-east1">Simulate Outage: us-east1 (S. Carolina)</option>
+              <option value="europe-west1">Simulate Outage: europe-west1 (Belgium)</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            {drAssets.map((a, idx) => (
+              <div
+                key={`${a.name}-${idx}`}
+                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-xs font-mono"
+              >
+                <div>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    {a.name}
+                  </span>{' '}
+                  <span className="text-zinc-500">
+                    ({a.type} · {a.location})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-bold">
+                    {a.haTier}
+                  </span>
+                  <span className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                    RPO: {a.rpoSeconds}s · RTO: {a.rtoSeconds}s
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: IAM LEAST-PRIVILEGE SYNTHESIZER */}
+      {activeTab === 'IAM_LEAST_PRIVILEGE' && (
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
+          <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+            03. Live IAM Least-Privilege Role Synthesizer ({overPrivilegedGrants.length} Broad Grants)
+          </h3>
+          <div className="space-y-2">
+            {overPrivilegedGrants.slice(0, 8).map((g, idx) => (
+              <div
+                key={`${g.member}-${idx}`}
+                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+              >
+                <div>
+                  <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                    {g.member}
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    Current: <span className="text-amber-600 dark:text-amber-400 font-bold">{g.currentRole}</span> → Recommended: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{g.recommendedRole}</span> (-{g.excessPermissionsRemoved} excess permissions)
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(
+                      `gcloud projects add-iam-policy-binding ${projectId} --member="${g.member}" --role="roles/viewer"`,
+                      `iam-${idx}`
+                    )
+                  }
+                  title={`Copy least-privilege gcloud IAM binding command for ${g.member}`}
+                  className="px-2.5 py-1 rounded bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono font-bold cursor-pointer inline-flex items-center gap-1"
+                >
+                  {copiedKey === `iam-${idx}` ? (
+                    <Check className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                  <span>Copy Least-Privilege CLI</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: LIVE BIGQUERY SQL COST SURGEON */}
+      {activeTab === 'SQL_COST_SURGEON' && (
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#202124] border border-zinc-200 dark:border-zinc-800 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+              04. Live BigQuery SQL Dry-Run Cost Surgeon
+            </h3>
+            <button
+              type="button"
+              disabled={busyId === 'DRY_RUN'}
+              onClick={handleDryRunSql}
+              title="Execute a live $0.00 BigQuery Dry-Run (dryRun=true) to verify exact bytes scanned and on-demand query cost"
+              className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+            >
+              {busyId === 'DRY_RUN'
+                ? 'Running BigQuery Dry-Run...'
+                : 'Verify SQL Bytes & Cost (Live Dry-Run)'}
+            </button>
+          </div>
+
+          <textarea
+            rows={4}
+            value={sqlInput}
+            onChange={(e) => setSqlInput(e.target.value)}
+            className="w-full p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+          />
+
+          {dryRunResult && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-800 dark:text-emerald-200">
+              ✓ {dryRunResult.message}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

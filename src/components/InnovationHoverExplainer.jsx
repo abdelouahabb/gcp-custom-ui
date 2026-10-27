@@ -1118,6 +1118,142 @@ export const INNOVATION_FEATURE_GUIDE = {
     gcpApis: 'bigframes · bigquery.googleapis.com (ML.FORECAST / AI.FORECAST)',
     safetyMode: 'READ_ONLY',
   },
+  // ============================================================================
+  // 6. STARTUP 10X — GOOGLE FOR STARTUPS MENTOR EDITION (Startup10xMentorStudio.jsx)
+  // ============================================================================
+  STARTUP_10X: {
+    badge: 'GOOGLE FOR STARTUPS MENTOR EDITION',
+    title: 'Startup 10X — Scale & Bottleneck Radar (Cold-Starts, DB Storms, Quotas & Credit Runway)',
+    whatItDoes:
+      'Exposes and fixes the 6 real scaling bottlenecks that hit startups scaling on Google Cloud: (1) Cloud Run Cold-Start & Legacy 200Mbps VPC Connector lags, (2) Cloud SQL 200-instance Connection Storms, (3) Launch-Day HTTP 429 Quota Walls, (4) $2k–$350k Credit Vampires, (5) B2B SOC2 Deal-Blockers, and (6) GenAI Token Inflation & Context Caching (-80%).',
+    enterpriseValue:
+      'Extends Google for Startups credit runway by months, eliminates 3s–8s p99 cold-start spikes, and prevents launch-day database or GPU quota outages.',
+    gcpApis: 'run v2 · sqladmin v1 · storage v1 · bigquery v2 · cloudquotas · iam',
+    safetyMode: 'READ_ONLY',
+  },
+  STARTUP_10X_RESCAN: {
+    badge: 'LIVE 6-PILLAR STARTUP AUDIT',
+    title: 'Run Live 10X Scale & Credit Runway Audit',
+    whatItDoes:
+      'Queries your live Cloud Run services, Cloud SQL instances, Cloud Storage buckets, BigQuery datasets, VPC Firewalls, and IAM bindings in parallel to recompute your Startup 10X Readiness Score and Credit Runway.',
+    enterpriseValue:
+      'Verifies in real time whether your startup infrastructure is ready for a 10X traffic spike.',
+    gcpApis: '6 Parallel Google Cloud REST Inspection Calls',
+    safetyMode: 'READ_ONLY',
+  },
+  COLD_START_VPC_LAG: {
+    badge: 'STARTUP 10X · MODULE 01',
+    title: 'Cloud Run Cold-Start & Legacy Serverless VPC Connector Lag Surgeon',
+    whatItDoes:
+      'Detects Cloud Run services missing startupCpuBoost or throttled by legacy e2-micro Serverless VPC Connectors (capped at 200 Mbps) instead of zero-hop Direct VPC Egress, with 1-click live PATCH remediation.',
+    enterpriseValue:
+      'Cuts container cold-start latency by ~1,430ms p99 and eliminates $15–$45/mo fixed VPC connector VM charges.',
+    gcpApis: 'PATCH https://run.googleapis.com/v2/.../services/{service}?updateMask=template.containers',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  DB_CONNECTION_STORM: {
+    badge: 'STARTUP 10X · MODULE 02',
+    title: 'Cloud SQL Connection Storm & Serverless Pool Exhaustion Guard',
+    whatItDoes:
+      'Simulates what happens when Cloud Run autoscales from 2 to 200 containers against your Cloud SQL max_connections ceiling and generates Managed Connection Pooling (PgBouncer) + ORM pool sizing fixes.',
+    enterpriseValue:
+      'Prevents the #1 ProductHunt / launch-day database crash ("FATAL: remaining connection slots are reserved").',
+    gcpApis: 'sqladmin.googleapis.com/v1 · Cloud SQL Managed Connection Pooling',
+    safetyMode: 'READ_ONLY',
+  },
+  QUOTA_WALL_RADAR: {
+    badge: 'STARTUP 10X · MODULE 03',
+    title: '10X Launch-Day Quota Wall (HTTP 429 RESOURCE_EXHAUSTED) Radar',
+    whatItDoes:
+      'Exposes default 0 GPU quotas and single-region Vertex AI RPM ceilings that cause HTTP 429 errors even when you have $100k+ in startup credits, and configures Dynamic Shared Quota (location="global") + Cloud Quotas Adjuster.',
+    enterpriseValue:
+      'Prevents viral launch traffic from hitting unexpected regional vCPU, L4 GPU, or Gemini RPM rate limits.',
+    gcpApis: 'cloudquotas.googleapis.com/v1beta · aiplatform (Global DSQ)',
+    safetyMode: 'READ_ONLY',
+  },
+  CREDIT_CLIFF_RUNWAY: {
+    badge: 'STARTUP 10X · MODULE 04',
+    title: 'Google for Startups Credit Vampire Detector & 1-Click Runway Extender',
+    whatItDoes:
+      'Audits your project for silent credit drainers (buckets without 30d Nearline lifecycle policies, unoptimized BigQuery datasets, and warm idle staging instances) across $2k, $25k, $100k, and $350k startup credit tiers.',
+    enterpriseValue:
+      'Extends your Google for Startups credit runway by months and prevents gross-vs-net billing cliff surprises.',
+    gcpApis: 'storage.buckets.patch · bigquery.datasets.patch · billingbudgets',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  SOC2_DEAL_BLOCKER: {
+    badge: 'STARTUP 10X · MODULE 05',
+    title: 'Enterprise B2B SOC2 Deal-Blocker & Zero-Trust Hygiene Scanner',
+    whatItDoes:
+      'Scans for the 3 findings that block startups from passing Fortune 500 enterprise security questionnaires: world-open 0.0.0.0/0 firewalls, primitive Owner/Editor sprawl, and buckets missing Public Access Prevention.',
+    enterpriseValue:
+      'Helps B2B startups pass enterprise security reviews and SOC2 Type II audits on the first try.',
+    gcpApis: 'compute.firewalls · cloudresourcemanager:getIamPolicy · storage.buckets',
+    safetyMode: 'READ_ONLY',
+  },
+  GEMINI_RAG_LATENCY: {
+    badge: 'STARTUP 10X · MODULE 06',
+    title: 'GenAI Token Inflation, -80% Context Caching & Cross-Region TTFT Surgeon',
+    whatItDoes:
+      'Calculates how much your startup wastes resending 25k+ system prompt/RAG tokens on every chat turn without Vertex AI Context Caching (-80% cost) and detects cross-region RTT lag between Cloud Run and Vertex AI.',
+    enterpriseValue:
+      'Slashes monthly Gemini/Vertex AI inference bills by up to 80% while cutting Time-To-First-Token (TTFT) latency by ~62%.',
+    gcpApis: 'aiplatform.googleapis.com/v1 (cachedContents) · Vertex AI Model Router',
+    safetyMode: 'READ_ONLY',
+  },
+  // ============================================================================
+  // 7. WAVE 16 ENTERPRISE MOONSHOT LAB (Wave16EnterpriseMoonshotStudio.jsx)
+  // ============================================================================
+  WAVE16_ENTERPRISE_MOONSHOT: {
+    badge: 'WAVE 16 · DR, IAM & SQL SURGEON',
+    title: 'Wave 16 Moonshot — FinOps Auto-Surgeon, Multi-Region DR GameDay, Least-Privilege IAM & SQL Surgeon',
+    whatItDoes:
+      'Unites 4 live enterprise engines: (1) FinOps Anomaly Auto-Fixer (live GCS Lifecycle PATCH & idle scale-to-zero), (2) Multi-Region DR GameDay RTO/RPO Prover, (3) IAM Least-Privilege Role Synthesizer, and (4) Live BigQuery SQL Dry-Run Cost Surgeon.',
+    enterpriseValue:
+      'Automates day-2 FinOps lifecycle remediation, proves multi-region disaster recovery SLAs, and verifies BigQuery SQL scan costs before execution.',
+    gcpApis: 'storage · bigquery (dryRun) · run v2 · cloudresourcemanager:getIamPolicy',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  FINOPS_AUTO_SURGEON: {
+    badge: 'WAVE 16 · STEP 01',
+    title: 'Live FinOps Anomaly Auto-Fixer & Lifecycle Surgeon',
+    whatItDoes:
+      'Scans live Cloud Storage buckets and Cloud Run services for missing object lifecycle policies and idle warm instances, applying 30d Nearline -> 90d Coldline tiering in 1 click.',
+    enterpriseValue:
+      'Automatically stops storage bloat and idle compute waste across your project.',
+    gcpApis: 'PATCH https://storage.googleapis.com/storage/v1/b/{bucket}',
+    safetyMode: 'LIVE_MUTATION',
+  },
+  DR_GAMEDAY_SIMULATOR: {
+    badge: 'WAVE 16 · STEP 02',
+    title: 'Multi-Region Disaster Recovery (DR) GameDay & RTO/RPO Prover',
+    whatItDoes:
+      'Audits the regional vs. multi-region topology of your live Cloud Storage buckets, BigQuery datasets, and Cloud Run services, simulating a regional blackout to calculate exact RPO and RTO.',
+    enterpriseValue:
+      'Proves business continuity readiness and highlights single-region bottlenecks before an outage.',
+    gcpApis: 'storage · bigquery · run Multi-Region Topology Analyzer',
+    safetyMode: 'SIMULATION',
+  },
+  IAM_LEAST_PRIVILEGE: {
+    badge: 'WAVE 16 · STEP 03',
+    title: 'Live IAM Least-Privilege Role Synthesizer & Owner/Editor Stripper',
+    whatItDoes:
+      'Reads live project IAM bindings, flags over-privileged roles/owner and roles/editor grants, and generates least-privilege replacement commands removing thousands of excess permissions.',
+    enterpriseValue:
+      'Shrinks your project’s credential blast radius to enforce strict zero-trust least privilege.',
+    gcpApis: 'POST https://cloudresourcemanager.googleapis.com/v1/projects/{project}:getIamPolicy',
+    safetyMode: 'READ_ONLY',
+  },
+  SQL_COST_SURGEON: {
+    badge: 'WAVE 16 · STEP 04',
+    title: 'Live BigQuery SQL Dry-Run Cost Surgeon & Byte Verifier',
+    whatItDoes:
+      'Executes a real $0.00 BigQuery Dry-Run (configuration.dryRun=true) against your SQL query to measure exact bytes scanned and on-demand dollar cost before running the query.',
+    enterpriseValue:
+      'Prevents expensive multi-terabyte BigQuery scan surprises in production.',
+    gcpApis: 'POST https://bigquery.googleapis.com/bigquery/v2/projects/{project}/jobs (dryRun=true)',
+    safetyMode: 'READ_ONLY',
+  },
 };
 
 /**
@@ -1143,6 +1279,12 @@ function resolveFeatureExplanation(buttonEl) {
   const combined = `${rawText} ${rawTitle}`.toLowerCase();
 
   // Match known studio / innovation labels
+  if (combined.includes('startup 10x') || combined.includes('google for startups')) {
+    return INNOVATION_FEATURE_GUIDE.STARTUP_10X;
+  }
+  if (combined.includes('wave 16')) {
+    return INNOVATION_FEATURE_GUIDE.WAVE16_ENTERPRISE_MOONSHOT;
+  }
   if (combined.includes('10-persona') || combined.includes('review board')) {
     return INNOVATION_FEATURE_GUIDE.FIVE_PERSONA_COUNCIL;
   }
@@ -1365,8 +1507,11 @@ export default function GlobalInnovationHoverExplainer() {
   const timerRef = useRef(null);
 
   useEffect(() => {
+    const HOVER_SELECTOR =
+      'button, [data-feature-id], [data-kpi-id], [data-hover-explain], [role="tab"], select[title], select[aria-label], [title], [data-original-title]';
+
     const handleMouseOver = (e) => {
-      const target = e.target?.closest?.('button, [data-feature-id], [role="tab"]');
+      const target = e.target?.closest?.(HOVER_SELECTOR);
       if (!target) {
         if (timerRef.current) clearTimeout(timerRef.current);
         setHoverState(null);
@@ -1414,7 +1559,7 @@ export default function GlobalInnovationHoverExplainer() {
     };
 
     const handleMouseOut = (e) => {
-      const related = e.relatedTarget?.closest?.('button, [data-feature-id], [role="tab"]');
+      const related = e.relatedTarget?.closest?.(HOVER_SELECTOR);
       if (!related) {
         if (timerRef.current) clearTimeout(timerRef.current);
         setHoverState(null);

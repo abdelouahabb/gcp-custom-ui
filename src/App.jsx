@@ -4101,6 +4101,19 @@ function CloudPulseCockpit() {
                       <Cpu className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                       <span>Auto-Pilot Guard</span>
                     </button>
+
+                    <button
+                      type="button"
+                      data-feature-id="STARTUP_10X"
+                      onClick={() =>
+                        handleNavigateStudioTab('INNOVATION_LAB', 'STARTUP_10X')
+                      }
+                      title="Google for Startups Mentor Edition — Startup 10X Scale & Bottleneck Radar (Cold-Starts, DB Connection Storms, Launch-Day HTTP 429 Quotas & Credit Runway)"
+                      className="inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-mono font-bold border border-blue-500/40 bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-700 dark:text-blue-300 transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
+                    >
+                      <Rocket className="w-3.5 h-3.5 shrink-0" />
+                      <span>Startup 10X</span>
+                    </button>
                   </>
                 );
               })()}
