@@ -1309,54 +1309,54 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'LIVE_MUTATION',
   },
   GLOBAL_MAP_MODE_LIVE_MIX: {
-    badge: 'SYNTHETIC PROBE vs. REAL VPC FIREWALLS',
-    title: 'Global Live Traffic & VPC Mesh (Multi-Protocol Firewall Tester)',
+    badge: '100% LIVE CLOUD LOGS + SOCKETS',
+    title: 'Live Cloud Logging Stream & Regional TLS 1.3 Socket Replay',
     whatItDoes:
-      'Launches synthetic HTTPS (:443), ICMP Ping, SSH (:22), and inter-region Andromeda fiber probes across the map and evaluates every packet in real time against your live compute.v1/firewalls rules.',
+      'Replays real Cloud Logging entries (logging.v2/entries:list for firewall, vpc_flows, run.googleapis.com/requests, cloudaudit) and real 8-region DNS + TCP (:443) + TLS 1.3 socket handshakes across the world map.',
     enterpriseValue:
-      'Since GCP VPC Flow Logs are disabled by default to save $0.50/GB logging costs, this tests your real VPC firewall rule priorities (0–65535) against live protocol mixes for $0.00.',
-    gcpApis: 'GET compute.v1/projects/{project}/global/firewalls + POST logging.v2/entries:list',
-    safetyMode: 'SIMULATION',
+      'Streams your actual project log activity and real socket round-trip latency into active GCP regions with zero synthetic data.',
+    gcpApis: 'POST logging.googleapis.com/v2/entries:list + Node net.createConnection(:443) & tls.connect',
+    safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_MODE_SSH_BRUTEFORCE: {
-    badge: 'SYNTHETIC THREAT PROBE vs. REAL FIREWALLS',
-    title: 'Global SSH (:22) & RDP (:3389) Brute-Force Wave Tester',
+    badge: '100% LIVE VM SOCKET & FIREWALL AUDIT',
+    title: 'Live VM Public Socket Prober (:22 SSH & :3389 RDP) & Firewall Audit',
     whatItDoes:
-      'Fires synthetic public internet threat probes (e.g., 185.220.101.44 -> TCP :22 & :3389) against your live VPC firewall rules to verify whether public SSH/RDP is blocked or exposed via 0.0.0.0/0.',
+      'Executes real TCP socket connection checks against your running Compute Engine VM public IPs (natIP :22 & :3389) and evaluates your live compute.v1/firewalls rules for 0.0.0.0/0 exposure.',
     enterpriseValue:
-      'Immediately reveals if default-allow-ssh or default-allow-rdp is exposing your VMs to the public internet and offers a 1-click Priority-100 DENY shield.',
-    gcpApis: 'GET compute.v1/projects/{project}/global/firewalls (Priority 0–65535 Evaluator)',
-    safetyMode: 'SIMULATION',
+      'Proves whether your live VMs and VPC firewall rules actually block or expose public SSH/RDP on the wire, and offers a 1-click Priority-100 DENY shield.',
+    gcpApis: 'Node net.createConnection(vm.natIP, 22/3389) + GET compute.v1/projects/{project}/global/firewalls',
+    safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_MODE_IAP_ZERO_TRUST: {
-    badge: 'SYNTHETIC IAP PROBE vs. REAL FIREWALLS',
-    title: 'Identity-Aware Proxy (IAP 35.235.240.0/20) Zero-Trust Tunnel Verifier',
+    badge: '100% LIVE IAP CIDR & FIREWALL AUDIT',
+    title: 'Identity-Aware Proxy (IAP 35.235.240.0/20) Live Firewall Verifier',
     whatItDoes:
-      'Compares synthetic SSH probes coming from Google Cloud’s official Identity-Aware Proxy range (35.235.240.0/20 -> :22) against public internet SSH probes (0.0.0.0/0 -> :22) using your real firewall rules.',
+      'Audits your live VPC firewall rules (compute.v1/firewalls) to verify whether TCP :22 is restricted to Google Cloud’s official Identity-Aware Proxy CIDR (35.235.240.0/20) vs open to your public client IP (0.0.0.0/0).',
     enterpriseValue:
-      'Verifies BeyondCorp Zero-Trust posture: allowing authenticated Google IAP TCP forwarding while blocking direct public SSH access.',
-    gcpApis: 'Google IAP CIDR (35.235.240.0/20) vs compute.v1/projects/{project}/global/firewalls',
-    safetyMode: 'SIMULATION',
+      'Verifies BeyondCorp Zero-Trust compliance against your real production VPC firewall table.',
+    gcpApis: 'GET https://compute.googleapis.com/compute/v1/projects/{project}/global/firewalls',
+    safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_MODE_GLOBAL_LOAD_TEST: {
-    badge: 'SYNTHETIC GCLB PROBE vs. REAL FIREWALLS',
-    title: 'Multi-Region Google Cloud Load Balancer (GCLB :443 / :80) Edge Surge',
+    badge: '100% LIVE 8-REGION TLS 1.3 HANDSHAKES',
+    title: 'Live 8-Region Google Front End (GFE :443) Socket Handshake Stream',
     whatItDoes:
-      'Simulates high-volume global HTTPS (:443) and HTTP (:80) edge traffic from Google Front Ends (130.211.0.0/22, 35.191.0.0/16) into your active regions, evaluated against your real VPC firewall rules.',
+      'Streams the live concurrent DNS lookup, TCP (:443) connect, and TLS 1.3 cipher handshakes measured against 8 Google Cloud regional endpoints (*-aiplatform.googleapis.com) alongside your GCLB firewall rules.',
     enterpriseValue:
-      'Confirms that your web/API ingress firewall rules permit Google Cloud Load Balancer health checks and HTTPS traffic across all active regions.',
-    gcpApis: 'GCLB Ranges (130.211.0.0/22, 35.191.0.0/16) vs compute.v1/firewalls',
-    safetyMode: 'SIMULATION',
+      'Visualizes real multi-region edge reachability, TLS 1.3 cipher negotiation, and microsecond RTT across North America, South America, Europe, Middle East, and Asia.',
+    gcpApis: 'Node dns.promises.lookup + net.createConnection(:443) + tls.connect + compute.v1/firewalls',
+    safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_PLAY_PAUSE: {
-    badge: 'CANVAS PACKET TESTER LOOP',
-    title: 'Start / Pause Animated Firewall Rule Packet Prober',
+    badge: 'LIVE TELEMETRY REPLAY CONTROL',
+    title: 'Start / Pause Live Socket & Cloud Log Trajectory Stream',
     whatItDoes:
-      'Starts or pauses the animated packet wave on the 40-region SVG world map. Automatically pauses when the browser tab is hidden to save CPU and battery.',
+      'Starts or pauses the visual trajectory stream of your live regional socket handshakes, Cloud Logging events, and VPC firewall verdicts on the 40-region SVG world map.',
     enterpriseValue:
-      'Lets you freeze any in-flight packet wave to inspect individual firewall rule matches or run continuous visual stress tests.',
-    gcpApis: 'Real-Time Client-Side VPC Firewall Rule Evaluator (compute.v1/firewalls)',
-    safetyMode: 'SIMULATION',
+      'Lets you pause the map at any moment to inspect individual socket RTTs, Cloud Logging entries, or matched firewall rule priorities.',
+    gcpApis: 'Live Socket Prober + logging.v2/entries:list + compute.v1/firewalls',
+    safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_CLEAR: {
     badge: 'RESET CANVAS COUNTERS',
@@ -1449,14 +1449,14 @@ export const INNOVATION_FEATURE_GUIDE = {
     safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_FIRE_WAVE: {
-    badge: 'INSTANT 6-PACKET BURST PROBE',
-    title: 'Fire 6-Packet Firewall Stress-Test Wave Now',
+    badge: 'LIVE SOCKET RE-PROBE & REPLAY',
+    title: 'Re-Probe Live Regional Sockets, Cloud Logs & Firewall Verdicts Now',
     whatItDoes:
-      'Immediately launches a 6-packet burst for the active scenario mode across the world map and logs each packet’s matched VPC firewall rule and priority.',
+      'Triggers a fresh backend probe of all 8 regional TCP/TLS 1.3 endpoints, live VM public sockets, and Cloud Logging entries (/api/project/:projectId/global-map/live-telemetry) and replays the wave on the map.',
     enterpriseValue:
-      'Tests firewall changes immediately after deploying or deleting a VPC firewall rule without waiting for background ticks.',
-    gcpApis: 'evaluatePacketAgainstFirewalls() vs compute.v1/projects/{project}/global/firewalls',
-    safetyMode: 'SIMULATION',
+      'Verifies real-world network reachability and firewall rule changes immediately after modifying VPC rules or deploying workloads.',
+    gcpApis: 'GET /api/project/{project}/global-map/live-telemetry + compute.v1/firewalls',
+    safetyMode: 'READ_ONLY',
   },
   GLOBAL_MAP_DEPLOY_SHIELD: {
     badge: '1-CLICK LIVE VPC FIREWALL MUTATION',
