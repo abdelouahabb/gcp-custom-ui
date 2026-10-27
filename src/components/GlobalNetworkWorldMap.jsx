@@ -2026,9 +2026,11 @@ export default function GlobalNetworkWorldMap({
   overview,
   firewalls = [],
   vpcs = [],
+  initialXRaySeed,
   onOpenProvision,
   onRunInShell,
   onOpenLogsExplorer,
+  onOpenVpcFirewallStudio,
   onSelectTab,
   onRefresh,
   onShowToast,
@@ -3388,6 +3390,139 @@ export default function GlobalNetworkWorldMap({
     ]
   );
 
+  const handleOpenRuleInVpcStudio = useCallback(
+    (ruleName, extra = {}) => {
+      setShowForensicDeepDiveModal(false);
+      if (onOpenVpcFirewallStudio) {
+        onOpenVpcFirewallStudio({
+          ruleName:
+            ruleName && !ruleName.includes('default-deny-ingress')
+              ? ruleName
+              : '',
+          protocol: extra.protocol || customProtocol,
+          port: extra.port || customPort,
+          sourceIp: extra.sourceIp || customPacketXRay.sourceIp,
+        });
+      } else if (onSelectTab) {
+        onSelectTab('VPC_NETWORKS');
+      }
+    },
+    [
+      onOpenVpcFirewallStudio,
+      onSelectTab,
+      customProtocol,
+      customPort,
+      customPacketXRay.sourceIp,
+    ]
+  );
+
+  const handleExportForensicReport = useCallback(
+    (ev, format = 'md') => {
+      const bundle = buildForensicEventBundle(ev || timeMachineActiveEvent);
+      if (!bundle) return;
+      const safeRegion = bundle.regionId || 'global';
+      const tsSlug = new Date().toISOString().replace(/[:.]/g, '-');
+
+      let content = '';
+      let mime = 'text/markdown;charset=utf-8';
+      let filename = `cloudpulse-forensic-${safeRegion}-${tsSlug}.md`;
+
+      if (format === 'json') {
+        content = JSON.stringify(
+          {
+            exportedAt: new Date().toISOString(),
+            projectId,
+            eventId: bundle.id,
+            timestamp: bundle.timestamp,
+            verdict: bundle.verdict,
+            sourceIp: bundle.sourceIp,
+            sourceLabel: bundle.sourceLabel,
+            regionId: bundle.regionId,
+            regionCity: bundle.regionCity,
+            targetZone: bundle.targetZone,
+            protocol: bundle.protocol,
+            port: bundle.port,
+            latencyMs: bundle.latencyMs,
+            winningRule: bundle.firewallTrace?.winningRule,
+            shadowedRules: bundle.firewallTrace?.shadowedRules,
+            firewallEvaluationSteps: bundle.firewallTrace?.steps,
+            gcloudCommand: bundle.gcloudCommand,
+            cloudLoggingEntry: bundle.rawPayload,
+          },
+          null,
+          2
+        );
+        mime = 'application/json;charset=utf-8';
+        filename = `cloudpulse-forensic-${safeRegion}-${tsSlug}.json`;
+      } else {
+        const stepsLines = (bundle.firewallTrace?.steps || [])
+          .map(
+            (s, i) =>
+              `| ${i + 1} | P-${s.priority} | \`${s.name}\` | **${s.action}** | \`${s.portsSummary}\` | \`${(s.sourceRanges || []).join(', ')}\` | **${s.status}** (${s.reason}) |`
+          )
+          .join('\n');
+        content = `# CloudPulse 2026 — Cloud Logging & VPC Firewall Forensic Report
+
+- **Project ID:** \`${projectId}\`
+- **Event ID:** \`${bundle.id}\`
+- **Captured Timestamp:** \`${bundle.timestamp}\`
+- **Final Verdict:** **${bundle.verdict}**
+- **Source Origin:** \`${bundle.sourceIp || 'edge'}\` (${bundle.sourceLabel || liveClientOriginNode.city})
+- **Target GCP Region & Zone:** \`${bundle.regionId}\` (${bundle.regionCity || 'GCP'}) · Zone \`${bundle.targetZone || `${bundle.regionId}-a`}\`
+- **Protocol & Port:** \`${String(bundle.protocol || 'tcp').toUpperCase()}:${bundle.port || 443}\`
+- **Measured Network RTT:** \`${bundle.latencyMs}ms\`
+- **Winning VPC Firewall Rule:** \`${bundle.ruleName || bundle.firewallTrace?.winningRule?.name}\` (Priority \`P-${bundle.priority ?? bundle.firewallTrace?.winningRule?.priority ?? 65535}\`)
+
+## 1. Ready-to-Run \`gcloud\` CLI Verification Command
+\`\`\`bash
+${bundle.gcloudCommand}
+\`\`\`
+
+## 2. Priority 0 ➔ 65535 VPC Firewall Rule Evaluation Trace
+| # | Priority | Rule Name | Action | Ports | Source CIDR | Evaluation Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+${stepsLines}
+
+## 3. Structured Cloud Logging Payload (\`jsonPayload\`)
+\`\`\`json
+${JSON.stringify(bundle.rawPayload, null, 2)}
+\`\`\`
+`;
+      }
+
+      try {
+        navigator.clipboard?.writeText(content);
+      } catch {
+        // ignore clipboard error
+      }
+      try {
+        const blob = new Blob([content], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch {
+        // ignore download error
+      }
+      if (onShowToast) {
+        onShowToast(
+          `Exported ${filename} (and copied forensic report to clipboard)!`
+        );
+      }
+    },
+    [
+      buildForensicEventBundle,
+      timeMachineActiveEvent,
+      projectId,
+      liveClientOriginNode.city,
+      onShowToast,
+    ]
+  );
+
   const handleResumeLiveStream = useCallback(() => {
     setInspectedTimeMachineEvent(null);
     setShowForensicDeepDiveModal(false);
@@ -3746,6 +3881,46 @@ export default function GlobalNetworkWorldMap({
       pkt,
     ]);
   };
+
+  // Deep-link seed from VPC & Firewalls Studio ("🔬 X-Ray on Map")
+  useEffect(() => {
+    if (!initialXRaySeed?.nonce) return;
+    const nextOrigin = initialXRaySeed.originId || 'my-live-client';
+    const nextProto = (initialXRaySeed.protocol || 'tcp').toLowerCase();
+    const nextPort = Number(initialXRaySeed.port ?? 22);
+    const nextTarget =
+      initialXRaySeed.targetRegionId ||
+      selectedRegionId ||
+      activeRegionIds[0] ||
+      'us-central1';
+
+    setActive10xDockTab('FIREWALL_XRAY');
+    setCustomOriginId(nextOrigin);
+    setCustomProtocol(nextProto);
+    setCustomPort(nextPort);
+    setCustomTargetRegionId(nextTarget);
+
+    const pkt = spawnSimulatedPacket({
+      originId: nextOrigin,
+      targetRegionId: nextTarget,
+      protocol: nextProto,
+      port: nextPort,
+    });
+    setInFlightPackets((prev) => [
+      ...prev.slice(-(maxConcurrentPackets - 1)),
+      pkt,
+    ]);
+  }, [
+    initialXRaySeed?.nonce,
+    initialXRaySeed?.originId,
+    initialXRaySeed?.protocol,
+    initialXRaySeed?.port,
+    initialXRaySeed?.targetRegionId,
+    selectedRegionId,
+    activeRegionIds,
+    spawnSimulatedPacket,
+    maxConcurrentPackets,
+  ]);
 
   // Switch scenario mode AND immediately launch a live 6-packet wave + update HUD/logs
   const handleSelectSimMode = useCallback(
@@ -7443,6 +7618,17 @@ export default function GlobalNetworkWorldMap({
                         </code>{' '}
                         (Priority {customPacketXRay.winningRule?.priority})
                       </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenRuleInVpcStudio(
+                            customPacketXRay.winningRule?.name
+                          )
+                        }
+                        className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-600 dark:text-blue-300 text-[9.5px] font-extrabold cursor-pointer"
+                      >
+                        🛡️ Open Rule in VPC &amp; Firewalls Studio ↗
+                      </button>
                     </div>
 
                     {customPacketXRay.shadowedRules.length > 0 && (
@@ -7861,6 +8047,34 @@ export default function GlobalNetworkWorldMap({
                           className="h-6 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[9.5px] cursor-pointer"
                         >
                           📄 Full Raw JSON &amp; Rule Trace
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleExportForensicReport(
+                              timeMachineActiveEvent,
+                              'md'
+                            )
+                          }
+                          className="h-6 px-2.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-800 dark:text-amber-300 font-extrabold text-[9.5px] cursor-pointer"
+                        >
+                          📥 Export Report (.md)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleOpenRuleInVpcStudio(
+                              timeMachineActiveEvent.ruleName,
+                              {
+                                protocol: timeMachineActiveEvent.protocol,
+                                port: timeMachineActiveEvent.port,
+                                sourceIp: timeMachineActiveEvent.sourceIp,
+                              }
+                            )
+                          }
+                          className="h-6 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[9.5px] cursor-pointer"
+                        >
+                          🛡️ VPC Rule Studio ↗
                         </button>
                         <button
                           type="button"
@@ -9072,6 +9286,41 @@ export default function GlobalNetworkWorldMap({
                   className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] cursor-pointer shadow-sm"
                 >
                   🚀 Open in Cloud Logs Explorer &amp; Shell Studio ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleOpenRuleInVpcStudio(
+                      inspectedForensicBundle.ruleName ||
+                        inspectedForensicBundle.firewallTrace?.winningRule?.name,
+                      {
+                        protocol: inspectedForensicBundle.protocol,
+                        port: inspectedForensicBundle.port,
+                        sourceIp: inspectedForensicBundle.sourceIp,
+                      }
+                    )
+                  }
+                  className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] cursor-pointer"
+                >
+                  🛡️ Open in VPC &amp; Firewalls Studio ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleExportForensicReport(inspectedForensicBundle, 'md')
+                  }
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-800 dark:text-amber-300 font-extrabold text-[11px] cursor-pointer"
+                >
+                  📥 Export .MD Report
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleExportForensicReport(inspectedForensicBundle, 'json')
+                  }
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-300 font-extrabold text-[11px] cursor-pointer"
+                >
+                  📥 Export .JSON
                 </button>
                 <button
                   type="button"

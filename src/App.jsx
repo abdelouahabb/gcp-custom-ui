@@ -3783,6 +3783,8 @@ function CloudPulseCockpit() {
   };
 
   const [logExplorerSeedSpec, setLogExplorerSeedSpec] = useState(null);
+  const [globalMapXRaySeed, setGlobalMapXRaySeed] = useState(null);
+  const [vpcStudioRuleSeed, setVpcStudioRuleSeed] = useState(null);
 
   const handleRunInShell = (cmd) => {
     setShellSeedCommand(cmd);
@@ -3800,6 +3802,24 @@ function CloudPulseCockpit() {
       `Opened Cloud Logs Explorer & Shell for ${spec?.regionId || 'event'} (${
         spec?.summary || spec?.category || 'Forensic Trace'
       })`
+    );
+  };
+
+  const handleTestRuleOnGlobalMap = (seed) => {
+    setGlobalMapXRaySeed({ ...seed, nonce: Date.now() });
+    setActiveTab('GLOBAL_MAP');
+    showToast(
+      `Tracing firewall rule "${seed?.ruleName || 'custom'}" (${String(
+        seed?.protocol || 'tcp'
+      ).toUpperCase()}:${seed?.port || 22}) in Global Map Firewall X-Ray`
+    );
+  };
+
+  const handleOpenInVpcFirewallStudio = (seed) => {
+    setVpcStudioRuleSeed({ ...seed, nonce: Date.now() });
+    setActiveTab('VPC_NETWORKS');
+    showToast(
+      `Opened "${seed?.ruleName || 'Firewall Policy'}" in VPC & Firewalls Studio`
     );
   };
 
@@ -4901,9 +4921,11 @@ function CloudPulseCockpit() {
                     overview={overview}
                     firewalls={overview?.firewalls || []}
                     vpcs={overview?.vpcs || []}
+                    initialXRaySeed={globalMapXRaySeed}
                     onOpenProvision={handleOpenProvision}
                     onRunInShell={handleRunInShell}
                     onOpenLogsExplorer={handleOpenInLogsExplorer}
+                    onOpenVpcFirewallStudio={handleOpenInVpcFirewallStudio}
                     onSelectTab={(tabId) => setActiveTab(tabId)}
                     onRefresh={() => fetchProjectOverview(selectedProjectId)}
                     onShowToast={showToast}
@@ -5549,10 +5571,13 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     vpcs={overview?.vpcs || []}
                     firewalls={overview?.firewalls || []}
+                    initialRuleSeed={vpcStudioRuleSeed}
                     onOpenProvisionVpc={() => handleOpenProvision('VPC_NETWORK')}
                     onOpenProvisionFirewall={() =>
                       handleOpenProvision('VPC_FIREWALL')
                     }
+                    onTestOnGlobalMap={handleTestRuleOnGlobalMap}
+                    onOpenLogsExplorer={handleOpenInLogsExplorer}
                     onDeleteResource={handleDeleteResource}
                     onRefresh={() => fetchProjectOverview(selectedProjectId)}
                     loading={loadingOverview}

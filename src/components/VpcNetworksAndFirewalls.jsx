@@ -226,7 +226,10 @@ export default function VpcNetworksAndFirewalls({
   projectId,
   vpcs = [],
   firewalls = [],
+  initialRuleSeed,
   onOpenProvisionVpc,
+  onTestOnGlobalMap,
+  onOpenLogsExplorer,
   onDeleteResource,
   onRefresh,
   loading = false,
@@ -274,9 +277,96 @@ export default function VpcNetworksAndFirewalls({
   const [simDirection, setSimDirection] = useState('INGRESS');
   const [simProtocol, setSimProtocol] = useState('tcp');
   const [simPort, setSimPort] = useState(22);
-  const [simIp, setSimIp] = useState('203.0.113.50');
+  const [simIp, setSimIp] = useState('198.51.100.1');
   const [simTag, setSimTag] = useState('');
   const [simNetwork, setSimNetwork] = useState('default');
+
+  useEffect(() => {
+    if (!initialRuleSeed?.nonce) return;
+    if (initialRuleSeed.ruleName) {
+      setSearchQuery(initialRuleSeed.ruleName);
+      setFilterMode('ALL');
+    }
+    if (initialRuleSeed.protocol) {
+      setSimProtocol(String(initialRuleSeed.protocol).toLowerCase());
+    }
+    if (initialRuleSeed.port !== undefined) {
+      setSimPort(Number(initialRuleSeed.port));
+    }
+    if (
+      initialRuleSeed.sourceIp &&
+      /^\d+\.\d+\.\d+\.\d+$/.test(initialRuleSeed.sourceIp)
+    ) {
+      setSimIp(initialRuleSeed.sourceIp);
+    }
+    setActiveSubPanel('SIMULATOR');
+  }, [
+    initialRuleSeed?.nonce,
+    initialRuleSeed?.ruleName,
+    initialRuleSeed?.protocol,
+    initialRuleSeed?.port,
+    initialRuleSeed?.sourceIp,
+  ]);
+
+  const extractRuleTestSpec = (fw) => {
+    const firstSpec = (fw.specs || [])[0] || { IPProtocol: 'tcp', ports: ['22'] };
+    const proto = String(firstSpec.IPProtocol || 'tcp').toLowerCase();
+    const protocol = proto === 'udp' || proto === 'icmp' ? proto : 'tcp';
+    const firstPortRaw = String(firstSpec.ports?.[0] || '22').split('-')[0];
+    const port = protocol === 'icmp' ? 0 : Number(firstPortRaw) || 22;
+    const ranges = fw.sourceRanges || [];
+    let originId = 'my-live-client';
+    let testIp = '198.51.100.1';
+    if (ranges.includes('35.235.240.0/20')) {
+      originId = 'gcp-iap-proxy';
+      testIp = '35.235.240.12';
+    } else if (
+      ranges.includes('130.211.0.0/22') ||
+      ranges.includes('35.191.0.0/16')
+    ) {
+      originId = 'gcp-gfe-healthcheck';
+      testIp = '130.211.0.22';
+    } else if (port === 22 || port === 3389) {
+      originId = 'scanner-botnet-east';
+      testIp = '185.220.101.44';
+    }
+    return {
+      ruleName: fw.name,
+      protocol,
+      port,
+      originId,
+      sourceIp: testIp,
+    };
+  };
+
+  const handleTestRuleOnMap = (fw) => {
+    const spec = extractRuleTestSpec(fw);
+    if (onTestOnGlobalMap) {
+      onTestOnGlobalMap(spec);
+    } else if (onSelectTab) {
+      onSelectTab('GLOBAL_MAP');
+    }
+  };
+
+  const handleOpenRuleLogs = (fw) => {
+    const spec = extractRuleTestSpec(fw);
+    const lqlFilter = `jsonPayload.rule_details.reference:"${fw.name}" OR jsonPayload.connection.dest_port=${spec.port}`;
+    const gcloudCommand = `gcloud logging read '${lqlFilter}' --project=${projectId} --limit=15 --format=json`;
+    if (onOpenLogsExplorer) {
+      onOpenLogsExplorer({
+        id: `fw-log-${fw.name}`,
+        regionId: 'global',
+        category: `VPC Firewall (${fw.name})`,
+        summary: `${fw.action} ${fw.direction} P-${fw.priority ?? 1000}`,
+        verdict: fw.action,
+        lqlFilter,
+        nlQuery: `show firewall logs for rule ${fw.name}`,
+        gcloudCommand,
+      });
+    } else if (onSelectTab) {
+      onSelectTab('LOGS_SHELL');
+    }
+  };
 
   // Helper to poll live GCP Global Operation status (`GET /api/project/:projectId/operation-status`)
   const pollGcpOperation = async (trackerKey, operationUrl, operationName, doneLabel) => {
@@ -929,7 +1019,7 @@ export default function VpcNetworksAndFirewalls({
     });
   }, [enrichedFirewalls, selectedVpcFilter, filterMode, searchQuery]);
 
-  // Packet Flow & Firewall Match Simulator evaluation
+  // Packet Flow & Firewall Match Simulator evaluation (tracks ★ WINNER + SHADOWED rules)
   const simulationResult = useMemo(() => {
     const candidateRules = enrichedFirewalls.filter(
       (fw) =>
@@ -939,6 +1029,9 @@ export default function VpcNetworksAndFirewalls({
     );
 
     const portNum = Number(simPort);
+    let winningRule = null;
+    const shadowedRules = [];
+
     for (const fw of candidateRules) {
       // 1. Check Target Tag match if rule restricts to specific targetTags
       if (Array.isArray(fw.targetTags) && fw.targetTags.length > 0) {
@@ -971,16 +1064,31 @@ export default function VpcNetworksAndFirewalls({
       });
 
       if (protoMatched) {
-        return {
-          verdict: fw.action,
-          matchedRule: fw.name,
-          priority: fw.priority ?? 1000,
-          isDefaultImplied: false,
-          reason: `Matched explicit ${fw.action} rule "${fw.name}" at priority ${
-            fw.priority ?? 1000
-          } on VPC "${simNetwork}".`,
-        };
+        if (!winningRule) {
+          winningRule = fw;
+        } else {
+          shadowedRules.push(fw);
+        }
       }
+    }
+
+    if (winningRule) {
+      return {
+        verdict: winningRule.action,
+        matchedRule: winningRule.name,
+        priority: winningRule.priority ?? 1000,
+        isDefaultImplied: false,
+        shadowedRules,
+        reason: `★ WINNER (1st Match): Matched explicit ${winningRule.action} rule "${winningRule.name}" at priority P-${
+          winningRule.priority ?? 1000
+        } on VPC "${simNetwork}".${
+          shadowedRules.length > 0
+            ? ` Shadows ${shadowedRules.length} lower-priority rule(s): ${shadowedRules
+                .map((s) => `${s.name} (P-${s.priority ?? 1000})`)
+                .join(', ')}.`
+            : ''
+        }`,
+      };
     }
 
     // Fallback to Google Cloud Implied Default Firewall Rules (Priority 65535)
@@ -990,8 +1098,9 @@ export default function VpcNetworksAndFirewalls({
         matchedRule: 'default-allow-egress (Implied GCP Rule)',
         priority: 65535,
         isDefaultImplied: true,
+        shadowedRules: [],
         reason:
-          'No custom EGRESS rule matched; fell through to Google Cloud implied default-allow-egress (priority 65535).',
+          'No custom EGRESS rule matched; fell through to Google Cloud implied default-allow-egress (priority P-65535).',
       };
     }
     return {
@@ -999,8 +1108,9 @@ export default function VpcNetworksAndFirewalls({
       matchedRule: 'default-deny-ingress (Implied GCP Rule)',
       priority: 65535,
       isDefaultImplied: true,
+      shadowedRules: [],
       reason:
-        'No custom INGRESS rule matched; blocked by Google Cloud implied default-deny-ingress (priority 65535).',
+        'No custom INGRESS rule matched; blocked by Google Cloud implied default-deny-ingress (priority P-65535).',
     };
   }, [
     enrichedFirewalls,
@@ -1799,7 +1909,7 @@ export default function VpcNetworksAndFirewalls({
                 </div>
               </div>
             </div>
-            <div className="flex gap-1.5 shrink-0">
+            <div className="flex flex-wrap gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1807,21 +1917,41 @@ export default function VpcNetworksAndFirewalls({
                   setSimPort(22);
                   setSimProtocol('tcp');
                 }}
-                className="px-2.5 py-1 rounded bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white text-[10px] font-mono cursor-pointer"
+                className="px-2.5 py-1 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-[10px] font-mono font-bold cursor-pointer"
               >
                 Test IAP SSH (35.235.240.12:22)
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  setSimIp('203.0.113.99');
+                  setSimIp('198.51.100.1');
                   setSimPort(22);
                   setSimProtocol('tcp');
                 }}
-                className="px-2.5 py-1 rounded bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white text-[10px] font-mono cursor-pointer"
+                className="px-2.5 py-1 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-[10px] font-mono font-bold cursor-pointer"
               >
-                Test Public SSH (203.0.113.99:22)
+                Test Public SSH (:22)
               </button>
+              {onTestOnGlobalMap && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onTestOnGlobalMap({
+                      ruleName: simulationResult.matchedRule,
+                      protocol: simProtocol,
+                      port: simPort,
+                      originId: simIp.startsWith('35.235.240.')
+                        ? 'gcp-iap-proxy'
+                        : simIp.startsWith('130.211.')
+                        ? 'gcp-gfe-healthcheck'
+                        : 'my-live-client',
+                    })
+                  }
+                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-extrabold cursor-pointer"
+                >
+                  🌐 Launch &amp; X-Ray on Global Map ↗
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -2205,8 +2335,28 @@ export default function VpcNetworksAndFirewalls({
                         )}
                       </div>
 
-                      {/* Action Buttons Column: Lock to IAP, Restore Public, Enable/Disable Toggle, Edit, Delete */}
+                      {/* Action Buttons Column: X-Ray on Map, Rule Logs, Lock to IAP, Restore Public, Enable/Disable Toggle, Edit, Delete */}
                       <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleTestRuleOnMap(fw)}
+                          title="Launch a live packet for this rule's protocol/port on the Global World Map and inspect its Priority 0 -> 65535 X-Ray evaluation"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2.5 py-1 rounded-md bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-300 border border-sky-500/35 transition-colors cursor-pointer"
+                        >
+                          <Globe className="w-3 h-3" />
+                          <span>🔬 X-Ray on Map</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRuleLogs(fw)}
+                          title="Open Cloud Logs Explorer & Shell Studio pre-filtered to this firewall rule"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>Logs ↗</span>
+                        </button>
+
                         {isPublicAllowIngress && (
                           <button
                             type="button"
