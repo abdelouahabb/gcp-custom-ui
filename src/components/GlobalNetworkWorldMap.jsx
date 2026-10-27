@@ -3176,6 +3176,7 @@ export default function GlobalNetworkWorldMap({
 
   const [showForensicDeepDiveModal, setShowForensicDeepDiveModal] =
     useState(false);
+  const [showJargonGuide, setShowJargonGuide] = useState(false);
 
   const buildForensicEventBundle = useCallback(
     (ev) => {
@@ -7042,6 +7043,102 @@ export default function GlobalNetworkWorldMap({
               })}
             </div>
 
+            {/* Plain-English Jargon & Badge Decoder Toggle Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                10x Orbital Command Dock · Live VPC Firewall Evaluation, Failover Teleporter &amp; Cloud Audit Time-Machine
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowJargonGuide((v) => !v)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-extrabold transition-colors cursor-pointer ${
+                  showJargonGuide
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300'
+                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 hover:border-blue-500/40'
+                }`}
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>
+                  {showJargonGuide
+                    ? 'Hide Plain-English Jargon Guide ▲'
+                    : '📖 What do WINNER, SHADOWED, P-1000, IAP & CFE mean? ▼'}
+                </span>
+              </button>
+            </div>
+
+            {showJargonGuide && (
+              <div className="p-3 rounded-xl bg-amber-500/[0.07] dark:bg-amber-950/25 border border-amber-500/35 space-y-2.5 text-[10px] font-mono">
+                <div className="flex items-center justify-between gap-2 border-b border-amber-500/20 pb-1.5">
+                  <span className="font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                    📖 Plain-English GCP Networking &amp; Firewall Jargon Decoder
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowJargonGuide(false)}
+                    className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-200 font-bold cursor-pointer"
+                  >
+                    ✕ Close Guide
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  <div className="p-2 rounded-lg bg-white/85 dark:bg-zinc-950/85 border border-zinc-200 dark:border-zinc-800">
+                    <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                      ★ WINNER (1st Matching Rule)
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-300 mt-0.5 leading-snug">
+                      Google Cloud checks firewall rules from Priority <code>0</code> to <code>65535</code>. The <strong>very first rule</strong> that matches both the packet&apos;s Source IP and Port &ldquo;wins&rdquo;—evaluation stops immediately and its action (<code>ALLOW</code> or <code>DENY</code>) is applied.
+                    </p>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-white/85 dark:bg-zinc-950/85 border border-zinc-200 dark:border-zinc-800">
+                    <div className="font-extrabold text-amber-600 dark:text-amber-400">
+                      SHADOWED (Overridden Rule)
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-300 mt-0.5 leading-snug">
+                      A rule with a weaker priority number (e.g. <code>P-65534 default-allow-ssh</code>) that <em>would</em> have matched the packet, but was never reached because an earlier <code>★ WINNER</code> rule (like <code>P-90 DENY</code>) matched first.
+                    </p>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-white/85 dark:bg-zinc-950/85 border border-zinc-200 dark:border-zinc-800">
+                    <div className="font-extrabold text-zinc-700 dark:text-zinc-200">
+                      PORT SKIP &amp; CIDR SKIP
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-300 mt-0.5 leading-snug">
+                      <strong>PORT SKIP</strong> means the rule applies to a different port (e.g. <code>:3389</code> RDP when testing <code>:22</code> SSH). <strong>CIDR SKIP</strong> means the rule&apos;s IP range (e.g. internal <code>10.128.0.0/9</code>) doesn&apos;t include the sender&apos;s IP.
+                    </p>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-white/85 dark:bg-zinc-950/85 border border-zinc-200 dark:border-zinc-800">
+                    <div className="font-extrabold text-blue-600 dark:text-blue-400">
+                      P-0 ➔ P-65535 (Priority Order)
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-300 mt-0.5 leading-snug">
+                      Lower number = stronger priority. <code>P-90</code> or <code>P-100</code> is evaluated before <code>P-1000</code> or <code>P-65534</code>. <code>P-65535</code> is Google&apos;s built-in <code>default-deny-ingress</code> fallback.
+                    </p>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-white/85 dark:bg-zinc-950/85 border border-zinc-200 dark:border-zinc-800">
+                    <div className="font-extrabold text-violet-600 dark:text-violet-400">
+                      IAP (35.235.240.0/20) &amp; GFE
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-300 mt-0.5 leading-snug">
+                      <strong>IAP</strong> (Identity-Aware Proxy) lets you SSH into VMs without exposing port 22 to the public internet (<code>0.0.0.0/0</code>). <strong>GFE</strong> (<code>130.211.0.0/22</code>) is Google Front End / Cloud Load Balancer health-check traffic.
+                    </p>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-white/85 dark:bg-zinc-950/85 border border-zinc-200 dark:border-zinc-800">
+                    <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                      % CFE, gCO2eq/kWh &amp; Fiber RTT
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-300 mt-0.5 leading-snug">
+                      <strong>% CFE</strong> is Google&apos;s hourly Carbon-Free Energy score for that region. <strong>gCO2eq/kWh</strong> is grid carbon intensity. <strong>Fiber RTT</strong> is round-trip latency over subsea optical fiber (~200 km/ms).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* =============================================================== */}
             {/* PILLAR 1: LIVE VPC FIREWALL X-RAY DEBUGGER (PRIORITY 0 -> 65535) */}
             {/* =============================================================== */}
@@ -7256,13 +7353,36 @@ export default function GlobalNetworkWorldMap({
                   </div>
 
                   {/* Step-by-Step Priority 0 -> 65535 Rule Evaluation Vertical Scrollable List */}
-                  <div className="pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1">
-                    <div className="flex items-center justify-between text-[9px] font-extrabold uppercase tracking-wider text-zinc-400 px-1">
-                      <span>
-                        Evaluated VPC Firewall Rules ({customPacketXRay.steps.length} total · ordered by Priority 0 ➔ 65535)
+                  <div className="pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
+                    {/* Always-Visible Badge Key Strip */}
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200/80 dark:border-zinc-800/80 text-[9px] text-zinc-500 dark:text-zinc-400">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold uppercase text-zinc-400">
+                          Badge Key:
+                        </span>
+                        <span>
+                          <strong className="text-emerald-600 dark:text-emerald-400">
+                            ★ WINNER (1st Match)
+                          </strong>{' '}
+                          = First matching rule applied by GCP (stops evaluation)
+                        </span>
+                        <span>·</span>
+                        <span>
+                          <strong className="text-amber-600 dark:text-amber-400">
+                            SHADOWED
+                          </strong>{' '}
+                          = Also matches, but overridden by an earlier WINNER
+                        </span>
+                        <span>·</span>
+                        <span>
+                          <strong>PORT / CIDR SKIP</strong> = Rule doesn&apos;t match port or IP
+                        </span>
+                      </div>
+                      <span className="text-zinc-400 font-bold">
+                        Scroll to inspect all ({customPacketXRay.steps.length}) rules ↕
                       </span>
-                      <span>Scroll to inspect all rules ↕</span>
                     </div>
+
                     <div className="max-h-44 overflow-y-auto flex flex-col gap-1.5 pr-1">
                       {customPacketXRay.steps.map((step, idx) => {
                         const isWinner = step.status === 'WINNING_MATCH';
@@ -7302,9 +7422,9 @@ export default function GlobalNetworkWorldMap({
                               </span>
                               <span className="shrink-0 uppercase text-[8.5px] font-extrabold px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10">
                                 {isWinner
-                                  ? '★ WINNER'
+                                  ? '★ WINNER (1ST MATCH)'
                                   : isShadowed
-                                  ? 'SHADOWED'
+                                  ? 'SHADOWED (OVERRIDDEN)'
                                   : step.status === 'SKIPPED_CIDR'
                                   ? 'CIDR SKIP'
                                   : step.status === 'SKIPPED_PORT'
